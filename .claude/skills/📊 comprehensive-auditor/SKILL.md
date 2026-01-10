@@ -1,6 +1,8 @@
 ---
 name: comprehensive-auditor
-description: Exhaustive multi-dimensional project auditor covering code, runtime, infrastructure, security, performance, business logic, and human processes across 12 dimensions with confidence-tracked findings and explicit blind spot documentation.
+description: Exhaustive multi-dimensional project auditor covering code, runtime, infrastructure, security, performance, business logic, and human processes across 12 dimensions with confidence-tracked findings and explicit blind spot documentation. Includes dead code detection (Knip/depcheck), file size/token limit analysis for AI editing compatibility, and honest system health reporting.
+keywords: audit, code quality, dead code, unused files, unused exports, unused dependencies, file size, token limit, system health, performance, security, documentation, test coverage, accessibility
+triggers: audit my project, check code health, dead code detection, find unused code, file too large, system status, comprehensive audit, codebase health
 ---
 
 # Comprehensive Honest Project Auditor - Maximum Coverage Edition
@@ -246,6 +248,116 @@ An exhaustive multi-dimensional project auditor that covers **code, runtime beha
 - Team communication quality
 - Knowledge transfer effectiveness
 - Developer satisfaction
+
+## Additional Detection Capabilities (Merged from codebase-health-auditor)
+
+### Dead Code Detection (via Knip/depcheck)
+
+**Capabilities:**
+- Unused files and exports detection (Knip)
+- Unused npm dependencies (depcheck)
+- TypeScript dead code (unused locals, parameters)
+- Vue-specific dead code (unused props, emits, computed, watchers)
+- Legacy pattern detection (deprecated libraries, orphaned directories)
+
+**Quick Start:**
+```bash
+# Full audit (dry-run by default)
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js audit
+
+# Execute safe removals only
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js execute --safe-only
+
+# Single detector
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js detect --detector file-size
+
+# CI mode
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js audit --ci
+```
+
+### File Size & Token Limit Detection
+
+Detects files that exceed token limits for AI editing tools like Claude Code.
+
+**Why this matters**: Files over ~25,000 tokens become difficult or impossible for AI tools to edit effectively, causing truncation, context loss, and failed edits.
+
+#### Token Thresholds
+
+| Level | Tokens | ~Size | Meaning |
+|-------|--------|-------|---------|
+| WARNING | 15,000 | ~60KB | Getting large, monitor |
+| CAUTION | 25,000 | ~100KB | Needs attention |
+| CRITICAL | 35,000 | ~140KB | Urgent refactoring needed |
+| BLOCKED | 50,000 | ~200KB | Blocks AI editing entirely |
+
+#### Usage
+
+```bash
+# Detect oversized files
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js detect --detector file-size
+
+# Custom threshold (e.g., only 20K+ tokens)
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js detect --detector file-size --min-tokens 20000
+
+# Save report to file
+node .claude/skills/📊\ comprehensive-auditor/scripts/orchestrator.js detect --detector file-size --output ./audit-reports/file-size.json
+```
+
+#### Refactoring Suggestions
+
+The detector provides context-aware suggestions based on file type:
+
+**Vue Components (.vue)**:
+- Extract script logic into composables
+- Split into smaller child components
+- Consider state extraction to Pinia stores
+
+**TypeScript/JavaScript (.ts/.js)**:
+- Split store into feature-specific modules
+- Break into smaller, focused composables
+- Apply single responsibility principle
+- Extract utility functions to separate files
+
+### System Health Analysis (Merged from comprehensive-system-analyzer)
+
+Provides **brutally honest** system health reporting with:
+- **Zero sugar-coating** - Tells you exactly what's wrong
+- **Complete coverage** - Analyzes every system layer
+- **Evidence-based findings** - Provides proof for all issues
+- **Prioritized fixes** - Shows what matters most
+- **Performance impact** - Quantifies how issues affect users
+
+#### Health Scoring (No Mercy Grading)
+
+| Score | Grade | Meaning |
+|-------|-------|---------|
+| 90-100 | Excellent | Rare, nearly perfect |
+| 80-89 | Good | Minor issues, generally solid |
+| 70-79 | Fair | Noticeable issues, needs attention |
+| 60-69 | Poor | Significant problems, user-impacting |
+| <60 | Critical | Major issues, intervention required |
+
+#### Performance Grades
+
+| Grade | FCP | LCP | TTI |
+|-------|-----|-----|-----|
+| A | <2s | <3s | <100ms |
+| B | <3s | <4s | <200ms |
+| C | <4s | <5s | <300ms |
+| D | >4s | >5s | >300ms |
+| F | Unusable performance |
+
+#### Analysis Layers
+
+- **Core Application Health**: Vue.js lifecycle, component tree, router, Pinia stores
+- **Performance Metrics**: FCP, LCP, TTI, CLS, memory leaks
+- **Data Layer**: IndexedDB, store sync, persistence reliability
+- **UI/UX Integrity**: Design system compliance, accessibility, responsive design
+- **Testing Coverage**: Unit/integration/E2E effectiveness, flaky tests
+- **Security Assessment**: Dependencies, code patterns, data exposure
+- **Build & Deployment**: Bundle size, asset optimization, production readiness
+
+---
 
 ## Execution Workflow
 

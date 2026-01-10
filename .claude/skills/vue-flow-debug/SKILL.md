@@ -283,3 +283,8 @@ After implementing, verify:
 - [ ] Refresh page → state persists correctly
 - [ ] Move task between groups → counts update correctly
 - [ ] Rapid drops → no race conditions
+
+## Resources
+
+### references/
+- `canvas-group-task-counting-tests.md` - E2E test patterns for validating group-task counting, coordinate verification, and parent-child relationships

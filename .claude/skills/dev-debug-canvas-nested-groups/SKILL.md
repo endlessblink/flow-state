@@ -222,6 +222,7 @@ function validateHierarchy(nodes: Node[]) {
 - `coordinate-system.md` - Deep dive into Vue Flow coordinate systems
 - `troubleshooting-tree.md` - Systematic problem diagnosis flowchart
 - `code-patterns.md` - Proven code patterns for common operations
+- `e2e-test-patterns.md` - Playwright E2E test patterns for nested groups and parent movement
 
 ### scripts/
 - `vueFlowDebug.ts` - TypeScript debugging utilities for Vue Flow

@@ -1,11 +1,11 @@
 ---
 name: dev-storybook
-description: Build and fix Storybook stories for Vue 3 components with proper patterns, error resolution, and consistent documentation
+description: Comprehensive Storybook skill for Vue 3 - story creation, auditing, component discovery, visual testing, and CI integration. Merged from dev-storybook, storybook-audit, and storybook-master.
 ---
 
 # dev-storybook
 
-BUILD Storybook stories for Vue 3 components with TypeScript. Document components, create interactive demos, and handle common Storybook patterns. Use when creating component documentation, fixing story compilation errors, or setting up visual testing.
+BUILD, AUDIT, and AUTOMATE Storybook stories for Vue 3 components with TypeScript. This comprehensive skill covers story creation, auditing existing stories for issues, component discovery and inventory, and CI/CD integration. Use when creating component documentation, fixing story compilation errors, auditing for display issues, or setting up automated testing workflows.
 
 ## Core Responsibilities
 
@@ -13,6 +13,9 @@ BUILD Storybook stories for Vue 3 components with TypeScript. Document component
 2. **Error Resolution**: Fix TypeScript and Vue compilation errors in stories
 3. **Styling Patterns**: Apply CSS correctly in Storybook without runtime template errors
 4. **Component Props**: Ensure correct prop types and event handlers
+5. **Story Auditing**: Detect and fix cutoff modals, store dependencies, design token violations
+6. **Component Discovery**: Scan codebase for components and generate inventory reports
+7. **Automated Testing**: Visual regression testing and accessibility compliance
 
 ## Critical Rules
 

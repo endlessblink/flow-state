@@ -1,0 +1,179 @@
+<template>
+  <div class="inbox-tasks scroll-container">
+    <!-- Empty State -->
+    <div v-if="tasks.length === 0" class="empty-inbox">
+      <div class="empty-icon">
+        {{ hasSelectedGroups ? '🎯' : '📋' }}
+      </div>
+      <p class="empty-text">
+        {{ emptyText }}
+      </p>
+      <p class="empty-subtext">
+        {{ emptySubtext }}
+      </p>
+    </div>
+
+    <!-- Selection Bar -->
+    <div v-if="multiSelectMode" class="selection-bar">
+      <span class="selection-count">{{ selectedCount }} selected</span>
+      <button class="selection-action delete-action" title="Delete selected tasks" @click="$emit('delete-selected')">
+        <Trash2 :size="14" />
+        Delete
+      </button>
+      <button class="selection-action clear-action" title="Clear selection (Esc)" @click="$emit('clear-selection')">
+        <X :size="14" />
+        Clear
+      </button>
+    </div>
+
+    <!-- Task Cards -->
+    <UnifiedInboxTaskCard
+      v-for="task in tasks"
+      :key="task.id"
+      :task="task"
+      :is-selected="selectedTaskIds.has(task.id)"
+      @drag-start="$emit('drag-start', $event, task)"
+      @drag-end="$emit('drag-end')"
+      @task-click="$emit('task-click', $event, task)"
+      @task-dblclick="$emit('task-dblclick', task)"
+      @task-contextmenu="$emit('task-contextmenu', $event, task)"
+      @task-keydown="$emit('task-keydown', $event, task)"
+      @start-timer="$emit('start-timer', task)"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Trash2, X } from 'lucide-vue-next'
+import type { Task } from '@/types/tasks'
+import UnifiedInboxTaskCard from './UnifiedInboxTaskCard.vue'
+
+const props = defineProps<{
+  tasks: Task[]
+  selectedTaskIds: Set<string>
+  multiSelectMode: boolean
+  hasSelectedGroups: boolean
+  areGlobalsFiltered: boolean // If global sidebar filters are active
+}>()
+
+const emit = defineEmits<{
+  (e: 'drag-start', event: DragEvent, task: Task): void
+  (e: 'drag-end'): void
+  (e: 'task-click', event: MouseEvent, task: Task): void
+  (e: 'task-dblclick', task: Task): void
+  (e: 'task-contextmenu', event: MouseEvent, task: Task): void
+  (e: 'task-keydown', event: KeyboardEvent, task: Task): void
+  (e: 'start-timer', task: Task): void
+  (e: 'delete-selected'): void
+  (e: 'clear-selection'): void
+}>()
+
+const selectedCount = computed(() => props.selectedTaskIds.size)
+
+// Empty State Logic
+const emptyText = computed(() => {
+  if (props.hasSelectedGroups) {
+    // We can't know the exact count in group here without passing prop, 
+    // but generalizing is fine for AI readability
+    return 'No tasks in selected groups'
+  }
+  return 'No tasks found'
+})
+
+const emptySubtext = computed(() => {
+  if (props.hasSelectedGroups) {
+    return 'Drag tasks to these groups on the Canvas.'
+  }
+  if (!props.areGlobalsFiltered) { // If filtering returns 0 but filteredTasks was 0
+    return 'All filtered tasks are already on the board/calendar' // Default assumption
+  }
+  return 'No tasks match your current view filters'
+})
+</script>
+
+<style scoped>
+.inbox-tasks {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.empty-inbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  font-size: 32px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-weight: var(--font-medium);
+  margin-bottom: var(--space-1);
+}
+
+.empty-subtext {
+  font-size: var(--text-xs);
+  max-width: 200px;
+}
+
+/* Selection Bar */
+.selection-bar {
+  position: sticky;
+  top: -8px; /* Stick near top */
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--brand-primary);
+  color: white;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  box-shadow: var(--shadow-md);
+  animation: slide-in 0.2s ease-out;
+}
+
+@keyframes slide-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.selection-count {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.selection-action {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.selection-action:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.delete-action:hover {
+  background: var(--color-error);
+}
+</style>

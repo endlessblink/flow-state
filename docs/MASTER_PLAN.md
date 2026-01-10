@@ -1,5 +1,5 @@
-**Last Updated**: January 9, 2026 (BUG-170/171 Data Loss Prevention Fixes)
-**Version**: 5.34 (Board + Catalog View Redesign)
+**Last Updated**: January 10, 2026 (TASK-193 Skill Consolidation Started)
+**Version**: 5.37 (Skill Consolidation)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -13,8 +13,10 @@
 
 ## Current Status
 
-| **Canvas** | ✅ **WORKING** | **Calendar** | ✅ Verified |
+| **Canvas** | 🔄 **REBUILDING** | **Calendar** | ✅ Verified |
 | **Sync** | ✅ **WORKING** | **Build/Tests** | ✅ **PASSING** |
+
+> **Canvas Rebuild**: Complete fresh rebuild in progress. See [TASK-184](#task-184-canvas-system-rebuild--in-progress).
 
 ---
 
@@ -32,6 +34,12 @@
 | **BUG-169** | **Tasks Auto-Removed on Login** | **P0** | ✅ **FIXED** | TASK-168 |
 | ~~**BUG-170**~~ | ~~Self-Healing Destroys Group Relationships~~ | P1 | ✅ **ALREADY FIXED** | TODO-011 |
 | ~~**BUG-171**~~ | ~~RLS Partial Write Failures Silent~~ | P1 | ✅ **FIXED** | TODO-012 |
+| **TASK-184** | **Canvas System Rebuild** | **P0** | 🔄 **IN PROGRESS** | [Detailed Docs](./process-docs/canvas-rebuild_10.1.26/) |
+| **TASK-189** | **System Tech Debt Audit** | **P1** | ✅ **DONE** [Details](#task-189-system-tech-debt-audit-done) | - |
+| TASK-190 | Quick Wins - Tech Debt Cleanup | P1 | 📋 PLANNED | TASK-189 |
+| ~~TASK-191~~ | Board View Refactor | P1 | ✅ **DONE** (2024-01-10) - Deep Refinement (CSS extraction, logic externalization, LOC reduction: Swimlane ~130, Column ~60) | TASK-184 patterns |
+| TASK-192 | Calendar View Refactor | P1 | 📋 PLANNED | TASK-191 patterns |
+| **TASK-193** | **Skill Consolidation (78→45)** | **P1** | 🔄 **IN PROGRESS** | [Details](#task-193-skill-consolidation-in-progress) |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 
 
@@ -132,6 +140,238 @@
 
 <details id="active-task-details">
 <summary><b>Active Task Details</b></summary>
+
+### TASK-184: Canvas System Rebuild (🔄 IN PROGRESS)
+**Priority**: P0-CRITICAL
+**Started**: January 10, 2026
+**Status**: Phase 1 - Foundation
+
+**Problem**: Canvas system has ~22,500 lines of complex, over-engineered code with:
+- ~1,200 lines of coordinate conversion that fights Vue Flow's native behavior
+- 22 competing watchers causing race conditions
+- 7-second position locks as bandaid for sync issues
+- Double-conversion bug (store + Vue Flow both convert coordinates)
+
+**Solution**: Complete fresh rebuild with Vue Flow-native architecture.
+
+**Documentation**: [docs/process-docs/canvas-rebuild_10.1.26/](./process-docs/canvas-rebuild_10.1.26/)
+- [00-OVERVIEW.md](./process-docs/canvas-rebuild_10.1.26/00-OVERVIEW.md) - Summary
+- [01-ARCHITECTURE.md](./process-docs/canvas-rebuild_10.1.26/01-ARCHITECTURE.md) - Architecture
+- [02-INTEGRATION-MAP.md](./process-docs/canvas-rebuild_10.1.26/02-INTEGRATION-MAP.md) - All touchpoints
+- [03-IMPLEMENTATION.md](./process-docs/canvas-rebuild_10.1.26/03-IMPLEMENTATION.md) - 7 phases
+- [04-TECHNICAL-DECISIONS.md](./process-docs/canvas-rebuild_10.1.26/04-TECHNICAL-DECISIONS.md) - Key decisions
+- [05-VERIFICATION.md](./process-docs/canvas-rebuild_10.1.26/05-VERIFICATION.md) - Tests/success criteria
+- [06-CLEANUP.md](./process-docs/canvas-rebuild_10.1.26/06-CLEANUP.md) - Files to delete
+
+**Phases**:
+- [ ] Phase 1: Empty canvas renders at `/canvas-new`
+- [ ] Phase 2: Groups load from Supabase
+- [ ] Phase 3: Tasks in inbox + canvas
+- [ ] Phase 4: Drag task to canvas (position persists)
+- [ ] Phase 5: Parent-child works (tasks move with groups)
+- [ ] Phase 6: Feature parity (all 15 features)
+- [ ] Phase 7: Swap and cleanup (delete old, rename new)
+
+**Target**: ~2,550 lines (88% reduction from 22,500)
+
+---
+
+### ~~TASK-182~~: Refactor useCanvasSync.ts (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (>900 lines) and split synchronization logic into focused composables.
+**Completed**: January 10, 2026
+**Links**: Part of [ADHD View Redesign](#task-157-adhd-friendly-view-redesign-in-progress)
+
+**Solution**:
+1. Extracted `useCanvasNodeSync.ts` (ViewModel Mapper).
+2. Extracted `useCanvasEdgeSync.ts` (Edge Sync).
+3. Simplified `useCanvasSync.ts` (Orchestrator).
+
+### ~~TASK-185~~: Refactor UnifiedInboxPanel.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (>1500 lines) and match the component structure of CalendarInboxPanel.
+**Links**: Part of [ADHD View Redesign](#task-157-adhd-friendly-view-redesign-in-progress)
+**Completion Date**: 2026-01-10
+**Solution**:
+- Extracted `useUnifiedInboxState` and `useUnifiedInboxActions` composables.
+- Created `UnifiedInboxHeader`, `UnifiedInboxInput`, `UnifiedInboxTaskCard`, `UnifiedInboxList` components.
+- Reduced main component to <150 lines.
+
+### ~~TASK-186~~: Refactor DragHandle.vue (✅ DONE)
+**Priority**: P3-LOW
+**Status**: DONE
+**Goal**: Reduce file size (>1300 lines) and extract visual logic.
+**Completion Date**: 2026-01-10
+**Solution**:
+- Extracted `DragHandleVisuals`, `DragHandleGhost`, `DragHandleHints`.
+- Extracted `useDragHandleInteraction` and `useDragHandleState`.
+- Reduced main component to <150 lines.
+
+### TASK-189: Refactor CanvasView.vue (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Status**: IN_PROGRESS
+**Goal**: The largest technical debt item (3.4k lines). Orchestrate the canvas rather than implementing it.
+
+### TASK-193: Skill Consolidation (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Status**: IN_PROGRESS
+**Goal**: Reduce Claude Code skills from 78 to ~45 (40 visible + 5 buffer) to fix skill matching issues caused by token truncation.
+**Report**: [docs/process-docs/skill-consolidation_10.1.26/skill-consolidation_10.1.26.md](./process-docs/skill-consolidation_10.1.26/skill-consolidation_10.1.26.md)
+
+**Problem**: Claude Code truncates skill list at ~56 skills due to token limits. With 78 skills, many specialized skills (like `vue-flow-debug`) are hidden and can't be automatically matched.
+
+**Actions**:
+- [x] Merge `skills-manager` into `skill-creator-doctor`
+- [ ] Archive 10 duplicate skills (emoji vs non-emoji)
+- [ ] Archive 4 obsolete tech skills (PouchDB/IndexedDB)
+- [ ] Delete 1 backup file
+- [ ] Merge 4 consolidation groups (Storybook, Auditor, Calendar, Cleanup)
+- [ ] Fix or archive broken metadata skills
+
+**Target**: 78 → 45 skills (42% reduction)
+
+### ~~TASK-188~~: Refactor DoneToggle.vue (✅ DONE)
+**Priority**: P3-LOW
+**Status**: DONE
+**Goal**: Reduce file size (>1200 lines) by extracting visual logic (CSS/Animations) from interaction logic.
+**Completion Date**: 2026-01-10
+**Solution**:
+- Extracted `DoneToggleVisuals` (CSS/Markup).
+- Extracted `useDoneToggleInteraction` (Logic).
+- Reduced main component to <100 lines.
+
+### TASK-187: Refactor HierarchicalTaskRow.vue (TODO)
+**Priority**: P2-MEDIUM
+**Status**: TODO
+**Goal**: Complex component with recursive logic.
+
+### ~~TASK-184~~: Refactor TaskNode.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (>1100 lines) and match the component structure of TaskCard/TaskRow.
+**Completed**: January 10, 2026
+**Links**: Part of [ADHD View Redesign](#task-157-adhd-friendly-view-redesign-in-progress)
+
+**Solution**:
+1. Extracted `useTaskNodeState.ts` (LOD/Visuals) and `useTaskNodeActions.ts` (Interactions).
+2. Extracted Components:
+    - `TaskNodeHeader.vue`
+    - `TaskNodeDescription.vue`
+    - `TaskNodeMeta.vue`
+    - `TaskNodePriority.vue`
+    - `TaskNodeSelection.vue`
+3. Simplified `TaskNode.vue` (Orchestrator).
+
+### ~~TASK-183~~: Refactor CalendarInboxPanel.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (>900 lines) and extract sub-components.
+**Completed**: January 10, 2026
+**Links**: Part of [ADHD View Redesign](#task-157-adhd-friendly-view-redesign-in-progress)
+
+**Solution**:
+1. Extracted `useCalendarInboxState.ts` (Filtering/Sort Logic).
+2. Extracted Components:
+    - `CalendarInboxHeader.vue`
+    - `CalendarInboxInput.vue`
+    - `CalendarInboxList.vue`
+    - `CalendarTaskCard.vue`
+3. Simplified `CalendarInboxPanel.vue` (Orchestrator).
+
+### ~~TASK-181~~: Refactor HierarchicalTaskRow.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (>1000 lines) and extract logic/components to support TASK-157.
+**Completed**: January 10, 2026
+**Links**: Part of [ADHD View Redesign](#task-157-adhd-friendly-view-redesign-in-progress)
+
+**Solution**:
+1. Extracted state to `useTaskRowState.ts`
+2. Extracted actions to `useTaskRowActions.ts`
+3. Created sub-components: `TaskRowTitle`, `TaskRowProject`, `TaskRowPriority`, `TaskRowActions`
+4. Simplified `HierarchicalTaskRow.vue` layout.
+
+### ~~TASK-180~~: Refactor TaskCard.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (>1200 lines) and extract logic/components to support TASK-157.
+**Completed**: January 10, 2026
+**Links**: Part of [ADHD View Redesign](#task-157-adhd-friendly-view-redesign-in-progress)
+
+**Solution**:
+1. Extracted state to `useTaskCardState.ts`
+2. Extracted actions to `useTaskCardActions.ts`
+3. Created sub-components: `TaskCardStatus`, `TaskCardMeta`, `TaskCardActions`
+4. Simplified `TaskCard.vue` orchestrator.
+
+### ~~TASK-179~~: Refactor TaskEditModal.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: DONE
+**Goal**: Reduce file size (currently ~1800 lines) by extracting sub-components and logic.
+**Completed**: January 10, 2026
+
+**Solution**:
+1. Extracted state management to `useTaskEditState.ts`
+2. Extracted actions/saving logic to `useTaskEditActions.ts`
+3. Created focused sub-components: `TaskEditHeader`, `TaskEditMetadata`, `TaskEditSubtasks`, `TaskEditDependencies`
+4. Reduced `TaskEditModal.vue` to a clean orchestrator.
+
+### ~~TASK-178~~: Refactor CanvasView.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Created**: January 10, 2026
+**Completed**: January 10, 2026
+
+**Problem**: `CanvasView.vue` was 3400+ lines (112KB), acting as a "God Component" managing too much state.
+
+**Solution**:
+1. Extracted `useCanvasModals` and `useCanvasContextMenus` for global UI state.
+2. Refactored `CanvasModals.vue` and `CanvasContextMenus.vue` to use these composables directly.
+3. Updated `useCanvasActions` to use global state, removing prop drilling.
+4. Preserved all core Vue Flow integration logic.
+
+---
+
+### ~~TASK-189~~: System Tech Debt Audit (✅ DONE)
+**Priority**: P1-HIGH
+**Completed**: January 10, 2026
+**Plan**: [plans/system-tech-debt-audit-2026-01-10.md](../plans/system-tech-debt-audit-2026-01-10.md)
+
+Comprehensive tech debt audit of all major systems to identify problems before they become critical like the Canvas system.
+
+**Systems Audited (7 total)**:
+
+| System | Score | LOC | Recommendation |
+|--------|-------|-----|----------------|
+| **Canvas** | 3.0/10 | 5,151 | REBUILD (in progress) |
+| ~~**Board View**~~ | ~~4.5/10~~ → **8.0/10** | ~~3,500+~~ → **732** | ✅ **DONE** |
+| **Calendar View** | 5.5/10 | 4,200+ | REFACTOR |
+| **Settings** | 5.8/10 | 1,883 | REFACTOR |
+| **Timer** | 6.5/10 | 2,503 | REFACTOR (focused) |
+| **Authentication** | 6.5/10 | 2,363 | REFACTOR (UserProfile) |
+| **Supabase Sync** | 7.2/10 | 1,800+ | MAINTAIN |
+| **Projects** | 7.2/10 | 1,800+ | MAINTAIN |
+
+**Key Findings**:
+- Board View and Calendar View show same patterns as Canvas (god objects, deep watchers)
+- 150+ console.log statements across codebase
+- 16+ `as any` type casts (type safety violations)
+- 6 deep watchers causing performance issues (timer fires 60x/min)
+- 3 circular dependency risks
+- Memory leaks in Calendar View (event listeners)
+- Broken i18n in Settings system
+
+**Implementation Roadmap**:
+
+| Phase | Tasks | Effort | Status |
+|-------|-------|--------|--------|
+| **TASK-190: Quick Wins** | Remove 150+ console.log, fix watchers, fix memory leaks | 8-12h | 📋 PLANNED |
+| ~~**TASK-191: Board View**~~ | ~~Extract composables, reduce 835→200 LOC~~ | ~~24-32h~~ | ✅ **DONE** (732 LOC, 8.0/10) |
+| **TASK-192: Calendar View** | Fix memory leaks, consolidate overlap calc | 16-24h | 📋 PLANNED |
+| **Week 4: Type Safety** | Store interfaces, remove `as any`, fix Settings | 12-16h | 📋 PLANNED |
+
+---
 
 ### ~~TASK-148~~: Supabase Debugger Skill (✅ DONE)
 **Priority**: P2-MEDIUM
@@ -429,11 +669,6 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 ### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
 **Priority**: P2-MEDIUM
 **Goal**: Clean up the store layer and begin UI decomposition.
-- [x] Delete dead code: `src/stores/taskCanvas.ts`.
-- [x] Clean up `src/stores/canvas.ts` (remove stubs, consolidate).
-- [ ] Extract UI components: `CanvasToolbar.vue`, `CanvasControls.vue`.
-- [ ] Move any remaining valid logic from `taskCanvas.ts` to `canvas.ts` before deletion.
-
 ### TASK-137: Refactor CanvasView.vue Phase 1 (✅ DONE)
 **Priority**: P1-HIGH
 **Goal**: Reduce technical debt in the massive `CanvasView.vue` file by strictly extracting logic into composables without touching the critical Vue Flow template structure.
@@ -838,6 +1073,26 @@ Despite 9 separate fixes, the issue persists because we built ~1200 lines of cus
 4. Persist only `parentId` to database, let sync restore relationship
 
 **SOP**: See `docs/sop/active/SOP-VUE-FLOW-PARENT-CHILD.md`
+
+---
+
+### TASK-179: Refactor TaskEditModal.vue (Planned)
+**Priority**: P2-MEDIUM
+**Status**: PLANNING
+**Goal**: Reduce file size (currently ~1800 lines) by extracting sub-components and logic.
+
+### ~~TASK-178~~: Refactor CanvasView.vue (✅ DONE)
+**Priority**: P2-MEDIUM
+**Created**: January 10, 2026
+**Completed**: January 10, 2026
+
+**Problem**: `CanvasView.vue` was 3400+ lines (112KB), acting as a "God Component" managing too much state.
+
+**Solution**:
+1. Extracted `useCanvasModals` and `useCanvasContextMenus` for global UI state.
+2. Refactored `CanvasModals.vue` and `CanvasContextMenus.vue` to use these composables directly.
+3. Updated `useCanvasActions` to use global state, removing prop drilling.
+4. Preserved all core Vue Flow integration logic.
 
 ---
 

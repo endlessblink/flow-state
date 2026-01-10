@@ -1,0 +1,559 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Legacy Tech Remover Configuration",
+  "description": "Configuration schema for the Legacy Tech Remover skill",
+  "type": "object",
+  "properties": {
+    "detection": {
+      "type": "object",
+      "description": "Legacy technology detection settings",
+      "properties": {
+        "min_years_untouched": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 2,
+          "description": "Minimum number of years a file/folder must be untouched to be considered legacy"
+        },
+        "safe_folder_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "^src/legacy/",
+            "^old/",
+            "^bak/",
+            "^deprecated/",
+            "^v[0-9]+/"
+          ],
+          "description": "Regex patterns for folders that are likely legacy"
+        },
+        "protected_packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "core-js",
+            "typescript",
+            "react",
+            "vue",
+            "angular"
+          ],
+          "description": "Packages that should never be flagged for removal"
+        },
+        "excluded_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "node_modules",
+            ".git",
+            "dist",
+            "build",
+            "coverage",
+            ".tmp",
+            "cache"
+          ],
+          "description": "Paths to exclude from scanning"
+        },
+        "scan_file_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".py",
+            ".java",
+            ".go",
+            ".rs",
+            ".php",
+            ".rb",
+            ".md",
+            ".txt"
+          ],
+          "description": "File extensions to scan for legacy markers"
+        },
+        "package_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "package.json",
+            "requirements.txt",
+            "pom.xml",
+            "build.gradle",
+            "Gemfile",
+            "Cargo.toml",
+            "composer.json"
+          ],
+          "description": "Package manager files to scan for deprecated dependencies"
+        }
+      }
+    },
+    "risk_thresholds": {
+      "type": "object",
+      "description": "Risk assessment thresholds",
+      "properties": {
+        "safe_removal": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.2,
+          "description": "Risk score threshold below which removal is considered safe"
+        },
+        "caution_zone": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.6,
+          "description": "Risk score threshold above which caution is advised"
+        },
+        "risky_removal": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.8,
+          "description": "Risk score threshold above which removal is considered risky"
+        }
+      },
+      "required": ["safe_removal", "caution_zone", "risky_removal"]
+    },
+    "execution": {
+      "type": "object",
+      "description": "Execution settings",
+      "properties": {
+        "default_mode": {
+          "type": "string",
+          "enum": ["dry_run", "safe_only", "batch_execution", "manual_review"],
+          "default": "dry_run",
+          "description": "Default execution mode"
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5,
+          "description": "Number of items to process in each batch"
+        },
+        "validate_after_batch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to run validation after each batch"
+        },
+        "backup_before_execution": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create backup before execution"
+        },
+        "max_execution_time": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "default": 300,
+          "description": "Maximum execution time in seconds"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "Validation settings",
+      "properties": {
+        "test_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "npm test",
+            "python -m pytest",
+            "cargo test",
+            "go test ./..."
+          ],
+          "description": "Commands to run for testing validation"
+        },
+        "build_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "npm run build",
+            "mvn compile",
+            "gradle build",
+            "cargo build"
+          ],
+          "description": "Commands to run for build validation"
+        },
+        "lint_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "npm run lint",
+            "eslint src/",
+            "pylint src/",
+            "golint ./..."
+          ],
+          "description": "Commands to run for linting validation"
+        },
+        "max_validation_time": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 1800,
+          "default": 300,
+          "description": "Maximum validation time per step in seconds"
+        },
+        "required_validations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["tests", "build", "lint", "performance"]
+          },
+          "default": ["tests", "build"],
+          "description": "Required validation steps"
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "description": "Git integration settings",
+      "properties": {
+        "auto_commit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to automatically commit changes"
+        },
+        "commit_prefix": {
+          "type": "string",
+          "default": "[legacy-removal]",
+          "description": "Prefix for commit messages"
+        },
+        "create_backup_branch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create backup branch before execution"
+        },
+        "push_commits": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to push commits to remote repository"
+        },
+        "create_pull_request": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create pull request for changes"
+        },
+        "branch_name_pattern": {
+          "type": "string",
+          "default": "legacy-removal-{date}-{time}",
+          "description": "Pattern for branch naming (supports {date}, {time} placeholders)"
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "description": "Claude Code skills integration settings",
+      "properties": {
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 300,
+          "default": 60,
+          "description": "Timeout for skill execution in seconds"
+        },
+        "retry_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 3,
+          "description": "Number of retry attempts for failed skill executions"
+        },
+        "skill_mappings": {
+          "type": "object",
+          "description": "Mapping of action types to Claude Code skills",
+          "properties": {
+            "library_removal": {
+              "type": "string",
+              "default": "/skill-remove-library",
+              "description": "Skill for library removal"
+            },
+            "folder_removal": {
+              "type": "string",
+              "default": "/skill-code-folder-remove",
+              "description": "Skill for folder removal"
+            },
+            "config_cleanup": {
+              "type": "string",
+              "default": "/skill-config-cleanup",
+              "description": "Skill for configuration cleanup"
+            },
+            "code_review": {
+              "type": "string",
+              "default": "/skill-request-code-review",
+              "description": "Skill for code review"
+            },
+            "migration_assist": {
+              "type": "string",
+              "default": "/skill-migration-assist",
+              "description": "Skill for migration assistance"
+            }
+          }
+        }
+      }
+    },
+    "documentation": {
+      "type": "object",
+      "description": "Documentation update settings",
+      "properties": {
+        "auto_update": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to automatically update documentation"
+        },
+        "backup_docs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to backup original documentation files"
+        },
+        "update_readme": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to update README.md"
+        },
+        "update_api_docs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to update API documentation"
+        },
+        "create_migration_guide": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create migration guide"
+        },
+        "doc_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "docs/",
+            "documentation/",
+            "README.md",
+            "CONTRIBUTING.md",
+            "CHANGELOG.md"
+          ],
+          "description": "Documentation paths to scan for updates"
+        },
+        "reference_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "install",
+            "setup",
+            "getting-started",
+            "quickstart",
+            "api-reference",
+            "examples"
+          ],
+          "description": "Documentation sections that may reference removed components"
+        }
+      }
+    },
+    "communication": {
+      "type": "object",
+      "description": "Team communication settings",
+      "properties": {
+        "auto_pr": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to automatically create pull request"
+        },
+        "team_announcement": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to send team announcement"
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["slack", "email", "github", "confluence", "teams"]
+          },
+          "default": ["slack", "github"],
+          "description": "Communication channels to use"
+        },
+        "notification_level": {
+          "type": "string",
+          "enum": ["all_changes", "important_changes", "only_failures"],
+          "default": "important_changes",
+          "description": "Level of notifications to send"
+        },
+        "stakeholders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "description": "List of stakeholder email addresses"
+        },
+        "slack_webhook_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Slack webhook URL for notifications"
+        }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "description": "Migration guide settings",
+      "properties": {
+        "create_guide": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create migration guide"
+        },
+        "include_examples": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include code examples in migration guide"
+        },
+        "include_rollbacks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include rollback procedures in migration guide"
+        },
+        "timeline_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 30,
+          "description": "Migration timeline in days"
+        },
+        "priority_components": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Components that should be prioritized in migration"
+        }
+      }
+    },
+    "reporting": {
+      "type": "object",
+      "description": "Reporting settings",
+      "properties": {
+        "output_format": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["json", "csv", "markdown", "html"]
+          },
+          "default": ["json", "csv", "markdown"],
+          "description": "Output formats for reports"
+        },
+        "include_metrics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include performance metrics in reports"
+        },
+        "include_confidence_scores": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include confidence scores in reports"
+        },
+        "generate_charts": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to generate charts for reports"
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "description": "Safety and rollback settings",
+      "properties": {
+        "require_confirmation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to require confirmation before execution"
+        },
+        "max_risk_level": {
+          "type": "string",
+          "enum": ["safe", "caution", "risky", "any"],
+          "default": "caution",
+          "description": "Maximum risk level allowed for automatic execution"
+        },
+        "emergency_stop": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to enable emergency stop functionality"
+        },
+        "rollback_timeout": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 300,
+          "default": 60,
+          "description": "Rollback timeout in seconds"
+        }
+      }
+    },
+    "advanced": {
+      "type": "object",
+      "description": "Advanced configuration options",
+      "properties": {
+        "parallel_execution": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable parallel execution (experimental)"
+        },
+        "max_parallel_workers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3,
+          "description": "Maximum number of parallel workers"
+        },
+        "cache_results": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to cache analysis results"
+        },
+        "cache_ttl_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24,
+          "description": "Cache time-to-live in hours"
+        },
+        "debug_mode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable debug mode with verbose logging"
+        },
+        "experimental_features": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable experimental features"
+        }
+      }
+    }
+  },
+  "required": [
+    "detection",
+    "risk_thresholds",
+    "execution",
+    "validation"
+  ],
+  "additionalProperties": false
+}

@@ -1,465 +1,94 @@
 <template>
   <div class="calendar-inbox-panel" :class="{ collapsed: isCollapsed }">
     <!-- Header -->
-    <div class="inbox-header">
-      <button
-        class="collapse-btn"
-        :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'"
-        @click="isCollapsed = !isCollapsed"
-      >
-        <ChevronLeft v-if="!isCollapsed" :size="16" />
-        <ChevronRight v-else :size="16" />
-      </button>
-      <h3 v-if="!isCollapsed" class="inbox-title">
-        Inbox
-      </h3>
+    <CalendarInboxHeader
+      v-model:isCollapsed="isCollapsed"
+      :inbox-count="inboxTasks.length"
+      v-model:showTodayOnly="showTodayOnly"
+      :today-count="todayCount"
+      :has-active-filters="hasActiveFilters"
+      :base-count="baseInboxTasks.length"
+      :canvas-group-options="canvasGroupOptions"
+      v-model:selectedCanvasGroups="selectedCanvasGroups"
+      v-model:showAdvancedFilters="showAdvancedFilters"
+      v-model:unscheduledOnly="unscheduledOnly"
+      v-model:selectedPriority="selectedPriority"
+      v-model:selectedProject="selectedProject"
+      v-model:selectedDuration="selectedDuration"
+      :hide-done-tasks="hideCalendarDoneTasks"
+      :base-tasks="baseInboxTasks"
+      :root-projects="taskStore.rootProjects"
+      @toggleHideDoneTasks="toggleHideDoneTasks"
+      @clearAllFilters="clearAllFilters"
+    />
 
-      <!-- Expanded state count -->
-      <NBadge v-if="!isCollapsed" :value="inboxTasks.length" type="info" />
-
-      <!-- Quick Today Filter (BUG-046) -->
-      <button
-        v-if="!isCollapsed"
-        class="today-quick-filter"
-        :class="{ active: showTodayOnly }"
-        :title="`Show tasks due today (${todayCount})`"
-        @click="showTodayOnly = !showTodayOnly"
-      >
-        <CalendarDays :size="14" />
-        <span>Today</span>
-        <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
-      </button>
-    </div>
-
-    <!-- Collapsed state task count indicators positioned under arrow -->
-    <div v-if="isCollapsed" class="collapsed-badges-container">
-      <!-- Show dual count when filter is active, single count when no filter -->
-      <BaseBadge
-        v-if="!hasActiveFilters"
-        variant="count"
-        size="sm"
-        rounded
-      >
-        {{ baseInboxTasks.length }}
-      </BaseBadge>
-      <div v-else class="dual-badges">
-        <BaseBadge
-          variant="count"
-          size="sm"
-          rounded
-          class="total-count"
-        >
-          {{ baseInboxTasks.length }}
-        </BaseBadge>
-        <BaseBadge
-          variant="info"
-          size="sm"
-          rounded
-          class="filtered-count"
-        >
-          {{ inboxTasks.length }}
-        </BaseBadge>
-      </div>
-    </div>
-
-    <!-- TASK-106: Canvas Group Filter (Primary - reduces cognitive overload) -->
-    <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
-      <CustomSelect
-        v-model="selectedCanvasGroups"
-        :options="canvasGroupOptions"
-        placeholder="Show from: All Tasks"
+    <!-- Quick Add & Brain Dump -->
+    <div v-if="!isCollapsed">
+      <CalendarInboxInput
+        v-model="newTaskTitle"
+        @add-task="addTask"
       />
     </div>
 
-    <!-- TASK-106: Collapsible Advanced Filters -->
-    <div v-if="!isCollapsed" class="advanced-filters-section">
-      <button
-        class="toggle-filters-btn"
-        :class="{ active: showAdvancedFilters }"
-        @click="showAdvancedFilters = !showAdvancedFilters"
-      >
-        <Filter :size="14" />
-        <span>{{ showAdvancedFilters ? 'Hide filters' : 'More filters' }}</span>
-        <ChevronDown :size="14" class="toggle-icon" :class="{ rotated: showAdvancedFilters }" />
-      </button>
-
-      <!-- Additional Filters (TASK-018: Unscheduled, Priority, Project) -->
-      <!-- TASK-076: Added hide-done-tasks for calendar-specific done filter -->
-      <Transition name="slide-down">
-        <InboxFilters
-          v-if="showAdvancedFilters"
-          v-model:unscheduled-only="unscheduledOnly"
-          v-model:selected-priority="selectedPriority"
-          v-model:selected-project="selectedProject"
-          v-model:selected-duration="selectedDuration"
-          :hide-done-tasks="hideCalendarDoneTasks"
-          :tasks="baseInboxTasks"
-          :projects="taskStore.rootProjects"
-          @update:hide-done-tasks="toggleHideDoneTasks"
-          @clear-all="clearAllFilters"
-        />
-      </Transition>
-    </div>
-
-    <!-- Quick Add -->
-    <div v-if="!isCollapsed" class="quick-add">
-      <input
-        v-model="newTaskTitle"
-        :dir="quickAddDirection"
-        placeholder="Quick add task (Enter)..."
-        class="quick-add-input"
-        @keydown.enter="addTask"
-      >
-    </div>
-
-    <!-- Brain Dump Mode (optional) -->
-    <div v-if="!isCollapsed" class="brain-dump-section">
-      <NButton
-        secondary
-        block
-        size="small"
-        class="brain-dump-toggle"
-        @click="brainDumpMode = !brainDumpMode"
-      >
-        {{ brainDumpMode ? 'Quick Add Mode' : 'Brain Dump Mode' }}
-      </NButton>
-
-      <!-- Brain Dump Textarea -->
-      <div v-if="brainDumpMode" class="brain-dump-container">
-        <textarea
-          v-model="brainDumpText"
-          :dir="textDirection"
-          class="brain-dump-textarea"
-          rows="5"
-          placeholder="Paste or type tasks (one per line)..."
-        />
-        <NButton
-          type="primary"
-          block
-          :disabled="parsedTaskCount === 0"
-          @click="processBrainDump"
-        >
-          Add {{ parsedTaskCount }} Tasks
-        </NButton>
-      </div>
-    </div>
-
-    <!-- Inbox Task List -->
-    <div v-if="!isCollapsed" class="inbox-tasks">
-      <!-- Empty State -->
-      <div v-if="inboxTasks.length === 0" class="empty-inbox">
-        <div class="empty-icon">
-          {{ selectedCanvasGroups.size > 0 ? '🎯' : '📋' }}
-        </div>
-        <p class="empty-text">
-          {{ selectedCanvasGroups.size > 0
-            ? 'No tasks in this group. Drag tasks to these groups on the Canvas.'
-            : 'No tasks in inbox'
-          }}
-        </p>
-      </div>
-
-      <!-- Task Cards -->
-      <div
-        v-for="task in inboxTasks"
-        :key="task.id"
-        class="task-card"
-        draggable="true"
-        tabindex="0"
-        @dragstart="onDragStart($event, task)"
-        @dragend="onDragEnd"
-        @click="handleTaskClick($event, task)"
-        @dblclick="handleTaskDoubleClick(task)"
-        @contextmenu.prevent="handleTaskContextMenu($event, task)"
-        @keydown="handleTaskKeydown($event, task)"
-      >
-        <!-- Priority Stripe (top) -->
-        <div class="priority-stripe" :class="`priority-${task.priority}`" />
-
-        <!-- Timer Active Badge -->
-        <div v-if="isTimerActive(task.id)" class="timer-indicator" title="Timer Active">
-          <Timer :size="12" />
-        </div>
-
-        <!-- Task Content -->
-        <div class="task-content--calendar-inbox">
-          <div class="task-title" dir="auto">
-            {{ task.title }}
-          </div>
-
-          <!-- Metadata Badges -->
-          <div class="task-metadata">
-            <!-- Project Badge -->
-            <span v-if="task.projectId" class="metadata-badge project-badge">
-              <ProjectEmojiIcon
-                :emoji="projectVisual(task.projectId).content"
-                size="xs"
-              />
-            </span>
-
-            <!-- Priority Tag -->
-            <NTag
-              :type="task.priority === 'high' ? 'error' : task.priority === 'medium' ? 'warning' : 'info'"
-              size="small"
-              round
-              class="priority-badge"
-            >
-              {{ task.priority }}
-            </NTag>
-
-            <!-- Due Date Badge -->
-            <span
-              v-if="task.dueDate"
-              class="metadata-badge due-date-badge"
-              :class="getDueBadgeClass(task.dueDate)"
-            >
-              <Calendar :size="12" />
-              {{ formatDueDateLabel(task.dueDate) }}
-            </span>
-
-            <!-- Duration Badge -->
-            <span v-if="task.estimatedDuration" class="metadata-badge duration-badge">
-              <Clock :size="12" />
-              {{ task.estimatedDuration }}m
-            </span>
-
-            <!-- Status Indicator -->
-            <span class="metadata-badge status-badge" :class="`status-${task.status}`">
-              {{ statusEmoji(task.status) }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Quick Actions (hover) -->
-        <div class="task-actions">
-          <button
-            class="action-btn"
-            :title="`Start timer for ${task.title}`"
-            @click.stop="handleStartTimer(task)"
-          >
-            <Play :size="12" />
-          </button>
-          <button
-            class="action-btn"
-            :title="`Edit ${task.title}`"
-            @click.stop="handleEditTask(task)"
-          >
-            <Edit2 :size="12" />
-          </button>
-        </div>
-      </div>
+    <!-- Task List -->
+    <div v-if="!isCollapsed" class="inbox-content">
+      <CalendarInboxList
+        :tasks="inboxTasks"
+        :has-group-filter="selectedCanvasGroups.size > 0"
+        @task-dragstart="onDragStart"
+        @task-dragend="onDragEnd"
+        @task-click="handleTaskClick"
+        @task-dblclick="handleTaskDoubleClick"
+        @task-contextmenu="handleTaskContextMenu"
+        @task-keydown="handleTaskKeydown"
+        @task-start-timer="handleStartTimer"
+        @task-edit="handleEditTask"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
-import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
-import {
-  ChevronLeft, ChevronRight, Play, Edit2, Plus, Timer, Calendar, Clock, CalendarDays, Filter, ChevronDown
-} from 'lucide-vue-next'
-import { NButton, NBadge, NTag } from 'naive-ui'
-import BaseBadge from '@/components/base/BaseBadge.vue'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import InboxFilters from '@/components/canvas/InboxFilters.vue'
-import CustomSelect from '@/components/common/CustomSelect.vue'
-import { useBrainDump } from '@/composables/useBrainDump'
-// TASK-144: Use centralized duration categories
-import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
+import { useCalendarInboxState } from '@/composables/inbox/useCalendarInboxState'
+
+// Sub-components
+import CalendarInboxHeader from './calendar/CalendarInboxHeader.vue'
+import CalendarInboxInput from './calendar/CalendarInboxInput.vue'
+import CalendarInboxList from './calendar/CalendarInboxList.vue'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
-const { updateTaskWithUndo, createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
-const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
+const { createTaskWithUndo, deleteTaskWithUndo } = useUnifiedUndoRedo()
 
-// TASK-076: Get calendar-specific hide done filter from store
-const hideCalendarDoneTasks = computed(() => taskStore.hideCalendarDoneTasks)
+// State Composable
+const {
+  isCollapsed,
+  showTodayOnly,
+  showAdvancedFilters,
+  unscheduledOnly,
+  selectedPriority,
+  selectedProject,
+  selectedDuration,
+  selectedCanvasGroups,
+  hideCalendarDoneTasks,
+  canvasGroupOptions,
+  baseInboxTasks,
+  inboxTasks,
+  todayCount,
+  hasActiveFilters,
+  toggleHideDoneTasks,
+  clearAllFilters
+} = useCalendarInboxState()
 
-// TASK-076: Toggle function for calendar view
-const toggleHideDoneTasks = () => {
-  taskStore.toggleCalendarDoneTasks()
-}
-
-// State
-const isCollapsed = ref(false)
+// Local State
 const newTaskTitle = ref('')
 const draggingTaskId = ref<string | null>(null)
 
-const {
-  brainDumpMode,
-  brainDumpText,
-  textDirection,
-  parsedTaskCount,
-  processBrainDump
-} = useBrainDump()
-
-// RTL detection for quick add
-const quickAddDirection = computed(() => {
-  if (!newTaskTitle.value.trim()) return 'ltr'
-  const firstChar = newTaskTitle.value.trim()[0]
-  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
-  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
-})
-
-// Filter state
-const unscheduledOnly = ref(false)
-const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
-const selectedProject = ref<string | null>(null)
-const selectedDuration = ref<DurationCategory | null>(null)
-const showTodayOnly = ref(false)
-
-// TASK-106: Canvas group filter (primary filter for reducing overload)
-const selectedCanvasGroups = ref<Set<string>>(new Set())
-const showAdvancedFilters = ref(false)
-
-// TASK-106: Options for canvas group dropdown
-const canvasGroupOptions = computed(() => {
-  const options = [
-    { label: 'All Tasks', value: '' }
-  ]
-
-  // Add canvas groups with task counts
-  groupsWithCounts.value.forEach(group => {
-    options.push({
-      label: `${group.name} (${group.taskCount})`,
-      value: group.id
-    })
-  })
-
-  return options
-})
-
-// Get today's date string for filtering
-const getTodayStr = () => new Date().toISOString().split('T')[0]
-
-// Computed
-const hasActiveFilters = computed(() => {
-  return showTodayOnly.value ||
-    unscheduledOnly.value ||
-    selectedPriority.value !== null ||
-    selectedProject.value !== null ||
-    selectedDuration.value !== null ||
-    (selectedCanvasGroups.value.size > 0)
-})
-
-// Count tasks due today (BUG-046)
-const todayCount = computed(() => {
-  const todayStr = getTodayStr()
-  return baseInboxTasks.value.filter(task => task.dueDate === todayStr).length
-})
-
-// Check if task is scheduled on calendar (has instances with dates)
-const isScheduledOnCalendar = (task: Task): boolean => {
-  if (!task.instances || task.instances.length === 0) return false
-  return task.instances.some(inst => inst.scheduledDate)
-}
-
-const baseInboxTasks = computed(() => {
-  // Calendar inbox base: Show tasks NOT yet scheduled on the calendar grid
-  // BUG-FIX: Use filteredTasks instead of tasks to respect _soft_deleted filter
-  return taskStore.filteredTasks.filter(task => {
-    // TASK-076: Use store filter instead of hardcoding done task removal
-    if (hideCalendarDoneTasks.value && task.status === 'done') return false
-    return !isScheduledOnCalendar(task)
-  })
-})
-
-const inboxTasks = computed(() => {
-  let tasks = baseInboxTasks.value
-
-  // TASK-106: Apply canvas group filter FIRST (primary filter)
-  if (selectedCanvasGroups.value.size > 0) {
-    const groupIds = Array.from(selectedCanvasGroups.value)
-    tasks = tasks.filter(task =>
-      groupIds.some(groupId => filterTasksByGroup([task], groupId).length > 0)
-    )
-  }
-
-  // Apply Today filter (BUG-046)
-  if (showTodayOnly.value) {
-    const todayStr = getTodayStr()
-    tasks = tasks.filter(task => task.dueDate === todayStr)
-  }
-
-  // Apply advanced filters (only when showAdvancedFilters is true or filter is active)
-  if (unscheduledOnly.value) {
-    tasks = tasks.filter(task => !isScheduledOnCalendar(task))
-  }
-
-  if (selectedPriority.value !== null) {
-    tasks = tasks.filter(task => task.priority === selectedPriority.value)
-  }
-
-  if (selectedProject.value !== null) {
-    if (selectedProject.value === 'none') {
-      tasks = tasks.filter(task => !task.projectId)
-    } else {
-      tasks = tasks.filter(task => task.projectId === selectedProject.value)
-    }
-  }
-
-  // TASK-144: Use centralized duration matching
-  if (selectedDuration.value !== null) {
-    tasks = tasks.filter(task =>
-      matchesDurationCategory(task.estimatedDuration, selectedDuration.value!)
-    )
-  }
-
-  return tasks
-})
-
-const projectVisual = computed(() => (projectId: string) =>
-  taskStore.getProjectVisual(projectId)
-)
-
-const isTimerActive = computed(() => (taskId: string) => {
-  return timerStore.isTimerActive && timerStore.currentTaskId === taskId
-})
-
-const statusEmoji = (status: string) => {
-  const emojis: Record<string, string> = {
-    planned: '📝',
-    in_progress: '🎬',
-    done: '✅',
-    backlog: '📦',
-    on_hold: '⏸️'
-  }
-  return emojis[status] || '❓'
-}
-
-const getDueBadgeClass = (dueDate: string) => {
-  const today = new Date().toISOString().split('T')[0]
-  if (dueDate < today) return 'due-badge-overdue'
-  if (dueDate === today) return 'due-badge-today'
-  return 'due-badge-future'
-}
-
-const formatDueDateLabel = (dueDate: string) => {
-  if (!dueDate) return ''
-  // Handle ISO strings (e.g., 2026-01-06T00:00:00+00:00) by taking just the date part for comparison
-  const dateStr = dueDate.split('T')[0]
-  const today = new Date().toISOString().split('T')[0]
-  
-  // Format for display (e.g., "Jan 6")
-  const dateObj = new Date(dueDate)
-  const formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dateObj)
-
-  if (dateStr < today) return 'Overdue ' + formattedDate
-  if (dateStr === today) return 'Today'
-  return formattedDate
-}
-
-// Methods
-const clearAllFilters = () => {
-  unscheduledOnly.value = false
-  selectedPriority.value = null
-  selectedProject.value = null
-  selectedDuration.value = null
-  selectedCanvasGroups.value = new Set()  // TASK-106
-}
+// --- Actions (kept inline for simplicity as they are mostly wrappers) ---
 
 const addTask = () => {
   if (!newTaskTitle.value.trim()) return
@@ -471,37 +100,6 @@ const addTask = () => {
   })
 
   newTaskTitle.value = ''
-}
-
-// processBrainDump handled by useBrainDump()
-
-const handleTaskClick = (_event: MouseEvent, _task: Task) => {
-  if (draggingTaskId.value) return
-}
-
-const handleTaskDoubleClick = (task: Task) => {
-  window.dispatchEvent(new CustomEvent('open-task-edit', {
-    detail: { taskId: task.id }
-  }))
-}
-
-const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
-  event.preventDefault()
-  event.stopPropagation()
-
-  window.dispatchEvent(new CustomEvent('task-context-menu', {
-    detail: { event, task }
-  }))
-}
-
-// ISSUE-010 FIX: Handle Delete/Backspace key to delete task from calendar inbox
-const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
-  if (event.key === 'Delete' || event.key === 'Backspace') {
-    event.preventDefault()
-    event.stopPropagation()
-    console.log('🗑️ Delete key pressed on calendar inbox task:', task.id)
-    deleteTaskWithUndo(task.id)
-  }
 }
 
 const onDragStart = (e: DragEvent, task: Task) => {
@@ -522,6 +120,34 @@ const onDragEnd = () => {
   draggingTaskId.value = null
 }
 
+const handleTaskClick = (_event: MouseEvent, _task: Task) => {
+  if (draggingTaskId.value) return
+}
+
+const handleTaskDoubleClick = (task: Task) => {
+  window.dispatchEvent(new CustomEvent('open-task-edit', {
+    detail: { taskId: task.id }
+  }))
+}
+
+const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
+  event.preventDefault()
+  event.stopPropagation()
+
+  window.dispatchEvent(new CustomEvent('task-context-menu', {
+    detail: { event, task }
+  }))
+}
+
+const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    event.stopPropagation()
+    console.log('🗑️ Delete key pressed on calendar inbox task:', task.id)
+    deleteTaskWithUndo(task.id)
+  }
+}
+
 const handleStartTimer = (task: Task) => {
   timerStore.startTimer(task.id)
 }
@@ -530,10 +156,6 @@ const handleEditTask = (task: Task) => {
   window.dispatchEvent(new CustomEvent('open-task-edit', {
     detail: { taskId: task.id }
   }))
-}
-
-const handleQuickAddTask = () => {
-  window.dispatchEvent(new CustomEvent('open-quick-task-create'))
 }
 </script>
 
@@ -562,370 +184,10 @@ const handleQuickAddTask = () => {
   padding: var(--space-4) var(--space-2);
 }
 
-.inbox-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-2);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-/* Today Quick Filter (BUG-046) */
-.today-quick-filter {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-light);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
-  white-space: nowrap;
-}
-
-.today-quick-filter:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
-}
-
-.today-quick-filter.active {
-  background: var(--brand-bg-subtle);
-  border-color: var(--brand-border-subtle);
-  color: var(--brand-primary);
-}
-
-.today-quick-filter .count-badge {
-  background: var(--brand-primary);
-  color: white;
-  font-size: 10px;
-  padding: 0 4px;
-  border-radius: var(--radius-full);
-  min-width: 16px;
-  text-align: center;
-}
-
-.collapse-btn {
-  background: transparent;
-  border: 1px solid var(--border-medium);
-  color: var(--text-muted);
-  padding: var(--space-1);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.collapse-btn:hover {
-  background: var(--state-hover-bg);
-  color: var(--text-primary);
-}
-
-.inbox-title {
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
+.inbox-content {
   flex: 1;
-}
-
-/* Naive UI components handle their own basic layout, 
-   but we can add spacing as needed */
-.brain-dump-section {
-  padding: 0 var(--space-1);
-}
-
-.collapsed-badges-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-top: var(--space-2);
-}
-
-.dual-badges {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.quick-add {
-  padding: 0;
-}
-
-.quick-add-input {
-  width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  unicode-bidi: plaintext;
-  text-align: start;
-}
-
-.brain-dump-toggle {
-  margin-bottom: var(--space-2);
-}
-
-.brain-dump-toggle:hover {
-  background: var(--state-hover-bg);
-  color: var(--text-secondary);
-}
-
-.brain-dump-container {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.brain-dump-textarea {
-  width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  resize: vertical;
-  margin-bottom: var(--space-2);
-  unicode-bidi: plaintext;
-  text-align: start;
-}
-
-.inbox-tasks {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.task-card {
-  position: relative;
-  padding: var(--space-3);
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  cursor: grab;
-  transition: all var(--duration-fast) ease;
-}
-
-.task-card:hover {
-  background: var(--state-hover-bg);
-  transform: translateY(-1px);
-}
-
-.priority-stripe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  height: 100%;
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-}
-
-.priority-high { background: var(--color-priority-high); }
-.priority-medium { background: var(--color-priority-medium); }
-.priority-low { background: var(--color-priority-low); }
-
-.task-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--space-1);
-}
-
-.task-metadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  align-items: center;
-}
-
-.metadata-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: var(--radius-full);
-  background: var(--glass-bg-medium);
-  color: var(--text-secondary);
-  border: 1px solid var(--glass-border);
-}
-
-.priority-badge {
-  font-weight: var(--font-bold);
-  text-transform: uppercase;
-}
-
-.due-badge-overdue { color: var(--status-error); }
-.due-badge-today { color: var(--status-warning); }
-
-.status-badge { opacity: 0.8; }
-
-.task-actions {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  display: flex;
-  gap: var(--space-1);
-  opacity: 0;
-  transition: opacity var(--duration-fast);
-}
-
-.task-card:hover .task-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  background: var(--glass-bg-heavy);
-  border: none;
-  color: var(--text-secondary);
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.action-btn:hover {
-  color: var(--brand-primary);
-}
-
-.quick-add-task {
-  margin-top: var(--space-2);
-}
-
-.empty-inbox {
-  text-align: center;
-  padding: var(--space-4);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-.empty-icon {
-  font-size: 24px;
-  margin-bottom: var(--space-2);
-  opacity: 0.5;
-}
-
-/* Custom scrollbar for inbox tasks */
-.inbox-tasks::-webkit-scrollbar {
-  width: 6px;
-}
-
-.inbox-tasks::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.inbox-tasks::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
-  border-radius: var(--radius-md);
-}
-
-.inbox-tasks::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
-}
-
-/* TASK-106: Canvas Group Filter Styles */
-.canvas-group-filter {
-  margin-bottom: var(--space-2);
-}
-
-.canvas-group-filter :deep(.custom-select) {
-  width: 100%;
-}
-
-.canvas-group-filter :deep(.select-trigger) {
-  width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-}
-
-.canvas-group-filter :deep(.select-trigger:hover) {
-  border-color: var(--glass-border-hover);
-}
-
-/* TASK-106: Advanced Filters Toggle */
-.advanced-filters-section {
-  margin-bottom: var(--space-2);
-}
-
-.toggle-filters-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  width: 100%;
-  padding: var(--space-1) var(--space-2);
-  background: transparent;
-  border: 1px dashed var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.toggle-filters-btn:hover {
-  background: var(--glass-bg-soft);
-  border-color: var(--border-medium);
-  color: var(--text-secondary);
-}
-
-.toggle-filters-btn.active {
-  background: var(--glass-bg-light);
-  border-style: solid;
-  border-color: var(--glass-border);
-  color: var(--text-primary);
-}
-
-.toggle-filters-btn .toggle-icon {
-  margin-left: auto;
-  transition: transform var(--duration-fast);
-}
-
-.toggle-filters-btn .toggle-icon.rotated {
-  transform: rotate(180deg);
-}
-
-/* Slide down transition for filters */
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all var(--duration-normal) ease;
   overflow: hidden;
-}
-
-.slide-down-enter-from,
-.slide-down-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-top: 0;
-}
-
-.slide-down-enter-to,
-.slide-down-leave-from {
-  opacity: 1;
-  max-height: 300px;
-  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
 }
 </style>

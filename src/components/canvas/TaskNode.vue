@@ -21,76 +21,52 @@
     @click="handleClick"
     @contextmenu.prevent="handleContextMenu"
   >
-    <!-- Content wrapper - clips priority bar to rounded corners -->
+    <!-- Content wrapper -->
     <div class="task-node-content">
       <!-- Priority Badge -->
-      <div v-if="showPriority" class="priority-indicator" />
+      <TaskNodePriority v-if="showPriority" />
 
-      <!-- Timer Active Badge -->
-      <div v-if="isTimerActive" class="timer-indicator" title="Timer Active">
-        <Timer :size="14" />
-      </div>
+      <!-- Header (Title + Timer) -->
+      <TaskNodeHeader
+        v-if="!isLOD3"
+        :title="task?.title"
+        :is-timer-active="isTimerActive"
+        :alignment-classes="titleAlignmentClasses"
+      />
 
-      <!-- Title -->
-      <div v-if="!isLOD3" class="task-title" :class="titleAlignmentClasses">
-        {{ task?.title || 'Untitled Task' }}
-      </div>
-
-      <!-- Description (if available) - TASK-075: Markdown rendering -->
-      <div v-if="task?.description && !isLOD1" class="task-description" :class="titleAlignmentClasses">
-        <MarkdownRenderer
-          :content="task.description"
-          :class="{ 'expanded': isDescriptionExpanded || !isDescriptionLong }"
-          @checkbox-click="handleCheckboxClick"
-        />
-        <button
-          v-if="isDescriptionLong"
-          class="description-toggle"
-          :aria-expanded="isDescriptionExpanded"
-          aria-label="Show more description"
-          @click.stop="toggleDescriptionExpanded"
-        >
-          {{ isDescriptionExpanded ? 'Show less' : 'Show more' }}
-        </button>
-      </div>
+      <!-- Description -->
+      <TaskNodeDescription
+        v-if="task?.description && !isLOD1"
+        :description="task?.description"
+        :is-expanded="isDescriptionExpanded"
+        :is-long="isDescriptionLong(task?.description)"
+        :alignment-classes="titleAlignmentClasses"
+        @checkbox-click="handleCheckboxClick"
+        @toggle-expand="toggleDescriptionExpanded"
+      />
 
       <!-- Metadata -->
-      <div v-if="!isLOD2" class="task-metadata">
-        <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
-        <span v-if="task?.dueDate" class="due-date-badge" title="Due Date">
-          <Calendar :size="12" />
-          {{ formattedDueDate }}
-        </span>
-
-        <span v-if="showSchedule && hasSchedule" class="schedule-badge" title="Scheduled">
-          📅
-        </span>
-        <span
-          v-if="showDuration && task?.estimatedDuration"
-          class="duration-badge"
-          :class="durationBadgeClass"
-          :title="`Duration: ${formattedDuration}`"
-        >
-          <component :is="durationIcon" :size="12" />
-          {{ formattedDuration }}
-        </span>
-        <!-- Done Indicator Badge (BUG-045) - small badge next to duration -->
-        <span v-if="task?.status === 'done'" class="done-badge" title="Completed">
-          <Check :size="12" />
-          Done
-        </span>
-      </div>
+      <TaskNodeMeta
+        v-if="!isLOD2"
+        :show-status="showStatus"
+        :status-label="statusLabel"
+        :due-date="task?.dueDate"
+        :formatted-due-date="formattedDueDate"
+        :show-schedule="showSchedule"
+        :has-schedule="hasSchedule"
+        :show-duration="showDuration"
+        :duration="task?.estimatedDuration"
+        :duration-badge-class="durationBadgeClass"
+        :duration-icon="durationIcon"
+        :formatted-duration="formattedDuration"
+        :is-done="task?.status === 'done'"
+      />
     </div>
 
-    <!-- Selection Indicator - outside content wrapper so it's not clipped -->
-    <div v-if="isSelected" class="selection-indicator">
-      <div class="selection-corner top-left" />
-      <div class="selection-corner top-right" />
-      <div class="selection-corner bottom-left" />
-      <div class="selection-corner bottom-right" />
-    </div>
+    <!-- Selection Indicator -->
+    <TaskNodeSelection v-if="isSelected" />
 
-    <!-- Connection Handles - outside content wrapper so they're not clipped -->
+    <!-- Connection Handles (Vue Flow) -->
     <Handle
       v-if="isInVueFlowContext"
       type="target"
@@ -107,16 +83,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
-import { Position, useVueFlow } from '@vue-flow/core'
-import { Calendar, Timer, Zap, Clock, Check } from 'lucide-vue-next'
-import type { Task, TaskStatus } from '@/types/tasks'
-import { useTaskStore } from '@/stores/tasks'
-import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { useTimerStore } from '@/stores/timer'
-import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue'
+import { defineAsyncComponent, computed } from 'vue'
+import { Position } from '@vue-flow/core'
+import type { Task } from '@/types/tasks'
+import { useTaskNodeState } from '@/composables/canvas/node/useTaskNodeState'
+import { useTaskNodeActions } from '@/composables/canvas/node/useTaskNodeActions'
+
+// Sub-components
+import TaskNodeHeader from './node/TaskNodeHeader.vue'
+import TaskNodeDescription from './node/TaskNodeDescription.vue'
+import TaskNodeMeta from './node/TaskNodeMeta.vue'
+import TaskNodePriority from './node/TaskNodePriority.vue'
+import TaskNodeSelection from './node/TaskNodeSelection.vue'
+
+// Logic extracted directly from original component to preserve context check
+const isInVueFlowContext = computed(() => {
+  if (typeof window === 'undefined') return false
+  if (typeof document === 'undefined') return false
+  try {
+    const vueFlowContainer = document.querySelector('.vue-flow')
+    return !!vueFlowContainer
+  } catch (_error) {
+    return false
+  }
+})
+
+// Lazy load Handle component
+const Handle = defineAsyncComponent(() =>
+  import('@vue-flow/core').then(mod => mod.Handle)
+)
 
 const props = withDefaults(defineProps<Props>(), {
   isSelected: false,
@@ -146,233 +141,32 @@ interface Props {
   isDragging?: boolean
 }
 
-// Lazy load Handle component to prevent Vue Flow context errors in Storybook
-const Handle = defineAsyncComponent(() =>
-  import('@vue-flow/core').then(mod => mod.Handle)
-)
+// State Logic
+const {
+  isLOD1,
+  isLOD2,
+  isLOD3,
+  titleAlignmentClasses,
+  isNodeDragging,
+  isRecentlyCreated,
+  statusLabel,
+  hasSchedule,
+  formattedDueDate,
+  isTimerActive,
+  durationBadgeClass,
+  durationIcon,
+  formattedDuration
+} = useTaskNodeState(props)
 
-// Defensive validation - handled by template v-if
-
-
-const { startDrag: _startDrag, endDrag: _endDrag } = useDragAndDrop()
-const timerStore = useTimerStore()
-const taskStore = useTaskStore()
-
-// 🚀 LOD Support: Get zoom level from Vue Flow context
-// We use a safe wrapper to avoid breaking Storybook
-// BUG-151 FIX: Store vf reference for REACTIVE access to viewport
-// Previously: viewport.value = vf.viewport.value (ONE-TIME COPY - not reactive!)
-// This caused tasks to render empty on first refresh when zoom was initially 0
-let vfContext: ReturnType<typeof useVueFlow> | null = null
-try {
-  vfContext = useVueFlow()
-} catch (_e) {
-  // Not in Vue Flow context (e.g. Storybook)
-}
-
-// BUG-151 FIX: Access viewport.zoom REACTIVELY through the ref
-// This ensures LOD levels update when Vue Flow's viewport changes
-const zoom = computed(() => {
-  if (!vfContext) return 1
-  const z = vfContext.viewport.value?.zoom
-  // Guard against 0, undefined, NaN - default to 1 (full detail)
-  return (typeof z === 'number' && Number.isFinite(z) && z > 0) ? z : 1
-})
-
-// LOD Levels
-const isLOD1 = computed(() => zoom.value < 0.6) // Hide description
-const isLOD2 = computed(() => zoom.value < 0.4) // Hide metadata
-const isLOD3 = computed(() => zoom.value < 0.2) // Hide title, simple block
-
-// Hebrew text alignment support
-const { getAlignmentClasses } = useHebrewAlignment()
-const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task?.title || ''))
-
-// Track dragging state from props to prevent visual artifacts
-const isNodeDragging = computed(() => props.isDragging || false)
-
-// Track if task was recently created for animation feedback
-const isRecentlyCreated = ref(false)
-
-onMounted(() => {
-  if (props.task?.createdAt) {
-    const createdDate = new Date(props.task.createdAt)
-    const now = new Date()
-    const ageInSeconds = (now.getTime() - createdDate.getTime()) / 1000
-
-    // If task was created in the last 5 seconds, trigger the animation
-    if (ageInSeconds < 5) {
-      isRecentlyCreated.value = true
-      // Remove the class after the animation completes
-      setTimeout(() => {
-        isRecentlyCreated.value = false
-      }, 2500)
-    }
-  }
-})
-
-// Description expansion state
-const isDescriptionExpanded = ref(false)
-const DESCRIPTION_MAX_LENGTH = 100
-
-// Check if description is long enough for truncation
-const isDescriptionLong = computed(() => {
-  return props.task?.description && props.task.description.length > DESCRIPTION_MAX_LENGTH
-})
-
-// Toggle description expansion
-const toggleDescriptionExpanded = () => {
-  isDescriptionExpanded.value = !isDescriptionExpanded.value
-}
-
-// TASK-075: Checkbox interactivity logic
-const handleCheckboxClick = (clickedIndex: number) => {
-  const description = props.task?.description || ''
-  const checkboxPattern = /- \[([ x])\]/g
-  const matches = [...description.matchAll(checkboxPattern)]
-
-  if (clickedIndex >= 0 && clickedIndex < matches.length) {
-    let currentIndex = 0
-    const newDescription = description.replace(checkboxPattern, (match) => {
-      if (currentIndex === clickedIndex) {
-        currentIndex++
-        return match === '- [ ]' ? '- [x]' : '- [ ]'
-      }
-      currentIndex++
-      return match
-    })
-    taskStore.updateTask(props.task.id, { description: newDescription })
-  }
-}
-
-// Check if we're in a Vue Flow context (works in CanvasView, but not in Storybook)
-// We detect this by checking for the Vue Flow DOM structure instead of calling the hook
-const isInVueFlowContext = computed(() => {
-  // For Storybook or SSR, always return false
-  if (typeof window === 'undefined') return false
-  if (typeof document === 'undefined') return false
-
-  // Check if we're inside a Vue Flow container by looking for the DOM structure
-  // This is a safer approach than calling useVueFlow() which throws outside context
-  try {
-    const vueFlowContainer = document.querySelector('.vue-flow')
-    return !!vueFlowContainer
-  } catch (_error) {
-    return false
-  }
-})
-
-const statusLabel = computed(() => {
-  const labels: Record<TaskStatus, string> = {
-    planned: 'Plan',
-    in_progress: 'Active',
-    done: 'Done',
-    backlog: 'Back',
-    on_hold: 'Hold'
-  }
-  return labels[props.task.status] || 'Unknown'
-})
-
-const hasSchedule = computed(() =>
-  props.task?.instances && props.task.instances.length > 0
-)
-
-
-
-// TASK-091: Format due date for clean display
-const formattedDueDate = computed(() => {
-  if (!props.task?.dueDate) return ''
-  try {
-    const date = new Date(props.task.dueDate)
-    if (isNaN(date.getTime())) return props.task.dueDate
-    return new Intl.DateTimeFormat('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date)
-  } catch (_e) {
-    return props.task.dueDate
-  }
-})
-
-// Check if this task has an active timer
-const isTimerActive = computed(() => {
-  return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
-})
-
-
-
-// Event handlers
-const handleClick = (event: MouseEvent) => {
-  if (!props.task) return
-
-  // BUG-007: Only Ctrl/Cmd triggers multi-select toggle
-  // Shift is reserved for rubber-band drag selection (handled elsewhere)
-  const isMultiSelectClick = event.ctrlKey || event.metaKey
-
-  // Prevent edit modal when connecting to avoid conflicts
-  if (props.isConnecting) {
-    // Don't emit edit event when connecting, just handle selection
-    emit('select', props.task, isMultiSelectClick)
-    return
-  }
-
-  // Ctrl/Cmd+click toggles selection (for multi-select)
-  // CRITICAL: stopPropagation prevents Vue Flow from processing this click
-  // and overriding our custom multi-select behavior
-  if (isMultiSelectClick) {
-    event.stopPropagation()
-    emit('select', props.task, true)
-    return
-  }
-
-  // If task is already selected and clicking again (without modifiers), open edit modal
-  if (props.isSelected) {
-    emit('edit', props.task)
-  } else {
-    // Single click on unselected task - select it (replacing other selections)
-    emit('select', props.task, false)
-  }
-}
-
-const handleContextMenu = (event: MouseEvent) => {
-  if (!props.task) return
-
-  // Don't show context menu if we're currently dragging or connecting
-  if (isNodeDragging.value) {
-    event.preventDefault()
-    event.stopPropagation()
-    return
-  }
-
-  emit('contextMenu', event, props.task)
-}
-
-
-
-// Duration Badge Logic
-const durationBadgeClass = computed(() => {
-  const d = props.task?.estimatedDuration || 0
-  if (d <= 15) return 'duration-quick'
-  if (d <= 30) return 'duration-short'
-  if (d <= 60) return 'duration-medium'
-  return 'duration-long'
-})
-
-const durationIcon = computed(() => {
-  const d = props.task?.estimatedDuration || 0
-  if (d <= 15) return Zap
-  if (d <= 60) return Timer
-  return Clock
-})
-
-const formattedDuration = computed(() => {
-  const d = props.task?.estimatedDuration || 0
-  if (d < 60) return `${d}m`
-  const h = Math.floor(d / 60)
-  const m = d % 60
-  return m > 0 ? `${h}h ${m}m` : `${h}h`
-})
+// Actions Logic
+const {
+  isDescriptionExpanded,
+  isDescriptionLong,
+  toggleDescriptionExpanded,
+  handleCheckboxClick,
+  handleClick,
+  handleContextMenu
+} = useTaskNodeActions(props, emit)
 </script>
 
 <style scoped>
@@ -409,11 +203,6 @@ const formattedDuration = computed(() => {
   padding: var(--space-6);
   border-radius: var(--radius-xl);
   overflow: hidden;
-}
-
-.task-title,
-.task-metadata {
-  /* Removed 3D transforms to fix blurriness */
 }
 
 /* TASK-074 + TASK-079: High-visibility background layer */
@@ -593,110 +382,12 @@ body.dragging-active .task-node .vue-flow__handle {
   pointer-events: auto; /* Changed from none - allows double-click to work! */
 }
 
-/* Text elements should not interfere with drag */
-.task-node .task-title,
-.task-node .task-metadata {
-  pointer-events: none; /* Only block these specific text elements */
-}
-
-/* But these interactive badges need events */
-.task-node .priority-indicator,
-.task-node .status-badge,
-.task-node .due-date-badge,
-.task-node .schedule-badge,
-.task-node .duration-badge {
-  pointer-events: auto;
-}
-
 .task-node:hover::before {
   background: linear-gradient(
     135deg,
     var(--glass-border-soft) 0%,
     var(--glass-bg-heavy) 100%
   );
-}
-
-.priority-indicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  /* No border-radius needed - parent's overflow:hidden clips to rounded corners */
-  border-radius: 0;
-  z-index: 1;
-}
-
-.priority-high .priority-indicator {
-  background: var(--color-priority-high);
-  box-shadow: var(--priority-high-glow);
-}
-
-.priority-medium .priority-indicator {
-  background: var(--color-priority-medium);
-  box-shadow: var(--priority-medium-glow);
-}
-
-.priority-low .priority-indicator {
-  background: var(--color-priority-low);
-  box-shadow: var(--priority-low-glow);
-}
-
-/* Timer Active Styles */
-.timer-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  background: var(--brand-primary);
-  color: white;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5;
-  box-shadow: 0 2px 8px var(--brand-primary);
-  animation: timerPulse 2s ease-in-out infinite;
-  border: 2px solid white;
-  /* Optimize for legibility to encourage re-rasterization at scale */
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: subpixel-antialiased;
-  /* Fix timer icon centering */
-  padding: 0;
-  margin: 0;
-  line-height: 1;
-}
-
-.timer-indicator svg {
-  width: 14px !important;
-  height: 14px !important;
-  display: block;
-  margin: 0;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-/* Done Badge Styles (BUG-045) - small badge in metadata row */
-.done-badge {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.done-badge svg {
-  width: 12px !important;
-  height: 12px !important;
-  flex-shrink: 0;
 }
 
 .timer-active {
@@ -715,32 +406,6 @@ body.dragging-active .task-node .vue-flow__handle {
   );
 }
 
-.timer-active .priority-indicator {
-  background: var(--brand-primary) !important;
-  box-shadow: 0 0 12px var(--brand-primary) !important;
-  animation: priorityPulse 2s ease-in-out infinite;
-}
-
-@keyframes timerPulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px var(--brand-primary);
-  }
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px var(--blue-border-medium);
-  }
-}
-
-@keyframes priorityPulse {
-  0%, 100% {
-    box-shadow: var(--brand-primary-glow);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--brand-primary), 0 0 30px var(--blue-border-medium);
-  }
-}
-
 .status-done {
   /* Use grayscale filter instead of opacity to keep backdrop solid/opaque */
   filter: grayscale(0.6) brightness(0.85);
@@ -749,10 +414,6 @@ body.dragging-active .task-node .vue-flow__handle {
 .status-done::before {
   /* Slightly darker/muted backdrop for completed tasks */
   background: rgba(35, 38, 48, 0.70);
-}
-
-.status-done .task-title {
-  text-decoration: line-through;
 }
 
 .status-in-progress {
@@ -771,382 +432,5 @@ body.dragging-active .task-node .vue-flow__handle {
 
 .multi-select-mode:hover {
   transform: translateY(-2px) scale(1.02);
-}
-
-.selection-indicator {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  right: -8px;
-  bottom: -8px;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.selection-corner {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  background: var(--brand-primary);
-  border: 3px solid white;
-  border-radius: var(--radius-xs);
-  box-shadow: 0 2px 4px var(--shadow-md);
-}
-
-.selection-corner.top-left {
-  top: 0;
-  left: 0;
-}
-
-.selection-corner.top-right {
-  top: 0;
-  right: 0;
-}
-
-.selection-corner.bottom-left {
-  bottom: 0;
-  left: 0;
-}
-
-.selection-corner.bottom-right {
-  bottom: 0;
-  right: 0;
-}
-
-.task-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin-bottom: var(--space-3);
-  margin-top: var(--space-1);
-  line-height: 1.4;
-  /* TASK-071: Force text to break and wrap vertically */
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  white-space: normal;
-  hyphens: auto;
-  text-shadow: 0 1px 2px var(--shadow-subtle);
-  /* Allow multi-line titles with graceful truncation */
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 5.6em; /* 4 lines at 1.4 line-height */
-}
-
-.task-metadata {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  /* Allow horizontal scrolling if badges overflow */
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-subtle) transparent;
-}
-
-.task-metadata::-webkit-scrollbar {
-  height: 3px;
-}
-
-.task-metadata::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.task-metadata::-webkit-scrollbar-thumb {
-  background: var(--border-subtle);
-  border-radius: var(--radius-full);
-}
-
-.task-description {
-  margin-bottom: var(--space-3);
-  margin-top: var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.description-content {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-}
-
-.description-content:not(.expanded) {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 2.8em; /* 2 lines at 1.4 line-height */
-}
-
-.description-toggle {
-  background: none;
-  border: none;
-  color: var(--brand-primary);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  padding: var(--space-1) 0;
-  margin-top: var(--space-1);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) ease;
-}
-
-.description-toggle:hover {
-  color: var(--brand-hover);
-  text-decoration: underline;
-}
-
-.status-badge,
-.due-date-badge,
-.duration-badge,
-.project-emoji-badge {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-light);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
-}
-
-.duration-badge.duration-quick {
-  color: var(--green-text);
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.duration-badge.duration-short {
-  color: var(--color-work);
-  background: var(--blue-bg-subtle);
-  border: 1px solid var(--blue-border-light);
-}
-
-.duration-badge.duration-medium {
-  color: var(--orange-text);
-  background: var(--orange-bg-subtle);
-  border: 1px solid rgba(249, 115, 22, 0.2);
-}
-
-.duration-badge.duration-long {
-  color: var(--danger-text);
-  background: var(--danger-bg-subtle);
-  border: 1px solid var(--danger-border-light);
-}
-.duration-badge {
-  font-weight: var(--font-medium);
-  box-shadow: 0 2px 4px var(--shadow-subtle);
-  white-space: nowrap;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-emoji-badge {
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-left: -2px; /* Pull slightly left to align with text */
-}
-
-.project-emoji {
-  font-size: 12px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.project-emoji.project-css-circle {
-  /* CSS circle with softened glow */
-  width: var(--project-indicator-size-sm); /* Shrink to 20px */
-  height: var(--project-indicator-size-sm);
-  border-radius: 50%;
-  background: var(--project-color);
-  opacity: var(--project-indicator-opacity); /* Apply subtle opacity */
-  box-shadow:
-    var(--project-indicator-glow-subtle),
-    var(--project-indicator-shadow-inset);
-  border: 1px solid var(--project-indicator-border);
-  backdrop-filter: var(--project-indicator-backdrop);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  position: relative;
-  transform: translateZ(0); /* Hardware acceleration */
-}
-
-.project-emoji.project-css-circle::after {
-  content: '';
-  position: absolute;
-  inset: -3px; /* Larger glow area for canvas */
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--project-color) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity var(--duration-normal) var(--spring-smooth);
-  pointer-events: none;
-}
-
-.project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.1); 
-  opacity: 1; /* Full brightness on hover */
-  box-shadow:
-    var(--project-indicator-glow-medium),
-    var(--project-indicator-shadow-inset);
-}
-
-.project-emoji-badge:hover .project-emoji.project-css-circle::after {
-  opacity: 0.4; /* Stronger glow for canvas interactions */
-}
-
-.project-emoji-badge.project-visual--css-circle {
-  /* Enhanced background for colored dots */
-  background: var(--glass-bg-subtle);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.schedule-badge {
-  font-size: var(--text-sm);
-  filter: drop-shadow(0 1px 2px var(--shadow-subtle));
-}
-
-/* Connection Handles */
-.handle-target,
-.handle-source {
-  width: 14px !important;
-  height: 14px !important;
-  background: var(--color-work) !important;
-  border: 3px solid var(--border-medium) !important;
-  box-shadow: var(--state-hover-glow) !important;
-  transition: all var(--duration-fast) var(--spring-bounce) !important;
-  z-index: 10 !important;
-  overflow: visible !important;
-}
-
-.handle-target:hover,
-.handle-source:hover {
-  width: 18px !important;
-  height: 18px !important;
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow) !important;
-}
-
-/* TASK-075: Markdown content styles */
-.markdown-content {
-  pointer-events: auto; /* Enable clicks for checkboxes */
-}
-
-.markdown-content :deep(p) {
-  margin: 0 0 var(--space-2) 0;
-}
-
-.markdown-content :deep(p:last-child) {
-  margin-bottom: 0;
-}
-
-.markdown-content :deep(strong),
-.markdown-content :deep(b) {
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-}
-
-.markdown-content :deep(em),
-.markdown-content :deep(i) {
-  font-style: italic;
-}
-
-.markdown-content :deep(code) {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.1em 0.4em;
-  border-radius: var(--radius-xs);
-  font-family: ui-monospace, monospace;
-  font-size: 0.9em;
-}
-
-.markdown-content :deep(pre) {
-  background: rgba(0, 0, 0, 0.3);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-  margin: var(--space-2) 0;
-}
-
-.markdown-content :deep(pre code) {
-  background: none;
-  padding: 0;
-}
-
-.markdown-content :deep(ul),
-.markdown-content :deep(ol) {
-  margin: var(--space-2) 0;
-  padding-left: var(--space-5);
-}
-
-.markdown-content :deep(li) {
-  margin-bottom: var(--space-1);
-}
-
-/* Checkbox list items (task lists) */
-.markdown-content :deep(ul.contains-task-list) {
-  list-style: none;
-  padding-left: var(--space-1);
-}
-
-.markdown-content :deep(li.task-list-item) {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-/* Interactive checkbox styling */
-.markdown-content :deep(.md-checkbox) {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: var(--brand-primary);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.markdown-content :deep(.md-checkbox:checked) {
-  background: var(--brand-primary);
-}
-
-.markdown-content :deep(.md-checkbox:hover) {
-  transform: scale(1.1);
-}
-
-/* Links */
-.markdown-content :deep(a) {
-  color: var(--brand-primary);
-  text-decoration: underline;
-  text-decoration-style: dotted;
-}
-
-.markdown-content :deep(a:hover) {
-  color: var(--brand-hover);
-  text-decoration-style: solid;
-}
-
-/* Blockquotes */
-.markdown-content :deep(blockquote) {
-  border-left: 3px solid var(--brand-primary);
-  margin: var(--space-2) 0;
-  padding-left: var(--space-3);
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-/* Horizontal rules */
-.markdown-content :deep(hr) {
-  border: none;
-  border-top: 1px solid var(--border-subtle);
-  margin: var(--space-3) 0;
 }
 </style>

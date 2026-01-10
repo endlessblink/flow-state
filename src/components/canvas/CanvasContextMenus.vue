@@ -1,13 +1,13 @@
 <template>
   <!-- Canvas Context Menu -->
   <CanvasContextMenu
-    :is-visible="showCanvasContextMenu"
-    :x="canvasContextMenuX"
-    :y="canvasContextMenuY"
-    :has-selected-tasks="hasSelectedTasks"
-    :selected-count="selectedCount"
-    :context-section="contextSection || undefined"
-    @close="$emit('closeCanvasContextMenu')"
+    :is-visible="contextMenus.showCanvasContextMenu"
+    :x="contextMenus.canvasContextMenuX"
+    :y="contextMenus.canvasContextMenuY"
+    :has-selected-tasks="canvasStore.selectedNodeIds.length > 0"
+    :selected-count="canvasStore.selectedNodeIds.length"
+    :context-section="contextMenus.canvasContextSection || undefined"
+    @close="contextMenus.closeCanvasContextMenu"
     @create-task-here="$emit('createTaskHere')"
     @create-group="$emit('createGroup')"
     @edit-group="(section) => $emit('editGroup', section)"
@@ -33,51 +33,35 @@
 
   <!-- Edge Context Menu -->
   <EdgeContextMenu
-    :is-visible="showEdgeContextMenu"
-    :x="edgeContextMenuX"
-    :y="edgeContextMenuY"
-    @close="$emit('closeEdgeContextMenu')"
+    :is-visible="contextMenus.showEdgeContextMenu"
+    :x="contextMenus.edgeContextMenuX"
+    :y="contextMenus.edgeContextMenuY"
+    @close="contextMenus.closeEdgeContextMenu"
     @disconnect="$emit('disconnectEdge')"
   />
 
   <!-- Node Context Menu (for sections) -->
   <EdgeContextMenu
-    :is-visible="showNodeContextMenu"
-    :x="nodeContextMenuX"
-    :y="nodeContextMenuY"
+    :is-visible="contextMenus.showNodeContextMenu"
+    :x="contextMenus.nodeContextMenuX"
+    :y="contextMenus.nodeContextMenuY"
     menu-text="Delete Section"
-    @close="$emit('closeNodeContextMenu')"
+    @close="contextMenus.closeNodeContextMenu"
     @disconnect="$emit('deleteNode')"
   />
 </template>
 
 <script setup lang="ts">
-import type { CanvasSection } from '@/stores/canvas'
+import type { CanvasSection } from '@/stores/canvas/types'
+import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
 import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 
-defineProps<{
-  // Canvas Context Menu
-  showCanvasContextMenu: boolean
-  canvasContextMenuX: number
-  canvasContextMenuY: number
-  hasSelectedTasks: boolean
-  selectedCount: number
-  contextSection: CanvasSection | null
-
-  // Edge Context Menu
-  showEdgeContextMenu: boolean
-  edgeContextMenuX: number
-  edgeContextMenuY: number
-
-  // Node Context Menu
-  showNodeContextMenu: boolean
-  nodeContextMenuX: number
-  nodeContextMenuY: number
-}>()
+const canvasStore = useCanvasStore()
+const contextMenus = useCanvasContextMenuStore()
 
 defineEmits<{
-  (e: 'closeCanvasContextMenu'): void
   (e: 'createTaskHere'): void
   (e: 'createGroup'): void
   (e: 'editGroup', section: CanvasSection): void
@@ -95,11 +79,8 @@ defineEmits<{
   (e: 'arrangeInRow'): void
   (e: 'arrangeInColumn'): void
   (e: 'arrangeInGrid'): void
-  (e: 'closeEdgeContextMenu'): void
   (e: 'disconnectEdge'): void
-  (e: 'closeNodeContextMenu'): void
   (e: 'deleteNode'): void
-  // TASK-068: New group actions moved from header
   (e: 'createTaskInGroup', section: CanvasSection): void
   (e: 'openGroupSettings', section: CanvasSection): void
   (e: 'togglePowerMode', section: CanvasSection): void

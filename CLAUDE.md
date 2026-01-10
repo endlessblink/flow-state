@@ -33,12 +33,13 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 ## Essential Commands
 
 ```bash
-npm run dev          # Start dev server (port 5546)
+npm run dev          # Start dev server (port 5546) - validates JWT keys first
 npm run kill         # Kill all PomoFlow processes (CRITICAL - DO NOT REMOVE)
 npm run build        # Production build
 npm run test         # Run tests
 npm run lint         # Lint code
 npm run storybook    # Component docs (port 6006)
+npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 ```
 
 ## Tech Stack
@@ -58,6 +59,39 @@ npm run storybook    # Component docs (port 6006)
 5. **Check Task Dependencies** - See Task Dependency Index in `docs/MASTER_PLAN.md`
 6. **NEVER Create Demo Data** - First-time users MUST see empty app, not sample data
 7. **Database Safety** - NEVER run destructive database commands without user approval (see below)
+8. **Atomic Tasks** - ALWAYS break broad requests into single-action steps (see below)
+
+## Atomic Task Breakdown (CRITICAL)
+
+**Problem:** Broad tasks like "test all features" or "fix everything" cause extended thinking loops (3+ minutes stuck).
+
+**Solution:** ALWAYS break down broad requests automatically:
+
+```
+❌ BAD: "Test parent-child features"
+✅ GOOD: Break into atomic steps:
+   1. Check if groups show task count badges
+   2. Verify dragging task into group works
+   3. Confirm group drag moves children
+```
+
+**When user asks for multiple things at once:**
+1. Use TodoWrite to create atomic task list
+2. Work on ONE task at a time
+3. Complete and mark done before starting next
+4. NEVER try to solve "all three issues" simultaneously
+
+**Atomic task criteria:**
+- Can be completed in <2 minutes
+- Has single, clear success condition
+- Doesn't require analyzing multiple systems at once
+
+**If you catch yourself thinking for >30 seconds:** STOP. Break the task down further.
+
+**CRITICAL: When spawning Task agents:**
+- NEVER use prompts like "test all", "verify everything", "fix all issues"
+- ALWAYS spawn MULTIPLE agents in PARALLEL with ONE specific task each
+- Each agent prompt must be completable in <2 minutes with Yes/No answer
 
 ## Database Safety (CRITICAL)
 
@@ -113,6 +147,26 @@ src/utils/supabaseMappers.ts              # Type conversion
 src/services/auth/supabase.ts             # Supabase client init
 src/stores/auth.ts                        # Auth state management
 ```
+
+## Supabase JWT Key Validation
+
+**Problem:** JWT keys in `.env.local` can drift from local Supabase's JWT secret, causing WebSocket 403 errors.
+
+**Prevention:** `npm run dev` automatically validates JWT signatures before starting.
+
+**If validation fails:**
+```
+[Supabase] JWT signature mismatch!
+To fix, run: npm run generate:keys
+```
+
+**Fix:** Run `npm run generate:keys` and copy output to `.env.local`.
+
+**Scripts:**
+- `scripts/validate-supabase-keys.cjs` - Validates JWT signature on startup
+- `scripts/generate-supabase-keys.cjs` - Generates correctly signed keys
+
+**Local JWT Secret:** `super-secret-jwt-token-with-at-least-32-characters-long` (default for local Supabase)
 
 ## Canvas Position Persistence (CRITICAL)
 
@@ -205,5 +259,5 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: January 9, 2026
+**Last Updated**: January 10, 2026
 **Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

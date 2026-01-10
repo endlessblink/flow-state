@@ -1,20 +1,20 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, reactive, onUnmounted } from 'vue'
 import { useTaskStore } from './tasks'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 import { useSettingsStore } from './settings'
+import { formatTime } from '@/utils/timer/formatTime'
+import { getCrossTabSync } from '@/composables/useCrossTabSync'
+import { useIntervalFn } from '@vueuse/core'
 
-// Cross-tab sync imports - for timer synchronization across browser tabs
-import {
-  useCrossTabSync,
-  type TimerSessionSync as _TimerSessionSync
-} from '@/composables/useCrossTabSync'
-
+/**
+ * Timer Session Interface
+ */
 export interface PomodoroSession {
   id: string
   taskId: string
   startTime: Date
-  duration: number // in seconds
+  duration: number
   remainingTime: number
   isActive: boolean
   isPaused: boolean
@@ -31,6 +31,11 @@ export const useTimerStore = defineStore('timer', () => {
   } = useSupabaseDatabase()
 
   const settingsStore = useSettingsStore()
+  const taskStore = useTaskStore()
+
+  // Constants for device synchronization
+  const DEVICE_HEARTBEAT_INTERVAL_MS = 10000 // 10 seconds
+  const DEVICE_LEADER_TIMEOUT_MS = 30000 // 30 seconds
 
   // Bridge to settingsStore for backward compatibility
   const settings = reactive({
@@ -51,41 +56,38 @@ export const useTimerStore = defineStore('timer', () => {
   // State
   const currentSession = ref<PomodoroSession | null>(null)
   const completedSessions = ref<PomodoroSession[]>([])
-  const sessions = ref<PomodoroSession[]>([])
-  const timerInterval = ref<NodeJS.Timeout | null>(null)
-
-  // Cross-tab sync state
-  let crossTabSync: ReturnType<typeof useCrossTabSync> | null = null
+  const sessions = computed(() => completedSessions.value)
   const isLeader = ref(false)
-  let crossTabInitialized = false
-
-  const getDeviceId = (): string => {
-    if (typeof window === 'undefined') return 'server'
-    const stored = localStorage.getItem('pomoflow-device-id')
-    if (stored) return stored
-    const newId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    localStorage.setItem('pomoflow-device-id', newId)
-    return newId
-  }
-
-  const deviceId = getDeviceId()
   const isDeviceLeader = ref(false)
-  let deviceHeartbeatInterval: ReturnType<typeof setInterval> | null = null
-  let lastLeaderTimestamp = 0
+  const deviceId = crypto.randomUUID()
+
+  // Cross-tab sync integration
+  const crossTabSync = getCrossTabSync()
+
+  // Intervals
+  const { pause: pauseTimerInterval, resume: resumeTimerInterval } = useIntervalFn(() => {
+    if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused) {
+      currentSession.value.remainingTime -= 1
+      if (currentSession.value.remainingTime % 5 === 0 && isDeviceLeader.value) broadcastSession()
+      if (currentSession.value.remainingTime <= 0) completeSession()
+    }
+  }, 1000, { immediate: false })
+
+  const { pause: pauseHeartbeat, resume: resumeHeartbeat } = useIntervalFn(async () => {
+    if (!currentSession.value || !isDeviceLeader.value) { pauseHeartbeat(); return }
+    await saveTimerSessionWithLeadership()
+  }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
   // Computed
-  const isTimerActive = computed(() => currentSession.value?.isActive && !currentSession.value?.isPaused)
+  const isTimerActive = computed(() => currentSession.value?.isActive || false)
   const isPaused = computed(() => currentSession.value?.isPaused || false)
   const currentTaskId = computed(() => currentSession.value?.taskId || null)
 
   const displayTime = computed(() => {
     if (!currentSession.value) {
-      const minutes = Math.floor(settings.workDuration / 60)
-      return `${minutes.toString().padStart(2, '0')}:00`
+      return formatTime(settings.workDuration)
     }
-    const minutes = Math.floor(currentSession.value.remainingTime / 60)
-    const seconds = currentSession.value.remainingTime % 60
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    return formatTime(currentSession.value.remainingTime)
   })
 
   const currentTaskName = computed(() => {
@@ -93,7 +95,6 @@ export const useTimerStore = defineStore('timer', () => {
     if (!session?.taskId) return null
     if (session.isBreak) return session.taskId === 'break' ? 'Break Time' : 'Short Break'
     if (session.taskId === 'general') return 'Focus Session'
-    const taskStore = useTaskStore()
     const task = taskStore.tasks.find(t => t.id === session.taskId)
     return task?.title || 'Unknown Task'
   })
@@ -102,9 +103,7 @@ export const useTimerStore = defineStore('timer', () => {
 
   const tabDisplayTime = computed(() => {
     if (!currentSession.value) return ''
-    const minutes = Math.floor(currentSession.value.remainingTime / 60)
-    const seconds = currentSession.value.remainingTime % 60
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    return formatTime(currentSession.value.remainingTime)
   })
 
   const sessionStatusText = computed(() => {
@@ -112,7 +111,6 @@ export const useTimerStore = defineStore('timer', () => {
     if (!session) return ''
     if (session.isBreak) return session.taskId === 'break' ? 'Short Break' : 'Long Break'
     if (session.taskId === 'general') return 'Focus Session'
-    const taskStore = useTaskStore()
     const task = taskStore.tasks.find(t => t.id === session.taskId)
     return task?.title || 'Work Session'
   })
@@ -134,72 +132,20 @@ export const useTimerStore = defineStore('timer', () => {
     if (!currentSession.value || !isTimerActive.value) return baseTitle
     const time = tabDisplayTime.value
     const icon = currentSession.value.isBreak ? '🧎' : '🍅'
-    const status = sessionStatusText.value
-    return `${status} - ${time} ${icon} | ${baseTitle}`
+    return `${icon} ${time} | ${baseTitle}`
   })
 
-  // Timer logic helpers
-  const calculateRemainingTime = (
-    session: { startTime: Date; duration: number; isPaused: boolean; remainingTime?: number },
-    leaderTimestamp?: number
-  ): number => {
-    if (session.isPaused && session.remainingTime !== undefined) return session.remainingTime
-    const now = Date.now()
-    if (leaderTimestamp && leaderTimestamp > 0) {
-      const timeSinceSave = now - leaderTimestamp
-      const leaderElapsedAtSave = leaderTimestamp - session.startTime.getTime()
-      const totalElapsed = leaderElapsedAtSave + timeSinceSave
-      return Math.max(0, session.duration - Math.floor(totalElapsed / 1000))
-    }
-    const elapsedSeconds = Math.floor((now - session.startTime.getTime()) / 1000)
-    return Math.max(0, session.duration - elapsedSeconds)
-  }
-
-  const startFollowerInterval = () => {
-    if (timerInterval.value) clearInterval(timerInterval.value)
-    timerInterval.value = setInterval(() => {
-      if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused && !isDeviceLeader.value) {
-        currentSession.value.remainingTime = calculateRemainingTime(currentSession.value, lastLeaderTimestamp)
-      }
-    }, 1000)
-  }
-
-  // Cross-tab sync actions
-  const initCrossTabSync = () => {
-    if (crossTabInitialized || typeof window === 'undefined') return
-    try {
-      crossTabSync = useCrossTabSync()
-      crossTabSync.setTimerCallbacks({
-        onSessionUpdate: (rawSession: any) => {
-          if (!isLeader.value && rawSession) {
-            currentSession.value = { ...rawSession, startTime: new Date(rawSession.startTime) }
-          } else if (!isLeader.value && rawSession === null) {
-            if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null }
-            currentSession.value = null
-          }
-        },
-        onBecomeLeader: () => { isLeader.value = true },
-        onLoseLeadership: () => {
-          isLeader.value = false
-          if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null }
-        }
-      })
-      crossTabInitialized = true
-    } catch (e) { console.warn('Cross-tab sync init failed', e) }
-  }
-
+  // Leadership Helpers
   const broadcastSession = () => {
-    if (!crossTabSync || !isLeader.value) return
-    const sessionData = currentSession.value ? { ...currentSession.value, startTime: currentSession.value.startTime.toISOString() } : null
-    crossTabSync.broadcastTimerSession(sessionData)
+    if (currentSession.value) {
+      crossTabSync.broadcastTimerSession(currentSession.value)
+    }
   }
 
-  // Supabase Sync Actions
-  const handleRemoteTimerUpdate = async (payload: any) => {
-    const { new: newDoc, eventType } = payload
-    if (eventType === 'DELETE' || !newDoc?.is_active) {
+  const handleRemoteTimerUpdate = (newDoc: any) => {
+    if (!newDoc) {
       currentSession.value = null
-      if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null }
+      pauseTimerInterval()
       return
     }
 
@@ -208,7 +154,8 @@ export const useTimerStore = defineStore('timer', () => {
     const lastSeen = new Date(newDoc.device_leader_last_seen).getTime()
     if (Date.now() - lastSeen < DEVICE_LEADER_TIMEOUT_MS) {
       isDeviceLeader.value = false
-      stopDeviceHeartbeat()
+      pauseHeartbeat()
+
       const session = {
         id: newDoc.id,
         taskId: newDoc.task_id,
@@ -222,32 +169,29 @@ export const useTimerStore = defineStore('timer', () => {
         deviceLeaderId: newDoc.device_leader_id,
         deviceLeaderLastSeen: lastSeen
       }
-      lastLeaderTimestamp = lastSeen
-      session.remainingTime = calculateRemainingTime(session, lastLeaderTimestamp)
-      currentSession.value = session
-      if (session.isActive && !session.isPaused) startFollowerInterval()
+
+      // Calculate adjusted remaining time based on drift
+      const now = Date.now()
+      const drift = Math.floor((now - lastSeen) / 1000)
+      if (session.isActive && !session.isPaused) {
+        session.remainingTime = Math.max(0, session.remainingTime - drift)
+      }
+
+      currentSession.value = session as PomodoroSession
+      if (session.isActive && !session.isPaused) {
+        resumeTimerInterval()
+      } else {
+        pauseTimerInterval()
+      }
     }
   }
 
   const saveTimerSessionWithLeadership = async () => {
     if (!currentSession.value) return
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(currentSession.value.id)) {
+    if (currentSession.value.id.length < 10) {
       currentSession.value.id = crypto.randomUUID()
     }
     await saveActiveTimerSession(currentSession.value, deviceId)
-  }
-
-  const startDeviceHeartbeat = () => {
-    if (deviceHeartbeatInterval) clearInterval(deviceHeartbeatInterval)
-    deviceHeartbeatInterval = setInterval(async () => {
-      if (!currentSession.value || !isDeviceLeader.value) { stopDeviceHeartbeat(); return }
-      await saveTimerSessionWithLeadership()
-    }, DEVICE_HEARTBEAT_INTERVAL_MS)
-  }
-
-  const stopDeviceHeartbeat = () => {
-    if (deviceHeartbeatInterval) { clearInterval(deviceHeartbeatInterval); deviceHeartbeatInterval = null }
   }
 
   const checkForActiveDeviceLeader = async (): Promise<boolean> => {
@@ -262,15 +206,10 @@ export const useTimerStore = defineStore('timer', () => {
 
   // Timer Control Actions
   const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
-    initCrossTabSync()
     if (await checkForActiveDeviceLeader()) return
 
-    if (crossTabSync) {
-      if (!crossTabSync.claimTimerLeadership()) return
-      isLeader.value = true
-    }
-
-    if (timerInterval.value) clearInterval(timerInterval.value)
+    if (!crossTabSync.claimTimerLeadership()) return
+    isLeader.value = true
 
     const sessionDuration = duration || settings.workDuration
     currentSession.value = {
@@ -285,24 +224,17 @@ export const useTimerStore = defineStore('timer', () => {
     }
 
     isDeviceLeader.value = true
-    startDeviceHeartbeat()
+    resumeHeartbeat()
     broadcastSession()
     await saveTimerSessionWithLeadership()
     playStartSound()
-
-    timerInterval.value = setInterval(() => {
-      const session = currentSession.value
-      if (session && session.isActive && !session.isPaused) {
-        session.remainingTime -= 1
-        if (session.remainingTime % 5 === 0) broadcastSession()
-        if (session.remainingTime <= 0) completeSession()
-      }
-    }, 1000)
+    resumeTimerInterval()
   }
 
   const pauseTimer = () => {
     if (currentSession.value) {
       currentSession.value.isPaused = true
+      pauseTimerInterval()
       broadcastSession()
     }
   }
@@ -310,13 +242,14 @@ export const useTimerStore = defineStore('timer', () => {
   const resumeTimer = () => {
     if (currentSession.value) {
       currentSession.value.isPaused = false
+      resumeTimerInterval()
       broadcastSession()
     }
   }
 
   const stopTimer = async () => {
-    if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null }
-    stopDeviceHeartbeat()
+    pauseTimerInterval()
+    pauseHeartbeat()
     isDeviceLeader.value = false
     if (currentSession.value) {
       completedSessions.value.push({ ...currentSession.value, isActive: false, completedAt: new Date() })
@@ -328,8 +261,8 @@ export const useTimerStore = defineStore('timer', () => {
   const completeSession = async () => {
     const session = currentSession.value
     if (!session) return
-    if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null }
-    stopDeviceHeartbeat()
+    pauseTimerInterval()
+    pauseHeartbeat()
 
     const completedSession = { ...session, isActive: false, completedAt: new Date() }
     completedSessions.value.push(completedSession)
@@ -338,10 +271,9 @@ export const useTimerStore = defineStore('timer', () => {
     const lastTaskId = session.taskId
 
     if (session.taskId && session.taskId !== 'general' && !session.isBreak) {
-      const taskStore = useTaskStore()
       const task = taskStore.tasks.find(t => t.id === session.taskId)
       if (task) {
-        const newCount = task.completedPomodoros + 1
+        const newCount = (task.completedPomodoros || 0) + 1
         taskStore.updateTask(session.taskId, {
           completedPomodoros: newCount,
           progress: Math.min(100, Math.round((newCount / (task.estimatedPomodoros || 1)) * 100))
@@ -414,21 +346,47 @@ export const useTimerStore = defineStore('timer', () => {
       currentSession.value = { ...saved, startTime: new Date(saved.startTime) }
       if (saved.deviceLeaderId === deviceId) {
         isDeviceLeader.value = true
-        startDeviceHeartbeat()
-        timerInterval.value = setInterval(() => {
-          if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused) {
-            currentSession.value.remainingTime -= 1
-            if (currentSession.value.remainingTime <= 0) completeSession()
-          }
-        }, 1000)
+        resumeHeartbeat()
+        resumeTimerInterval()
       } else {
         isDeviceLeader.value = false
-        startFollowerInterval()
+        // Followers should also update their local countdown
+        resumeTimerInterval()
       }
     }
-    initCrossTabSync()
+
+    // Set cross-tab callbacks
+    crossTabSync.setTimerCallbacks({
+      onSessionUpdate: (session: any) => {
+        if (!isDeviceLeader.value) {
+          currentSession.value = session
+          if (session?.isActive && !session?.isPaused) {
+            resumeTimerInterval()
+          } else {
+            pauseTimerInterval()
+          }
+        }
+      },
+      onBecomeLeader: () => {
+        isLeader.value = true
+        isDeviceLeader.value = true
+        resumeHeartbeat()
+      },
+      onLoseLeadership: () => {
+        isLeader.value = false
+        isDeviceLeader.value = false
+        pauseHeartbeat()
+      }
+    })
+
     initRealtimeSubscription(() => { }, () => { }, handleRemoteTimerUpdate)
   }
+
+  // Cleanup
+  onUnmounted(() => {
+    pauseTimerInterval()
+    pauseHeartbeat()
+  })
 
   initializeStore()
 

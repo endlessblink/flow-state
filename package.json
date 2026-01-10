@@ -5,7 +5,8 @@
   "main": "src/main.ts",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite --host 0.0.0.0 --port 5546\" \"npm run backup:watch\"",
+    "dev": "node scripts/validate-supabase-keys.cjs && concurrently \"vite --host 0.0.0.0 --port 5546\" \"npm run backup:watch\"",
+    "generate:keys": "node scripts/generate-supabase-keys.cjs",
     "backup:watch": "node scripts/auto-backup-daemon.cjs",
     "dev:manager": "cd dev-manager && npm start",
     "postinstall": "cd dev-manager && npm install",

@@ -18,7 +18,7 @@ import { Timer } from 'lucide-vue-next'
 defineProps<{
   title: string
   isTimerActive: boolean
-  alignmentClasses: string
+  alignmentClasses: Object | String
 }>()
 </script>
 

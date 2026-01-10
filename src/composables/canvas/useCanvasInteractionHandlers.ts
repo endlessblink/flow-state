@@ -32,7 +32,7 @@ interface InteractionHandlersDeps {
     canvasContextSection?: Ref<any>
     sectionSettingsState?: {
         isOpen: Ref<boolean>
-        editingId: Ref<string | null>
+        editingSection: Ref<any> // Using any to avoid circular type issues, or import properly
     }
 }
 
@@ -310,8 +310,11 @@ export function useCanvasInteractionHandlers(deps: InteractionHandlersDeps) {
 
     const handleOpenSectionSettings = (sectionId: string) => {
         if (deps.sectionSettingsState) {
-            deps.sectionSettingsState.editingId.value = sectionId
-            deps.sectionSettingsState.isOpen.value = true
+            const section = canvasStore.sections.find((s: any) => s.id === sectionId)
+            if (section) {
+                deps.sectionSettingsState.editingSection.value = section
+                deps.sectionSettingsState.isOpen.value = true
+            }
         }
     }
 

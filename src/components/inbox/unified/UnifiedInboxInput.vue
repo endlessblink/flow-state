@@ -84,16 +84,16 @@ const handleAddTask = () => {
 <style scoped>
 .quick-add {
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-light);
-  background: var(--surface-0);
+  border-bottom: 1px solid var(--glass-border);
+  background: transparent;
 }
 
 .quick-add-input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: var(--surface-input);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
   color: var(--text-primary);
   font-size: var(--text-sm);
   transition: all 0.2s;
@@ -107,8 +107,8 @@ const handleAddTask = () => {
 
 .brain-dump-section {
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-light);
-  background: var(--surface-ground);
+  border-bottom: 1px solid var(--glass-border);
+  background: transparent;
 }
 
 .brain-dump-container {
@@ -122,8 +122,8 @@ const handleAddTask = () => {
   width: 100%;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: var(--surface-input);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
   color: var(--text-primary);
   font-size: var(--text-sm);
   resize: vertical;

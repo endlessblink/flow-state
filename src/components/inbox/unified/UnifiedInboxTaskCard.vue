@@ -182,8 +182,8 @@ const dueStatus = computed(() => {
 <style scoped>
 .task-card {
   position: relative;
-  background: var(--surface-0);
-  border: 1px solid var(--border-color);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   cursor: grab;

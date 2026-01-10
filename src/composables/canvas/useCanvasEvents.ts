@@ -1,9 +1,10 @@
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 // TASK-089: Import position lock check to prevent sync from overwriting user changes
 import { isAnyCanvasStateLocked } from '@/utils/canvasStateLock'
+import { useCanvasContextMenus } from './useCanvasContextMenus'
 
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
@@ -15,44 +16,37 @@ export function useCanvasEvents(syncNodes?: () => void) {
     // --- Interaction State ---
     const isConnecting = ref(false)
 
-    // --- Context Menu State ---
-    const showCanvasContextMenu = ref(false)
-    const canvasContextMenuX = ref(0)
-    const canvasContextMenuY = ref(0)
-    const canvasContextSection = ref<CanvasSection | null>(null)
+    // --- Context Menu State (Singleton) ---
+    const {
+        showCanvasContextMenu,
+        canvasContextMenuX,
+        canvasContextMenuY,
+        canvasContextSection,
+        showNodeContextMenu,
+        nodeContextMenuX,
+        nodeContextMenuY,
+        nodeContextMenuNodeId, // Singleton ID
+        showEdgeContextMenu,
+        edgeContextMenuX,
+        edgeContextMenuY,
+        edgeContextMenuEdgeId, // Singleton ID
+        openNodeContextMenu,
+        openEdgeContextMenu,
+        closeCanvasContextMenu,
+        closeNodeContextMenu,
+        closeEdgeContextMenu,
+        closeAllContextMenus
+    } = useCanvasContextMenus()
 
-    const showNodeContextMenu = ref(false)
-    const nodeContextMenuX = ref(0)
-    const nodeContextMenuY = ref(0)
-    const selectedNode = ref<Node | null>(null)
+    // Compatibility: Map IDs to Objects for legacy consumers
+    const selectedNode = computed(() => {
+        if (!nodeContextMenuNodeId.value) return null
+        return findNode(nodeContextMenuNodeId.value) || null
+    })
 
-    const showEdgeContextMenu = ref(false)
-    const edgeContextMenuX = ref(0)
-    const edgeContextMenuY = ref(0)
-    const selectedEdgeId = ref<string | null>(null)
+    const selectedEdgeId = computed(() => edgeContextMenuEdgeId.value)
 
-    // --- Actions ---
-
-    const closeCanvasContextMenu = () => {
-        showCanvasContextMenu.value = false
-        canvasContextSection.value = null
-    }
-
-    const closeNodeContextMenu = () => {
-        showNodeContextMenu.value = false
-        selectedNode.value = null
-    }
-
-    const closeEdgeContextMenu = () => {
-        showEdgeContextMenu.value = false
-        selectedEdgeId.value = null
-    }
-
-    const closeAllContextMenus = () => {
-        closeCanvasContextMenu()
-        closeNodeContextMenu()
-        closeEdgeContextMenu()
-    }
+    /* Actions are now provided by singleton */
 
     // --- Event Handlers ---
 
@@ -99,15 +93,6 @@ export function useCanvasEvents(syncNodes?: () => void) {
     }
 
     const handleCanvasRightClick = (event: MouseEvent) => {
-        console.log('🖱️ [DEBUG] handleCanvasRightClick fired:', {
-            clientX: event.clientX,
-            clientY: event.clientY,
-            pageX: event.pageX,
-            pageY: event.pageY,
-            target: (event.target as HTMLElement)?.className,
-            eventType: event.type
-        })
-
         if (isConnecting.value) {
             event.preventDefault()
             event.stopPropagation()
@@ -122,20 +107,10 @@ export function useCanvasEvents(syncNodes?: () => void) {
 
         canvasContextMenuX.value = event.clientX
         canvasContextMenuY.value = event.clientY
-        console.log('🖱️ [DEBUG] handleCanvasRightClick SET coords:', { x: canvasContextMenuX.value, y: canvasContextMenuY.value })
         showCanvasContextMenu.value = true
     }
 
     const handlePaneContextMenu = (event: MouseEvent) => {
-        console.log('🎯 [DEBUG] handlePaneContextMenu fired:', {
-            clientX: event.clientX,
-            clientY: event.clientY,
-            pageX: event.pageX,
-            pageY: event.pageY,
-            target: (event.target as HTMLElement)?.className,
-            eventType: event.type
-        })
-
         if (isConnecting.value) {
             event.preventDefault()
             event.stopPropagation()
@@ -144,7 +119,6 @@ export function useCanvasEvents(syncNodes?: () => void) {
         event.preventDefault()
         canvasContextMenuX.value = event.clientX
         canvasContextMenuY.value = event.clientY
-        console.log('🎯 [DEBUG] handlePaneContextMenu SET coords:', { x: canvasContextMenuX.value, y: canvasContextMenuY.value })
         showCanvasContextMenu.value = true
     }
 
@@ -168,7 +142,6 @@ export function useCanvasEvents(syncNodes?: () => void) {
             })
             const { x, y } = flowCoords
 
-            console.log(`[BUG-152] Inbox drop: task ${taskId} at (${x.toFixed(0)}, ${y.toFixed(0)})`)
 
             // BUG-152 FIX: AWAIT the task update before calling syncNodes
             // Otherwise syncNodes runs with stale task data
@@ -177,13 +150,14 @@ export function useCanvasEvents(syncNodes?: () => void) {
                 isInInbox: false
             })
 
+            if (syncNodes) syncNodes()
+
             // BUG-152 FIX: Wait for Vue reactivity to propagate before syncing
             // filteredTasks is a computed that needs time to recalculate
             await nextTick()
 
             // BUG-152 FIX: Call syncNodes to build the node array with parent-child relationships
             if (syncNodes) {
-                console.log('[BUG-152] Inbox drop: calling syncNodes to build nodes')
                 syncNodes()
             }
 
@@ -195,28 +169,31 @@ export function useCanvasEvents(syncNodes?: () => void) {
             // Direct array mutation doesn't trigger Vue Flow's complete initialization sequence
             // setNodes() ensures parent-child relationships are properly discovered
             const currentNodes = getNodes.value
-            console.log(`[BUG-152] Forcing Vue Flow reinit with ${currentNodes.length} nodes via setNodes()`)
             setNodes(currentNodes)
 
             // BUG-152 FIX: Double nextTick() for Vue Flow parent-child discovery
-            // Vue Flow needs two render cycles:
-            // 1st tick: Vue detects node array change, updates DOM
-            // 2nd tick: Vue Flow discovers parent-child relationships, recalculates coordinates
             await nextTick()
             await nextTick()
 
-            // BUG-152 FIX: Verify the task got a parent assigned
-            const droppedNode = findNode(taskId)
-            console.log(`[BUG-152] Task ${taskId} after drop:`, {
-                parentNode: droppedNode?.parentNode,
-                position: droppedNode?.position
-            })
-
-            console.log(`[BUG-152] Inbox drop complete`)
-
-        } catch (e) {
-            console.error('Error handling drop:', e)
+        } catch (error) {
+            console.error('❌ Error in handleDrop:', error)
         }
+    }
+
+    const handleNodeContextMenu = (event: any) => {
+        const mouseEvent = (event.event || event) as MouseEvent
+        mouseEvent.preventDefault()
+        const node = event.node || event
+        if (!node?.id) return
+        openNodeContextMenu(mouseEvent.clientX, mouseEvent.clientY, node.id)
+    }
+
+    const handleEdgeContextMenu = (event: any) => {
+        const mouseEvent = (event.event || event) as MouseEvent
+        mouseEvent.preventDefault()
+        const edge = event.edge || event
+        if (!edge?.id) return
+        openEdgeContextMenu(mouseEvent.clientX, mouseEvent.clientY, edge.id)
     }
 
     return {
@@ -245,6 +222,8 @@ export function useCanvasEvents(syncNodes?: () => void) {
         handlePaneClick,
         handleCanvasRightClick,
         handlePaneContextMenu,
+        handleNodeContextMenu,
+        handleEdgeContextMenu,
         handleDrop
     }
 }

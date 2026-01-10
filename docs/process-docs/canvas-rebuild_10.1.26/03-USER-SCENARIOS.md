@@ -309,6 +309,36 @@ WHAT HAPPENED:
 
 ---
 
+## 10a. Dragging Parent Group - Children Stay Visible
+
+**I drag a container group that has child groups inside**
+
+```
+DURING DRAG:
+┌─────────────────────────────────┐
+│ Container (being dragged)       │  <-- Moving
+│                                 │
+│   ┌───────────────────┐         │
+│   │ Child Group       │         │  <-- MUST stay visible!
+│   │ ┌─────────────┐   │         │
+│   │ │Task        │   │         │  <-- MUST stay visible!
+│   │ └─────────────┘   │         │
+│   └───────────────────┘         │
+│                                 │
+└─────────────────────────────────┘
+
+WHAT MUST HAPPEN:
+- Child groups remain visible throughout the ENTIRE drag
+- Tasks inside child groups remain visible
+- NO flickering, disappearing, or re-appearing
+- Children move smoothly WITH the parent in real-time
+- This applies to ALL nesting levels (grandchildren too)
+
+⚠️ BUG TO AVOID: Child disappears at drag start and reappears at drag end
+```
+
+---
+
 ## 10b. Task Count with Mixed Nesting
 
 **Container has 1 direct task + a child group with 2 tasks**
@@ -1004,7 +1034,7 @@ Moving OUT does NOT clear the property!
 | 11 | Multi-select tasks | All move together |
 | 12 | Multi-select groups | All move with tasks |
 | 13 | Move after task left | Only current contents move |
-| 14 | Child out of parent | Child independent |
+| 14 | Child out of parent | Child independent, parent stays |
 | 15 | Group + tasks selected | Group wins (redundant) |
 | **Past Bugs** | | |
 | 16 | Edit task | Position unchanged |

@@ -3,7 +3,7 @@
  * Provides utilities for lazy loading heavy components with loading states
  */
 
-import { defineAsyncComponent, type AsyncComponentLoader } from 'vue'
+import { defineAsyncComponent, h, type AsyncComponentLoader } from 'vue'
 import type { Component } from 'vue'
 
 export interface LazyComponentOptions {
@@ -19,26 +19,26 @@ export interface LazyComponentOptions {
  * Default loading component for lazy loaded components
  */
 export const DefaultLoadingComponent = {
-  template: `
-    <div class="flex items-center justify-center p-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      <span class="ml-2 text-gray-600">Loading...</span>
-    </div>
-  `
+  render() {
+    return h('div', { class: 'flex items-center justify-center p-8' }, [
+      h('div', { class: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500' }),
+      h('span', { class: 'ml-2 text-gray-600' }, 'Loading...')
+    ])
+  }
 }
 
 /**
  * Default error component for lazy loaded components
  */
 export const DefaultErrorComponent = {
-  template: `
-    <div class="flex items-center justify-center p-8 text-red-600">
-      <div class="text-center">
-        <div class="text-xl mb-2">⚠️ Failed to load component</div>
-        <div class="text-sm opacity-75">Please try refreshing the page</div>
-      </div>
-    </div>
-  `
+  render() {
+    return h('div', { class: 'flex items-center justify-center p-8 text-red-600' }, [
+      h('div', { class: 'text-center' }, [
+        h('div', { class: 'text-xl mb-2' }, '⚠️ Failed to load component'),
+        h('div', { class: 'text-sm opacity-75' }, 'Please try refreshing the page')
+      ])
+    ])
+  }
 }
 
 /**
@@ -90,15 +90,15 @@ export function createLazyDashboard(loader: AsyncComponentLoader) {
     delay: 500, // Slightly longer delay for dashboard components
     timeout: 45000, // Longer timeout for heavy dashboard components
     loadingComponent: {
-      template: `
-        <div class="flex items-center justify-center p-12">
-          <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <div class="text-gray-600">Loading dashboard...</div>
-            <div class="text-sm text-gray-500 mt-2">This may take a moment</div>
-          </div>
-        </div>
-      `
+      render() {
+        return h('div', { class: 'flex items-center justify-center p-12' }, [
+          h('div', { class: 'text-center' }, [
+            h('div', { class: 'animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4' }),
+            h('div', { class: 'text-gray-600' }, 'Loading dashboard...'),
+            h('div', { class: 'text-sm text-gray-500 mt-2' }, 'This may take a moment')
+          ])
+        ])
+      }
     }
   })
 }

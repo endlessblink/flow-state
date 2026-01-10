@@ -130,6 +130,42 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         showScheduleBadge.value = !showScheduleBadge.value
     }
 
+    // Operation State
+    const operationLoading = ref({
+        saving: false,
+        loading: false,
+        syncing: false,
+        creating: false,
+        updating: false,
+        deleting: false
+    })
+
+    const operationError = ref<{
+        type: string
+        message: string
+        retryable: boolean
+    } | null>(null)
+
+    const setOperationLoading = (operation: string, loading: boolean) => {
+        if (operation in operationLoading.value) {
+            operationLoading.value[operation as keyof typeof operationLoading.value] = loading
+            if (loading) {
+                operationError.value = null
+            }
+        }
+    }
+
+    const setOperationError = (type: string, message: string, retryable: boolean = false) => {
+        operationError.value = { type, message, retryable }
+        Object.keys(operationLoading.value).forEach(key => {
+            operationLoading.value[key as keyof typeof operationLoading.value] = false
+        })
+    }
+
+    const clearOperationError = () => {
+        operationError.value = null
+    }
+
     // Persistence via User Settings in Supabase
     let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
     watch(viewport, (newViewport) => {
@@ -206,6 +242,12 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         toggleStatusBadge,
         toggleDurationBadge,
         toggleScheduleBadge,
-        loadSavedViewport
+        loadSavedViewport,
+        // Operation State
+        operationLoading,
+        operationError,
+        setOperationLoading,
+        setOperationError,
+        clearOperationError
     }
 })

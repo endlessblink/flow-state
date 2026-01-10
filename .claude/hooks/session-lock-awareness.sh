@@ -15,7 +15,7 @@ LOCK_EXPIRY_HOURS=4
 mkdir -p "$LOCKS_DIR"
 
 # Read JSON input (with timeout to prevent hanging)
-INPUT=$(timeout 1 cat 2>/dev/null || echo '{}')
+INPUT=$(timeout 2 cat 2>/dev/null || echo '{}')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')
 
 # Clean up stale locks

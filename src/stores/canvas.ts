@@ -133,6 +133,14 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (invalidGroups.length > 0) {
         console.error(`❌ [INTEGRITY] ${invalidGroups.length} groups have invalid positions:`,
           invalidGroups.map(g => `${g.name}: ${JSON.stringify(g.position)}`))
+
+        // Auto-repair invalid positions
+        loadedGroups.forEach(g => {
+          if (!g.position || !Number.isFinite(g.position.x) || !Number.isFinite(g.position.y)) {
+            console.warn(`🛠️ [INTEGRITY] Auto-repairing position for group ${g.name}`)
+            g.position = { x: 0, y: 0, width: g.position?.width || 600, height: g.position?.height || 400 }
+          }
+        })
       }
 
       // TASK-150 FIX: When authenticated, Supabase is the source of truth
@@ -429,36 +437,53 @@ export const useCanvasStore = defineStore('canvas', () => {
       return { x, y }
     }
 
-    // Direct tasks in this group
+    // BUG-184c FIX: Get child groups FIRST so we can exclude their tasks from direct count
+    // SAFETY: Use _rawGroups to include hidden child groups
+    const childGroups = _rawGroups.value.filter(g => g.parentGroupId === groupId)
+
+    // Pre-calculate child group rects for exclusion check
+    const childGroupRects = childGroups.map(child => {
+      const childAbsPos = getGroupAbsolutePosition(child)
+      return {
+        x: childAbsPos.x,
+        y: childAbsPos.y,
+        width: child.position?.width ?? 300,
+        height: child.position?.height ?? 200
+      }
+    })
+
+    // Calculate this group's absolute rect
+    const absPos = getGroupAbsolutePosition(group)
+    const groupRect = {
+      x: absPos.x,
+      y: absPos.y,
+      width: group.position?.width ?? 300,
+      height: group.position?.height ?? 200
+    }
+
+    // Direct tasks in this group (EXCLUDING those in child groups)
     let count = tasks.filter(t => {
-      // 1. Calculate Group Absolute Rect
-      const absPos = getGroupAbsolutePosition(group)
-      const groupRect = {
-        x: absPos.x,
-        y: absPos.y,
-        width: group.position?.width ?? 300,
-        height: group.position?.height ?? 200
-      }
+      if (!t.canvasPosition) return false
 
-      // 2. Get Task Center (Absolute)
-      let taskCenterX, taskCenterY
+      // Get Task Center (Absolute)
+      const w = 220
+      const h = 100
+      const taskCenterX = t.canvasPosition.x + (w / 2)
+      const taskCenterY = t.canvasPosition.y + (h / 2)
 
-      if (t.canvasPosition) {
-        // Task position is ALWAYS absolute in store
-        // Just align to center
-        const w = 220
-        const h = 100
-        taskCenterX = t.canvasPosition.x + (w / 2)
-        taskCenterY = t.canvasPosition.y + (h / 2)
+      // Check if task is in this group's bounds
+      if (!isPointInRect(taskCenterX, taskCenterY, groupRect)) return false
 
-        return isPointInRect(taskCenterX, taskCenterY, groupRect)
-      }
-      return false
+      // BUG-184c FIX: Exclude tasks that are in any child group
+      // This prevents double-counting: once by parent, once by recursive child call
+      const isInChildGroup = childGroupRects.some(childRect =>
+        isPointInRect(taskCenterX, taskCenterY, childRect)
+      )
+
+      return !isInChildGroup  // Only count if NOT in a child group
     }).length
 
     // Recursive: Tasks in child groups
-    // SAFETY: Use _rawGroups to include hidden child groups in count
-    const childGroups = _rawGroups.value.filter(g => g.parentGroupId === groupId)
     for (const child of childGroups) {
       count += getTaskCountInGroupRecursive(child.id, tasks)
     }

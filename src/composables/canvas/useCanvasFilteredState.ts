@@ -27,10 +27,29 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
     /**
      * Optimized filtering for tasks that have valid canvas positions.
      * Consolidates filteredTasksWithCanvasPosition and tasksWithCanvasPositions.
+     * Also handles view-specific filtering (Hide Done, Hide Overdue).
      */
     const tasksWithCanvasPosition = computed(() => {
-        const tasks = filteredTasks.value
+        let tasks = filteredTasks.value
         if (!Array.isArray(tasks)) return []
+
+        // 1. Filter out Done tasks if enabled in store
+        // @ts-ignore - taskStore is not explicitly typed here but we know it has these properties
+        if (canvasStore.taskStore?.hideCanvasDoneTasks) {
+            tasks = tasks.filter(t => t.status !== 'done')
+        }
+
+        // 2. Filter out Overdue tasks if enabled
+        // @ts-ignore
+        if (canvasStore.taskStore?.hideCanvasOverdueTasks) {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            tasks = tasks.filter(t => {
+                if (!t.dueDate) return true
+                const due = new Date(t.dueDate)
+                return due >= today
+            })
+        }
 
         // Robust hashing for cache invalidation
         const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')

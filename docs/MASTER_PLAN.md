@@ -1,5 +1,5 @@
-**Last Updated**: January 10, 2026 (TASK-197 Canvas Error Resolution Completed)
-**Version**: 5.37 (Skill Consolidation)
+**Last Updated**: January 10, 2026 (TASK-198/199/200 Canvas Hardening Tasks Added)
+**Version**: 5.38 (Canvas Deep Dive)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -41,9 +41,12 @@
 | ~~TASK-192~~ | ✅ **DONE** | Calendar View Refactor | P1 | ✅ **DONE** (2026-01-10) - Performance, race conditions, type safety, prop reduction. | TASK-191 patterns |
 | ~~TASK-193~~ | ~~Skill Consolidation (78→57)~~ | P1 | ✅ **DONE** | [Details](#task-193-skill-consolidation-done) |
 | ~~TASK-194~~ | ✅ **DONE** | Settings System Refactor | P2 | ✅ **DONE** (2026-01-10) - Unified store, extracted tabs, reactive density. | TASK-191, TASK-192 |
-| TASK-195 | Timer System Refactor | P2 | 🔄 **IN PROGRESS** | TASK-191, TASK-192, TASK-194 |
+| ~~TASK-195~~ | Timer System Refactor | P2 | ✅ **DONE** (2026-01-10) | TASK-191, TASK-192, TASK-194 |
 | ~~TASK-196~~ | ✅ **DONE** | Vue Flow Documentation Scraping | P2 | ✅ **DONE** (2026-01-10) - Scraped API, 7 specialized guides, and 5 component references. | - |
 | ~~TASK-197~~ | ✅ **DONE** | Canvas Error Resolution | P0 | ✅ **DONE** (2026-01-10) - Fixed "fn is not a function" crashes, prop mismatches, and console pollution. | TASK-189 |
+| **TASK-198** | **Implement Optimistic Sync** | **P0** | 📋 **PLANNED** | TASK-184 |
+| **TASK-199** | **Canvas Code Quality Pass** | **P1** | 📋 **PLANNED** | TASK-198 |
+| **TASK-200** | **Canvas Architecture Consolidation** | **P2** | 📋 **PLANNED** | TASK-199 |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 
 
@@ -111,9 +114,9 @@
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
-### ROAD-004: Mobile PWA (🔄 IN PROGRESS - Phase 1)
+### ROAD-004: Mobile PWA (🔄 IN PROGRESS - Phase 6)
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
-- **Status**: Phase 1 - PWA Foundation in progress
+- **Status**: Phase 6 - Stabilization in progress
 - **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
 
 ### ROAD-025: Backup Containerization (VPS Distribution)
@@ -148,35 +151,125 @@
 ### TASK-184: Canvas System Rebuild (🔄 IN PROGRESS)
 **Priority**: P0-CRITICAL
 **Started**: January 10, 2026
-**Status**: Phase 1 - Foundation
+**Status**: Partial Refactor Complete, Hardening Required
+**Updated**: January 10, 2026 - Deep Dive Assessment
 
-**Problem**: Canvas system has ~22,500 lines of complex, over-engineered code with:
-- ~1,200 lines of coordinate conversion that fights Vue Flow's native behavior
-- 22 competing watchers causing race conditions
-- 7-second position locks as bandaid for sync issues
-- Double-conversion bug (store + Vue Flow both convert coordinates)
+**Original Problem**: Canvas system had ~22,500 lines of complex, over-engineered code.
 
-**Solution**: Complete fresh rebuild with Vue Flow-native architecture.
+**Current State (After Initial Refactor)**:
 
-**Documentation**: [docs/process-docs/canvas-rebuild_10.1.26/](./process-docs/canvas-rebuild_10.1.26/)
-- [00-OVERVIEW.md](./process-docs/canvas-rebuild_10.1.26/00-OVERVIEW.md) - Summary
-- [01-ARCHITECTURE.md](./process-docs/canvas-rebuild_10.1.26/01-ARCHITECTURE.md) - Architecture
-- [02-INTEGRATION-MAP.md](./process-docs/canvas-rebuild_10.1.26/02-INTEGRATION-MAP.md) - All touchpoints
-- [03-IMPLEMENTATION.md](./process-docs/canvas-rebuild_10.1.26/03-IMPLEMENTATION.md) - 7 phases
-- [04-TECHNICAL-DECISIONS.md](./process-docs/canvas-rebuild_10.1.26/04-TECHNICAL-DECISIONS.md) - Key decisions
-- [05-VERIFICATION.md](./process-docs/canvas-rebuild_10.1.26/05-VERIFICATION.md) - Tests/success criteria
-- [06-CLEANUP.md](./process-docs/canvas-rebuild_10.1.26/06-CLEANUP.md) - Files to delete
+| Metric | Before | After | Target |
+|--------|--------|-------|--------|
+| CanvasView.vue | 2,098 LOC | 347 LOC ✅ | <400 |
+| Composables | 6,962 LOC | 5,658 LOC | <4,000 |
+| Console.log | 133 | 62 | 0 |
+| `any` types | 57 | 41 | 0 |
+| Position Lock Bandaid | 451 LOC | 451 LOC ⚠️ | 0 (deleted) |
 
-**Phases**:
-- [ ] Phase 1: Empty canvas renders at `/canvas-new`
-- [ ] Phase 2: Groups load from Supabase
-- [ ] Phase 3: Tasks in inbox + canvas
-- [ ] Phase 4: Drag task to canvas (position persists)
-- [ ] Phase 5: Parent-child works (tasks move with groups)
-- [ ] Phase 6: Feature parity (all 15 features)
-- [ ] Phase 7: Swap and cleanup (delete old, rename new)
+**Remaining Issues (Deep Dive Jan 10)**:
+1. **Position Lock Bandaid** (451 LOC) - Masks sync race condition, NOT removed
+2. **Empty Event Handlers** - `handleNodeDrag()`, `handleEdgeClick()` are no-ops
+3. **Bug Workarounds** - 13 files with BUG-XXX/TASK-XXX comments still present
+4. **Duplicated Logic** - Position calculation in 3 composables
 
-**Target**: ~2,550 lines (88% reduction from 22,500)
+**Implementation Prompt**: [docs/prompts/CANVAS-HARDENING-PROMPT.md](../prompts/CANVAS-HARDENING-PROMPT.md)
+
+**Sub-Tasks**:
+- [ ] **TASK-198**: Implement Optimistic Sync (P0) - Replace position lock bandaid
+- [ ] **TASK-199**: Canvas Code Quality Pass (P1) - Remove 62 console.log, fix 41 `any` types
+- [ ] **TASK-200**: Canvas Architecture Consolidation (P2) - Unify position/containment logic
+
+---
+
+### TASK-198: Implement Optimistic Sync (📋 PLANNED)
+**Priority**: P0-CRITICAL
+**Depends On**: TASK-184
+**Blocks**: TASK-199, Position stability
+
+**Problem**: The 7-second position lock (`canvasStateLock.ts`, 451 LOC) is a bandaid that masks a sync race condition:
+1. User drags node
+2. Supabase sync pulls stale data before local push completes
+3. Without lock → position resets to stale data
+
+**Solution**: Replace lock with timestamp-based optimistic updates:
+
+```typescript
+// New: useCanvasOptimisticSync.ts
+const pendingChanges = new Map<string, {
+  position: { x: number, y: number },
+  timestamp: number,
+  synced: boolean
+}>()
+
+const shouldAcceptRemoteChange = (id: string, remoteTimestamp: number): boolean => {
+  const pending = pendingChanges.get(id)
+  if (!pending) return true
+  return remoteTimestamp > pending.timestamp
+}
+```
+
+**Steps**:
+- [ ] Create `useCanvasOptimisticSync.ts`
+- [ ] Integrate with `useCanvasSync.ts`, `useCanvasDragDrop.ts`
+- [ ] Test: drag → refresh → position persists (without 7s lock)
+- [ ] Delete `src/utils/canvasStateLock.ts` (-451 LOC)
+
+**Files to Modify**:
+- `src/composables/canvas/useCanvasSync.ts`
+- `src/composables/canvas/useCanvasNodeSync.ts`
+- `src/composables/canvas/useCanvasTaskDrag.ts`
+- `src/composables/canvas/useCanvasGroupDrag.ts`
+
+**Files to Delete**:
+- `src/utils/canvasStateLock.ts` (451 LOC)
+
+---
+
+### TASK-199: Canvas Code Quality Pass (📋 PLANNED)
+**Priority**: P1-HIGH
+**Depends On**: TASK-198
+**Blocks**: TASK-200
+
+**Goal**: Clean up code quality issues identified in deep dive.
+
+**Tasks**:
+- [ ] Remove 62 console.log statements from canvas composables
+- [ ] Fix 41 `any` type instances with proper Vue Flow types
+- [ ] Clean 13 files with bug workaround comments (verify fixes, remove comments)
+- [ ] Fill empty event handlers (`handleNodeDrag`, `handleEdgeClick`)
+
+**Files with Most Issues**:
+
+| File | Console.log | `any` Types |
+|------|-------------|-------------|
+| useCanvasSectionProperties.ts | 7 | 0 |
+| useCanvasGroupActions.ts | 7 | 0 |
+| useCanvasTaskActions.ts | 7 | 3 |
+| useCanvasOrchestrator.ts | 3 | 6 |
+| useCanvasEvents.ts | 0 | 5 |
+| useCanvasSync.ts | 2 | 5 |
+
+---
+
+### TASK-200: Canvas Architecture Consolidation (📋 PLANNED)
+**Priority**: P2-MEDIUM
+**Depends On**: TASK-199
+
+**Goal**: Eliminate duplicated logic and standardize patterns.
+
+**Duplicated Logic to Consolidate**:
+
+| Pattern | Current Files | Target |
+|---------|---------------|--------|
+| Absolute position calc | `useCanvasTaskDrag`, `useCanvasNodeSync`, `useNodeAttachment` | Single utility |
+| Containment check | `useCanvasParentChild`, `useCanvasGroupDrag`, `useCanvasTaskDrag` | Unified approach |
+| Parent metrics | `useNodeAttachment`, `useCanvasParentChild` | Shared helper |
+
+**Tasks**:
+- [ ] Create `src/utils/canvas/positionCalculator.ts` - centralize coordinate transforms
+- [ ] Standardize containment: always use `isPointInRect` for tasks, `isNodeMoreThanHalfInside` for groups
+- [ ] Remove redundant helpers from individual composables
+- [ ] Update all consumers to use centralized utilities
 
 ---
 
@@ -220,16 +313,17 @@
 **Completed**: January 10, 2026
 **Verification**: `tests/repro_zombie_movement.spec.ts` passing.
 
-### TASK-195: Timer System Refactor (🔄 IN PROGRESS)
+### TASK-195: Timer System Refactor (🔄 IN PROGRESS - Phase 6)
 **Priority**: P2-MEDIUM
 **Status**: IN_PROGRESS
 **Goal**: Fix performance issues, split monolithic sync composable, and remove console pollution.
-- [x] Phase 1: Console removal (38 statements)
-- [x] Phase 2: Fix store-in-computed anti-pattern
-- [x] Phase 3: Extract time formatting utility
-- [x] Phase 4: Split `useCrossTabSync.ts` into focused composables
-- [x] Phase 5: Use VueUse `useIntervalFn`
-- [x] Phase 6: Final integration and verification
+- [x] Phase 1: Empty canvas renders at `/canvas-new`
+- [x] Phase 2: Groups load from Supabase
+- [x] Phase 3: Tasks in inbox + canvas
+- [x] Phase 4: Drag task to canvas (position persists)
+- [x] Phase 5: Parent-child works (tasks move with groups)
+- [ ] Phase 6: Feature parity (all 15 features)
+- [ ] Phase 7: Swap and cleanup (delete old, rename new)
 
 ### ~~TASK-195~~: Timer System Refactor (✅ DONE)
 

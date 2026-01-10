@@ -7,13 +7,13 @@ interface TaskCountsDeps {
     canvasStore: ReturnType<typeof useCanvasStore>
     nodes: Ref<Node[]>
     filteredTasks: ComputedRef<Task[]>
-    taskStore?: ReturnType<typeof useTaskStore>  // BUG-184: Optional for backwards compat
+    taskStore?: ReturnType<typeof useTaskStore>
 }
 
 export function useCanvasTaskCounts(deps: TaskCountsDeps) {
     const { canvasStore, nodes, filteredTasks, taskStore } = deps
 
-    // BUG-047 FIX: Helper to get all ancestor group IDs for a given group
+    // Helper to get all ancestor group IDs for a given group
     // This is needed to update parent groups when a child's count changes
     const getAncestorGroupIds = (groupId: string, visited = new Set<string>()): string[] => {
         if (visited.has(groupId)) return [] // Prevent infinite loops
@@ -27,7 +27,7 @@ export function useCanvasTaskCounts(deps: TaskCountsDeps) {
         return ancestors
     }
 
-    // BUG-047 FIX: Update a single section's task count by mutating node.data
+    // Update a single section's task count by mutating node.data
     const updateSingleSectionCount = (sectionId: string, tasks: Task[]) => {
         const sectionNodeId = `section-${sectionId}`
         const newCount = canvasStore.getTaskCountInGroupRecursive(sectionId, tasks)
@@ -36,13 +36,12 @@ export function useCanvasTaskCounts(deps: TaskCountsDeps) {
         const node = nodes.value.find(n => n.id === sectionNodeId)
         if (node && node.data) {
             node.data.taskCount = newCount
-            // console.log(`[BUG-047] Updated "${node.data?.name || sectionId}" taskCount: ${newCount}`)
         }
     }
 
-    // TASK-072 FIX: Update section task counts without calling syncNodes()
-    // BUG-047 FIX: Also update all ancestor groups to reflect recursive counting
-    // BUG-152 FIX: Use nextTick to ensure task store updates have propagated
+    // Update section task counts without calling syncNodes()
+    // Also update all ancestor groups to reflect recursive counting
+    // Use nextTick to ensure task store updates have propagated
     //
     // CRITICAL INSIGHT from Vue Flow docs (https://github.com/bcakmakoglu/vue-flow/discussions/920):
     // "useNode returns us the node object straight from the state - since the node obj is reactive,
@@ -51,30 +50,21 @@ export function useCanvasTaskCounts(deps: TaskCountsDeps) {
     // The key is to MUTATE the existing node.data, NOT replace the node object.
     // Replacing the node breaks the reference that useNode() is watching in custom components.
     const updateSectionTaskCounts = async (oldSectionId?: string, newSectionId?: string) => {
-        // BUG-152 FIX: Wait for Vue reactivity to propagate task position updates
+        // Wait for Vue reactivity to propagate task position updates
         // Without this, filteredTasks may have stale canvasPosition values
         await nextTick()
-        await nextTick() // BUG-152: Extra tick for store propagation
+        await nextTick()
 
-        // BUG-184 FIX: Read directly from taskStore to bypass filteredTasks cache
+        // Read directly from taskStore to bypass filteredTasks cache
         // The filteredTasks computed has hash-based caching that can return stale positions
         // during drag operations, causing task counts to not update correctly
         let tasks: Task[]
         if (taskStore && taskStore.tasks) {
             // Fresh read from store - filter out soft-deleted tasks
             tasks = taskStore.tasks.filter(t => !t._soft_deleted)
-            // console.log(`[BUG-184] Fresh read: ${tasks.length} tasks from store`)
         } else {
             // Fallback to filtered tasks (may be cached)
             tasks = filteredTasks.value || []
-        }
-
-        // BUG-152 DEBUG: Log task positions we're using for counting
-        if (newSectionId) {
-            const section = canvasStore.groups.find(s => s.id === newSectionId)
-            if (section) {
-                // console.log(`[BUG-152 COUNT DEBUG] Counting for "${section.name}"...`)
-            }
         }
 
         // Collect all sections that need updating (including ancestors)
@@ -92,12 +82,10 @@ export function useCanvasTaskCounts(deps: TaskCountsDeps) {
             getAncestorGroupIds(newSectionId).forEach(id => sectionsToUpdate.add(id))
         }
 
-        // BUG-047 FIX: Update all affected sections in one pass
+        // Update all affected sections in one pass
         sectionsToUpdate.forEach(sectionId => {
             updateSingleSectionCount(sectionId, tasks)
         })
-
-        // console.log(`[BUG-152] Updated task counts for ${sectionsToUpdate.size} groups`)
     }
 
     return {

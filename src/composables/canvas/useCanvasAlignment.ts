@@ -22,13 +22,6 @@ export function useCanvasAlignment(
 
     // Pre-alignment state validation function
     const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; reason?: string } => {
-        console.log('🔍 Validating alignment state...')
-        console.log(`  Vue Flow mounted: ${status.isVueFlowMounted.value}`)
-        console.log(`  Vue Flow ready: ${status.isVueFlowReady.value}`)
-        console.log(`  Canvas ready: ${status.isCanvasReady.value}`)
-        console.log(`  Total nodes: ${nodes.value.length}`)
-        console.log(`  Selected in store: ${canvasStore.selectedNodeIds.length}`)
-
         // Check if Vue Flow component is mounted
         if (!status.isVueFlowMounted.value) {
             return {
@@ -55,7 +48,6 @@ export function useCanvasAlignment(
 
         // Check selection synchronization
         const vueFlowSelected = nodes.value.filter(n => 'selected' in n && n.selected && n.type === 'taskNode')
-        console.log(`  Selected in Vue Flow: ${vueFlowSelected.length}`)
 
         if (vueFlowSelected.length < minNodes) {
             return {
@@ -64,14 +56,11 @@ export function useCanvasAlignment(
             }
         }
 
-        // Verify selection state synchronization
         const syncInfo = {
             storeSelection: canvasStore.selectedNodeIds.length,
             vueFlowSelection: vueFlowSelected.length,
             matched: vueFlowSelected.filter(n => canvasStore.selectedNodeIds.includes(n.id)).length
         }
-
-        console.log('  Selection sync info:', syncInfo)
 
         if (syncInfo.matched !== syncInfo.storeSelection) {
             return {
@@ -80,22 +69,17 @@ export function useCanvasAlignment(
             }
         }
 
-        console.log('✅ Alignment state validation passed')
         return { canProceed: true }
     }
 
-    // Enhanced alignment operation helper with comprehensive error handling
     const executeAlignmentOperation = (
         operationName: string,
         operation: (selectedNodes: Node[]) => void,
         minNodes: number = 2
     ) => {
-        console.log(`🔧 ${operationName}: Starting alignment operation`)
-
         // Pre-alignment state validation
         const validation = validateAlignmentState(minNodes)
         if (!validation.canProceed) {
-            console.warn(`⚠️ ${operationName}: Validation failed:`, validation.reason)
             message.warning(validation.reason || 'Validation failed')
             return false
         }
@@ -106,7 +90,6 @@ export function useCanvasAlignment(
 
         if (selectedNodes.length < minNodes) {
             const errorMsg = `Need at least ${minNodes} selected tasks for ${operationName.toLowerCase()}, have ${selectedNodes.length}`
-            console.warn(`⚠️ ${operationName}: Insufficient nodes:`, errorMsg)
             message.error(errorMsg)
             return false
         }
@@ -120,10 +103,8 @@ export function useCanvasAlignment(
 
             // Show success feedback
             message.success(`Successfully aligned ${selectedNodes.length} tasks ${operationName.toLowerCase().replace('align ', '')}`)
-            console.log(`✅ ${operationName}: Operation completed successfully`)
             return true
         } catch (error) {
-            console.error(`❌ ${operationName}: Operation failed:`, error)
             message.error(`Alignment operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
             return false
         }

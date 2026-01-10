@@ -383,11 +383,9 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .task-node:hover::before {
-  background: linear-gradient(
-    135deg,
-    var(--glass-border-soft) 0%,
-    var(--glass-bg-heavy) 100%
-  );
+  /* Slightly lighter on hover for visual feedback */
+  background: rgba(52, 55, 65, 0.7);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .timer-active {

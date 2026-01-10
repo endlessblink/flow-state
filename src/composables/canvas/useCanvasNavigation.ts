@@ -1,9 +1,8 @@
 import { computed } from 'vue'
-import { useVueFlow, type Node } from '@vue-flow/core'
-import { useCanvasStore } from '@/stores/canvas'
-import { storeToRefs } from 'pinia'
+import { useVueFlow } from '@vue-flow/core'
+import type { useCanvasStore } from '@/stores/canvas'
 
-export function useCanvasNavigation(canvasStore: any) {
+export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStore>) {
     const { fitView: vueFlowFitView, getNodes } = useVueFlow()
 
     // Safety check - use computed to access viewport properties to avoid crash if store is not ready

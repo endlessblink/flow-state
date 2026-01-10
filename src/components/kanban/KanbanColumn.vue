@@ -66,16 +66,17 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
-// TASK-157: Reverted to original card - fixing layout instead
 import TaskCard from './TaskCard.vue'
-import type { Task } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 import { Plus } from 'lucide-vue-next'
+
+import './KanbanColumn.css'
 
 interface Props {
   title: string
   status: Task['status']
   tasks: Task[]
-  wipLimit?: number // Optional WIP limit (default: 10)
+  wipLimit?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,301 +89,32 @@ const emit = defineEmits<{
   startTimer: [taskId: string]
   editTask: [taskId: string]
   deleteTask: [taskId: string]
-  moveTask: [taskId: string, newStatus: Task['status']]
   contextMenu: [event: MouseEvent, task: Task]
 }>()
 
-// Local reactive copy for drag-drop
 const localTasks = ref([...props.tasks])
+watch(() => props.tasks, (newTasks) => { localTasks.value = [...newTasks] })
 
-// Watch for external task changes and update local copy
-watch(() => props.tasks, (newTasks) => {
-  localTasks.value = [...newTasks]
-}, { deep: true })
-
-// WIP Limit calculations
 const taskCount = computed(() => props.tasks.length)
 
 const wipStatusClass = computed(() => {
   if (!props.wipLimit) return ''
-
   const count = taskCount.value
   const limit = props.wipLimit
-  const warningThreshold = Math.floor(limit * 0.8) // 80% of limit
-
   if (count >= limit) return 'wip-exceeded'
-  if (count >= warningThreshold) return 'wip-warning'
+  if (count >= Math.floor(limit * 0.8)) return 'wip-warning'
   return ''
 })
 
-interface DraggableChangeEvent {
-  added?: {
-    element: Task
-    newIndex: number
-  }
-  removed?: {
-    element: Task
-    oldIndex: number
-  }
-  moved?: {
-    element: Task
-    newIndex: number
-    oldIndex: number
-  }
-}
+const taskStore = useTaskStore()
 
-// Handle drag-drop changes
-const handleDragChange = (event: DraggableChangeEvent) => {
+const handleDragChange = async (event: any) => {
   if (event.added) {
-    // Task was dropped into this column
-    const task = event.added.element
-    emit('moveTask', task.id, props.status)
-  } else if (event.moved) {
-    // Task was moved within this column
-    console.log('🔄 Task moved within column:', event.moved.element.title, 'to index:', event.moved.newIndex)
-    // NOTE: Internal sorting within a column is currently not persisted in the DB 
-    // because the Task interface doesn't have an order field.
-    // However, updating localTasks gives visual feedback.
+    try {
+      await taskStore.moveTaskWithUndo(event.added.element.id, props.status)
+    } catch (error) {
+      // Error moving task
+    }
   }
 }
 </script>
-
-<style scoped>
-/* Glass Morphism Column Container */
-.kanban-column {
-  background: var(--glass-bg-light); /* Subtle glass base */
-  backdrop-filter: blur(var(--blur-regular));
-  -webkit-backdrop-filter: blur(var(--blur-regular));
-  border: 1px solid var(--border-subtle); /* Consistent border */
-  border-radius: var(--radius-lg); /* Softer rounded corners */
-  padding: var(--space-3); /* Consistent padding */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Deep ambient shadow */
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-width: 320px;
-}
-
-.kanban-column:hover {
-  background: var(--glass-bg-medium); /* Slightly lighter on hover */
-  border-color: var(--glass-border-hover);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
-}
-
-/* WIP Limit Warning States */
-.kanban-column.wip-warning {
-  border-left: 2px solid var(--color-break);
-  background: linear-gradient(to bottom, rgba(245, 158, 11, 0.05), rgba(255, 255, 255, 0.03));
-}
-
-.kanban-column.wip-exceeded {
-  border-left: 2px solid var(--color-danger);
-  background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.03));
-  box-shadow: 
-    0 20px 40px rgba(0,0,0,0.4),
-    inset 0 0 20px rgba(239, 68, 68, 0.1);
-}
-
-/* Header - Floating Glass */
-.column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-  padding: var(--space-2) var(--space-3);
-  background: var(--glass-bg-medium);
-  border-radius: var(--radius-6);
-  border: 1px solid var(--glass-bg-medium);
-  backdrop-filter: blur(var(--blur-xs));
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.column-title {
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 600;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* Task Count Badge */
-.task-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
-  padding: 2px 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  min-width: 24px;
-  text-align: center;
-}
-
-.task-count.wip-warning {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.4);
-}
-
-.task-count.wip-exceeded {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.4);
-  animation: wipPulse 2s ease-in-out infinite;
-}
-
-@keyframes wipPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
-}
-
-/* Add Task Button */
-.add-task-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.add-task-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
-  transform: translateY(-1px) rotate(90deg);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-/* Tasks Container */
-.tasks-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-sm);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: var(--space-1); /* Added padding to prevent hover effects from being clipped */
-  padding-right: var(--space-1); /* Maintain space for scrollbar */
-  min-height: 100px;
-}
-
-/* Custom Scrollbar */
-.tasks-container::-webkit-scrollbar {
-  width: 4px;
-}
-
-.tasks-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.tasks-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.tasks-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Empty State */
-.empty-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  margin-top: 8px;
-  transition: all 0.2s ease;
-}
-
-.empty-column:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.empty-message {
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 13px;
-  margin-bottom: 12px;
-}
-
-.add-first-task {
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.add-first-task:hover {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: rgba(99, 102, 241, 0.5);
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-}
-
-/* Task Item Transitions */
-.task-item {
-  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.ghost-card {
-  opacity: 0.4;
-  background: rgba(59, 130, 246, 0.1) !important;
-  border: 2px dashed rgba(59, 130, 246, 0.5) !important;
-}
-
-.chosen-card {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.1) !important;
-  transform: scale(1.02);
-  z-index: 1000;
-}
-
-.drag-card {
-  opacity: 1;
-  background: rgba(40, 40, 50, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  cursor: grabbing;
-}
-
-/* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
-.sortable-fallback {
-  position: fixed !important;
-  z-index: 9999 !important;
-  pointer-events: none !important;
-  opacity: 0.9 !important;
-  background: rgba(40, 40, 50, 0.95) !important;
-  border: 1px solid rgba(99, 102, 241, 0.4) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
-  border-radius: var(--radius-lg) !important;
-  transform: rotate(2deg) scale(1.02) !important;
-}
-</style>

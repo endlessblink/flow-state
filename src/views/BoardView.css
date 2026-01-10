@@ -1,0 +1,322 @@
+.board-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0; /* Allows children to use flex-grow/shrink properly */
+}
+
+/* KANBAN HEADER */
+.kanban-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6) var(--space-8);
+  background: transparent !important; /* Force transparent background */
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.board-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.task-count {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--surface-tertiary);
+  border-radius: var(--radius-full);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Density Selector - Todoist Inspired */
+.density-selector {
+  display: flex;
+  gap: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 2px;
+  box-shadow: inset var(--shadow-sm);
+}
+
+.density-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.density-btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg-heavy);
+}
+
+.density-btn.active {
+  background: var(--state-active-bg);
+  border: 1px solid var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.hide-done-toggle {
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  z-index: 1000;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.hide-done-toggle.icon-only {
+  padding: var(--space-2);
+  min-width: 40px;
+  min-height: 40px;
+  justify-content: center;
+}
+
+.hide-done-toggle:hover {
+  background: linear-gradient(
+    135deg,
+    var(--state-hover-bg) 0%,
+    var(--glass-bg-soft) 100%
+  );
+  border-color: var(--state-hover-border);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.hide-done-toggle.active {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.done-column-toggle {
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  z-index: 1000;
+  pointer-events: auto;
+  user-select: none;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.done-column-toggle.icon-only {
+  padding: var(--space-2);
+  justify-content: center;
+}
+
+.done-column-toggle:hover {
+  background: linear-gradient(
+    135deg,
+    var(--state-hover-bg) 0%,
+    var(--glass-bg-soft) 100%
+  );
+  border-color: var(--state-hover-border);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.done-column-toggle.active {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* Today Filter Toggle */
+.today-filter {
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  z-index: 1000;
+  pointer-events: auto;
+  user-select: none;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.today-filter.icon-only {
+  padding: var(--space-2);
+  justify-content: center;
+}
+
+.today-filter:hover {
+  background: linear-gradient(
+    135deg,
+    var(--state-hover-bg) 0%,
+    var(--glass-bg-soft) 100%
+  );
+  border-color: var(--state-hover-border);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+.today-filter.active {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  color: var(--state-active-text);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* Status Filters - Board View */
+.status-filters {
+  display: flex;
+  gap: 2px;
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg-soft) 0%,
+    var(--glass-bg-light) 100%
+  );
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 2px;
+  box-shadow: inset var(--shadow-sm);
+}
+
+.status-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-btn.icon-only {
+  padding: var(--space-2);
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.status-btn:hover {
+  color: var(--text-primary);
+  background: var(--state-hover-bg);
+  border-color: var(--state-hover-border);
+  backdrop-filter: var(--state-active-glass);
+  box-shadow: var(--state-hover-shadow);
+}
+
+.status-btn.active {
+  color: var(--state-active-text);
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  backdrop-filter: var(--state-active-glass);
+  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+}
+
+/* SCROLL CONTAINER - uses .scroll-container utility for base styles */
+.kanban-scroll-container {
+  overflow-x: visible; /* Allow horizontal scrolling in inner containers */
+  padding-bottom: 2rem;
+  position: relative;
+}
+
+/* KANBAN BOARD */
+.kanban-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}

@@ -81,7 +81,9 @@ const groupStyle = computed(() => ({
   height: props.data?.isCollapsed
     ? '48px'
     : `${props.data?.dimensions?.height ?? 200}px`,
-  '--group-color': props.data?.color ?? '#6366f1'
+  '--group-color': props.data?.color ?? '#6366f1',
+  // Set depth for z-index CSS variable (used by parent wrapper)
+  '--group-depth': props.data?.depth ?? 0
 }))
 
 const headerStyle = computed(() => ({

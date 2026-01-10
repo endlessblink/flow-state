@@ -75,20 +75,6 @@
         :dragged-event-id="draggedEventId"
         :hovered-event-id="hoveredEventId"
         :resize-preview="resizePreview"
-        :format-hour="formatHour"
-        :is-current-time-slot="isCurrentTimeSlot"
-        :format-slot-time="formatSlotTime"
-        :get-tasks-for-slot="getTasksForSlot"
-        :is-task-primary-slot="isTaskPrimarySlot"
-        :get-slot-task-style="getSlotTaskStyle"
-        :get-project-visual="getProjectVisual"
-        :get-project-name="getProjectName"
-        :get-project-color="getProjectColor"
-        :get-priority-class="getPriorityClass"
-        :get-priority-label="getPriorityLabel"
-        :get-task-status="getTaskStatus"
-        :get-status-label="getStatusLabel"
-        :get-status-icon="getStatusIcon"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -113,17 +99,6 @@
         :working-hours="workingHours"
         :week-events="weekEvents"
         :current-task-id="timerStore.currentTaskId"
-        :format-hour="formatHour"
-        :get-week-event-style="getWeekEventStyle"
-        :is-current-week-time-cell="isCurrentWeekTimeCell"
-        :get-project-visual="getProjectVisual"
-        :get-project-name="getProjectName"
-        :get-project-color="getProjectColor"
-        :get-priority-class="getPriorityClass"
-        :get-priority-label="getPriorityLabel"
-        :get-task-status="getTaskStatus"
-        :get-status-label="getStatusLabel"
-        :get-status-icon="getStatusIcon"
         @week-drag-over="handleWeekDragOver"
         @week-drop="handleWeekDrop"
         @event-drag-start="handleEventDragStart"
@@ -141,15 +116,6 @@
         v-else-if="viewMode === 'month'"
         :month-days="monthDays"
         :current-task-id="timerStore.currentTaskId"
-        :get-project-visual="getProjectVisual"
-        :get-project-name="getProjectName"
-        :get-project-color="getProjectColor"
-        :get-priority-class="getPriorityClass"
-        :get-priority-label="getPriorityLabel"
-        :get-task-status="getTaskStatus"
-        :get-status-label="getStatusLabel"
-        :get-status-icon="getStatusIcon"
-        :format-event-time="formatEventTime"
         @month-drop="handleMonthDrop"
         @month-day-click="handleMonthDayClick"
         @event-drag-start="handleMonthDragStart"
@@ -163,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -210,12 +176,12 @@ const operationError = ref<OperationError | null>(null)
 const systemHealthy = computed(() => !!taskStore && !!timerStore && !!uiStore)
 const systemHealthMessage = computed(() => !systemHealthy.value ? 'Critical stores failed to initialize' : '')
 
+// 📍 TASK-192: Fix memory leak using AbortController
+let dragAbortController: AbortController | null = null
+const DRAG_CAPTURE_OPTIONS = { capture: true }
+
 const handleValidateStores = () => {
-  console.log('Validating stores...', {
-    taskStore: !!taskStore,
-    timerStore: !!timerStore,
-    uiStore: !!uiStore
-  })
+  // Store validation logic
 }
 
 const handleRetryFailedOperation = () => {
@@ -254,7 +220,6 @@ const {
   isEditModalOpen,
   selectedTask,
   showConfirmModal,
-  taskToDelete,
   handleEditTask,
   closeEditModal,
   handleConfirmDelete,
@@ -262,10 +227,8 @@ const {
   cancelDeleteTask
 } = useCalendarModals()
 
-// View state
 // Use global status filter directly from store (maintains reactivity)
 const statusFilter = computed(() => taskStore.activeStatusFilter)
-const timeGridRef = ref<HTMLElement | null>(null)
 
 // Recording state
 const _isRecording = ref(false)
@@ -305,7 +268,7 @@ const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, ha
 const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
         getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus,
         getProjectColor, getProjectEmoji: _getProjectEmoji, getProjectName, getProjectVisual,
-        formatSlotTime, isCurrentTimeSlot: checkCurrentTimeSlot, getWeekStart } = eventHelpers
+        formatSlotTime, isCurrentTimeSlot: checkCurrentTimeSlot } = eventHelpers
 
 // Destructure scroll composable
 const { setupScrollSync, cleanupScrollSync, scrollToCurrentTime } = calendarScroll
@@ -315,7 +278,6 @@ const isCurrentTimeSlot = (slot: TimeSlot) => checkCurrentTimeSlot(slot, current
 
 // Interaction Handlers (Extracted)
 const {
-  selectedCalendarEvents,
   hoveredEventId,
   handleSlotTaskMouseEnter,
   handleSlotTaskMouseLeave,
@@ -343,6 +305,27 @@ const timeIndicatorPosition = computed(() => {
   return (hours * 60) + minutes
 })
 
+// Provide helpers to sub-components (Day/Week views) to reduce props
+provide('calendar-helpers', {
+  formatHour,
+  formatEventTime,
+  getPriorityClass,
+  getPriorityLabel,
+  getTaskStatus,
+  getStatusLabel,
+  getStatusIcon,
+  cycleTaskStatus,
+  getProjectColor,
+  getProjectName,
+  getProjectVisual,
+  formatSlotTime,
+  isCurrentTimeSlot,
+  getTasksForSlot,
+  isTaskPrimarySlot,
+  getSlotTaskStyle,
+  handleRemoveFromCalendar
+})
+
 // Positioning and sizing for slot tasks are handled by getSlotTaskStyle from useCalendarDayView
 
 // vuedraggable integration for calendar time grid drop zone
@@ -355,7 +338,6 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
   const taskId = droppedElement?.dataset?.taskId
 
   if (!taskId) {
-    console.warn('[Calendar] vuedraggable drop: no taskId found on dropped element')
     return
   }
 
@@ -367,7 +349,6 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
     const targetDate = new Date(currentDate.value)
     targetDate.setHours(slot.hour, slot.minute, 0, 0)
 
-    console.log(`📅 [Calendar] vuedraggable: Scheduling task ${taskId} to ${targetDate.toISOString()}`)
     taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
   }
 
@@ -377,7 +358,7 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
 
 const _handleVueDraggableChange = (evt: unknown) => {
   // Optional: handle change events for debugging
-  console.log('[Calendar] vuedraggable change:', evt)
+  
 }
 
 // Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
@@ -390,7 +371,7 @@ const onDragOver = (e: DragEvent, slot: TimeSlot) => {
     e.dataTransfer.dropEffect = 'move'
   }
 
-  console.log('🔄 [CalendarDrag] onDragOver - drop target validated for slot:', slot.slotIndex)
+  
 
   // Call the existing handler from composable
   handleDragOver(e, slot)
@@ -403,7 +384,7 @@ const onDragEnter = (e: DragEvent, slot: TimeSlot) => {
     e.dataTransfer.dropEffect = 'move'
   }
 
-  console.log('📍 [CalendarDrag] onDragEnter - slot entered:', slot.slotIndex)
+  
 
   // Track active drop slot for visual feedback (handled by composable)
   handleDragEnter(e, slot)
@@ -419,42 +400,45 @@ const onDropSlot = (e: DragEvent, slot: TimeSlot) => {
   e.preventDefault()
   e.stopPropagation()
 
-  console.log('🎯 [CalendarDrag] onDropSlot called for slot:', slot.slotIndex)
+  
 
   // Use existing handleDrop from composable
   handleDrop(e, slot)
 }
 
 // ✅ CAPTURE PHASE HANDLERS
-const handleDragEnterCapture = (e: DragEvent) => {
-  const slot = (e.target as HTMLElement).closest('.time-slot')
+const handleDragEnterCapture = (e: Event) => {
+  const dragEvent = e as DragEvent
+  const slot = (dragEvent.target as HTMLElement).closest('.time-slot')
   if (!slot) return
-  e.stopImmediatePropagation()
+  dragEvent.stopImmediatePropagation()
   const idx = parseInt(slot.getAttribute('data-slot-index') || '-1')
   if (idx === -1) return
   const slotObj = timeSlots.value[idx]
-  if (slotObj) handleDragEnter(e, slotObj)
+  if (slotObj) handleDragEnter(dragEvent, slotObj)
 }
 
-const handleDragOverCapture = (e: DragEvent) => {
-  const slot = (e.target as HTMLElement).closest('.time-slot')
+const handleDragOverCapture = (e: Event) => {
+  const dragEvent = e as DragEvent
+  const slot = (dragEvent.target as HTMLElement).closest('.time-slot')
   if (!slot) return
-  e.preventDefault()
-  e.stopImmediatePropagation()
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dragEvent.preventDefault()
+  dragEvent.stopImmediatePropagation()
+  if (dragEvent.dataTransfer) dragEvent.dataTransfer.dropEffect = 'move'
   const idx = parseInt(slot.getAttribute('data-slot-index') || '-1')
   if (idx === -1) return
   const slotObj = timeSlots.value[idx]
   if (slotObj) {
     activeDropSlot.value = idx
-    handleDragOver(e, slotObj)
+    handleDragOver(dragEvent, slotObj)
   }
 }
 
-const handleDragLeaveCapture = (e: DragEvent) => {
-  const slot = (e.target as HTMLElement).closest('.time-slot')
+const handleDragLeaveCapture = (e: Event) => {
+  const dragEvent = e as DragEvent
+  const slot = (dragEvent.target as HTMLElement).closest('.time-slot')
   if (!slot) return
-  e.stopImmediatePropagation()
+  dragEvent.stopImmediatePropagation()
   const idx = parseInt(slot.getAttribute('data-slot-index') || '-1')
   if (idx === -1) return
   activeDropSlot.value = null
@@ -462,16 +446,17 @@ const handleDragLeaveCapture = (e: DragEvent) => {
   if (slotObj) handleDragLeave()
 }
 
-const handleDropCapture = (e: DragEvent) => {
-  const slot = (e.target as HTMLElement).closest('.time-slot')
+const handleDropCapture = (e: Event) => {
+  const dragEvent = e as DragEvent
+  const slot = (dragEvent.target as HTMLElement).closest('.time-slot')
   if (!slot) return
-  e.preventDefault()
-  e.stopImmediatePropagation()
+  dragEvent.preventDefault()
+  dragEvent.stopImmediatePropagation()
   const idx = parseInt(slot.getAttribute('data-slot-index') || '-1')
   if (idx === -1) return
   activeDropSlot.value = null
   const slotObj = timeSlots.value[idx]
-  if (slotObj) handleDrop(e, slotObj)
+  if (slotObj) handleDrop(dragEvent, slotObj)
 }
 
 // Listen for start-task-now events
@@ -512,14 +497,14 @@ onMounted(() => {
   // ✅ ADD CAPTURE PHASE DRAG EVENT LISTENERS
   const calendarEl = document.querySelector('.calendar-main')
   if (calendarEl) {
-    // Third parameter = true enables CAPTURE PHASE
-    calendarEl.addEventListener('dragenter', (e: Event) => handleDragEnterCapture(e as DragEvent), true)
-    calendarEl.addEventListener('dragover', (e: Event) => handleDragOverCapture(e as DragEvent), true)
-    calendarEl.addEventListener('dragleave', (e: Event) => handleDragLeaveCapture(e as DragEvent), true)
-    calendarEl.addEventListener('drop', (e: Event) => handleDropCapture(e as DragEvent), true)
-    console.log('✅ [CalendarDrag] Capture phase listeners attached to .calendar-main')
-  } else {
-    console.error('❌ [CalendarDrag] .calendar-main element not found for capture listeners')
+    dragAbortController = new AbortController()
+    const { signal } = dragAbortController
+
+    // Third parameter = { capture: true, signal } enables CAPTURE PHASE and AUTO-CLEANUP
+    calendarEl.addEventListener('dragenter', handleDragEnterCapture, { ...DRAG_CAPTURE_OPTIONS, signal })
+    calendarEl.addEventListener('dragover', handleDragOverCapture, { ...DRAG_CAPTURE_OPTIONS, signal })
+    calendarEl.addEventListener('dragleave', handleDragLeaveCapture, { ...DRAG_CAPTURE_OPTIONS, signal })
+    calendarEl.addEventListener('drop', handleDropCapture, { ...DRAG_CAPTURE_OPTIONS, signal })
   }
 })
 
@@ -537,12 +522,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
 
   // ✅ CLEANUP CAPTURE PHASE DRAG EVENT LISTENERS
-  const calendarEl = document.querySelector('.calendar-main')
-  if (calendarEl) {
-    // Note: Can't remove arrow functions added with addEventListener
-    // This is expected - the capture phase listeners will persist until page unload
-    console.log('✅ [CalendarDrag] Capture phase listeners cleanup skipped (arrow functions persist)')
-  }
+  dragAbortController?.abort()
+  dragAbortController = null
 })
 
 // Watchers for auto-scrolling to current time
@@ -592,9 +573,8 @@ const _handleStartTimer = (taskId: string) => {
 
 // DELETE HANDLERS (Moved to useCalendarModals)
 
-// TASK CREATED HANDLER
-const handleTaskCreated = (task: Task) => {
-  console.log('Task created:', task)
+const handleTaskCreated = (_task: Task) => {
+  
   dragCreate.showQuickCreateModal.value = false
   dragCreate.resetCreateDrag()
 }

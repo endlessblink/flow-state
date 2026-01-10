@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import { useTaskStore } from './tasks'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSettingsStore } from './settings'
 
 // Cross-tab sync imports - for timer synchronization across browser tabs
 import {
@@ -24,38 +25,39 @@ export interface PomodoroSession {
 export const useTimerStore = defineStore('timer', () => {
   // Initialize database composable
   const {
-    fetchUserSettings,
-    saveUserSettings,
     fetchActiveTimerSession,
     saveActiveTimerSession,
     initRealtimeSubscription
   } = useSupabaseDatabase()
 
-  // Default settings
-  const defaultSettings = {
-    workDuration: 20 * 60, // 20 minutes in seconds
-    shortBreakDuration: 5 * 60, // 5 minutes
-    longBreakDuration: 15 * 60, // 15 minutes
-    autoStartBreaks: true,
-    autoStartPomodoros: true,
-    playNotificationSounds: true
-  }
+  const settingsStore = useSettingsStore()
+
+  // Bridge to settingsStore for backward compatibility
+  const settings = reactive({
+    get workDuration() { return settingsStore.workDuration },
+    set workDuration(val) { settingsStore.updateSetting('workDuration', val) },
+    get shortBreakDuration() { return settingsStore.shortBreakDuration },
+    set shortBreakDuration(val) { settingsStore.updateSetting('shortBreakDuration', val) },
+    get longBreakDuration() { return settingsStore.longBreakDuration },
+    set longBreakDuration(val) { settingsStore.updateSetting('longBreakDuration', val) },
+    get autoStartBreaks() { return settingsStore.autoStartBreaks },
+    set autoStartBreaks(val) { settingsStore.updateSetting('autoStartBreaks', val) },
+    get autoStartPomodoros() { return settingsStore.autoStartPomodoros },
+    set autoStartPomodoros(val) { settingsStore.updateSetting('autoStartPomodoros', val) },
+    get playNotificationSounds() { return settingsStore.playNotificationSounds },
+    set playNotificationSounds(val) { settingsStore.updateSetting('playNotificationSounds', val) }
+  })
 
   // State
   const currentSession = ref<PomodoroSession | null>(null)
   const completedSessions = ref<PomodoroSession[]>([])
-  const sessions = ref<PomodoroSession[]>([]) // Alias for completedSessions for compatibility
+  const sessions = ref<PomodoroSession[]>([])
   const timerInterval = ref<NodeJS.Timeout | null>(null)
-  const settings = ref(defaultSettings)
 
-  // Cross-tab sync state (same browser)
+  // Cross-tab sync state
   let crossTabSync: ReturnType<typeof useCrossTabSync> | null = null
-  const isLeader = ref(false) // Whether this tab controls the timer
+  const isLeader = ref(false)
   let crossTabInitialized = false
-
-  // Cross-device sync state
-  const DEVICE_LEADER_TIMEOUT_MS = 5000  // 5 seconds
-  const DEVICE_HEARTBEAT_INTERVAL_MS = 2000  // 2 seconds
 
   const getDeviceId = (): string => {
     if (typeof window === 'undefined') return 'server'
@@ -69,7 +71,6 @@ export const useTimerStore = defineStore('timer', () => {
   const deviceId = getDeviceId()
   const isDeviceLeader = ref(false)
   let deviceHeartbeatInterval: ReturnType<typeof setInterval> | null = null
-  let _crossDeviceSyncInitialized = false
   let lastLeaderTimestamp = 0
 
   // Computed
@@ -79,7 +80,7 @@ export const useTimerStore = defineStore('timer', () => {
 
   const displayTime = computed(() => {
     if (!currentSession.value) {
-      const minutes = Math.floor(settings.value.workDuration / 60)
+      const minutes = Math.floor(settings.workDuration / 60)
       return `${minutes.toString().padStart(2, '0')}:00`
     }
     const minutes = Math.floor(currentSession.value.remainingTime / 60)
@@ -99,7 +100,6 @@ export const useTimerStore = defineStore('timer', () => {
 
   const sessionTypeIcon = computed(() => currentSession.value?.isBreak ? '🧎' : '🍅')
 
-  // Tab-friendly computed properties
   const tabDisplayTime = computed(() => {
     if (!currentSession.value) return ''
     const minutes = Math.floor(currentSession.value.remainingTime / 60)
@@ -231,14 +231,10 @@ export const useTimerStore = defineStore('timer', () => {
 
   const saveTimerSessionWithLeadership = async () => {
     if (!currentSession.value) return
-
-    // SAFETY: Ensure session has a valid UUID before saving (guards against cached timestamp IDs)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(currentSession.value.id)) {
-      console.warn(`[TIMER] Session had invalid ID: "${currentSession.value.id}", regenerating UUID`)
       currentSession.value.id = crypto.randomUUID()
     }
-
     await saveActiveTimerSession(currentSession.value, deviceId)
   }
 
@@ -276,7 +272,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     if (timerInterval.value) clearInterval(timerInterval.value)
 
-    const sessionDuration = duration || settings.value.workDuration
+    const sessionDuration = duration || settings.workDuration
     currentSession.value = {
       id: crypto.randomUUID(),
       taskId,
@@ -322,12 +318,10 @@ export const useTimerStore = defineStore('timer', () => {
     if (timerInterval.value) { clearInterval(timerInterval.value); timerInterval.value = null }
     stopDeviceHeartbeat()
     isDeviceLeader.value = false
-
     if (currentSession.value) {
       completedSessions.value.push({ ...currentSession.value, isActive: false, completedAt: new Date() })
       currentSession.value = null
       broadcastSession()
-      // We don't delete immediately to allow last state sync, but we could
     }
   }
 
@@ -366,19 +360,19 @@ export const useTimerStore = defineStore('timer', () => {
       })
     }
 
-    if (settings.value.autoStartBreaks && !wasBreak) {
+    if (settings.autoStartBreaks && !wasBreak) {
       isDeviceLeader.value = false
-      setTimeout(() => startTimer('break', settings.value.shortBreakDuration, true), 2000)
-    } else if (settings.value.autoStartPomodoros && wasBreak && lastTaskId !== 'break') {
+      setTimeout(() => startTimer('break', settings.shortBreakDuration, true), 2000)
+    } else if (settings.autoStartPomodoros && wasBreak && lastTaskId !== 'break') {
       isDeviceLeader.value = false
-      setTimeout(() => startTimer(lastTaskId, settings.value.workDuration, false), 2000)
+      setTimeout(() => startTimer(lastTaskId, settings.workDuration, false), 2000)
     } else {
       isDeviceLeader.value = false
     }
   }
 
   const playStartSound = () => {
-    if (!settings.value.playNotificationSounds) return
+    if (!settings.playNotificationSounds) return
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       const osc = audioContext.createOscillator()
@@ -389,11 +383,11 @@ export const useTimerStore = defineStore('timer', () => {
       gain.gain.setValueAtTime(0.1, audioContext.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
       osc.start(); osc.stop(audioContext.currentTime + 0.3)
-    } catch (_e) { /* Audio not available */ }
+    } catch (_e) { }
   }
 
   const playEndSound = () => {
-    if (!settings.value.playNotificationSounds) return
+    if (!settings.playNotificationSounds) return
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       const osc = audioContext.createOscillator()
@@ -404,7 +398,7 @@ export const useTimerStore = defineStore('timer', () => {
       gain.gain.setValueAtTime(0.1, audioContext.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6)
       osc.start(); osc.stop(audioContext.currentTime + 0.6)
-    } catch (_e) { /* Audio not available */ }
+    } catch (_e) { }
   }
 
   const requestNotificationPermission = async () => {
@@ -414,17 +408,7 @@ export const useTimerStore = defineStore('timer', () => {
     return Notification.permission === 'granted'
   }
 
-  // Watchers
-  watch(settings, () => saveUserSettings(settings.value), { deep: true })
-  watch(currentSession, () => {
-    if (isDeviceLeader.value) saveTimerSessionWithLeadership()
-  }, { deep: true })
-
-  // Initialize
   const initializeStore = async () => {
-    const loaded = await fetchUserSettings()
-    if (loaded) settings.value = { ...defaultSettings, ...loaded }
-
     const saved = await fetchActiveTimerSession()
     if (saved && saved.isActive) {
       currentSession.value = { ...saved, startTime: new Date(saved.startTime) }
@@ -442,23 +426,18 @@ export const useTimerStore = defineStore('timer', () => {
         startFollowerInterval()
       }
     }
-
     initCrossTabSync()
-    _crossDeviceSyncInitialized = true
     initRealtimeSubscription(() => { }, () => { }, handleRemoteTimerUpdate)
   }
 
   initializeStore()
 
   return {
-    // State
     currentSession, completedSessions, sessions, settings,
     isLeader, isDeviceLeader,
-    // Computed
     isTimerActive, isPaused, currentTaskId, displayTime, currentTaskName,
     sessionTypeIcon, tabDisplayTime, sessionStatusText,
     timerPercentage, faviconStatus, tabTitleWithTimer,
-    // Actions
     startTimer, pauseTimer, resumeTimer, stopTimer, completeSession,
     requestNotificationPermission, playStartSound, playEndSound
   }

@@ -13,7 +13,7 @@
 import { ref, markRaw, computed, nextTick, type Ref } from 'vue'
 import { useVueFlow, type Node, type Edge, type NodeChange, type EdgeChange } from '@vue-flow/core'
 import GroupNodeNew from '@/components/canvasNew/GroupNodeNew.vue'
-// import TaskNodeNew from '@/components/canvasNew/TaskNodeNew.vue' // Phase 3
+import TaskNodeNew from '@/components/canvasNew/TaskNodeNew.vue'
 
 export interface UseCanvasCoreOptions {
   flowId?: string
@@ -53,7 +53,7 @@ export function useCanvasCore(options: UseCanvasCoreOptions = {}) {
   // Register custom node components
   const nodeTypes = markRaw({
     sectionNode: GroupNodeNew,  // Phase 2: Group/section nodes
-    // taskNode: TaskNodeNew,   // Phase 3: Task nodes
+    taskNode: TaskNodeNew,      // Phase 3: Task nodes
   })
 
   // ============================================

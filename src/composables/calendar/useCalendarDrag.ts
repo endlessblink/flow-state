@@ -137,13 +137,6 @@ export function useCalendarDrag() {
 
     // Set global fallback for browser compatibility
     (window as Window & typeof globalThis).__draggingTaskId = calendarEvent.taskId
-
-    console.log('🎯 [UnifiedDrag] Drag started:', {
-      taskId: calendarEvent.taskId,
-      viewMode,
-      dragMode: dragState.value.dragMode,
-      eventTitle: calendarEvent.title
-    })
   }
 
   /**
@@ -162,7 +155,6 @@ export function useCalendarDrag() {
       try {
         dragData = JSON.parse(data) as DragData
       } catch (error) {
-        console.error('❌ [UnifiedDrag] Error parsing drag data:', error)
         return
       }
     } else {
@@ -181,7 +173,6 @@ export function useCalendarDrag() {
     }
 
     if (!dragData) {
-      console.warn('⚠️ [UnifiedDrag] No drag data available')
       return
     }
 
@@ -198,8 +189,6 @@ export function useCalendarDrag() {
       // Start document-level tracking for smooth ghost updates
       startDocumentDragTracking()
     }
-
-    console.log('📥 [UnifiedDrag] Drag enter:', { target, dragData })
   }
 
   /**
@@ -234,11 +223,6 @@ export function useCalendarDrag() {
     if (target && activeDropTarget.value?.type === target.type) {
       activeDropTarget.value = null
     }
-
-    console.log('📍 [UnifiedDrag] Drag leave:', {
-      target: target?.type,
-      hadActiveTarget: !!activeDropTarget.value
-    })
   }
 
   /**
@@ -258,7 +242,6 @@ export function useCalendarDrag() {
       try {
         dragData = JSON.parse(data) as DragData
       } catch (error) {
-        console.error('❌ [UnifiedDrag] Error parsing drop data:', error)
         return
       }
     } else {
@@ -270,7 +253,6 @@ export function useCalendarDrag() {
     }
 
     if (!dragData || !dragData.taskId) {
-      console.warn('⚠️ [UnifiedDrag] No valid drag data for drop')
       return
     }
 
@@ -278,11 +260,8 @@ export function useCalendarDrag() {
     const task = taskStore.tasks.find(t => t.id === taskId)
 
     if (!task) {
-      console.warn('⚠️ [UnifiedDrag] Task not found:', taskId)
       return
     }
-
-    console.log('🎯 [UnifiedDrag] Processing drop:', { task: task.title, target, dragMode: dragState.value.dragMode })
 
     // Create transaction backup for rollback
     const taskBackup = JSON.parse(JSON.stringify(task))
@@ -304,25 +283,20 @@ export function useCalendarDrag() {
           operationSuccess = true
           break
         default:
-          console.warn('⚠️ [UnifiedDrag] Unknown target type:', target.type)
           return
       }
 
       if (operationSuccess) {
-        console.log(`✅ [UnifiedDrag] Successfully processed drop: ${task.title}`)
+        // Success handled by switch
       } else {
         throw new Error('Drop operation returned false')
       }
     } catch (error) {
-      console.error('❌ [UnifiedDrag] Error processing drop, rolling back:', error)
 
       // Rollback task state to prevent data loss
       try {
         taskStore.updateTask(task.id, taskBackup)
-        console.log(`🔄 [UnifiedDrag] Rolled back task state: ${task.title}`)
       } catch (rollbackError) {
-        console.error('💀 [UnifiedDrag] CRITICAL: Failed to rollback task state:', rollbackError)
-        console.error('💀 [UnifiedDrag] Original task backup:', taskBackup)
       }
     }
 
@@ -337,7 +311,7 @@ export function useCalendarDrag() {
   const handleDragEnd = () => {
     // Stop document-level tracking
     stopDocumentDragTracking()
-    console.log('🏁 [UnifiedDrag] Drag ended')
+
     clearDragState()
   }
 
@@ -357,7 +331,6 @@ export function useCalendarDrag() {
 
     if (dragData.source === 'calendar-event') {
       // Moving existing calendar event
-      console.log(`🎯 [UnifiedDrag] Moving event to ${target.date} at ${timeStr}`)
 
       taskStore.updateTask(task.id, {
         scheduledDate: target.date,
@@ -376,7 +349,6 @@ export function useCalendarDrag() {
       }
     } else if (dragData.source && dragData.source.includes('unified-inbox')) {
       // Drag from inbox - CRITICAL FIX: Handle inbox drag sources properly
-      console.log(`📥 [UnifiedDrag] Moving task from inbox to ${target.date} at ${timeStr}`)
 
       // Create task instance to schedule the task
       const instance = taskStore.createTaskInstance(task.id, {
@@ -389,9 +361,7 @@ export function useCalendarDrag() {
         taskStore.updateTask(task.id, {
           isInInbox: false
         })
-        console.log(`✅ [UnifiedDrag] Task moved from inbox: ${task.title}`)
       } else {
-        console.error(`❌ [UnifiedDrag] Failed to create instance for task: ${task.title}`)
       }
     } else {
       // Drag from other sources
@@ -404,9 +374,7 @@ export function useCalendarDrag() {
         taskStore.updateTask(task.id, {
           isInInbox: false
         })
-        console.log(`✅ [UnifiedDrag] Task scheduled from unknown source: ${task.title}`)
       } else {
-        console.error(`❌ [UnifiedDrag] Failed to create instance for task: ${task.title}`)
       }
     }
   }

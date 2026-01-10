@@ -2,7 +2,6 @@ import { ref, computed, nextTick, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
-import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 
 export interface TimeSlot {
   id: string
@@ -184,10 +183,10 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       // Calculate overlapping positions with error handling
       try {
         const positionedEvents = calculateOverlappingPositions(events)
-        return positionedEvents as CalendarEvent[]
+        return positionedEvents
       } catch (positionError) {
         // Return events without positioning if calculation fails
-        return events as CalendarEvent[]
+        return events
       }
     } catch (error) {
       // Return empty array to prevent template rendering failure
@@ -219,7 +218,76 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     return slot.slotIndex === event.startSlot
   }
 
-  // use overlapCalculation utility
+  // Calculate overlapping event positions
+  const calculateOverlappingPositions = (events: CalendarEvent[]): CalendarEvent[] => {
+    if (events.length === 0) return events
+
+    const sorted = [...events].sort((a, b) => a.startSlot - b.startSlot)
+
+    // Find groups of overlapping events
+    const groups: CalendarEvent[][] = []
+    let currentGroup: CalendarEvent[] = []
+
+    sorted.forEach((event, index) => {
+      if (index === 0) {
+        currentGroup.push(event)
+        return
+      }
+
+      // Check if this event overlaps with any event in current group
+      const overlapsWithGroup = currentGroup.some(existing =>
+        event.startSlot < existing.startSlot + existing.slotSpan &&
+        event.startSlot + event.slotSpan > existing.startSlot
+      )
+
+      if (overlapsWithGroup) {
+        currentGroup.push(event)
+      } else {
+        groups.push(currentGroup)
+        currentGroup = [event]
+      }
+    })
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup)
+    }
+
+    // Assign columns within each group
+    groups.forEach(group => {
+      const columns: CalendarEvent[][] = []
+
+      group.forEach(event => {
+        let placed = false
+
+        for (let i = 0; i < columns.length; i++) {
+          const column = columns[i]
+          const hasCollision = column.some(existing =>
+            event.startSlot < existing.startSlot + existing.slotSpan &&
+            event.startSlot + event.slotSpan > existing.startSlot
+          )
+
+          if (!hasCollision) {
+            column.push(event)
+            event.column = i
+            placed = true
+            break
+          }
+        }
+
+        if (!placed) {
+          columns.push([event])
+          event.column = columns.length - 1
+        }
+      })
+
+      const totalColumns = columns.length
+      group.forEach(event => {
+        event.totalColumns = totalColumns
+      })
+    })
+
+    return sorted
+  }
 
   // Event styling
   const getEventStyle = (event: CalendarEvent) => {
@@ -284,135 +352,166 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   const handleDragEnter = (event: DragEvent, slot: TimeSlot) => {
     event.preventDefault()
 
-    const data = event.dataTransfer?.getData('application/json')
-    let parsedData: CalendarDragData | null = null
+    slotIndex: slot.slotIndex,
+      slotDate: slot.date,
+        slotTime: `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
+  })
 
-    // FALLBACK: Check for global dragging state when dataTransfer is empty
-    // This handles mouse-based dragging where dataTransfer might not be populated
-    if (!data) {
+  const data = event.dataTransfer?.getData('application/json')
+  let parsedData: CalendarDragData | null = null
+
+  // FALLBACK: Check for global dragging state when dataTransfer is empty
+  // This handles mouse-based dragging where dataTransfer might not be populated
+  if (!data) {
 
 
-      // Try to get dragged task from global state (CalendarInboxPanel sets this)
-      const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId ||
-        document.querySelector('[data-dragging-task-id]')?.getAttribute('data-dragging-task-id')
+    // Try to get dragged task from global state (CalendarInboxPanel sets this)
+    const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId ||
+      document.querySelector('[data-dragging-task-id]')?.getAttribute('data-dragging-task-id')
 
-      if (draggingTaskId) {
-        const task = taskStore.tasks.find(t => t.id === draggingTaskId)
-        if (task) {
+    if (draggingTaskId) {
+      const task = taskStore.tasks.find(t => t.id === draggingTaskId)
+      if (task) {
 
-          parsedData = {
-            ...task,
-            taskId: task.id,
-            source: 'calendar-inbox'
-          }
-
+        parsedData = {
+          ...task,
+          taskId: task.id,
+          source: 'calendar-inbox'
         }
-      }
 
-      if (!parsedData) {
-        return
-      }
-    } else {
-      // Parse dataTransfer data
-      try {
-        parsedData = JSON.parse(data) as CalendarDragData
-
-      } catch (error) {
-        return
       }
     }
 
     if (!parsedData) {
       return
     }
+  } else {
+    // Parse dataTransfer data
+    try {
+      parsedData = JSON.parse(data) as CalendarDragData
 
-    // Use the parsedData we already created above
-    const { title, taskId } = parsedData
-    const task = taskStore.tasks.find(t => t.id === taskId)
+    } catch (error) {
+      return
+    }
+  }
 
-    if (!task) {
+  if (!parsedData) {
+    return
+  }
+
+  // Use the parsedData we already created above
+  const { title, taskId } = parsedData
+  const task = taskStore.tasks.find(t => t.id === taskId)
+
+  if (!task) {
+  }
+
+  dragGhost.value = {
+    visible: true,
+    title: title || 'New Task',
+    duration: task?.estimatedDuration || 30,
+    slotIndex: slot.slotIndex
+  }
+
+  title: dragGhost.value.title,
+    duration: dragGhost.value.duration,
+      slotIndex: dragGhost.value.slotIndex,
+        taskFound: !!task
+})
+  }
+
+const handleDragOver = (event: DragEvent, slot: TimeSlot) => {
+  event.preventDefault()
+  // Check if dataTransfer exists before setting dropEffect
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+
+  // Track active drop slot for visual feedback
+  activeDropSlot.value = slot.slotIndex
+
+  slotIndex: slot.slotIndex,
+    slotDate: slot.date,
+      slotTime: `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`,
+        dropEffect: event.dataTransfer?.dropEffect,
+          ghostVisible: dragGhost.value.visible,
+            activeDropSlot: activeDropSlot.value
+})
+
+if (dragGhost.value.visible) {
+  const oldSlotIndex = dragGhost.value.slotIndex
+  dragGhost.value.slotIndex = slot.slotIndex
+
+  if (oldSlotIndex !== slot.slotIndex) {
+
+  }
+} else {
+
+}
+  }
+
+const handleDragLeave = () => {
+  // Keep ghost visible, only hide on drop
+}
+
+const handleDrop = async (event: DragEvent, slot: TimeSlot) => {
+  event.preventDefault()
+
+  const data = event.dataTransfer?.getData('application/json')
+  if (!data) {
+    // Try fallback for browser compatibility
+    const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId
+    if (!draggingTaskId) {
+      return
+    }
+  }
+
+  try {
+    const parsedData = data ? JSON.parse(data) : { taskId: (window as Window & typeof globalThis).__draggingTaskId, source: 'calendar-event' }
+    const taskId = parsedData.taskId || parsedData.taskIds?.[0]
+    const source = parsedData.source
+
+    if (!taskId) {
       return
     }
 
-    dragGhost.value = {
-      visible: true,
-      title: title || 'New Task',
-      duration: task?.estimatedDuration || 30,
-      slotIndex: slot.slotIndex
-    }
-  }
+    // Calculate snapped time with 15-minute precision
+    const snappedTime = snapTo15Minutes(slot.hour, slot.minute)
+    const timeStr = `${snappedTime.hour.toString().padStart(2, '0')}:${snappedTime.minute.toString().padStart(2, '0')}`
 
-  const handleDragOver = (event: DragEvent, slot: TimeSlot) => {
-    event.preventDefault()
-    // Check if dataTransfer exists before setting dropEffect
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move'
-    }
-
-    // Track active drop slot for visual feedback
-    activeDropSlot.value = slot.slotIndex
-
-    if (dragGhost.value.visible) {
-      dragGhost.value.slotIndex = slot.slotIndex
-    }
-  }
-
-  const handleDragLeave = () => {
-    // Keep ghost visible, only hide on drop
-  }
-
-  const handleDrop = async (event: DragEvent, slot: TimeSlot) => {
-    event.preventDefault()
-
-    const data = event.dataTransfer?.getData('application/json')
-    if (!data) {
-      // Try fallback for browser compatibility
-      const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId
-      if (!draggingTaskId) {
-        return
-      }
-    }
-
-    try {
-      const parsedData = data ? JSON.parse(data) : { taskId: (window as Window & typeof globalThis).__draggingTaskId, source: 'calendar-event' }
-      const taskId = parsedData.taskId || parsedData.taskIds?.[0]
-      const source = parsedData.source
-
-      if (!taskId) {
-        return
-      }
-
-      // Calculate snapped time with 15-minute precision
-      const snappedTime = snapTo15Minutes(slot.hour, slot.minute)
-      const timeStr = `${snappedTime.hour.toString().padStart(2, '0')}:${snappedTime.minute.toString().padStart(2, '0')}`
-
-      const task = taskStore.tasks.find(t => t.id === taskId)
+    // DEBUG LOG: Track task drop on calendar
+    const task = taskStore.tasks.find(t => t.id === taskId)
+       from ${ source } dropped on ${ slot.date } at ${ timeStr } (15 - min snapped)`)
+      .padStart(2, '0')}, Snapped to: ${timeStr}`)
 
 
 
-      if (source === 'calendar-event') {
-        const instanceToUpdate = task?.instances?.find(i => i.id)
+    if (source === 'calendar-event') {
+      const instanceToUpdate = task?.instances?.find(i => i.id)
 
-        await taskStore.updateTaskWithSchedule(taskId, {
-          scheduledDate: slot.date,
-          scheduledTime: timeStr,
-          instanceId: instanceToUpdate?.id
-        })
-      } else {
-        // Drag from inbox or other sources
-        // Create task instance and update task to remove from inbox
-        const instance = taskStore.createTaskInstance(taskId, {
-          scheduledDate: slot.date,
-          scheduledTime: timeStr
-        })
+      await taskStore.updateTaskWithSchedule(taskId, {
+        scheduledDate: slot.date,
+        scheduledTime: timeStr,
+        instanceId: instanceToUpdate?.id
+      })
+    } else {
+      // Drag from inbox or other sources
+      // Create task instance and update task to remove from inbox
+      const instance = taskStore.createTaskInstance(taskId, {
+        scheduledDate: slot.date,
+        scheduledTime: timeStr
+      })
 
-        // If instance was created successfully, log it
-        // Dec 16, 2025 fix: DO NOT modify isInInbox or canvasPosition here
-        // Calendar and Canvas are INDEPENDENT systems:
-        // - Creating an instance removes task from CALENDAR inbox (filtered by !hasInstances)
-        // - Canvas state (isInInbox, canvasPosition) should NOT be affected
-        if (instance) {
-          // Successfully created instance
+      // If instance was created successfully, log it
+      // Dec 16, 2025 fix: DO NOT modify isInInbox or canvasPosition here
+      // Calendar and Canvas are INDEPENDENT systems:
+      // - Creating an instance removes task from CALENDAR inbox (filtered by !hasInstances)
+      // - Canvas state (isInInbox, canvasPosition) should NOT be affected
+      if (instance) {
+
+        `)
+        } else {
+          
         }
       }
     } catch (error) {
@@ -424,7 +523,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     isDragging.value = false
     draggedEventId.value = null
     activeDropSlot.value = null
-
+    
   }
 
   // Event drag-and-drop (repositioning within calendar)
@@ -458,7 +557,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
           const newHour = Math.floor((targetSlot * 30) / 60)
           const newMinute = (targetSlot * 30) % 60
-          const newTime = `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')} `
+          const newTime = `${ newHour.toString().padStart(2, '0') }:${ newMinute.toString().padStart(2, '0') } `
           const newDate = currentDate.value.toISOString().split('T')[0]
 
           if (isDuplicateMode) {
@@ -510,10 +609,19 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   }
 
   const handleEventDragStart = (event: DragEvent, calendarEvent: CalendarEvent) => {
+      taskId: calendarEvent.taskId,
+      instanceId: calendarEvent.instanceId,
+      eventTitle: calendarEvent.title,
+      startSlot: calendarEvent.startSlot,
+      duration: calendarEvent.duration
+    })
 
     // Set drag state for visual feedback
     isDragging.value = true
     draggedEventId.value = calendarEvent.id
+      isDragging: isDragging.value,
+      draggedEventId: draggedEventId.value
+    })
 
     // Allow dragging calendar events without Shift key or restrictions
     if (event.dataTransfer) {
@@ -523,7 +631,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         source: 'calendar-event'
       }
 
-
+      
 
       event.dataTransfer.setData('application/json', JSON.stringify(dragData))
       event.dataTransfer.effectAllowed = 'move'
@@ -544,7 +652,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         // Set the drag image
         try {
           event.dataTransfer.setDragImage(dragImage, 20, 20)
-
+          
 
           // Remove the temporary element after a short delay
           setTimeout(() => {
@@ -557,18 +665,26 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           event.dataTransfer.setDragImage(dragElement, 20, 20)
         }
       }
+
+      
     } else {
     }
 
     // Don't prevent default - let HTML5 drag work naturally
-
+    
   }
 
   const handleEventDragEnd = (event: DragEvent, calendarEvent: CalendarEvent) => {
+      taskId: calendarEvent.taskId,
+      instanceId: calendarEvent.instanceId,
+      eventTitle: calendarEvent.title,
+      wasDragging: isDragging.value,
+      draggedEventId: draggedEventId.value
+    })
 
     // Clean up drag state to prevent stuck states
     if (isDragging.value) {
-
+      
       isDragging.value = false
       draggedEventId.value = null
       activeDropSlot.value = null
@@ -578,13 +694,13 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         const draggingElements = document.querySelectorAll('.calendar-event.dragging')
         draggingElements.forEach(el => {
           el.classList.remove('dragging')
-
+          
         })
 
         const dragOverSlots = document.querySelectorAll('.time-slot.drag-over')
         dragOverSlots.forEach(slot => {
           slot.classList.remove('drag-over')
-
+          
         })
       }, 50) // Small delay to ensure DOM updates are processed
     }
@@ -598,7 +714,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       }
     }, 2000) // 2 second fallback
 
-
+    
   }
 
   // Event resizing - uses preview state during drag, commits on mouseup
@@ -615,7 +731,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     // Get current time information
     const [currentHour, currentMinute] = calendarEvent.startTime.toTimeString().slice(0, 5).split(':').map(Number)
     const currentStartTime = currentHour * 60 + currentMinute
-    const originalTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')} `
+    const originalTimeStr = `${ currentHour.toString().padStart(2, '0') }:${ currentMinute.toString().padStart(2, '0') } `
 
     // Initialize resize preview state
     resizePreview.value = {
@@ -652,7 +768,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           resizePreview.value.previewDuration = newDuration
           finalDuration = newDuration
 
-
+          
 
         } else {
           // Resize from top - change start time and maintain end time
@@ -674,7 +790,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             const actualNewStartTime = newStartHour * 60 + newStartMinute
             newDuration = Math.max(MIN_DURATION, currentEndTime - actualNewStartTime)
 
-            const newTimeStr = `${newStartHour.toString().padStart(2, '0')}:${newStartMinute.toString().padStart(2, '0')} `
+            const newTimeStr = `${ newStartHour.toString().padStart(2, '0') }:${ newStartMinute.toString().padStart(2, '0') } `
 
             // Update preview state only (NOT the store)
             resizePreview.value.previewDuration = newDuration
@@ -682,14 +798,14 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             finalDuration = newDuration
             finalStartTime = newTimeStr
 
-
+            
           }
         }
       })
     }
 
     const handleMouseUp = () => {
-
+      
 
       // Commit final values to store
       if (direction === 'bottom') {
@@ -740,6 +856,12 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+
+      taskId: calendarEvent.taskId,
+      direction,
+      originalTime: originalTimeStr,
+      originalDuration
+    })
   }
 
   return {

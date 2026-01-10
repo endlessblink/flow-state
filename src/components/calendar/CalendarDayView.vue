@@ -1,7 +1,27 @@
 <script setup lang="ts">
+import { inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+
+// Inject helpers from parent CalendarView
+const helpers = inject('calendar-helpers') as any
+const {
+  formatHour,
+  isCurrentTimeSlot,
+  formatSlotTime,
+  getTasksForSlot,
+  isTaskPrimarySlot,
+  getSlotTaskStyle,
+  getProjectVisual,
+  getProjectName,
+  getProjectColor,
+  getPriorityClass,
+  getPriorityLabel,
+  getTaskStatus,
+  getStatusLabel,
+  getStatusIcon
+} = helpers
 
 defineProps<{
   timeSlots: TimeSlot[]
@@ -21,21 +41,12 @@ defineProps<{
     direction: 'top' | 'bottom'
   } | null
   
-  // Helpers/Methods passed as props
-  formatHour: (hour: number) => string
-  isCurrentTimeSlot: (slot: TimeSlot) => boolean
-  formatSlotTime: (slot: TimeSlot) => string
-  getTasksForSlot: (slot: TimeSlot) => CalendarEvent[]
-  isTaskPrimarySlot: (slot: TimeSlot, event: CalendarEvent) => boolean
-  getSlotTaskStyle: (event: CalendarEvent) => any
-  getProjectVisual: (event: CalendarEvent) => { type: 'emoji' | 'color'; content: string }
-  getProjectName: (event: CalendarEvent) => string
-  getProjectColor: (event: CalendarEvent) => string
-  getPriorityClass: (event: CalendarEvent) => string
-  getPriorityLabel: (event: CalendarEvent) => string
-  getTaskStatus: (event: CalendarEvent) => string
-  getStatusLabel: (event: CalendarEvent) => string
-  getStatusIcon: (status: string) => string
+  resizePreview?: {
+    isResizing: boolean
+    taskId: string | null
+    previewDuration: number
+    direction: 'top' | 'bottom'
+  } | null
 }>()
 
 defineEmits<{

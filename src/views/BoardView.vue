@@ -105,6 +105,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
+import { useSettingsStore } from '@/stores/settings'
 
 // Composables
 import { useBoardModals } from '@/composables/board/useBoardModals'
@@ -128,6 +129,7 @@ import FilterControls from '@/components/base/FilterControls.vue'
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
+const settingsStore = useSettingsStore()
 const supabaseDb = useSupabaseDatabase()
 
 // Provide progressive disclosure state for TaskCard components
@@ -169,10 +171,8 @@ const {
 
 const {
   showDoneColumn,
-  toggleDoneColumn: handleToggleDoneColumn,
-  loadSettings: loadKanbanSettings,
-  handleSettingsChange: handleKanbanSettingsChange
-} = useBoardDensity({ uiStore, supabaseDb })
+  toggleDoneColumn: handleToggleDoneColumn
+} = useBoardDensity()
 
 const {
   tasksByProject,
@@ -180,27 +180,19 @@ const {
   totalDisplayedTasks
 } = useBoardState({ taskStore })
 
-// Density state from global UI store
-const currentDensity = computed(() => uiStore.boardDensity)
+// Density state from global settings store
+const currentDensity = computed(() => settingsStore.boardDensity)
 
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
 const showFilters = ref(false)
 
 // Load saved settings on mount
 onMounted(() => {
-  // Initialize UI store (includes density loading)
+  // Initialize UI store
   uiStore.loadState()
-
-  // Load kanban settings
-  loadKanbanSettings()
-
-  // Listen for kanban settings changes
-  window.addEventListener('kanban-settings-changed', handleKanbanSettingsChange)
-})
-
-// Clean up event listener
-onUnmounted(() => {
-  window.removeEventListener('kanban-settings-changed', handleKanbanSettingsChange)
+  
+  // Settings store is initialized automatically in its definition
+  settingsStore.loadFromStorage()
 })
 
 // Task management methods (wrappers for composables to match template emitters)

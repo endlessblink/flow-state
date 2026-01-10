@@ -2,6 +2,7 @@ import { computed, ref, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { WeekEvent } from '@/types/tasks'
+import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 
 export interface WeekDay {
   dayName: string
@@ -107,88 +108,19 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
               }
             })
         } catch (err) {
-          console.warn(`Error processing week event for task ${task.id}:`, err)
+          // Task processing error
         }
       })
 
       // Calculate overlapping positions for this day
-      eventsByDay[dayIndex] = calculateOverlappingPositions(dayEvents)
+      eventsByDay[dayIndex] = calculateOverlappingPositions(dayEvents) as WeekEvent[]
     })
 
     // Flatten all events into a single array
     return eventsByDay.flat()
   })
 
-  // Calculate overlapping event positions for a single day
-  const calculateOverlappingPositions = (events: WeekEvent[]): WeekEvent[] => {
-    if (events.length === 0) return events
-
-    const sorted = [...events].sort((a, b) => a.startSlot - b.startSlot)
-
-    // Find groups of overlapping events
-    const groups: WeekEvent[][] = []
-    let currentGroup: WeekEvent[] = []
-
-    sorted.forEach((event, index) => {
-      if (index === 0) {
-        currentGroup.push(event)
-        return
-      }
-
-      // Check if this event overlaps with any event in current group
-      const overlapsWithGroup = currentGroup.some(existing =>
-        event.startSlot < existing.startSlot + existing.slotSpan &&
-        event.startSlot + event.slotSpan > existing.startSlot
-      )
-
-      if (overlapsWithGroup) {
-        currentGroup.push(event)
-      } else {
-        groups.push(currentGroup)
-        currentGroup = [event]
-      }
-    })
-
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup)
-    }
-
-    // Assign columns within each group
-    groups.forEach(group => {
-      const columns: WeekEvent[][] = []
-
-      group.forEach(event => {
-        let placed = false
-
-        for (let i = 0; i < columns.length; i++) {
-          const column = columns[i]
-          const hasCollision = column.some(existing =>
-            event.startSlot < existing.startSlot + existing.slotSpan &&
-            event.startSlot + event.slotSpan > existing.startSlot
-          )
-
-          if (!hasCollision) {
-            column.push(event)
-            event.column = i
-            placed = true
-            break
-          }
-        }
-
-        if (!placed) {
-          columns.push([event])
-          event.column = columns.length - 1
-        }
-      })
-
-      const totalColumns = columns.length
-      group.forEach(event => {
-        event.totalColumns = totalColumns
-      })
-    })
-
-    return sorted
-  }
+  // use overlapCalculation utility
 
   // Event styling for week grid
   const getWeekEventStyle = (event: WeekEvent): Record<string, string | number> => {

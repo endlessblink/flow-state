@@ -1,84 +1,28 @@
-import { ref } from 'vue'
-import type { useUIStore } from '@/stores/ui'
-import type { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { computed } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
 
-interface BoardDensityDependencies {
-    uiStore: ReturnType<typeof useUIStore>
-    supabaseDb: ReturnType<typeof useSupabaseDatabase>
-}
+export function useBoardDensity() {
+    const settingsStore = useSettingsStore()
 
-interface KanbanSettings {
-    showDoneColumn: boolean
-}
+    // Reactive source of truth from settings store
+    const showDoneColumn = computed(() => settingsStore.showDoneColumn)
 
-export function useBoardDensity(deps: BoardDensityDependencies) {
-    const { uiStore, supabaseDb } = deps
-    const showDoneColumn = ref(false)
-
-    const toggleDoneColumn = async () => {
-        showDoneColumn.value = !showDoneColumn.value
-        await saveSettings()
-
-        // Emit custom event to keep other components in sync if needed
-        window.dispatchEvent(new CustomEvent('kanban-settings-changed', {
-            detail: { showDoneColumn: showDoneColumn.value }
-        }))
+    const toggleDoneColumn = () => {
+        settingsStore.updateSetting('showDoneColumn', !settingsStore.showDoneColumn)
     }
 
-    const saveSettings = async () => {
-        const kanbanSettings: KanbanSettings = {
-            showDoneColumn: showDoneColumn.value
-        }
-
-        // Always save to localStorage first
-        localStorage.setItem('pomo-flow-kanban-settings', JSON.stringify(kanbanSettings))
-
-        try {
-            const currentSettings = await supabaseDb.fetchUserSettings() || {}
-            await supabaseDb.saveUserSettings({
-                ...currentSettings,
-                kanban_settings: kanbanSettings
-            })
-        } catch (error) {
-            // Failed to save to Supabase
-        }
-    }
-
+    // These are now handled by settingsStore.loadFromStorage() in app init or store init
     const loadSettings = async () => {
-        // Load from localStorage first
-        try {
-            const localSaved = localStorage.getItem('pomo-flow-kanban-settings')
-            if (localSaved) {
-                const settings = JSON.parse(localSaved)
-                showDoneColumn.value = settings.showDoneColumn || false
-            }
-        } catch (e) {
-            // Failed to load from localStorage
-        }
-
-        // Then load from Supabase
-        try {
-            const settings = await supabaseDb.fetchUserSettings()
-            if (settings?.kanban_settings) {
-                const kanban = settings.kanban_settings as KanbanSettings
-                showDoneColumn.value = kanban.showDoneColumn || false
-            }
-        } catch (error) {
-            // Failed to load from Supabase
-        }
+        // No-op for compatibility if needed, or remove
     }
 
-    const handleSettingsChange = (event: Event) => {
-        const customEvent = event as CustomEvent
-        if (customEvent.detail && typeof customEvent.detail.showDoneColumn === 'boolean') {
-            showDoneColumn.value = customEvent.detail.showDoneColumn
-        }
+    const handleSettingsChange = () => {
+        // No-op for compatibility, logic removed in favor of Pinia reactivity
     }
 
     return {
         showDoneColumn,
         toggleDoneColumn,
-        saveSettings,
         loadSettings,
         handleSettingsChange
     }

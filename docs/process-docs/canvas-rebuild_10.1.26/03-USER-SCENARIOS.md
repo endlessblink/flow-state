@@ -1027,6 +1027,204 @@ Moving OUT does NOT clear the property!
 | 32 | Drop in "Quick" | duration = 15 min |
 | 33 | Nested smart groups | Inherit from ALL parents |
 | 34 | Move OUT of smart group | Properties stay set |
+| 35 | Resize group | Only resized group changes, contents unchanged |
+| 36 | Group containment by size | Smaller group in larger becomes child |
+
+---
+
+## 36. Group Containment - Size Determines Parent-Child
+
+**When a smaller group is placed inside a larger group, the smaller one becomes a CHILD**
+
+This is automatic - the canvas detects containment based on size and position.
+
+```
+EXAMPLE 1: Place small group inside large group
+─────────────────────────────────────────────────
+BEFORE (two separate groups):
+┌─────────────────────────────┐        ┌───────────────┐
+│ Large Group                 │        │ Small Group   │
+│                             │        │               │
+│                             │        └───────────────┘
+│                             │
+└─────────────────────────────┘
+
+I DRAG Small Group INTO Large Group:
+
+AFTER (Small is now CHILD of Large):
+┌─────────────────────────────┐
+│ Large Group            (0)  │  <-- Container/Parent
+│                             │
+│   ┌───────────────┐         │
+│   │ Small Group   │         │  <-- Child (appears ABOVE parent)
+│   │               │         │
+│   └───────────────┘         │
+│                             │
+└─────────────────────────────┘
+
+
+EXAMPLE 2: Two groups overlapping - size determines parent
+─────────────────────────────────────────────────
+SCENARIO: A small 200x200 group overlaps with a large 500x400 group
+
+RESULT:
+- The LARGER group (500x400) becomes the CONTAINER
+- The SMALLER group (200x200) becomes the CHILD
+- If the small group is fully inside the large one → automatic nesting
+
+┌─────────────────────────────────────┐
+│ Large (500x400)                     │
+│                                     │
+│    ┌──────────────┐                 │
+│    │ Small        │                 │
+│    │ (200x200)    │                 │
+│    │              │                 │
+│    └──────────────┘                 │
+│                                     │
+└─────────────────────────────────────┘
+
+
+EXAMPLE 3: Multiple levels of nesting
+─────────────────────────────────────────────────
+- Biggest group (600x500) = root container
+- Medium group (300x250) inside it = child of biggest
+- Smallest group (150x100) inside medium = child of medium
+
+┌─────────────────────────────────────────┐
+│ Big Container                           │
+│                                         │
+│   ┌─────────────────────────┐           │
+│   │ Medium                  │           │
+│   │                         │           │
+│   │   ┌───────────────┐     │           │
+│   │   │ Small         │     │           │
+│   │   │               │     │           │
+│   │   └───────────────┘     │           │
+│   │                         │           │
+│   └─────────────────────────┘           │
+│                                         │
+└─────────────────────────────────────────┘
+
+
+Z-INDEX RULES:
+- Smaller/nested groups ALWAYS appear ABOVE their parent groups
+- Tasks ALWAYS appear above ALL groups (100+)
+- Deepest nested group has highest z-index among groups
+
+
+WHAT MUST HAPPEN:
+- Containment detected by: smaller group's bounds INSIDE larger group's bounds
+- Automatic parent-child assignment when positions overlap
+- Child groups move with parent when parent is dragged
+- Child groups appear ABOVE parent (visible, not hidden behind)
+- Task counts on parent include tasks in ALL nested children
+```
+
+---
+
+## 35. Resize Group - Only Resized Group Changes
+
+**I resize ANY group by dragging its corner handle**
+
+This applies to ALL groups - parent groups, child groups, standalone groups, nested groups at any level.
+
+```
+EXAMPLE 1: Resize a parent group (has children)
+─────────────────────────────────────────────────
+BEFORE:
+┌─────────────────────────────────┐
+│ Parent Group                    │
+│                                 │
+│  ┌─────────────────┐            │
+│  │ Child      (2)  │            │
+│  │ ┌───────────┐   │            │
+│  │ │Task A    │   │            │
+│  │ └───────────┘   │            │
+│  └─────────────────┘            │
+└─────────────────────────────────┘
+
+I RESIZE Parent Group (make it wider):
+
+AFTER:
+┌─────────────────────────────────────────────────┐
+│ Parent Group                                     │
+│                                                  │
+│  ┌─────────────────┐                             │
+│  │ Child      (2)  │  <-- SAME size!             │
+│  │ ┌───────────┐   │  <-- SAME position!         │
+│  │ │Task A    │   │                             │
+│  │ └───────────┘   │                             │
+│  └─────────────────┘                             │
+└─────────────────────────────────────────────────┘
+
+
+EXAMPLE 2: Resize a child group (inside a parent)
+─────────────────────────────────────────────────
+BEFORE:
+┌─────────────────────────────────┐
+│ Parent                          │
+│  ┌─────────────────┐            │
+│  │ Child      (1)  │            │
+│  │ ┌───────────┐   │            │
+│  │ │Task      │   │            │
+│  │ └───────────┘   │            │
+│  └─────────────────┘            │
+└─────────────────────────────────┘
+
+I RESIZE Child group (make it taller):
+
+AFTER:
+┌─────────────────────────────────┐
+│ Parent                          │  <-- SAME size!
+│  ┌─────────────────┐            │
+│  │ Child      (1)  │            │
+│  │ ┌───────────┐   │            │
+│  │ │Task      │   │  <-- Task unchanged!
+│  │ └───────────┘   │            │
+│  │                 │            │
+│  │                 │            │  <-- Child is now taller
+│  └─────────────────┘            │
+└─────────────────────────────────┘
+
+
+EXAMPLE 3: Resize a standalone group (no parent, no children)
+─────────────────────────────────────────────────
+BEFORE:
+┌─────────────────┐
+│ My Group   (2)  │
+│ ┌─────────────┐ │
+│ │Task A      │ │
+│ └─────────────┘ │
+│ ┌─────────────┐ │
+│ │Task B      │ │
+│ └─────────────┘ │
+└─────────────────┘
+
+I RESIZE My Group:
+
+AFTER:
+┌─────────────────────────────┐
+│ My Group               (2)  │
+│ ┌─────────────┐             │
+│ │Task A      │             │  <-- SAME position!
+│ └─────────────┘             │
+│ ┌─────────────┐             │
+│ │Task B      │             │  <-- SAME position!
+│ └─────────────┘             │
+│                             │
+└─────────────────────────────┘
+
+
+WHAT MUST HAPPEN (for ANY group):
+- ONLY the resized group's dimensions change
+- Parent groups (if any) stay same size and position
+- Child groups (if any) stay same size and position
+- Tasks inside stay same size and position
+- Sibling groups stay same size and position
+- NO cascade resize to children
+- NO cascade resize to parent
+- NO position adjustments to anything
+```
 
 ---
 
@@ -1081,6 +1279,7 @@ Moving OUT does NOT clear the property!
 - [ ] Multi-drag positions preserved → Scenario 25
 
 ### Phase 6: Feature Parity
+- [ ] Resize group - only resized group changes → Scenario 35
 - [ ] All 35 scenarios pass
 - [ ] All past bugs prevented
 - [ ] Performance acceptable (50+ groups/tasks)

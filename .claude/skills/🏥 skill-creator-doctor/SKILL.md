@@ -1,6 +1,6 @@
 ---
 name: skill-creator-doctor
-description: Create, repair, maintain, and consolidate skills. This skill should be used when users want to create new skills, fix broken skills that won't load, diagnose skill system issues, maintain skill health, or consolidate duplicate/obsolete skills. Automatically detects and repairs common skill loading problems including missing registry entries, metadata format issues, and structural problems. Provides comprehensive skill ecosystem management including duplicate detection, merge workflows, and archival processes.
+description: Complete skill lifecycle management - create, repair, maintain, audit, and consolidate Claude Code skills. This skill should be used when users want to create new skills, fix broken skills that won't load, diagnose skill system issues, maintain skill health, audit skill effectiveness, or consolidate duplicate/obsolete skills. Analyzes project state and tech stack, detects redundancies with necessity scoring, and safely manages skills with backup, confirmations, and rollback capabilities. Provides comprehensive skill ecosystem management including duplicate detection, merge workflows, archival processes, and emoji organization.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -510,6 +510,100 @@ The inconsistency you're experiencing (some skills load, others don't with ident
 4. **Name validation edge case**
 
 The fact that renaming doesn't help suggests the issue is likely in the file content itself (encoding, hidden characters, or YAML structure) rather than the name.
+
+## Project Analysis & Tech Stack Detection
+
+Before making decisions about skills, analyze your actual project state to understand which skills are relevant.
+
+### Detect Project Type & Tech Stack
+
+**Objective:** Build accurate understanding of your actual project.
+
+**Process:**
+
+```bash
+# Find all dependency files
+find . -name "package.json" -o -name "requirements.txt" -o -name "pom.xml" \
+  -o -name "go.mod" -o -name "Cargo.toml" -o -name "composer.json" \
+  -o -name "Gemfile" -o -name "build.gradle"
+
+# Extract technologies (for Node.js)
+if [ -f "package.json" ]; then
+  echo "Node.js project detected"
+  cat package.json | jq -r '.dependencies, .devDependencies | keys[]' | head -20
+fi
+
+# Analyze directory structure
+echo "=== Project Structure Analysis ==="
+for dir in src lib app components services docs k8s docker; do
+  if [ -d "$dir" ]; then
+    file_count=$(find "$dir" -type f | wc -l)
+    echo "$dir/ - $file_count files"
+  fi
+done
+```
+
+**Output Format:**
+```json
+{
+  "system_reality": {
+    "project_type": "Vue.js TypeScript Application",
+    "primary_technologies": ["Vue 3", "TypeScript", "Vite", "Pinia"],
+    "frameworks": ["Vue.js", "Tailwind CSS"],
+    "build_tools": ["Vite", "ESLint", "TypeScript"]
+  },
+  "relevance_domains": ["frontend", "vue.js", "typescript", "pinia", "productivity"]
+}
+```
+
+### Necessity Scoring Algorithm
+
+**Objective:** Rank skills by importance and relevance to current project (0-100 scale).
+
+```python
+def calculate_necessity_score(skill_data, project_reality, usage_stats):
+    """Calculate necessity score for a skill (0-100)"""
+    score = 0
+
+    # Base score from recent usage (40 points max)
+    usage = usage_stats.get(skill_data['name'], {})
+    recent_uses = usage.get('uses_90_days', 0)
+    usage_score = min(recent_uses * 2, 40)  # 2 points per use, max 40
+    score += usage_score
+
+    # Project relevance score (30 points max)
+    skill_domains = extract_domains(skill_data['description'], skill_data['capabilities'])
+    project_domains = project_reality.get('relevance_domains', [])
+    domain_overlap = len(set(skill_domains) & set(project_domains))
+    relevance_score = min(domain_overlap * 10, 30)  # 10 points per matching domain
+    score += relevance_score
+
+    # Category importance score (20 points max)
+    important_categories = ['debug', 'create', 'fix']
+    if skill_data['category'] in important_categories:
+        score += 20
+    elif skill_data['category'] in ['optimize', 'analyze']:
+        score += 15
+    else:
+        score += 10
+
+    # Dependency score (10 points max)
+    if skill_data['name'] in usage_stats.get('dependencies', {}):
+        dependent_count = len(usage_stats['dependencies'][skill_data['name']])
+        dependency_score = min(dependent_count * 2, 10)
+        score += dependency_score
+
+    return min(score, 100)
+```
+
+**Score Interpretation:**
+- **80-100**: Critical skill, actively used, high project relevance
+- **60-79**: Important skill, moderate usage
+- **40-59**: Useful but not essential
+- **20-39**: Low priority, candidate for review
+- **0-19**: Archive candidate
+
+---
 
 ## Skill Consolidation & Optimization
 
@@ -1104,6 +1198,63 @@ description: Debug Vue.js applications
 - **Category-based organization** through consistent emojis
 - **Folder visual organization** matching registry
 - **Conflict prevention** through detection and resolution
+
+---
+
+## Configuration
+
+### Configuration File
+
+The skill supports a configuration file for customizing behavior:
+
+```yaml
+# config/skills-manager-config.yml
+conservatism_level: balanced  # Options: aggressive, balanced, conservative
+
+protected_skills:
+  - skill-creator-doctor
+  - dev-debugging
+  - basic-coding
+  - git-workflow-helper
+  - file-operations
+
+risk_settings:
+  max_deletion_risk: medium    # disallow high-risk deletion without manual confirmation
+  merge_threshold: 0.7         # 70% overlap required for merge suggestion
+  archive_instead_of_delete: true
+  require_confirmation_for:
+    - delete
+    - merge
+    - modify_protected
+
+usage_analysis:
+  usage_window_days: 90        # Analyze skill activations from last 90 days
+  inactive_threshold: 180      # Days without usage before considering archive
+  high_usage_threshold: 20     # Uses per 90 days = high usage
+
+redundancy_detection:
+  capability_similarity_threshold: 0.8
+  trigger_conflict_detection: true
+  semantic_analysis_enabled: true
+
+output:
+  generate_reports: true
+  create_backup: true
+  verbose_logging: false
+```
+
+### Runtime Configuration Updates
+
+```bash
+# Update conservatism level
+/skills-config --conservatism conservative
+
+# Add protected skill
+/skills-config --protect new-important-skill
+
+# Adjust thresholds
+/skills-config --merge-threshold 0.85
+```
 
 ---
 

@@ -489,3 +489,311 @@ test.describe('Task Management', () => {
   });
 });
 ```
+
+## Canvas/Vue Flow Page Object Pattern
+
+Advanced Page Object for testing Vue Flow canvas with drag operations and store access.
+
+### Canvas Page Object
+
+```typescript
+// src/tests/e2e/pages/CanvasPage.ts
+import { Page, Locator, expect } from '@playwright/test';
+
+interface CoordinateState {
+  position: { x: number; y: number };
+  computedPosition: { x: number; y: number };
+  parentNode: string | undefined;
+}
+
+export class CanvasPage {
+  private createdTaskIds: string[] = [];
+  private createdGroupIds: string[] = [];
+
+  constructor(private page: Page) {}
+
+  async goto(): Promise<void> {
+    await this.page.goto('/#/canvas');
+    await this.page.locator('.vue-flow').waitFor({ state: 'visible', timeout: 10000 });
+    await this.waitForCanvasSync();
+  }
+
+  async fitView(): Promise<void> {
+    await this.page.keyboard.press('f');
+    await this.page.waitForTimeout(300);
+  }
+
+  // ============================================
+  // STORE ACCESS (Pinia from Playwright)
+  // ============================================
+
+  async getGroupTaskCount(groupId: string): Promise<number> {
+    return this.page.evaluate((id) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      const taskStore = vueApp.config.globalProperties.$pinia._s.get('tasks');
+      return canvasStore.getTaskCountInGroupRecursive(id, taskStore.tasks);
+    }, groupId);
+  }
+
+  async getTaskParentNode(taskId: string): Promise<string | undefined> {
+    return this.page.evaluate((id) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      const node = canvasStore.nodes.find((n: any) => n.id === `task-${id}`);
+      return node?.parentNode;
+    }, taskId);
+  }
+
+  async getNodeCoordinateState(nodeId: string): Promise<CoordinateState | null> {
+    return this.page.evaluate((id) => {
+      const app = document.querySelector('#app');
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      const node = canvasStore.nodes.find((n: any) => n.id === id);
+      if (!node) return null;
+      return {
+        position: { ...node.position },
+        computedPosition: { ...node.computedPosition },
+        parentNode: node.parentNode
+      };
+    }, nodeId);
+  }
+
+  // ============================================
+  // DRAG OPERATIONS
+  // ============================================
+
+  async dragTaskToGroup(taskId: string, targetGroupId: string): Promise<void> {
+    const taskNode = this.page.locator(`[data-id="task-${taskId}"]`);
+    const targetGroup = this.page.locator(`[data-id="section-${targetGroupId}"]`);
+
+    await expect(taskNode).toBeVisible({ timeout: 5000 });
+    await expect(targetGroup).toBeVisible({ timeout: 5000 });
+
+    const taskBox = await taskNode.boundingBox();
+    const targetBox = await targetGroup.boundingBox();
+
+    if (!taskBox || !targetBox) throw new Error('Could not get bounding boxes');
+
+    await this.page.mouse.move(taskBox.x + taskBox.width / 2, taskBox.y + 20);
+    await this.page.mouse.down();
+    await this.page.waitForTimeout(100);
+    await this.page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2,
+      { steps: 10 }
+    );
+    await this.page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2
+    );
+    await this.page.waitForTimeout(100);
+    await this.page.mouse.up();
+
+    await this.page.waitForTimeout(600);
+    await this.waitForCanvasSync();
+  }
+
+  async dragGroup(groupId: string, delta: { deltaX: number; deltaY: number }): Promise<void> {
+    const groupNode = this.page.locator(`[data-id="section-${groupId}"]`);
+    const box = await groupNode.boundingBox();
+
+    if (!box) throw new Error('Could not get group bounding box');
+
+    await this.page.mouse.move(box.x + box.width / 2, box.y + 15);
+    await this.page.mouse.down();
+    await this.page.waitForTimeout(100);
+    await this.page.mouse.move(
+      box.x + box.width / 2 + delta.deltaX,
+      box.y + 15 + delta.deltaY,
+      { steps: 10 }
+    );
+    await this.page.waitForTimeout(100);
+    await this.page.mouse.up();
+
+    await this.page.waitForTimeout(600);
+    await this.waitForCanvasSync();
+  }
+
+  async dragGroupToGroup(sourceGroupId: string, targetGroupId: string): Promise<void> {
+    const sourceGroup = this.page.locator(`[data-id="section-${sourceGroupId}"]`);
+    const targetGroup = this.page.locator(`[data-id="section-${targetGroupId}"]`);
+
+    await expect(sourceGroup).toBeVisible({ timeout: 5000 });
+    await expect(targetGroup).toBeVisible({ timeout: 5000 });
+
+    const sourceBox = await sourceGroup.boundingBox();
+    const targetBox = await targetGroup.boundingBox();
+
+    if (!sourceBox || !targetBox) throw new Error('Could not get bounding boxes');
+
+    await this.page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + 15);
+    await this.page.mouse.down();
+    await this.page.waitForTimeout(100);
+    await this.page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2,
+      { steps: 10 }
+    );
+    await this.page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + targetBox.height / 2
+    );
+    await this.page.waitForTimeout(100);
+    await this.page.mouse.up();
+
+    await this.page.waitForTimeout(600);
+    await this.waitForCanvasSync();
+  }
+
+  // ============================================
+  // SYNC HELPERS
+  // ============================================
+
+  async waitForCanvasSync(): Promise<void> {
+    await this.page.waitForFunction(() => {
+      const app = document.querySelector('#app');
+      if (!app || !('__vue_app__' in app)) return true;
+      const vueApp = (app as any).__vue_app__;
+      const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+      return !canvasStore?.isSyncing;
+    }, { timeout: 5000 }).catch(() => {});
+  }
+
+  // ============================================
+  // CLEANUP
+  // ============================================
+
+  async cleanup(): Promise<void> {
+    for (const taskId of this.createdTaskIds) {
+      await this.page.evaluate((id) => {
+        const app = document.querySelector('#app');
+        const vueApp = (app as any).__vue_app__;
+        const taskStore = vueApp.config.globalProperties.$pinia._s.get('tasks');
+        taskStore.deleteTask(id);
+      }, taskId).catch(() => {});
+    }
+
+    for (const groupId of this.createdGroupIds) {
+      await this.page.evaluate((id) => {
+        const app = document.querySelector('#app');
+        const vueApp = (app as any).__vue_app__;
+        const canvasStore = vueApp.config.globalProperties.$pinia._s.get('canvas');
+        canvasStore.deleteGroup(id);
+      }, groupId).catch(() => {});
+    }
+
+    this.createdTaskIds = [];
+    this.createdGroupIds = [];
+  }
+}
+```
+
+### Canvas Custom Assertions
+
+```typescript
+// src/tests/e2e/fixtures/canvas-assertions.ts
+import { expect } from '@playwright/test';
+import { CanvasPage } from '../pages/CanvasPage';
+
+const CANVAS_DEFAULTS = {
+  timeout: 3000,
+  intervals: [100, 300, 500, 1000, 1500]
+};
+
+export async function assertGroupCount(
+  canvas: CanvasPage,
+  groupId: string,
+  expected: number
+): Promise<void> {
+  let lastActual: number | undefined;
+
+  try {
+    await expect(async () => {
+      lastActual = await canvas.getGroupTaskCount(groupId);
+      expect(lastActual).toBe(expected);
+    }).toPass(CANVAS_DEFAULTS);
+  } catch (error) {
+    throw new Error(
+      `Group "${groupId}" task count mismatch after ${CANVAS_DEFAULTS.timeout}ms.\n` +
+      `  Expected: ${expected}\n` +
+      `  Actual:   ${lastActual ?? 'unknown'}`
+    );
+  }
+}
+
+export async function assertTaskNotInGroup(
+  canvas: CanvasPage,
+  taskId: string
+): Promise<void> {
+  await expect(async () => {
+    const parentNode = await canvas.getTaskParentNode(taskId);
+    expect(parentNode).toBeUndefined();
+  }).toPass(CANVAS_DEFAULTS);
+}
+
+export async function assertTaskInGroup(
+  canvas: CanvasPage,
+  taskId: string,
+  groupId: string
+): Promise<void> {
+  await expect(async () => {
+    const parentNode = await canvas.getTaskParentNode(taskId);
+    expect(parentNode).toBe(`section-${groupId}`);
+  }).toPass(CANVAS_DEFAULTS);
+}
+```
+
+### Canvas Test Example
+
+```typescript
+// src/tests/e2e/canvas-counting.spec.ts
+import { test, expect } from '@playwright/test';
+import { CanvasPage } from './pages/CanvasPage';
+import { assertGroupCount, assertTaskInGroup, assertTaskNotInGroup } from './fixtures/canvas-assertions';
+
+test.describe('Canvas Group-Task Counting', () => {
+  let canvas: CanvasPage;
+
+  test.beforeEach(async ({ page }) => {
+    canvas = new CanvasPage(page);
+    await canvas.goto();
+    await canvas.fitView();
+  });
+
+  test.afterEach(async () => {
+    await canvas.cleanup();
+  });
+
+  test('parent group moves everything inside', async ({ page }) => {
+    // Create nested structure
+    await canvas.createTestGroup({ id: 'parent', position: { x: 50, y: 50 }, size: { width: 600, height: 500 } });
+    await canvas.createTestGroup({ id: 'child', position: { x: 100, y: 100 }, size: { width: 250, height: 200 } });
+    const taskId = await canvas.createTestTask({ title: 'Nested Task', position: { x: 150, y: 150 } });
+
+    await page.waitForTimeout(500);
+
+    // Verify counts
+    await assertGroupCount(canvas, 'child', 1);
+    await assertGroupCount(canvas, 'parent', 1);
+
+    // Record positions before move
+    const taskBefore = await canvas.getNodeCoordinateState(`task-${taskId}`);
+
+    // Move parent group
+    await canvas.dragGroup('parent', { deltaX: 200, deltaY: 150 });
+
+    // Task should have moved with parent
+    const taskAfter = await canvas.getNodeCoordinateState(`task-${taskId}`);
+    expect(taskAfter!.computedPosition.x).toBeCloseTo(taskBefore!.computedPosition.x + 200, -1);
+    expect(taskAfter!.computedPosition.y).toBeCloseTo(taskBefore!.computedPosition.y + 150, -1);
+
+    // Counts unchanged
+    await assertGroupCount(canvas, 'child', 1);
+    await assertGroupCount(canvas, 'parent', 1);
+  });
+});
+```

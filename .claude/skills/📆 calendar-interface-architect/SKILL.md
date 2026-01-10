@@ -5,6 +5,8 @@ confidence_boost:
   event_interface_missing: 0.4
   scheduling_problems: 0.5
   temporal_type_issues: 0.5
+  inbox_sync_issues: 0.5
+  task_scheduling_leaks: 0.5
 dependencies:
 - typescript
 - vue
@@ -13,10 +15,10 @@ dependencies:
 - vite
 - date-fns
 - luxon
-description: SYSTEMATICALLY architect and fix TypeScript calendar interface issues
-  by creating comprehensive temporal type systems, resolving CalendarEvent interface
-  problems, and implementing proper task instance type safety. Addresses critical
-  calendar functionality that is currently broken due to missing interface properties.
+description: COMPREHENSIVE calendar system skill combining TypeScript interface architecture,
+  inbox synchronization debugging, and task scheduling fixes. Handles CalendarEvent
+  interface issues, inbox showing 0 tasks problems, and tasks incorrectly appearing
+  in calendar grid instead of inbox.
 estimated_duration: 25-45 minutes
 name: calendar-interface-architect
 prerequisites:
@@ -25,8 +27,10 @@ prerequisites:
 - calendar systems
 - date handling
 - scheduling algorithms
+- vue 3 reactivity
+- pinia stores
 skill_id: calendar-interface-architect
-skill_name: TypeScript Calendar Interface Architect
+skill_name: Calendar Interface Architect
 tags:
 - typescript
 - calendar
@@ -37,7 +41,10 @@ tags:
 - date
 - time
 - architectural
-token_budget: 4000
+- inbox
+- sync
+- filtering
+token_budget: 5000
 triggers:
   contexts:
   - typescript
@@ -48,12 +55,15 @@ triggers:
   - event
   - date
   - time
+  - inbox
+  - filtering
   file_patterns:
   - src/composables/calendar/*.ts
   - src/views/CalendarView*.vue
   - src/types/recurrence.ts
   - src/stores/taskScheduler.ts
   - src/stores/tasks.ts
+  - src/components/CalendarInboxPanel.vue
   keywords:
   - calendar
   - CalendarEvent
@@ -66,12 +76,23 @@ triggers:
   - event interface
   - calendar type
   - TaskInstance
-version: 1.0
+  - inbox shows 0 tasks
+  - calendar inbox
+  - calendar filtering
+  - tasks in calendar grid
+  - dueDate vs instances
+version: 2.0
+merged_from:
+- calendar-inbox-sync
+- calendar-scheduling-fixer
 ---
 
-# TypeScript Calendar Interface Architect
+# Calendar Interface Architect
 
-This skill provides comprehensive architectural resolution of calendar interface and temporal type system issues in the Pomo-Flow application.
+This comprehensive skill handles all calendar-related issues in the Pomo-Flow application:
+- **TypeScript Interface Architecture**: Fix CalendarEvent and TaskInstance type issues
+- **Inbox Synchronization**: Debug calendar inbox showing 0 tasks
+- **Scheduling Fixes**: Prevent tasks with due dates from incorrectly appearing in calendar grid
 
 ## Quick Context
 - **Complexity**: high
@@ -79,11 +100,15 @@ This skill provides comprehensive architectural resolution of calendar interface
 - **Dependencies**: typescript, vue, pinia, @vue/runtime-core, vite, date-fns, luxon
 
 ## Activation Triggers
-- **Keywords**: calendar, CalendarEvent, isDueDate, task instance, temporal, date, time, scheduling
+- **Keywords**: calendar, CalendarEvent, isDueDate, task instance, temporal, inbox shows 0 tasks, calendar filtering
 - **Files**: src/composables/calendar/*.ts, src/views/CalendarView*.vue, src/types/recurrence.ts
-- **Contexts**: typescript, calendar, interface, temporal, scheduling, event
+- **Contexts**: typescript, calendar, interface, temporal, scheduling, inbox, filtering
 
-## 🚨 CRITICAL CALENDAR INTERFACE ISSUES
+---
+
+# SECTION 1: TypeScript Calendar Interface Architecture
+
+## Critical Calendar Interface Issues
 
 ### **IMMEDIATE Calendar Blocking Issues**
 **CURRENT COMPILATION ERRORS:**
@@ -93,21 +118,18 @@ This skill provides comprehensive architectural resolution of calendar interface
 4. **Calendar composables failing** due to interface problems
 
 ### **Why Calendar Issues Block Application:**
-```
+```typescript
 // PROBLEM: Missing properties in CalendarEvent interface
 const calendarEvent: CalendarEvent = {
   title: 'Task',
   date: '2024-01-01',
-  isDueDate: true  // ❌ Property does not exist on CalendarEvent
+  isDueDate: true  // Property does not exist on CalendarEvent
 }
 
 // CONSEQUENCE: Calendar functionality breaks, rendering fails
-// Task scheduling doesn't work, calendar view crashes
 ```
 
-## Calendar Interface Architecture Process
-
-### Phase 1: Temporal Type Analysis (Critical)
+## Phase 1: Temporal Type Analysis (Critical)
 ```typescript
 // Comprehensive temporal type system
 export interface BaseTemporalEntity {
@@ -143,7 +165,7 @@ export interface TaskCalendarEvent extends CalendarEvent {
 }
 ```
 
-### Phase 2: TaskInstance Type System (Critical)
+## Phase 2: TaskInstance Type System (Critical)
 ```typescript
 // Complete TaskInstance interface for calendar operations
 export interface TaskInstance {
@@ -179,7 +201,7 @@ export interface TaskInstanceFactory {
 }
 ```
 
-### Phase 3: Calendar State Management (Critical)
+## Phase 3: Calendar State Management (Critical)
 ```typescript
 // Calendar-specific state management
 export interface CalendarState {
@@ -213,115 +235,284 @@ export interface CalendarActions {
 }
 ```
 
-### Phase 4: Calendar Composable Architecture (Critical)
-```typescript
-// Type-safe calendar composables
-export function useCalendarDayView(date: Ref<Date>) {
-  const dayEvents = computed((): TaskCalendarEvent[] => {
-    const dayStart = startOfDay(date.value)
-    const dayEnd = endOfDay(date.value)
+---
 
-    return taskStore.taskInstances
-      .filter(instance => {
-        const instanceDate = parseISO(instance.scheduledDate)
-        return isWithinInterval(instanceDate, { start: dayStart, end: dayEnd })
-      })
-      .map(instance => createTaskCalendarEvent(instance))
+# SECTION 2: Calendar Inbox Synchronization
+
+## Problem Identification
+
+You're experiencing the classic Vue 3 calendar filtering failure:
+- **Inbox shows**: 7 tasks (actual data)
+- **Calendar inbox shows**: 0 tasks (filtered out)
+- **Root cause**: Calendar uses `taskStore.filteredTasks` which applies sidebar filters
+- **Expected**: Calendar inbox should show unscheduled tasks regardless of sidebar filters
+
+## Diagnostic Protocol
+
+### Step 1: Verify the Calendar Filter Issue
+Run this diagnostic code in browser console:
+
+```javascript
+// Check calendar vs inbox data discrepancy
+async function diagnoseCalendarInboxSync() {
+  console.group('Calendar-Inbox Sync Diagnosis')
+
+  try {
+    // 1. Check task store state
+    const taskStore = window.Vue?.config?.globalProperties?.$pinia?._s?.get('tasks')
+    if (!taskStore) {
+      console.error('Task store not found')
+      return
+    }
+
+    const allTasks = taskStore.tasks || []
+    const filteredTasks = taskStore.filteredTasks || []
+    console.log(`All tasks: ${allTasks.length}`)
+    console.log(`Filtered tasks: ${filteredTasks.length}`)
+    console.log(`Tasks filtered out: ${allTasks.length - filteredTasks.length}`)
+
+    // 2. Check inbox vs calendar eligibility
+    const inboxTasks = allTasks.filter(task =>
+      task.isInInbox !== false &&
+      !task.canvasPosition &&
+      task.status !== 'done'
+    )
+
+    const calendarEligible = allTasks.filter(task => {
+      const hasInstances = task.instances && task.instances.length > 0
+      const hasLegacy = task.scheduledDate && task.scheduledTime
+      return hasInstances || hasLegacy
+    })
+
+    const calendarInboxTasks = allTasks.filter(task =>
+      task.isInInbox !== false &&
+      !task.canvasPosition &&
+      task.status !== 'done' &&
+      !((task.instances?.length || 0) + ((task.scheduledDate && task.scheduledTime) ? 1 : 0) > 0)
+    )
+
+    console.log(`Inbox tasks: ${inboxTasks.length}`)
+    console.log(`Calendar scheduled tasks: ${calendarEligible.length}`)
+    console.log(`Calendar inbox tasks: ${calendarInboxTasks.length}`)
+
+    // 3. Identify the problem
+    console.group('Problem Analysis')
+    if (inboxTasks.length > 0 && filteredTasks.length === 0) {
+      console.error('ISSUE: All tasks filtered out - calendar will show 0 tasks')
+    }
+
+    if (filteredTasks.length < allTasks.length) {
+      console.warn('Sidebar filters are hiding tasks from calendar')
+    }
+    console.groupEnd()
+
+    return {
+      allTasks: allTasks.length,
+      filteredTasks: filteredTasks.length,
+      inboxTasks: inboxTasks.length,
+      calendarInboxTasks: calendarInboxTasks.length,
+      hasIssue: inboxTasks.length > 0 && filteredTasks.length === 0
+    }
+
+  } catch (error) {
+    console.error('Diagnosis failed:', error)
+  } finally {
+    console.groupEnd()
+  }
+}
+
+// Run diagnosis
+await diagnoseCalendarInboxSync()
+```
+
+### Issue Types
+
+#### Issue A: Calendar Uses filteredTasks
+**Symptom**: Calendar shows 0 tasks when sidebar has active filters
+**Cause**: `useCalendarDayView.ts` uses `taskStore.filteredTasks`
+**Fix**: Use `taskStore.tasks` with calendar-specific filtering
+
+#### Issue B: Sidebar Filters Hide Calendar Tasks
+**Symptom**: Calendar inbox count doesn't match inbox count
+**Cause**: Project/smart view filters affect calendar visibility
+**Fix**: Calendar should be independent of sidebar filters
+
+#### Issue C: Done Tasks Hidden Everywhere
+**Symptom**: Tasks disappear when marked as done
+**Cause**: Global "hide done" filter affects calendar
+**Fix**: Only hide done tasks from calendar timeline, not inbox
+
+## Specific Fixes
+
+### Fix 1: Calendar Data Source Independence
+```typescript
+// Replace in useCalendarDayView.ts around line 81
+// OLD CODE:
+const filteredTasks = taskStore.filteredTasks
+
+// NEW CODE:
+const calendarTasks = computed(() => {
+  const allTasks = taskStore.tasks
+
+  // Calendar-specific filtering - independent of sidebar
+  return allTasks.filter(task => {
+    // Only hide tasks that should never appear in calendar
+    if (task.status === 'done') return false
+
+    // Check if task is scheduled for current date
+    const hasInstances = task.instances && task.instances.length > 0
+    const hasLegacy = task.scheduledDate && task.scheduledTime
+
+    return hasInstances || hasLegacy
+  })
+})
+```
+
+### Fix 2: Calendar Inbox Panel Fix
+```typescript
+// In CalendarInboxPanel.vue or similar
+const calendarInboxTasks = computed(() => {
+  const allTasks = taskStore.tasks
+
+  return allTasks.filter(task => {
+    // Task is in inbox and not scheduled
+    const isInInbox = task.isInInbox !== false && !task.canvasPosition
+    const isUnscheduled = !((task.instances?.length || 0) + ((task.scheduledDate && task.scheduledTime) ? 1 : 0) > 0)
+    const isNotDone = task.status !== 'done'
+
+    return isInInbox && isUnscheduled && isNotDone
+  })
+})
+```
+
+---
+
+# SECTION 3: Calendar Scheduling Fixes
+
+## Core Principles
+
+### 1. Data Model Separation
+- **Tasks**: Use `dueDate` field for deadline metadata, stay in inbox until manually scheduled
+- **Calendar Events**: Use `instances` array for time-specific commitments with scheduled dates/times
+- **State Management**: Maintain clear distinction between inbox state (`isInInbox: true`) and scheduled state
+
+### 2. Visual Separation
+- **Inbox Tasks**: Show as cards/panels, draggable to calendar for scheduling
+- **Calendar Events**: Show as time blocks with specific start/end times
+- **Visual Cues**: Use different styling, icons, and interaction patterns
+
+### 3. Workflow Separation
+- **Canvas Smart Groups**: Organize tasks by relevance (Today, Tomorrow, etc.)
+- **Calendar Inbox**: Action queue for tasks that need scheduling
+- **Calendar Grid**: Commitments with specific time slots
+
+## State Flow Architecture
+
+```
+Task Creation -> Smart Groups -> Calendar Inbox -> Manual Scheduling -> Calendar Grid
+     |              |              |                    |              |
+  New Task     dueDate=Today   isInInbox=true    Create Instance   Show in Calendar
+```
+
+### Smart Group Behavior (Canvas "Today" Group)
+
+```typescript
+// When task is moved to "Today" smart group:
+moveTaskToSmartGroup(taskId, 'today') {
+  const updates = {
+    dueDate: '2025-11-08',    // Set deadline for organization
+    isInInbox: true,          // Keep in inbox for manual scheduling
+    // CRITICAL: Do NOT create instances
+  }
+
+  updateTask(taskId, updates)
+}
+```
+
+### Inbox to Calendar Flow
+
+```typescript
+// When task is manually scheduled from inbox:
+scheduleTaskFromInbox(taskId, date, time) {
+  // 1. Create calendar instance
+  createTaskInstance(taskId, {
+    scheduledDate: date,
+    scheduledTime: time
   })
 
-  const addTaskToDay = async (task: Task, time?: string) => {
-    const instance: TaskInstance = {
-      id: generateId(),
-      parentTaskId: task.id,
-      scheduledDate: format(date.value, 'yyyy-MM-dd'),
-      scheduledTime: time,
-      duration: task.estimatedDuration || 25,
-      status: 'scheduled',
-      isRecurring: false,
-      pomodoroTracking: {
-        completed: 0,
-        total: task.estimatedPomodoros || 1,
-        duration: 25
-      }
-    }
+  // 2. Remove from inbox state
+  updateTask(taskId, { isInInbox: false })
 
-    await taskStore.addTaskInstance(instance)
-  }
-
-  return {
-    dayEvents,
-    addTaskToDay,
-    removeTaskFromDay: (instanceId: string) => taskStore.removeTaskInstance(instanceId)
-  }
+  // 3. Task now appears in calendar grid
 }
 ```
 
-### Phase 5: Recurrence Integration (Critical)
+## Common Violations and Solutions
+
+### Violation 1: Tasks with dueDate appear in calendar
+
+**Problem:**
 ```typescript
-// Calendar-aware recurrence system
-export interface CalendarRecurrenceIntegration {
-  generateRecurringInstances: (
-    task: Task,
-    pattern: RecurrenceRule,
-    startDate: Date,
-    endDate: Date
-  ) => TaskInstance[]
-  applyRecurrenceExceptions: (
-    instances: TaskInstance[],
-    exceptions: RecurrenceException[]
-  ) => TaskInstance[]
-  updateRecurringPattern: (
-    taskId: string,
-    oldPattern: RecurrenceRule,
-    newPattern: RecurrenceRule,
-    fromDate: Date
-  ) => Promise<void>
-}
-
-export function useCalendarRecurrence(): CalendarRecurrenceIntegration {
-  const generateRecurringInstances = (
-    task: Task,
-    pattern: RecurrenceRule,
-    startDate: Date,
-    endDate: Date
-  ): TaskInstance[] => {
-    const instances: TaskInstance[] = []
-    let currentDate = new Date(startDate)
-
-    while (isBefore(currentDate, endDate) || isSameDay(currentDate, endDate)) {
-      const instance: TaskInstance = {
-        id: `${task.id}-${format(currentDate, 'yyyy-MM-dd')}`,
-        parentTaskId: task.id,
-        scheduledDate: format(currentDate, 'yyyy-MM-dd'),
-        scheduledTime: task.scheduledTime,
-        duration: task.estimatedDuration,
-        status: 'scheduled',
-        isRecurring: true,
-        pomodoroTracking: {
-          completed: 0,
-          total: task.estimatedPomodoros || 1,
-          duration: 25
-        }
-      }
-
-      instances.push(instance)
-      currentDate = addRecurrence(currentDate, pattern)
-    }
-
-    return instances
-  }
-
-  return {
-    generateRecurringInstances,
-    applyRecurrenceExceptions: applyExceptions,
-    updateRecurringPattern: updatePattern
-  }
+// Wrong: Creating calendar events from dueDate
+if (task.dueDate === today) {
+  createCalendarEvent(task)  // This should NOT happen
 }
 ```
 
-## Implementation Patterns
+**Solution:**
+```typescript
+// Correct: Only create events from instances
+if (task.instances?.some(inst => inst.scheduledDate === today)) {
+  createCalendarEvent(task)  // Only for explicitly scheduled tasks
+}
+```
 
-### Pattern 1: Calendar Event Factory
+### Violation 2: Tasks in both inbox and calendar
+
+**Problem:**
+```typescript
+// Wrong: Task appears in both places
+const updates = {
+  dueDate: today,
+  isInInbox: true,
+  instances: [{ scheduledDate: today, scheduledTime: '09:00' }]
+}
+```
+
+**Solution:**
+```typescript
+// Correct: Clear state transition
+const updates = {
+  dueDate: today,
+  isInInbox: false,      // Remove from inbox
+  instances: [{ scheduledDate: today, scheduledTime: '09:00' }]
+}
+```
+
+### Violation 3: Smart groups create scheduling
+
+**Problem:**
+```typescript
+// Wrong: Smart group creates time-based scheduling
+moveTaskToSmartGroup(taskId, 'today') {
+  createTaskInstance(taskId, { scheduledDate: today, scheduledTime: '09:00' })
+}
+```
+
+**Solution:**
+```typescript
+// Correct: Smart group only sets deadline
+moveTaskToSmartGroup(taskId, 'today') {
+  updateTask(taskId, { dueDate: today })
+  // Task stays in inbox for manual scheduling
+}
+```
+
+---
+
+# Implementation Patterns
+
+## Pattern 1: Calendar Event Factory
 ```typescript
 // Factory for creating calendar events from different sources
 export class CalendarEventFactory {
@@ -385,7 +576,7 @@ export class CalendarEventFactory {
 }
 ```
 
-### Pattern 2: Type-Safe Calendar Store
+## Pattern 2: Type-Safe Calendar Store
 ```typescript
 // Pinia store for calendar state with full type safety
 export const useCalendarStore = defineStore('calendar', () => {
@@ -440,7 +631,7 @@ export const useCalendarStore = defineStore('calendar', () => {
 })
 ```
 
-### Pattern 3: Date Type Safety
+## Pattern 3: Date Type Safety
 ```typescript
 // Type-safe date utilities for calendar operations
 export class CalendarDateUtils {
@@ -483,89 +674,27 @@ export class CalendarDateUtils {
 }
 ```
 
-## Error Resolution Map
+---
 
-### Error Type 1: Missing CalendarEvent Properties
-```typescript
-// BEFORE (Error):
-interface CalendarEvent {
-  id: string
-  title: string
-  date: string
-  // Missing isDueDate property
-}
+# Testing Requirements
 
-const event: CalendarEvent = {
-  id: '1',
-  title: 'Task',
-  date: '2024-01-01',
-  isDueDate: true  // ❌ Property does not exist
-}
+## Mandatory Playwright Testing
+Before claiming any fix works, perform these visual tests:
 
-// AFTER (Fixed):
-interface CalendarEvent extends BaseTemporalEntity {
-  date: string
-  time?: string
-  duration?: number
-  isDueDate: boolean  // ✅ Property exists
-  isAllDay: boolean
-  color?: string
-  // ... other properties
-}
+1. **Today Group Test**: Move task to "Today" in canvas, verify it appears in calendar inbox "Today" filter but NOT in calendar time slots
+2. **Drag Test**: Drag task from calendar inbox to calendar time slot, verify it appears as scheduled event
+3. **Multi-view Test**: Verify behavior is consistent across day, week, and month views
+4. **State Test**: Verify task properties (dueDate, instances, isInInbox) are correct throughout workflow
+5. **Inbox Count Test**: Verify calendar inbox shows same count as main inbox
 
-const event: CalendarEvent = {
-  id: '1',
-  title: 'Task',
-  date: '2024-01-01',
-  isDueDate: true,  // ✅ Works
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  isAllDay: false
-}
-```
-
-### Error Type 2: TaskInstance Type Mismatch
-```typescript
-// BEFORE (Error):
-// TaskInstance interface incomplete or missing
-const instance: TaskInstance = {
-  id: '1',
-  parentTaskId: 'task-1',
-  scheduledDate: '2024-01-01'
-  // Missing required properties
-}
-
-// AFTER (Fixed):
-const instance: TaskInstance = {
-  id: '1',
-  parentTaskId: 'task-1',
-  scheduledDate: '2024-01-01',
-  duration: 25,
-  status: 'scheduled',
-  isRecurring: false,
-  pomodoroTracking: {
-    completed: 0,
-    total: 1,
-    duration: 25
-  }
-  // ✅ All required properties present
-}
-```
-
-## Expected Outcomes
-After successful execution:
-- ✅ **Complete CalendarEvent Interface**: All required properties including isDueDate
-- ✅ **TaskInstance Type System**: Full type safety for task instances
-- ✅ **Calendar Functionality**: All calendar views work properly
-- ✅ **Scheduling Integration**: Tasks can be scheduled on calendar
-- ✅ **Temporal Type Safety**: All date/time operations are type-safe
-
-## Success Criteria
-- [ ] CalendarEvent interface includes isDueDate and all required properties
-- [ ] TaskInstance interface is complete and type-safe
-- [ ] Calendar composables compile and function properly
-- [ ] Task scheduling works in calendar views
-- [ ] No calendar-related TypeScript errors
+## Test Verification Checklist
+- [ ] Playwright MCP server is running and accessible
+- [ ] Task moved to "Today" appears in Calendar Inbox
+- [ ] Task moved to "Today" does NOT appear in calendar time slots
+- [ ] Manual drag from inbox to calendar works correctly
+- [ ] Task state properties are correct after each operation
+- [ ] Behavior is consistent across all calendar views
+- [ ] Calendar inbox shows correct task count regardless of sidebar filters
 
 ## Validation Commands
 ```bash
@@ -580,7 +709,25 @@ npm run dev
 ```
 
 ---
-**This skill resolves the critical calendar interface issues that are preventing calendar functionality from working by implementing a comprehensive temporal type system.**
+
+# Reference Materials
+
+See the `references/` directory for detailed documentation:
+- `task-calendar-separation.md` - Data model separation principles
+- `vue-calendar-best-practices.md` - Vue.js calendar implementation patterns
+
+---
+
+# Expected Outcomes
+
+After successful execution:
+- Complete CalendarEvent Interface: All required properties including isDueDate
+- TaskInstance Type System: Full type safety for task instances
+- Calendar Functionality: All calendar views work properly
+- Scheduling Integration: Tasks can be scheduled on calendar
+- Temporal Type Safety: All date/time operations are type-safe
+- Inbox Sync: Calendar inbox shows correct task count
+- Task-Calendar Separation: Tasks with dueDate stay in inbox until manually scheduled
 
 ---
 

@@ -1,13 +1,22 @@
 ---
 name: safe-project-organizer
-description: Safely analyze and reorganize project structure with multi-stage validation, dry-run previews, and explicit user confirmation. Use when projects need cleanup, standardization, or better organization.
+description: Comprehensive project cleanup and organization skill combining safe reorganization, root directory cleanup, and legacy tech removal. Features multi-stage validation, dry-run previews, and explicit user confirmation.
+keywords: project cleanup, file organization, legacy removal, root cleanup, dead code, deprecated libraries, directory restructuring
+category: maintenance
+triggers: project cleanup, organize files, clean root directory, remove legacy code, dead library removal, deprecated tech cleanup, project structure reorganization
 ---
 
 # Safe Project Organizer
 
 ## Overview
 
-This skill enables Claude Code to analyze project structure and suggest safe organizational improvements like moving files, removing unused directories, and restructuring folders. It prioritizes safety through multi-stage validation, dry-run previews, and explicit user confirmation.
+This comprehensive skill combines three cleanup capabilities into one unified tool:
+
+1. **Safe Project Organization** - Analyze and reorganize project structure with multi-stage validation
+2. **Root Directory Cleanup** - Remove temporary files, build artifacts, and development clutter from the project root
+3. **Legacy Tech Removal** - Audit and remove abandoned libraries, deprecated code, and dead directories
+
+All operations prioritize safety through multi-stage validation, dry-run previews, and explicit user confirmation.
 
 ## Core Safety Principles
 
@@ -389,10 +398,168 @@ User: "I need to clean up before handing this project to another team"
 Claude: [Uses skill for comprehensive safe reorganization]
 ```
 
+---
+
+## Root Directory Cleanup (Merged from root-project-cleaner)
+
+**A specialized capability for safely removing temporary files, build artifacts, and unwanted clutter FROM THE PROJECT ROOT DIRECTORY.**
+
+### Scope
+- **Cleans**: `node_modules/.cache`, `dist`, `.vite`, `*.tmp`, `*.log` in root
+- **Does NOT**: Refactor code, organize source files, clean src/ directory
+
+### Root Cleanup Categories
+
+#### 1. Build Artifacts
+- `dist/`, `build/`, `.vite/`
+- Compiled assets and bundles
+
+#### 2. Development Caches
+- `node_modules/.cache/`
+- `.cache/`, `tmp/`, `temp/`
+
+#### 3. Temporary Files
+- `*.tmp`, `*.temp`, `*.swp`, `*.swo`
+- Editor backup files
+
+#### 4. System Files
+- `.DS_Store`, `Thumbs.db`
+- OS-specific metadata
+
+#### 5. Logs and Debug
+- `*.log`, `logs/`, `debug/`
+
+### Root Cleanup Configuration
+```javascript
+const config = {
+  rules: {
+    maxAge: 30,           // days
+    maxSize: '100MB',
+    patterns: {
+      include: [
+        '*.tmp', '*.temp', '*.swp', '*.swo',
+        '*.log', 'logs/', '.cache/',
+        'dist/', 'build/', '.vite/',
+        'node_modules/.cache/', '.DS_Store',
+        'Thumbs.db', '*.bak', '*.backup'
+      ],
+      exclude: [
+        '*.config.*', '*.env.*', '.gitignore',
+        'package.json', 'package-lock.json',
+        '*.md', 'README.*', '.gitkeep'
+      ]
+    }
+  },
+  safety: {
+    gitAware: true,
+    createBackup: true,
+    interactiveMode: true
+  }
+};
+```
+
+---
+
+## Legacy Tech Removal (Merged from legacy-tech-remover)
+
+**Automated audit and cleanup for abandoned/dead libraries, legacy tech stacks, and deprecated development directions.**
+
+### 4-Phase Legacy Removal Process
+
+#### Phase 1: Legacy Detection & Inventory
+- **Dependency Analysis**: Scan package managers for unused/abandoned libraries
+- **Directory Analysis**: Identify orphaned source trees and dead folders
+- **Pattern Detection**: Find deprecated architectural patterns
+- **Git History**: Analyze last touched dates
+
+**Output Files:**
+- `legacy-inventory.csv`: Complete inventory with risk scores
+- `legacy-directories.tree`: Hierarchical view of removal candidates
+- `legacy-dependencies.json`: Dependency graph analysis
+
+#### Phase 2: Impact Assessment & Risk Analysis
+Risk Categories:
+- **SAFE**: Zero usage, safe for immediate removal
+- **CAUTION**: Low/uncertain usage, manual review recommended
+- **RISKY**: Possible indirect use, migration required
+
+#### Phase 3: Execution Automation
+Execution Modes:
+- **DRY RUN**: Preview mode with detailed reports, no changes
+- **BATCH EXECUTION**: Automated removal of safe items
+- **MANUAL REVIEW**: Interactive review of risky items
+- **VALIDATION**: Post-execution verification
+
+#### Phase 4: Documentation & Communication
+- Migration Log: Complete record of all changes
+- Architecture Updates: Update system documentation
+- Team Notifications: Automated announcements
+
+### Legacy Tech Patterns Detected
+- **Deprecated Libraries**: Libraries unmaintained >18 months
+- **Dead Frameworks**: AngularJS, jQuery, Grunt, Gulp, TravisCI
+- **Abandoned Patterns**: Legacy MVC, Flux, old build systems
+- **Orphaned Directories**: `old/`, `legacy/`, `v1/`, `bak/`
+
+### Legacy Removal Usage
+```bash
+# Full legacy audit and removal plan
+python3 scripts/run_legacy_removal.py --full-audit
+
+# Only phase 1: Detection and inventory
+python3 scripts/phase1_detection.py --output-dir ./reports
+
+# Dry run of removal plan
+python3 scripts/phase3_execution.py --dry-run --plan ./reports/removal_plan.json
+
+# Execute safe removals only
+python3 scripts/phase3_execution.py --safe-only --auto-commit
+```
+
+### Configuration File: `.claude/legacy-remover-config.yml`
+```yaml
+min_years_untouched: 2
+safe_folder_patterns:
+  - "^src/legacy/"
+  - "^old/"
+  - "^bak/"
+  - "^deprecated/"
+
+protected_packages:
+  - "core-js"
+  - "typescript"
+  - "react"
+  - "vue"
+
+risk_thresholds:
+  safe_removal: 0.2
+  caution_zone: 0.6
+  risky_removal: 0.8
+
+git:
+  auto_commit: true
+  commit_prefix: "[legacy-removal]"
+  create_backup_branch: true
+```
+
+---
+
 ## Resources
 
 ### scripts/
 - `project_organizer.py` - The main safe project organizer script with comprehensive safety features
+- `run_legacy_removal.py` - Full legacy audit orchestrator
+- `phase1_detection.py` - Legacy detection and inventory
+- `phase2_assessment.py` - Impact assessment and risk analysis
+- `phase3_execution.py` - Execution automation
+- `phase4_documentation.py` - Documentation generation
+
+### references/
+- `deprecated-patterns.md` - Known deprecated technology patterns
+- `migration-strategies.md` - Modern replacement recommendations
+
+### assets/
+- `config_schemas/legacy-remover-config-schema.json` - Configuration validation schema
 
 The script includes:
 - Multi-phase analysis and execution

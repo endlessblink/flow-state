@@ -48,63 +48,26 @@
         />
       </div>
 
-      <!-- Title (matches TaskTable title-cell) -->
-      <div class="task-row__title">
-        <span
-          class="task-row__title-text"
-          :class="[
-            titleAlignmentClasses,
-            {
-              'task-row__title-text--completed': task.status === 'done',
-              'task-row__title-text--hover': isHovered,
-              'task-row__title-text--selected': selected
-            }
-          ]"
-          :title="task.title"
-        >
-          {{ task.title }}
-        </span>
-        <span
-          v-if="hasSubtasks"
-          class="subtask-count"
-          :class="{
-            'subtask-count--completed': isAllSubtasksCompleted,
-            'subtask-count--progress': !isAllSubtasksCompleted && completedSubtaskCount > 0
-          }"
-        >
-          {{ completedSubtaskCount }}/{{ childTasks.length }}
-        </span>
-      </div>
+      <!-- Title Cell -->
+      <TaskRowTitle
+        :title="task.title"
+        :is-completed="task.status === 'done'"
+        :is-hovered="isHovered"
+        :is-selected="selected"
+        :title-alignment-classes="titleAlignmentClasses"
+        :has-subtasks="hasSubtasks"
+        :completed-subtask-count="completedSubtaskCount"
+        :total-subtasks="childTasks.length"
+        :is-all-subtasks-completed="isAllSubtasksCompleted"
+      />
 
-      <!-- Project Emoji -->
-      <div class="task-row__project">
-        <span
-          class="project-emoji-badge"
-          :class="`project-visual--${projectVisual.type}`"
-          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-        >
-          <!-- Emoji rendering using ProjectEmojiIcon for consistency -->
-          <ProjectEmojiIcon
-            v-if="projectVisual.type === 'emoji'"
-            :emoji="projectVisual.content"
-            size="xs"
-          />
-          <!-- CSS Circle for colored projects -->
-          <div
-            v-else-if="projectVisual.type === 'css-circle'"
-            class="project-css-circle"
-            :style="{ '--project-color': projectVisual.color }"
-          />
-          <!-- Default fallback (folder icon) -->
-          <ProjectEmojiIcon
-            v-else
-            emoji="📁"
-            size="xs"
-          />
-        </span>
-      </div>
+      <!-- Project Indicator -->
+      <TaskRowProject
+        :visual="projectVisual"
+        :project-display-name="taskStore.getProjectDisplayName(task.projectId)"
+      />
 
-      <!-- Status (matches TaskTable status-cell) -->
+      <!-- Status Cell -->
       <div class="task-row__status table-cell status-cell" @click.stop>
         <CustomSelect
           :model-value="task.status || 'planned'"
@@ -114,73 +77,39 @@
         />
       </div>
 
-      <!-- Priority (matches TaskTable priority-cell) -->
-      <div class="task-row__priority">
-        <span
-          v-if="task.priority"
-          class="task-row__priority-badge task-row__priority-badge--clickable"
-          :class="{
-            'task-row__priority-badge--high': task.priority === 'high',
-            'task-row__priority-badge--medium': task.priority === 'medium',
-            'task-row__priority-badge--low': task.priority === 'low'
-          }"
-          title="Click to change priority"
-          @click.stop="cyclePriority(task.id, task.priority)"
-        >
-          {{ formatPriority(task.priority) }}
-        </span>
-      </div>
+      <!-- Priority Badge -->
+      <TaskRowPriority
+        :priority="task.priority"
+        @cycle="cyclePriority(task.id, task.priority)"
+      />
 
-      <!-- Due Date (matches TaskTable due-date-cell) -->
+      <!-- Due Date Cell -->
       <div class="task-row__due-date">
         <span v-if="task.dueDate" class="task-row__due-date-content">
           <Calendar :size="14" />
-          {{ formatDueDate(task.dueDate) }}
+          {{ formattedDueDate }}
         </span>
         <span v-else class="task-row__no-date">-</span>
       </div>
 
-      <!-- Progress (matches TaskTable progress-cell) - Stroke-only design -->
+      <!-- Progress Bar (Stroke-only design) -->
       <div class="task-row__progress">
         <div class="task-row__progress-bar" :style="{ '--progress': `${task.progress || 0}%` }">
-          <!-- Gray background stroke (always visible) -->
           <div class="task-row__progress-bg" />
-          <!-- Colored progress stroke (clips left-to-right) -->
           <div class="task-row__progress-fill" />
           <span class="task-row__progress-text">{{ task.progress || 0 }}%</span>
         </div>
       </div>
 
-      <!-- Actions (matches TaskTable actions-cell) -->
-      <div class="task-row__actions">
-        <button
-          class="task-row__action-btn"
-          title="Start Timer"
-          :aria-label="`Start timer for ${task.title}`"
-          @click.stop="$emit('startTimer', task.id)"
-        >
-          <Play :size="14" />
-        </button>
-        <button
-          class="task-row__action-btn"
-          title="Edit Task"
-          :aria-label="`Edit ${task.title}`"
-          @click.stop="$emit('edit', task.id)"
-        >
-          <Edit :size="14" />
-        </button>
-        <button
-          class="task-row__action-btn"
-          title="Duplicate Task"
-          :aria-label="`Duplicate ${task.title}`"
-          @click.stop="$emit('duplicate', task.id)"
-        >
-          <Copy :size="14" />
-        </button>
-      </div>
+      <!-- Action Buttons -->
+      <TaskRowActions
+        @start-timer="$emit('startTimer', task.id)"
+        @edit="$emit('edit', task.id)"
+        @duplicate="$emit('duplicate', task.id)"
+      />
     </div>
 
-    <!-- Subtasks (Recursive) with performance optimization -->
+    <!-- Subtasks (Recursive) -->
     <template v-if="isExpanded && hasSubtasks">
       <div class="subtasks-container">
         <HierarchicalTaskRow
@@ -205,15 +134,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { defineProps, defineEmits, withDefaults } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import { Calendar, Play, Edit, Copy } from 'lucide-vue-next'
-import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
+import { Calendar } from 'lucide-vue-next'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
-import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Import Composables
+import { useTaskRowState } from '@/composables/tasks/row/useTaskRowState'
+import { useTaskRowActions } from '@/composables/tasks/row/useTaskRowActions'
+
+// Import Sub-components
+import TaskRowTitle from './row/TaskRowTitle.vue'
+import TaskRowProject from './row/TaskRowProject.vue'
+import TaskRowPriority from './row/TaskRowPriority.vue'
+import TaskRowActions from './row/TaskRowActions.vue'
+
+interface Props {
+  task: Task
+  indentLevel?: number
+  selected?: boolean
+  expandedTasks?: Set<string>
+  visitedIds?: Set<string>
+}
 
 const props = withDefaults(defineProps<Props>(), {
   indentLevel: 0,
@@ -234,7 +178,6 @@ const emit = defineEmits<{
   updateTask: [taskId: string, updates: Partial<Task>]
 }>()
 
-// Status options for CustomSelect
 const statusOptions = [
   { label: 'To Do', value: 'planned' },
   { label: 'In Progress', value: 'in_progress' },
@@ -243,365 +186,27 @@ const statusOptions = [
   { label: 'On Hold', value: 'on_hold' }
 ]
 
-interface Props {
-  task: Task
-  indentLevel?: number
-  selected?: boolean
-  expandedTasks?: Set<string>
-  visitedIds?: Set<string>
-}
-
 const taskStore = useTaskStore()
-const { startDrag, endDrag } = useDragAndDrop()
 
-// Hebrew text alignment support
-const { getAlignmentClasses } = useHebrewAlignment()
-const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task.title))
+// --- Initialize Composables ---
+const state = useTaskRowState(props)
+const actions = useTaskRowActions(props, emit, state)
 
-const isDragging = ref(false)
-const isDropTarget = ref(false)
-const isMobile = ref(false)
-const isFocused = ref(false)
-const isHovered = ref(false)
-const showTouchFeedback = ref(false)
-const touchFeedbackStyle = ref({})
-const _isTimerActive = ref(false)
-const animationFrameId = ref<number | undefined>()
+// --- Destructure State ---
+const {
+  isMobile, isFocused, isHovered, isDragging, isDropTarget,
+  hasSubtasks, isExpanded, childTasks, completedSubtaskCount,
+  isAllSubtasksCompleted, titleAlignmentClasses, projectVisual,
+  formattedDueDate, isOverdue
+} = state
 
-// Mobile detection with responsive breakpoint
-const checkMobile = () => {
-  isMobile.value = window.innerWidth < 768
-}
-
-// Performance optimization: throttle expensive computations
-let resizeTimeout: ReturnType<typeof setTimeout>
-const handleResize = () => {
-  clearTimeout(resizeTimeout)
-  resizeTimeout = setTimeout(checkMobile, 100)
-}
-
-const hasSubtasks = computed(() =>
-  taskStore.hasNestedTasks(props.task.id)
-)
-
-const isExpanded = computed(() =>
-  props.expandedTasks.has(props.task.id)
-)
-
-const childTasks = computed(() => {
-  // Cycle detection: filter out children that are already in the visited chain
-  return taskStore.getTaskChildren(props.task.id)
-    .filter(child => !props.visitedIds.has(child.id))
-})
-
-const completedSubtaskCount = computed(() =>
-  childTasks.value.filter(task => task.status === 'done').length
-)
-
-// Enhanced computed properties for advanced interactions
-const isAllSubtasksCompleted = computed(() =>
-  hasSubtasks.value && completedSubtaskCount.value === childTasks.value.length
-)
-
-
-
-const isOverdue = computed(() => {
-  if (!props.task.dueDate) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dueDate = new Date(props.task.dueDate)
-  dueDate.setHours(0, 0, 0, 0)
-  return dueDate < today
-})
-
-// Project visual indicator (emoji or colored dot)
-const projectVisual = computed(() =>
-  taskStore.getProjectVisual(props.task.projectId)
-)
-
-const toggleExpanded = () => {
-  if (hasSubtasks.value) {
-    emit('toggleExpand', props.task.id)
-  }
-}
-
-const handleRowClick = () => {
-  emit('select', props.task.id)
-}
-
-const handleToggleComplete = (_completed: boolean) => {
-  emit('toggleComplete', props.task.id)
-}
-
-const _handleSelectionChange = (selected: boolean) => {
-  if (selected) {
-    emit('select', props.task.id)
-  } else {
-    // We would need a deselect event in the parent
-    emit('select', props.task.id)
-  }
-}
-
-const formatDueDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  if (date.toDateString() === today.toDateString()) return 'Today'
-  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-const _getDueDateClass = (): string => {
-  if (!props.task.dueDate) return ''
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dueDate = new Date(props.task.dueDate)
-  dueDate.setHours(0, 0, 0, 0)
-  const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) return 'task-row__date--overdue'
-  if (diffDays === 0) return 'task-row__date--today'
-  if (diffDays <= 3) return 'task-row__date--soon'
-  return ''
-}
-
-const _formatStatus = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    'planned': 'To Do',
-    'in_progress': 'In Progress',
-    'done': 'Done',
-    'backlog': 'Backlog',
-    'on_hold': 'On Hold'
-  }
-  return statusMap[status] || status
-}
-
-const formatPriority = (priority: string): string => {
-  const priorityMap: Record<string, string> = {
-    'low': 'Low',
-    'medium': 'Medium',
-    'high': 'High',
-    'urgent': 'Urgent'
-  }
-  return priorityMap[priority] || priority
-}
-
-// Interactive methods for inline editing
-const updateTaskStatus = (taskId: string, status: string) => {
-  emit('updateTask', taskId, { status: status as Task['status'] })
-}
-
-const cyclePriority = (taskId: string, currentPriority?: string) => {
-  const priorities = ['low', 'medium', 'high'] as const
-  const currentIndex = priorities.indexOf((currentPriority || 'medium') as typeof priorities[number])
-  const nextIndex = (currentIndex + 1) % priorities.length
-  emit('updateTask', taskId, { priority: priorities[nextIndex] })
-}
-
-// Enhanced event handlers with sophisticated interactions
-const handleMouseEnter = () => {
-  isHovered.value = true
-}
-
-const handleMouseLeave = () => {
-  isHovered.value = false
-}
-
-// Enhanced touch feedback for mobile
-const handleTouchStart = (event: TouchEvent) => {
-  if (!isMobile.value) return
-
-  const touch = event.touches[0]
-  const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect()
-  if (rect) {
-    touchFeedbackStyle.value = {
-      left: `${touch.clientX - rect.left}px`,
-      top: `${touch.clientY - rect.top}px`
-    }
-  }
-
-  showTouchFeedback.value = true
-}
-
-const handleTouchEnd = () => {
-  if (!isMobile.value) return
-  setTimeout(() => {
-    showTouchFeedback.value = false
-  }, 200)
-}
-
-// Celebration handling for enhanced feedback
-const _handleCelebrationStart = () => {
-  // Could trigger parent component celebration or confetti
-  console.log(`Celebration started for task: ${props.task.title}`)
-}
-
-const _handleCelebrationEnd = () => {
-  // Could trigger analytics or achievement tracking
-  console.log(`Celebration ended for task: ${props.task.title}`)
-}
-
-// Enhanced date utilities
-const _getDueDateIconClass = (): string => {
-  if (!props.task.dueDate) return ''
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dueDate = new Date(props.task.dueDate)
-  dueDate.setHours(0, 0, 0, 0)
-  const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) return 'task-row__icon--overdue'
-  if (diffDays === 0) return 'task-row__icon--today'
-  if (diffDays <= 3) return 'task-row__icon--soon'
-  return ''
-}
-
-const _getFullDueDateText = (): string => {
-  if (!props.task.dueDate) return ''
-  const date = new Date(props.task.dueDate)
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
-// Enhanced keyboard navigation
-const handleKeyDown = (event: KeyboardEvent) => {
-  switch (event.key) {
-    case 'Enter':
-    case ' ':
-      event.preventDefault()
-      handleRowClick()
-      break
-    case 'ArrowRight':
-      if (hasSubtasks.value && !isExpanded.value) {
-        event.preventDefault()
-        toggleExpanded()
-      }
-      break
-    case 'ArrowLeft':
-      if (hasSubtasks.value && isExpanded.value) {
-        event.preventDefault()
-        toggleExpanded()
-      }
-      break
-    case 'd':
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault()
-        emit('toggleComplete', props.task.id)
-      }
-      break
-    case 'e':
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault()
-        emit('edit', props.task.id)
-      }
-      break
-  }
-}
-
-// Performance optimization for smooth animations
-const _smoothStateTransition = (callback: () => void) => {
-  if (animationFrameId.value) {
-    cancelAnimationFrame(animationFrameId.value)
-  }
-
-  animationFrameId.value = requestAnimationFrame(() => {
-    callback()
-    animationFrameId.value = undefined
-  })
-}
-
-// Drag and drop handlers
-const handleDragStart = (event: DragEvent) => {
-  if (!event.dataTransfer) return
-
-  isDragging.value = true
-
-  const dragData: DragData = {
-    type: 'task',
-    taskId: props.task.id,
-    title: props.task.title,
-    source: 'kanban' // Using kanban as generic source
-  }
-
-  startDrag(dragData)
-  event.dataTransfer.setData('application/json', JSON.stringify(dragData))
-  event.dataTransfer.effectAllowed = 'move'
-}
-
-const handleDragEnd = () => {
-  isDragging.value = false
-  isDropTarget.value = false
-  endDrag()
-}
-
-const handleDragOver = (event: DragEvent) => {
-  event.preventDefault()
-  isDropTarget.value = true
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-}
-
-const handleDragLeave = () => {
-  isDropTarget.value = false
-}
-
-const handleDrop = (event: DragEvent) => {
-  event.preventDefault()
-  isDropTarget.value = false
-
-  const dataString = event.dataTransfer?.getData('application/json')
-  if (!dataString) return
-
-  try {
-    const dragData = JSON.parse(dataString) as DragData
-    if (dragData.type === 'task' && dragData.taskId && dragData.taskId !== props.task.id) {
-      // Dropped task becomes a subtask of this task
-      emit('moveTask', dragData.taskId, props.task.projectId || null, props.task.id)
-    }
-  } catch (error) {
-    console.error('Failed to parse drag data:', error)
-  }
-}
-
-// Focus handlers for accessibility
-const handleFocusIn = () => {
-  isFocused.value = true
-}
-
-const handleFocusOut = () => {
-  isFocused.value = false
-}
-
-// Enhanced lifecycle hooks for performance optimization
-onMounted(() => {
-  checkMobile()
-  window.addEventListener('resize', handleResize, { passive: true })
-
-  // Pre-compute animation frames for better performance
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      // Second RAF ensures browser paint completion
-    })
-  })
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-  clearTimeout(resizeTimeout)
-
-  // Clean up animation frames
-  if (animationFrameId.value) {
-    cancelAnimationFrame(animationFrameId.value)
-  }
-})
+// --- Destructure Actions ---
+const {
+  handleDragStart, handleDragEnd, handleDragOver, handleDragLeave,
+  handleDrop, handleRowClick, handleToggleComplete, handleFocusIn,
+  handleFocusOut, handleMouseEnter, handleMouseLeave, handleKeyDown,
+  handleTouchStart, handleTouchEnd, updateTaskStatus, cyclePriority
+} = actions
 </script>
 
 <style scoped>
@@ -675,145 +280,6 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.task-row__title {
-  grid-area: title;
-  display: flex;
-  align-items: center;
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.task-row__title-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.task-row__title-text--completed {
-  text-decoration: line-through;
-  color: var(--text-tertiary);
-}
-
-/* Project Emoji Cell - Enhanced to match canvas implementation */
-.task-row__project {
-  grid-area: project;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Enhanced project indicator styles matching canvas implementation */
-.project-emoji-badge {
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--spring-smooth) ease;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-}
-
-.project-emoji-badge:hover {
-  background: var(--brand-bg-subtle-hover);
-  border-color: var(--brand-border);
-  transform: translateY(-1px) translateZ(0);
-  box-shadow: 0 4px 8px var(--shadow-subtle);
-}
-
-.project-emoji {
-  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: translateZ(0); /* Hardware acceleration */
-  transition: all var(--spring-smooth) ease;
-}
-
-.project-emoji.project-css-circle {
-  width: var(--project-indicator-size-md); /* 24px to match canvas */
-  height: var(--project-indicator-size-md); /* 24px to match canvas */
-  border-radius: 50%;
-  background: var(--project-color);
-  box-shadow: var(--project-indicator-shadow-inset);
-  position: relative;
-  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
-  color: white;
-  font-weight: var(--font-bold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--spring-smooth) ease;
-  backdrop-filter: var(--project-indicator-backdrop);
-  /* Enhanced glow to match canvas */
-  box-shadow:
-    var(--project-indicator-shadow-inset),
-    var(--project-indicator-glow-strong);
-}
-
-.project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
-  box-shadow:
-    var(--project-indicator-shadow-inset),
-    0 0 16px var(--project-color),
-    0 0 32px var(--project-color);
-}
-
-/* Add radial gradient glow effect like canvas */
-.project-emoji-badge:hover .project-emoji.project-css-circle::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(
-    circle,
-    var(--project-color) 0%,
-    transparent 70%
-  );
-  opacity: 0.3;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.project-emoji-badge.project-visual--css-circle {
-  background: var(--glass-bg-subtle);
-  border: 1px solid var(--glass-border-hover);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-/* Subtask count */
-.subtask-count {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 2px var(--space-1_5);
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-.subtask-count--completed {
-  background-color: var(--success-bg-light);
-  color: var(--color-success);
-}
-
-.subtask-count--progress {
-  background-color: var(--blue-bg-light);
-  color: var(--color-info);
-}
-
-/* Status cell - Match TaskTable */
 .task-row__status {
   grid-area: status;
   display: flex;
@@ -835,46 +301,6 @@ onUnmounted(() => {
   border-color: var(--glass-border-hover);
 }
 
-/* Priority cell - Match TaskTable */
-.task-row__priority {
-  grid-area: priority;
-  display: flex;
-  align-items: center;
-}
-
-.task-row__priority-badge {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: transform var(--duration-fast) ease;
-}
-
-.task-row__priority-badge:hover {
-  transform: scale(1.05);
-}
-
-.task-row__priority-badge--high {
-  background-color: var(--priority-high-bg);
-  color: var(--color-priority-high);
-}
-
-.task-row__priority-badge--medium {
-  background-color: var(--color-priority-medium-bg);
-  color: var(--color-priority-medium);
-}
-
-.task-row__priority-badge--low {
-  background-color: var(--blue-bg-light);
-  color: var(--color-info);
-}
-
-.task-row__priority-badge--urgent {
-  background-color: var(--color-error);
-  color: white;
-}
-
 /* Due Date cell - Match TaskTable */
 .task-row__due-date {
   grid-area: due;
@@ -885,13 +311,14 @@ onUnmounted(() => {
 .task-row__due-date-content {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
 }
 
 .task-row__no-date {
-  color: var(--text-tertiary);
+  color: var(--text-disabled);
+  font-size: var(--text-xs);
 }
 
 /* Progress cell - Stroke-only design */
@@ -901,82 +328,46 @@ onUnmounted(() => {
   align-items: center;
 }
 
+/* Progress bar styles */
 .task-row__progress-bar {
   position: relative;
   width: 100%;
-  height: 20px;
+  height: 6px; /* Slightly thicker */
+  background: transparent;
   border-radius: var(--radius-full);
-  --progress: 0%;
+  display: flex;
+  align-items: center;
 }
 
-/* Gray background stroke - always visible */
 .task-row__progress-bg {
   position: absolute;
-  inset: 0;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: inherit;
-  box-sizing: border-box;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-subtle);
 }
 
-/* Colored progress stroke - clips from left to right */
 .task-row__progress-fill {
   position: absolute;
-  inset: 0;
-  border: 2px solid var(--color-primary);
-  border-radius: inherit;
-  box-sizing: border-box;
-  clip-path: inset(0 calc(100% - var(--progress)) 0 0);
-  transition: clip-path var(--duration-normal) ease;
-}
-
-/* Add glow effect when progress > 0 */
-.task-row__progress-bar:has(.task-row__progress-fill[style*="--progress"]:not([style*="0%"])) .task-row__progress-fill {
-  filter: drop-shadow(0 0 4px var(--color-primary));
+  left: 0;
+  top: 0;
+  bottom: 0;
+  /* Clip based on progress percentage */
+  width: var(--progress);
+  background: var(--brand-gradient-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
 }
 
 .task-row__progress-text {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-  z-index: 1;
-}
-
-/* Actions cell - Match TaskTable */
-.task-row__actions {
-  grid-area: actions;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  opacity: 0;
-  transition: opacity var(--duration-fast) ease;
-}
-
-.task-row:hover .task-row__actions {
-  opacity: 1;
-}
-
-.task-row__action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1);
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--duration-fast) ease;
-}
-
-.task-row__action-btn:hover {
-  background-color: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
-  color: var(--text-primary);
+  margin-left: calc(100% + 8px); /* Push text outside bar */
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  min-width: 32px;
 }
 
 /* Subtasks container - Preserve nesting functionality */

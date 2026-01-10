@@ -24,6 +24,12 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
+      path: '/canvas-new',
+      name: 'canvas-new',
+      component: () => import('@/views/CanvasViewNew.vue'),
+      meta: { requiresAuth: false } // TASK-184: Canvas rebuild test route
+    },
+    {
       path: '/calendar-test',
       name: 'calendar-test',
       component: () => import('@/views/CalendarViewVueCal.vue'),

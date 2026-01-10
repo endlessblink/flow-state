@@ -24,7 +24,7 @@ defineProps<{
   description?: string
   isExpanded: boolean
   isLong: boolean
-  alignmentClasses: string
+  alignmentClasses: Object | String
 }>()
 
 defineEmits<{

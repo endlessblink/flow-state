@@ -1,4 +1,4 @@
-**Last Updated**: January 10, 2026 (TASK-193 Skill Consolidation Started)
+**Last Updated**: January 10, 2026 (TASK-197 Canvas Error Resolution Completed)
 **Version**: 5.37 (Skill Consolidation)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -13,8 +13,8 @@
 
 ## Current Status
 
-| **Canvas** | 🔄 **REBUILDING** | **Calendar** | ✅ Verified |
-| **Sync** | ✅ **WORKING** | **Build/Tests** | ✅ **PASSING** |
+| **Canvas** | ✅ **REFOCUSED** | **Calendar** | ✅ Verified |
+| **Sync** | ✅ **STABILIZED** | **Build/Tests** | ✅ **PASSING** |
 
 > **Canvas Rebuild**: Complete fresh rebuild in progress. See [TASK-184](#task-184-canvas-system-rebuild--in-progress).
 
@@ -41,6 +41,9 @@
 | ~~TASK-192~~ | ✅ **DONE** | Calendar View Refactor | P1 | ✅ **DONE** (2026-01-10) - Performance, race conditions, type safety, prop reduction. | TASK-191 patterns |
 | ~~TASK-193~~ | ~~Skill Consolidation (78→57)~~ | P1 | ✅ **DONE** | [Details](#task-193-skill-consolidation-done) |
 | ~~TASK-194~~ | ✅ **DONE** | Settings System Refactor | P2 | ✅ **DONE** (2026-01-10) - Unified store, extracted tabs, reactive density. | TASK-191, TASK-192 |
+| TASK-195 | Timer System Refactor | P2 | 🔄 **IN PROGRESS** | TASK-191, TASK-192, TASK-194 |
+| ~~TASK-196~~ | ✅ **DONE** | Vue Flow Documentation Scraping | P2 | ✅ **DONE** (2026-01-10) - Scraped API, 7 specialized guides, and 5 component references. | - |
+| ~~TASK-197~~ | ✅ **DONE** | Canvas Error Resolution | P0 | ✅ **DONE** (2026-01-10) - Fixed "fn is not a function" crashes, prop mismatches, and console pollution. | TASK-189 |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 
 
@@ -210,10 +213,25 @@
 - Extracted `useDragHandleInteraction` and `useDragHandleState`.
 - Reduced main component to <150 lines.
 
-### TASK-189: Refactor CanvasView.vue (🔄 IN PROGRESS)
+### ~~TASK-189~~: Refactor CanvasView.vue (✅ DONE)
 **Priority**: P1-HIGH
+**Status**: DONE
+**Goal**: Consolidate 3.4k lines of logic into `useCanvasOrchestrator.ts`.
+**Completed**: January 10, 2026
+**Verification**: `tests/repro_zombie_movement.spec.ts` passing.
+
+### TASK-195: Timer System Refactor (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
 **Status**: IN_PROGRESS
-**Goal**: The largest technical debt item (3.4k lines). Orchestrate the canvas rather than implementing it.
+**Goal**: Fix performance issues, split monolithic sync composable, and remove console pollution.
+- [x] Phase 1: Console removal (38 statements)
+- [x] Phase 2: Fix store-in-computed anti-pattern
+- [x] Phase 3: Extract time formatting utility
+- [x] Phase 4: Split `useCrossTabSync.ts` into focused composables
+- [x] Phase 5: Use VueUse `useIntervalFn`
+- [x] Phase 6: Final integration and verification
+
+### ~~TASK-195~~: Timer System Refactor (✅ DONE)
 
 ### ~~TASK-193~~: Skill Consolidation (✅ DONE)
 **Priority**: P1-HIGH
@@ -779,6 +797,20 @@ _rawGroups.value = loadedGroups // Respects deletions
 **Fix Applied**: Disabled auto-creation in `ensureActionGroups()` - users should manually create groups via canvas context menu.
 
 **File Modified**: `src/composables/canvas/useCanvasOverdueCollector.ts:187-242`
+
+---
+
+### ~~TASK-196~~: Vue Flow Documentation Scraping (✅ DONE)
+**Priority**: P2-MEDIUM
+**Started**: January 10, 2026
+**Goal**: Scrape comprehensive Vue Flow API references and examples into `docs/documentation/vue` for local reference and AI context.
+
+**Status**:
+- [x] Map URLs to file structure
+- [x] Scrape API references (Node, FlowProps, FlowEvents, Actions)
+- [x] Scrape guides and composables documentation
+- [x] Scrape examples (DnD, Nesting, Interaction)
+- [x] Organize and format for local documentation system
 
 ---
 

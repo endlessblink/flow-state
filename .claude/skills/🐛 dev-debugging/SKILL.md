@@ -1,6 +1,6 @@
 ---
 name: Comprehensive Debugging
-description: MASTER debugging for Vue.js, Pinia, canvas interactions, cache issues, and complex state problems. Systematically debug reactivity failures, memory leaks, performance bottlenecks, canvas drag/drop issues, and persistent cache problems with comprehensive troubleshooting approaches. CRITICAL: All canvas fixes MUST be visually tested with Playwright before claiming success.
+description: Use when tasks disappear, data is lost, things are broken, or bugs need fixing. Debug Vue.js reactivity issues, Pinia state problems, canvas position resets, tasks vanishing, drag-drop not working, cache problems, memory leaks, and performance issues. Invoke for any "not working", "broken", "fix bug", "debug issue", "tasks missing", or "state not updating" requests.
 ---
 
 # Comprehensive Debugging

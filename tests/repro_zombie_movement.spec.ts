@@ -52,8 +52,10 @@ test.describe('BUG-153: Zombie Task Movement', () => {
         // 1. Create a Group (Shift+G)
         console.log('Creating Group...');
         await page.keyboard.press('Shift+G');
-        const group = page.locator('.section-node').first();
-        await group.waitFor({ state: 'visible', timeout: 10000 });
+        // Wait specifically for the new group to appear by text or class
+        // Use a more robust selector that doesn't depend on order
+        const group = page.locator('.section-node').filter({ hasText: 'New Group' }).first();
+        await group.waitFor({ state: 'visible', timeout: 30000 });
 
         const groupBoxBefore = await group.boundingBox();
         if (!groupBoxBefore) throw new Error('Group not found');

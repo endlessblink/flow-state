@@ -1,8 +1,8 @@
 #!/bin/bash
 # Detect when user indicates Claude misunderstood and force clarification
 
-# Read the user's message from stdin
-USER_MESSAGE=$(cat)
+# Read the user's message from stdin (with timeout to prevent freeze in Zellij)
+USER_MESSAGE=$(timeout 2 cat 2>/dev/null || echo '')
 
 # Check for misunderstanding patterns (case-insensitive)
 if echo "$USER_MESSAGE" | grep -qiE "(you (didn.?t|don.?t) understand|that.?s not what I (meant|asked)|misunderstood|no,? I (meant|said)|wrong|incorrect|not what I (wanted|asked|meant)|try again|let me clarify|I said|you missed|you got it wrong)"; then

@@ -9,8 +9,8 @@ set -euo pipefail
 
 MASTER_PLAN="$CLAUDE_PROJECT_DIR/docs/MASTER_PLAN.md"
 
-# Read JSON input from stdin
-INPUT=$(cat)
+# Read JSON input from stdin (with timeout to prevent freeze in Zellij)
+INPUT=$(timeout 2 cat 2>/dev/null || echo '{}')
 
 # Extract file path from tool input
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')

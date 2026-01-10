@@ -20,7 +20,7 @@
 # - ALTER TABLE DROP COLUMN
 
 # Read the command from stdin (with timeout to prevent freeze in Zellij)
-INPUT=$(timeout 1 cat 2>/dev/null || echo '{}')
+INPUT=$(timeout 2 cat 2>/dev/null || echo '{}')
 
 # Extract the command from JSON input
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)

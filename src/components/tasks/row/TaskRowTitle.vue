@@ -35,7 +35,7 @@ defineProps<{
   isCompleted: boolean
   isHovered: boolean
   isSelected: boolean
-  titleAlignmentClasses: string
+  titleAlignmentClasses: Object | String
   hasSubtasks: boolean
   completedSubtaskCount: number
   totalSubtasks: number

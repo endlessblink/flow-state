@@ -2,7 +2,7 @@
 # Hook: Check for existing npm scripts before using manual serve commands
 
 # Read JSON input from stdin (with timeout to prevent freeze in Zellij)
-INPUT=$(timeout 1 cat 2>/dev/null || echo '{}')
+INPUT=$(timeout 2 cat 2>/dev/null || echo '{}')
 
 # Extract the command being executed
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')

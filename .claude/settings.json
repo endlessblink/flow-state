@@ -37,21 +37,6 @@
             "timeout": 10
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-npm-scripts.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/destructive-command-blocker.sh",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "UserPromptSubmit": [
@@ -59,27 +44,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-hook.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/master-plan-reminder.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-disappearance-helper.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/dependency-check-reminder.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ask-questions-reminder.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/misunderstanding-detector.sh",
             "timeout": 5
           }
         ]

@@ -171,8 +171,8 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   display: flex;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-color);
-  background: var(--surface-0);
+  border-bottom: 1px solid var(--glass-border);
+  background: transparent;
   gap: var(--space-3);
   height: 48px;
   flex-shrink: 0;

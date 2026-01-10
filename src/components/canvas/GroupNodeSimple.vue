@@ -18,6 +18,7 @@
         placeholder="Group name..."
         :disabled="isCollapsed"
         @blur="updateName"
+        @keydown.enter="($event.target as HTMLInputElement).blur()"
       >
       <!-- TASK-130: Show date suffix for day-of-week groups (e.g., "/ Jan 10") -->
       <span v-if="dayOfWeekDateSuffix" class="section-date-suffix">
@@ -121,8 +122,8 @@ const powerKeyword = computed((): PowerKeywordResult | null => {
   if (sectionData?.powerKeyword !== undefined) {
     return sectionData.powerKeyword
   }
-  // Auto-detect from name (guard against undefined name)
-  const name = props.data?.name || sectionData?.name
+  // Auto-detect from local name (instant feedback) or stored name
+  const name = sectionName.value || props.data?.name || sectionData?.name
   return name ? detectPowerKeyword(name) : null
 })
 

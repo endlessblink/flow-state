@@ -30,7 +30,7 @@ export interface TimerSettings {
 interface DatabaseDependencies { }
 
 export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
-    console.log('>>> 🚀 [V2-LOADED] useSupabaseDatabaseV2 loaded at ' + new Date().toISOString())
+
     const authStore = useAuthStore()
     const isSyncing = ref(false)
     const lastSyncError = ref<string | null>(null)
@@ -415,7 +415,7 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
                 .eq('user_id', userId)
 
             if (error) throw error
-            return data?.map(d => d.id) || []
+            return data?.map((d: any) => d.id) || []
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted task IDs:', e)
             return []
@@ -435,7 +435,7 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
                 .eq('user_id', userId)
 
             if (error) throw error
-            return data?.map(d => d.id) || []
+            return data?.map((d: any) => d.id) || []
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted project IDs:', e)
             return []
@@ -455,7 +455,7 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
                 .eq('user_id', userId)
 
             if (error) throw error
-            return data?.map(d => d.id) || []
+            return data?.map((d: any) => d.id) || []
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted group IDs:', e)
             return []
@@ -780,24 +780,25 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         onTimerChange?: (payload: unknown) => void,
         onNotificationChange?: (payload: unknown) => void
     ) => {
-        if (!authStore.user?.id) return null
+        const userId = authStore.user?.id
+        if (!userId) return null
 
-        const channel = supabase.channel('db-changes')
+        // Use a unique channel name per user and purpose
+        const channelName = `db-changes-${userId.substring(0, 8)}`
+        const channel = supabase.channel(channelName)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'projects' },
+                { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
                 (payload: any) => {
                     // SAFETY: Explicitly verify table to prevent cross-talk
                     if (payload.table === 'projects') {
                         onProjectChange(payload)
-                    } else if (payload.table) {
-                        console.warn(`[SYNC-WARN] Project handler received event for table: ${payload.table}`)
                     }
                 }
             )
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'tasks' },
+                { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
                 (payload: any) => {
                     // SAFETY: Explicitly verify table
                     if (payload.table === 'tasks') {
@@ -809,7 +810,7 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         if (onTimerChange) {
             channel.on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'timer_sessions' },
+                { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
                 (payload: any) => onTimerChange(payload)
             )
         }
@@ -817,12 +818,36 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         if (onNotificationChange) {
             channel.on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'notifications' },
+                { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
                 (payload: any) => onNotificationChange(payload)
             )
         }
 
-        channel.subscribe()
+        // DEBUG: Log auth state before subscription
+        const session = authStore.session
+        console.log(`📡 [REALTIME] Initializing subscription. Auth state: ${session ? 'Authenticated' : 'Anonymous'}, Role: ${session?.user?.role || 'none'}`)
+
+        // PHASE 4 FIX: Explicitly set auth token and delay subscription
+        // This ensures the WebSocket carries the user's JWT instead of the anon key
+        if (session?.access_token) {
+            supabase.realtime.setAuth(session.access_token)
+        }
+
+        // Delay subscription slightly to ensure client state is synced
+        setTimeout(() => {
+            console.log('📡 [REALTIME] Attempting to subscribe...')
+            channel.subscribe((status: any, err?: any) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('📡 [REALTIME] Successfully subscribed to database changes')
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('📡 [REALTIME] Subscription error:', err || 'Handshake failed (403?)')
+                    console.debug('📡 [REALTIME] Error context:', { status, session: !!session, role: session?.user?.role })
+                } else if (status === 'TIMED_OUT') {
+                    console.warn('📡 [REALTIME] Subscription timed out')
+                }
+            })
+        }, 500)
+
         return channel
     }
 

@@ -73,6 +73,36 @@ window.taskLogger.exportLogs()            // Export for analysis
 - `src/stores/canvas.ts` (auth watcher)
 - `src/composables/canvas/useCanvasOverdueCollector.ts` (ensureActionGroups)
 
+### Supabase Realtime WebSocket 403 Errors
+**Symptom**: Console shows repeated `WebSocket connection failed: Unexpected response code: 403` and `[REALTIME] Subscription error: Handshake failed (403?)`.
+
+**Root Cause**: JWT keys in `.env.local` were signed with a different secret than what local Supabase expects. The signature verification fails, causing 403 Forbidden.
+
+**Diagnosis**:
+- Error appears on app startup when Realtime tries to connect
+- REST API works fine (queries succeed)
+- Only WebSocket connections fail
+
+**Solution**:
+```bash
+npm run generate:keys
+# Copy output to .env.local
+npm run kill && npm run dev
+```
+
+**Prevention**: `npm run dev` now validates JWT signatures before starting. If keys drift, you'll see:
+```
+[Supabase] JWT signature mismatch!
+To fix, run: npm run generate:keys
+```
+
+**Key Files**:
+- `scripts/validate-supabase-keys.cjs` - Startup validation
+- `scripts/generate-supabase-keys.cjs` - Key regeneration
+- `.env.local` - JWT keys storage
+
+**Local JWT Secret**: `super-secret-jwt-token-with-at-least-32-characters-long`
+
 ## Critical Gotchas
 
 ### Undo/Redo System

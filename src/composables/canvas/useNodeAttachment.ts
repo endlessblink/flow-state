@@ -149,7 +149,8 @@ export function useNodeAttachment() {
             childNode.position = relativePos
             childNode.parentNode = parentId
             // TASK-UPDATE: Enforce parent boundaries as per user recommendation
-            childNode.extent = 'parent'
+            // FIXED: Removed 'parent' extent to allow dragging tasks OUT of groups (Zombie Task regression)
+            // childNode.extent = 'parent'
 
             // BUG-153 FIX: Also set data.parentId for persistence/sync
             // useCanvasSync.ts uses this to determine existing parent relationships

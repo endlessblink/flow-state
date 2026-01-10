@@ -21,8 +21,8 @@ LOCK_EXPIRY_HOURS=4  # Stale locks older than this are auto-cleared
 # Ensure locks directory exists
 mkdir -p "$LOCKS_DIR"
 
-# Read JSON input from stdin
-INPUT=$(cat)
+# Read JSON input from stdin (with timeout to prevent freeze in Zellij)
+INPUT=$(timeout 2 cat 2>/dev/null || echo '{}')
 
 # Extract data from hook input
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')

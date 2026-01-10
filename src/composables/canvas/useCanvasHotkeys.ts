@@ -7,17 +7,29 @@ interface BulkDeleteState {
     isBulkDeleteModalOpen: Ref<boolean>
     bulkDeleteItems: Ref<{ id: string; name: string; type: 'task' | 'section' }[]>
     bulkDeleteIsPermanent: Ref<boolean>
+    createGroup: (position?: { x: number; y: number }) => Promise<string | undefined>
 }
 
 export function useCanvasHotkeys(
-    bulkDeleteState: BulkDeleteState
+    deps: BulkDeleteState
 ) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { getSelectedNodes } = useVueFlow()
+    const { getSelectedNodes, toObject } = useVueFlow()
 
     // Handle Delete Key
     const handleKeyDown = async (event: KeyboardEvent) => {
+        // Handle Creation Hotkeys
+        if (event.shiftKey && (event.key === 'G' || event.key === 'g')) {
+            event.preventDefault()
+            // Create group at center of viewport
+            const viewport = toObject().viewport
+            // Calculate center: -x/zoom + width/2/zoom
+            // Simple approximation or just let createGroup handle default (center)
+            await deps.createGroup()
+            return
+        }
+
         const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
 
         if (!isDeleteKey) return
@@ -63,10 +75,12 @@ export function useCanvasHotkeys(
 
         if (itemsToDelete.length === 0) return
 
+        if (itemsToDelete.length === 0) return
+
         // Show bulk delete confirmation modal
-        bulkDeleteState.bulkDeleteItems.value = itemsToDelete
-        bulkDeleteState.bulkDeleteIsPermanent.value = permanentDelete
-        bulkDeleteState.isBulkDeleteModalOpen.value = true
+        deps.bulkDeleteItems.value = itemsToDelete
+        deps.bulkDeleteIsPermanent.value = permanentDelete
+        deps.isBulkDeleteModalOpen.value = true
     }
 
     // Register listener

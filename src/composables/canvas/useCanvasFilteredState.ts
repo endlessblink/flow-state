@@ -3,7 +3,7 @@ import type { Task } from '@/stores/tasks'
 import { useWindowSize } from '@vueuse/core'
 
 interface CanvasStore {
-    calculateContentBounds: (tasks: Task[]) => { minX: number; minY: number; maxX: number; maxY: number }
+    calculateContentBounds: (tasks: Task[]) => { x: number; y: number; width: number; height: number }
 }
 
 export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: CanvasStore) {
@@ -33,7 +33,7 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         if (!Array.isArray(tasks)) return []
 
         // Robust hashing for cache invalidation
-        const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.updatedAt?.getTime() ?? ''}`).join('|')
+        const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')
 
         if (currentHash === lastCanvasTasksHash && lastCanvasTasks.length > 0) {
             return lastCanvasTasks
@@ -85,12 +85,18 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         }
 
         try {
-            const contentBounds = canvasStore.calculateContentBounds(tasks)
+            const bounds = canvasStore.calculateContentBounds(tasks)
             const padding = 1000
 
+            // Convert {x,y,w,h} to extent [[minX, minY], [maxX, maxY]]
+            const minX = bounds.x
+            const minY = bounds.y
+            const maxX = bounds.x + bounds.width
+            const maxY = bounds.y + bounds.height
+
             const result = [
-                [contentBounds.minX - padding * 10, contentBounds.minY - padding * 10],
-                [contentBounds.maxX + padding * 10, contentBounds.maxY + padding * 10]
+                [minX - padding * 10, minY - padding * 10],
+                [maxX + padding * 10, maxY + padding * 10]
             ] as [[number, number], [number, number]]
 
             lastDynamicNodeExtent = result

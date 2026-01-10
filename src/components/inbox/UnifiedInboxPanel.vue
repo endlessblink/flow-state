@@ -17,7 +17,7 @@
       :selected-duration="selectedDuration"
       :hide-done-tasks="currentHideDoneTasks"
       :base-tasks="baseInboxTasks"
-      :root-tasks="taskStore.rootProjects"
+      :root-projects="taskStore.rootProjects"
       
       @toggle-collapse="isCollapsed = !isCollapsed"
       @toggle-today="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
@@ -171,11 +171,18 @@ const handleStartTimer = (task: Task) => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--surface-0);
-  border-right: 1px solid var(--border-color);
+  max-height: 100%;
+  padding: var(--space-4);
+  gap: var(--space-3);
+  background: var(--inbox-panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   width: v-bind(expandedWidth);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
   overflow: hidden;
+  position: relative;
+  z-index: 100;
 }
 
 .unified-inbox-panel.collapsed {

@@ -1,3 +1,14 @@
+---
+name: idea-issue-creator
+description: Transform bullet points into enhanced, prioritized items for MASTER_PLAN.md. Process ideas inbox and integrate with project tracking.
+triggers:
+  - new issues
+  - go over issues
+  - process ideas
+  - check inbox
+  - ideas inbox
+---
+
 # 💡 Idea-Issue Creator - Simple Workflow
 
 **Status**: Production Ready - Simple & Practical

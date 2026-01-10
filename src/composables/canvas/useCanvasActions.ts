@@ -1,10 +1,11 @@
-
-import { type Ref, nextTick } from 'vue'
+import { type Ref, ref, nextTick } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
-import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
-// TASK-158: Persistent deleted groups tracking (replaces setTimeout approach)
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
+
+// Imported Composables
+import { useCanvasGroupActions } from './useCanvasGroupActions'
+import { useCanvasTaskActions } from './useCanvasTaskActions'
 
 interface ActionsDeps {
     viewport: Ref<{ x: number; y: number; zoom: number }>
@@ -17,355 +18,62 @@ interface ActionsDeps {
     recentlyDeletedGroups?: Ref<Set<string>>
 }
 
+// NOTE: State is now decomposed into sub-composables but we keep this interface 
+// if we need to aggregate it for the view, but the ReturnType of this composable
+// will naturally expose everything.
+// 
+// For backward compatibility with the View, we'll destructure and re-return everything.
+/*
 interface ActionsState {
-    // Quick Task
-    isQuickTaskCreateOpen: Ref<boolean>
-    quickTaskPosition: Ref<{ x: number; y: number }>
-
-    // Context Menu
-    showCanvasContextMenu: Ref<boolean>
-    canvasContextMenuX: Ref<number>
-    canvasContextMenuY: Ref<number>
-    canvasContextSection: Ref<CanvasSection | null>
-
-    // Group Modals
-    isGroupModalOpen: Ref<boolean>
-    selectedGroup: Ref<CanvasSection | null>
-    groupModalPosition: Ref<{ x: number; y: number }>
-    isGroupEditModalOpen: Ref<boolean>
-    selectedSectionForEdit: Ref<CanvasSection | null>
-
-    // Group Delete Confirmation
-    isDeleteGroupModalOpen: Ref<boolean>
-    groupPendingDelete: Ref<CanvasSection | null>
-
-    // Bulk Delete Confirmation (for Shift+Delete on multiple items)
-    isBulkDeleteModalOpen: Ref<boolean>
-    bulkDeleteItems: Ref<{ id: string; name: string; type: 'task' | 'section' }[]>
-    bulkDeleteIsPermanent: Ref<boolean>
-
-    // Node Context Menu
-    selectedNode: Ref<Node | null>
-    showNodeContextMenu: Ref<boolean>
-    nodeContextMenuX: Ref<number>
-    nodeContextMenuY: Ref<number>
-
-    // Data for validations
-    filteredTasks: Ref<Task[]>
+    // ... moved to sub-composables
 }
+*/
 
+// Note: arguments changed slightly - state is now internal/distributed
 export function useCanvasActions(
     deps: ActionsDeps,
-    state: ActionsState,
+    // state argument removed or ignored as we build it up
+    ignoredState: any,
     undoHistory: any
 ) {
     const canvasStore = useCanvasStore()
-    const taskStore = useTaskStore()
-    // BUG-044 FIX: Get viewport directly from Vue Flow (not stale store value)
-    const createTaskInGroup = async (section: CanvasSection) => {
-        console.log('➕ [CanvasActions] Create task in group:', section.name)
+    const { getSelectedNodes, screenToFlowCoordinate, removeNodes } = useVueFlow()
 
-        const sectionNode = canvasStore.sections.find(s => s.id === section.id)
-        if (!sectionNode) {
-            console.warn('❌ [CanvasActions] Section not found:', section.id)
-            return
-        }
+    // --- Instantiate Sub-Composables ---
 
-        const flowCoords = screenToFlowCoordinate({
-            x: state.canvasContextMenuX.value,
-            y: state.canvasContextMenuY.value
-        })
+    // Groups
+    const groupActions = useCanvasGroupActions({
+        viewport: deps.viewport,
+        syncNodes: deps.syncNodes,
+        batchSyncNodes: deps.batchedSyncNodes,
+        closeCanvasContextMenu: deps.closeCanvasContextMenu,
+        screenToFlowCoordinate: (pos) => screenToFlowCoordinate(pos),
+        recentlyDeletedGroups: deps.recentlyDeletedGroups
+    })
 
-        let taskPosition = {
-            x: (sectionNode.position?.x || 0) + 20,
-            y: (sectionNode.position?.y || 0) + 60
-        }
+    // Tasks
+    const taskActions = useCanvasTaskActions({
+        syncNodes: deps.syncNodes,
+        batchSyncNodes: deps.batchedSyncNodes,
+        closeCanvasContextMenu: deps.closeCanvasContextMenu,
+        screenToFlowCoordinate: (pos) => screenToFlowCoordinate(pos),
+        recentlyDeletedGroups: deps.recentlyDeletedGroups,
+        undoHistory
+    })
 
-        if (Number.isFinite(flowCoords.x) && Number.isFinite(flowCoords.y)) {
-            taskPosition = { x: flowCoords.x, y: flowCoords.y }
-        }
+    // --- Orchestrator Logic (things that don't fit cleanly or bridge both) ---
 
-        const newTask = await taskStore.createTaskWithUndo({
-            title: '',
-            status: 'planned',
-            isInInbox: false,
-            canvasPosition: taskPosition
-        })
+    // Node Context Menu (Orchestrates between Groups and Tasks)
+    const selectedNode = ref<Node | null>(null)
+    const showNodeContextMenu = ref(false)
+    const nodeContextMenuX = ref(0)
+    const nodeContextMenuY = ref(0)
 
-        if (newTask) {
-            // Further orchestration could be added here
-            deps.batchedSyncNodes('high')
-        }
-    }
-
-    const { getSelectedNodes, screenToFlowCoordinate, viewport: vfViewport, removeNodes } = useVueFlow()
-
-    // --- Helper for Ghost Removal ---
-    const forceRemoveGhostNode = (id: string) => {
-        const nodeId = id.startsWith('section-') ? id : `section-${id}`
-        console.warn('👻 [CanvasActions] Force removing ghost node:', nodeId)
-
-        // 1. Remove from Vue Flow (triggers internal cleanup)
-        removeNodes([nodeId])
-
-        // 2. Remove from Store Nodes Ref (ensures reactivity even if v-model lags)
-        if (canvasStore.nodes) {
-            canvasStore.nodes = canvasStore.nodes.filter(n => n.id !== nodeId)
-        }
-    }
-
-    // --- Task Creation ---
-
-    const createTaskHere = () => {
-        const functionName = 'createTaskHere'
-        console.log(`🔧 ${functionName} called at screen coords: x=${state.canvasContextMenuX.value}, y=${state.canvasContextMenuY.value}`)
-
-        try {
-            // ✅ VALIDATION 3: Check DOM element exists
-            // (Still good to verify flow exists, even if we delegate calc)
-            const vueFlowElement = document.querySelector('.vue-flow')
-            if (!vueFlowElement) {
-                throw new Error('Vue Flow DOM element (.vue-flow) not found')
-            }
-
-            // ✅ DRIFT FIX: Use Vue Flow native projection
-            // screenToFlowCoordinate handles getBoundingClientRect AND viewport transform automatically
-            const flowCoords = screenToFlowCoordinate({
-                x: state.canvasContextMenuX.value,
-                y: state.canvasContextMenuY.value
-            })
-
-            console.log(`📐 ${functionName}: Projected position:`, flowCoords)
-
-            if (!Number.isFinite(flowCoords.x) || !Number.isFinite(flowCoords.y)) {
-                throw new Error(`Invalid calculated coordinates: x=${flowCoords.x}, y=${flowCoords.y}`)
-            }
-
-            // ✅ STORE POSITION
-            state.quickTaskPosition.value = flowCoords
-
-            // ✅ CLOSE MENU & OPEN MODAL
-            deps.closeCanvasContextMenu()
-            state.isQuickTaskCreateOpen.value = true
-
-        } catch (error) {
-            console.error(`❌ ${functionName}: FAILED`, error)
-            state.showCanvasContextMenu.value = false
-            throw error
-        }
-    }
-
-    const handleQuickTaskCreate = async (title: string, description: string) => {
-        const functionName = 'handleQuickTaskCreate'
-        console.log(`📍 ${functionName}: Creating task "${title}" at`, state.quickTaskPosition.value)
-
-        try {
-            if (!title?.trim()) throw new Error('Task title is required')
-
-            // BUG FIX: When position is at default (0,0), create task in inbox instead
-            // This happens when task is created from empty state "Add Task" button
-            // Real positions from createTaskHere() are calculated from screen coords and never exactly (0,0)
-            const isDefaultPosition = state.quickTaskPosition.value.x === 0 && state.quickTaskPosition.value.y === 0
-            const shouldCreateInInbox = isDefaultPosition
-
-            const newTask = await taskStore.createTaskWithUndo({
-                title,
-                description,
-                canvasPosition: shouldCreateInInbox ? undefined : { ...state.quickTaskPosition.value },
-                status: 'planned',
-                isInInbox: shouldCreateInInbox
-            })
-
-            deps.batchedSyncNodes('high')
-            state.isQuickTaskCreateOpen.value = false
-            state.quickTaskPosition.value = { x: 0, y: 0 }
-
-            // Show temporary notification if available
-            if (window.__notificationApi) {
-                window.__notificationApi({
-                    type: 'success',
-                    title: 'Task Created',
-                    content: shouldCreateInInbox
-                        ? `Task "${title}" added to inbox`
-                        : `Task "${title}" created on canvas`
-                })
-            }
-
-        } catch (error) {
-            console.error(`❌ ${functionName} failed:`, error)
-            throw error
-        }
-    }
-
-    const closeQuickTaskCreate = () => {
-        state.isQuickTaskCreateOpen.value = false
-        state.quickTaskPosition.value = { x: 0, y: 0 }
-    }
-
-    // --- Group Management ---
-
-    const createGroup = () => {
-        console.log('🔧 CanvasView: createGroup function called!')
-
-        const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
-        if (!vueFlowElement) return
-
-        // ✅ DRIFT FIX: Use Vue Flow native projection
-        const flowCoords = screenToFlowCoordinate({
-            x: state.canvasContextMenuX.value,
-            y: state.canvasContextMenuY.value
-        })
-
-        state.groupModalPosition.value = flowCoords
-        state.selectedGroup.value = null // Ensure create mode
-
-        deps.closeCanvasContextMenu()
-        state.isGroupModalOpen.value = true
-    }
-
-    const closeGroupModal = () => {
-        state.isGroupModalOpen.value = false
-        state.selectedGroup.value = null
-        state.groupModalPosition.value = { x: 100, y: 100 }
-    }
-
-    const handleGroupCreated = (group: CanvasSection) => {
-        console.log('Group created:', group)
-        deps.syncNodes()
-    }
-
-    const handleGroupUpdated = (group: CanvasSection) => {
-        console.log('Group updated:', group)
-        deps.syncNodes()
-    }
-
-    const editGroup = (section: CanvasSection) => {
-        state.selectedSectionForEdit.value = section
-        state.isGroupEditModalOpen.value = true
-        deps.closeCanvasContextMenu()
-    }
-
-    const closeGroupEditModal = () => {
-        state.isGroupEditModalOpen.value = false
-        state.selectedSectionForEdit.value = null
-    }
-
-    const handleGroupEditSave = (updatedSection: Partial<CanvasSection> & { id: string }) => {
-        if (!updatedSection) return
-        canvasStore.updateSectionWithUndo(updatedSection.id, updatedSection)
-        deps.syncNodes()
-        closeGroupEditModal()
-    }
-
-    const deleteGroup = (section: CanvasSection) => {
-        if (!section) return
-
-        // Show designed confirmation modal instead of native confirm()
-        state.groupPendingDelete.value = section
-        state.isDeleteGroupModalOpen.value = true
-        deps.closeCanvasContextMenu()
-    }
-
-    const confirmDeleteGroup = async () => {
-        const section = state.groupPendingDelete.value
-        if (!section) return
-
-        const sectionNodeId = `section-${section.id}`
-        console.log(`🗑️ [CanvasActions] Confirming delete for group: ${section.name} (${section.id})`)
-
-        // TASK-158 FIX: Use persistent deleted groups tracker (replaces setTimeout)
-        // Mark as deleted BEFORE operation (prevents sync from recreating)
-        markGroupDeleted(section.id)
-        if (deps.recentlyDeletedGroups) {
-            deps.recentlyDeletedGroups.value.add(section.id)
-        }
-
-        // BUG-091 FIX: Check if section exists in store (might be a ghost)
-        const existsInStore = canvasStore.sections.some(s => s.id === section.id)
-
-        if (!existsInStore) {
-            console.warn('👻 [CanvasActions] Ghost section detected, forcing direct removal:', sectionNodeId)
-            forceRemoveGhostNode(section.id)
-            // Confirm deletion since there's nothing in Supabase to delete
-            confirmGroupDeleted(section.id)
-            if (deps.recentlyDeletedGroups) {
-                deps.recentlyDeletedGroups.value.delete(section.id)
-            }
-        } else {
-            // TASK-149 FIX: AWAIT the deletion to ensure Supabase soft-delete completes
-            try {
-                await canvasStore.deleteSection(section.id)
-                console.log(`✅ [TASK-158] Delete completed for "${section.name}" - confirmed`)
-                // TASK-158: Confirm deletion after Supabase success
-                confirmGroupDeleted(section.id)
-                if (deps.recentlyDeletedGroups) {
-                    deps.recentlyDeletedGroups.value.delete(section.id)
-                }
-            } catch (e) {
-                console.error(`❌ [TASK-158] Delete failed for "${section.name}" - keeping in tracker`, e)
-                // Don't clear from tracker on failure - let TTL handle cleanup
-            }
-        }
-
-        // Force high priority sync which cleans up/re-verifies
-        // Now safe because Supabase delete is complete
-        nextTick(() => deps.batchedSyncNodes('high'))
-
-        // Close the modal
-        cancelDeleteGroup()
-    }
-
-    const cancelDeleteGroup = () => {
-        state.isDeleteGroupModalOpen.value = false
-        state.groupPendingDelete.value = null
-    }
-
-    // --- Bulk Actions ---
-
-    const moveSelectedTasksToInbox = async () => {
-        const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !id.startsWith('section-'))
-        if (selectedNodeIds.length === 0) return
-
-        for (const nodeId of selectedNodeIds) {
-            try {
-                await undoHistory.updateTaskWithUndo(nodeId, {
-                    isInInbox: true,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    canvasPosition: null as any
-                })
-            } catch (e) {
-                console.error(`Failed to move task ${nodeId}:`, e)
-            }
-        }
-        canvasStore.setSelectedNodes([])
-        deps.batchedSyncNodes('high')
-        deps.closeCanvasContextMenu()
-    }
-
-    const deleteSelectedTasks = async () => {
-        const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !id.startsWith('section-'))
-        if (selectedNodeIds.length === 0) return
-
-        const msg = selectedNodeIds.length > 1
-            ? `Delete ${selectedNodeIds.length} tasks permanently?`
-            : 'Delete this task permanently?'
-
-        if (!confirm(msg)) {
-            deps.closeCanvasContextMenu()
-            return
-        }
-
-        for (const nodeId of selectedNodeIds) {
-            await undoHistory.deleteTaskWithUndo(nodeId)
-        }
-
-        canvasStore.setSelectedNodes([])
-        deps.batchedSyncNodes('high')
-        deps.closeCanvasContextMenu()
-    }
-
-    // --- Node Context Menu (Sections) ---
-    // TASK-070: Show canvas context menu with group actions instead of minimal "Delete Section" menu
+    // Canvas Context Menu State (Shared)
+    const showCanvasContextMenu = ref(false)
+    const canvasContextMenuX = ref(0)
+    const canvasContextMenuY = ref(0)
+    const canvasContextSection = ref<CanvasSection | null>(null)
 
     const handleNodeContextMenu = (event: { node: Node; event: MouseEvent | TouchEvent }) => {
         event.event.preventDefault()
@@ -379,14 +87,12 @@ export function useCanvasActions(
 
         if (section) {
             // Show the canvas context menu with group actions (TASK-070)
-            state.canvasContextMenuX.value = mouseEvent.clientX || 0
-            state.canvasContextMenuY.value = mouseEvent.clientY || 0
-            state.canvasContextSection.value = section
-            state.showCanvasContextMenu.value = true
+            canvasContextMenuX.value = mouseEvent.clientX || 0
+            canvasContextMenuY.value = mouseEvent.clientY || 0
+            canvasContextSection.value = section
+            showCanvasContextMenu.value = true
         } else {
-            // Fix: Also show for ghost nodes (similar to handleSectionContextMenu)
-            // But here we clicked a NODE, so we have the node object.
-            // We can construct a ghost section from the node data or just ID.
+            // Ghost handling
             const ghostSection: CanvasSection = {
                 id: sectionId,
                 name: (event.node.data?.name as string) || 'Unknown Group (Ghost)',
@@ -397,159 +103,98 @@ export function useCanvasActions(
                 layout: 'freeform',
                 isVisible: true
             }
-            state.canvasContextMenuX.value = mouseEvent.clientX || 0
-            state.canvasContextMenuY.value = mouseEvent.clientY || 0
-            state.canvasContextSection.value = ghostSection
-            state.showCanvasContextMenu.value = true
+            canvasContextMenuX.value = mouseEvent.clientX || 0
+            canvasContextMenuY.value = mouseEvent.clientY || 0
+            canvasContextSection.value = ghostSection
+            showCanvasContextMenu.value = true
         }
 
         deps.closeEdgeContextMenu()
     }
 
     const closeNodeContextMenu = () => {
-        state.showNodeContextMenu.value = false
-        state.selectedNode.value = null
+        showNodeContextMenu.value = false
+        selectedNode.value = null
     }
 
     const deleteNode = async () => {
-        if (!state.selectedNode.value) return
+        if (!selectedNode.value) return
 
-        if (state.selectedNode.value.id.startsWith('section-')) {
-            const sectionId = state.selectedNode.value.id.replace('section-', '')
+        if (selectedNode.value.id.startsWith('section-')) {
+            const sectionId = selectedNode.value.id.replace('section-', '')
             // Check existence
-            const existsInStore = canvasStore.sections.some(s => s.id === sectionId)
+            const section = canvasStore.sections.find(s => s.id === sectionId)
 
-            // TASK-158 FIX: Use persistent deleted groups tracker
-            markGroupDeleted(sectionId)
-            if (deps.recentlyDeletedGroups) {
-                deps.recentlyDeletedGroups.value.add(sectionId)
-            }
-
-            if (!existsInStore) {
-                if (confirm('Delete this ghost group?')) {
-                    forceRemoveGhostNode(sectionId)
-                    confirmGroupDeleted(sectionId)
-                    deps.recentlyDeletedGroups?.value.delete(sectionId)
-                }
+            // Delegate to group actions
+            if (section) {
+                groupActions.deleteGroup(section)
             } else {
-                const section = canvasStore.sections.find(s => s.id === sectionId)
-                if (section) {
-                    const taskCount = canvasStore.getTaskCountInGroupRecursive(section.id, state.filteredTasks.value)
-                    const msg = taskCount > 0
-                        ? `Delete "${section.name}" section? It contains ${taskCount} task(s).`
-                        : `Delete "${section.name}" section?`
-
-                    if (confirm(msg)) {
-                        try {
-                            await canvasStore.deleteSection(sectionId)
-                            confirmGroupDeleted(sectionId)
-                            deps.recentlyDeletedGroups?.value.delete(sectionId)
-                            deps.syncNodes()
-                        } catch (e) {
-                            console.error(`❌ [TASK-158] Delete failed - keeping in tracker`, e)
-                        }
-                    } else {
-                        // User cancelled - remove from tracker
-                        confirmGroupDeleted(sectionId)
-                        deps.recentlyDeletedGroups?.value.delete(sectionId)
-                    }
+                // Ghost?
+                const ghost: CanvasSection = {
+                    id: sectionId,
+                    name: 'Ghost',
+                    color: '#000',
+                    position: { x: 0, y: 0, w: 0, h: 0 } as any,
+                    type: 'custom',
+                    layout: 'freeform',
+                    isVisible: true,
+                    isCollapsed: false
                 }
+                groupActions.deleteGroup(ghost)
             }
         }
         closeNodeContextMenu()
     }
 
-    // --- Keyboard Handlers ---
-
-
-
-    // Confirm bulk delete - called when user confirms the modal
-    const confirmBulkDelete = async () => {
-        const items = state.bulkDeleteItems.value
-        const isPermanent = state.bulkDeleteIsPermanent.value
-
-        for (const item of items) {
-            if (item.type === 'section') {
-                // TASK-158 FIX: Use persistent deleted groups tracker
-                markGroupDeleted(item.id)
-                if (deps.recentlyDeletedGroups) {
-                    deps.recentlyDeletedGroups.value.add(item.id)
-                }
-
-                const exists = canvasStore.sections.some(s => s.id === item.id)
-                if (!exists) {
-                    forceRemoveGhostNode(item.id)
-                    confirmGroupDeleted(item.id)
-                    deps.recentlyDeletedGroups?.value.delete(item.id)
-                } else {
-                    try {
-                        await canvasStore.deleteSection(item.id)
-                        confirmGroupDeleted(item.id)
-                        deps.recentlyDeletedGroups?.value.delete(item.id)
-                    } catch (e) {
-                        console.error(`❌ [TASK-158] Bulk delete failed for ${item.id}`, e)
-                    }
-                }
-            } else if (isPermanent) {
-                // [DEEP-DIVE FIX] Call explicit permanent delete
-                await taskStore.permanentlyDeleteTask(item.id)
-            } else {
-                // Move to inbox (soft delete)
-                await undoHistory.updateTaskWithUndo(item.id, {
-                    // Force null to ensure DB update clears the fields
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    canvasPosition: null as any,
-                    isInInbox: true,
-                    instances: [],
-                    scheduledDate: undefined,
-                    scheduledTime: undefined
-                })
-            }
-        }
-
-        // Clear selection and state
-        canvasStore.setSelectedNodes([])
-        state.bulkDeleteItems.value = []
-        state.isBulkDeleteModalOpen.value = false
-        await nextTick()
-        deps.syncNodes()
-    }
-
-    // Cancel bulk delete
-    const cancelBulkDelete = () => {
-        state.bulkDeleteItems.value = []
-        state.isBulkDeleteModalOpen.value = false
-    }
-
-    // Placeholder for paste functionality
-    const handlePasteTasks = () => {
-        console.log('📋 [CANVAS] Paste tasks triggered (not implemented yet)')
-    }
-
+    // --- Re-Export Everything ---
     return {
-        createTaskHere,
-        handlePasteTasks, // Added export
-        handleQuickTaskCreate,
-        closeQuickTaskCreate,
-        createGroup,
-        closeGroupModal,
-        handleGroupCreated,
-        handleGroupUpdated,
-        editGroup,
-        closeGroupEditModal,
-        handleGroupEditSave,
-        deleteGroup,
-        confirmDeleteGroup,
-        cancelDeleteGroup,
-        moveSelectedTasksToInbox,
-        deleteSelectedTasks,
+        // Group Actions & State
+        createGroup: groupActions.createGroup,
+        closeGroupModal: groupActions.closeGroupModal,
+        handleGroupCreated: groupActions.handleGroupCreated,
+        handleGroupUpdated: groupActions.handleGroupUpdated,
+        editGroup: groupActions.editGroup,
+        closeGroupEditModal: groupActions.closeGroupEditModal,
+        handleGroupEditSave: groupActions.handleGroupEditSave,
+        deleteGroup: groupActions.deleteGroup,
+        confirmDeleteGroup: groupActions.confirmDeleteGroup,
+        cancelDeleteGroup: groupActions.cancelDeleteGroup,
+
+        isGroupModalOpen: groupActions.isGroupModalOpen,
+        selectedGroup: groupActions.selectedGroup,
+        groupModalPosition: groupActions.groupModalPosition,
+        isGroupEditModalOpen: groupActions.isGroupEditModalOpen,
+        selectedSectionForEdit: groupActions.selectedSectionForEdit,
+        isDeleteGroupModalOpen: groupActions.isDeleteGroupModalOpen,
+        groupPendingDelete: groupActions.groupPendingDelete,
+
+        // Task Actions & State
+        createTaskHere: taskActions.createTaskHere,
+        handleQuickTaskCreate: taskActions.handleQuickTaskCreate,
+        closeQuickTaskCreate: taskActions.closeQuickTaskCreate,
+        moveSelectedTasksToInbox: taskActions.moveSelectedTasksToInbox,
+        deleteSelectedTasks: taskActions.deleteSelectedTasks,
+        confirmBulkDelete: taskActions.confirmBulkDelete,
+        cancelBulkDelete: taskActions.cancelBulkDelete,
+
+        isQuickTaskCreateOpen: taskActions.isQuickTaskCreateOpen,
+        quickTaskPosition: taskActions.quickTaskPosition,
+        isBulkDeleteModalOpen: taskActions.isBulkDeleteModalOpen,
+        bulkDeleteItems: taskActions.bulkDeleteItems,
+        bulkDeleteIsPermanent: taskActions.bulkDeleteIsPermanent,
+
+        // Orchestrator State & Actions
         handleNodeContextMenu,
         closeNodeContextMenu,
         deleteNode,
 
-        // Bulk delete handlers
-        confirmBulkDelete,
-        cancelBulkDelete,
-        createTaskInGroup
+        selectedNode,
+        showNodeContextMenu,
+        nodeContextMenuX,
+        nodeContextMenuY,
+        showCanvasContextMenu,
+        canvasContextMenuX,
+        canvasContextMenuY,
+        canvasContextSection
     }
 }

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Conditional hook: Only triggers when user asks about disappearing tasks
 
-# Read user prompt from stdin
-USER_PROMPT=$(cat)
+# Read user prompt from stdin (with timeout to prevent freeze in Zellij)
+USER_PROMPT=$(timeout 2 cat 2>/dev/null || echo '')
 
 # Check if prompt mentions disappearing/missing tasks (case insensitive)
 if echo "$USER_PROMPT" | grep -iE "(task|tasks).*(disappear|missing|gone|vanish|lost)|where.*(task|tasks).*go|(disappear|missing|gone|vanish|lost).*(task|tasks)" > /dev/null 2>&1; then

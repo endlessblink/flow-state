@@ -1,78 +1,77 @@
 <template>
   <!-- Task Edit Modal -->
   <TaskEditModal
-    :is-open="isEditModalOpen"
-    :task="selectedTask"
-    @close="$emit('closeEditModal')"
+    :is-open="modals.isEditModalOpen"
+    :task="modals.selectedTask"
+    @close="modals.closeEditModal"
   />
 
   <!-- Quick Task Create Modal -->
   <QuickTaskCreateModal
-    :is-open="isQuickTaskCreateOpen"
+    :is-open="modals.isQuickTaskCreateOpen"
     :loading="false"
-    @cancel="$emit('closeQuickTaskCreate')"
+    @cancel="modals.closeQuickTaskCreate"
     @create="(title, description) => $emit('handleQuickTaskCreate', title, description)"
   />
 
   <!-- Batch Edit Modal -->
   <BatchEditModal
-    :is-open="isBatchEditModalOpen"
-    :task-ids="batchEditTaskIds"
-    @close="$emit('closeBatchEditModal')"
+    :is-open="modals.isBatchEditModalOpen"
+    :task-ids="modals.batchEditTaskIds"
+    @close="modals.closeBatchEditModal"
     @applied="$emit('handleBatchEditApplied')"
   />
 
   <!-- Section Settings Modal -->
   <GroupSettingsMenu
-    :section="editingSection"
-    :is-visible="isSectionSettingsOpen"
-    @close="$emit('closeSectionSettingsModal')"
+    :section="modals.editingSection"
+    :is-visible="modals.isSectionSettingsOpen"
+    @close="modals.closeSectionSettings"
     @save="(settings) => $emit('handleSectionSettingsSave', settings)"
   />
 
   <!-- Unified Group Modal (create + edit with optional smart settings) -->
   <UnifiedGroupModal
-    :is-open="isGroupModalOpen"
-    :group="selectedGroup"
-    :position="groupModalPosition"
-    @close="$emit('closeGroupModal')"
+    :is-open="modals.isGroupModalOpen"
+    :group="modals.selectedGroup"
+    :position="modals.groupModalPosition"
+    @close="modals.closeGroupModal"
     @created="(group) => $emit('handleGroupCreated', group)"
     @updated="(group) => $emit('handleGroupUpdated', group)"
   />
 
   <!-- Group Edit Modal -->
   <GroupEditModal
-    :section="selectedSectionForEdit"
-    :is-visible="isGroupEditModalOpen"
-    @close="$emit('closeGroupEditModal')"
+    :section="modals.selectedSectionForEdit"
+    :is-visible="modals.isGroupEditModalOpen"
+    @close="modals.closeGroupEditModal"
     @save="(updatedSection) => $emit('handleGroupEditSave', updatedSection)"
   />
 
   <!-- Group Delete Confirmation Modal -->
   <ConfirmationModal
-    :is-open="isDeleteGroupModalOpen"
+    :is-open="modals.isDeleteGroupModalOpen"
     title="Delete Group"
-    :message="deleteGroupMessage"
+    :message="modals.deleteGroupMessage"
     confirm-text="Delete"
     @confirm="$emit('confirmDeleteGroup')"
-    @cancel="$emit('cancelDeleteGroup')"
+    @cancel="modals.closeDeleteGroupModal"
   />
 
   <!-- Bulk Delete Confirmation Modal (Shift+Delete on multiple items) -->
   <ConfirmationModal
-    :is-open="isBulkDeleteModalOpen"
-    :title="bulkDeleteTitle"
-    :message="bulkDeleteMessage"
-    :details="bulkDeleteItems.map(item => `${item.type === 'section' ? '📁' : '📌'} ${item.name}`)"
-    :confirm-text="bulkDeleteIsPermanent ? 'Delete Permanently' : 'Remove'"
+    :is-open="modals.isBulkDeleteModalOpen"
+    :title="modals.bulkDeleteTitle"
+    :message="modals.bulkDeleteMessage"
+    :details="modals.bulkDeleteItems.map(item => `${item.type === 'section' ? '📁' : '📌'} ${item.name}`)"
+    :confirm-text="modals.bulkDeleteIsPermanent ? 'Delete Permanently' : 'Remove'"
     @confirm="$emit('confirmBulkDelete')"
-    @cancel="$emit('cancelBulkDelete')"
+    @cancel="modals.closeBulkDeleteModal"
   />
 </template>
 
 <script setup lang="ts">
-import type { Task } from '@/stores/tasks'
-import type { CanvasSection, AssignOnDropSettings } from '@/stores/canvas'
+import { useCanvasModalsStore } from '@/stores/canvas/modals'
 
 // Components
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
@@ -83,59 +82,16 @@ import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
-defineProps<{
-  // Task Edit
-  isEditModalOpen: boolean
-  selectedTask: Task | null
-  
-  // Quick Task Create
-  isQuickTaskCreateOpen: boolean
-  
-  // Batch Edit
-  isBatchEditModalOpen: boolean
-  batchEditTaskIds: string[]
-  
-  // Section Settings
-  isSectionSettingsOpen: boolean
-  editingSection: CanvasSection | null
-  
-  // Unified Group
-  isGroupModalOpen: boolean
-  selectedGroup: CanvasSection | null
-  groupModalPosition: { x: number; y: number }
-  
-  // Group Edit
-  isGroupEditModalOpen: boolean
-  selectedSectionForEdit: CanvasSection | null
-  
-  // Group Delete
-  isDeleteGroupModalOpen: boolean
-  deleteGroupMessage: string
-
-  // Bulk Delete (Shift+Delete on multiple items)
-  isBulkDeleteModalOpen: boolean
-  bulkDeleteTitle: string
-  bulkDeleteMessage: string
-  bulkDeleteItems: { id: string; name: string; type: 'task' | 'section' }[]
-  bulkDeleteIsPermanent: boolean
-}>()
+const modals = useCanvasModalsStore()
 
 defineEmits<{
-  (e: 'closeEditModal'): void
-  (e: 'closeQuickTaskCreate'): void
   (e: 'handleQuickTaskCreate', title: string, description: string): void
-  (e: 'closeBatchEditModal'): void
   (e: 'handleBatchEditApplied'): void
-  (e: 'closeSectionSettingsModal'): void
-  (e: 'handleSectionSettingsSave', settings: { assignOnDrop: AssignOnDropSettings }): void
-  (e: 'closeGroupModal'): void
-  (e: 'handleGroupCreated', group: CanvasSection): void
-  (e: 'handleGroupUpdated', group: CanvasSection): void
-  (e: 'closeGroupEditModal'): void
+  (e: 'handleSectionSettingsSave', settings: any): void
+  (e: 'handleGroupCreated', group: any): void
+  (e: 'handleGroupUpdated', group: any): void
   (e: 'handleGroupEditSave', updatedSection: any): void
   (e: 'confirmDeleteGroup'): void
-  (e: 'cancelDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
-  (e: 'cancelBulkDelete'): void
 }>()
 </script>

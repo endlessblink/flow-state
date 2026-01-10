@@ -62,6 +62,42 @@ export function useCanvasActions(
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     // BUG-044 FIX: Get viewport directly from Vue Flow (not stale store value)
+    const createTaskInGroup = async (section: CanvasSection) => {
+        console.log('➕ [CanvasActions] Create task in group:', section.name)
+
+        const sectionNode = canvasStore.sections.find(s => s.id === section.id)
+        if (!sectionNode) {
+            console.warn('❌ [CanvasActions] Section not found:', section.id)
+            return
+        }
+
+        const flowCoords = screenToFlowCoordinate({
+            x: state.canvasContextMenuX.value,
+            y: state.canvasContextMenuY.value
+        })
+
+        let taskPosition = {
+            x: (sectionNode.position?.x || 0) + 20,
+            y: (sectionNode.position?.y || 0) + 60
+        }
+
+        if (Number.isFinite(flowCoords.x) && Number.isFinite(flowCoords.y)) {
+            taskPosition = { x: flowCoords.x, y: flowCoords.y }
+        }
+
+        const newTask = await taskStore.createTaskWithUndo({
+            title: '',
+            status: 'planned',
+            isInInbox: false,
+            canvasPosition: taskPosition
+        })
+
+        if (newTask) {
+            // Further orchestration could be added here
+            deps.batchedSyncNodes('high')
+        }
+    }
+
     const { getSelectedNodes, screenToFlowCoordinate, viewport: vfViewport, removeNodes } = useVueFlow()
 
     // --- Helper for Ghost Removal ---
@@ -485,8 +521,14 @@ export function useCanvasActions(
         state.isBulkDeleteModalOpen.value = false
     }
 
+    // Placeholder for paste functionality
+    const handlePasteTasks = () => {
+        console.log('📋 [CANVAS] Paste tasks triggered (not implemented yet)')
+    }
+
     return {
         createTaskHere,
+        handlePasteTasks, // Added export
         handleQuickTaskCreate,
         closeQuickTaskCreate,
         createGroup,
@@ -507,6 +549,7 @@ export function useCanvasActions(
 
         // Bulk delete handlers
         confirmBulkDelete,
-        cancelBulkDelete
+        cancelBulkDelete,
+        createTaskInGroup
     }
 }

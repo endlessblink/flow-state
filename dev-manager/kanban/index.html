@@ -636,6 +636,10 @@
       border-color: #10b981;
     }
 
+    .column-header.paused {
+      border-color: #fca5a5;
+    }
+
     /* Ideas view columns */
     .column-header.raw {
       border-color: #4a5568;
@@ -829,6 +833,11 @@
     .task-status.in-progress {
       background: #3b82f6;
       color: white;
+    }
+
+    .task-status.paused {
+      background: #fca5a5;
+      color: #7f1d1d;
     }
 
     .task-status.review {
@@ -1677,6 +1686,13 @@
             <div class="column-content" id="column-in-progress"></div>
           </div>
           <div class="kanban-column">
+            <div class="column-header paused"><span class="icon"><svg viewBox="0 0 24 24">
+                  <rect x="6" y="4" width="4" height="16" />
+                  <rect x="14" y="4" width="4" height="16" />
+                </svg></span> Paused</div>
+            <div class="column-content" id="column-paused"></div>
+          </div>
+          <div class="kanban-column">
             <div class="column-header review"><span class="icon"><svg viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="3" />
                   <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" />
@@ -1868,6 +1884,7 @@
           <select id="modalStatusSelect" class="modal-edit-select" onchange="updateTaskStatus()">
             <option value="todo">To Do</option>
             <option value="in-progress">In Progress</option>
+            <option value="paused">Paused</option>
             <option value="review">Review</option>
             <option value="done">Done</option>
           </select>
@@ -1932,6 +1949,7 @@
       inbox: '<svg class="inline-icon empty-icon" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
       todo: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>',
       inProgress: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+      paused: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
       review: '<svg class="inline-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>',
       done: '<svg class="inline-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
       calendar: '<svg class="inline-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
@@ -1974,11 +1992,12 @@
         // Active work
         'IN PROGRESS', 'IN-PROGRESS', 'IN_PROGRESS', 'PROGRESS', 'ACTIVE', 'WORKING',
         'WIP', 'STARTED', 'ONGOING', 'DOING',
-        // Paused/blocked states (still in-progress, just not active)
-        'PAUSED', 'PARTIAL', 'ON HOLD', 'ON-HOLD', 'HOLD', 'BLOCKED',
-        'WAITING',
-        // Emoji indicators
-        '⏳', '🔄', '⏸️', '⏸', '🚧'
+        'PARTIAL', 'STATUS: IN PROGRESS'
+      ];
+
+      const pausedPatterns = [
+        'PAUSED', 'ON HOLD', 'ON-HOLD', 'HOLD', 'BLOCKED',
+        'WAITING', '⏳', '⏸️', '⏸', '🚧'
       ];
 
       // Check done patterns FIRST (highest priority)
@@ -1995,7 +2014,14 @@
         }
       }
 
-      // Check in-progress patterns THIRD
+      // Check paused patterns THIRD
+      for (const pattern of pausedPatterns) {
+        if (text.includes(pattern)) {
+          return 'paused';
+        }
+      }
+
+      // Check in-progress patterns FOURTH
       for (const pattern of inProgressPatterns) {
         if (text.includes(pattern)) {
           return 'in-progress';
@@ -2168,7 +2194,7 @@
                 section: 'activeWork',
                 description: '',
                 subtasks: [],
-                progress: status === 'done' ? 100 : (status === 'in-progress' ? 50 : 0)
+                progress: status === 'done' ? 100 : (status === 'in-progress' || status === 'paused' ? 50 : 0)
               });
             }
             continue;
@@ -2197,6 +2223,25 @@
                 }
               }
               continue; // Don't add priority line to description
+            }
+
+            // Extract **Status**: line as the task's status (override header status)
+            if (trimmed.startsWith('**Status**:')) {
+              const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
+              if (taskIdx >= 0) {
+                const statusValue = trimmed.replace('**Status**:', '').trim();
+                const parsedStatus = parseTaskStatus(statusValue);
+                if (parsedStatus !== 'todo') { // Only override if we found a meaningful status
+                  data.activeWork[taskIdx].status = parsedStatus;
+                  // Re-evaluate progress based on new status if not explicitly set by %
+                  if (parsedStatus === 'done') {
+                    data.activeWork[taskIdx].progress = 100;
+                  } else if ((parsedStatus === 'in-progress' || parsedStatus === 'paused') && data.activeWork[taskIdx].progress === 0) {
+                    data.activeWork[taskIdx].progress = 50;
+                  }
+                }
+              }
+              continue; // Don't add status line to description
             }
 
             // Capture description text (Goal, Priority, Design Reference, etc.)
@@ -2512,6 +2557,7 @@
             return (i.status === 'in-progress' && i.progress < 100) ||
               (i.status === 'todo' && i.progress > 0 && i.progress < 100 && i.status !== 'review');
           }),
+          paused: allItems.filter(i => i.status === 'paused'),
           review: allItems.filter(i => {
             // Review ONLY if explicitly set
             return i.status === 'review' && i.status !== 'done';
@@ -2528,6 +2574,7 @@
         const columns = {
           todo: document.getElementById('column-todo'),
           inProgress: document.getElementById('column-in-progress'),
+          paused: document.getElementById('column-paused'),
           review: document.getElementById('column-review'),
           done: document.getElementById('column-done')
         };
@@ -2582,10 +2629,12 @@
               // Get status class for badge
               const statusClass = task.status === 'done' ? 'done' :
                 task.status === 'in-progress' ? 'in-progress' :
-                  task.status === 'review' ? 'review' : 'todo';
+                  task.status === 'paused' ? 'paused' :
+                    task.status === 'review' ? 'review' : 'todo';
               const statusLabel = task.status === 'done' ? 'DONE' :
                 task.status === 'in-progress' ? 'IN PROGRESS' :
-                  task.status === 'review' ? 'REVIEW' : 'TODO';
+                  task.status === 'paused' ? 'PAUSED' :
+                    task.status === 'review' ? 'REVIEW' : 'TODO';
 
               card.innerHTML = `
               <div class="task-header">
@@ -2596,6 +2645,7 @@
                   <div class="badge-dropdown status-dropdown" id="status-dropdown-${task.id}">
                     <button class="badge-dropdown-option${task.status === 'todo' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'todo', event)">${ICONS.todo}TODO</button>
                     <button class="badge-dropdown-option${task.status === 'in-progress' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'in-progress', event)">${ICONS.inProgress}IN PROGRESS</button>
+                    <button class="badge-dropdown-option${task.status === 'paused' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'paused', event)">${ICONS.paused}PAUSED</button>
                     <button class="badge-dropdown-option${task.status === 'review' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'review', event)">${ICONS.review}REVIEW</button>
                     <button class="badge-dropdown-option${task.status === 'done' ? ' selected' : ''}" onclick="updateInlineStatus('${task.id}', 'done', event)">${ICONS.done}DONE</button>
                   </div>
@@ -3362,13 +3412,19 @@
       console.log('[Modal] Status select initial value:', statusSelect.value);
 
       // Set priority dropdown
+      // Set priority dropdown
       const prioritySelect = document.getElementById('modalPrioritySelect');
       const priority = extractPriority(item) || 'P2';
-      prioritySelect.value = priority.toUpperCase().replace(/HIGH|CRITICAL/, 'P1').replace(/MEDIUM/, 'P2').replace(/LOW/, 'P3');
-      if (!['P1', 'P2', 'P3'].includes(prioritySelect.value)) {
-        prioritySelect.value = 'P2';
-      }
-      console.log('[Modal] Priority select initial value:', prioritySelect.value);
+
+      // Normalize priority to P1, P2, P3
+      let normalized = priority.toUpperCase();
+      if (normalized.includes('P1') || normalized.includes('HIGH') || normalized.includes('CRITICAL')) normalized = 'P1';
+      else if (normalized.includes('P2') || normalized.includes('MEDIUM')) normalized = 'P2';
+      else if (normalized.includes('P3') || normalized.includes('LOW')) normalized = 'P3';
+      else normalized = 'P2';
+
+      prioritySelect.value = normalized;
+      console.log('[Modal] Priority select normalized value:', prioritySelect.value);
 
       // Re-attach event listeners (in case inline handlers aren't working)
       statusSelect.onchange = function () {
@@ -3395,6 +3451,19 @@
 
       // Use structured HTML rendering for description
       const descElement = document.getElementById('modalDescription');
+      // Update Checklist Header
+      const checklistHeader = document.querySelector('.checklist-header h3');
+      if (checklistHeader) {
+        const total = item.subtasks ? item.subtasks.length : 0;
+        const completed = item.completedSubtasks || 0;
+        checklistHeader.textContent = `Checklist (${completed}/${total} complete)`;
+      }
+
+      // Update Subtasks in Checklist
+      const checklistContainer = document.getElementById('modalChecklist');
+      if (checklistContainer) {
+        checklistContainer.innerHTML = ''; // Clear existing
+      }
       if (item.description || (item.subtasks && item.subtasks.length > 0)) {
         descElement.innerHTML = buildExpandedContentHtml(item);
       } else {
@@ -3672,6 +3741,7 @@
       const statusMap = {
         'todo': 'To Do',
         'in-progress': 'In Progress',
+        'paused': 'Paused',
         'review': 'Review',
         'done': 'Completed',
         'raw': 'Raw Idea',
@@ -3960,6 +4030,9 @@
         // Re-append cards in sorted order
         cards.forEach(card => column.appendChild(card));
       });
+
+      // Re-initialize drag and drop listeners for new cards
+      initDragAndDrop();
     }
 
     // Priority comparison (P1/HIGH > P2/MEDIUM > P3/LOW)
@@ -4115,10 +4188,53 @@
           column.classList.remove('drag-over');
         });
 
-        column.addEventListener('drop', (e) => {
+        column.addEventListener('drop', async (e) => {
           e.preventDefault();
           column.classList.remove('drag-over');
-          showToast('ℹ️ To change task status, edit MASTER_PLAN.md directly', 'info');
+
+          const card = document.querySelector('.dragging');
+          if (!card) return;
+
+          // Determine target status from column ID
+          const columnId = column.id;
+          let newStatus = 'todo';
+
+          if (columnId === 'column-todo') newStatus = 'todo';
+          else if (columnId === 'column-in-progress') newStatus = 'in-progress';
+          else if (columnId === 'column-paused') newStatus = 'paused';
+          else if (columnId === 'column-review') newStatus = 'review';
+          else if (columnId === 'column-done') newStatus = 'done';
+          else return; // Unknown column
+
+          const taskId = card.getAttribute('data-id');
+          if (!taskId) return;
+
+          // Optimistically move card
+          column.appendChild(card);
+
+          // Call API
+          try {
+            showToast(`Updating ${taskId} to ${newStatus}...`, 'info');
+            const response = await fetch(`${API_BASE}/api/task/${taskId}/status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: newStatus })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+              showToast(`✓ ${taskId} moved to ${newStatus.toUpperCase()}`, 'success');
+              // Optional: Refresh data to ensure sort order/consistency
+              setTimeout(() => renderKanban(), 500);
+            } else {
+              showToast(`✗ Failed to update status`, 'error');
+              // Revert move? (Requires complex logic, usually refresh fixes it)
+              setTimeout(() => renderKanban(), 1000);
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('✗ Server error', 'error');
+          }
         });
       });
     }

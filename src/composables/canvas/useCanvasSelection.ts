@@ -4,6 +4,10 @@ import { useVueFlow } from '@vue-flow/core'
 import type { Node } from '@vue-flow/core'
 import type { Task } from '@/types/tasks'
 
+interface TaskNodeData {
+    task?: Task
+}
+
 export interface SelectionBox {
     x: number
     y: number
@@ -40,6 +44,17 @@ export function useCanvasSelection() {
     const closeEditModal = () => {
         isEditModalOpen.value = false
         selectedTask.value = null
+    }
+
+    const handleTaskSelect = (task: Task, multiSelect: boolean) => {
+        if (!task.id) return
+
+        if (multiSelect) {
+            canvasStore.toggleNodeSelection(task.id)
+        } else {
+            // Single select - clear others
+            canvasStore.setSelectedNodes([task.id])
+        }
     }
 
     const handleSelectionChange = (params: { nodes: Node[] }) => {
@@ -133,7 +148,7 @@ export function useCanvasSelection() {
         // 2. Screen-Space Intersection Strategy
         const nodes = getNodes.value
         const selectedIds: string[] = []
-        const debugSample: any[] = []
+        const debugSample: unknown[] = []
 
         // Selection box bounds
         const boxLeft = selectionBox.x
@@ -196,17 +211,9 @@ export function useCanvasSelection() {
                 })
             }
         })
-
-        console.log('📐 [SELECTION ROBUST RECURSIVE]', {
-            found: selectedIds.length,
-            box: { l: selectionBox.x, t: selectionBox.y, w: selectionBox.width, h: selectionBox.height },
-            sample: debugSample
-        })
-
         if (selectedIds.length > 0) {
             canvasStore.setSelectedNodes(selectedIds)
         } else {
-            console.log('❌ No nodes intersected in screen space.')
         }
 
         selectionBox.isVisible = false
@@ -238,7 +245,7 @@ export function useCanvasSelection() {
     // Visual Helpers
     const getNodeColor = (node: Node) => {
         if (node.type === 'sectionNode') return 'rgba(99, 102, 241, 0.15)'
-        const task = (node.data as any)?.task
+        const task = (node.data as TaskNodeData)?.task
         if (!task) return '#94a3b8' // Slate-400
         if (task.status === 'done') return '#10b981' // Emerald-500
         if (task.status === 'in-progress') return '#3b82f6' // Blue-500
@@ -250,6 +257,7 @@ export function useCanvasSelection() {
         isEditModalOpen,
         selectionBox,
         handleEditTask,
+        handleTaskSelect,
         closeEditModal,
         handleSelectionChange,
         clearSelection,

@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '../../stores/canvas'
 import { useTaskStore } from '../../stores/tasks'
-import { lockTaskPosition, lockGroupPosition } from '../../utils/canvasStateLock'
+import { useCanvasOptimisticSync } from './useCanvasOptimisticSync'
 
 // Imported Composables
 import { useCanvasResizeState } from './useCanvasResizeState'
@@ -80,7 +80,6 @@ export function useCanvasResize(deps?: {
                 })
             }
 
-            console.log('🎬 [Resize] Started:', { sectionId, startX, startY, childCount: Object.keys(resizeState.value.childStartPositions).length })
         }
     }
 
@@ -144,7 +143,6 @@ export function useCanvasResize(deps?: {
     }
 
     const handleSectionResizeEnd = ({ sectionId, event }: { sectionId: string; event: unknown }) => {
-        console.log('🎯 [CanvasView] Section resize END:', { sectionId })
 
         const vueFlowNode = findNode(`section-${sectionId}`)
         if (!vueFlowNode) {
@@ -174,13 +172,9 @@ export function useCanvasResize(deps?: {
                 const deltaY = newY - resizeState.value.startY
                 const { width: validatedWidth, height: validatedHeight } = validateDimensions(width, height)
 
-                // Lock Group
-                lockGroupPosition(sectionId, {
-                    x: newX,
-                    y: newY,
-                    width: validatedWidth,
-                    height: validatedHeight
-                }, 'resize')
+                // Optimistic Sync: Track Change
+                const { trackLocalChange, markSynced } = useCanvasOptimisticSync()
+                trackLocalChange(sectionId, 'group', { x: newX, y: newY })
 
                 // Update Store
                 canvasStore.updateSection(sectionId, {
@@ -191,6 +185,9 @@ export function useCanvasResize(deps?: {
                         height: validatedHeight
                     }
                 })
+
+                // Mark as synced immediately since we just updated the store
+                markSynced(sectionId)
 
                 // Update children's RELATIVE positions in Store (Persistence)
                 // Since we used Inverse Delta, children stayed put in World Space.
@@ -233,7 +230,6 @@ export function useCanvasResize(deps?: {
                 // Settling timeout
                 setTimeout(() => {
                     isResizeSettling.value = false
-                    console.log('%c[Resize] Settling complete', 'color: #4CAF50')
                 }, 1000)
             }
         }

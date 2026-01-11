@@ -111,13 +111,10 @@ export function useCanvasZoom(resourceManager: ResourceManager) {
             const currentZoom = viewport.value.zoom
             const newZoom = Math.max(zoomConfig.value.minZoom, currentZoom - 0.1)
 
-            console.log(`[Zoom Debug] Zoom out: ${currentZoom} -> ${newZoom}`)
-            console.log(`[Zoom Debug] Min zoom allowed: ${zoomConfig.value.minZoom}`)
 
             // Force Vue Flow to respect our zoom limits by explicitly setting min zoom first
             if (setMinZoom) {
                 setMinZoom(zoomConfig.value.minZoom)
-                console.log(`[Zoom Debug] Forcefully set minZoom to ${zoomConfig.value.minZoom}`)
             }
 
             // Use vueFlowZoomTo instead of vueFlowZoomOut to ensure we respect minZoom
@@ -127,7 +124,6 @@ export function useCanvasZoom(resourceManager: ResourceManager) {
             const timerId = setTimeout(() => {
                 const actualZoom = viewport.value.zoom
                 if (actualZoom > newZoom && Math.abs(actualZoom - newZoom) > 0.01) {
-                    console.log(`[Zoom Debug] Vue Flow ignored zoom request, forcing again: ${actualZoom} -> ${newZoom}`)
                     vueFlowZoomTo(newZoom, { duration: 0 })
                 }
             }, 250)

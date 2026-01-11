@@ -8,7 +8,7 @@ import { useProjectStore } from './projects'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
-import { isPositionLocked, getLockedPosition } from '@/utils/canvasStateLock'
+import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
@@ -177,13 +177,15 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
-          // BUG-FIX: Check position lock - preserve local canvasPosition if locked
+          // OPTIMISTIC SYNC: Check pending changes
           // This prevents sync from overwriting positions during the push window after drag
-          if (isPositionLocked(taskId)) {
-            const lockedPos = getLockedPosition(taskId)
-            if (lockedPos) {
-              console.log(`🔒 [POSITION-LOCK] Preserving local canvasPosition for ${taskId} during sync`)
-              normalizedTask.canvasPosition = lockedPos
+          const { shouldAcceptRemoteChange, getPendingPosition } = useCanvasOptimisticSync()
+
+          if (!shouldAcceptRemoteChange(taskId, normalizedTask.updatedAt.getTime())) {
+            const pendingPos = getPendingPosition(taskId)
+            if (pendingPos) {
+              console.log(`🛡️ [OPTIMISTIC-SYNC] Preserving local canvasPosition for ${taskId} during sync`)
+              normalizedTask.canvasPosition = pendingPos
             }
           }
 

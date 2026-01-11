@@ -11,21 +11,30 @@ export interface GroupActionsDeps {
     closeCanvasContextMenu: () => void
     screenToFlowCoordinate: (position: { x: number; y: number }) => { x: number; y: number }
     recentlyDeletedGroups?: Ref<Set<string>>
+    state?: {
+        isGroupModalOpen: Ref<boolean>
+        selectedGroup: Ref<CanvasSection | null>
+        groupModalPosition: Ref<{ x: number; y: number }>
+        isGroupEditModalOpen: Ref<boolean>
+        selectedSectionForEdit: Ref<CanvasSection | null>
+        isDeleteGroupModalOpen: Ref<boolean>
+        groupPendingDelete: Ref<CanvasSection | null>
+    }
 }
 
 export function useCanvasGroupActions(deps: GroupActionsDeps) {
     const canvasStore = useCanvasStore()
 
-    // --- State ---
-    const isGroupModalOpen = ref(false)
-    const selectedGroup = ref<CanvasSection | null>(null)
-    const groupModalPosition = ref({ x: 100, y: 100 })
+    // --- State (Use injected state or fallback to local) ---
+    const isGroupModalOpen = deps.state?.isGroupModalOpen ?? ref(false)
+    const selectedGroup = deps.state?.selectedGroup ?? ref<CanvasSection | null>(null)
+    const groupModalPosition = deps.state?.groupModalPosition ?? ref({ x: 100, y: 100 })
 
-    const isGroupEditModalOpen = ref(false)
-    const selectedSectionForEdit = ref<CanvasSection | null>(null)
+    const isGroupEditModalOpen = deps.state?.isGroupEditModalOpen ?? ref(false)
+    const selectedSectionForEdit = deps.state?.selectedSectionForEdit ?? ref<CanvasSection | null>(null)
 
-    const isDeleteGroupModalOpen = ref(false)
-    const groupPendingDelete = ref<CanvasSection | null>(null)
+    const isDeleteGroupModalOpen = deps.state?.isDeleteGroupModalOpen ?? ref(false)
+    const groupPendingDelete = deps.state?.groupPendingDelete ?? ref<CanvasSection | null>(null)
 
     // --- Helper for Ghost Removal ---
     // Note: duplicated small helper to avoid complex sharing, or could be passed in.
@@ -44,7 +53,6 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     // --- Actions ---
 
     const createGroup = async (screenPos?: { x: number; y: number }) => {
-        console.log('🔧 useCanvasGroupActions: createGroup function called!')
 
         const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
         if (!vueFlowElement) return
@@ -78,12 +86,10 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     }
 
     const handleGroupCreated = (group: CanvasSection) => {
-        console.log('Group created:', group)
         deps.syncNodes()
     }
 
     const handleGroupUpdated = (group: CanvasSection) => {
-        console.log('Group updated:', group)
         deps.syncNodes()
     }
 
@@ -119,7 +125,6 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         if (!section) return
 
         const sectionNodeId = `section-${section.id}`
-        console.log(`🗑️ [GroupActions] Confirming delete for group: ${section.name} (${section.id})`)
 
         // TASK-158 FIX: Use persistent deleted groups tracker
         markGroupDeleted(section.id)
@@ -131,7 +136,6 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         const existsInStore = canvasStore.sections.some(s => s.id === section.id)
 
         if (!existsInStore) {
-            console.warn('👻 [GroupActions] Ghost section detected, forcing direct removal:', sectionNodeId)
             removeGhostNodeRef(section.id)
 
             // Confirm deletion since there's nothing in Supabase to delete
@@ -140,17 +144,13 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
                 deps.recentlyDeletedGroups.value.delete(section.id)
             }
         } else {
-            // TASK-149 FIX: AWAIT the deletion to ensure Supabase soft-delete completes
             try {
                 await canvasStore.deleteSection(section.id)
-                console.log(`✅ [TASK-158] Delete completed for "${section.name}" - confirmed`)
-                // TASK-158: Confirm deletion after Supabase success
                 confirmGroupDeleted(section.id)
                 if (deps.recentlyDeletedGroups) {
                     deps.recentlyDeletedGroups.value.delete(section.id)
                 }
             } catch (e) {
-                console.error(`❌ [TASK-158] Delete failed for "${section.name}" - keeping in tracker`, e)
                 // Don't clear from tracker on failure - let TTL handle cleanup
             }
         }

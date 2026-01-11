@@ -1,7 +1,7 @@
 
 import { type Ref } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
-import type { EdgeMouseEvent } from '@vue-flow/core'
+import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
 
 interface ConnectionDeps {
     syncEdges: () => void
@@ -17,7 +17,7 @@ interface ConnectionState {
     showEdgeContextMenu: Ref<boolean>
     edgeContextMenuX: Ref<number>
     edgeContextMenuY: Ref<number>
-    selectedEdge: Ref<any> // Edge type from Vue Flow is complex, keep as any for now but improve where used
+    selectedEdge: Ref<Edge | null>
 }
 
 export function useCanvasConnections(

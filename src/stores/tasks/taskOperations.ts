@@ -6,7 +6,7 @@ import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
-import { clearTaskLock, getLockedTaskPosition } from '@/utils/canvasStateLock'
+import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
 
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
@@ -40,7 +40,6 @@ export function useTaskOperations(
         import('../canvas/canvasUi').then(({ useCanvasUiStore }) => {
             const canvasUiStore = useCanvasUiStore()
             canvasUiStore.requestSync()
-            console.log('🔄 [CANVAS-SYNC] Triggered canvas sync after task operation')
         }).catch(_e => {
             // Ignore if canvas store not available (e.g., in non-canvas views)
         })
@@ -126,31 +125,29 @@ export function useTaskOperations(
 
         try {
             const task = _rawTasks.value[index]
-            console.log(`📝 [TASK-OP] updateTask called for ${taskId}:`, updates)
 
             // BUG-045 FIX: Removed auto-archive behavior
             // Tasks now stay on canvas when marked as done (no position/inbox changes)
 
             // Canvas logic
             if (updates.canvasPosition && !task.canvasPosition) {
-                console.log(`📝 [TASK-OP] Setting isInInbox=false for ${taskId} due to canvasPosition update`)
                 updates.isInInbox = false
             }
 
             // BUG-FIX: Explicitly unlock position if removing from canvas
             // This prevents sync from restoring the position due to "Preserve local canvasPosition" logic
             if (updates.canvasPosition === null) {
-                console.log(`🔓 [TASK-OP] Task ${taskId} removed from canvas - clearing position lock`)
-                clearTaskLock(taskId)
+                const { pendingChanges } = useCanvasOptimisticSync()
+                pendingChanges.value.delete(taskId)
             }
 
             // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
-            // If a position lock exists (from recent drag), use the locked position instead of the update
+            // If a position lock (pending change) exists, use that position instead of the update
             if (updates.canvasPosition && updates.canvasPosition !== null) {
-                const lockedPosition = getLockedTaskPosition(taskId)
-                if (lockedPosition) {
-                    console.log(`🛡️ [TASK-131] Position lock active for ${taskId} - using locked position instead of update`)
-                    updates.canvasPosition = { x: lockedPosition.x, y: lockedPosition.y }
+                const { getPendingPosition } = useCanvasOptimisticSync()
+                const pendingPos = getPendingPosition(taskId)
+                if (pendingPos) {
+                    updates.canvasPosition = { x: pendingPos.x, y: pendingPos.y }
                 }
             }
 
@@ -171,7 +168,6 @@ export function useTaskOperations(
             const finalPos = updates.canvasPosition ?? task.canvasPosition
             const finalInst = updates.instances ?? task.instances
             if (!finalInInbox && !finalPos && (!finalInst || !finalInst.length)) {
-                console.log(`⚠️ [TASK-OP] Task ${taskId} would be orphaned (no inbox, no pos, no schedule). SKIPPING FORCED INBOX for debugging.`)
                 // updates.isInInbox = true
             }
 
@@ -180,7 +176,6 @@ export function useTaskOperations(
             // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
             try {
                 await saveSpecificTasks([_rawTasks.value[index]], `updateTask-${taskId}`)
-                console.log(`✅ [TASK-OP] Task ${taskId} saved successfully. isInInbox: ${_rawTasks.value[index].isInInbox}`)
 
                 // Trigger canvas sync for Tauri reactivity
                 triggerCanvasSync()
@@ -212,7 +207,6 @@ export function useTaskOperations(
 
             // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
             // The watcher detects the deletion and removes only the affected node, preventing position resets
-            console.log(`✅ [DELETE] Task ${taskId} deleted from local state and storage`)
         } catch (error) {
             _rawTasks.value.splice(index, 0, deletedTask)
             console.error(`❌ [DELETE] Failed to delete task ${taskId}:`, error)
@@ -261,7 +255,6 @@ export function useTaskOperations(
 
             // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
             // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
-            console.log(`✅ [BULK-DELETE] ${taskIds.length} tasks deleted atomically`)
         } catch (error) {
             console.error(`❌ [BULK-DELETE] Failed to delete ${taskIds.length} tasks:`, error)
             throw error
@@ -402,7 +395,6 @@ export function useTaskOperations(
     }
 
     const startTaskNow = (taskId: string) => {
-        console.log('🎯 startTaskNow (operations) called for task:', taskId)
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) {
             console.warn('🎯 startTaskNow: Task not found:', taskId)
@@ -420,13 +412,10 @@ export function useTaskOperations(
             scheduledTime: `${roundedTime.getHours().toString().padStart(2, '0')}:${roundedTime.getMinutes().toString().padStart(2, '0')}`,
             duration: task.estimatedDuration || 60
         }
-        console.log('🎯 startTaskNow: Creating instance:', newInstance)
         updateTask(taskId, { instances: [newInstance], status: 'in_progress' })
-        console.log('🎯 startTaskNow: Task updated with instance')
     }
 
     const moveTaskToSmartGroup = (taskId: string, type: string) => {
-        console.log(`📅 [TASK-114] moveTaskToSmartGroup called: taskId=${taskId}, type="${type}"`)
         const today = new Date()
         let dueDate = ''
         switch (type.toLowerCase()) {
@@ -462,7 +451,6 @@ export function useTaskOperations(
                 console.warn(`⚠️ [TASK-114] Unknown smart group type: "${type}" - no update performed`)
                 return
         }
-        console.log(`📅 [TASK-114] Computed dueDate: "${dueDate}" for type "${type}"`)
         updateTask(taskId, { dueDate })
     }
 

@@ -1,10 +1,10 @@
 import { type Ref } from 'vue'
-import { type Node } from '@vue-flow/core'
+import { type Node, type GraphNode } from '@vue-flow/core'
 import { type CanvasSection, useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasParentChild } from './useCanvasParentChild'
-import { isNodeMoreThanHalfInside } from '@/utils/geometry'
-import { lockGroupPosition, lockTaskPosition } from '@/utils/canvasStateLock'
+
+import { useCanvasOptimisticSync } from './useCanvasOptimisticSync'
 
 interface GroupDragDeps {
     nodes: Ref<Node[]>
@@ -14,6 +14,7 @@ interface GroupDragDeps {
 export function useCanvasGroupDrag(deps: GroupDragDeps) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
+    const { trackLocalChange, markSynced } = useCanvasOptimisticSync()
 
     // De-couple from the main composable by importing dependencies directly or passing them in
     // For now, we reuse the shared logic
@@ -33,7 +34,7 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
 
         // Get absolute visual position using Vue Flow's computed position for accuracy
         // For root nodes, position IS absolute. For child nodes, computedPosition IS absolute.
-        const computedPos = (node as any).computedPosition
+        const computedPos = (node as GraphNode).computedPosition
         const nodePos = node.position
 
         let absoluteX: number
@@ -147,14 +148,12 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
             }
         }
 
-        // 3. Lock UI (Target Absolute Position)
+        // 3. Lock UI (Optimistic Sync)
         // We always lock the visual absolute position to prevent jitter during sync
-        lockGroupPosition(sectionId, {
+        trackLocalChange(sectionId, 'group', {
             x: absoluteX,
-            y: absoluteY,
-            width: newWidth,
-            height: newHeight
-        }, 'drag')
+            y: absoluteY
+        })
 
         // 4. Update Store
         await canvasStore.updateSectionWithUndo(sectionId, {
@@ -166,6 +165,7 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
             },
             parentGroupId: newParentGroupId
         })
+        markSynced(sectionId)
 
         // 5. Immediate Visual Update (Vue Flow Node)
         // Update the node's position and parent immediately to prevent flickering while waiting for sync
@@ -177,18 +177,20 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
             let childZIndex = 0
             if (newParentNodeId) {
                 const parentNode = deps.nodes.value.find(n => n.id === newParentNodeId)
-                const parentZInt = (parentNode?.style as any)?.zIndex
-                    ? parseInt(String((parentNode?.style as any).zIndex))
+                const parentStyle = parentNode?.style as Record<string, unknown> | undefined
+                const parentZInt = parentStyle?.zIndex
+                    ? parseInt(String(parentStyle.zIndex))
                     : 0
                 childZIndex = parentZInt + 1
             }
 
+            const currentStyle = deps.nodes.value[nodeIndex].style as Record<string, unknown> | undefined
             deps.nodes.value[nodeIndex] = {
                 ...deps.nodes.value[nodeIndex],
                 parentNode: newParentNodeId,
                 position: { x: finalStoreX, y: finalStoreY }, // Relative to new parent
                 style: {
-                    ...deps.nodes.value[nodeIndex].style as any,
+                    ...currentStyle,
                     zIndex: childZIndex
                 }
             }
@@ -235,11 +237,13 @@ export function useCanvasGroupDrag(deps: GroupDragDeps) {
                     const newAbsY = task.canvasPosition.y + deltaY
 
                     // Lock to prevent sync overwrite
-                    lockTaskPosition(taskNode.id, { x: newAbsX, y: newAbsY })
+                    trackLocalChange(taskNode.id, 'task', { x: newAbsX, y: newAbsY })
 
                     // Update store (don't await to allow parallel updates)
                     taskStore.updateTask(taskNode.id, {
                         canvasPosition: { x: newAbsX, y: newAbsY }
+                    }).then(() => {
+                        markSynced(taskNode.id)
                     }).catch(err => {
                         console.error('Silent fail task update', err)
                     })

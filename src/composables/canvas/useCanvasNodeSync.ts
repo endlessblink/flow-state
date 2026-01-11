@@ -1,11 +1,11 @@
 import { type Ref, nextTick } from 'vue'
-import { type Node } from '@vue-flow/core'
+import { type Node, type GraphNode } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { type Task } from '@/stores/tasks'
 import { useCanvasParentChild } from './useCanvasParentChild'
 import { useNodeAttachment } from './useNodeAttachment'
 import { isGroupDeleted } from '@/utils/deletedGroupsTracker'
-import { getLockedTaskPosition, isGroupPositionLocked } from '@/utils/canvasStateLock'
+import { useCanvasOptimisticSync } from './useCanvasOptimisticSync'
 
 // Minimal interface for dependencies needed by node sync
 interface NodeSyncDeps {
@@ -19,6 +19,7 @@ interface NodeSyncDeps {
 
 export function useCanvasNodeSync(deps: NodeSyncDeps) {
     const canvasStore = useCanvasStore()
+    const { getPendingPosition } = useCanvasOptimisticSync()
 
     // Instantiate useNodeAttachment once in setup context
     // This prevents 'inject() can only be used inside setup' errors during async syncNodes execution
@@ -81,10 +82,10 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                 let position = { x: section.position?.x ?? 0, y: section.position?.y ?? 0 }
                 const nodeId = `section-${section.id}`
                 const existingPos = existingSectionPositions.get(nodeId)
-                const isLocked = isGroupPositionLocked(section.id)
+                const pendingPos = getPendingPosition(section.id)
 
-                if (isLocked && existingPos) {
-                    position = { x: existingPos.x, y: existingPos.y } // Assumed Absolute or Relative depending on context? 
+                if (pendingPos && existingPos) {
+                    position = { x: pendingPos.x, y: pendingPos.y } // Use pending local position 
                     // Wait, existingPos is raw node.position. If it was parented, it's relative.
                     // If we detach, we must convert.
 
@@ -109,7 +110,7 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                                 // Simplified Fix: If we detach, try to retrieve absolute position from node if possible?
                                 // existingPos comes from n.position.
                                 // If we can access positionAbsolute from node, use that!
-                                const absPos = (existingNode as any).positionAbsolute
+                                const absPos = (existingNode as GraphNode).positionAbsolute
                                 if (absPos) {
                                     position = { x: absPos.x, y: absPos.y }
                                 }
@@ -134,7 +135,7 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                             // Child is outside parent - treat as root level
                             // Use absolute position from existing node or calculate from store
                             const existingNode = deps.nodes.value.find(n => n.id === nodeId)
-                            const absPos = (existingNode as any)?.positionAbsolute
+                            const absPos = (existingNode as GraphNode | undefined)?.positionAbsolute
                             if (absPos && Number.isFinite(absPos.x) && Number.isFinite(absPos.y)) {
                                 position = { x: absPos.x, y: absPos.y }
                             } else {
@@ -201,22 +202,22 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
             tasks.forEach(task => {
                 if (task.canvasPosition) {
                     let parentNode = undefined
-                    const lockedPosition = getLockedTaskPosition(task.id)
+                    const pendingPosition = getPendingPosition(task.id)
                     const existingPos = existingNodePositions.get(task.id)
                     const existingParent = existingNodeParents.get(task.id)
                     const taskExistsInNodes = existingNodeParents.has(task.id)
 
-                    // LOCKED TASK LOGIC (Short-circuit)
-                    if (lockedPosition && taskExistsInNodes && existingPos) {
+                    // PENDING (OPTIMISTIC) TASK LOGIC (Short-circuit)
+                    if (pendingPosition && taskExistsInNodes && existingPos) {
                         let finalParent = existingParent
                         let finalPos = { x: existingPos.x, y: existingPos.y }
 
-                        if (existingParent && lockedPosition) {
+                        if (existingParent && pendingPosition) {
                             const parentSectionId = existingParent.replace('section-', '')
                             const parentSection = sections.find(s => s.id === parentSectionId)
 
                             if (parentSection) {
-                                const taskCenter = { x: lockedPosition.x + 110, y: lockedPosition.y + 50 }
+                                const taskCenter = { x: pendingPosition.x + 110, y: pendingPosition.y + 50 }
                                 const parentAbsPos = getSectionAbsolutePosition(parentSection)
                                 const parentRect = {
                                     x: parentAbsPos.x,
@@ -234,11 +235,11 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
 
                                 if (!isInside) {
                                     finalParent = undefined
-                                    finalPos = { x: lockedPosition.x, y: lockedPosition.y }
+                                    finalPos = { x: pendingPosition.x, y: pendingPosition.y }
                                 }
                             } else {
                                 finalParent = undefined
-                                finalPos = { x: lockedPosition.x, y: lockedPosition.y }
+                                finalPos = { x: pendingPosition.x, y: pendingPosition.y }
                             }
                         }
 
@@ -258,8 +259,8 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                     }
 
                     // STANDARD TASK LOGIC
-                    let position = lockedPosition
-                        ? { x: lockedPosition.x, y: lockedPosition.y }
+                    let position = pendingPosition
+                        ? { x: pendingPosition.x, y: pendingPosition.y }
                         : { ...task.canvasPosition }
 
                     let skipContainmentCalc = false
@@ -275,7 +276,7 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
                             if (section) {
                                 const parentAbsPos = getSectionAbsolutePosition(section)
 
-                                if (existingPos && !lockedPosition) {
+                                if (existingPos && !pendingPosition) {
                                     // Use closure-scoped method
                                     const metrics = { borderLeft: 2, borderTop: 2, paddingLeft: 0, paddingTop: 0 }
                                     // Note: calculateAbsolutePosition was not extracted above.
@@ -309,7 +310,7 @@ export function useCanvasNodeSync(deps: NodeSyncDeps) {
 
                                 if (isInside) {
                                     parentNode = existingParent
-                                    if (existingPos && !lockedPosition) {
+                                    if (existingPos && !pendingPosition) {
                                         position = { x: existingPos.x, y: existingPos.y }
                                     } else {
                                         const { calculateRelativePosition, getParentMetrics } = useNodeAttachment()

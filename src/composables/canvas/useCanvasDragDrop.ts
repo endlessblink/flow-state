@@ -135,7 +135,6 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             dragStartPositions.set(node.id, { x: startX, y: startY })
         })
 
-        console.log(`[DRAG START] ${draggedNodes.length} nodes`)
     })
 
     // 5. Orchestrate Drag Stop
@@ -184,7 +183,6 @@ export function useCanvasDragDrop(deps: DragDropDeps, state: DragDropState) {
             // Settling Period
             dragSettlingTimeoutId.value = setTimeout(() => {
                 isDragSettling.value = false
-                console.log('⚓ [DRAG-STOP] Settling complete')
             }, 800) // 800ms settling time
         }
     })

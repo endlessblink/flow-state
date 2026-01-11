@@ -1,5 +1,5 @@
 import { ref, computed, nextTick } from 'vue'
-import { useVueFlow, type Node } from '@vue-flow/core'
+import { useVueFlow, type Node, type GraphNode } from '@vue-flow/core'
 
 /**
  * COMPOSABLE: Node Attachment & Coordinate Handover
@@ -106,8 +106,9 @@ export function useNodeAttachment() {
      * Use this when positionAbsolute is unreliable or missing.
      */
     function getNodeAbsolutePosition(node: Node): Coordinates {
-        if ((node as any).positionAbsolute && !Number.isNaN((node as any).positionAbsolute.x)) {
-            return (node as any).positionAbsolute
+        const graphNode = node as GraphNode
+        if (graphNode.positionAbsolute && !Number.isNaN(graphNode.positionAbsolute.x)) {
+            return graphNode.positionAbsolute
         }
         let x = node.position.x
         let y = node.position.y
@@ -116,8 +117,18 @@ export function useNodeAttachment() {
         while (parentId && safety < 100) {
             const parent = getNode.value(parentId)
             if (!parent) break
+
+            // Add parent position
             x += parent.position.x
             y += parent.position.y
+
+            // FIX: Add parent border metrics to correctly calculate absolute world space
+            const metrics = getParentMetrics(parentId)
+            if (metrics) {
+                x += metrics.borderLeft
+                y += metrics.borderTop
+            }
+
             parentId = parent.parentNode
             safety++
         }
@@ -168,11 +179,9 @@ export function useNodeAttachment() {
             const relativePos = calculateRelativePosition(childAbsPos, parentAbsPos, metrics)
 
             // 5. Apply Atomic Update
-            console.log(`[useNodeAttachment] Attaching ${nodeId} to ${parentId}`, {
-                childAbs: childAbsPos,
-                parentAbs: parentAbsPos,
-                relativeResult: relativePos
-            })
+            // childAbs: childAbsPos,
+            // parentAbs: parentAbsPos,
+            // relativeResult: relativePos
 
             childNode.position = relativePos
             childNode.parentNode = parentId
@@ -223,10 +232,8 @@ export function useNodeAttachment() {
             const absPos = explicitPosition || getNodeAbsolutePosition(node)
 
             // 2. Apply Update
-            console.log(`[useNodeAttachment] Detaching ${nodeId} from ${node.parentNode}`, {
-                absPos,
-                usingExplicit: !!explicitPosition
-            })
+            // absPos,
+            // usingExplicit: !!explicitPosition
 
             node.position = absPos
             node.parentNode = undefined

@@ -1,6 +1,6 @@
+import { type Ref, unref } from 'vue'
 import { type Node } from '@vue-flow/core'
-import { getAbsoluteNodePosition } from '@/utils/canvasGraph'
-import { isNodeMoreThanHalfInside, isPointInRect } from '@/utils/geometry'
+import { isRectMoreThanHalfInside, isPointInRect, getGroupAbsolutePosition } from '@/utils/canvas/positionCalculator'
 import type { CanvasSection } from '@/stores/canvas'
 
 /**
@@ -13,8 +13,8 @@ import type { CanvasSection } from '@/stores/canvas'
  */
 
 export function useCanvasParentChild(
-    nodes: any, // Reactive ref<Node[]>
-    sections: any // Reactive ref<CanvasSection[]>
+    nodes: any,
+    sections: any
 ) {
 
     // --- Containment Logic ---
@@ -23,30 +23,10 @@ export function useCanvasParentChild(
      * Calculates the absolute position of a section by traversing its parent chain.
      * Uses the store's section data (CanvasSection) rather than Vue Flow nodes to ensure specific accuracy during sync.
      */
-    const getSectionAbsolutePosition = (sect: CanvasSection): { x: number, y: number } => {
-        let x = sect.position?.x ?? 0
-        let y = sect.position?.y ?? 0
-        let currentParentId = sect.parentGroupId
-
-        // Walk up the parent chain, accumulating offsets
-        // Safety depth limit to prevent infinite loops
-        let depth = 0
-        while (currentParentId && currentParentId !== 'NONE' && depth < 50) {
-            // Find parent in the provided sections list (source of truth)
-            // @ts-ignore - sections is a Ref but we treat it as array in loop if unwrapped, or using .value if ref
-            const list = Array.isArray(sections) ? sections : (sections.value || [])
-            const parent = list.find((s: CanvasSection) => s.id === currentParentId)
-
-            if (parent) {
-                x += parent.position?.x ?? 0
-                y += parent.position?.y ?? 0
-                currentParentId = parent.parentGroupId
-                depth++
-            } else {
-                break // Parent not found
-            }
-        }
-        return { x, y }
+    // REPLACED by imported getGroupAbsolutePosition
+    const getGroupAbsolutePositionHelper = (sect: CanvasSection): { x: number, y: number } => {
+        const list = unref(sections)
+        return getGroupAbsolutePosition(sect.id, list)
     }
 
     /**
@@ -59,8 +39,7 @@ export function useCanvasParentChild(
     ): CanvasSection[] => {
         const potentialParents: CanvasSection[] = []
 
-        // @ts-ignore
-        const list = Array.isArray(sections) ? sections : (sections.value || [])
+        const list = Array.isArray(sections) ? sections : (unref(sections) || [])
 
         list.forEach((section: CanvasSection) => {
             if (section.id === excludeId) return
@@ -69,7 +48,7 @@ export function useCanvasParentChild(
             if (section.parentGroupId === excludeId) return
 
             // Calculate Section Absolute Rect
-            const absPos = getSectionAbsolutePosition(section)
+            const absPos = getGroupAbsolutePositionHelper(section)
             const sectionRect = {
                 x: absPos.x,
                 y: absPos.y,
@@ -78,11 +57,8 @@ export function useCanvasParentChild(
             }
 
             // Use robust check (>50% inside)
-            const isInside = isNodeMoreThanHalfInside(
-                nodeRect.x,
-                nodeRect.y,
-                nodeRect.width,
-                nodeRect.height,
+            const isInside = isRectMoreThanHalfInside(
+                nodeRect,
                 sectionRect
             )
 
@@ -126,8 +102,7 @@ export function useCanvasParentChild(
         taskCenter: { x: number, y: number },
         excludeId?: string
     ): CanvasSection | null => {
-        // @ts-ignore
-        const list = Array.isArray(sections) ? sections : (sections.value || [])
+        const list = Array.isArray(sections) ? sections : (unref(sections) || [])
 
         const validContainers: CanvasSection[] = []
 
@@ -136,7 +111,7 @@ export function useCanvasParentChild(
             if (section.isVisible === false) return
             // Avoid using sections that are collapsed? (Optional: current behavior usually allows dropping into collapsed)
 
-            const absPos = getSectionAbsolutePosition(section)
+            const absPos = getGroupAbsolutePositionHelper(section)
             const rect = {
                 x: absPos.x,
                 y: absPos.y,
@@ -164,8 +139,8 @@ export function useCanvasParentChild(
      * Used during sync to detect when a child has been dragged out.
      */
     const isActuallyInsideParent = (childSection: CanvasSection, parentSection: CanvasSection): boolean => {
-        const childAbs = getSectionAbsolutePosition(childSection)
-        const parentAbs = getSectionAbsolutePosition(parentSection)
+        const childAbs = getGroupAbsolutePositionHelper(childSection)
+        const parentAbs = getGroupAbsolutePositionHelper(parentSection)
 
         const childWidth = childSection.position?.width ?? 300
         const childHeight = childSection.position?.height ?? 200
@@ -211,7 +186,7 @@ export function useCanvasParentChild(
 
     return {
         // Methods
-        getSectionAbsolutePosition,
+        getSectionAbsolutePosition: getGroupAbsolutePositionHelper,
         findSmallestContainingSection,
         findSectionForTask,
         findAllContainingSections,

@@ -16,6 +16,7 @@ import { useCanvasEvents } from './useCanvasEvents'
 import { useCanvasHotkeys } from './useCanvasHotkeys'
 import { useCanvasDragDrop } from './useCanvasDragDrop'
 import { useCanvasActions } from './useCanvasActions'
+import { useCanvasOverdueCollector } from './useCanvasOverdueCollector'
 import { useCanvasModals } from './useCanvasModals'
 import { useCanvasFilteredState } from './useCanvasFilteredState'
 import { useCanvasLifecycle } from './useCanvasLifecycle'
@@ -24,16 +25,14 @@ import { useCanvasNavigation } from './useCanvasNavigation'
 import { useCanvasZoom } from './useCanvasZoom'
 import { useCanvasSelection } from './useCanvasSelection'
 import { useCanvasAlignment } from './useCanvasAlignment'
-import { useCanvasSmartGroups } from './useCanvasSmartGroups'
 import { useCanvasConnections } from './useCanvasConnections'
 
 // Helper for error boundaries
-const mockErrorBoundary = (_name: string, fn: Function) => {
-    if (typeof fn !== 'function') return (...args: any[]) => {
-        console.warn(`[CanvasError] Attempted to call non-function "${_name}"`, { args })
+const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) => {
+    if (typeof fn !== 'function') return (...args: unknown[]) => {
         return null
     }
-    return (...args: any[]) => {
+    return (...args: unknown[]) => {
         try {
             return fn(...args)
         } catch (e) {
@@ -162,7 +161,7 @@ export function useCanvasOrchestrator() {
         closeEdgeContextMenu: events.closeEdgeContextMenu,
         closeNodeContextMenu: events.closeNodeContextMenu,
         recentlyDeletedGroups
-    }, {}, getUndoSystem())
+    }, modals, getUndoSystem()) // Pass 'modals' as the state argument (Fixes disconnected state)
 
     // Drag Drop (Actual Logic)
     const dragDrop = useCanvasDragDrop({
@@ -208,7 +207,21 @@ export function useCanvasOrchestrator() {
     })
 
     // Smart Groups
-    const smartGroups = useCanvasSmartGroups()
+    const smartGroups = useCanvasOverdueCollector()
+
+    // Events Wrapper
+    const handleCanvasContainerClick = (e: MouseEvent) => {
+        selection.clearSelection()
+        events.closeCanvasContextMenu()
+        events.closeEdgeContextMenu()
+        events.closeNodeContextMenu()
+    }
+
+    const collectTasksForSection = (sectionId: string) => {
+        // Delegate to specific collectors based on section type or ID
+        // For now, we only have Overdue collector
+        smartGroups.autoCollectOverdueTasks()
+    }
 
     // Connections
     const connections = useCanvasConnections({
@@ -216,7 +229,6 @@ export function useCanvasOrchestrator() {
         closeCanvasContextMenu: events.closeCanvasContextMenu,
         closeEdgeContextMenu: events.closeEdgeContextMenu,
         closeNodeContextMenu: events.closeNodeContextMenu,
-        addTimer: (id: number) => resourceManager.addTimer(id),
         withVueFlowErrorBoundary: mockErrorBoundary
     }, {
         isConnecting: ref(false),
@@ -288,6 +300,7 @@ export function useCanvasOrchestrator() {
 
         // UI
         viewport,
+        initialViewport,
         hasInitialFit,
         shift,
         vueFlowRef,
@@ -302,12 +315,23 @@ export function useCanvasOrchestrator() {
         // Actions & Handlers
         ...actions,
         ...modals,
+        // Aliases for mismatched View names (Fixes compilation errors)
+        closeSectionSettingsModal: actions.closeGroupEditModal,
+        handleSectionSettingsSave: actions.handleGroupEditSave,
+
         ...events,
+
+        // Selection Handlers
+        handleMouseDown: selection.startSelection,
+        handleMouseMove: selection.updateSelection,
+        handleMouseUp: selection.endSelection,
+        handleCanvasContainerClick,
 
         // New feature re-exports
         ...selection,
         ...alignment,
         ...smartGroups,
+        collectTasksForSection, // Add explicit export
         ...connections,
 
         handleNodeDragStart: dragDrop.handleNodeDragStart,
@@ -318,29 +342,25 @@ export function useCanvasOrchestrator() {
         handleSectionResize,
         handleSectionResizeEnd,
 
-        onPaneReady: (params: any) => {
+        onPaneReady: () => {
             isVueFlowReady.value = true
             isVueFlowMounted.value = true
             setOperationLoading('loading', false)
             setOperationLoading('syncing', false)
-            // REMOVED: onPaneReady(params) - This was registering params as a listener!
         },
         fitCanvas,
         zoomToSelection,
         retryFailedOperation,
 
         // Vue Flow Handlers (Wrappers to prevent register-as-handler traps)
-        handleNodesChange: (changes: any) => {
+        handleNodesChange: (_changes: unknown) => {
             // Vue Flow handles nodes via v-model or internal state.
-            // We use this mostly for debugging or local sync hooks if needed.
             if (isHandlingNodeChange.value) return
-            // onNodesChange(changes) - DO NOT CALL! This is a register function.
         },
-        handleEdgesChange: (changes: any) => {
-            // onEdgesChange(changes) - DO NOT CALL! This is a register function.
+        handleEdgesChange: (_changes: unknown) => {
+            // Registration-safe wrapper
         },
-        handleConnect: (params: any) => {
-            // onConnect(params) - DO NOT CALL! This is a register function.
+        handleConnect: (params: import('@vue-flow/core').Connection) => {
             // Delegate to the actual connection logic from useCanvasConnections
             connections.handleConnect(params)
         },

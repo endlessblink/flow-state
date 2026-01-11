@@ -34,7 +34,7 @@
       :x="contextMenuX"
       :y="contextMenuY"
       :task="contextMenuTask"
-      :compact-mode="uiStore.boardDensity === 'ultrathin'"
+      :compact-mode="settingsStore.boardDensity === 'ultrathin'"
       @close="closeTaskContextMenu"
       @edit="(taskId: string) => {
         const task = taskStore.tasks.find(t => t.id === taskId)
@@ -116,8 +116,11 @@ import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import SectionSelectionModal from '@/components/canvas/SectionSelectionModal.vue'
 const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
+import { useSettingsStore } from '@/stores/settings'
+
 // Stores
 const uiStore = useUIStore()
+const settingsStore = useSettingsStore()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const canvasStore = useCanvasStore()

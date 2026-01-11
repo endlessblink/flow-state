@@ -36,9 +36,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
     // --- Actions ---
 
-    const createTaskHere = (screenPos: { x: number; y: number }) => {
+    const createTaskHere = (screenPos?: { x: number; y: number }) => {
         const functionName = 'createTaskHere'
-        console.log(`🔧 ${functionName} called at screen coords: x=${screenPos.x}, y=${screenPos.y}`)
 
         try {
             const vueFlowElement = document.querySelector('.vue-flow')
@@ -46,8 +45,16 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 throw new Error('Vue Flow DOM element (.vue-flow) not found')
             }
 
-            const flowCoords = deps.screenToFlowCoordinate(screenPos)
-            console.log(`📐 ${functionName}: Projected position:`, flowCoords)
+            let finalPos = screenPos
+            if (!finalPos) {
+                const rect = vueFlowElement.getBoundingClientRect()
+                finalPos = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                }
+            }
+
+            const flowCoords = deps.screenToFlowCoordinate(finalPos)
 
             if (!Number.isFinite(flowCoords.x) || !Number.isFinite(flowCoords.y)) {
                 throw new Error(`Invalid calculated coordinates: x=${flowCoords.x}, y=${flowCoords.y}`)
@@ -63,9 +70,23 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         }
     }
 
+    const createTaskInGroup = (groupId: string) => {
+        const group = canvasStore.groups.find(g => g.id === groupId)
+        if (!group) return
+
+        // Calculate center of group for new task
+        const groupCenter = {
+            x: group.position.x + (group.position.width / 2) - 100, // Approx half task width
+            y: group.position.y + (group.position.height / 2) - 40 // Approx half task height
+        }
+
+        quickTaskPosition.value = groupCenter
+        deps.closeCanvasContextMenu()
+        isQuickTaskCreateOpen.value = true
+    }
+
     const handleQuickTaskCreate = async (title: string, description: string) => {
         const functionName = 'handleQuickTaskCreate'
-        console.log(`📍 ${functionName}: Creating task "${title}" at`, quickTaskPosition.value)
 
         try {
             if (!title?.trim()) throw new Error('Task title is required')
@@ -122,8 +143,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 // Using passed undoHistory instance
                 await undoHistory.updateTaskWithUndo(nodeId, {
                     isInInbox: true,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    canvasPosition: null as any
+                    canvasPosition: undefined
                 })
             } catch (e) {
                 console.error(`Failed to move task ${nodeId}:`, e)
@@ -191,8 +211,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             } else {
                 // Soft delete (to inbox)
                 await undoHistory.updateTaskWithUndo(item.id, {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    canvasPosition: null as any,
+                    canvasPosition: undefined,
                     isInInbox: true,
                     instances: [],
                     scheduledDate: undefined,
@@ -224,6 +243,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         // Actions
         createTaskHere,
+        createTaskInGroup,
         handleQuickTaskCreate,
         closeQuickTaskCreate,
         moveSelectedTasksToInbox,

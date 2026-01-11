@@ -173,7 +173,6 @@ export function useCanvasOverdueCollector() {
         }
 
         if (updatedCount > 0) {
-            console.log(`🧹 [OverdueCollector] Moved ${updatedCount} overdue tasks to Overdue group`)
         }
     }
 
@@ -189,7 +188,6 @@ export function useCanvasOverdueCollector() {
         // This was causing groups to reappear after deletion because the function
         // ran on every app startup and recreated them if they didn't exist.
         // Users should manually create groups via the canvas context menu.
-        console.log(`[OverdueCollector] ensureActionGroups DISABLED - users create groups manually`)
         return
 
         // --- DISABLED CODE BELOW ---
@@ -220,7 +218,6 @@ export function useCanvasOverdueCollector() {
 
         // Ensure Friday Group
         // if (!findGroup(FRIDAY_GROUP_NAME, 'smart_friday')) {
-        //     console.log(`[OverdueCollector] Creating missing Friday group (Checked ${allGroups.length} groups)`)
         //     await canvasStore.createSection({
         //         name: FRIDAY_GROUP_NAME,
         //         type: 'custom',
@@ -231,12 +228,10 @@ export function useCanvasOverdueCollector() {
         //         isVisible: true
         //     })
         // } else {
-        //     console.log(`[OverdueCollector] Found existing Friday group`)
         // }
 
         // Ensure Saturday Group
         // if (!findGroup(SATURDAY_GROUP_NAME, 'smart_saturday')) {
-        //     console.log(`[OverdueCollector] Creating missing Saturday group`)
         //     await canvasStore.createSection({
         //         name: SATURDAY_GROUP_NAME,
         //         type: 'custom',

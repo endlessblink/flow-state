@@ -7,22 +7,24 @@ import { NodeUpdateBatcher } from '@/utils/canvas/NodeUpdateBatcher'
 import { useCanvasEdgeSync } from './useCanvasEdgeSync'
 import { useCanvasNodeSync } from './useCanvasNodeSync'
 
+import { type Task } from '@/stores/tasks'
+
 interface SyncDependencies {
     nodes: Ref<Node[]>
     edges: Ref<Edge[]>
-    filteredTasks: Ref<any[]> // Typed as any[] to match Task[] efficiently for now or explicit Task[]
+    filteredTasks: Ref<Task[]>
     recentlyRemovedEdges: Ref<Set<string>>
     recentlyDeletedGroups: Ref<Set<string>>
-    vueFlowRef: Ref<any>
+    vueFlowRef: Ref<null | HTMLElement>
     isHandlingNodeChange: Ref<boolean>
     isSyncing: Ref<boolean>
     isNodeDragging: Ref<boolean>
     isDragSettlingRef: Ref<boolean>
     resizeState: Ref<{ isResizing: boolean }>
     isResizeSettling: Ref<boolean>
-    resourceManager: any
+    resourceManager: { setNodeBatcher: (batcher: NodeUpdateBatcher | null) => void }
     // validateStores removed (handled logic internally or skipped)
-    setOperationLoading: (op: string, loading: boolean) => void
+    setOperationLoading: (op: 'loading' | 'syncing', loading: boolean) => void
     setOperationError: (type: string, message: string, retryable?: boolean) => void
     clearOperationError: () => void
 }
@@ -48,7 +50,7 @@ export function useCanvasSync(deps: SyncDependencies) {
     })
 
     // Optimized sync functions using the batching system
-    const _nodeUpdateBatcher: NodeUpdateBatcher | null = new NodeUpdateBatcher(deps.vueFlowRef)
+    const _nodeUpdateBatcher: NodeUpdateBatcher | null = new NodeUpdateBatcher(deps.vueFlowRef as any)
     deps.resourceManager.setNodeBatcher(_nodeUpdateBatcher)
 
     const batchedSyncNodes = (priority: 'high' | 'normal' | 'low' = 'normal') => {
@@ -82,7 +84,6 @@ export function useCanvasSync(deps: SyncDependencies) {
 
     // System restart mechanism
     const performSystemRestart = async () => {
-        console.log('🔄 [SYSTEM] Performing critical system restart...')
         deps.setOperationLoading('loading', true)
         deps.setOperationError('System Restart', 'Restarting application...', false)
 
@@ -106,10 +107,9 @@ export function useCanvasSync(deps: SyncDependencies) {
             edgeSync.syncEdges()
 
             deps.setOperationLoading('loading', false)
-            console.log('✅ [SYSTEM] System restart completed successfully')
 
-            if ((window as any).__notificationApi) {
-                (window as any).__notificationApi({
+            if (window.__notificationApi) {
+                window.__notificationApi({
                     type: 'success',
                     title: 'System Restarted',
                     content: 'Application has been successfully restarted.'

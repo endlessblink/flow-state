@@ -110,13 +110,11 @@
             @pane-ready="onPaneReady"
             @node-drag-start="handleNodeDragStart"
             @node-drag-stop="handleNodeDragStop"
-            @node-drag="handleNodeDrag"
             @nodes-change="handleNodesChange"
             @selection-change="handleSelectionChange"
             @pane-click="handlePaneClick"
             @pane-context-menu="handlePaneContextMenu"
             @node-context-menu="handleNodeContextMenu"
-            @edge-click="handleEdgeClick"
             @edge-context-menu="handleEdgeContextMenu"
             @connect="handleConnect"
             @keydown="handleKeyDown"
@@ -136,7 +134,7 @@
                 :data="nodeProps.data"
                 :selected="nodeProps.selected"
                 :dragging="nodeProps.dragging"
-                @update="handleSectionUpdate"
+                @update="(data) => handleSectionUpdate(nodeProps.id, data)"
                 @collect="collectTasksForSection"
                 @context-menu="handleSectionContextMenu"
                 @open-settings="handleOpenSectionSettings"
@@ -216,7 +214,7 @@
       @arrange-in-grid="arrangeInGrid"
       @create-task-in-group="createTaskInGroup"
       @open-group-settings="handleOpenSectionSettingsFromContext"
-      @toggle-power-mode="handleTogglePowerMode"
+      @toggle-power-mode="handleToggleFocusMode"
       @collect-tasks="handleCollectTasksFromMenu"
       @disconnect-edge="disconnectEdge"
       @delete-node="deleteNode"
@@ -251,7 +249,7 @@ import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import { useCanvasSelection } from '../composables/canvas/useCanvasSelection'
 import { useCanvasAlignment } from '../composables/canvas/useCanvasAlignment'
-import { useCanvasSmartGroups } from '../composables/canvas/useCanvasSmartGroups'
+import { useCanvasOverdueCollector } from '../composables/canvas/useCanvasOverdueCollector'
 import { useCanvasConnections } from '../composables/canvas/useCanvasConnections'
 
 const taskStore = useTaskStore()
@@ -259,7 +257,8 @@ const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
 
 // Register custom node types
-const nodeTypes = {
+// Register custom node types
+const nodeTypes: Record<string, any> = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }
@@ -292,10 +291,10 @@ const {
   handleNodeContextMenu, handleEdgeContextMenu,
   
   // From consolidated features
-  selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick,
+  selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical, 
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, handleCollectTasksFromMenu, disconnectEdge
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge
 } = orchestrator
 
 // Aliases for template compatibility
@@ -315,32 +314,29 @@ const handleOpenSectionSettings = (id: string) => {
 const handleOpenSectionSettingsFromContext = () => {
     if (canvasContextSection.value) handleOpenSectionSettings(canvasContextSection.value.id)
 }
-const handleTogglePowerMode = () => uiStore.togglePowerMode()
+const handleToggleFocusMode = () => uiStore.toggleFocusMode()
 const handleSectionUpdate = (id: string, data: any) => canvasStore.updateSection(id, data)
 const handleEditTask = (task: any) => { selectedTask.value = task; isEditModalOpen.value = true; closeCanvasContextMenu() }
-const handleTaskSelect = (taskId: string, multi: boolean) => {
-    if (multi) canvasStore.toggleNodeSelection(taskId)
-    else canvasStore.setSelectedNodes([taskId])
-}
 const handleTaskContextMenu = (event: MouseEvent, task: any) => {
-    // Bridges TaskNode emission to Orchestrator context menu
     if (event) event.preventDefault()
-    // Manual trigger since TaskNode emits task object not Node
-    const node = nodes.value.find(n => n.id === task.id)
-    if (node) orchestrator.handleNodeContextMenu({ node, event })
+    // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
+    window.dispatchEvent(new CustomEvent('task-context-menu', {
+        detail: { event, task }
+    }))
 }
 
 const handleSectionContextMenu = (event: MouseEvent, section: any) => {
     if (event) event.preventDefault()
-    const node = nodes.value.find(n => n.id === `section-${section.id}`)
-    if (node) orchestrator.handleNodeContextMenu({ node, event })
+    // Open Canvas Context Menu with section context
+    // We need to pass the raw section object, relying on orchestrator/store
+    canvasStore.updateSection(section.id, { ...section }) // Ensure store is fresh?
+    
+    // Position menu
+    canvasContextMenuX.value = event.clientX
+    canvasContextMenuY.value = event.clientY
+    canvasContextSection.value = section
+    showCanvasContextMenu.value = true
 }
-
-const handleEdgeClick = (e: EdgeMouseEvent) => {
-    // Handle edge selection or context menu
-}
-
-const handleNodeDrag = () => {}
 </script>
 
 <style scoped src="@/assets/canvas-view-layout.css"></style>

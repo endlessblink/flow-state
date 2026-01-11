@@ -63,3 +63,5 @@ playwright-report/data/
 docs/.debug/
 .debug-images
 src-tauri/*.zip
+stats.html
+dev-dist/

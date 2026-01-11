@@ -1,8 +1,7 @@
 import { ref, nextTick, computed } from 'vue'
-import { useVueFlow, type Node } from '@vue-flow/core'
+import { useVueFlow, type Node, type Edge } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
-import { isAnyCanvasStateLocked } from '@/utils/canvasStateLock'
 import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
 
@@ -181,20 +180,72 @@ export function useCanvasEvents(syncNodes?: () => void) {
         }
     }
 
-    const handleNodeContextMenu = (event: { event: MouseEvent; node: Node } | MouseEvent) => {
-        const mouseEvent = ((event as any).event || event) as MouseEvent
+    const handleNodeContextMenu = (event: { event: MouseEvent | TouchEvent; node: Node } | MouseEvent | TouchEvent) => {
+        let mouseEvent: MouseEvent | TouchEvent
+        let node: Node | undefined
+
+        if (event && 'event' in event && 'node' in event) {
+            mouseEvent = event.event
+            node = event.node
+        } else {
+            mouseEvent = event as MouseEvent | TouchEvent
+        }
+
+        if (!node) return
+
+        // Use clientX/Y from MouseEvent or TouchEvent (first touch)
+        const clientX = 'clientX' in mouseEvent ? mouseEvent.clientX : (mouseEvent as TouchEvent).touches[0].clientX
+        const clientY = 'clientY' in mouseEvent ? mouseEvent.clientY : (mouseEvent as TouchEvent).touches[0].clientY
+
         mouseEvent.preventDefault()
-        const node = (event as any).node || event
-        if (!node?.id) return
-        openNodeContextMenu(mouseEvent.clientX, mouseEvent.clientY, node.id)
+
+        // --- ROUTE TO CORRECT MENU ---
+        if (node.type === 'taskNode') {
+            // Bridge to TaskContextMenu (managed by ModalManager)
+            window.dispatchEvent(new CustomEvent('task-context-menu', {
+                detail: {
+                    event: mouseEvent,
+                    task: node.data?.task || { id: node.id }
+                }
+            }))
+            closeAllContextMenus()
+        } else if (node.type === 'sectionNode') {
+            // Bridge to CanvasContextMenu with Section context
+            const sectionId = node.id.replace('section-', '')
+            const section = canvasStore.groups.find(s => s.id === sectionId)
+
+            canvasContextMenuX.value = clientX
+            canvasContextMenuY.value = clientY
+            canvasContextSection.value = section || null
+            showCanvasContextMenu.value = true
+
+            // Close other internal menus
+            showNodeContextMenu.value = false
+            showEdgeContextMenu.value = false
+        } else {
+            // Default generic node menu (for any other custom types)
+            openNodeContextMenu(clientX, clientY, node.id)
+        }
     }
 
-    const handleEdgeContextMenu = (event: { event: MouseEvent; edge: any } | MouseEvent) => {
-        const mouseEvent = ((event as any).event || event) as MouseEvent
+    const handleEdgeContextMenu = (event: { event: MouseEvent | TouchEvent; edge: Edge } | MouseEvent | TouchEvent) => {
+        let mouseEvent: MouseEvent | TouchEvent
+        let edgeId: string | undefined
+
+        if ('event' in event && 'edge' in event) {
+            mouseEvent = event.event
+            edgeId = event.edge.id
+        } else {
+            mouseEvent = event as MouseEvent | TouchEvent
+        }
+
+        const clientX = 'clientX' in mouseEvent ? mouseEvent.clientX : (mouseEvent as TouchEvent).touches[0].clientX
+        const clientY = 'clientY' in mouseEvent ? mouseEvent.clientY : (mouseEvent as TouchEvent).touches[0].clientY
+
         mouseEvent.preventDefault()
-        const edge = (event as any).edge || event
-        if (!edge?.id) return
-        openEdgeContextMenu(mouseEvent.clientX, mouseEvent.clientY, edge.id)
+        if (edgeId) {
+            openEdgeContextMenu(clientX, clientY, edgeId)
+        }
     }
 
     return {

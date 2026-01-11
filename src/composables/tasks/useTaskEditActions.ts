@@ -1,7 +1,7 @@
 import { type Ref } from 'vue'
 import { type Task, type Subtask, useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
-import { lockTaskPosition } from '@/utils/canvasStateLock'
+import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
 
 // Helper for cleaning task instances (from existing code)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +18,7 @@ export function useTaskEditActions(
 ) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const { trackLocalChange } = useCanvasOptimisticSync()
 
     // --- Subtask Management ---
 
@@ -48,7 +49,7 @@ export function useTaskEditActions(
         // TASK-089 FIX: Lock position BEFORE any store updates
         const canvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
         if (canvasPosition) {
-            lockTaskPosition(editedTask.value.id, canvasPosition, 'manual')
+            trackLocalChange(editedTask.value.id, 'task', canvasPosition)
         }
 
         // Update subtask in store
@@ -178,7 +179,7 @@ export function useTaskEditActions(
 
             // Lock position before update
             if (originalCanvasPosition) {
-                lockTaskPosition(editedTask.value.id, originalCanvasPosition, 'manual')
+                trackLocalChange(editedTask.value.id, 'task', originalCanvasPosition)
             }
 
             // Update main task

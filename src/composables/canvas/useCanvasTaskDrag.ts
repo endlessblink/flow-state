@@ -4,9 +4,8 @@ import { type Task, useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasParentChild } from './useCanvasParentChild'
 import { useNodeAttachment } from './useNodeAttachment'
-import { getTaskCenter } from '@/utils/geometry'
-import { lockTaskPosition } from '@/utils/canvasStateLock'
-import { getAbsoluteNodePosition } from '@/utils/canvasGraph'
+import { getTaskCenter, getAbsoluteNodePosition } from '@/utils/canvas/positionCalculator'
+import { useCanvasOptimisticSync } from './useCanvasOptimisticSync'
 
 interface TaskDragDeps {
     nodes: Ref<Node[]>
@@ -22,6 +21,7 @@ interface TaskDragDeps {
 export function useCanvasTaskDrag(deps: TaskDragDeps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const { trackLocalChange, markSynced } = useCanvasOptimisticSync()
 
     // Use centralized parent-child logic
     const { findSectionForTask, getSectionAbsolutePosition } = useCanvasParentChild(
@@ -30,7 +30,7 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
     )
 
     // Use atomic attachment logic
-    const { attachNodeToParent, detachNodeFromParent } = useNodeAttachment()
+    const { attachNodeToParent, detachNodeFromParent, getParentMetrics } = useNodeAttachment()
 
     // --- Helper: Get Containment ---
     const getContainingSection = (x: number, y: number, w: number = 220, h: number = 100) => {
@@ -67,19 +67,23 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
             const section = canvasStore.groups.find(s => s.id === sectionId)
             if (section) {
                 const parentAbsPos = getSectionAbsolutePosition(section)
-                absoluteX = parentAbsPos.x + targetX
-                absoluteY = parentAbsPos.y + targetY
+                // FIX: Account for parent border metrics
+                const metrics = getParentMetrics(node.parentNode) || { borderLeft: 0, borderTop: 0, paddingLeft: 0, paddingTop: 0 }
+
+                absoluteX = parentAbsPos.x + targetX + metrics.borderLeft
+                absoluteY = parentAbsPos.y + targetY + metrics.borderTop
             }
         }
 
-        // 1. Lock UI (Absolute)
-        lockTaskPosition(node.id, { x: absoluteX, y: absoluteY })
+        // 1. Lock UI (Optimistic)
+        trackLocalChange(node.id, 'task', { x: absoluteX, y: absoluteY })
 
         // 2. Update Store (Absolute)
         try {
             await taskStore.updateTask(node.id, {
                 canvasPosition: { x: absoluteX, y: absoluteY }
             })
+            markSynced(node.id)
         } catch (err) {
             console.error(`[TASK-DRAG] Failed to save position for task ${node.id}:`, err)
         }
@@ -92,7 +96,7 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
             try {
                 deps.applyAllNestedSectionProperties(node.id, absoluteX, absoluteY)
             } catch (err) {
-                console.error('Failed to apply nested properties:', err)
+                // Silently fail as this is additive 
             }
         }
 
@@ -135,10 +139,25 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
         const affectedGroupIds = new Set<string>()
 
         for (const taskNode of taskNodes) {
-            // Get Absolute Position
-            const absolutePos = getAbsoluteNodePosition(taskNode.id, deps.nodes.value)
-            const absoluteX = absolutePos.x
-            const absoluteY = absolutePos.y
+            // Get Absolute Position - Manual Calculation to include metrics
+            let absoluteX = taskNode.position.x
+            let absoluteY = taskNode.position.y
+
+            if (taskNode.parentNode) {
+                const sectionId = taskNode.parentNode.replace('section-', '')
+                const section = canvasStore.groups.find(s => s.id === sectionId)
+                if (section) {
+                    const parentAbsPos = getSectionAbsolutePosition(section)
+                    const metrics = getParentMetrics(taskNode.parentNode) || { borderLeft: 0, borderTop: 0, paddingLeft: 0, paddingTop: 0 }
+                    absoluteX = parentAbsPos.x + taskNode.position.x + metrics.borderLeft
+                    absoluteY = parentAbsPos.y + taskNode.position.y + metrics.borderTop
+                } else {
+                    // Fallback to graph traversal if store info missing (shouldn't happen)
+                    const absPos = getAbsoluteNodePosition(taskNode.id, deps.nodes.value)
+                    absoluteX = absPos.x
+                    absoluteY = absPos.y
+                }
+            }
 
             const containingSection = getContainingSection(absoluteX, absoluteY)
             const newParentNodeId = containingSection ? `section-${containingSection.id}` : undefined
@@ -165,11 +184,12 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
                 }
             }
 
-            lockTaskPosition(taskNode.id, { x: absoluteX, y: absoluteY })
+            trackLocalChange(taskNode.id, 'task', { x: absoluteX, y: absoluteY })
             try {
                 await taskStore.updateTask(taskNode.id, {
                     canvasPosition: { x: absoluteX, y: absoluteY }
                 })
+                markSynced(taskNode.id)
             } catch (err) {
                 console.error(`Failed to update task ${taskNode.id}`, err)
             }
@@ -182,7 +202,7 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
             canvasStore.setSelectedNodes(selectedIdsBeforeDrag)
             deps.nodes.value.forEach(n => {
                 if (selectedIdsBeforeDrag.includes(n.id)) {
-                    (n as any).selected = true
+                    n.selected = true
                 }
             })
         }

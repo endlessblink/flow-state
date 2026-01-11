@@ -126,7 +126,6 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         }
 
         if (Object.keys(mergedUpdates).length > 0) {
-            // console.log(`🎯 [NESTED-GROUPS] Applying properties from ${appliedSections.length} sections:`, {
             //     sections: appliedSections,
             //     mergedUpdates
             // })
@@ -137,7 +136,6 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
     // Helper: Apply section properties to task (single section - legacy)
     const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
         const updates: Partial<Task> = {}
-        // console.log(`🎯 [TASK-114] applySectionPropertiesToTask called for task ${taskId} → section "${section.name}"`)
 
         // 0. DAY-OF-WEEK GROUPS (Monday-Sunday)
         // TASK-130: Support all days of the week, not just Friday/Saturday
@@ -162,7 +160,6 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             updates.dueDate = formatDateKey(resultDate)
 
             if (Object.keys(updates).length > 0) {
-                // console.log(`📅 [DayGroup] Assigning ${lowerName} date: ${updates.dueDate} (${daysUntilTarget} days from now)`)
                 taskStore.updateTaskWithUndo(taskId, updates)
                 return
             }
@@ -170,7 +167,6 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
 
         // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
         if (section.assignOnDrop) {
-            // console.log(`🎯 [TASK-114] Path 1: Using assignOnDrop settings:`, section.assignOnDrop)
             const settings = section.assignOnDrop
 
             if (settings.priority) {
@@ -198,13 +194,10 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
 
         // 2. AUTO-DETECT: If no assignOnDrop settings, try keyword detection on section name
         const keyword = detectPowerKeyword(section.name)
-        // console.log(`🎯 [TASK-114] Path 2: detectPowerKeyword("${section.name}") =`, keyword)
         if (keyword) {
-            // console.log(`🎯 [TASK-114] Detected keyword:`, keyword)
 
             switch (keyword.category) {
                 case 'date':
-                    // console.log(`🎯 [TASK-114] Calling moveTaskToSmartGroup(${taskId}, "${keyword.value}")`)
                     taskStore.moveTaskToSmartGroup(taskId, keyword.value)
                     return
 

@@ -2,8 +2,14 @@ import { computed, ref, type Ref } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useWindowSize } from '@vueuse/core'
 
+interface TaskStoreSettings {
+    hideCanvasDoneTasks?: boolean
+    hideCanvasOverdueTasks?: boolean
+}
+
 interface CanvasStore {
     calculateContentBounds: (tasks: Task[]) => { x: number; y: number; width: number; height: number }
+    taskStore?: TaskStoreSettings
 }
 
 export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: CanvasStore) {
@@ -34,13 +40,11 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         if (!Array.isArray(tasks)) return []
 
         // 1. Filter out Done tasks if enabled in store
-        // @ts-ignore - taskStore is not explicitly typed here but we know it has these properties
         if (canvasStore.taskStore?.hideCanvasDoneTasks) {
             tasks = tasks.filter(t => t.status !== 'done')
         }
 
         // 2. Filter out Overdue tasks if enabled
-        // @ts-ignore
         if (canvasStore.taskStore?.hideCanvasOverdueTasks) {
             const today = new Date()
             today.setHours(0, 0, 0, 0)

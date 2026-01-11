@@ -93,7 +93,6 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
             deps.edges.value = validEdges
         } catch (error) {
             console.error('❌ Critical error in syncEdges():', error)
-            console.log('🔧 Recovery: Keeping existing edges array unchanged')
         }
     }
 

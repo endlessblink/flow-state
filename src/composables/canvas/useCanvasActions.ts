@@ -48,7 +48,8 @@ export function useCanvasActions(
         batchSyncNodes: deps.batchedSyncNodes,
         closeCanvasContextMenu: deps.closeCanvasContextMenu,
         screenToFlowCoordinate: (pos) => screenToFlowCoordinate(pos),
-        recentlyDeletedGroups: deps.recentlyDeletedGroups
+        recentlyDeletedGroups: deps.recentlyDeletedGroups,
+        state: ignoredState // Pass the potentially injected state (modals)
     })
 
     // Tasks
@@ -170,6 +171,7 @@ export function useCanvasActions(
 
         // Task Actions & State
         createTaskHere: taskActions.createTaskHere,
+        createTaskInGroup: taskActions.createTaskInGroup,
         handleQuickTaskCreate: taskActions.handleQuickTaskCreate,
         closeQuickTaskCreate: taskActions.closeQuickTaskCreate,
         moveSelectedTasksToInbox: taskActions.moveSelectedTasksToInbox,

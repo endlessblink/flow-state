@@ -13,7 +13,7 @@
 import { computed } from 'vue'
 import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
-import { isPointInRect, findSmallestContainingRect, type Rect } from '@/utils/geometry'
+import { findSmallestContainingRect, getGroupAbsolutePosition, type Rect } from '@/utils/canvas/positionCalculator'
 
 export function useCanvasGroupMembership() {
   const canvasStore = useCanvasStore()
@@ -29,14 +29,18 @@ export function useCanvasGroupMembership() {
 
     const { x, y } = task.canvasPosition
 
-    // Convert groups to Rect format for geometry utils
-    const groupRects = canvasStore.groups.map(group => ({
-      ...group,
-      x: group.position.x,
-      y: group.position.y,
-      width: group.position.width,
-      height: group.position.height
-    }))
+    // Convert groups to Rect format using ABSOLUTE positions (fixing nested group detection)
+    const groupsRaw = canvasStore.groups
+    const groupRects = groupsRaw.map(group => {
+      const absPos = getGroupAbsolutePosition(group.id, groupsRaw)
+      return {
+        ...group,
+        x: absPos.x,
+        y: absPos.y,
+        width: group.position.width,
+        height: group.position.height
+      }
+    })
 
     const containingGroup = findSmallestContainingRect(x, y, groupRects)
     return containingGroup?.id || null

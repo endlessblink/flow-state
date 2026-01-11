@@ -4,9 +4,9 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
 // Force HMR update
 import { type Task } from './tasks'
 import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
-// TASK-131: Import lock checking for patchGroups
-import { isGroupPositionLocked } from '@/utils/canvasStateLock'
-import { getAbsoluteNodePosition } from '@/utils/canvasGraph'
+// TASK-CUSTOM: Import optimistic sync for patchGroupschecks
+import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
+import { getAbsoluteNodePosition, getGroupAbsolutePosition, isPointInRect } from '@/utils/canvas/positionCalculator'
 import type {
   GroupFilter,
   TaskPosition,
@@ -82,7 +82,6 @@ export const useCanvasStore = defineStore('canvas', () => {
   const saveGroupsToLocalStorage = () => {
     try {
       localStorage.setItem(GUEST_GROUPS_KEY, JSON.stringify(_rawGroups.value))
-      console.log(`💾 [GUEST-MODE] Saved ${_rawGroups.value.length} groups to localStorage`)
     } catch (e) {
       console.error('❌ [GUEST-MODE] Failed to save groups to localStorage:', e)
     }
@@ -94,7 +93,6 @@ export const useCanvasStore = defineStore('canvas', () => {
       const stored = localStorage.getItem(GUEST_GROUPS_KEY)
       if (stored) {
         const groups = JSON.parse(stored) as CanvasGroup[]
-        console.log(`📦 [GUEST-MODE] Loaded ${groups.length} groups from localStorage`)
         return groups
       }
     } catch (e) {
@@ -105,7 +103,6 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const loadFromDatabase = async () => {
     try {
-      console.log(`[CanvasStore] loadFromDatabase called at ${new Date().toISOString()}`)
 
       const { useAuthStore } = await import('@/stores/auth')
       const authStore = useAuthStore()
@@ -113,7 +110,6 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Guest mode: load from localStorage (persists across refreshes)
       if (!authStore.isAuthenticated) {
         const localGroups = loadGroupsFromLocalStorage()
-        console.log(`👤 [GUEST-MODE] Loaded ${localGroups.length} groups from localStorage`)
         _rawGroups.value = localGroups
         return
       }
@@ -163,15 +159,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       _rawGroups.value = loadedGroups
 
       if (loadedGroups.length > 0) {
-        console.log(`✅ [SUPABASE] Loaded ${loadedGroups.length} canvas groups:`, loadedGroups.map(g => g.name))
 
         // TASK-142 DEBUG: Log positions of loaded groups
-        console.log(`📍 [GROUP-LOAD] Positions from Supabase:`)
         loadedGroups.forEach(g => {
-          console.log(`   - ${g.name}: (${g.position?.x?.toFixed(0) ?? 'null'}, ${g.position?.y?.toFixed(0) ?? 'null'})`)
         })
       } else {
-        console.log(`📭 [SUPABASE] No groups in database (all deleted or none created)`)
       }
 
       // NOTE: Authenticated users use Supabase as single source of truth
@@ -184,20 +176,17 @@ export const useCanvasStore = defineStore('canvas', () => {
       const localGroups = loadGroupsFromLocalStorage()
       if (localGroups.length > 0) {
         _rawGroups.value = localGroups
-        console.log(`✅ [FALLBACK] Using ${localGroups.length} groups from localStorage`)
       }
     }
   }
 
   const saveGroupToStorage = async (group: CanvasGroup) => {
-    console.log(`📍 [GROUP-SAVE] Saving "${group.name}" pos=(${group.position?.x?.toFixed(0)}, ${group.position?.y?.toFixed(0)})`)
 
     // Always save to localStorage for persistence across refreshes
     saveGroupsToLocalStorage()
 
     try {
       await saveGroup(group)
-      console.log(`✅ [GROUP-SAVE] Group "${group.name}" saved to Supabase successfully`)
     } catch (e) {
       // Supabase failed or skipped (guest mode) - localStorage backup is still saved
       console.debug(`⏭️ [GROUP-SAVE] Supabase skipped/failed - localStorage backup saved`)
@@ -303,7 +292,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   /**
-   * TASK-131: Safe group update API that respects position locks.
+   * TASK-131/198: Safe group update API that respects optimistic sync.
    * Use this instead of setGroups() to prevent position resets.
    *
    * @param updates - Map of group ID to partial updates
@@ -326,9 +315,10 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
 
     for (const [groupId, changes] of updates) {
-      // Check if group position is locked (user is actively dragging/resizing)
-      if (isGroupPositionLocked(groupId) && (changes.position !== undefined)) {
-        console.log(`🛡️ [CANVAS] Skipping position update for locked group: ${groupId}`)
+      // Check if group has pending local changes (optimistic sync)
+      const { getPendingPosition } = useCanvasOptimisticSync()
+      const pendingPos = getPendingPosition(groupId)
+      if (pendingPos && (changes.position !== undefined)) {
         result.skippedLocked.push(groupId)
         continue
       }
@@ -345,7 +335,6 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
 
     if (result.patched.length > 0) {
-      console.log(`✅ [CANVAS] Patched ${result.patched.length} groups`)
       saveGroupsToLocalStorage()
     }
 
@@ -374,7 +363,6 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       if (savedViewport && typeof savedViewport.x === 'number' && Number.isFinite(savedViewport.zoom) && savedViewport.zoom > 0) {
         viewport.value = savedViewport
-        console.log('🔭 [TASK-155] Viewport restored from Supabase:', savedViewport)
         return true
       }
 
@@ -389,7 +377,6 @@ export const useCanvasStore = defineStore('canvas', () => {
           parsed.zoom > 0
         ) {
           viewport.value = parsed
-          console.log('🔭 [TASK-155] Viewport restored from localStorage (fallback):', parsed)
           return true
         }
         console.warn('⚠️ [CANVAS] Invalid viewport in localStorage, using defaults')
@@ -402,10 +389,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   // Helper to check if a task is visually inside a group
-  const isPointInRect = (x: number, y: number, rect: { x: number, y: number, width: number, height: number }) => {
-    return x >= rect.x && x <= rect.x + rect.width &&
-      y >= rect.y && y <= rect.y + rect.height
-  }
+  // REPLACED by imported isPointInRect
 
   const getTaskCountInGroupRecursive = (groupId: string, tasks: Task[]): number => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
@@ -413,28 +397,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (!group) return 0
 
     // Helper: Calculate absolute position recursively from store data
-    // This is safer than relying on Vue Flow nodes which might be stale during sync
-    const getGroupAbsolutePosition = (group: CanvasGroup): { x: number, y: number } => {
-      // SAFETY: Handle undefined position (legacy data or partial smart groups)
-      let x = group.position?.x ?? 0
-      let y = group.position?.y ?? 0
-      let parentId = group.parentGroupId
-
-      // Safety depth limit to prevent infinite loops
-      let depth = 0
-      while (parentId && parentId !== 'NONE' && depth < 20) {
-        // SAFETY: _rawGroups is the source of truth
-        const parent = _rawGroups.value.find(g => g.id === parentId)
-        if (parent) {
-          x += parent.position?.x ?? 0
-          y += parent.position?.y ?? 0
-          parentId = parent.parentGroupId
-          depth++
-        } else {
-          break
-        }
-      }
-      return { x, y }
+    // REPLACED by imported getGroupAbsolutePosition
+    const getGroupAbsolutePositionHelper = (group: CanvasGroup): { x: number, y: number } => {
+      return getGroupAbsolutePosition(group.id, _rawGroups.value)
     }
 
     // BUG-184c FIX: Get child groups FIRST so we can exclude their tasks from direct count
@@ -443,7 +408,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Pre-calculate child group rects for exclusion check
     const childGroupRects = childGroups.map(child => {
-      const childAbsPos = getGroupAbsolutePosition(child)
+      const childAbsPos = getGroupAbsolutePositionHelper(child)
       return {
         x: childAbsPos.x,
         y: childAbsPos.y,
@@ -453,7 +418,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
 
     // Calculate this group's absolute rect
-    const absPos = getGroupAbsolutePosition(group)
+    const absPos = getGroupAbsolutePositionHelper(group)
     const groupRect = {
       x: absPos.x,
       y: absPos.y,
@@ -677,7 +642,6 @@ export const useCanvasStore = defineStore('canvas', () => {
         // 2. AND user is authenticated
         // 3. AND groups were loaded from Guest Mode (localStorage)
         if (isInitialized && isAuthenticated && !wasAuthenticated) {
-          console.log('🔄 [CANVAS] Auth state changed to authenticated - reloading groups from Supabase')
 
           // Force reload from Supabase (not localStorage)
           try {
@@ -699,9 +663,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
             _rawGroups.value = loadedGroups
             if (loadedGroups.length > 0) {
-              console.log(`✅ [SUPABASE] Reloaded ${loadedGroups.length} canvas groups after auth`)
             } else {
-              console.log(`📭 [SUPABASE] No groups in database after auth (all deleted or none created)`)
             }
           } catch (e) {
             console.error('❌ [CANVAS] Failed to reload groups after auth:', e)

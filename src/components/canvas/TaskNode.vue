@@ -174,6 +174,12 @@ const {
   border: none !important;
   outline: none !important;
   border-radius: var(--radius-xl);
+  /* Glassmorphism: semi-transparent background with blur */
+  background: rgba(28, 30, 38, 0.55) !important;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  /* Subtle border for definition */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   /* TASK-071: Fixed width to force vertical text wrapping instead of horizontal expansion */
   width: 280px;
   min-width: 200px;
@@ -184,14 +190,10 @@ const {
   transition: all var(--duration-normal) var(--spring-smooth);
   cursor: grab;
   user-select: none;
-  /* TASK-079: High-visibility shadow with strong white halo */
+  /* Clean shadow for depth */
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    /* ZOOM FIX: Very strong white halo for zoom-out visibility */
-    0 0 80px 20px rgba(255, 255, 255, 0.25),
-    /* White outline for separation */
-    0 0 0 1px rgba(255, 255, 255, 0.20);
+    0 12px 24px var(--shadow-md),
+    0 6px 12px var(--shadow-md);
 
   box-sizing: border-box;
   display: block;
@@ -205,30 +207,24 @@ const {
   overflow: hidden;
 }
 
-/* TASK-074 + TASK-079: High-visibility background layer */
+/* Priority glow overlay - no background, just for colored border effects */
 .task-node::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Glass morphism - translucent background with visible blur */
-  background: rgba(42, 45, 55, 0.65);
-  /* Increased blur to properly blur canvas dots */
-  backdrop-filter: blur(32px) saturate(1.3);
-  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
   border-radius: var(--radius-xl);
-  /* TASK-079: Thick visible border for zoom-out */
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  z-index: -1;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Disable expensive filters at high zoom levels */
-.task-node.lod-2::before {
+.task-node.lod-2 {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(42, 45, 55, 0.95); /* More opaque since blur is gone */
+  background: rgba(28, 30, 38, 0.95) !important; /* Solid fallback when blur is disabled */
 }
 
 .task-node.lod-3 {
@@ -247,13 +243,10 @@ const {
 .task-node:hover {
   border: none;
   transform: translate3d(0, -2px, 0);
-  /* TASK-079: High-visibility enhanced hover shadow */
+  /* Enhanced shadow on hover - v0.9.0 style */
   box-shadow:
-    0 20px 56px rgba(0, 0, 0, 0.55),
-    0 10px 28px rgba(0, 0, 0, 0.35),
-    /* ZOOM FIX: Very strong halo on hover */
-    0 0 100px 25px rgba(255, 255, 255, 0.35),
-    0 0 0 2px rgba(255, 255, 255, 0.30);
+    0 16px 32px var(--shadow-strong),
+    0 8px 16px var(--shadow-md);
   cursor: grab;
 }
 
@@ -383,9 +376,36 @@ body.dragging-active .task-node .vue-flow__handle {
 }
 
 .task-node:hover::before {
-  /* Slightly lighter on hover for visual feedback */
-  background: rgba(52, 55, 65, 0.7);
-  border-color: rgba(255, 255, 255, 0.35);
+  /* Subtle border enhancement on hover */
+  border-color: var(--glass-border-hover);
+}
+
+/* Priority-based glow effects on card outline */
+.priority-high {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  box-shadow:
+    0 12px 24px var(--shadow-md),
+    0 6px 12px var(--shadow-md),
+    0 0 20px rgba(239, 68, 68, 0.25),
+    inset 0 0 0 1px rgba(239, 68, 68, 0.1);
+}
+
+.priority-medium {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow:
+    0 12px 24px var(--shadow-md),
+    0 6px 12px var(--shadow-md),
+    0 0 20px rgba(245, 158, 11, 0.25),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.1);
+}
+
+.priority-low {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow:
+    0 12px 24px var(--shadow-md),
+    0 6px 12px var(--shadow-md),
+    0 0 20px rgba(59, 130, 246, 0.25),
+    inset 0 0 0 1px rgba(59, 130, 246, 0.1);
 }
 
 .timer-active {

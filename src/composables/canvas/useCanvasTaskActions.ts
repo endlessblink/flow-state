@@ -1,7 +1,9 @@
-import { ref, type Ref, nextTick } from 'vue'
+import { type Ref, nextTick } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
+import { storeToRefs } from 'pinia'
 
 export interface TaskActionsDeps {
     syncNodes: () => void
@@ -15,16 +17,18 @@ export interface TaskActionsDeps {
 export function useCanvasTaskActions(deps: TaskActionsDeps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const modalsStore = useCanvasModalsStore()
     const { undoHistory } = deps
 
-    // --- State ---
-    const isQuickTaskCreateOpen = ref(false)
-    const quickTaskPosition = ref({ x: 0, y: 0 })
-
-    // Bulk Delete
-    const isBulkDeleteModalOpen = ref(false)
-    const bulkDeleteItems = ref<{ id: string; name: string; type: 'task' | 'section' }[]>([])
-    const bulkDeleteIsPermanent = ref(false)
+    // --- Bulk Delete State from Pinia Store (BUG-211 FIX) ---
+    // Previously used local refs which were never populated by hotkeys
+    const {
+        isBulkDeleteModalOpen,
+        bulkDeleteItems,
+        bulkDeleteIsPermanent,
+        isQuickTaskCreateOpen,
+        quickTaskPosition
+    } = storeToRefs(modalsStore)
 
     // Helper: Ghost Removal (duplicated from GroupActions for independence)
     const removeGhostNodeRef = (id: string) => {
@@ -41,8 +45,16 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         try {
             const vueFlowElement = document.querySelector('.vue-flow')
+
+            // BUG-212 FIX: Handle empty canvas state gracefully
+            // When canvas is empty, Vue Flow may not be fully initialized
+            // In this case, fall back to creating task in inbox (position 0,0)
             if (!vueFlowElement) {
-                throw new Error('Vue Flow DOM element (.vue-flow) not found')
+                console.warn(`⚠️ ${functionName}: Vue Flow element not found, creating in inbox`)
+                quickTaskPosition.value = { x: 0, y: 0 }
+                deps.closeCanvasContextMenu()
+                isQuickTaskCreateOpen.value = true
+                return
             }
 
             let finalPos = screenPos
@@ -56,8 +68,14 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             const flowCoords = deps.screenToFlowCoordinate(finalPos)
 
+            // BUG-212 FIX: If coordinate conversion fails (empty canvas), use default canvas position
             if (!Number.isFinite(flowCoords.x) || !Number.isFinite(flowCoords.y)) {
-                throw new Error(`Invalid calculated coordinates: x=${flowCoords.x}, y=${flowCoords.y}`)
+                console.warn(`⚠️ ${functionName}: Invalid coordinates from viewport, using default position`)
+                // Use a sensible default position on the canvas (not 0,0 which means inbox)
+                quickTaskPosition.value = { x: 200, y: 200 }
+                deps.closeCanvasContextMenu()
+                isQuickTaskCreateOpen.value = true
+                return
             }
 
             quickTaskPosition.value = flowCoords
@@ -66,11 +84,15 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         } catch (error) {
             console.error(`❌ ${functionName}: FAILED`, error)
-            throw error
+            // BUG-212 FIX: Even on error, open the modal with inbox fallback
+            quickTaskPosition.value = { x: 0, y: 0 }
+            deps.closeCanvasContextMenu()
+            isQuickTaskCreateOpen.value = true
         }
     }
 
-    const createTaskInGroup = (groupId: string) => {
+    const createTaskInGroup = (groupOrId: string | any) => {
+        const groupId = typeof groupOrId === 'string' ? groupOrId : groupOrId.id
         const group = canvasStore.groups.find(g => g.id === groupId)
         if (!group) return
 

@@ -75,33 +75,22 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
             }
         }
 
-        // 1. Lock UI (Optimistic)
-        trackLocalChange(node.id, 'task', { x: absoluteX, y: absoluteY })
-
-        // 2. Update Store (Absolute)
-        try {
-            await taskStore.updateTask(node.id, {
-                canvasPosition: { x: absoluteX, y: absoluteY }
-            })
-            markSynced(node.id)
-        } catch (err) {
-            console.error(`[TASK-DRAG] Failed to save position for task ${node.id}:`, err)
-        }
-
         // 3. Check Containment (Center Point)
         const containingSection = getContainingSection(absoluteX, absoluteY)
 
-        // 4. Apply Properties (Theme, etc.)
+        // 4. Apply Properties (Theme, etc.) -- Additive, do before visual attach
         if (containingSection) {
             try {
                 deps.applyAllNestedSectionProperties(node.id, absoluteX, absoluteY)
             } catch (err) {
-                // Silently fail as this is additive 
+                // Silently fail
             }
         }
 
-        // 5. Detect Parent Change
+        // 5. Detect Parent Change & Apply Visual Update
         const nodeIndex = deps.nodes.value.findIndex(n => n.id === node.id)
+        let newGroupId: string | null = null
+
         if (nodeIndex !== -1) {
             const currentParentNode = deps.nodes.value[nodeIndex].parentNode
             const newParentNode = containingSection ? `section-${containingSection.id}` : undefined
@@ -112,11 +101,11 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
                 if (containingSection) affectedIds.add(containingSection.id)
 
                 if (containingSection) {
-                    // FIX: Pass explicit absoluteX/absoluteY to ensure robust relative calculation
                     await attachNodeToParent(node.id, `section-${containingSection.id}`, { x: absoluteX, y: absoluteY })
+                    newGroupId = containingSection.id
                 } else {
-                    // ROBUST DETACHMENT: Use explicit coordinates due to drift
                     await detachNodeFromParent(node.id, { x: absoluteX, y: absoluteY })
+                    newGroupId = null // Explicitly null for root
                 }
 
                 // Update Counts
@@ -128,7 +117,39 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
                         deps.updateSingleSectionCount(ancestorId, tasks)
                     })
                 })
+            } else {
+                // Parent didn't change, but we still need to know the current group for persistence
+                if (currentParentNode) {
+                    newGroupId = currentParentNode.replace('section-', '')
+                }
             }
+        }
+
+        // 6. Lock UI (Optimistic)
+        trackLocalChange(node.id, 'task', { x: absoluteX, y: absoluteY })
+
+        // 7. Update Store (Absolute Position + ParentId)
+        try {
+            const updatePayload: any = {
+                canvasPosition: { x: absoluteX, y: absoluteY }
+            }
+
+            // Explicitly set parentId if we detected a group (or root)
+            // Note: If newGroupId is null, we send null to clear it
+            if (newGroupId !== undefined) {
+                updatePayload.parentId = newGroupId
+            } else if (node.parentNode) {
+                // Fallback if logic above skipped: trust current parent
+                updatePayload.parentId = node.parentNode.replace('section-', '')
+            } else {
+                updatePayload.parentId = null
+            }
+
+            await taskStore.updateTask(node.id, updatePayload)
+            markSynced(node.id)
+
+        } catch (err) {
+            console.error(`[TASK-DRAG] Failed to save position/parent for task ${node.id}:`, err)
         }
 
         deps.dragStartPositions.delete(node.id)
@@ -186,9 +207,15 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
 
             trackLocalChange(taskNode.id, 'task', { x: absoluteX, y: absoluteY })
             try {
-                await taskStore.updateTask(taskNode.id, {
+                const updatePayload: any = {
                     canvasPosition: { x: absoluteX, y: absoluteY }
-                })
+                }
+
+                // Explicitly set parentId
+                const finalGroupId = newParentNodeId ? newParentNodeId.replace('section-', '') : null
+                updatePayload.parentId = finalGroupId // Can be null
+
+                await taskStore.updateTask(taskNode.id, updatePayload)
                 markSynced(taskNode.id)
             } catch (err) {
                 console.error(`Failed to update task ${taskNode.id}`, err)
@@ -202,7 +229,7 @@ export function useCanvasTaskDrag(deps: TaskDragDeps) {
             canvasStore.setSelectedNodes(selectedIdsBeforeDrag)
             deps.nodes.value.forEach(n => {
                 if (selectedIdsBeforeDrag.includes(n.id)) {
-                    n.selected = true
+                    (n as any).selected = true
                 }
             })
         }

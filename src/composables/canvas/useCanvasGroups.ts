@@ -83,16 +83,32 @@ export function useCanvasGroups() {
 
     // --- Task Counting Logic ---
 
-    // Optimized Recursive Count
+    // Optimized Recursive Count (CYCLE-SAFE)
     // Relies STRICTLY on parentId relationship, avoiding expensive spatial checks for counting.
-    const getTaskCountInGroupRecursive = (groupId: string, tasks: Task[]): number => {
+    // Uses visited set to prevent infinite recursion if cycles exist in data.
+    // FIX: Uses _rawGroups to include hidden groups in hierarchy traversal
+    const getTaskCountInGroupRecursive = (
+        groupId: string,
+        tasks: Task[],
+        visited: Set<string> = new Set()
+    ): number => {
+        // Cycle protection: don't revisit groups we've already counted
+        if (visited.has(groupId)) {
+            console.warn('[GROUPS] Detected cycle while counting tasks', { groupId })
+            return 0
+        }
+        visited.add(groupId)
+
         // 1. Direct Children
         let count = tasks.filter(t => t.parentId === groupId && !t._soft_deleted).length
 
         // 2. Recursive Children (in subgroups)
-        const childGroups = canvasStore.groups.filter(g => g.parentGroupId === groupId)
+        // FIX: Use _rawGroups instead of canvasStore.groups to include hidden groups
+        // canvasStore.groups is filtered to visible only, which breaks hierarchy traversal
+        const allGroups = canvasStore._rawGroups
+        const childGroups = allGroups.filter(g => g.parentGroupId === groupId)
         for (const child of childGroups) {
-            count += getTaskCountInGroupRecursive(child.id, tasks)
+            count += getTaskCountInGroupRecursive(child.id, tasks, visited)
         }
 
         return count
@@ -111,11 +127,13 @@ export function useCanvasGroups() {
     }
 
     // Helper to get ancestor chain for bubbling updates
+    // FIX: Uses _rawGroups to include hidden groups in hierarchy traversal
     const getAncestorGroupIds = (groupId: string, visited = new Set<string>()): string[] => {
         if (visited.has(groupId)) return []
         visited.add(groupId)
 
-        const group = canvasStore.groups.find(g => g.id === groupId)
+        const allGroups = canvasStore._rawGroups
+        const group = allGroups.find(g => g.id === groupId)
         if (!group || !group.parentGroupId) return []
 
         const ancestors: string[] = [group.parentGroupId]

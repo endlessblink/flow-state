@@ -31,6 +31,72 @@ export type {
 // Task store import for safe sync functionality
 let taskStore: any = null
 
+/**
+ * CYCLE CLEANUP: Break any parent cycles in groups on load
+ *
+ * This function detects and breaks cyclic parent relationships (A→B→A)
+ * that could cause infinite recursion in descendant collection and counting.
+ *
+ * Called once when loading groups from Supabase to fix any historical cycles.
+ */
+function breakGroupCycles(groups: CanvasGroup[]): CanvasGroup[] {
+  console.log('[GROUPS] breakGroupCycles called with', groups.length, 'groups')
+
+  // Log all parent relationships for debugging
+  console.log('[GROUPS] Parent relationships:', groups.map(g => ({
+    id: g.id,
+    name: g.name,
+    parentGroupId: g.parentGroupId
+  })))
+
+  const byId = new Map(groups.map(g => [g.id, g]))
+  let cyclesBroken = 0
+
+  // Simple direct cycle detection: follow parent chain, detect if we return to start
+  for (const g of groups) {
+    if (!g.parentGroupId || g.parentGroupId === 'NONE') continue
+
+    const visited = new Set<string>()
+    let current: CanvasGroup | undefined = g
+    let hasCycle = false
+
+    // Follow parent chain until we find a cycle or reach the root
+    while (current && current.parentGroupId && current.parentGroupId !== 'NONE') {
+      if (visited.has(current.id)) {
+        // We've seen this node before - cycle detected!
+        hasCycle = true
+        break
+      }
+      visited.add(current.id)
+      current = byId.get(current.parentGroupId)
+    }
+
+    // Also check if current is back to g (the starting group)
+    if (current && visited.has(current.id)) {
+      hasCycle = true
+    }
+
+    if (hasCycle) {
+      console.warn('[GROUPS] Breaking cycle by clearing parentGroupId', {
+        groupId: g.id,
+        groupName: g.name,
+        oldParentGroupId: g.parentGroupId,
+        visitedChain: Array.from(visited),
+      })
+      g.parentGroupId = null
+      cyclesBroken++
+    }
+  }
+
+  if (cyclesBroken > 0) {
+    console.log(`[GROUPS] Broke ${cyclesBroken} parent cycle(s) on load`)
+  } else {
+    console.log('[GROUPS] No cycles detected in group parents')
+  }
+
+  return groups
+}
+
 export const useCanvasStore = defineStore('canvas', () => {
 
   const { fetchGroups, saveGroup, deleteGroup: deleteGroupRemote } = useSupabaseDatabase()
@@ -116,7 +182,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Guest mode: load from localStorage (persists across refreshes)
       if (!authStore.isAuthenticated) {
         const localGroups = loadGroupsFromLocalStorage()
-        _rawGroups.value = localGroups
+        // Break any parent cycles before loading
+        _rawGroups.value = breakGroupCycles(localGroups)
         return
       }
 
@@ -162,7 +229,22 @@ export const useCanvasStore = defineStore('canvas', () => {
         console.warn(`⚠️ [GROUP-LOAD] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
       }
 
-      _rawGroups.value = loadedGroups
+      // Break any parent cycles before loading
+      const cleanedGroups = breakGroupCycles(loadedGroups)
+      _rawGroups.value = cleanedGroups
+
+      // Persist any cycle fixes back to Supabase
+      const groupsWithBrokenCycles = cleanedGroups.filter((g, i) =>
+        g.parentGroupId !== loadedGroups[i]?.parentGroupId
+      )
+      if (groupsWithBrokenCycles.length > 0) {
+        console.log('[GROUPS] Persisting cycle fixes to Supabase for', groupsWithBrokenCycles.length, 'groups')
+        for (const g of groupsWithBrokenCycles) {
+          saveGroup(g).catch(err =>
+            console.error('[GROUPS] Failed to persist cycle fix for', g.id, err)
+          )
+        }
+      }
 
       // Populate nodeVersionMap with loaded group versions for optimistic locking
       // Defensive: ensure nodeVersionMap.value is a valid Map before clearing
@@ -197,7 +279,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       // TASK-130: Fallback to localStorage on Supabase failure
       const localGroups = loadGroupsFromLocalStorage()
       if (localGroups.length > 0) {
-        _rawGroups.value = localGroups
+        // Break any parent cycles before loading
+        _rawGroups.value = breakGroupCycles(localGroups)
       }
     }
   }
@@ -582,6 +665,41 @@ export const useCanvasStore = defineStore('canvas', () => {
     return aggregatedTaskCountByGroupId.value.get(groupId) ?? 0
   }
 
+  /**
+   * DEBUG: Log group hierarchy and task count relationships
+   * Call this to trace why nested group counts aren't aggregating correctly
+   */
+  const debugGroupHierarchy = (groupId: string) => {
+    const group = _rawGroups.value.find(g => g.id === groupId)
+    console.log('[DEBUG GROUP]', groupId, {
+      name: group?.name,
+      parentGroupId: group?.parentGroupId,
+      exists: !!group
+    })
+
+    const children = _rawGroups.value.filter(g => g.parentGroupId === groupId)
+    console.log('[DEBUG GROUP CHILDREN]', groupId, children.map(c => ({ id: c.id, name: c.name })))
+
+    // Also log the descendant IDs and counts
+    const descendantIds = getAllDescendantGroupIds(groupId, _rawGroups.value)
+    console.log('[DEBUG DESCENDANTS]', groupId, descendantIds)
+
+    const aggregatedCount = aggregatedTaskCountByGroupId.value.get(groupId) ?? 0
+    console.log('[DEBUG AGGREGATED COUNT]', groupId, aggregatedCount)
+  }
+
+  /**
+   * DEBUG: Log all aggregated counts at once
+   */
+  const debugAllAggregatedCounts = () => {
+    console.log('[DEBUG COUNTS] All aggregated counts:', Array.from(aggregatedTaskCountByGroupId.value.entries()))
+    console.log('[DEBUG GROUPS] All groups:', _rawGroups.value.map(g => ({
+      id: g.id,
+      name: g.name,
+      parentGroupId: g.parentGroupId
+    })))
+  }
+
   const getTasksInSection = (groupId: string, tasks?: Task[]): Task[] => {
     // Determine source tasks: provided tasks > taskStore.tasks > empty
     const sourceTasks = tasks || (taskStore && taskStore.tasks ? taskStore.tasks : [])
@@ -808,7 +926,8 @@ export const useCanvasStore = defineStore('canvas', () => {
               console.warn(`⚠️ [AUTH-WATCHER] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty`)
             }
 
-            _rawGroups.value = loadedGroups
+            // Break any parent cycles before loading
+            _rawGroups.value = breakGroupCycles(loadedGroups)
 
             // Populate nodeVersionMap with loaded group versions for optimistic locking
             // Defensive: ensure nodeVersionMap.value is a valid Map
@@ -939,6 +1058,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     getAllDescendantGroupIds, // Helper: get rootId + all nested child group IDs
     aggregatedTaskCountByGroupId, // Reactive computed: Map<groupId, aggregatedCount> (includes descendants)
     getAggregatedTaskCountForGroup, // Helper: get aggregated count for a group (includes descendants)
+    debugGroupHierarchy, // DEBUG: Log group hierarchy
+    debugAllAggregatedCounts, // DEBUG: Log all aggregated counts
     calculateContentBounds,
     setSelectedNodes,
     getTasksInSection,

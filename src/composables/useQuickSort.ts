@@ -15,9 +15,9 @@ export function useQuickSort() {
 
   // Getters
   // Fixed: Use direct filtering instead of mutating store state (antipattern)
+  // TASK-243: Use raw tasks so Quick Sort sees ALL uncategorized tasks regardless of active smart view
   const uncategorizedTasks = computed<Task[]>(() => {
-    // BUG-FIX: Exclude soft-deleted tasks
-    return taskStore.tasks.filter(task => !task._soft_deleted && isUncategorizedTask(task))
+    return taskStore.rawTasks.filter(task => !task._soft_deleted && isUncategorizedTask(task))
   })
 
   // Watch for list updates to clamp index

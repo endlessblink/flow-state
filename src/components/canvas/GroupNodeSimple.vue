@@ -94,7 +94,19 @@ const taskStore = useTaskStore()
 // Ensure we handle both structure formats (direct props or nested in data)
 const section = computed(() => props.data?.section || props.data)
 const isCollapsed = computed(() => !!props.data?.isCollapsed)
-const taskCount = computed(() => props.data?.taskCount || 0)
+const taskCount = computed(() => {
+  const data = props.data as any
+  if (!data) return 0
+
+  // Determine which count to show based on whether this is a root or child group
+  // - Root groups (no parent): show aggregated count (includes descendants)
+  // - Child groups: show only direct count (tasks in this group only)
+  const isRootGroup = !data.parentGroupId || data.parentGroupId === 'NONE'
+  const direct = data.directTaskCount ?? 0
+  const aggregated = data.aggregatedTaskCount ?? direct
+
+  return isRootGroup ? aggregated : direct
+})
 
 // Local State
 const sectionName = ref(props.data?.name || '')

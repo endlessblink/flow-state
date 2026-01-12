@@ -3,7 +3,7 @@
     transition: all var(--duration-normal) var(--spring-smooth);
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible; /* TASK-243: Allow card shadows to render without clipping */
     background: var(--kanban-swimlane-bg);
 }
 
@@ -144,6 +144,11 @@
     scrollbar-color: var(--border-subtle) transparent;
     touch-action: pan-y;
     /* Allow native vertical scroll, JS handles horizontal */
+    /* TASK-243: Padding for card shadow bleed */
+    padding-top: var(--space-2);
+    padding-left: var(--space-2);
+    margin-top: calc(-1 * var(--space-2));
+    margin-left: calc(-1 * var(--space-2));
 }
 
 .table-scroll-container::-webkit-scrollbar {
@@ -163,7 +168,8 @@
     display: flex;
     gap: var(--space-4);
     padding-bottom: var(--space-3);
-    padding-right: var(--space-1);
+    padding-right: var(--space-3); /* TASK-243: More space for shadow bleed */
+    padding-top: var(--space-1); /* TASK-243: Space for top shadow */
     align-items: flex-start;
     /* Prevent columns from stretching to match tallest */
     width: max-content;

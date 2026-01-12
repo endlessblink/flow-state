@@ -74,7 +74,8 @@ import BaseNavItem from '@/components/base/BaseNavItem.vue'
 interface Props {
   project: Project
   expandedProjects: string[]
-  selectedProjectIds?: Set<string>
+  // Allow Set, Array, or Object (for cross-tab sync compatibility)
+  selectedProjectIds?: Set<string> | string[] | Record<string, any>
   nested?: boolean
   nestingDepth?: number
   level?: number
@@ -96,9 +97,22 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 
+// Safely convert selectedProjectIds to Set (handles cross-tab sync serialization)
+// PiniaSharedState serializes Sets as plain objects, so we need to handle that
+const selectedIds = computed<Set<string>>(() => {
+  const raw = props.selectedProjectIds
+  if (raw instanceof Set) return raw
+  if (Array.isArray(raw)) return new Set(raw)
+  if (raw && typeof raw === 'object') {
+    // Object from JSON serialization - use keys or values
+    return new Set(Object.keys(raw))
+  }
+  return new Set()
+})
+
 // Check if this project is selected
 const isSelected = computed(() => {
-  return props.selectedProjectIds?.has(props.project.id) ?? false
+  return selectedIds.value.has(props.project.id)
 })
 
 // Check if this project has children
@@ -126,13 +140,14 @@ const handleProjectClick = (event: MouseEvent) => {
   emit('click', event, props.project)
 }
 
-// Recursively count tasks in this project and all descendants (matches BoardView filtering logic)
+// Recursively count tasks in this project and all descendants
+// TASK-243: Uses raw tasks to show accurate counts regardless of active smart view filter
 const getProjectTaskCount = (projectId: string): number => {
   // Get all child projects (same logic as filteredTasks) with cycle detection
   const getChildProjectIds = (pid: string, visited = new Set<string>()): string[] => {
     if (visited.has(pid)) return []
     visited.add(pid)
-    
+
     const ids = [pid]
     const children = taskStore.projects.filter(p => p.parentId === pid)
     children.forEach(child => {
@@ -144,10 +159,13 @@ const getProjectTaskCount = (projectId: string): number => {
   // Get all child project IDs for this project tree
   const allChildProjectIds = getChildProjectIds(projectId)
 
-  // Count tasks that belong to this project tree
-  const projectTasks = taskStore.tasks.filter(task => {
+  // Count tasks using raw tasks (bypasses smart view filters for accurate counts)
+  const projectTasks = taskStore.rawTasks.filter(task => {
     // Only count tasks that belong to this project tree
     if (!allChildProjectIds.includes(task.projectId)) return false
+
+    // Exclude soft-deleted tasks
+    if (task._soft_deleted) return false
 
     // Respect hideDoneTasks setting for consistency with sidebar counts
     if (taskStore.hideDoneTasks && task.status === 'done') return false

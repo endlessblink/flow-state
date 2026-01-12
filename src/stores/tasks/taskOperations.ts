@@ -23,6 +23,7 @@ export function useTaskOperations(
     hideDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
+    hideCanvasOverdueTasks: Ref<boolean>,
     manualOperationInProgress: Ref<boolean>,
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
     saveSpecificTasks: (tasks: Task[], context: string) => Promise<void>,
@@ -139,13 +140,13 @@ export function useTaskOperations(
             // BUG-FIX: Explicitly unlock position if removing from canvas
             // This prevents sync from restoring the position due to "Preserve local canvasPosition" logic
             if (updates.canvasPosition === null) {
-
+                // Position will be cleared by the update
             }
 
             // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
             // If a position lock (pending change) exists, use that position instead of the update
             if (updates.canvasPosition && updates.canvasPosition !== null) {
-
+                // Position lock protection handled by persistence logic
             }
 
             if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
@@ -523,6 +524,11 @@ export function useTaskOperations(
         persistFilters()
     }
 
+    const toggleCanvasOverdueTasks = () => {
+        hideCanvasOverdueTasks.value = !hideCanvasOverdueTasks.value
+        persistFilters()
+    }
+
     const setActiveStatusFilter = (status: string | null) => {
         activeStatusFilter.value = status
         if (status) activeDurationFilter.value = null
@@ -598,6 +604,7 @@ export function useTaskOperations(
         toggleHideDoneTasks,
         toggleCanvasDoneTasks,
         toggleCalendarDoneTasks,
+        toggleCanvasOverdueTasks,
         setActiveStatusFilter,
         toggleStatusFilter,
         setActiveDurationFilter,

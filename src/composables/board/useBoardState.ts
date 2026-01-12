@@ -23,21 +23,24 @@ export function useBoardState(deps: BoardStateDependencies) {
     }
 
     // Group tasks by project (using filtered tasks from store)
+    // TASK-243: Filter done tasks locally based on hideDoneTasks setting
     const tasksByProject = computed(() => {
         const grouped: Record<string, Task[]> = {}
 
-        taskStore.filteredTasks.forEach(task => {
-            const projectId = task.projectId || 'uncategorized'
-            if (!grouped[projectId]) {
-                grouped[projectId] = []
-            }
-            grouped[projectId].push(task)
-        })
+        taskStore.filteredTasks
+            .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
+            .forEach(task => {
+                const projectId = task.projectId || 'uncategorized'
+                if (!grouped[projectId]) {
+                    grouped[projectId] = []
+                }
+                grouped[projectId].push(task)
+            })
 
         return grouped
     })
 
-    // Get projects to display
+    // Get projects to display (TASK-243: Filter out empty projects)
     const projectsWithTasks = computed(() => {
         // If a specific project is selected, show that project AND its children
         if (taskStore.activeProjectId) {
@@ -45,8 +48,11 @@ export function useBoardState(deps: BoardStateDependencies) {
             return taskStore.projects.filter(project => projectIds.includes(project.id))
         }
 
-        // Get real projects
-        const projects = [...taskStore.projects]
+        // Get real projects that have tasks (filter out empty ones)
+        const projects = taskStore.projects.filter(project => {
+            const tasksInProject = tasksByProject.value[project.id] || []
+            return tasksInProject.length > 0
+        })
 
         // Add virtual "Uncategorized" project if there are uncategorized tasks
         const hasUncategorizedTasks = taskStore.filteredTasks.some(

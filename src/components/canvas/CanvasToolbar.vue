@@ -37,7 +37,7 @@
           :title="taskStore.hideCanvasOverdueTasks ? 'Show overdue tasks' : 'Hide overdue tasks'"
           :aria-label="taskStore.hideCanvasOverdueTasks ? 'Show overdue tasks' : 'Hide overdue tasks'"
           :aria-pressed="taskStore.hideCanvasOverdueTasks"
-          @click="taskStore.hideCanvasOverdueTasks = !taskStore.hideCanvasOverdueTasks"
+          @click="taskStore.toggleCanvasOverdueTasks()"
         >
           <CalendarX v-if="taskStore.hideCanvasOverdueTasks" :size="14" />
           <Calendar v-else :size="14" />

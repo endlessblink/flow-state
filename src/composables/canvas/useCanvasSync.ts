@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -9,6 +9,58 @@ import {
     taskPositionToVueFlow
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import type { CanvasGroup } from '@/stores/canvas/types'
+import { validateAllInvariants, logHierarchySummary } from '@/utils/canvas/invariants'
+
+// =============================================================================
+// MODULE-LEVEL HELPERS (defined before composable to ensure availability)
+// =============================================================================
+
+/**
+ * Interface for groups that can be sorted by hierarchy
+ */
+interface HierarchicalGroup {
+    id: string
+    parentGroupId?: string | null
+}
+
+/**
+ * Sort groups by hierarchy depth (parents before children)
+ * Ensures Vue Flow can resolve parentNode references correctly.
+ *
+ * Uses topological sort: root groups (no parent) first, then their children, etc.
+ * This guarantees that when a child group is added, its parent already exists.
+ *
+ * @param groups - Array of groups with id and optional parentGroupId
+ * @returns Sorted array with root groups first, then depth 1, depth 2, etc.
+ */
+function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): T[] {
+    // Helper to get depth (0 = root, 1 = direct child of root, etc.)
+    const getDepth = (groupId: string, visited: Set<string> = new Set()): number => {
+        const group = groups.find(g => g.id === groupId)
+        if (!group) return 0
+        if (!group.parentGroupId || group.parentGroupId === 'NONE') return 0
+        if (visited.has(groupId)) return 0 // Cycle protection
+
+        visited.add(groupId)
+        return 1 + getDepth(group.parentGroupId, visited)
+    }
+
+    // Calculate depth for each group and sort by depth (ascending)
+    const groupsWithDepth = groups.map(g => ({
+        group: g,
+        depth: getDepth(g.id)
+    }))
+
+    // Sort by depth: root groups (depth 0) first, then children (depth 1), etc.
+    groupsWithDepth.sort((a, b) => a.depth - b.depth)
+
+    return groupsWithDepth.map(gwd => gwd.group)
+}
+
+// =============================================================================
+// COMPOSABLE
+// =============================================================================
 
 /**
  * Canvas Sync Composable
@@ -29,45 +81,11 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
  */
 export function useCanvasSync() {
     const canvasStore = useCanvasStore()
-    const { nodeVersionMap, aggregatedTaskCountByGroupId } = storeToRefs(canvasStore)
+    const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
     const { getNodes, setNodes, addNodes, removeNodes } = useVueFlow()
 
     const isSyncing = ref(false)
-
-    /**
-     * Sort groups by hierarchy depth (parents before children)
-     * Ensures Vue Flow can resolve parentNode references correctly.
-     *
-     * Uses topological sort: root groups (no parent) first, then their children, etc.
-     * This guarantees that when a child group is added, its parent already exists.
-     */
-    const sortGroupsByHierarchy = (groups: any[]): any[] => {
-        const result: any[] = []
-        const processed = new Set<string>()
-
-        // Helper to get depth (0 = root, 1 = direct child of root, etc.)
-        const getDepth = (groupId: string, visited: Set<string> = new Set()): number => {
-            const group = groups.find(g => g.id === groupId)
-            if (!group) return 0
-            if (!group.parentGroupId || group.parentGroupId === 'NONE') return 0
-            if (visited.has(groupId)) return 0 // Cycle protection
-
-            visited.add(groupId)
-            return 1 + getDepth(group.parentGroupId, visited)
-        }
-
-        // Calculate depth for each group and sort by depth (ascending)
-        const groupsWithDepth = groups.map(g => ({
-            group: g,
-            depth: getDepth(g.id)
-        }))
-
-        // Sort by depth: root groups (depth 0) first, then children (depth 1), etc.
-        groupsWithDepth.sort((a, b) => a.depth - b.depth)
-
-        return groupsWithDepth.map(g => g.group)
-    }
 
     /**
      * Helper to detect if assigning a parent would create a cycle
@@ -137,6 +155,9 @@ export function useCanvasSync() {
             // This ensures correct parent-child relationships on initial render after reload.
             const sortedGroups = sortGroupsByHierarchy(groups)
 
+            // Create a Set of visible group IDs for fast lookup
+            const visibleGroupIds = new Set(groups.map(g => g.id))
+
             for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
 
@@ -158,30 +179,46 @@ export function useCanvasSync() {
                     parentId = null
                 }
 
-                // Get aggregated task count (includes tasks in descendant groups)
-                const taskCount = aggregatedTaskCountByGroupId.value.get(group.id) ?? 0
+                // FIX: Only set parentNode if parent is VISIBLE (will be rendered in Vue Flow)
+                // If parent exists but is hidden, treat as root node to avoid "Only child nodes can use a parent extent" warning
+                if (parentId && !visibleGroupIds.has(parentId)) {
+                    console.warn(`[SYNC] Parent group ${parentId} is hidden, treating ${group.id} as root node`)
+                    parentId = null
+                }
+
+                // Get BOTH direct and aggregated task counts
+                // Direct = tasks where task.parentId === group.id (only this group)
+                // Aggregated = direct + all tasks in descendant groups
+                const directTaskCount = taskCountByGroupId.value.get(group.id) ?? 0
+                const aggregatedTaskCount = aggregatedTaskCountByGroupId.value.get(group.id) ?? directTaskCount
 
                 newNodes.push({
                     id: nodeId,
                     type: 'sectionNode',
                     position: displayPos,
                     parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
-                    extent: parentId ? 'parent' : undefined,
-                    // FIX: Removed expandParent: true
-                    // expandParent causes Vue Flow to auto-resize parent groups when
-                    // children are placed outside bounds. This caused unexpected group
-                    // resizing when dragging tasks into groups.
-                    // extent: 'parent' already constrains child movement within parent bounds.
+                    // FIX: Removed extent: 'parent' for groups so they can be dragged OUT of parent.
+                    // With extent: 'parent', Vue Flow constrains movement to parent bounds,
+                    // preventing child groups from being dragged outside to become root groups.
+                    // Without it, groups can be freely dragged, and onNodeDragStop handles
+                    // re-parenting via spatial containment (same pattern as tasks).
                     expandParent: false,
                     data: {
                         id: group.id,
                         label: group.name || 'Group',
+                        name: group.name || 'Group',
                         color: group.color || '#3b82f6',
                         width: group.position?.width || 300,
                         height: group.position?.height || 200,
                         collapsed: group.isCollapsed || false,
-                        // AGGREGATED COUNT: Includes tasks in this group + all descendant groups
-                        taskCount
+                        // Pass BOTH counts - component decides which to show
+                        directTaskCount,
+                        aggregatedTaskCount,
+                        // Pass STORE's parentGroupId (not Vue Flow's parentId) so component
+                        // correctly determines if it's a root or child group for count logic
+                        parentGroupId: group.parentGroupId,
+                        // Legacy: keep taskCount for backwards compat (use aggregated)
+                        taskCount: aggregatedTaskCount
                     },
                     style: {
                         width: `${group.position?.width || 300}px`,
@@ -229,6 +266,12 @@ export function useCanvasSync() {
                 // SAFETY: Cycle Detection
                 if (parentId && hasParentCycle(task.id, parentId, groups)) {
                     console.error(`🔄 [CYCLE DETECTED] Creating task ${task.id} would create cycle with parent ${parentId}. Breaking link.`)
+                    parentId = null
+                }
+
+                // FIX: Only set parentNode if parent group is VISIBLE (will be rendered in Vue Flow)
+                // If parent group is hidden, treat task as root node
+                if (parentId && !visibleGroupIds.has(parentId)) {
                     parentId = null
                 }
 
@@ -280,6 +323,49 @@ export function useCanvasSync() {
 
             if (isDifferent(newNodes, currentNodes)) {
                 setNodes(newNodes)
+
+                // ================================================================
+                // INVARIANT VALIDATION (Dev Only)
+                // ================================================================
+                // Run invariant checks after sync to catch any violations early
+                // This helps identify bugs before they cause visual issues
+                if (import.meta.env.DEV) {
+                    // Use nextTick to ensure Vue Flow has processed the nodes
+                    nextTick(() => {
+                        const vueFlowNodes = getNodes.value
+                        const storeGroups = canvasStore._rawGroups || []
+                        const storeTasks = taskStore.tasks || []
+
+                        validateAllInvariants(
+                            vueFlowNodes,
+                            storeGroups,
+                            storeTasks,
+                            'syncStoreToCanvas'
+                        )
+
+                        // ================================================================
+                        // CHILD→ROOT INVARIANT CHECK
+                        // ================================================================
+                        // Verify: If a group has no parentGroupId in store,
+                        // its Vue Flow node must NOT have parentNode set.
+                        // This catches bugs where detach logic fails to clear parentNode.
+                        const nodeMap = new Map(vueFlowNodes.map(n => [n.id, n]))
+                        for (const group of storeGroups) {
+                            const nodeId = CanvasIds.groupNodeId(group.id)
+                            const node = nodeMap.get(nodeId)
+                            const hasStoreParent = group.parentGroupId && group.parentGroupId !== 'NONE'
+
+                            if (!hasStoreParent && node?.parentNode) {
+                                console.error('[INVARIANT A-child-root] Group has no parentGroupId but node.parentNode is set', {
+                                    groupId: group.id,
+                                    groupName: group.name,
+                                    storeParentGroupId: group.parentGroupId,
+                                    nodeParentNode: node.parentNode,
+                                })
+                            }
+                        }
+                    })
+                }
             }
         } finally {
             isSyncing.value = false

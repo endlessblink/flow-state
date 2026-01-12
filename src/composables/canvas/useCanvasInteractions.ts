@@ -23,20 +23,26 @@ import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coo
 // so that when a parent group moves, all nested items are synced to DB.
 
 /**
- * Collect all descendant groups recursively
+ * Collect all descendant groups recursively (CYCLE-SAFE)
  * For hierarchy A → B → C, calling with A returns [B, C]
+ *
+ * Uses visited set to prevent infinite recursion if cycles exist in data.
  */
-function collectDescendantGroups(rootId: string, groups: CanvasGroup[]): CanvasGroup[] {
-    const descendants: CanvasGroup[] = []
+function collectDescendantGroups(
+    rootId: string,
+    groups: CanvasGroup[],
+    visited: Set<string> = new Set()
+): CanvasGroup[] {
+    // Cycle protection: don't revisit nodes we've already processed
+    if (visited.has(rootId)) return []
+    visited.add(rootId)
+
     const directChildren = groups.filter(g => g.parentGroupId === rootId)
 
-    for (const child of directChildren) {
-        descendants.push(child)
-        // Recursively collect grandchildren, great-grandchildren, etc.
-        descendants.push(...collectDescendantGroups(child.id, groups))
-    }
-
-    return descendants
+    return directChildren.flatMap(child => [
+        child,
+        ...collectDescendantGroups(child.id, groups, visited)
+    ])
 }
 
 /**
@@ -240,70 +246,167 @@ export function useCanvasInteractions(deps?: {
                 // GROUP DRAG END
                 // ============================================================
                 const { id: groupId } = CanvasIds.parseNodeId(node.id)
-                const group = canvasStore.groups.find(g => g.id === groupId)
+                // Use _rawGroups to include hidden groups
+                const groupsForLookup = canvasStore._rawGroups || canvasStore.groups || []
+                const group = groupsForLookup.find(g => g.id === groupId)
                 if (!group) continue
 
                 // Compute absolute position for the group
-                const absolutePos = computeNodeAbsolutePosition(node, canvasStore.groups)
+                // Use _rawGroups to include hidden groups in position lookups
+                const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+                const absolutePos = computeNodeAbsolutePosition(node, allGroups)
 
-                // DISABLED: Containment-based re-parenting for groups
-                // Dragging a group only changes its position, NOT its parent.
-                // Group nesting should only happen via explicit UX action.
-                // Keeping the existing parentGroupId unchanged.
-                const existingParentId = group.parentGroupId
+                // Build spatial representation of the group for containment check
+                const groupWidth = group.position.width
+                const groupHeight = group.position.height
 
-                // 1. Optimistic Store Update (position only, parentGroupId preserved)
+                const spatialGroup = {
+                    position: absolutePos,
+                    width: groupWidth,
+                    height: groupHeight,
+                }
+
+                // Find deepest containing group, excluding this group itself
+                const targetParent = getDeepestContainingGroup(
+                    spatialGroup,
+                    allGroups,
+                    groupId // exclude this group from being its own parent
+                )
+
+                // Get old parent for comparison
+                const oldParentGroupId = group.parentGroupId ?? null
+
+                // DEBUG: Log group drop details for child→root transition debugging
+                console.log('[DEBUG GROUP DROP]', {
+                    groupId,
+                    groupName: group.name,
+                    oldParentGroupId,
+                    targetParentId: targetParent?.id ?? null,
+                    center: {
+                        x: spatialGroup.position.x + spatialGroup.width / 2,
+                        y: spatialGroup.position.y + spatialGroup.height / 2,
+                    },
+                })
+
+                // ================================================================
+                // CYCLE PREVENTION: Don't allow cyclic parent assignments
+                // ================================================================
+                let newParentGroupId = targetParent?.id ?? null
+
+                // 1) Don't allow a group to be its own parent (redundant but explicit)
+                if (newParentGroupId === groupId) {
+                    console.warn('[GROUP] Prevented self-parenting', { groupId })
+                    newParentGroupId = null
+                }
+
+                // 2) Don't allow making a descendant the parent (would create a cycle)
+                if (newParentGroupId) {
+                    const descendants = collectDescendantGroups(groupId, allGroups)
+                    const descendantIds = new Set(descendants.map(d => d.id))
+                    if (descendantIds.has(newParentGroupId)) {
+                        console.warn('[GROUP] Prevented cyclic parent assignment', {
+                            groupId,
+                            groupName: group.name,
+                            attemptedParentId: newParentGroupId,
+                            attemptedParentName: targetParent?.name,
+                            descendantIds: Array.from(descendantIds),
+                        })
+                        // Keep old parent to avoid cycle
+                        newParentGroupId = oldParentGroupId
+                    }
+                }
+
+                // ================================================================
+                // POSITION JUMP FIX: Adjust node.position BEFORE setting parentNode
+                // ================================================================
+                // When parent changes, Vue Flow immediately interprets node.position
+                // as relative to the new parent. We must adjust the position value
+                // so the visual position stays the same.
+                //
+                // - absolutePos: where the group visually IS (absolute world coords)
+                // - node.position: what Vue Flow uses (relative to parentNode)
+                //
+                // To keep visual position after parent change:
+                // - If going INTO a parent: newRelative = absolute - parentAbsolute
+                // - If going to ROOT: newRelative = absolute (no offset)
+                if (oldParentGroupId !== newParentGroupId) {
+                    if (newParentGroupId) {
+                        // Going into a parent group - convert to relative position
+                        const newParentAbsolute = getGroupAbsolutePosition(newParentGroupId, allGroups)
+                        const newRelativePos = {
+                            x: absolutePos.x - newParentAbsolute.x,
+                            y: absolutePos.y - newParentAbsolute.y
+                        }
+                        // Guard against NaN values
+                        if (isFinite(newRelativePos.x) && isFinite(newRelativePos.y)) {
+                            node.position = newRelativePos
+                        }
+                    } else {
+                        // Going to root (no parent) - use absolute position
+                        node.position = absolutePos
+                    }
+                }
+
+                // Update Vue Flow node's parentNode AND extent to match
+                // MUST happen AFTER position adjustment to avoid visual jump
+                // CRITICAL: Both parentNode AND extent must be set together!
+                // - When going INTO a parent: set both parentNode and extent: 'parent'
+                // - When going to ROOT: clear both to undefined
+                if (newParentGroupId) {
+                    node.parentNode = CanvasIds.groupNodeId(newParentGroupId)
+                    node.extent = 'parent'
+                } else {
+                    node.parentNode = undefined
+                    node.extent = undefined
+                }
+
+                // Update store with ABSOLUTE position AND parentGroupId
                 canvasStore.updateSection(groupId, {
                     position: {
                         x: absolutePos.x,
                         y: absolutePos.y,
-                        width: group.position.width,
-                        height: group.position.height
+                        width: spatialGroup.width,
+                        height: spatialGroup.height,
                     },
-                    // parentGroupId: existingParentId - NOT changing parent on drag
-                    positionFormat: 'absolute'
+                    parentGroupId: newParentGroupId,
+                    positionFormat: 'absolute',
                 })
 
-                // 2. Vue Flow parentNode stays consistent with existing parent
-                // (no change needed since we're preserving existing parentGroupId)
-                if (existingParentId) {
-                    node.parentNode = CanvasIds.groupNodeId(existingParentId)
-                } else {
-                    node.parentNode = undefined
-                }
-
-                // 3. Sync group to DB
+                // Sync group to DB (persists parent_group_id)
+                // Re-fetch allGroups after store update to ensure we have latest data
+                const updatedAllGroups = canvasStore._rawGroups || canvasStore.groups || []
                 setNodeState(groupId, NodeState.SYNCING)
-                await syncNodePosition(groupId, node, canvasStore.groups, 'groups')
+                await syncNodePosition(groupId, node, updatedAllGroups, 'groups')
                 setNodeState(groupId, NodeState.IDLE)
 
-                // 4. Sync ALL Descendant Tasks (BUG #1 FIX: recursive, not just direct children)
-                // FULLY ABSOLUTE: Vue Flow updated computedPosition for ALL nested children
-                // We must save their new absolute positions to DB
-                // For hierarchy A → B → C, this syncs tasks in A, B, AND C
-                const descendantTasks = collectDescendantTasks(groupId, taskStore.tasks, canvasStore.groups)
-                for (const descendantTask of descendantTasks) {
-                    const childNode = findNode(descendantTask.id)
-                    if (childNode) {
-                        setNodeState(descendantTask.id, NodeState.SYNCING)
-                        syncNodePosition(descendantTask.id, childNode, canvasStore.groups, 'tasks')
-                            .finally(() => setNodeState(descendantTask.id, NodeState.IDLE))
-                    }
-                }
+                // ================================================================
+                // SYNC DESCENDANTS: Tasks and Groups
+                // ================================================================
+                // When parent moves, Vue Flow moves all children visually.
+                // We must sync their NEW absolute positions to DB.
 
-                // 5. Sync ALL Descendant Groups (BUG #1 FIX: recursive, not just direct children)
-                // When parent moves, Vue Flow moves ALL nested children visually
-                // We must sync ALL descendant groups' new absolute positions to DB
-                // For hierarchy A → B → C, this syncs B AND C (not just B)
-                const descendantGroups = collectDescendantGroups(groupId, canvasStore.groups)
+                const descendantTasks = collectDescendantTasks(groupId, taskStore.tasks, updatedAllGroups)
+                const descendantGroups = collectDescendantGroups(groupId, updatedAllGroups)
+
+                // Sync descendant GROUPS first (parents before their children)
                 for (const descendantGroup of descendantGroups) {
                     const childNodeId = CanvasIds.groupNodeId(descendantGroup.id)
                     const childNode = findNode(childNodeId)
-                    if (childNode) {
-                        setNodeState(descendantGroup.id, NodeState.SYNCING)
-                        syncNodePosition(descendantGroup.id, childNode, canvasStore.groups, 'groups')
-                            .finally(() => setNodeState(descendantGroup.id, NodeState.IDLE))
-                    }
+                    if (!childNode) continue
+
+                    setNodeState(descendantGroup.id, NodeState.SYNCING)
+                    await syncNodePosition(descendantGroup.id, childNode, updatedAllGroups, 'groups')
+                    setNodeState(descendantGroup.id, NodeState.IDLE)
+                }
+
+                // Sync descendant TASKS
+                for (const descendantTask of descendantTasks) {
+                    const childNode = findNode(descendantTask.id)
+                    if (!childNode) continue
+
+                    setNodeState(descendantTask.id, NodeState.SYNCING)
+                    await syncNodePosition(descendantTask.id, childNode, updatedAllGroups, 'tasks')
+                    setNodeState(descendantTask.id, NodeState.IDLE)
                 }
 
             } else {
@@ -313,10 +416,13 @@ export function useCanvasInteractions(deps?: {
                 const task = taskStore.getTask(node.id)
                 if (!task) continue
 
+                // Use _rawGroups to include hidden groups in lookups
+                const taskAllGroups = canvasStore._rawGroups || canvasStore.groups || []
+
                 // 1. Compute ABSOLUTE position for containment check
                 // When node has parentNode, node.position is RELATIVE, not absolute
                 // computedPosition is preferred; fallback calculates from parent's absolute
-                const absolutePos = computeNodeAbsolutePosition(node, canvasStore.groups)
+                const absolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
 
                 // 2. Build spatial task with explicit dimensions for center-based containment
                 const spatialTask = {
@@ -326,7 +432,7 @@ export function useCanvasInteractions(deps?: {
                 }
 
                 // 3. Detect new parent using spatial containment (center inside group bounds)
-                const targetGroup = getDeepestContainingGroup(spatialTask, canvasStore.groups)
+                const targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
                 const oldParentId = task.parentId
                 const newParentId = targetGroup?.id ?? null
 
@@ -342,7 +448,7 @@ export function useCanvasInteractions(deps?: {
 
                 // 4. Optimistic Store Update (Absolute position + parentId)
                 taskStore.updateTask(task.id, {
-                    parentId: newParentId,
+                    parentId: newParentId ?? undefined,
                     canvasPosition: absolutePos,
                     positionFormat: 'absolute'
                 })
@@ -360,7 +466,7 @@ export function useCanvasInteractions(deps?: {
 
                 // 6. Sync task to DB with optimistic locking
                 setNodeState(task.id, NodeState.SYNCING)
-                await syncNodePosition(task.id, node, canvasStore.groups, 'tasks')
+                await syncNodePosition(task.id, node, taskAllGroups, 'tasks')
                 setNodeState(task.id, NodeState.IDLE)
             }
         }

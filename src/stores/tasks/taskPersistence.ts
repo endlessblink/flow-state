@@ -10,6 +10,7 @@ export function useTaskPersistence(
     hideDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
+    hideCanvasOverdueTasks: Ref<boolean>,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     activeSmartView: Ref<any>,
     activeStatusFilter: Ref<string | null>,
@@ -29,6 +30,7 @@ export function useTaskPersistence(
         activeStatusFilter: string | null
         hideCanvasDoneTasks?: boolean
         hideCalendarDoneTasks?: boolean
+        hideCanvasOverdueTasks?: boolean
     }
 
     // --- SQL PERSISTENCE ---
@@ -132,7 +134,7 @@ export function useTaskPersistence(
             await saveTasks(validTasksToSave)
             // console.debug(`✅ [SUPABASE] Saved ${validTasksToSave.length} tasks (${context})`)
 
-        } catch (e) {
+        } catch (_e) {
             // Supabase failed or skipped (guest mode) - localStorage backup is still saved
             console.debug(`⏭️ [PERSISTENCE] Supabase skipped/failed - localStorage backup saved (${context})`)
         }
@@ -210,9 +212,10 @@ export function useTaskPersistence(
                 activeStatusFilter.value = state.activeStatusFilter
                 hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
                 hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
+                hideCanvasOverdueTasks.value = state.hideCanvasOverdueTasks ?? false
             }
-        } catch (e) {
-            console.warn('Failed to load filters from localStorage:', e)
+        } catch (_e) {
+            console.warn('Failed to load filters from localStorage:', _e)
         }
     }
 
@@ -236,7 +239,8 @@ export function useTaskPersistence(
                 activeSmartView: activeSmartView.value,
                 activeStatusFilter: activeStatusFilter.value,
                 hideCanvasDoneTasks: hideCanvasDoneTasks.value,
-                hideCalendarDoneTasks: hideCalendarDoneTasks.value
+                hideCalendarDoneTasks: hideCalendarDoneTasks.value,
+                hideCanvasOverdueTasks: hideCanvasOverdueTasks.value
             }
             localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
         }, 500)

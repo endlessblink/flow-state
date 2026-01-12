@@ -92,9 +92,9 @@
             zoom-on-scroll
             :pan-on-scroll="false"
             zoom-on-pinch
-            :pan-on-drag="!shift"
-            :nodes-draggable="!shift"
-            multi-selection-key-code="Shift"
+            :pan-on-drag="!shift && !control && !meta"
+            :nodes-draggable="!shift && !control && !meta"
+            :multi-selection-key-code="['Control', 'Meta']"
             snap-to-grid
             :snap-grid="[16, 16]"
             :node-extent="dynamicNodeExtent"
@@ -269,7 +269,7 @@ const nodeTypes: Record<string, any> = {
 // Initialize Orchestrator
 const orchestrator = useCanvasOrchestrator()
 const {
-  nodes, edges, isCanvasReady, initialViewport, shift, vueFlowRef,
+  nodes, edges, isCanvasReady, initialViewport, shift, control, meta, vueFlowRef,
   tasksWithCanvasPosition, dynamicNodeExtent, hasNoTasks,
   handleNodeDragStart, handleNodeDrag, handleNodeDragStop, handleKeyDown,
   handleSectionResizeStart, handleSectionResize, handleSectionResizeEnd,

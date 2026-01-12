@@ -8,7 +8,8 @@
         'is-compact': compact,
         'is-drag-target': isDragTarget,
         'is-drag-valid': isDragValid,
-        'is-drag-invalid': isDragTarget && !isDragValid && isDragging
+        'is-drag-invalid': isDragTarget && !isDragValid && isDragging,
+        'is-empty': count === 0
       }
     ]"
     @click="$emit('click', $event)"
@@ -218,6 +219,15 @@ const calculateTargetDate = (): string => {
 
 .sidebar-smart-item:hover {
   background: var(--surface-hover);
+}
+
+/* ADHD-friendly: Dim zero-count items to reduce visual noise */
+.sidebar-smart-item.is-empty {
+  opacity: 0.5;
+}
+
+.sidebar-smart-item.is-empty:hover {
+  opacity: 0.8;
 }
 
 /* Active Glassmorphism States */

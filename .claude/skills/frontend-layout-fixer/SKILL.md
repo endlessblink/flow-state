@@ -7,10 +7,18 @@ description: This skill should be used when identifying and fixing frontend layo
 
 ## Overview
 
-A specialized skill for diagnosing and fixing frontend layout issues (clipping, spacing, overflow) by analyzing HTML and CSS structure. When vanilla Claude cannot pinpoint which CSS selector to modify from a screenshot alone, this skill provides structured CSS patch recommendations with clear diagnostics and testing checklists.
+A comprehensive frontend debugging and fixing toolkit that provides structured patch recommendations with clear diagnostics and testing checklists. This skill suite includes:
+
+| Skill | Purpose | Triggers |
+|-------|---------|----------|
+| **Layout Fixer** | Fix clipping, spacing, overflow, RTL issues | "text clipped", "overflow", "spacing" |
+| **A11y Checker** | Fix accessibility issues (WCAG A/AA/AAA) | "accessibility", "contrast", "screen reader" |
+| **JS Debugger** | Fix JavaScript bugs and logic errors | "click not working", "event handler", "promise" |
+| **Perf Optimizer** | Fix Core Web Vitals (CLS, FCP, LCP, FID) | "slow", "performance", "lighthouse" |
 
 ## When to Use This Skill
 
+### Layout Issues
 - Text is clipped at top/bottom of containers
 - Content overflows its parent element
 - Spacing issues (too tight, too loose)
@@ -18,6 +26,27 @@ A specialized skill for diagnosing and fixing frontend layout issues (clipping, 
 - Fixed-height containers cutting off content
 - Flex/grid layout alignment issues
 - Responsive layout breakages
+
+### Accessibility Issues
+- Color contrast failures (WCAG 2.1)
+- Missing form labels
+- Missing ARIA attributes
+- Keyboard navigation problems
+- Screen reader compatibility
+
+### JavaScript Issues
+- Event handlers not firing
+- Promise rejections
+- Memory leaks
+- Logic errors
+- Framework-specific bugs (React, Vue, etc.)
+
+### Performance Issues
+- High CLS (Cumulative Layout Shift)
+- Slow FCP (First Contentful Paint)
+- Slow LCP (Largest Contentful Paint)
+- High FID (First Input Delay)
+- Render-blocking resources
 
 ## Core Workflow
 
@@ -264,12 +293,105 @@ Always validate patches before applying:
 - Verify constraints are not violated
 - Ensure old_block exists in current CSS
 
+## Additional Skills
+
+### Accessibility Checker (A11y)
+
+Fix WCAG 2.1 accessibility issues including color contrast, labels, ARIA, and keyboard navigation.
+
+```javascript
+import { fixA11y } from "./scripts/a11y-checker.js";
+
+const result = await fixA11y({
+  html: '<input type="email" placeholder="Email">',
+  css: 'input { color: #999; background: #eee; }',
+  issue_description: "Input has no label and low contrast",
+  context: { accessibility_level: "AA" }
+});
+
+// Returns: diagnosis, fixes, wcag_score, testing_checklist
+```
+
+**Supported Issues:**
+- Color contrast (4.5:1 for AA, 7:1 for AAA)
+- Missing form labels
+- Missing ARIA attributes
+- Keyboard navigation
+- Screen reader compatibility
+
+### JavaScript Debugger
+
+Fix JavaScript bugs including event handlers, promises, memory leaks, and framework-specific issues.
+
+```javascript
+import { fixJavaScript } from "./scripts/js-debugger.js";
+
+const result = await fixJavaScript({
+  javascript: "button.addEventListener('click', handler);",
+  html: "<button>Click</button>",
+  issue_description: "Button click not working",
+  context: { project_type: "vue" }
+});
+
+// Returns: diagnosis, fixes, debugging_steps, testing_checklist
+```
+
+**Supported Frameworks:**
+- React, Vue, Angular, Svelte
+- Next.js, Nuxt
+- Vanilla JavaScript
+
+### Performance Optimizer
+
+Fix Core Web Vitals (CLS, FCP, LCP, FID) and improve Lighthouse scores.
+
+```javascript
+import { fixPerformance } from "./scripts/performance-optimizer.js";
+
+const result = await fixPerformance({
+  html: '<img src="hero.jpg">',
+  css: 'img { max-width: 100%; }',
+  issue_description: "High CLS from images without dimensions",
+  context: { current_metrics: { cls: 0.25, lcp: 3.8 } }
+});
+
+// Returns: diagnosis, fixes, performance_impact, recommendations, testing_checklist
+```
+
+**Core Web Vitals Targets:**
+| Metric | Good | Needs Improvement | Poor |
+|--------|------|-------------------|------|
+| CLS | < 0.1 | 0.1 - 0.25 | > 0.25 |
+| FCP | < 1.8s | 1.8 - 3s | > 3s |
+| LCP | < 2.5s | 2.5 - 4s | > 4s |
+| FID | < 100ms | 100 - 300ms | > 300ms |
+
+### Unified Interface
+
+Use `fixFrontendIssue` to automatically route to the appropriate skill:
+
+```javascript
+import { fixFrontendIssue } from "./scripts/index.js";
+
+// Automatically routes to the right skill based on issue description
+const result = await fixFrontendIssue({
+  html: "...",
+  css: "...",
+  javascript: "...",
+  issue_description: "Button click not working"  // Routes to JS Debugger
+});
+```
+
 ## Resources
 
 ### scripts/
 
-- `skill.js` - Core skill implementation that calls Claude API
-- `patch-applier.js` - Functions to apply CSS/HTML patches
+- `index.js` - Unified interface exporting all skills
+- `skill.js` - Layout fixer implementation
+- `a11y-checker.js` - Accessibility checker implementation
+- `js-debugger.js` - JavaScript debugger implementation
+- `performance-optimizer.js` - Performance optimizer implementation
+- `patch-applier.js` - Functions to apply CSS/HTML/JS patches
 - `validator.js` - Input/output validation and constraint checking
 
 ### references/

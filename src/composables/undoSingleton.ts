@@ -156,7 +156,7 @@ const performUndo = async () => {
 
     // Request canvas sync IMMEDIATELY after group restore
     try {
-      canvasUiStore.requestSync()
+      canvasUiStore.requestSync('user:undo')
       console.log('🔄 [UNDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
@@ -199,7 +199,7 @@ const performRedo = async () => {
 
     // Request canvas sync IMMEDIATELY after group restore
     try {
-      canvasUiStore.requestSync()
+      canvasUiStore.requestSync('user:redo')
       console.log('🔄 [REDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [REDO] Could not request canvas sync:', error)

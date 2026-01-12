@@ -340,9 +340,9 @@ const handleSectionContextMenu = (event: MouseEvent, section: any) => {
         event.stopPropagation() // STOP PROPAGATION to prevent pane menu
     }
     // Open Canvas Context Menu with section context
-    // We need to pass the raw section object, relying on orchestrator/store
-    canvasStore.updateSection(section.id, { ...section }) // Ensure store is fresh?
-    
+    // NOTE: Removed updateSection call - it was causing unnecessary writes
+    // and potential position drift. The store already has the section data.
+
     // Position menu
     canvasContextMenuX.value = event.clientX
     canvasContextMenuY.value = event.clientY

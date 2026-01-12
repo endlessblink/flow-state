@@ -119,9 +119,16 @@ const taskToDelete = ref<string | null>(null)
 
 // Computed Tasks - Access store's computed directly (maintains full reactivity)
 const filteredTasks = computed(() => {
-  const tasks = taskStore.filteredTasks
+  let tasks = taskStore.filteredTasks
+  
+  // TASK-076: Apply view-specific 'Hide Done' filter locally
+  if (hideDoneTasks.value) {
+    tasks = tasks.filter(t => t.status !== 'done')
+  }
+
   console.log('🔍 [AllTasksView] filteredTasks computed:', {
     taskCount: tasks.length,
+    hideDoneTasks: hideDoneTasks.value,
     tasks: tasks.slice(0, 3), // Show first 3 tasks for debugging
     storeInitialized: taskStore.tasks.length > 0,
     allTasksCount: taskStore.tasks.length

@@ -100,6 +100,23 @@ const emptySubtext = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* Firefox thin scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+
+/* Webkit thin scrollbar (Chrome/Safari) */
+.inbox-tasks::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inbox-tasks::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inbox-tasks::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: var(--radius-md);
 }
 
 .empty-inbox {

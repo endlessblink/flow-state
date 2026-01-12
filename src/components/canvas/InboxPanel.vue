@@ -201,7 +201,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton, NBadge, NTag } from 'naive-ui'
 import { ChevronLeft, ChevronRight, Timer, CalendarDays } from 'lucide-vue-next'
@@ -247,6 +247,14 @@ const newTaskTitle = ref('')
 const isCollapsed = ref(true) // Start collapsed to avoid overwhelming the user
 const selectedTaskIds = ref<Set<string>>(new Set())
 const lastSelectedTaskId = ref<string | null>(null)
+
+// FEATURE-252: Auto-minimize when empty
+watch(() => baseInboxTasks.value.length, (newCount) => {
+  if (newCount === 0) {
+    isCollapsed.value = true
+    console.log('📉 [INBOX] Auto-collapsing empty inbox')
+  }
+})
 
 // Context menu state
 const showContextMenu = ref(false)

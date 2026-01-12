@@ -1,10 +1,12 @@
 .task-card {
-    /* Todoist-inspired compact card */
-    background: var(--glass-bg-subtle);
-    backdrop-filter: blur(var(--blur-xs));
-    -webkit-backdrop-filter: blur(var(--blur-xs));
-    border: 1px solid var(--glass-border);
+    /* ADHD-friendly: More visible card background for better definition */
+    background: rgba(30, 32, 44, 0.85);
+    backdrop-filter: blur(var(--blur-sm));
+    -webkit-backdrop-filter: blur(var(--blur-sm));
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-lg);
+    /* ADHD-friendly: Status-colored left border for instant visual recognition */
+    border-left: 4px solid transparent;
     /* TASK-204: restore rounded corners */
     padding: var(--space-2) var(--space-3);
     margin-bottom: var(--space-2);
@@ -31,6 +33,27 @@
 .task-card.completed {
     opacity: 0.8;
     background: rgba(255, 255, 255, 0.03);
+}
+
+/* ADHD-friendly: Status-colored left borders for instant visual recognition */
+.task-card[data-status="planned"] {
+    border-left-color: var(--status-planned-border);
+}
+
+.task-card[data-status="in_progress"] {
+    border-left-color: var(--status-in-progress-border);
+}
+
+.task-card[data-status="done"] {
+    border-left-color: var(--status-done-border);
+}
+
+.task-card[data-status="backlog"] {
+    border-left-color: var(--status-backlog-border);
+}
+
+.task-card[data-status="on_hold"] {
+    border-left-color: var(--status-on-hold-border);
 }
 
 /* Multi-select selected state */

@@ -1,8 +1,19 @@
 <template>
-  <div class="inbox-header">
-    <button class="collapse-btn" :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" @click="$emit('toggle-collapse')">
-      <ChevronLeft v-if="!isCollapsed" :size="16" />
-      <ChevronRight v-else :size="16" />
+  <div class="inbox-header" :class="{ 'is-collapsed': isCollapsed }">
+    <button 
+      class="collapse-btn" 
+      :class="{ 'is-collapsed': isCollapsed }" 
+      :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" 
+      @click="$emit('toggle-collapse')"
+    >
+      <template v-if="context === 'canvas'">
+        <ChevronRight v-if="!isCollapsed" :size="16" />
+        <ChevronLeft v-else :size="14" />
+      </template>
+      <template v-else>
+        <ChevronLeft v-if="!isCollapsed" :size="16" />
+        <ChevronRight v-else :size="14" />
+      </template>
     </button>
     <h3 v-if="!isCollapsed" class="inbox-title">
       Inbox
@@ -38,6 +49,7 @@
     >
       <span v-if="group.color" class="chip-dot" :style="{ backgroundColor: group.color }" />
       <span class="chip-label">{{ group.label }}</span>
+      <span v-if="group.count !== undefined" class="chip-count">{{ group.count }}</span>
     </button>
   </div>
 
@@ -85,6 +97,7 @@ interface GroupOption {
   label: string
   value: string
   color?: string
+  count?: number
 }
 
 const props = defineProps<{
@@ -103,6 +116,7 @@ const props = defineProps<{
   hideDoneTasks: boolean
   baseTasks: Task[]
   rootProjects: any[]
+  context: string
 }>()
 
 const emit = defineEmits<{
@@ -178,6 +192,13 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   flex-shrink: 0;
 }
 
+.inbox-header.is-collapsed {
+  padding: var(--space-2);
+  justify-content: center;
+  height: 40px;
+  border-bottom: none;
+}
+
 .inbox-title {
   margin: 0;
   font-size: var(--text-base);
@@ -188,7 +209,7 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 
 .collapse-btn {
   background: none;
-  border: none;
+  border: 1px solid var(--border-subtle);
   cursor: pointer;
   color: var(--text-secondary);
   padding: var(--space-1);
@@ -196,6 +217,15 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.collapse-btn.is-collapsed {
+  width: 24px;
+  height: 24px;
+  padding: 2px;
 }
 
 .collapse-btn:hover {
@@ -280,6 +310,14 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+}
+
+.chip-count {
+  opacity: 0.6;
+  font-size: 10px;
+  padding-left: 4px;
+  border-left: 1px solid currentColor;
+  margin-left: 4px;
 }
 
 /* Advanced Filters Toggle */

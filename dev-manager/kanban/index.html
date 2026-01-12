@@ -2196,6 +2196,10 @@
                 subtasks: [],
                 progress: status === 'done' ? 100 : (status === 'in-progress' || status === 'paused' ? 50 : 0)
               });
+            } else if (trimmed.startsWith('### ')) {
+              // Non-matching ### header (e.g., FEATURE-XXX, ROAD-XXX) - reset currentItem
+              // to prevent subsequent **Priority**: or **Status**: lines from affecting the previous task
+              currentItem = null;
             }
             continue;
           }
@@ -2342,7 +2346,8 @@
                 status: isDone ? 'done' : 'todo',
                 priority: '',
                 notes: '',
-                section: currentSection
+                section: currentSection,
+                progress: isDone ? 100 : 0  // Set progress based on done status
               };
 
               // Extract priority
@@ -2359,7 +2364,7 @@
                 }
               }
 
-              // Route to correct array based on ID prefix
+              // Route to correct array based on ID prefix (with deduplication)
               if (id.startsWith('ROAD-')) {
                 if (currentSubSection === 'later') {
                   data.roadmap.later.push(item);
@@ -2367,9 +2372,36 @@
                   data.roadmap.nearTerm.push(item);
                 }
               } else if (id.startsWith('BUG-')) {
-                data.bugs.push(item);
+                // Check for existing bug in activeWork (parsed from ### BUG-XXX: sections)
+                const existingInActiveWork = data.activeWork.find(t => t.id === id);
+                if (existingInActiveWork) {
+                  // Merge: prefer activeWork's detailed data, but use table's status if activeWork has wrong status
+                  if (!existingInActiveWork.priority && item.priority) {
+                    existingInActiveWork.priority = item.priority;
+                  }
+                  // Table parsing is authoritative for done status (strikethrough + DONE markers)
+                  if (isDone && existingInActiveWork.status !== 'done') {
+                    existingInActiveWork.status = 'done';
+                    existingInActiveWork.progress = 100;
+                  }
+                  // Don't push duplicate to data.bugs
+                } else {
+                  data.bugs.push(item);
+                }
               } else if (id.startsWith('ISSUE-')) {
-                data.issues.push(item);
+                // Check for existing issue in activeWork
+                const existingInActiveWork = data.activeWork.find(t => t.id === id);
+                if (existingInActiveWork) {
+                  if (!existingInActiveWork.priority && item.priority) {
+                    existingInActiveWork.priority = item.priority;
+                  }
+                  if (isDone && existingInActiveWork.status !== 'done') {
+                    existingInActiveWork.status = 'done';
+                    existingInActiveWork.progress = 100;
+                  }
+                } else {
+                  data.issues.push(item);
+                }
               } else if (id.startsWith('TASK-')) {
                 // Update existing task if present (TASK headers are parsed separately)
                 const existingTask = data.activeWork.find(t => t.id === id);
@@ -2538,13 +2570,34 @@
           console.log('[renderKanban] TASK-033 status:', task033.status, 'priority:', task033.priority, 'progress:', task033.progress);
         }
 
-        // Combine active tasks into kanban columns
+        // Combine active tasks into kanban columns (with deduplication)
         // (Roadmap items have their own dedicated Roadmap tab)
-        const allItems = [
-          ...data.activeWork,
-          ...data.bugs,
-          ...data.issues
-        ];
+        // Prefer items from activeWork (detailed sections) over table-parsed items
+        const seenIds = new Set();
+        const allItems = [];
+
+        // First add activeWork items (they have more detail from ### sections)
+        for (const item of data.activeWork) {
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            allItems.push(item);
+          }
+        }
+
+        // Then add bugs/issues only if not already seen (avoids duplicates)
+        for (const item of data.bugs) {
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            allItems.push(item);
+          }
+        }
+
+        for (const item of data.issues) {
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            allItems.push(item);
+          }
+        }
 
         const tasks = {
           todo: allItems.filter(i => {

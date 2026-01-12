@@ -52,6 +52,16 @@ const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) =
     }
 }
 
+// =============================================================================
+// DRIFT FIX: Module-level flag to ensure reconciliation runs only ONCE per browser session
+// =============================================================================
+// This prevents parent drift when:
+// - Tab visibility changes (focus/unfocus)
+// - Auth token refreshes (TOKEN_REFRESHED event)
+// - CanvasView remounts for any reason
+// Reconciliation should only happen on FIRST load, not repeatedly.
+let hasReconciledThisSession = false
+
 export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
@@ -253,18 +263,24 @@ export function useCanvasOrchestrator() {
         persistence.initRealtimeSubscription()
 
         // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
-        // This runs ONCE on load, using the same spatial containment logic as onNodeDragStop.
-        // Tasks whose absolute center is inside a group but have wrong parentId are corrected.
-        console.log('🔧 [ORCHESTRATOR] Starting reconciliation with', taskStore.tasks.length, 'tasks')
-        await reconcileTaskParentsByContainment(
-            taskStore.tasks,
-            canvasStore.groups,
-            async (taskId, updates) => {
-                // Update store (will auto-sync to Supabase via existing persistence)
-                taskStore.updateTask(taskId, updates)
-            },
-            { writeToDb: true, silent: false }
-        )
+        // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
+        // This guards against remounts from: tab focus, auth refresh, route changes
+        if (!hasReconciledThisSession) {
+            hasReconciledThisSession = true
+            console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
+            await reconcileTaskParentsByContainment(
+                taskStore.tasks,
+                canvasStore.groups,
+                async (taskId, updates) => {
+                    // Update store (will auto-sync to Supabase via existing persistence)
+                    console.log(`🔧 [RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
+                    taskStore.updateTask(taskId, updates)
+                },
+                { writeToDb: true, silent: false }
+            )
+        } else {
+            console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
+        }
 
         // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
         canvasStore.recalculateAllTaskCounts(taskStore.tasks)
@@ -306,6 +322,19 @@ export function useCanvasOrchestrator() {
         syncNodes()
     })
 
+    // REACTIVITY FIX: Watch for manual sync requests from context menus
+    watch(() => canvasStore.syncTrigger, () => {
+        if (!isInitialized.value) return
+        console.log('🔔 [ORCHESTRATOR] canvasStore.syncTrigger changed - forcing sync')
+        syncNodes()
+    })
+
+    watch(() => canvasUiStore.syncTrigger, () => {
+        if (!isInitialized.value) return
+        console.log('🔔 [ORCHESTRATOR] canvasUiStore.syncTrigger changed - forcing sync')
+        syncNodes()
+    })
+
     // Global guard to prevent recursive watcher triggers
     let isSyncingFromWatcher = false
 
@@ -341,21 +370,13 @@ export function useCanvasOrchestrator() {
         }
     })
 
-    // REACTIVITY FIX: Watch for task parentId changes (via version counter)
-    // This triggers when a task is dragged between groups, updating the counters
-    watch(() => canvasStore.taskCountByGroupId.value, () => {
-        // Skip during initialization - onMounted handles initial sync
-        if (!isInitialized.value) return
-        if (isSyncingFromWatcher) return
-        isSyncingFromWatcher = true
-        try {
-            if (persistence.isSyncing.value) return
-            console.log('👀 [ORCHESTRATOR] taskCountByGroupId changed - syncing nodes')
-            syncNodes()
-        } finally {
-            isSyncingFromWatcher = false
-        }
-    }, { deep: true })
+    // DRIFT FIX: REMOVED watcher on taskCountByGroupId
+    // This watcher was causing sync loops and is now redundant because:
+    // 1. updateSingleSectionCount() directly updates Vue Flow node.data with fresh counts
+    // 2. The drag handler calls bumpTaskParentVersion() + updateSectionTaskCounts()
+    // 3. No need to rebuild all nodes just because counts changed
+    // Keeping this comment to document why it was removed.
+    // watch(() => canvasStore.taskCountByGroupId, () => { ... }, { deep: true })
 
     // Retry Logic
     const retryFailedOperation = async () => {
@@ -393,6 +414,8 @@ export function useCanvasOrchestrator() {
         initialViewport,
         hasInitialFit,
         shift,
+        control,
+        meta,
         vueFlowRef: ref(null), // TODO: Do we need this ref if we use Core? CanvasView binds it.
 
         // Computed

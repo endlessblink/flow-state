@@ -21,9 +21,6 @@ const {
 defineProps<{
   monthDays: MonthDay[]
   currentTaskId?: string | null
-  
-  monthDays: MonthDay[]
-  currentTaskId?: string | null
 }>()
 
 defineEmits<{

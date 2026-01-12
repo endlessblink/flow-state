@@ -40,13 +40,6 @@ defineProps<{
     previewDuration: number
     direction: 'top' | 'bottom'
   } | null
-  
-  resizePreview?: {
-    isResizing: boolean
-    taskId: string | null
-    previewDuration: number
-    direction: 'top' | 'bottom'
-  } | null
 }>()
 
 defineEmits<{

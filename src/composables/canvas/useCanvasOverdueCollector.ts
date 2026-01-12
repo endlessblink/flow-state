@@ -29,6 +29,18 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { startOfDay } from 'date-fns'
 
+// =============================================================================
+// FEATURE FLAG: Smart-Group Reparenting
+// =============================================================================
+// When FALSE: Smart-Groups are metadata-only (read counts, display badges)
+// When TRUE: Smart-Groups can move tasks and modify positions
+//
+// DRIFT FIX: Set to FALSE to prevent auto-collection from causing position drift.
+// The auto-collect feature was moving tasks into the Overdue group, which triggered
+// sync cascades and caused tasks to drift back together after manual separation.
+// =============================================================================
+const ENABLE_SMART_GROUP_REPARENTING = false
+
 export function useCanvasOverdueCollector() {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
@@ -99,6 +111,14 @@ export function useCanvasOverdueCollector() {
 
     // Main logic to collect overdue tasks
     const autoCollectOverdueTasks = async () => {
+        // DRIFT FIX: When ENABLE_SMART_GROUP_REPARENTING is false, this function
+        // becomes a no-op. Smart-Groups will still display count badges via
+        // computed properties, but won't move tasks or modify positions.
+        if (!ENABLE_SMART_GROUP_REPARENTING) {
+            console.log('ℹ️ [SMART-GROUP] autoCollectOverdueTasks skipped (ENABLE_SMART_GROUP_REPARENTING = false)')
+            return
+        }
+
         // 1. Get Overdue Tasks
         // Criteria: dueDate < today (00:00) AND not recurring
         const today = startOfDay(new Date())
@@ -152,6 +172,13 @@ export function useCanvasOverdueCollector() {
             }
 
             // Move to group
+            // DRIFT LOGGING: Track when autoCollect modifies positions
+            console.warn(`⚠️ [AUTO-COLLECT POSITION WRITE] Task ${task.id.slice(0, 8)}... moved to Overdue group`, {
+                from: task.canvasPosition,
+                to: { x: startX, y: currentY },
+                caller: 'autoCollectOverdueTasks',
+                stack: new Error().stack?.split('\n').slice(1, 4).join('\n')
+            })
             await taskStore.updateTask(task.id, {
                 canvasPosition: {
                     x: startX,

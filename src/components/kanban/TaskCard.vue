@@ -17,6 +17,7 @@
     :aria-expanded="progressiveDisclosureEnabled ? isExpanded : undefined"
     :aria-disabled="disabled"
     data-draggable="true"
+    :data-status="task.status"
     @click="handleCardClick"
     @keydown="handleKeydown"
     @contextmenu.prevent="handleRightClick"

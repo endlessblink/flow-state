@@ -126,7 +126,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -134,13 +133,13 @@
     <div class="content-header">
       <div class="view-tabs">
         <router-link to="/" class="view-tab" active-class="active">
-          Board
+          Canvas
         </router-link>
         <router-link to="/calendar" class="view-tab" active-class="active">
           Calendar
         </router-link>
-        <router-link to="/canvas" class="view-tab" active-class="active">
-          Canvas
+        <router-link to="/board" class="view-tab" active-class="active">
+          Board
         </router-link>
         <router-link to="/catalog" class="view-tab" active-class="active">
           Catalog
@@ -169,9 +168,9 @@ const timerStore = useTimerStore()
 
 // Route name to display title mapping
 const routeNameToTitle = {
-  'board': 'Board',
-  'calendar': 'Calendar',
   'canvas': 'Canvas',
+  'calendar': 'Calendar',
+  'board': 'Board',
   'catalog': 'Task Catalog',
   'all-tasks': 'All Tasks',
   'quick-sort': 'Quick Sort',
@@ -201,7 +200,7 @@ interface PageTitleInfo {
 const pageTitleInfo = computed<PageTitleInfo>(() => {
   // Get current route name for main title
   const currentRouteName = router.currentRoute.value.name as string
-  const mainTitle = routeNameToTitle[currentRouteName as keyof typeof routeNameToTitle] || 'Board'
+  const mainTitle = routeNameToTitle[currentRouteName as keyof typeof routeNameToTitle] || 'Canvas'
 
   // Determine filter context with priority order:
   // 1. Explicit smart views (highest priority)
@@ -254,14 +253,14 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
   else {
     // Apply smart defaults based on current route
     switch (currentRouteName) {
-      case 'board':
-        filterContext = 'Overview'
+      case 'canvas':
+        filterContext = 'Workflow'
         break
       case 'calendar':
         filterContext = 'Schedule'
         break
-      case 'canvas':
-        filterContext = 'Workflow'
+      case 'board':
+        filterContext = 'Overview'
         break
       case 'catalog':
         filterContext = 'Knowledge Base'

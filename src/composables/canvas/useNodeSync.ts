@@ -220,9 +220,28 @@ export function useNodeSync(
                 }
 
                 if (!retryData || retryData.length === 0) {
-                    // Retry also failed - give up to avoid infinite loops
-                    syncError.value = `Sync Conflict: Retry failed for ${tableName} ${nodeId}. Position may be lost.`
-                    console.error(`❌ [NODE-SYNC] Retry failed for ${tableName} ${nodeId}`)
+                    // ================================================================
+                    // RETRY FAILED - LOG ONLY, NO STORE MUTATION
+                    // ================================================================
+                    // CRITICAL CONTRACT: On retry failure, we ONLY log the error.
+                    // We do NOT:
+                    //   - Fire syncTrigger to cause another sync attempt
+                    //   - Modify task.canvasPosition or task.parentId
+                    //   - Modify group.position or group.parentGroupId
+                    //   - Call any store mutation methods
+                    //
+                    // This prevents feedback loops where failed syncs cascade into
+                    // more sync attempts that also fail.
+                    // ================================================================
+                    const expectedPayload = tableName === 'tasks'
+                        ? updatePayload.position
+                        : updatePayload.position_json
+                    console.error(`❌ [NODE-SYNC] Retry failed for ${tableName} ${nodeId}`, {
+                        expectedPosition: expectedPayload,
+                        lastKnownVersion: newVersion,
+                        advice: 'Position may be stale until next user drag. No automatic retry.'
+                    })
+                    syncError.value = `Sync Conflict: Retry failed for ${tableName} ${nodeId}. Position may be stale.`
                     return false
                 }
 

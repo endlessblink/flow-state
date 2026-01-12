@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
@@ -46,9 +46,10 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
         groupsWithCounts.value.forEach(group => {
             options.push({
-                label: `${group.name} ${group.taskCount}`,
+                label: group.name,
                 value: group.id,
-                color: group.color || '#4ecdc4'
+                color: group.color || '#4ecdc4',
+                count: group.taskCount
             })
         })
 
@@ -148,6 +149,18 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         activeTimeFilter.value = 'all'
         selectedCanvasGroups.value = new Set()
     }
+
+    // FEATURE-254: Canvas inbox starts minimized always unless it has tasks inside
+    // Reactive behavior: auto-collapse when empty, auto-expand when tasks appear (on start)
+    watch(() => inboxTasks.value.length, (count) => {
+        if (props.context === 'canvas') {
+            if (count === 0) {
+                isCollapsed.value = true
+            } else {
+                isCollapsed.value = false
+            }
+        }
+    }, { immediate: true })
 
     return {
         // State

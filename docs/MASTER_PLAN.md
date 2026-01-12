@@ -31,7 +31,7 @@
 | ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) | - |
 | ~~TASK-132~~ | ✅ **DONE** | Fix Canvas & Auth | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/3f8d0816-9774-4fe5-aa58-d6f311bc2d36/walkthrough.md) | - |
 | ~~BUG-144~~ | ✅ **DONE** Canvas Tasks Disappeared | [Details](#bug-144-canvas-content-disappeared-done) | - |
-| **BUG-169** | **Tasks Auto-Removed on Login** | **P0** | ✅ **FIXED** | TASK-168 |
+| ~~**BUG-169**~~ | ✅ **DONE** **Tasks Auto-Removed on Login** | **P0** | ✅ **DONE** (2026-01-09) | TASK-168 |
 | ~~**BUG-170**~~ | ~~Self-Healing Destroys Group Relationships~~ | P1 | ✅ **ALREADY FIXED** | TODO-011 |
 | ~~**BUG-171**~~ | ~~RLS Partial Write Failures Silent~~ | P1 | ✅ **FIXED** | TODO-012 |
 | ~~**BUG-153**~~ | ~~Nested Groups Broken~~ | P1 | ✅ **DONE** | TASK-184 |
@@ -72,6 +72,10 @@
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 | ~~**TASK-230**~~ | ~~**Fix Deps & Locks Tab**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/locks endpoint, fixed dependency parser |
 | ~~**TASK-231**~~ | ~~**Dynamic Skills & Docs API**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/skills and /api/docs endpoints |
+| ~~**TASK-253**~~ | ✅ **DONE** **Reorder App Views** | **P2** | ✅ **DONE** (2026-01-12) | Support user preference: Canvas - Calendar - Board - Catalog - Quick Sort |
+| ~~**BUG-226**~~ | ✅ **DONE** **Nested Group Z-Index Layering** | **P1** | ✅ **DONE** (2026-01-12) | Depth-based Z-index bonus. |
+| ~~**BUG-214**~~ | ✅ **DONE** **Fix Blurry Text in Empty Canvas State** | **P3** | ✅ **DONE** (2026-01-13) | Centering fix with flexbox. |
+| **FEATURE-254** | **Canvas Inbox Smart Minimization** | **P2** | 🔄 **IN PROGRESS** | - |
 
 ---
 
@@ -669,20 +673,32 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ---
 
-### BUG-214: Fix Blurry Text in Empty Canvas State (🆕 NEW)
+### ~~BUG-214~~: Fix Blurry Text in Empty Canvas State (✅ DONE)
 **Priority**: P3-LOW
-**Status**: TODO
+**Status**: Done
 **Created**: January 11, 2026
+**Completed**: January 13, 2026
 
 **Problem**: The "Your canvas is empty" placeholder text appears blurry.
 **Likely Cause**: Sub-pixel rendering issues often caused by `transform: translate(-50%, -50%)` or non-integer pixel positioning in the empty state container.
 
+**Resolution**: Switched from `absolute` + `translate` to `absolute` + `inset: 0` + `flexbox` centering. This avoids fractional pixels and sub-pixel interpolation, resulting in crisp text rendering.
+
 **Investigation**:
-- [ ] Check `CanvasEmptyState.vue` (or similar component) CSS.
-- [ ] Verify if `backdrop-filter: blur` is interfering with text sharpness.
-- [ ] Ensure centering uses flexbox/grid instead of transform where possible.
+- [x] Check `CanvasEmptyState.vue` (or similar component) CSS.
+- [x] Verify if `backdrop-filter: blur` is interfering with text sharpness.
+- [x] Ensure centering uses flexbox/grid instead of transform where possible.
 
 ---
+
+### FEATURE-254: Canvas Inbox Smart Minimization (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Status**: In Progress
+**Goal**: Canvas inbox starts minimized always unless it has tasks inside.
+**Tasks**:
+- [ ] Implement initial state check for Inbox tasks.
+- [ ] Auto-collapse Inbox if empty on mount/initialization.
+- [ ] Ensure user can still expand it manually if desired.
 
 | ~~**BUG-218**~~ | ✅ **DONE** **Persistent Task Position Drift** | **P0** | ✅ **RECOVERY FIXED** (TASK-232) | - |
 
@@ -758,14 +774,19 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 - [ ] Check `GroupNode.vue` props/computed for color binding.
 - [ ] Verify `useCanvasGroups.ts` update logic.
 
-### BUG-226: Nested Group Z-Index Layering (🔥 URGENT)
+### ~~BUG-226~~: Nested Group Z-Index Layering (✅ DONE)
 **Priority**: P1-HIGH
-**Status**: IN PROGRESS
+**Status**: Done
 **Created**: January 11, 2026
+**Completed**: January 12, 2026
 
 **Problem**: Nested groups appear *behind* or *under* their parent group container, limiting interaction and visibility.
 **Cause**: Z-index calculation currently relies on Area (smaller = higher), but this might be insufficient or overridden by stacking contexts.
 **Fix**: Introduce explicit "depth" or "hierarchy" bonus to Z-index calculation. Child Z must be > Parent Z.
+**Implementation**: Added depth-based Z-index bonus in `useCanvasSync.ts` and refactored `sortGroupsByHierarchy` to preserve depth information. Removed hardcoded Z-index conflict in `canvas-view-overrides.css`.
+
+---
+
 
 ### TASK-227: Fix Group/Task Containment Drift (🔥 URGENT)
 **Priority**: P1-HIGH
@@ -979,17 +1000,18 @@ Unified skill merging Legacy Tech Remover + Comprehensive Auditor with dead code
 
 ---
 
-### TASK-169: Codebase Cleanup Phase 1 (🔄 IN PROGRESS)
+### ~~TASK-169~~: Codebase Cleanup Phase 1 (✅ DONE)
 **Priority**: P2-MEDIUM
+**Status**: Done
 **Started**: January 9, 2026
 **Related**: TASK-212 (Codebase Health Auditor Skill)
 
 Address findings from the newly implemented Codebase Health Auditor.
 
 **Scope**:
-- [ ] Cleanup SAFE items (unused files/exports)
-- [ ] Cleanup Vue-specific items (unused props/emits/computed)
-- [ ] Verify build and tests pass
+- [x] Cleanup SAFE items (unused files/exports)
+- [x] Cleanup Vue-specific items (unused props/emits/computed)
+- [x] Verify build and tests pass
 
 ---
 
@@ -1108,8 +1130,9 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 **Completed**: January 8, 2026
 **Resolution**: Added missing `<slot />` to `GroupNodeSimple.vue` enabling Vue Flow to render nested specific nodes.
 
-### BUG-169: Tasks Auto-Removed on Login (✅ FIXED)
+### ~~BUG-169~~: Tasks Auto-Removed on Login (✅ DONE)
 **Priority**: P0-CRITICAL
+**Status**: Done
 **Completed**: January 9, 2026
 **Problem**: Tasks appeared briefly then disappeared automatically when signed in. Canvas kept reinitializing.
 **Root Cause Analysis**:
@@ -3307,8 +3330,8 @@ Race condition in `ensureActionGroups()` - function ran before sections loaded f
 - `src/composables/canvas/useCanvasSmartGroups.ts`
 - `src/stores/canvas.ts`
 
----
-
+--- [ ] BUG-250: Status change via context menu doesn't update immediately ✅ (Added)
+- [x] ~~TASK-245: Fix Smart Group Dates~~ ✅
 ### ~~TASK-116~~: Smart Group Drop Should Update Task Due Date Instantly (✅ DONE)
 **Priority**: P1-HIGH
 **Completed**: January 7, 2026

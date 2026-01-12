@@ -8,7 +8,8 @@
  * INVARIANT A: HIERARCHY CONSISTENCY
  * ============================================================================
  * - If group.parentGroupId === null → Vue Flow node has parentNode: undefined, extent: undefined
- * - If group.parentGroupId !== null → Vue Flow node has parentNode = CanvasIds.groupNodeId(parentGroupId), extent: 'parent'
+ * - If group.parentGroupId !== null → Vue Flow node has parentNode = CanvasIds.groupNodeId(parentGroupId)
+ *   (NOTE: Groups do NOT have extent: 'parent' set - this allows child→root drag transitions)
  * - The parent group MUST exist in the store
  *
  * ============================================================================

@@ -68,6 +68,164 @@ function collectDescendantTasks(rootId: string, tasks: Task[], groups: CanvasGro
 }
 
 // =============================================================================
+// GROUP PARENT UPDATE HELPER
+// =============================================================================
+// This helper encapsulates ALL parent transition logic for groups:
+// - Center-based containment detection
+// - Cycle prevention
+// - Vue Flow node updates (parentNode, position)
+// - Store updates (parentGroupId)
+//
+// CRITICAL INVARIANT: Groups must NOT have extent: 'parent' set!
+// This allows them to escape their parent via drag.
+
+interface GroupParentUpdateResult {
+    oldParentId: string | null
+    newParentId: string | null
+    transitionType: 'root-to-child' | 'child-to-root' | 'child-to-child' | 'no-change'
+    cyclePreventedAttemptedParent?: string
+}
+
+/**
+ * Update a group's parent after drag, using center-based containment.
+ *
+ * BEHAVIOR:
+ * 1. Computes targetParentId using center of group's bounding box
+ * 2. If center is inside a group → becomes child of that group
+ * 3. If center is outside all groups → becomes root (parentGroupId = null)
+ * 4. Prevents cycles (can't make a descendant the parent)
+ * 5. Updates Vue Flow node.parentNode (but NOT extent!)
+ * 6. Returns detailed transition info for logging
+ *
+ * @param args.groupId - The group being moved
+ * @param args.absoluteRect - The group's absolute bounding box {x, y, width, height}
+ * @param args.node - The Vue Flow node to update
+ * @param args.allGroups - All groups for containment lookup
+ * @returns Result with old/new parent and transition type
+ */
+function updateGroupParentAfterDrag(args: {
+    groupId: string
+    absoluteRect: { x: number; y: number; width: number; height: number }
+    node: any
+    allGroups: CanvasGroup[]
+}): GroupParentUpdateResult {
+    const { groupId, absoluteRect, node, allGroups } = args
+
+    // Find current group in store
+    const group = allGroups.find(g => g.id === groupId)
+    const oldParentId = group?.parentGroupId ?? null
+
+    // Build spatial representation for containment check
+    const spatialGroup = {
+        position: { x: absoluteRect.x, y: absoluteRect.y },
+        width: absoluteRect.width,
+        height: absoluteRect.height,
+    }
+
+    // Find containing group by CENTER (not overlap)
+    const targetParent = getDeepestContainingGroup(spatialGroup, allGroups, groupId)
+    let newParentId: string | null = targetParent?.id ?? null
+
+    // Log center position for debugging
+    const centerX = absoluteRect.x + absoluteRect.width / 2
+    const centerY = absoluteRect.y + absoluteRect.height / 2
+
+    console.log(`[GROUP-PARENT] Checking containment for "${group?.name || groupId}"`, {
+        center: { x: Math.round(centerX), y: Math.round(centerY) },
+        oldParent: oldParentId ?? '(root)',
+        detectedParent: newParentId ?? '(root)',
+    })
+
+    // ================================================================
+    // CYCLE PREVENTION
+    // ================================================================
+    let cyclePreventedAttemptedParent: string | undefined
+
+    // 1) Don't allow self-parenting
+    if (newParentId === groupId) {
+        console.warn(`[GROUP-PARENT] Prevented self-parenting for ${groupId}`)
+        newParentId = null
+    }
+
+    // 2) Don't allow making a descendant the parent (creates A→B→A cycle)
+    if (newParentId) {
+        const descendants = collectDescendantGroups(groupId, allGroups)
+        const descendantIds = new Set(descendants.map(d => d.id))
+        if (descendantIds.has(newParentId)) {
+            console.warn(`[GROUP-PARENT] Prevented cycle: "${group?.name}" cannot have descendant "${targetParent?.name}" as parent`)
+            cyclePreventedAttemptedParent = newParentId
+            // BUG FIX: When cycle prevented, DON'T keep old parent!
+            // The user dragged outside, they want to escape. Set to root.
+            // Only exception: if they tried to drop INTO their own child.
+            // In that case, we keep position but become root.
+            newParentId = null
+        }
+    }
+
+    // ================================================================
+    // POSITION ADJUSTMENT (before parentNode change)
+    // ================================================================
+    // When parent changes, Vue Flow interprets node.position relative to new parent.
+    // Adjust position so visual location stays the same.
+    if (oldParentId !== newParentId) {
+        if (newParentId) {
+            // Going INTO a parent: convert absolute → relative
+            const newParentAbsolute = getGroupAbsolutePosition(newParentId, allGroups)
+            const newRelativePos = {
+                x: absoluteRect.x - newParentAbsolute.x,
+                y: absoluteRect.y - newParentAbsolute.y
+            }
+            if (isFinite(newRelativePos.x) && isFinite(newRelativePos.y)) {
+                node.position = newRelativePos
+            }
+        } else {
+            // Going to ROOT: use absolute position directly
+            node.position = { x: absoluteRect.x, y: absoluteRect.y }
+        }
+    }
+
+    // ================================================================
+    // VUE FLOW NODE UPDATE
+    // ================================================================
+    // CRITICAL: Do NOT set extent: 'parent'!
+    // This would lock the group inside and prevent future escape.
+    if (newParentId) {
+        node.parentNode = CanvasIds.groupNodeId(newParentId)
+        // NOTE: Intentionally NOT setting node.extent = 'parent'
+    } else {
+        node.parentNode = undefined
+        node.extent = undefined
+    }
+
+    // Determine transition type for logging
+    let transitionType: GroupParentUpdateResult['transitionType'] = 'no-change'
+    if (oldParentId !== newParentId) {
+        if (!oldParentId && newParentId) {
+            transitionType = 'root-to-child'
+        } else if (oldParentId && !newParentId) {
+            transitionType = 'child-to-root'
+        } else {
+            transitionType = 'child-to-child'
+        }
+
+        const oldName = oldParentId ? allGroups.find(g => g.id === oldParentId)?.name : '(root)'
+        const newName = newParentId ? allGroups.find(g => g.id === newParentId)?.name : '(root)'
+        console.log(`[GROUP-PARENT] ✓ Transition: ${transitionType}`, {
+            group: group?.name || groupId,
+            from: oldName,
+            to: newName,
+        })
+    }
+
+    return {
+        oldParentId,
+        newParentId,
+        transitionType,
+        cyclePreventedAttemptedParent,
+    }
+}
+
+// =============================================================================
 // ABSOLUTE POSITION COMPUTATION HELPER
 // =============================================================================
 // This helper reliably computes the absolute world position of a Vue Flow node,
@@ -256,129 +414,39 @@ export function useCanvasInteractions(deps?: {
                 // GROUP DRAG END
                 // ============================================================
                 const { id: groupId } = CanvasIds.parseNodeId(node.id)
-                // Use _rawGroups to include hidden groups
-                const groupsForLookup = canvasStore._rawGroups || canvasStore.groups || []
-                const group = groupsForLookup.find(g => g.id === groupId)
+                const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+                const group = allGroups.find(g => g.id === groupId)
                 if (!group) continue
 
                 // Compute absolute position for the group
-                // Use _rawGroups to include hidden groups in position lookups
-                const allGroups = canvasStore._rawGroups || canvasStore.groups || []
                 const absolutePos = computeNodeAbsolutePosition(node, allGroups)
-
-                // Build spatial representation of the group for containment check
                 const groupWidth = group.position.width
                 const groupHeight = group.position.height
 
-                const spatialGroup = {
-                    position: absolutePos,
-                    width: groupWidth,
-                    height: groupHeight,
-                }
-
-                // Find deepest containing group, excluding this group itself
-                const targetParent = getDeepestContainingGroup(
-                    spatialGroup,
-                    allGroups,
-                    groupId // exclude this group from being its own parent
-                )
-
-                // Get old parent for comparison
-                const oldParentGroupId = group.parentGroupId ?? null
-
-                // DEBUG: Log group drop details for child→root transition debugging
-                console.log('[DEBUG GROUP DROP]', {
+                // Use the unified helper for parent update logic
+                // This handles: containment detection, cycle prevention, position adjustment,
+                // Vue Flow node updates (parentNode but NOT extent)
+                const parentResult = updateGroupParentAfterDrag({
                     groupId,
-                    groupName: group.name,
-                    oldParentGroupId,
-                    targetParentId: targetParent?.id ?? null,
-                    center: {
-                        x: spatialGroup.position.x + spatialGroup.width / 2,
-                        y: spatialGroup.position.y + spatialGroup.height / 2,
+                    absoluteRect: {
+                        x: absolutePos.x,
+                        y: absolutePos.y,
+                        width: groupWidth,
+                        height: groupHeight,
                     },
+                    node,
+                    allGroups,
                 })
-
-                // ================================================================
-                // CYCLE PREVENTION: Don't allow cyclic parent assignments
-                // ================================================================
-                let newParentGroupId = targetParent?.id ?? null
-
-                // 1) Don't allow a group to be its own parent (redundant but explicit)
-                if (newParentGroupId === groupId) {
-                    console.warn('[GROUP] Prevented self-parenting', { groupId })
-                    newParentGroupId = null
-                }
-
-                // 2) Don't allow making a descendant the parent (would create a cycle)
-                if (newParentGroupId) {
-                    const descendants = collectDescendantGroups(groupId, allGroups)
-                    const descendantIds = new Set(descendants.map(d => d.id))
-                    if (descendantIds.has(newParentGroupId)) {
-                        console.warn('[GROUP] Prevented cyclic parent assignment', {
-                            groupId,
-                            groupName: group.name,
-                            attemptedParentId: newParentGroupId,
-                            attemptedParentName: targetParent?.name,
-                            descendantIds: Array.from(descendantIds),
-                        })
-                        // Keep old parent to avoid cycle
-                        newParentGroupId = oldParentGroupId
-                    }
-                }
-
-                // ================================================================
-                // POSITION JUMP FIX: Adjust node.position BEFORE setting parentNode
-                // ================================================================
-                // When parent changes, Vue Flow immediately interprets node.position
-                // as relative to the new parent. We must adjust the position value
-                // so the visual position stays the same.
-                //
-                // - absolutePos: where the group visually IS (absolute world coords)
-                // - node.position: what Vue Flow uses (relative to parentNode)
-                //
-                // To keep visual position after parent change:
-                // - If going INTO a parent: newRelative = absolute - parentAbsolute
-                // - If going to ROOT: newRelative = absolute (no offset)
-                if (oldParentGroupId !== newParentGroupId) {
-                    if (newParentGroupId) {
-                        // Going into a parent group - convert to relative position
-                        const newParentAbsolute = getGroupAbsolutePosition(newParentGroupId, allGroups)
-                        const newRelativePos = {
-                            x: absolutePos.x - newParentAbsolute.x,
-                            y: absolutePos.y - newParentAbsolute.y
-                        }
-                        // Guard against NaN values
-                        if (isFinite(newRelativePos.x) && isFinite(newRelativePos.y)) {
-                            node.position = newRelativePos
-                        }
-                    } else {
-                        // Going to root (no parent) - use absolute position
-                        node.position = absolutePos
-                    }
-                }
-
-                // Update Vue Flow node's parentNode AND extent to match
-                // MUST happen AFTER position adjustment to avoid visual jump
-                // CRITICAL: Both parentNode AND extent must be set together!
-                // - When going INTO a parent: set both parentNode and extent: 'parent'
-                // - When going to ROOT: clear both to undefined
-                if (newParentGroupId) {
-                    node.parentNode = CanvasIds.groupNodeId(newParentGroupId)
-                    node.extent = 'parent'
-                } else {
-                    node.parentNode = undefined
-                    node.extent = undefined
-                }
 
                 // Update store with ABSOLUTE position AND parentGroupId
                 canvasStore.updateSection(groupId, {
                     position: {
                         x: absolutePos.x,
                         y: absolutePos.y,
-                        width: spatialGroup.width,
-                        height: spatialGroup.height,
+                        width: groupWidth,
+                        height: groupHeight,
                     },
-                    parentGroupId: newParentGroupId,
+                    parentGroupId: parentResult.newParentId,
                     positionFormat: 'absolute',
                 })
 
@@ -464,9 +532,10 @@ export function useCanvasInteractions(deps?: {
                 })
 
                 if (oldParentId !== newParentId) {
-                    updateSectionTaskCounts(oldParentId || undefined, newParentId || undefined)
-                    // REACTIVITY FIX: Bump version to trigger count recomputation
+                    // REACTIVITY FIX: Bump version FIRST to trigger count recomputation
+                    // Then updateSectionTaskCounts can read the fresh values from computeds
                     canvasStore.bumpTaskParentVersion()
+                    updateSectionTaskCounts(oldParentId || undefined, newParentId || undefined)
                 }
 
                 // 5. Update Vue Flow parentNode to match new containment

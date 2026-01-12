@@ -571,7 +571,7 @@ const setDueDate = async (dateType: string) => {
         try {
           await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: newDate })
           // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
-          canvasStore.requestSync()
+          canvasStore.requestSync('user:context-menu')
         } catch (error) {
           console.error('❌ Error updating task due date:', error)
         }
@@ -588,7 +588,7 @@ const setDueDate = async (dateType: string) => {
       const formattedDate = dueDate.toLocaleDateString()
       await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
       // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
-      canvasStore.requestSync()
+      canvasStore.requestSync('user:context-menu')
     } catch (error) {
       console.error('❌ Error setting due date:', error)
     }
@@ -604,7 +604,7 @@ const setPriority = async (priority: 'high' | 'medium' | 'low') => {
     try {
       await taskStore.updateTaskWithUndo(currentTask.value.id, { priority })
       // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
-      canvasStore.requestSync()
+      canvasStore.requestSync('user:context-menu')
     } catch (error) {
       console.error('❌ Error setting priority:', error)
     }
@@ -620,7 +620,7 @@ const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' 
     try {
       await taskStore.updateTaskWithUndo(currentTask.value.id, { status })
       // FIX BUG-013: Request canvas sync to refresh Vue Flow nodes after property change
-      canvasStore.requestSync()
+      canvasStore.requestSync('user:context-menu')
     } catch (error) {
       console.error('❌ Error setting status:', error)
     }
@@ -634,7 +634,7 @@ const setDuration = async (duration: number | null) => {
   } else if (currentTask.value) {
     try {
       await taskStore.updateTaskWithUndo(currentTask.value.id, { estimatedDuration: duration ?? undefined })
-      canvasStore.requestSync()
+      canvasStore.requestSync('user:context-menu')
     } catch (error) {
       console.error('❌ Error setting estimated duration:', error)
     }

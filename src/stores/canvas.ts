@@ -1,12 +1,14 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, watch, computed } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 // Force HMR update
 import { type Task } from './tasks'
 import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
-// TASK-CUSTOM: Import optimistic sync for patchGroupschecks
-import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
-import { getAbsoluteNodePosition, getGroupAbsolutePosition, isPointInRect } from '@/utils/canvas/positionCalculator'
+import { isPointInRect } from '@/utils/canvas/positionCalculator'
+import { isNodeCompletelyInside, type ContainerBounds } from '@/utils/canvas/spatialContainment'
+import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
+import { CANVAS } from '@/constants/canvas'
+import { type Node } from '@vue-flow/core'
 import type {
   GroupFilter,
   TaskPosition,
@@ -62,7 +64,13 @@ export const useCanvasStore = defineStore('canvas', () => {
   // SAFETY: Named _rawGroups to discourage direct access - use visibleGroups (exported as 'groups') instead
   const _rawGroups = ref<CanvasGroup[]>([])
   const activeGroupId = ref<string | null>(null)
+  const isDragging = ref(false)
+  watch(isDragging, (val) => {
+    console.log(`🎯 [CANVAS-STORE] isDragging: ${val}`)
+  })
   const syncTrigger = ref(0)
+  // Optimistic Locking Version Map
+  const nodeVersionMap = ref<Map<string, number>>(new Map())
 
   // SAFETY: Filtered groups for display - excludes hidden groups
   const visibleGroups = computed(() => _rawGroups.value.filter(g => g.isVisible !== false))
@@ -158,12 +166,25 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       _rawGroups.value = loadedGroups
 
-      if (loadedGroups.length > 0) {
+      // Populate nodeVersionMap with loaded group versions for optimistic locking
+      nodeVersionMap.value.clear()
+      loadedGroups.forEach(g => {
+        if (g.positionVersion !== undefined) {
+          nodeVersionMap.value.set(g.id, g.positionVersion)
+        }
+      })
 
-        // TASK-142 DEBUG: Log positions of loaded groups
-        loadedGroups.forEach(g => {
+      // Also populate from taskStore if available
+      if (taskStore && taskStore.tasks) {
+        taskStore.tasks.forEach((t: any) => {
+          if (t.positionVersion !== undefined) {
+            nodeVersionMap.value.set(t.id, t.positionVersion)
+          }
         })
-      } else {
+      }
+
+      if (loadedGroups.length > 0) {
+        console.log(`📦 [CANVAS] Loaded ${loadedGroups.length} groups, nodeVersionMap size: ${nodeVersionMap.value.size}`)
       }
 
       // NOTE: Authenticated users use Supabase as single source of truth
@@ -243,7 +264,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       ...groupData,
       id: `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       isVisible: true,
-      isCollapsed: false
+      isCollapsed: false,
+      positionVersion: 1, // Start at version 1
+      positionFormat: groupData.positionFormat || 'absolute' // Default to absolute until Phase 3 migration is fully active
     }
     _rawGroups.value.push(newGroup)
     await saveGroupToStorage(newGroup)
@@ -257,7 +280,17 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (updates.name) {
         applySmartGroupNormalizations(updates)
       }
-      _rawGroups.value[index] = { ..._rawGroups.value[index], ...updates, updatedAt: new Date().toISOString() }
+
+      // TASK-240: Handle position versioning
+      const currentVersion = _rawGroups.value[index].positionVersion || 0
+      const newVersion = updates.position ? currentVersion + 1 : currentVersion
+
+      _rawGroups.value[index] = {
+        ..._rawGroups.value[index],
+        ...updates,
+        positionVersion: newVersion,
+        updatedAt: new Date().toISOString()
+      }
       await saveGroupToStorage(_rawGroups.value[index])
     }
   }
@@ -315,13 +348,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
 
     for (const [groupId, changes] of updates) {
-      // Check if group has pending local changes (optimistic sync)
-      const { getPendingPosition } = useCanvasOptimisticSync()
-      const pendingPos = getPendingPosition(groupId)
-      if (pendingPos && (changes.position !== undefined)) {
-        result.skippedLocked.push(groupId)
-        continue
-      }
+      // Check if group has pending local changes (optimistic sync: REMOVED)
 
       const group = _rawGroups.value.find(g => g.id === groupId)
       if (!group) {
@@ -388,72 +415,48 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  // Helper to check if a task is visually inside a group
-  // REPLACED by imported isPointInRect
+  // Visual Containment Count - counts tasks that are VISUALLY inside the group bounds
+  const getTaskCountInGroupRecursive = (groupId: string, tasks: Task[], visited = new Set<string>()): number => {
+    // Prevent infinite recursion in cyclic graphs
+    if (visited.has(groupId)) {
+      console.warn(`🔄 [CANVAS] Cycle detected in group hierarchy at ${groupId}`)
+      return 0
+    }
+    visited.add(groupId)
 
-  const getTaskCountInGroupRecursive = (groupId: string, tasks: Task[]): number => {
-    // SAFETY: Use _rawGroups to find any group including hidden ones
     const group = _rawGroups.value.find(g => g.id === groupId)
     if (!group) return 0
 
-    // Helper: Calculate absolute position recursively from store data
-    // REPLACED by imported getGroupAbsolutePosition
-    const getGroupAbsolutePositionHelper = (group: CanvasGroup): { x: number, y: number } => {
-      return getGroupAbsolutePosition(group.id, _rawGroups.value)
+    // 1. Get ABSOLUTE group position (handles nested groups correctly)
+    const groupAbsolutePos = getGroupAbsolutePosition(groupId, _rawGroups.value)
+
+    // 2. Count tasks visually inside this group (using CENTER-based spatial containment)
+    const containerBounds: ContainerBounds = {
+      position: groupAbsolutePos,
+      width: group.position.width,
+      height: group.position.height
     }
 
-    // BUG-184c FIX: Get child groups FIRST so we can exclude their tasks from direct count
-    // SAFETY: Use _rawGroups to include hidden child groups
-    const childGroups = _rawGroups.value.filter(g => g.parentGroupId === groupId)
-
-    // Pre-calculate child group rects for exclusion check
-    const childGroupRects = childGroups.map(child => {
-      const childAbsPos = getGroupAbsolutePositionHelper(child)
-      return {
-        x: childAbsPos.x,
-        y: childAbsPos.y,
-        width: child.position?.width ?? 300,
-        height: child.position?.height ?? 200
-      }
-    })
-
-    // Calculate this group's absolute rect
-    const absPos = getGroupAbsolutePositionHelper(group)
-    const groupRect = {
-      x: absPos.x,
-      y: absPos.y,
-      width: group.position?.width ?? 300,
-      height: group.position?.height ?? 200
-    }
-
-    // Direct tasks in this group (EXCLUDING those in child groups)
     let count = tasks.filter(t => {
-      if (!t.canvasPosition) return false
-
-      // Get Task Center (Absolute)
-      const w = 220
-      const h = 100
-      const taskCenterX = t.canvasPosition.x + (w / 2)
-      const taskCenterY = t.canvasPosition.y + (h / 2)
-
-      // Check if task is in this group's bounds
-      if (!isPointInRect(taskCenterX, taskCenterY, groupRect)) return false
-
-      // BUG-184c FIX: Exclude tasks that are in any child group
-      // This prevents double-counting: once by parent, once by recursive child call
-      const isInChildGroup = childGroupRects.some(childRect =>
-        isPointInRect(taskCenterX, taskCenterY, childRect)
-      )
-
-      return !isInChildGroup  // Only count if NOT in a child group
+      if (!t.canvasPosition || t._soft_deleted) return false
+      const taskNode = { position: t.canvasPosition }
+      const isInside = isNodeCompletelyInside(taskNode, containerBounds)
+      return isInside
     }).length
 
-    // Recursive: Tasks in child groups
+    // 3. Recursive Children (in nested subgroups)
+    const childGroups = _rawGroups.value.filter(g => g.parentGroupId === groupId)
     for (const child of childGroups) {
-      count += getTaskCountInGroupRecursive(child.id, tasks)
+      count += getTaskCountInGroupRecursive(child.id, tasks, visited)
     }
 
     return count
+  }
+
+  const recalculateAllTaskCounts = (tasks: Task[]) => {
+    _rawGroups.value.forEach(group => {
+      group.taskCount = getTaskCountInGroupRecursive(group.id, tasks)
+    })
   }
 
   const getTasksInSection = (groupId: string, tasks?: Task[]): Task[] => {
@@ -464,10 +467,18 @@ export const useCanvasStore = defineStore('canvas', () => {
     const group = _rawGroups.value.find(g => g.id === groupId)
     if (!group) return []
 
-    // Direct tasks in this group
+    // Get ABSOLUTE group position (handles nested groups correctly)
+    const groupAbsolutePos = getGroupAbsolutePosition(groupId, _rawGroups.value)
+
+    // Direct tasks in this group (using CENTER-based spatial containment with ABSOLUTE bounds)
+    const containerBounds: ContainerBounds = {
+      position: groupAbsolutePos,
+      width: group.position.width,
+      height: group.position.height
+    }
     return sourceTasks.filter((t: Task) => {
       if (t.canvasPosition) {
-        return isPointInRect(t.canvasPosition.x, t.canvasPosition.y, group.position)
+        return isNodeCompletelyInside({ position: t.canvasPosition }, containerBounds)
       }
       return false
     })
@@ -477,7 +488,17 @@ export const useCanvasStore = defineStore('canvas', () => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
     const group = _rawGroups.value.find(g => g.id === sectionId)
     if (!group || !task.canvasPosition) return false
-    return isPointInRect(task.canvasPosition.x, task.canvasPosition.y, group.position)
+
+    // Get ABSOLUTE group position (handles nested groups correctly)
+    const groupAbsolutePos = getGroupAbsolutePosition(sectionId, _rawGroups.value)
+
+    // Use CENTER-based spatial containment with ABSOLUTE bounds
+    const containerBounds: ContainerBounds = {
+      position: groupAbsolutePos,
+      width: group.position.width,
+      height: group.position.height
+    }
+    return isNodeCompletelyInside({ position: task.canvasPosition }, containerBounds)
   }
 
   const calculateContentBounds = (tasks: Task[]) => {
@@ -662,8 +683,16 @@ export const useCanvasStore = defineStore('canvas', () => {
             }
 
             _rawGroups.value = loadedGroups
+
+            // Populate nodeVersionMap with loaded group versions for optimistic locking
+            loadedGroups.forEach(g => {
+              if (g.positionVersion !== undefined) {
+                nodeVersionMap.value.set(g.id, g.positionVersion)
+              }
+            })
+
             if (loadedGroups.length > 0) {
-            } else {
+              console.log(`📦 [AUTH-WATCHER] Reloaded ${loadedGroups.length} groups, ${nodeVersionMap.value.size} version entries`)
             }
           } catch (e) {
             console.error('❌ [CANVAS] Failed to reload groups after auth:', e)
@@ -769,6 +798,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     setViewport,
     loadSavedViewport,
     getTaskCountInGroupRecursive,
+    recalculateAllTaskCounts,
     calculateContentBounds,
     setSelectedNodes,
     getTasksInSection,
@@ -787,6 +817,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     toggleSectionCollapse,
     clearSelection,
     requestSync,
+    isDragging,
     setSelectionMode,
     startSelection,
     updateSelection,
@@ -802,6 +833,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     startConnection,
     clearConnection,
     syncTrigger,
+    nodeVersionMap,
     syncTasksToCanvas,
 
     // Aliases - sections is same as groups (visibleGroups filtered)
@@ -812,3 +844,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     deleteSection,
   }
 })
+
+// HMR support
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useCanvasStore, import.meta.hot))
+}

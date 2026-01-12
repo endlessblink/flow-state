@@ -1,8 +1,22 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
 const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
+
+/**
+ * Helper to ensure a value is a Set<string>
+ * Handles cross-tab sync where PiniaSharedState serializes Sets as plain objects
+ */
+function ensureSet(value: unknown): Set<string> {
+  if (value instanceof Set) return value
+  if (Array.isArray(value)) return new Set(value)
+  if (value && typeof value === 'object') {
+    // Object from JSON serialization - use keys
+    return new Set(Object.keys(value))
+  }
+  return new Set()
+}
 
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
@@ -20,8 +34,17 @@ export const useUIStore = defineStore('ui', () => {
   const focusMode = ref(false)
 
   // Project Multi-Selection State
+  // Note: PiniaSharedState can serialize Sets as plain objects during cross-tab sync
   const selectedProjectIds = ref<Set<string>>(new Set())
   const lastSelectedProjectId = ref<string | null>(null)
+
+  // FIX: Ensure selectedProjectIds is always a Set after cross-tab sync
+  // PiniaSharedState serializes Sets as plain objects, so we watch and convert back
+  watch(selectedProjectIds, (newVal) => {
+    if (!(newVal instanceof Set)) {
+      selectedProjectIds.value = ensureSet(newVal)
+    }
+  }, { immediate: true })
 
   // Theme and additional UI state
   const theme = ref<'light' | 'dark' | 'auto'>('dark')

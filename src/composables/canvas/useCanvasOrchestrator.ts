@@ -10,6 +10,7 @@ import { useMagicKeys, useWindowSize } from '@vueuse/core'
 import resourceManager from '../../utils/canvas/resourceManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { reconcileTaskParentsByContainment } from '@/utils/canvas/spatialContainment'
+import { logHierarchySummary } from '@/utils/canvas/invariants'
 
 // --- NEW COMPOSABLES (Phase 3) ---
 import { useCanvasCore } from './useCanvasCore'
@@ -89,7 +90,7 @@ export function useCanvasOrchestrator() {
     const { hasInitialFit, operationLoading, operationError } = storeToRefs(canvasUiStore)
     const { setOperationLoading, setOperationError, clearOperationError } = canvasUiStore
     const { width, height } = useWindowSize()
-    const { shift } = useMagicKeys()
+    const { shift, control, meta } = useMagicKeys()
 
     // --- 2. Computed Data ---
     const filteredTasks = computed(() => taskStore.filteredTasks)
@@ -208,14 +209,14 @@ export function useCanvasOrchestrator() {
     const smartGroups = useCanvasOverdueCollector()
 
     // Events Wrapper
-    const handleCanvasContainerClick = (e: MouseEvent) => {
+    const handleCanvasContainerClick = (_e: MouseEvent) => {
         interactions.clearSelection()
         events.closeCanvasContextMenu()
         events.closeEdgeContextMenu()
         events.closeNodeContextMenu()
     }
 
-    const collectTasksForSection = (sectionId: string) => {
+    const collectTasksForSection = (_sectionId: string) => {
         smartGroups.autoCollectOverdueTasks()
     }
 
@@ -237,16 +238,24 @@ export function useCanvasOrchestrator() {
 
     // --- 4. Initialization & Reactivity ---
 
+    // CRITICAL: Initialization guard to prevent watchers from calling syncNodes during startup
+    // Without this, watchers fire as data loads, causing multiple syncNodes() calls with different task counts
+    const isInitialized = ref(false)
+
     // Initial sync
     onMounted(async () => {
+        console.log('🚀 [ORCHESTRATOR] onMounted starting...')
+
         await canvasStore.loadSavedViewport()
         await nextTick()
+
         // Initialize Realtime
         persistence.initRealtimeSubscription()
 
         // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
         // This runs ONCE on load, using the same spatial containment logic as onNodeDragStop.
         // Tasks whose absolute center is inside a group but have wrong parentId are corrected.
+        console.log('🔧 [ORCHESTRATOR] Starting reconciliation with', taskStore.tasks.length, 'tasks')
         await reconcileTaskParentsByContainment(
             taskStore.tasks,
             canvasStore.groups,
@@ -259,8 +268,19 @@ export function useCanvasOrchestrator() {
 
         // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
         canvasStore.recalculateAllTaskCounts(taskStore.tasks)
-        // Initial Load
+
+        // Log hierarchy summary once on load (dev only)
+        if (import.meta.env.DEV) {
+            logHierarchySummary(canvasStore._rawGroups || [])
+        }
+
+        // SINGLE initial sync respecting current filters
+        console.log('🚀 [ORCHESTRATOR] Initial syncNodes...')
         syncNodes()
+
+        // Mark initialization complete - watchers can now fire
+        isInitialized.value = true
+        console.log('✅ [ORCHESTRATOR] Initialization complete')
     })
 
     // Persist Viewport on Change
@@ -272,9 +292,19 @@ export function useCanvasOrchestrator() {
 
     // Watchers are now largely handled by persistence.initRealtimeSubscription which watches Stores
     // But we still need to watch Filter changes here as they affect WHICH tasks we show
-    watch(() => taskStore.activeStatusFilter, () => syncNodes())
-    watch(() => taskStore.hideCanvasDoneTasks, () => syncNodes())
-    watch(() => taskStore.hideCanvasOverdueTasks, () => syncNodes())
+    // CRITICAL: All watchers check isInitialized to prevent firing during startup
+    watch(() => taskStore.activeStatusFilter, () => {
+        if (!isInitialized.value) return
+        syncNodes()
+    })
+    watch(() => taskStore.hideCanvasDoneTasks, () => {
+        if (!isInitialized.value) return
+        syncNodes()
+    })
+    watch(() => taskStore.hideCanvasOverdueTasks, () => {
+        if (!isInitialized.value) return
+        syncNodes()
+    })
 
     // Global guard to prevent recursive watcher triggers
     let isSyncingFromWatcher = false
@@ -282,6 +312,8 @@ export function useCanvasOrchestrator() {
     // CRITICAL FIX: Watch for task data changes (e.g. after async load)
     // Only watch task count changes, not deep property changes
     watch(() => tasksWithCanvasPosition.value.length, () => {
+        // Skip during initialization - onMounted handles initial sync
+        if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
         isSyncingFromWatcher = true
         try {
@@ -295,6 +327,8 @@ export function useCanvasOrchestrator() {
 
     // CRITICAL FIX: Watch for group changes (e.g. creation/deletion/remote sync)
     watch(() => canvasStore.groups.length, () => {
+        // Skip during initialization - onMounted handles initial sync
+        if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
         isSyncingFromWatcher = true
         try {

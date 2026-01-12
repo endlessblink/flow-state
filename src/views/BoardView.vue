@@ -17,14 +17,14 @@
           <SlidersHorizontal :size="20" :stroke-width="1.5" />
         </button>
 
-        <!-- Show Done Column Toggle -->
+        <!-- Hide Done Tasks Toggle (TASK-243: Single control for hiding done) -->
         <button
           class="done-column-toggle icon-only"
-          :class="{ active: showDoneColumn }"
-          :title="showDoneColumn ? 'Hide Done column' : 'Show Done column'"
+          :class="{ active: hideDoneTasks }"
+          :title="hideDoneTasks ? 'Show done tasks' : 'Hide done tasks'"
           @click="handleToggleDoneColumn"
         >
-          <CheckCircle v-if="showDoneColumn" :size="20" :stroke-width="1.5" />
+          <CheckCircle v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />
           <Circle v-else :size="20" :stroke-width="1.5" />
         </button>
       </div>
@@ -47,7 +47,7 @@
           :tasks="tasksByProject[project.id] || []"
           :current-filter="taskStore.activeSmartView || 'none'"
           :density="currentDensity"
-          :show-done-column="showDoneColumn"
+          :show-done-column="!hideDoneTasks"
           @select-task="handleSelectTask"
           @start-timer="handleStartTimer"
           @edit-task="handleEditTask"
@@ -100,6 +100,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -169,10 +170,9 @@ const {
   addSubtask: _handleAddSubtaskFromMenu
 } = useBoardActions({ taskStore, timerStore })
 
-const {
-  showDoneColumn,
-  toggleDoneColumn: handleToggleDoneColumn
-} = useBoardDensity()
+// TASK-243: Use hideDoneTasks from store instead of separate showDoneColumn
+const { hideDoneTasks } = storeToRefs(taskStore)
+const handleToggleDoneColumn = () => taskStore.toggleHideDoneTasks()
 
 const {
   tasksByProject,

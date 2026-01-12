@@ -147,7 +147,7 @@ export function getDeepestContainingGroup(
  */
 export function validateParentClaim(
     taskPosition: NodePosition,
-    claimedParentId: string | null | undefined,
+    claimedParentId: string | undefined,
     allGroups: CanvasSection[]
 ): boolean {
     if (!claimedParentId) return true // No parent claim is always valid
@@ -176,10 +176,10 @@ export function validateParentClaim(
 export function getSpatiallyCorrectParent(
     taskPosition: NodePosition,
     allGroups: CanvasSection[]
-): string | null {
+): string | undefined {
     const taskNode: SpatialNode = { position: taskPosition }
     const containingGroup = getDeepestContainingGroup(taskNode, allGroups)
-    return containingGroup?.id || null
+    return containingGroup?.id
 }
 
 /**
@@ -217,7 +217,7 @@ export function logContainmentDebug(
  */
 export interface ReconcilableTask {
     id: string
-    parentId?: string | null
+    parentId?: string
     canvasPosition?: NodePosition | null
 }
 
@@ -238,7 +238,7 @@ export interface ReconcilableTask {
 export async function reconcileTaskParentsByContainment(
     tasks: ReconcilableTask[],
     groups: CanvasSection[],
-    updateTask: (id: string, updates: { parentId: string | null }) => Promise<void>,
+    updateTask: (id: string, updates: { parentId?: string }) => Promise<void>,
     options?: {
         writeToDb?: boolean  // If false, only logs but doesn't update (dry run)
         silent?: boolean     // If true, suppresses console output
@@ -248,7 +248,7 @@ export async function reconcileTaskParentsByContainment(
     const silent = options?.silent === true
 
     let reconciledCount = 0
-    const tasksToReconcile: Array<{ task: ReconcilableTask; correctParentId: string | null }> = []
+    const tasksToReconcile: Array<{ task: ReconcilableTask; correctParentId: string | undefined }> = []
 
     // Phase 1: Identify tasks needing reconciliation
     for (const task of tasks) {
@@ -263,10 +263,10 @@ export async function reconcileTaskParentsByContainment(
         }
 
         // Find the correct parent based on spatial containment
-        const correctParentId = getDeepestContainingGroup(spatialNode, groups)?.id ?? null
+        const correctParentId = getDeepestContainingGroup(spatialNode, groups)?.id
 
-        // Normalize parentId for comparison (treat undefined/'NONE' as null)
-        const currentParentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
+        // Normalize parentId for comparison (treat undefined/'NONE' as undefined)
+        const currentParentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : undefined
 
         // Check if parentId needs correction
         if (currentParentId !== correctParentId) {

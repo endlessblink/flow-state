@@ -30,19 +30,7 @@
       />
     </div>
 
-    <!-- Hide Done Tasks Toggle -->
-    <div class="checkbox-control">
-      <input
-        id="hide-done"
-        :checked="hideDoneTasks"
-        type="checkbox"
-        class="hide-done-checkbox"
-        @input="updateHideDone"
-      >
-      <label for="hide-done" class="checkbox-label">
-        Hide Done
-      </label>
-    </div>
+    <!-- TASK-243: Hide Done checkbox removed - use icon toggle in view header instead -->
 
     <!-- Clear Filters -->
     <button
@@ -61,7 +49,7 @@ import { useTaskStore } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
 const taskStore = useTaskStore()
-const { projects, activeProjectId, activeSmartView, activeStatusFilter, hideDoneTasks } = storeToRefs(taskStore)
+const { projects, activeProjectId, activeSmartView, activeStatusFilter } = storeToRefs(taskStore)
 
 // Options for CustomSelect components
 const projectOptions = computed(() => [
@@ -103,25 +91,11 @@ const updateStatusFilter = (value: string | number) => {
   taskStore.setActiveStatusFilter(statusFilter)
 }
 
-const updateHideDone = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const newValue = target.checked
-
-  // Only toggle if the state actually changed
-  if (newValue !== hideDoneTasks.value) {
-    taskStore.toggleHideDoneTasks()
-  }
-}
-
+// TASK-243: Clear filters (hideDoneTasks now controlled by view header toggle)
 const clearAllFilters = () => {
   taskStore.setActiveProject(null)
   taskStore.setSmartView(null)
   taskStore.setActiveStatusFilter(null)
-
-  // Ensure hide done tasks is set to false
-  if (hideDoneTasks.value !== false) {
-    taskStore.toggleHideDoneTasks()
-  }
 }
 </script>
 
@@ -150,37 +124,6 @@ const clearAllFilters = () => {
   flex-direction: column;
   flex-shrink: 0;
   min-width: 120px;
-}
-
-/* Checkbox control container */
-.checkbox-control {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* Checkbox styling */
-.hide-done-checkbox {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border-hover);
-  cursor: pointer;
-  accent-color: var(--brand-teal);
-  flex-shrink: 0;
-}
-
-/* Checkbox label styling */
-.checkbox-label {
-  color: var(--text-primary);
-  font-size: 13px;
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* Clear button styling */

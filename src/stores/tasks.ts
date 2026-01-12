@@ -70,7 +70,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const states = useTaskStates()
   const {
     // SAFETY: tasks is now filteredTasks (safe for dis-
-    tasks, _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    tasks, _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
     isLoadingFilters, syncInProgress, runAllTaskMigrations, calendarFilteredTasks
@@ -80,7 +80,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // BUG-057: Pass syncInProgress to prevent saves during sync operations
   // SAFETY: Pass _rawTasks for load/save operations
   const persistence = useTaskPersistence(
-    _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     activeSmartView, activeStatusFilter,
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,
     syncInProgress,
@@ -92,7 +92,7 @@ export const useTaskStore = defineStore('tasks', () => {
   // SAFETY: Pass _rawTasks for CRUD operations
   const operations = useTaskOperations(
     _rawTasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
-    activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
+    activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations
   )
 
@@ -107,6 +107,7 @@ export const useTaskStore = defineStore('tasks', () => {
       const dbReady = await projectStore.initializeFromDatabase()
       if (!dbReady) console.debug('⚠️ Project store failed to initialize')
       await loadFromDatabase()
+      await loadPersistedFilters()
       runAllTaskMigrations()
 
       // TASK-129: Removed PouchDB WAL crash recovery (transactionManager was a stub)
@@ -245,6 +246,10 @@ export const useTaskStore = defineStore('tasks', () => {
     updateTaskFromSync,
     syncInProgress,
     calendarFilteredTasks,
+
+    // TASK-243: Expose raw tasks for accurate counters (bypasses smart view filters)
+    // Exposed as computed for reactivity
+    rawTasks: computed(() => _rawTasks.value),
 
     // Helper functions
     getTaskInstances,

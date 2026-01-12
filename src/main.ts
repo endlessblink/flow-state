@@ -46,12 +46,6 @@ import { useSecurityHeaderManager as _useSecurityHeaderManager } from './utils/s
 import { useCSPManager as _useCSPManager } from './utils/cspManager'
 import { useSecurityMonitor as _useSecurityMonitor } from './utils/securityMonitor'
 
-// Initialize local-first authentication system
-import { useLocalAuthStore as _useLocalAuthStore } from './stores/local-auth'
-
-// NOTE: PouchDB → Supabase migration complete (Jan 2026). Legacy cleanup code archived.
-// TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool no longer needed)
-
 // SECURITY: App is now 100% Supabase standard
 
 // Run pre-check and initialize app
@@ -104,9 +98,9 @@ async function initializeApp() {
   app.config.errorHandler = (err, _vm, info) => {
     const errorStr = String(err);
 
-    // Extension errors: log silently, don't crash
-    if (errorStr.match(/chrome is not defined|browser is not defined/i)) {
-      console.warn('🔌 Extension compatibility detected:', errorStr);
+    // Extension or harmless browser errors: log silently, don't crash
+    if (errorStr.match(/chrome is not defined|browser is not defined|ResizeObserver loop completed/i)) {
+      console.warn('ℹ️ [SILENCED] Harmless browser/extension error:', errorStr);
       return; // Don't propagate - app continues
     }
 
@@ -116,7 +110,8 @@ async function initializeApp() {
 
   // Handle unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
-    if (String(event.reason).includes('chrome is not defined')) {
+    const reason = String(event.reason)
+    if (reason.match(/chrome is not defined|ResizeObserver loop/i)) {
       event.preventDefault(); // Don't crash the app
     }
   });

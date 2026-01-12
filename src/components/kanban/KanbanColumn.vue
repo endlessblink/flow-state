@@ -18,7 +18,7 @@
         group="tasks"
         item-key="id"
         class="drag-area"
-        :animation="60"
+        :animation="200"
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"

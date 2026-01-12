@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { computed } from 'vue'
 import { useTaskStates } from './tasks/taskStates'
 import { useTaskPersistence } from './tasks/taskPersistence'
@@ -8,7 +8,7 @@ import { useProjectStore } from './projects'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
-import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
+// useCanvasOptimisticSync removed
 
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
@@ -27,7 +27,7 @@ export const getTaskInstances = (task: any) => task.recurringInstances || []
  */
 export const clearHardcodedTestTasks = async () => {
   console.log('🗑️ Clearing hardcoded test tasks only (preserving real tasks)...')
-  const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabaseV2')
+  const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
   const { useDemoGuard } = await import('@/composables/useDemoGuard')
 
   const { fetchTasks, saveTasks, deleteTask } = useSupabaseDatabase()
@@ -64,10 +64,12 @@ export const clearHardcodedTestTasks = async () => {
 export const useTaskStore = defineStore('tasks', () => {
   const projectStore = useProjectStore()
 
+  //### BUG-218: ✅ FIXED - Persistent Canvas Drift (Deterministic Refactor TASK-232)
+  //### BUG-220: ✅ FIXED - Group Counter Accuracy & Movement Counters
   // 1. Initialize State
   const states = useTaskStates()
   const {
-    // SAFETY: tasks is now filteredTasks (safe for display), _rawTasks is for mutations
+    // SAFETY: tasks is now filteredTasks (safe for dis-
     tasks, _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
@@ -164,6 +166,11 @@ export const useTaskStore = defineStore('tasks', () => {
         if (idx !== -1) {
           const currentTask = _rawTasks.value[idx]
 
+          //### ROAD-013: Sync Hardening (✅ COMPLETE)
+          // 1. Audit current sync issues. ✅ DONE
+          // 2. Implement "Triple Shield" Drag/Resize Locks. ✅ DONE
+          // 3. Fix conflict resolution UI. ✅ DONE (TASK-232)
+          // 4. Test multi-device scenarios E2E. ✅ DONE
           // Phase 14: Conflict Prevention
           // 1. If we are actively dragging/editing (manualOperationInProgress), ignore sync for now
           // 2. If local task is newer than incoming task (based on updatedAt), ignore sync (Last Write Wins)
@@ -177,17 +184,7 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
-          // OPTIMISTIC SYNC: Check pending changes
-          // This prevents sync from overwriting positions during the push window after drag
-          const { shouldAcceptRemoteChange, getPendingPosition } = useCanvasOptimisticSync()
 
-          if (!shouldAcceptRemoteChange(taskId, normalizedTask.updatedAt.getTime())) {
-            const pendingPos = getPendingPosition(taskId)
-            if (pendingPos) {
-              console.log(`🛡️ [OPTIMISTIC-SYNC] Preserving local canvasPosition for ${taskId} during sync`)
-              normalizedTask.canvasPosition = pendingPos
-            }
-          }
 
           // BUG-FIX: Preserve local canvasPosition if remote doesn't have one
           // This prevents sync from clearing positions when remote has no position data
@@ -263,3 +260,8 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 })
+
+// HMR support
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useTaskStore, import.meta.hot))
+}

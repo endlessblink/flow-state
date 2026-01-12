@@ -44,12 +44,6 @@
       @contextmenu.prevent="handleCanvasRightClick"
     >
       
-      <!-- Canvas Toolbar - Actions & Filters -->
-      <CanvasToolbar
-        @addTask="handleAddTask"
-        @createGroup="handleToolbarCreateGroup"
-      />
-
       <!-- Loading overlay while canvas initializes -->
       <CanvasLoadingOverlay 
         v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
@@ -71,6 +65,12 @@
       <!-- Inbox Sidebar -->
       <UnifiedInboxPanel key="canvas-inbox" context="canvas" />
 
+      <!-- Canvas Toolbar - Actions & Filters (MUST be after InboxPanel for z-index stacking) -->
+      <CanvasToolbar
+        @addTask="handleAddTask"
+        @createGroup="handleToolbarCreateGroup"
+      />
+
       <!-- Canvas Container -->
       <div
         class="canvas-container"
@@ -81,8 +81,8 @@
       >
           <VueFlow
             ref="vueFlowRef"
-            v-model:nodes="nodes"
-            v-model:edges="edges"
+            :nodes="nodes"
+            :edges="edges"
             :class="{ 'canvas-ready': isCanvasReady }"
             class="vue-flow-container"
             :node-types="nodeTypes"
@@ -109,8 +109,10 @@
             dir="ltr"
             @pane-ready="onPaneReady"
             @node-drag-start="handleNodeDragStart"
+            @node-drag="handleNodeDrag"
             @node-drag-stop="handleNodeDragStop"
             @nodes-change="handleNodesChange"
+            @edges-change="handleEdgesChange"
             @selection-change="handleSelectionChange"
             @pane-click="handlePaneClick"
             @pane-context-menu="handlePaneContextMenu"
@@ -131,6 +133,7 @@
             <template #node-sectionNode="nodeProps">
               <GroupNodeSimple
                 v-memo="[nodeProps.id, nodeProps.data, nodeProps.selected, nodeProps.dragging]"
+                :id="nodeProps.id"
                 :data="nodeProps.data"
                 :selected="nodeProps.selected"
                 :dragging="nodeProps.dragging"
@@ -144,36 +147,39 @@
               />
             </template>
 
-            <!-- Custom Task Node Template -->
-            <template #node-taskNode="nodeProps">
-              <TaskNode
-                v-memo="[nodeProps.id, nodeProps.data.task, nodeProps.selected, nodeProps.dragging, canvasStore.multiSelectMode]"
-                :task="nodeProps.data.task"
-                :is-selected="nodeProps.selected"
-                :is-dragging="nodeProps.dragging"
-                :multi-select-mode="canvasStore.multiSelectMode"
-                :show-priority="canvasStore.showPriorityIndicator"
-                :show-status="canvasStore.showStatusBadge"
-                :show-duration="canvasStore.showDurationBadge"
-                :show-schedule="canvasStore.showScheduleBadge"
-                @edit="handleEditTask"
-                @select="handleTaskSelect"
-                @context-menu="handleTaskContextMenu"
-              />
-            </template>
 
-            <!-- SVG markers for connection arrows -->
-            <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
-              <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                  <polygon points="0 0, 10 3, 0 6" fill="var(--border-secondary)" />
-                </marker>
-                <marker id="arrowhead-hover" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                  <polygon points="0 0, 10 3, 0 6" fill="var(--color-navigation)" />
-                </marker>
-              </defs>
-            </svg>
-          </VueFlow>
+
+              <!-- Custom Task Node Template -->
+              <template #node-taskNode="nodeProps">
+                <TaskNode
+                  v-memo="[nodeProps.id, nodeProps.data.task, nodeProps.selected, nodeProps.dragging, canvasStore.multiSelectMode]"
+                  :task="nodeProps.data.task"
+                  :is-selected="nodeProps.selected"
+                  :is-dragging="nodeProps.dragging"
+                  :multi-select-mode="canvasStore.multiSelectMode"
+                  :show-priority="canvasStore.showPriorityIndicator"
+                  :show-status="canvasStore.showStatusBadge"
+                  :show-duration="canvasStore.showDurationBadge"
+                  :show-schedule="canvasStore.showScheduleBadge"
+                  @edit="handleEditTask"
+                  @select="handleTaskSelect"
+                  @context-menu="handleTaskContextMenu"
+                />
+              </template>
+
+              <!-- SVG markers for connection arrows -->
+              <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+                <defs>
+                  <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <polygon points="0 0, 10 3, 0 6" fill="var(--border-secondary)" />
+                  </marker>
+                  <marker id="arrowhead-hover" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                    <polygon points="0 0, 10 3, 0 6" fill="var(--color-navigation)" />
+                  </marker>
+                </defs>
+              </svg>
+            </VueFlow>
+
 
           <CanvasLoadingOverlay
             v-if="!isCanvasReady"
@@ -230,6 +236,7 @@ import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '../assets/vue-flow-overrides.css'
+import { useEventListener } from '@vueuse/core'
 
 import { useTaskStore } from '../stores/tasks'
 import { useCanvasStore } from '../stores/canvas'
@@ -247,10 +254,6 @@ import CanvasLoadingOverlay from '../components/canvas/CanvasLoadingOverlay.vue'
 import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
-import { useCanvasSelection } from '../composables/canvas/useCanvasSelection'
-import { useCanvasAlignment } from '../composables/canvas/useCanvasAlignment'
-import { useCanvasOverdueCollector } from '../composables/canvas/useCanvasOverdueCollector'
-import { useCanvasConnections } from '../composables/canvas/useCanvasConnections'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -268,7 +271,7 @@ const orchestrator = useCanvasOrchestrator()
 const {
   nodes, edges, isCanvasReady, initialViewport, shift, vueFlowRef,
   tasksWithCanvasPosition, dynamicNodeExtent, hasNoTasks,
-  handleNodeDragStart, handleNodeDragStop, handleKeyDown,
+  handleNodeDragStart, handleNodeDrag, handleNodeDragStop, handleKeyDown,
   handleSectionResizeStart, handleSectionResize, handleSectionResizeEnd,
   onPaneReady, fitCanvas, zoomToSelection, retryFailedOperation,
   handlePaneClick, handleCanvasRightClick, handlePaneContextMenu, handleDrop,
@@ -296,6 +299,12 @@ const {
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
   collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge
 } = orchestrator
+
+// Register global hotkeys
+useEventListener(window, 'keydown', (e) => {
+  // Only handle if canvas is active/visible
+  handleKeyDown(e)
+})
 
 // Aliases for template compatibility
 const tasksWithCanvasPositions = tasksWithCanvasPosition
@@ -326,7 +335,10 @@ const handleTaskContextMenu = (event: MouseEvent, task: any) => {
 }
 
 const handleSectionContextMenu = (event: MouseEvent, section: any) => {
-    if (event) event.preventDefault()
+    if (event) {
+        event.preventDefault()
+        event.stopPropagation() // STOP PROPAGATION to prevent pane menu
+    }
     // Open Canvas Context Menu with section context
     // We need to pass the raw section object, relying on orchestrator/store
     canvasStore.updateSection(section.id, { ...section }) // Ensure store is fresh?
@@ -336,6 +348,14 @@ const handleSectionContextMenu = (event: MouseEvent, section: any) => {
     canvasContextMenuY.value = event.clientY
     canvasContextSection.value = section
     showCanvasContextMenu.value = true
+}// Expose for testing purposes (Fundamental Stability)
+if (process.env.NODE_ENV === 'development' || (window as any).PLAYWRIGHT_TEST) {
+  (window as any).__POMO_FLOW_DEBUG__ = {
+    orchestrator,
+    canvasStore,
+    taskStore,
+    uiStore
+  }
 }
 </script>
 

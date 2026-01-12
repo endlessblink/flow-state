@@ -87,11 +87,14 @@ export interface Task {
   isUncategorized?: boolean // true if task has no project assigned
   estimatedPomodoros?: number // Estimated pomodoro sessions
   projectId: string
+  parentId?: string // Link to Canvas Group (Section) - Persisted in position JSON
   parentTaskId?: string | null // For nested tasks - null means root-level task
   createdAt: Date
   updatedAt: Date
   // Canvas workflow fields
   canvasPosition?: { x: number; y: number }
+  positionVersion?: number // Version for conflict resolution
+  positionFormat?: 'absolute' | 'relative' // TASK-240: Transition to relative-only
   isInInbox?: boolean // True if not yet positioned on canvas
   dependsOn?: string[] // Task IDs this depends on
   tags?: string[] // Task labels for categorization and filtering

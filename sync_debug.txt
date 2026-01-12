@@ -1,0 +1,21 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] › tests/debug-sync-state.spec.ts:4:1 › inspect sync state
+[1A[2K[chromium] › tests/debug-sync-state.spec.ts:4:1 › inspect sync state
+Sync Skip Warnings: []
+
+[1A[2KState Dump: {
+  nodesLength: [33m0[39m,
+  isCanvasReady: [33mtrue[39m,
+  operationLoading: {
+    saving: [33mfalse[39m,
+    loading: [33mfalse[39m,
+    syncing: [33mfalse[39m,
+    creating: [33mfalse[39m,
+    updating: [33mfalse[39m,
+    deleting: [33mfalse[39m
+  }
+}
+
+[1A[2K  1 passed (4.7s)

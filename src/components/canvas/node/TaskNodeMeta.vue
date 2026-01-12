@@ -56,7 +56,7 @@ defineProps<{
 .task-metadata {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: center;
 }
 

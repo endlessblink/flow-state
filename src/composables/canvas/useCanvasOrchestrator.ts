@@ -1,5 +1,5 @@
 import { ref, computed, watch, nextTick, onMounted, type Ref } from 'vue'
-import { useVueFlow, type Node, type Edge } from '@vue-flow/core'
+import { type Node, type Edge } from '@vue-flow/core'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -10,20 +10,28 @@ import { useMagicKeys, useWindowSize } from '@vueuse/core'
 import resourceManager from '../../utils/canvas/resourceManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
 
-// Sub-composables
+// --- NEW COMPOSABLES (Phase 3) ---
+import { useCanvasCore } from './useCanvasCore'
 import { useCanvasSync } from './useCanvasSync'
+import { useCanvasInteractions } from './useCanvasInteractions'
+
+// ...
+// Persistence (Sync)
+// Moved inside useCanvasOrchestrator to ensure correct Vue context
+
+import { useCanvasGroups } from './useCanvasGroups'
+
+
+// Legacy/Auxiliary Composables (Still used)
 import { useCanvasEvents } from './useCanvasEvents'
 import { useCanvasHotkeys } from './useCanvasHotkeys'
-import { useCanvasDragDrop } from './useCanvasDragDrop'
 import { useCanvasActions } from './useCanvasActions'
 import { useCanvasOverdueCollector } from './useCanvasOverdueCollector'
 import { useCanvasModals } from './useCanvasModals'
 import { useCanvasFilteredState } from './useCanvasFilteredState'
 import { useCanvasLifecycle } from './useCanvasLifecycle'
-import { useCanvasResize } from './useCanvasResize'
-import { useCanvasNavigation } from './useCanvasNavigation'
-import { useCanvasZoom } from './useCanvasZoom'
-import { useCanvasSelection } from './useCanvasSelection'
+import { useCanvasNavigation } from './useCanvasNavigation' // Keeping for specialized nav if needed
+import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
 
@@ -48,12 +56,10 @@ export function useCanvasOrchestrator() {
     const canvasUiStore = useCanvasUiStore()
     const uiStore = useUIStore()
 
-    // --- 1. Core State & Vue Flow ---
-    const nodes = ref<Node[]>([])
-    const edges = ref<Edge[]>([])
-    const vueFlowRef = ref(null)
-
+    // --- 1. Core State & Vue Flow (Via useCanvasCore) ---
     const {
+        nodes,
+        edges,
         onPaneReady,
         viewport,
         setViewport,
@@ -61,23 +67,23 @@ export function useCanvasOrchestrator() {
         setNodes,
         updateNode,
         findNode,
-        screenToFlowCoordinate,
-        project,
-        getIntersectingNodes,
+        screenToFlowCoordinate, // Proxy
         isNodeIntersecting,
-        panOnDrag,
-        zoomOnScroll,
-        zoomOnPinch,
-        nodesDraggable,
-        elementsSelectable,
+        getIntersectingNodes,
         onMoveEnd,
         addEdges,
         removeEdges,
         onConnect,
         onEdgesChange,
         onNodesChange,
-        toObject
-    } = useVueFlow()
+        applyNodeChanges,
+        applyEdgeChanges,
+        toObject,
+        fitView, // Core now exposes fitView
+        zoomTo, // Core now exposes zoomTo
+        project,
+        panOnDrag
+    } = useCanvasCore()
 
     const { hasInitialFit, operationLoading, operationError } = storeToRefs(canvasUiStore)
     const { setOperationLoading, setOperationError, clearOperationError } = canvasUiStore
@@ -87,91 +93,84 @@ export function useCanvasOrchestrator() {
     // --- 2. Computed Data ---
     const filteredTasks = computed(() => taskStore.filteredTasks)
 
+    // Pass taskStore reference so filtering can access hideCanvasDoneTasks etc.
+    const canvasStoreWithTaskStore = {
+        ...canvasStore,
+        taskStore: {
+            get hideCanvasDoneTasks() { return taskStore.hideCanvasDoneTasks },
+            get hideCanvasOverdueTasks() { return taskStore.hideCanvasOverdueTasks }
+        }
+    }
+
     const {
         tasksWithCanvasPosition,
         dynamicNodeExtent,
         hasNoTasks,
         hasInboxTasks
-    } = useCanvasFilteredState(filteredTasks, canvasStore)
+    } = useCanvasFilteredState(filteredTasks, canvasStoreWithTaskStore)
 
     // --- 3. Feature Initialization ---
 
-    // Navigation
-    const { initialViewport, fitCanvas, zoomToSelection } = useCanvasNavigation(canvasStore)
-    const { cleanupZoom } = useCanvasZoom(resourceManager)
+    // Persistence (Sync)
+    // const persistence = useCanvasPersistence()
 
-    // Modals
-    const modals = useCanvasModals()
+    // Persistence (Sync)
+    const persistence = useCanvasSync()
 
-    // Resize
-    const {
-        resizeState,
-        isResizeSettling,
-        handleSectionResizeStart,
-        handleSectionResize,
-        handleSectionResizeEnd
-    } = useCanvasResize({
+    // Unified Interactions (Drag & Resize)
+    const interactions = useCanvasInteractions({
         nodes,
         findNode,
         updateNode
     })
 
-    // Drag Drop State
-    const isNodeDragging = ref(false)
-    const isDragSettling = ref(false)
+    // Groups (Unified)
+    const groups = useCanvasGroups()
 
-    // Sync Logic
-    const isSyncing = ref(false)
-    const isHandlingNodeChange = ref(false)
-    const recentlyRemovedEdges = ref(new Set<string>())
-    const recentlyDeletedGroups = ref(new Set<string>())
+    // Navigation & Zoom (Legacy cleanup support, transitioning to Core)
+    const { initialViewport, fitCanvas: legacyFitCanvas, zoomToSelection: legacyZoomToSelection } = useCanvasNavigation(canvasStore)
+    const fitCanvas = legacyFitCanvas
+    const zoomToSelection = legacyZoomToSelection
+    const { cleanupZoom } = useCanvasZoom(resourceManager)
 
-    // Note: useCanvasSync imports resourceManager singleton internally usually or expects it
-    const sync = useCanvasSync({
-        nodes,
-        edges,
-        filteredTasks,
-        recentlyRemovedEdges,
-        recentlyDeletedGroups,
-        vueFlowRef,
-        isHandlingNodeChange,
-        isSyncing,
-        isNodeDragging,
-        isDragSettlingRef: isDragSettling,
-        resizeState,
-        isResizeSettling,
-        resourceManager,
-        setOperationLoading,
-        setOperationError,
-        clearOperationError
-    })
+    // Modals
+    const modals = useCanvasModals()
+
+    // Sync Helpers (Adapter for legacy calls)
+    const syncNodes = (tasks?: any[]) => {
+        console.log('👉 [ORCHESTRATOR] Calling syncNodes', { hasTasks: !!tasks })
+        try {
+            console.log('👉 [ORCHESTRATOR] Resolving tasks...')
+            const tasksToSync = tasks || tasksWithCanvasPosition.value
+            console.log('👉 [ORCHESTRATOR] Tasks resolved:', { count: tasksToSync?.length })
+
+            persistence.syncStoreToCanvas(tasksToSync)
+        } catch (e) {
+            console.error('💥 [ORCHESTRATOR] syncNodes failed:', e)
+        }
+    }
+    const batchedSyncNodes = (priority?: string) => {
+        nextTick(() => syncNodes())
+    }
+    const syncEdges = () => { /* Edges sync implemented in Persistence later if needed, mostly static for now */ }
 
     // Events (Selection, Connection)
     const isVueFlowReady = ref(false)
     const isVueFlowMounted = ref(false)
 
-    const events = useCanvasEvents(sync.syncNodes)
+    const events = useCanvasEvents(syncNodes)
 
     // Actions
+    const recentlyDeletedGroups = ref(new Set<string>())
     const actions = useCanvasActions({
         viewport,
-        batchedSyncNodes: sync.batchedSyncNodes,
-        syncNodes: sync.syncNodes,
+        batchedSyncNodes: batchedSyncNodes,
+        syncNodes: syncNodes,
         closeCanvasContextMenu: events.closeCanvasContextMenu,
         closeEdgeContextMenu: events.closeEdgeContextMenu,
         closeNodeContextMenu: events.closeNodeContextMenu,
         recentlyDeletedGroups
-    }, modals, getUndoSystem()) // Pass 'modals' as the state argument (Fixes disconnected state)
-
-    // Drag Drop (Actual Logic)
-    const dragDrop = useCanvasDragDrop({
-        taskStore,
-        canvasStore,
-        nodes,
-        filteredTasks,
-        syncNodes: sync.syncNodes,
-        withVueFlowErrorBoundary: mockErrorBoundary
-    }, { isNodeDragging })
+    }, modals, getUndoSystem())
 
     // Hotkeys
     const { handleKeyDown } = useCanvasHotkeys({
@@ -190,8 +189,6 @@ export function useCanvasOrchestrator() {
         cleanupZoom
     )
 
-    // Selection
-    const selection = useCanvasSelection()
 
     const isCanvasReady = computed(() => {
         return !operationLoading.value.loading && !operationLoading.value.syncing
@@ -211,28 +208,26 @@ export function useCanvasOrchestrator() {
 
     // Events Wrapper
     const handleCanvasContainerClick = (e: MouseEvent) => {
-        selection.clearSelection()
+        interactions.clearSelection()
         events.closeCanvasContextMenu()
         events.closeEdgeContextMenu()
         events.closeNodeContextMenu()
     }
 
     const collectTasksForSection = (sectionId: string) => {
-        // Delegate to specific collectors based on section type or ID
-        // For now, we only have Overdue collector
         smartGroups.autoCollectOverdueTasks()
     }
 
     // Connections
     const connections = useCanvasConnections({
-        syncEdges: sync.syncEdges,
+        syncEdges: syncEdges,
         closeCanvasContextMenu: events.closeCanvasContextMenu,
         closeEdgeContextMenu: events.closeEdgeContextMenu,
         closeNodeContextMenu: events.closeNodeContextMenu,
         withVueFlowErrorBoundary: mockErrorBoundary
     }, {
         isConnecting: ref(false),
-        recentlyRemovedEdges,
+        recentlyRemovedEdges: ref(new Set()), // Persistence handles this internally now?
         showEdgeContextMenu: ref(false),
         edgeContextMenuX: ref(0),
         edgeContextMenuY: ref(0),
@@ -241,51 +236,81 @@ export function useCanvasOrchestrator() {
 
     // --- 4. Initialization & Reactivity ---
 
-    // Initial sync on mount or as soon as stores are likely available
+    // Initial sync
     onMounted(async () => {
+        await canvasStore.loadSavedViewport()
         await nextTick()
-        sync.syncNodes()
-        sync.syncEdges()
+        // Initialize Realtime
+        persistence.initRealtimeSubscription()
+        // Calculate initial task counts before syncing (fixes 0 counters on load)
+        canvasStore.recalculateAllTaskCounts(taskStore.tasks)
+        // Initial Load
+        syncNodes()
     })
 
-    // Watchers to keep canvas in sync with store changes
-    watch(() => taskStore.tasks, () => {
-        sync.batchedSyncNodes('low')
-    }, { deep: true })
+    // Persist Viewport on Change
+    onMoveEnd((flow) => {
+        if (flow && flow.flowTransform) {
+            canvasStore.setViewport(flow.flowTransform.x, flow.flowTransform.y, flow.flowTransform.zoom)
+        }
+    })
 
-    watch(() => canvasStore.groups, () => {
-        sync.batchedSyncNodes('normal')
-    }, { deep: true })
+    // Watchers are now largely handled by persistence.initRealtimeSubscription which watches Stores
+    // But we still need to watch Filter changes here as they affect WHICH tasks we show
+    watch(() => taskStore.activeStatusFilter, () => syncNodes())
+    watch(() => taskStore.hideCanvasDoneTasks, () => syncNodes())
+    watch(() => taskStore.hideCanvasOverdueTasks, () => syncNodes())
 
-    watch(() => taskStore.activeStatusFilter, () => {
-        sync.syncNodes()
+    // Global guard to prevent recursive watcher triggers
+    let isSyncingFromWatcher = false
+
+    // CRITICAL FIX: Watch for task data changes (e.g. after async load)
+    // Only watch task count changes, not deep property changes
+    watch(() => tasksWithCanvasPosition.value.length, () => {
+        if (isSyncingFromWatcher) return
+        isSyncingFromWatcher = true
+        try {
+            if (persistence.isSyncing.value) return
+            canvasStore.recalculateAllTaskCounts(taskStore.tasks)
+            syncNodes()
+        } finally {
+            isSyncingFromWatcher = false
+        }
+    })
+
+    // CRITICAL FIX: Watch for group changes (e.g. creation/deletion/remote sync)
+    watch(() => canvasStore.groups.length, () => {
+        if (isSyncingFromWatcher) return
+        isSyncingFromWatcher = true
+        try {
+            if (persistence.isSyncing.value) return
+            console.log('👀 [ORCHESTRATOR] canvasStore.groups changed', { count: canvasStore.groups.length })
+            canvasStore.recalculateAllTaskCounts(taskStore.tasks)
+            syncNodes()
+        } finally {
+            isSyncingFromWatcher = false
+        }
     })
 
     // Retry Logic
     const retryFailedOperation = async () => {
         if (!operationError.value?.retryable) return
-
         const { type } = operationError.value
         clearOperationError()
 
-        switch (type) {
-            case 'System Restart':
-                await sync.performSystemRestart()
-                break
-            case 'Sync Operation':
-                setOperationLoading('syncing', true)
-                try {
-                    await nextTick()
-                    sync.syncNodes()
-                    sync.syncEdges()
-                    setOperationLoading('syncing', false)
-                } catch (_error) {
-                    setOperationError('Sync Operation', 'Retry failed: Unable to synchronize data', true)
-                    setOperationLoading('syncing', false)
-                }
-                break
-            default:
-                console.warn(`[SYSTEM] No retry implementation for operation type: ${type}`)
+        if (type === 'System Restart') {
+            // persistence.performSystemRestart() // Todo: implement if needed
+            window.location.reload()
+        } else {
+            setOperationLoading('syncing', true)
+            try {
+                await nextTick()
+                syncNodes()
+                setOperationLoading('syncing', false)
+            } catch (_error) {
+                setOperationError('Sync Operation', 'Retry failed', true)
+                setOperationLoading('syncing', false)
+            }
         }
     }
 
@@ -303,7 +328,7 @@ export function useCanvasOrchestrator() {
         initialViewport,
         hasInitialFit,
         shift,
-        vueFlowRef,
+        vueFlowRef: ref(null), // TODO: Do we need this ref if we use Core? CanvasView binds it.
 
         // Computed
         filteredTasks,
@@ -315,34 +340,40 @@ export function useCanvasOrchestrator() {
         // Actions & Handlers
         ...actions,
         ...modals,
-        // Aliases for mismatched View names (Fixes compilation errors)
         closeSectionSettingsModal: actions.closeGroupEditModal,
         handleSectionSettingsSave: actions.handleGroupEditSave,
 
         ...events,
 
         // Selection Handlers
-        handleMouseDown: selection.startSelection,
-        handleMouseMove: selection.updateSelection,
-        handleMouseUp: selection.endSelection,
+        handleMouseDown: interactions.startSelection,
+        handleMouseMove: interactions.updateSelection,
+        handleMouseUp: interactions.endSelection,
         handleCanvasContainerClick,
 
         // New feature re-exports
-        ...selection,
+        ...interactions,
         ...alignment,
         ...smartGroups,
-        collectTasksForSection, // Add explicit export
+        collectTasksForSection,
         ...connections,
 
-        handleNodeDragStart: dragDrop.handleNodeDragStart,
-        handleNodeDragStop: dragDrop.handleNodeDragStop,
-        handleKeyDown,
+        // Interaction Handlers
+        handleNodeDragStart: interactions.onNodeDragStart,
+        handleNodeDrag: interactions.onNodeDrag,
+        handleNodeDragStop: interactions.onNodeDragStop,
 
-        handleSectionResizeStart,
-        handleSectionResize,
-        handleSectionResizeEnd,
+        handleSectionResizeStart: interactions.onSectionResizeStart,
+        handleSectionResize: interactions.onSectionResize,
+        handleSectionResizeEnd: interactions.onSectionResizeEnd,
 
-        onPaneReady: () => {
+        resizeState: interactions.resizeState,
+        isResizeSettling: interactions.isResizeSettling,
+        resizeLineStyle: interactions.resizeLineStyle,
+        edgeHandleStyle: interactions.edgeHandleStyle,
+
+        onPaneReady: (instance: any) => {
+            onPaneReady(instance) // Core handler
             isVueFlowReady.value = true
             isVueFlowMounted.value = true
             setOperationLoading('loading', false)
@@ -352,24 +383,20 @@ export function useCanvasOrchestrator() {
         zoomToSelection,
         retryFailedOperation,
 
-        // Vue Flow Handlers (Wrappers to prevent register-as-handler traps)
-        handleNodesChange: (_changes: unknown) => {
-            // Vue Flow handles nodes via v-model or internal state.
-            if (isHandlingNodeChange.value) return
-        },
-        handleEdgesChange: (_changes: unknown) => {
-            // Registration-safe wrapper
-        },
+        // Vue Flow Handlers
+        // Vue Flow Handlers
+        handleNodesChange: applyNodeChanges,
+        handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {
-            // Delegate to the actual connection logic from useCanvasConnections
             connections.handleConnect(params)
         },
 
-        // For debugging/System
-        syncNodes: sync.syncNodes,
-        performSystemRestart: sync.performSystemRestart,
+        // Debug
+        syncNodes,
+        performSystemRestart: () => window.location.reload(), // Simple fallback
+        storeHealth: lifecycle.storeHealth,
 
-        // Validation
-        storeHealth: lifecycle.storeHealth
+        // Hotkeys
+        handleKeyDown
     }
 }

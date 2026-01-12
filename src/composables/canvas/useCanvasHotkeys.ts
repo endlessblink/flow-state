@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 interface BulkDeleteState {
     isBulkDeleteModalOpen: Ref<boolean>
@@ -54,8 +55,8 @@ export function useCanvasHotkeys(
         const itemsToDelete: { id: string; name: string; type: 'task' | 'section' }[] = []
 
         for (const node of selectedNodes) {
-            if (node.id.startsWith('section-')) {
-                const sectionId = node.id.replace('section-', '')
+            if (CanvasIds.isGroupNode(node.id)) {
+                const { id: sectionId } = CanvasIds.parseNodeId(node.id)
                 const section = canvasStore.sections.find(s => s.id === sectionId)
 
                 itemsToDelete.push({

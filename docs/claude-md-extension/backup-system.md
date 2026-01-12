@@ -15,8 +15,19 @@ npm run db:backup:data      # Data only (no schema)
 npm run db:backup:tasks     # Tasks and groups tables only
 
 # List backups
-ls -la supabase/backups/
+ls -la supabase/backups/         # SQL Dumps
+ls -la backups/shadow.db         # SQLite Shadow Mirror
+ls -la public/shadow-latest.json # Frontend Bridge
 ```
+
+## Layers of Protection
+
+| Layer | System | Scope | Location |
+|-------|--------|-------|----------|
+| **Layer 1** | Local History | Undo/Recovery | `localStorage` |
+| **Layer 2** | Golden Backup | Peak Data Safety | `localStorage` (Smart Filtered) |
+| **Layer 3** | Shadow Mirror | Disaster/Cross-Device | SQLite + JSON Export |
+| **Layer 4** | SQL Dumps | Infrastructure Loss | `.sql` Files (Rotated) |
 
 ## How It Works
 
@@ -105,6 +116,23 @@ The `destructive-command-blocker.sh` hook provides automatic protection:
 | `DROP DATABASE` | PERMANENTLY BLOCKED |
 | `TRUNCATE` | PERMANENTLY BLOCKED |
 | `DELETE FROM` (no WHERE) | BLOCKED |
+
+## Recovery Paths
+
+### 1. In-App Storage Tab (Seamless)
+Access via **Settings ⚙️ > Storage 💾**.
+- **Golden Backup**: Restores the all-time peak task count. Automatically filters out items marked as `is_deleted: true` in Supabase to prevent data resurrection.
+- **Shadow Hub**: Fetches the latest cloud snapshot from the local daemon. One-click recovery relative to the last 5-min sync.
+
+### 2. Standalone Recovery Tool
+If the main app fails to load:
+- Open `public/restore-backup.html` in your browser.
+- This tool bypasses the Vue application logic and attempts to push raw data into `localStorage`.
+
+### 3. Database Restoration
+For infrastructure-level loss:
+- Use `psql` to restore `.sql` dumps from `supabase/backups/`.
+- Use `node scripts/verify-shadow-layer.cjs` to check data fidelity between Supabase and Shadow layers.
 
 ## Files
 

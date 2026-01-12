@@ -3,6 +3,7 @@ import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 // TASK-158: Persistent deleted groups tracking
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 export interface GroupActionsDeps {
     viewport?: Ref<{ x: number; y: number; zoom: number }>
@@ -45,7 +46,7 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         // But the main orchestrator handles the view dependencies.
         // For pure data operations, we can modify the store.
         if (canvasStore.nodes) {
-            const nodeId = id.startsWith('section-') ? id : `section-${id}`
+            const nodeId = CanvasIds.groupNodeId(id)
             canvasStore.nodes = canvasStore.nodes.filter(n => n.id !== nodeId)
         }
     }
@@ -124,7 +125,7 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         const section = groupPendingDelete.value
         if (!section) return
 
-        const sectionNodeId = `section-${section.id}`
+        const sectionNodeId = CanvasIds.groupNodeId(section.id)
 
         // TASK-158 FIX: Use persistent deleted groups tracker
         markGroupDeleted(section.id)

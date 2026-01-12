@@ -76,8 +76,8 @@ SKILL_MAPPINGS=(
   # VueUse
   "dev-vueuse:vueuse|usemagickey|useclipboard|uselocalstorage|useevent"
 
-  # Testing (broad)
-  "qa-testing:playwright|visual test|verify|check if|screenshot test|test if|run test|does.*work"
+  # Testing & Auditing (broad)
+  "qa-testing:playwright|visual test|verify|check if|screenshot test|test if|run test|does.*work|audit|complexity|analyze system"
 
   # Vue development (broad)
   "dev-vue:vue component|reactivity|composable|pinia store|props emit"

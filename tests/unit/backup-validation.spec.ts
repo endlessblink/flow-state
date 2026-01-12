@@ -22,6 +22,13 @@ vi.mock('@/composables/useSupabaseDatabaseV2', () => ({
     }),
 }));
 
+// Mock Integrity Service
+vi.mock('@/utils/integrity', () => ({
+    default: {
+        calculateChecksum: vi.fn(() => 'abc'),
+    },
+}));
+
 // Mock Stores
 const mockTaskStore = { tasks: [] };
 const mockProjectStore = { projects: [] };

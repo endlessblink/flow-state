@@ -2,6 +2,7 @@ import { type Ref, ref, nextTick } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 // Imported Composables
 import { useCanvasGroupActions } from './useCanvasGroupActions'
@@ -80,10 +81,10 @@ export function useCanvasActions(
         event.event.preventDefault()
         event.event.stopPropagation()
 
-        if (!event.node.id.startsWith('section-')) return
+        if (!CanvasIds.isGroupNode(event.node.id)) return
 
         const mouseEvent = event.event as MouseEvent
-        const sectionId = event.node.id.replace('section-', '')
+        const { id: sectionId } = CanvasIds.parseNodeId(event.node.id)
         const section = canvasStore.sections.find(s => s.id === sectionId)
 
         if (section) {
@@ -121,8 +122,8 @@ export function useCanvasActions(
     const deleteNode = async () => {
         if (!selectedNode.value) return
 
-        if (selectedNode.value.id.startsWith('section-')) {
-            const sectionId = selectedNode.value.id.replace('section-', '')
+        if (CanvasIds.isGroupNode(selectedNode.value.id)) {
+            const { id: sectionId } = CanvasIds.parseNodeId(selectedNode.value.id)
             // Check existence
             const section = canvasStore.sections.find(s => s.id === sectionId)
 

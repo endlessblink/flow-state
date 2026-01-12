@@ -9,7 +9,7 @@
  * - Handle group position/dimension persistence
  * - Basic containment check logic
  */
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useCanvasNewStore } from '@/stores/canvasNew'
 import type { CanvasNode } from './useCanvasCore'
 import type { CanvasGroup } from '@/stores/canvas/types'

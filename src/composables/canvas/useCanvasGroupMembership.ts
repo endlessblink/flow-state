@@ -13,11 +13,31 @@
 import { computed } from 'vue'
 import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
-import { findSmallestContainingRect, getGroupAbsolutePosition, type Rect } from '@/utils/canvas/positionCalculator'
+import { findSmallestContainingRect, type Rect } from '@/utils/canvas/positionCalculator'
 
 export function useCanvasGroupMembership() {
   const canvasStore = useCanvasStore()
   const taskStore = useTaskStore()
+
+  // Local helper to replace the removed utility
+  const getGroupAbsolutePosition = (groupId: string, groups: CanvasGroup[]) => {
+    let x = 0
+    let y = 0
+    let currentId: string | null = groupId
+
+    // Safety break to prevent infinite loops
+    let depth = 0
+    while (currentId && depth < 50) {
+      const group = groups.find(g => g.id === currentId)
+      if (!group) break
+
+      x += group.position.x
+      y += group.position.y
+      currentId = group.parentGroupId || null
+      depth++
+    }
+    return { x, y }
+  }
 
   /**
    * Get the canvas group ID that contains a task.

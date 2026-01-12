@@ -38,13 +38,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X, Timer, Palette, Layout, User } from 'lucide-vue-next'
+import { X, Timer, Palette, Layout, User, Database } from 'lucide-vue-next'
 
 // Tab components
 import TimerSettingsTab from '../settings/tabs/TimerSettingsTab.vue'
 import AppearanceSettingsTab from '../settings/tabs/AppearanceSettingsTab.vue'
 import WorkflowSettingsTab from '../settings/tabs/WorkflowSettingsTab.vue'
 import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
+import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
 
 defineProps<{
   isOpen: boolean
@@ -60,7 +61,8 @@ const tabs = [
   { id: 'timer', label: 'Timer', icon: Timer, component: TimerSettingsTab },
   { id: 'appearance', label: 'Appearance', icon: Palette, component: AppearanceSettingsTab },
   { id: 'workflow', label: 'Workflow', icon: Layout, component: WorkflowSettingsTab },
-  { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab }
+  { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab },
+  { id: 'storage', label: 'Storage', icon: Database, component: StorageSettingsTab }
 ]
 
 const currentTab = computed(() => {

@@ -1,0 +1,76 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] › tests/debug-startup.spec.ts:4:1 › capture startup errors
+[1A[2K[chromium] › tests/debug-startup.spec.ts:4:1 › capture startup errors
+--- BROWSER CONSOLE LOGS ---
+
+[1A[2K[debug] [vite] connecting...
+
+[1A[2K[debug] [vite] connected.
+
+[1A[2K[log] 📥 [STATIC_CACHE] Loading: /src/assets/styles.css
+
+[1A[2K[log] 🚀 [MAIN] Starting app initialization...
+
+[1A[2K[log] 🌐 [MAIN] Browser environment detected
+
+[1A[2K[log] 📊 [MAIN] Monitoring systems active
+
+[1A[2K[log] 🔍 [DEBUG] No refHistoryInstance exists, calling initializeRefHistory()
+
+[1A[2K[log] Initial tab visibility: visible
+
+[1A[2K[log] Added tab visibility listeners for: visibilitychange
+
+[1A[2K[log] 🚀 [APP] Starting strictly ordered initialization (Supabase Mode)...
+
+[1A[2K[log] 🧙‍♂️ Running task migrations...
+
+[1A[2K[log] 👤 [APP] Guest mode: starting with fresh empty app
+
+[1A[2K[log] ⚡ [APP] Loading stores from Supabase...
+
+[1A[2K[info] ℹ️ [DATABASE] User not authenticated, skipping notification load | Context: {"operation":"loadScheduledNotifications"}
+
+[1A[2K[log] [SafariITP] User interaction recorded - ITP counter reset
+
+[1A[2K[log] [SafariITP] User interaction recorded - ITP counter reset
+
+[1A[2K[log] 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
+
+[1A[2K[log] 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
+
+[1A[2K[log] 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
+
+[1A[2K---------------------------
+
+[1A[2K  1) [chromium] › tests/debug-startup.spec.ts:4:1 › capture startup errors ─────────────────────────
+
+    TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('.app') to be visible[22m
+
+
+       9 |     try {
+      10 |         await page.goto('http://localhost:5546');
+    > 11 |         await page.waitForSelector('.app', { timeout: 5000 });
+         |                    ^
+      12 |     } catch (e) {
+      13 |         console.log('--- BROWSER CONSOLE LOGS ---');
+      14 |         messages.forEach(m => console.log(m));
+        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/debug-startup.spec.ts:11:20
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/debug-startup-capture-startup-errors-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/debug-startup-capture-startup-errors-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/debug-startup-capture-startup-errors-chromium/error-context.md
+
+
+[1A[2K  1 failed
+    [chromium] › tests/debug-startup.spec.ts:4:1 › capture startup errors ──────────────────────────

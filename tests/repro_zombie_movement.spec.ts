@@ -7,6 +7,11 @@ test.describe('BUG-153: Zombie Task Movement', () => {
         console.log('--- TEST START ---');
         await page.goto('/');
 
+        // DEBUG: Capture browser logs
+        page.on('console', msg => {
+            console.log(`[BROWSER-RAW] ${msg.text()}`);
+        });
+
         // Auth Handling
         try {
             const signInBtn = page.locator('button', { hasText: 'Sign In' });
@@ -52,10 +57,34 @@ test.describe('BUG-153: Zombie Task Movement', () => {
         // 1. Create a Group (Shift+G)
         console.log('Creating Group...');
         await page.keyboard.press('Shift+G');
+
+        // Handle Group Creation Modal
+        const modal = page.locator('.modal-content');
+        await expect(modal).toBeVisible({ timeout: 5000 });
+
+        // Fill Group Name
+        const nameInput = page.locator('input[placeholder="Enter group name..."]');
+        await nameInput.waitFor({ state: 'visible' });
+        await nameInput.fill('New Group');
+
+        // Click Create Group button
+        await page.click('button:has-text("Create Group")');
+
         // Wait specifically for the new group to appear by text or class
         // Use a more robust selector that doesn't depend on order
+        // Check if node exists in DOM even if not visible
+        const nodeCount = await page.evaluate(() => document.querySelectorAll('.section-node').length);
+        console.log(`[DEBUG] .section-node count in DOM: ${nodeCount}`);
+
         const group = page.locator('.section-node').filter({ hasText: 'New Group' }).first();
-        await group.waitFor({ state: 'visible', timeout: 30000 });
+        try {
+            await group.waitFor({ state: 'visible', timeout: 5000 });
+        } catch (e) {
+            console.log('[DEBUG] Group wait failed. Dumping raw text content of .vue-flow__pane');
+            const text = await page.textContent('.vue-flow__pane');
+            console.log('[DEBUG] Pane Text:', text?.substring(0, 200));
+            throw e;
+        }
 
         const groupBoxBefore = await group.boundingBox();
         if (!groupBoxBefore) throw new Error('Group not found');

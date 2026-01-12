@@ -1,0 +1,38 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] › tests/canvas-parent-child.spec.ts:45:3 › Canvas Parent-Child Movement › should have parent-child relationships configured
+[1A[2K[chromium] › tests/canvas-parent-child.spec.ts:45:3 › Canvas Parent-Child Movement › should have parent-child relationships configured
+📊 Found 0 sections and 0 tasks
+
+[1A[2KDEBUG: Found 0 total nodes
+
+[1A[2K  1) [chromium] › tests/canvas-parent-child.spec.ts:45:3 › Canvas Parent-Child Movement › should have parent-child relationships configured 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThan[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: > [32m0[39m
+    Received:   [31m0[39m
+
+      68 |     }
+      69 |
+    > 70 |     expect(sectionCount).toBeGreaterThan(0)
+         |                          ^
+      71 |
+      72 |     // Take screenshot
+      73 |     await page.screenshot({ path: '/tmp/canvas-sections-tasks.png' })
+        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/canvas-parent-child.spec.ts:70:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/canvas-parent-child-Canvas-eae32-ld-relationships-configured-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/canvas-parent-child-Canvas-eae32-ld-relationships-configured-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/canvas-parent-child-Canvas-eae32-ld-relationships-configured-chromium/error-context.md
+
+
+[1A[2K  1 failed
+    [chromium] › tests/canvas-parent-child.spec.ts:45:3 › Canvas Parent-Child Movement › should have parent-child relationships configured 

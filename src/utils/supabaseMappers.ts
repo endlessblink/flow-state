@@ -77,7 +77,8 @@ export interface SupabaseTask {
     depends_on?: string[] | null
 
     // Complex JSON fields (mapped to camelCase in jsonb)
-    position?: { x: number; y: number } | null
+    position?: { x: number; y: number; parentId?: string; format?: 'absolute' | 'relative' } | null
+    position_version?: number // Optimistic locking for canvas position sync
     instances?: TaskInstance[] | null
     connection_types?: Record<string, 'sequential' | 'blocker' | 'reference'> | null
     recurrence?: TaskRecurrence | null
@@ -107,6 +108,8 @@ export interface SupabaseGroup {
     color?: string
 
     position_json?: any // Fixed: Use legacy database column name
+    position_version?: number // Optimistic locking for canvas position sync
+    position_format?: string // TASK-240: Transition to relative-only
     layout?: string
 
     is_visible?: boolean
@@ -207,6 +210,7 @@ export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
         color: group.color,
 
         position_json: group.position, // Fixed: Map internal position to DB position_json
+        // Note: position_version is managed by DB triggers, not sent on update
         layout: group.layout,
 
         is_visible: group.isVisible,
@@ -224,9 +228,9 @@ export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
         is_pinned: group.isPinned,
         property_value: typeof group.propertyValue === 'object' ? JSON.stringify(group.propertyValue) : group.propertyValue,
 
-        // TASK-149 FIX: Do NOT set is_deleted here - it overwrites soft-deletes!
         // Let the database default handle new groups (default: false)
         // Upsert will only update fields present in the payload
+        // position_format removed - column does not exist in DB
         updated_at: new Date().toISOString()
     }
 }
@@ -239,6 +243,7 @@ export function fromSupabaseGroup(record: SupabaseGroup): any {
         color: record.color,
 
         position: record.position_json, // Fixed: Map DB position_json to internal position
+        positionVersion: record.position_version ?? 0, // Read position_version for optimistic locking
         layout: record.layout,
 
         isVisible: record.is_visible,
@@ -255,6 +260,7 @@ export function fromSupabaseGroup(record: SupabaseGroup): any {
         autoCollect: record.auto_collect,
         isPinned: record.is_pinned,
         propertyValue: record.property_value, // Might need parsing if it was stringified object
+        positionFormat: 'absolute', // Default to absolute since DB column is missing
 
         updatedAt: record.updated_at
     }
@@ -344,7 +350,13 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         depends_on: sanitizedDependsOn.length > 0 ? sanitizedDependsOn : null,
 
         // JSONB mappings
-        position: task.canvasPosition || null,
+        position: task.canvasPosition ? {
+            x: task.canvasPosition.x,
+            y: task.canvasPosition.y,
+            parentId: task.parentId, // Serialize parentId into position JSON
+            format: 'absolute' // Default for existing tasks during migration
+        } : null,
+        // Note: position_version is managed by DB triggers, not sent on update
         instances: task.instances || [],
         connection_types: task.connectionTypes || null,
         recurrence: task.recurrence || null,
@@ -390,6 +402,9 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         dependsOn: record.depends_on || undefined,
 
         canvasPosition: record.position ? { x: record.position.x, y: record.position.y } : undefined,
+        positionVersion: record.position_version ?? 0, // Read position_version for optimistic locking
+        parentId: record.position?.parentId,
+        positionFormat: record.position?.format || 'absolute',
         instances: record.instances || [],
         connectionTypes: record.connection_types || undefined,
         recurrence: record.recurrence || undefined,

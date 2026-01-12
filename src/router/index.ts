@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import type { RouteLocationNormalized as _RouteLocationNormalized, NavigationGuardNext as _NavigationGuardNext } from 'vue-router'
-import { useLocalAuthStore } from '@/stores/local-auth'
+import type { RouteLocationNormalized as _RouteLocationNormalized, NavigationGuardNext as _NavigationGuardNext } from 'vue-router' // SECURITY: App is now 100% Supabase standard
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -83,29 +83,29 @@ const router = createRouter({
   ]
 })
 
-// Local authentication guard
+// Global authentication guard
 router.beforeEach(async (to, _from, next) => {
-  const authStore = useLocalAuthStore()
+  const authStore = useAuthStore()
 
-  // Ensure local user is initialized
+  // Ensure user is initialized
   if (!authStore.isInitialized) {
-    await authStore.initializeLocalUser()
+    await authStore.initialize()
   }
 
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    console.log('🛣️ Route requires authentication - initializing local user')
-    await authStore.initializeLocalUser()
+    console.log('🛣️ Route requires authentication - redirecting to board')
+    next({ name: 'board' })
+    return
   }
 
   // Check if route requires admin privileges
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
     console.warn('👮 Access denied: Route requires Admin privileges')
-    next({ name: 'board' }) // Redirect non-admins to home
+    next({ name: 'board' })
     return
   }
 
-  // Allow navigation - local auth is always available once initialized
   next()
 })
 

@@ -1,5 +1,5 @@
 import { ref as _ref } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
 // Interface for task-like objects in demo guard
 interface TaskLike {

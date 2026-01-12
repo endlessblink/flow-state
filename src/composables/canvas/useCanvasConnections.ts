@@ -2,6 +2,7 @@
 import { type Ref } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 interface ConnectionDeps {
     syncEdges: () => void
@@ -49,12 +50,12 @@ export function useCanvasConnections(
 
         // Allow immediate re-creation of recently deleted edges
         // If the user manually connects A->B, we must unblock it from the "zombie edge" protection list
-        const potentialEdgeId = `e-${source}-${target}`
+        const potentialEdgeId = CanvasIds.edgeId(source, target)
         if (state.recentlyRemovedEdges.value.has(potentialEdgeId)) {
             state.recentlyRemovedEdges.value.delete(potentialEdgeId)
         }
 
-        if (source.startsWith('section-') || target.startsWith('section-')) return
+        if (CanvasIds.isGroupNode(source) || CanvasIds.isGroupNode(target)) return
         if (source === target) return
 
         const sourceTask = taskStore.tasks.find(t => t.id === source)

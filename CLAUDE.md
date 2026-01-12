@@ -6,7 +6,7 @@
 
 **IMPORTANT: Follow this workflow for EVERY task:**
 
-1. **Before starting**: Add task to `docs/MASTER_PLAN.md` with proper ID format (TASK-XXX, BUG-XXX, etc.)
+1. **Before starting**: Run `./scripts/utils/get-next-task-id.cjs` to get a unique ID, then add task to `docs/MASTER_PLAN.md` with proper ID format (TASK-XXX, BUG-XXX, etc.)
 2. **During work**: Update progress and meaningful steps in MASTER_PLAN.md
 3. **After completion**: Mark as ✅ DONE with strikethrough on ID
 
@@ -26,6 +26,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Board | ✅ Working (Kanban swimlanes) |
 | Calendar | ⚠️ Partial (resize issues) |
 | Supabase Sync | ✅ Working (RLS enabled) |
+| Backup System | ✅ Hardened (Smart Layers 1-3) |
 | Build/CI | ✅ Passing |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
@@ -114,8 +115,11 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 **Dual-Engine Backup System (Shadow Mirror):**
 - **Engine A**: Standard Postgres Dump (`.sql`, 50-file rotation)
 - **Engine B**: Shadow Mirror (`backups/shadow.db` - SQLite)
+- **Engine C**: JSON Hub (`public/shadow-latest.json` - Frontend Bridge)
 - **Interval**: Automatic every 5 minutes via `npm run dev`
 - **Manual Trigger**: `npm run backup:watch` or `node scripts/shadow-mirror.cjs`
+- **Verification**: `node scripts/verify-shadow-layer.cjs` (verifies fidelity)
+- **Recovery UI**: Settings > Storage tab (System 2 Golden Restore & System 3 Shadow Hub)
 - **Configuration**: Service Role Key in `.env.local` required for full Shadow access bypass RLS.
 
 **Hook enforcement:** `.claude/hooks/destructive-command-blocker.sh`
@@ -209,7 +213,7 @@ To fix, run: npm run generate:keys
 **Rules:**
 - IDs must be sequential (TASK-001, TASK-002...)
 - Completed items: `~~TASK-001~~` with strikethrough
-- Never reuse IDs
+- **NEVER reuse IDs** - Always run `./scripts/utils/get-next-task-id.cjs` first
 
 ## Dev-Manager Kanban Compatibility
 
@@ -226,6 +230,7 @@ The dev-manager at `http://localhost:6010` parses MASTER_PLAN.md.
 |--------|----------|
 | Done | `DONE`, `COMPLETE`, `✅`, `~~strikethrough~~` |
 | In Progress | `IN PROGRESS`, `IN_PROGRESS`, `🔄` |
+| Paused | `PAUSED`, `⏸️` |
 | Review | `REVIEW`, `MONITORING`, `👀` |
 
 ## UI Component Standards

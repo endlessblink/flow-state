@@ -7,7 +7,7 @@ test.describe('Canvas Parent-Child Movement', () => {
     await page.waitForLoadState('networkidle')
 
     // Wait for app to be ready
-    await page.waitForSelector('.app', { timeout: 10000 })
+    await page.waitForSelector('.app-layout', { timeout: 10000 })
 
     // Navigate to Canvas view
     const canvasLink = page.locator('text=Canvas').first()
@@ -56,7 +56,40 @@ test.describe('Canvas Parent-Child Movement', () => {
 
     console.log(`📊 Found ${sectionCount} sections and ${taskCount} tasks`)
 
+    // Debug: Check ancestors
+    const headerCountTest = await page.locator('.section-header').count();
+    console.log(`DEBUG: Header count in this test: ${headerCountTest}`);
+
+    if (headerCountTest > 0) {
+      const debugInfo = await page.locator('.section-header').first().evaluate(el => {
+        const parents = [];
+        let curr = el.parentElement;
+        while (curr) {
+          parents.push({
+            tagName: curr.tagName,
+            classList: Array.from(curr.classList),
+            id: curr.id,
+            dataId: curr.getAttribute('data-id')
+          });
+          if (curr.classList.contains('vue-flow')) break;
+          curr = curr.parentElement;
+        }
+        return parents;
+      });
+      console.log('DEBUG: Ancestors of first section header:', JSON.stringify(debugInfo, null, 2));
+    }
+
     // Verify at least some content exists
+    // Debug: Log all node attributes
+    const allNodes = page.locator('.vue-flow__node');
+    const count = await allNodes.count();
+    console.log(`DEBUG: Found ${count} total nodes`);
+    for (let i = 0; i < count; i++) {
+      const id = await allNodes.nth(i).getAttribute('data-id');
+      const classList = await allNodes.nth(i).getAttribute('class');
+      console.log(`Node ${i}: data-id="${id}" class="${classList}"`);
+    }
+
     expect(sectionCount).toBeGreaterThan(0)
 
     // Take screenshot

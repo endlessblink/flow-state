@@ -9,7 +9,7 @@
   left: 0;
   right: 0;
   height: 6px;
-  border-radius: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   z-index: 1;
 }
 

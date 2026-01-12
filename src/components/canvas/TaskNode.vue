@@ -199,12 +199,12 @@ const {
   display: block;
 }
 
-/* Content wrapper - clips priority bar to card's rounded corners */
+/* Content wrapper - allow shadows/borders to extend beyond */
 .task-node-content {
   position: relative;
   padding: var(--space-6);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Priority glow overlay - no background, just for colored border effects */

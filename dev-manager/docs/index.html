@@ -420,7 +420,7 @@
         // Load data and initialize
         async function init() {
             try {
-                const response = await fetch('/docs/graph-data.json?v=' + Date.now());
+                const response = await fetch('/api/docs?v=' + Date.now());
                 graphData = await response.json();
 
                 updateStats();

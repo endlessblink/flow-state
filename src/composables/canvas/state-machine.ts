@@ -82,9 +82,18 @@ export function useNodeStateMachine(initialState: NodeState = NodeState.IDLE) {
 
     /**
      * Attempt state transition
-     * Returns true if successful, false if invalid
+     * Returns true if successful (or already in target state), false if invalid
+     *
+     * IDEMPOTENT: If already in targetState, returns true without logging warning.
+     * This prevents spurious "Invalid state transition: X → X" messages when
+     * Vue Flow fires duplicate drag events or multi-select triggers multiple handlers.
      */
     function setState(targetState: NodeState, reason?: string): boolean {
+        // IDEMPOTENT: Already in target state = success (no-op)
+        if (currentState.value === targetState) {
+            return true;
+        }
+
         if (!canTransitionTo(targetState)) {
             console.warn(
                 `Invalid state transition: ${currentState.value} → ${targetState}` +

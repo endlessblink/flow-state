@@ -53,13 +53,30 @@ export function useNodeSync(
         allGroups: CanvasGroup[],
         tableName: 'tasks' | 'groups'
     ): Promise<boolean> {
-        // Runtime guard: ensure nodeVersionMapRef is a valid Ref<Map>
+        // Defensive initialization: ensure nodeVersionMapRef.value is always a Map
+        // This handles cases where the ref might not be properly initialized yet
+        // (e.g., during HMR, store re-initialization, or timing issues)
         if (!nodeVersionMapRef?.value || !(nodeVersionMapRef.value instanceof Map)) {
-            console.error('[NODE-SYNC] nodeVersionMap is not initialized or not a Map')
-            return false
+            // Auto-fix: reinitialize as an empty Map instead of bailing out
+            if (nodeVersionMapRef) {
+                nodeVersionMapRef.value = new Map<string, number>()
+            } else {
+                // Truly exceptional case: ref itself is missing
+                console.error('[NODE-SYNC] nodeVersionMapRef is null/undefined - cannot sync')
+                return false
+            }
         }
 
+        // CRITICAL: Capture the Map reference in a local variable
+        // This ensures we use the same Map instance throughout the async function,
+        // even if nodeVersionMapRef.value gets reassigned during await calls
+        const versionMap = nodeVersionMapRef.value as Map<string, number>
 
+        // Validate nodeId is provided
+        if (!nodeId) {
+            console.error('[NODE-SYNC] nodeId is required for sync')
+            return false
+        }
 
         if (isSyncing.value) return false
 
@@ -111,8 +128,8 @@ export function useNodeSync(
             // ================================================================
             // 3. GET CURRENT VERSION FOR OPTIMISTIC LOCK
             // ================================================================
-            // nodeVersionMapRef.value is a plain Map
-            const currentVersion = nodeVersionMapRef.value.get(nodeId) ?? 0
+            // Use local versionMap (captured above) for all Map operations
+            const currentVersion = versionMap.get(nodeId) ?? 0
 
             // ================================================================
             // 4. PREPARE DB PAYLOAD
@@ -185,7 +202,8 @@ export function useNodeSync(
                 }
 
                 const newVersion = latest.position_version
-                nodeVersionMapRef.value.set(nodeId, newVersion)
+                // Use local versionMap for all Map operations
+                versionMap.set(nodeId, newVersion)
 
                 // Retry the update with the new version
                 updatePayload.position_version = newVersion + 1
@@ -208,14 +226,14 @@ export function useNodeSync(
                     return false
                 }
 
-                // Retry succeeded
+                // Retry succeeded - use local versionMap
                 console.log(`✅ [NODE-SYNC] Retry succeeded for ${tableName} ${nodeId}`)
-                nodeVersionMapRef.value.set(nodeId, retryData[0].position_version)
+                versionMap.set(nodeId, retryData[0].position_version)
                 return true
             }
 
-            // Success: update local version tracker
-            nodeVersionMapRef.value.set(nodeId, data[0].position_version)
+            // Success: update local version tracker using versionMap
+            versionMap.set(nodeId, data[0].position_version)
             return true
 
         } catch (err: any) {

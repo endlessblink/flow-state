@@ -9,6 +9,7 @@ import { useMagicKeys, useWindowSize } from '@vueuse/core'
 
 import resourceManager from '../../utils/canvas/resourceManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
+import { reconcileTaskParentsByContainment } from '@/utils/canvas/spatialContainment'
 
 // --- NEW COMPOSABLES (Phase 3) ---
 import { useCanvasCore } from './useCanvasCore'
@@ -242,7 +243,21 @@ export function useCanvasOrchestrator() {
         await nextTick()
         // Initialize Realtime
         persistence.initRealtimeSubscription()
-        // Calculate initial task counts before syncing (fixes 0 counters on load)
+
+        // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
+        // This runs ONCE on load, using the same spatial containment logic as onNodeDragStop.
+        // Tasks whose absolute center is inside a group but have wrong parentId are corrected.
+        await reconcileTaskParentsByContainment(
+            taskStore.tasks,
+            canvasStore.groups,
+            async (taskId, updates) => {
+                // Update store (will auto-sync to Supabase via existing persistence)
+                taskStore.updateTask(taskId, updates)
+            },
+            { writeToDb: true, silent: false }
+        )
+
+        // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
         canvasStore.recalculateAllTaskCounts(taskStore.tasks)
         // Initial Load
         syncNodes()

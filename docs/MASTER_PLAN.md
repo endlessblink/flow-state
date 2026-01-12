@@ -65,6 +65,7 @@
 | ~~**TASK-CLEANUP-001**~~ | ✅ **DONE** **Migrate to useSupabaseDatabaseV2** | **P0** | ✅ **DONE** (2026-01-11) - Replaced legacy V1 composable, silenced Realtime errors. | - |
 | **TASK-240** | **Canvas Architecture Redesign (SSOT/Relative/Normalized)** | **P0** | 🔄 **IN PROGRESS** (Phase 2 Component Migration Complete) | TASK-232 |
 | ~~**BUG-241**~~ | ✅ **DONE** **Fix nodeVersionMap Undefined in Optimistic Sync** | **P0** | ✅ **DONE** (2026-01-12) | TASK-198 |
+| **TASK-242** | **Commit and Push Changes** | **P2** | 🔄 **IN PROGRESS** | - |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 | ~~**TASK-230**~~ | ~~**Fix Deps & Locks Tab**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/locks endpoint, fixed dependency parser |
 | ~~**TASK-231**~~ | ~~**Dynamic Skills & Docs API**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/skills and /api/docs endpoints |

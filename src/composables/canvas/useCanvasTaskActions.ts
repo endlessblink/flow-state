@@ -138,15 +138,19 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
         if (selectedNodeIds.length === 0) return
 
-        for (const nodeId of selectedNodeIds) {
-            await undoHistory.updateTaskWithUndo(nodeId, {
-                isInInbox: true,
-                canvasPosition: undefined
-            })
+        try {
+            for (const nodeId of selectedNodeIds) {
+                await undoHistory.updateTaskWithUndo(nodeId, {
+                    isInInbox: true,
+                    canvasPosition: undefined
+                })
+            }
+            canvasStore.setSelectedNodes([])
+            if (deps.batchSyncNodes) deps.batchSyncNodes('high')
+            deps.closeCanvasContextMenu()
+        } catch (error) {
+            console.error('[ASYNC-ERROR] moveSelectedTasksToInbox failed', error)
         }
-        canvasStore.setSelectedNodes([])
-        if (deps.batchSyncNodes) deps.batchSyncNodes('high')
-        deps.closeCanvasContextMenu()
     }
 
     const deleteSelectedTasks = async () => {
@@ -155,51 +159,59 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         if (!confirm('Delete selected tasks permanently?')) return
 
-        for (const nodeId of selectedNodeIds) {
-            await undoHistory.deleteTaskWithUndo(nodeId)
-        }
+        try {
+            for (const nodeId of selectedNodeIds) {
+                await undoHistory.deleteTaskWithUndo(nodeId)
+            }
 
-        canvasStore.setSelectedNodes([])
-        if (deps.batchSyncNodes) deps.batchSyncNodes('high')
-        deps.closeCanvasContextMenu()
+            canvasStore.setSelectedNodes([])
+            if (deps.batchSyncNodes) deps.batchSyncNodes('high')
+            deps.closeCanvasContextMenu()
+        } catch (error) {
+            console.error('[ASYNC-ERROR] deleteSelectedTasks failed', error)
+        }
     }
 
     const confirmBulkDelete = async () => {
         const items = bulkDeleteItems.value
         const isPermanent = bulkDeleteIsPermanent.value
 
-        for (const item of items) {
-            if (item.type === 'section') {
-                markGroupDeleted(item.id)
-                if (deps.recentlyDeletedGroups) deps.recentlyDeletedGroups.value.add(item.id)
+        try {
+            for (const item of items) {
+                if (item.type === 'section') {
+                    markGroupDeleted(item.id)
+                    if (deps.recentlyDeletedGroups) deps.recentlyDeletedGroups.value.add(item.id)
 
-                if (!canvasStore.sections.some(s => s.id === item.id)) {
-                    removeGhostNodeRef(item.id)
-                    confirmGroupDeleted(item.id)
-                    deps.recentlyDeletedGroups?.value.delete(item.id)
+                    if (!canvasStore.sections.some(s => s.id === item.id)) {
+                        removeGhostNodeRef(item.id)
+                        confirmGroupDeleted(item.id)
+                        deps.recentlyDeletedGroups?.value.delete(item.id)
+                    } else {
+                        await canvasStore.deleteSection(item.id)
+                        confirmGroupDeleted(item.id)
+                        deps.recentlyDeletedGroups?.value.delete(item.id)
+                    }
+                } else if (isPermanent) {
+                    await taskStore.permanentlyDeleteTask(item.id)
                 } else {
-                    await canvasStore.deleteSection(item.id)
-                    confirmGroupDeleted(item.id)
-                    deps.recentlyDeletedGroups?.value.delete(item.id)
+                    await undoHistory.updateTaskWithUndo(item.id, {
+                        canvasPosition: undefined,
+                        isInInbox: true,
+                        instances: [],
+                        scheduledDate: undefined,
+                        scheduledTime: undefined
+                    })
                 }
-            } else if (isPermanent) {
-                await taskStore.permanentlyDeleteTask(item.id)
-            } else {
-                await undoHistory.updateTaskWithUndo(item.id, {
-                    canvasPosition: undefined,
-                    isInInbox: true,
-                    instances: [],
-                    scheduledDate: undefined,
-                    scheduledTime: undefined
-                })
             }
-        }
 
-        canvasStore.setSelectedNodes([])
-        bulkDeleteItems.value = []
-        isBulkDeleteModalOpen.value = false
-        await nextTick()
-        deps.syncNodes()
+            canvasStore.setSelectedNodes([])
+            bulkDeleteItems.value = []
+            isBulkDeleteModalOpen.value = false
+            await nextTick()
+            deps.syncNodes()
+        } catch (error) {
+            console.error('[ASYNC-ERROR] confirmBulkDelete failed', error)
+        }
     }
 
     const cancelBulkDelete = () => {

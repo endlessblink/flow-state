@@ -65,9 +65,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   const _rawGroups = ref<CanvasGroup[]>([])
   const activeGroupId = ref<string | null>(null)
   const isDragging = ref(false)
-  watch(isDragging, (val) => {
-    console.log(`🎯 [CANVAS-STORE] isDragging: ${val}`)
-  })
+  // NOTE: Debug watch removed - isDragging transitions are now guarded by FSM
   const syncTrigger = ref(0)
   // Optimistic Locking Version Map
   const nodeVersionMap = ref<Map<string, number>>(new Map())
@@ -167,19 +165,22 @@ export const useCanvasStore = defineStore('canvas', () => {
       _rawGroups.value = loadedGroups
 
       // Populate nodeVersionMap with loaded group versions for optimistic locking
+      // Defensive: ensure nodeVersionMap.value is a valid Map before clearing
+      if (!nodeVersionMap.value || !(nodeVersionMap.value instanceof Map)) {
+        nodeVersionMap.value = new Map()
+      }
       nodeVersionMap.value.clear()
+
+      // Always initialize version entries (default to 0 if positionVersion is undefined)
+      // This ensures syncNodePosition always has a starting version to work with
       loadedGroups.forEach(g => {
-        if (g.positionVersion !== undefined) {
-          nodeVersionMap.value.set(g.id, g.positionVersion)
-        }
+        nodeVersionMap.value.set(g.id, g.positionVersion ?? 0)
       })
 
       // Also populate from taskStore if available
       if (taskStore && taskStore.tasks) {
         taskStore.tasks.forEach((t: any) => {
-          if (t.positionVersion !== undefined) {
-            nodeVersionMap.value.set(t.id, t.positionVersion)
-          }
+          nodeVersionMap.value.set(t.id, t.positionVersion ?? 0)
         })
       }
 
@@ -260,13 +261,16 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Enforce Smart Group consistency
     applySmartGroupNormalizations(groupData)
 
+    // CRITICAL: New groups are ALWAYS top-level (not auto-nested)
+    // Nesting should only happen via explicit UX action, not containment detection
     const newGroup: CanvasGroup = {
       ...groupData,
       id: `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       isVisible: true,
       isCollapsed: false,
+      parentGroupId: null, // Explicitly top-level - never auto-nest new groups
       positionVersion: 1, // Start at version 1
-      positionFormat: groupData.positionFormat || 'absolute' // Default to absolute until Phase 3 migration is fully active
+      positionFormat: 'absolute' // Always absolute for new groups
     }
     _rawGroups.value.push(newGroup)
     await saveGroupToStorage(newGroup)
@@ -459,6 +463,125 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
   }
 
+  /**
+   * Computed: Task counts derived from task.parentId relationship
+   *
+   * This is the SOURCE OF TRUTH for group task counts.
+   * Use this instead of relying on cached taskCount field on groups.
+   *
+   * @returns Map<groupId, taskCount> - reactive count of tasks per group
+   */
+  const taskCountByGroupId = computed(() => {
+    const counts = new Map<string, number>()
+
+    // taskStore is loaded asynchronously - check if available
+    if (!taskStore || !taskStore.tasks) {
+      return counts
+    }
+
+    // Count tasks by their parentId (direct membership)
+    for (const task of taskStore.tasks) {
+      if (task._soft_deleted) continue // Skip deleted tasks
+      if (task.parentId) {
+        counts.set(task.parentId, (counts.get(task.parentId) ?? 0) + 1)
+      }
+    }
+
+    return counts
+  })
+
+  /**
+   * Get task count for a specific group from the derived counts
+   *
+   * @param groupId - The group ID to get count for
+   * @returns Number of tasks in this group (based on parentId)
+   */
+  const getTaskCountForGroup = (groupId: string): number => {
+    return taskCountByGroupId.value.get(groupId) ?? 0
+  }
+
+  /**
+   * Get all descendant group IDs for a given root group (depth-first)
+   *
+   * Returns rootGroupId PLUS all nested child group IDs recursively.
+   * Used for aggregating task counts across nested group hierarchies.
+   *
+   * @param rootGroupId - The root group to start from
+   * @param groups - All groups to search through
+   * @returns Array of group IDs: [rootGroupId, ...allDescendantIds]
+   */
+  const getAllDescendantGroupIds = (rootGroupId: string, groups: CanvasGroup[]): string[] => {
+    const result: string[] = [rootGroupId]
+    const visited = new Set<string>([rootGroupId])
+
+    // Recursive helper to collect descendants
+    const collectDescendants = (parentId: string) => {
+      const children = groups.filter(g => g.parentGroupId === parentId)
+      for (const child of children) {
+        if (!visited.has(child.id)) {
+          visited.add(child.id)
+          result.push(child.id)
+          collectDescendants(child.id)
+        }
+      }
+    }
+
+    collectDescendants(rootGroupId)
+    return result
+  }
+
+  /**
+   * Computed: Aggregated task counts that include tasks in descendant groups
+   *
+   * For nested groups, a parent group's count = sum of:
+   * - Tasks directly in that group (parentId === groupId)
+   * - Tasks in ALL descendant groups (children, grandchildren, etc.)
+   *
+   * This is what should be displayed in group headers for accurate counts.
+   *
+   * @returns Map<groupId, aggregatedCount>
+   */
+  const aggregatedTaskCountByGroupId = computed(() => {
+    const aggregatedCounts = new Map<string, number>()
+    const groups = _rawGroups.value
+
+    // taskStore is loaded asynchronously - check if available
+    if (!taskStore || !taskStore.tasks) {
+      return aggregatedCounts
+    }
+
+    // Step 1: Pre-index tasks by parentId (direct membership)
+    const directCountsByGroupId = new Map<string, number>()
+    for (const task of taskStore.tasks) {
+      if (task._soft_deleted) continue
+      if (task.parentId) {
+        directCountsByGroupId.set(task.parentId, (directCountsByGroupId.get(task.parentId) ?? 0) + 1)
+      }
+    }
+
+    // Step 2: For each group, sum counts from itself + all descendants
+    for (const group of groups) {
+      const descendantIds = getAllDescendantGroupIds(group.id, groups)
+      let total = 0
+      for (const gid of descendantIds) {
+        total += directCountsByGroupId.get(gid) ?? 0
+      }
+      aggregatedCounts.set(group.id, total)
+    }
+
+    return aggregatedCounts
+  })
+
+  /**
+   * Get aggregated task count for a specific group (includes descendants)
+   *
+   * @param groupId - The group ID to get aggregated count for
+   * @returns Number of tasks in this group + all descendant groups
+   */
+  const getAggregatedTaskCountForGroup = (groupId: string): number => {
+    return aggregatedTaskCountByGroupId.value.get(groupId) ?? 0
+  }
+
   const getTasksInSection = (groupId: string, tasks?: Task[]): Task[] => {
     // Determine source tasks: provided tasks > taskStore.tasks > empty
     const sourceTasks = tasks || (taskStore && taskStore.tasks ? taskStore.tasks : [])
@@ -643,6 +766,8 @@ export const useCanvasStore = defineStore('canvas', () => {
       taskStore = useTaskStore()
       // REMOVED: watch(() => taskStore.tasks, ...) - competed with useCanvasSync.ts
       // This was the root cause of BUG-020 regression where task positions reset
+    }).catch((err) => {
+      console.error('[ASYNC-ERROR] canvas.ts: Failed to import tasks store', err)
     })
   }
 
@@ -652,10 +777,11 @@ export const useCanvasStore = defineStore('canvas', () => {
   // TASK-142 FIX: Watch for auth state changes to reload groups from Supabase
   // This fixes the race condition where canvas loads before auth is ready
   import('@/stores/auth').then(({ useAuthStore }) => {
-    const authStore = useAuthStore()
+    try {
+      const authStore = useAuthStore()
 
-    // Watch for auth becoming ready
-    watch(
+      // Watch for auth becoming ready
+      watch(
       () => [authStore.isInitialized, authStore.isAuthenticated],
       async ([isInitialized, isAuthenticated], [, wasAuthenticated]) => {
         // Only reload when:
@@ -685,10 +811,14 @@ export const useCanvasStore = defineStore('canvas', () => {
             _rawGroups.value = loadedGroups
 
             // Populate nodeVersionMap with loaded group versions for optimistic locking
+            // Defensive: ensure nodeVersionMap.value is a valid Map
+            if (!nodeVersionMap.value || !(nodeVersionMap.value instanceof Map)) {
+              nodeVersionMap.value = new Map()
+            }
+
+            // Always initialize version entries (default to 0 if positionVersion is undefined)
             loadedGroups.forEach(g => {
-              if (g.positionVersion !== undefined) {
-                nodeVersionMap.value.set(g.id, g.positionVersion)
-              }
+              nodeVersionMap.value.set(g.id, g.positionVersion ?? 0)
             })
 
             if (loadedGroups.length > 0) {
@@ -701,6 +831,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       },
       { immediate: false }
     )
+    } catch (err) {
+      console.error('[ASYNC-ERROR] canvas.ts: Failed to setup auth watcher', err)
+    }
+  }).catch((err) => {
+    console.error('[ASYNC-ERROR] canvas.ts: Failed to import auth store', err)
   })
 
   // Aliases for compatibility
@@ -799,6 +934,11 @@ export const useCanvasStore = defineStore('canvas', () => {
     loadSavedViewport,
     getTaskCountInGroupRecursive,
     recalculateAllTaskCounts,
+    taskCountByGroupId,      // Reactive computed: Map<groupId, count> derived from task.parentId
+    getTaskCountForGroup,    // Helper: get count for a specific group (direct only)
+    getAllDescendantGroupIds, // Helper: get rootId + all nested child group IDs
+    aggregatedTaskCountByGroupId, // Reactive computed: Map<groupId, aggregatedCount> (includes descendants)
+    getAggregatedTaskCountForGroup, // Helper: get aggregated count for a group (includes descendants)
     calculateContentBounds,
     setSelectedNodes,
     getTasksInSection,

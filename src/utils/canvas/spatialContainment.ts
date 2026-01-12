@@ -1,11 +1,16 @@
 /**
  * Spatial Containment Detection
  *
+ * IMPORTANT: All positions passed to these functions must be ABSOLUTE world coordinates.
+ * Do NOT pass Vue Flow's relative positions for nested nodes.
+ *
  * Fixes the bug where tasks outside group bounds are treated as children.
  * Only tasks PHYSICALLY INSIDE a group should be grouped together.
  *
  * Key Insight: parentId is a SUGGESTION, not a rule.
  * Vue Flow's parentNode should only be set if task is actually inside the group spatially.
+ *
+ * CONTAINMENT RULE: A task is "inside" a group if its CENTER lies within the group's bounds.
  */
 
 import type { CanvasSection } from '@/stores/canvas'
@@ -16,20 +21,20 @@ export interface NodePosition {
 }
 
 export interface SpatialNode {
-    position: NodePosition
+    position: NodePosition  // Must be ABSOLUTE world coordinates
     width?: number
     height?: number
 }
 
 export interface ContainerBounds {
-    position: NodePosition
+    position: NodePosition  // Must be ABSOLUTE world coordinates
     width: number
     height: number
 }
 
-// Default task dimensions
-const DEFAULT_TASK_WIDTH = 220
-const DEFAULT_TASK_HEIGHT = 100
+// Default task dimensions - exported for callers to use when building SpatialNode
+export const DEFAULT_TASK_WIDTH = 220
+export const DEFAULT_TASK_HEIGHT = 100
 
 /**
  * Check if a node's center is inside a container's bounds
@@ -106,9 +111,12 @@ export function findContainingGroups(
  * Find the deepest (smallest) containing group for a node
  * If node is in multiple nested groups, returns the innermost (smallest) one
  *
- * @param node - The node to check
- * @param allGroups - All available groups
- * @param excludeId - Optional group ID to exclude
+ * CRITICAL: Both node.position and all group positions must be ABSOLUTE world coordinates.
+ * The containment check uses the node's CENTER point against group bounds.
+ *
+ * @param node - The node to check (with ABSOLUTE position)
+ * @param allGroups - All available groups (with ABSOLUTE positions from store)
+ * @param excludeId - Optional group ID to exclude (e.g., the node's own ID if it's a group)
  * @returns The deepest containing group, or null if not in any group
  */
 export function getDeepestContainingGroup(
@@ -121,6 +129,7 @@ export function getDeepestContainingGroup(
     if (containingGroups.length === 0) return null
 
     // Return the smallest group by area (this handles nested groups correctly)
+    // The smallest containing group is the "deepest" one in the hierarchy
     return containingGroups.reduce((smallest, current) => {
         const currentArea = current.position.width * current.position.height
         const smallestArea = smallest.position.width * smallest.position.height
@@ -201,4 +210,105 @@ export function logContainmentDebug(
     }
 
     console.groupEnd()
+}
+
+/**
+ * Task interface for reconciliation (minimal required fields)
+ */
+export interface ReconcilableTask {
+    id: string
+    parentId?: string | null
+    canvasPosition?: NodePosition | null
+}
+
+/**
+ * Reconcile task parentIds based on spatial containment
+ *
+ * This function runs on load to fix legacy tasks whose parentId doesn't
+ * match their actual spatial position. Uses center-based containment logic.
+ *
+ * SAFE: Only updates parentId, does not touch positions or other properties.
+ *
+ * @param tasks - Tasks to reconcile
+ * @param groups - All canvas groups (with absolute positions)
+ * @param updateTask - Callback to update a task (store.updateTask)
+ * @param options - Options for reconciliation behavior
+ * @returns Promise with count of reconciled tasks
+ */
+export async function reconcileTaskParentsByContainment(
+    tasks: ReconcilableTask[],
+    groups: CanvasSection[],
+    updateTask: (id: string, updates: { parentId: string | null }) => Promise<void>,
+    options?: {
+        writeToDb?: boolean  // If false, only logs but doesn't update (dry run)
+        silent?: boolean     // If true, suppresses console output
+    }
+): Promise<{ reconciled: number; total: number }> {
+    const writeToDb = options?.writeToDb !== false // Default true
+    const silent = options?.silent === true
+
+    let reconciledCount = 0
+    const tasksToReconcile: Array<{ task: ReconcilableTask; correctParentId: string | null }> = []
+
+    // Phase 1: Identify tasks needing reconciliation
+    for (const task of tasks) {
+        // Skip tasks not on canvas (no position = inbox task)
+        if (!task.canvasPosition) continue
+
+        // Build spatial node using task's absolute position
+        const spatialNode: SpatialNode = {
+            position: task.canvasPosition,
+            width: DEFAULT_TASK_WIDTH,
+            height: DEFAULT_TASK_HEIGHT
+        }
+
+        // Find the correct parent based on spatial containment
+        const correctParentId = getDeepestContainingGroup(spatialNode, groups)?.id ?? null
+
+        // Normalize parentId for comparison (treat undefined/'NONE' as null)
+        const currentParentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
+
+        // Check if parentId needs correction
+        if (currentParentId !== correctParentId) {
+            tasksToReconcile.push({ task, correctParentId })
+        }
+    }
+
+    // Phase 2: Apply corrections
+    if (tasksToReconcile.length > 0) {
+        if (!silent) {
+            console.log(`🔧 [RECONCILE] Found ${tasksToReconcile.length} tasks with incorrect parentId`)
+        }
+
+        for (const { task, correctParentId } of tasksToReconcile) {
+            const oldParent = task.parentId || 'none'
+            const newParent = correctParentId || 'none'
+
+            if (!silent) {
+                console.log(`   📍 Task ${task.id.substring(0, 8)}... : "${oldParent}" → "${newParent}"`)
+            }
+
+            if (writeToDb) {
+                try {
+                    await updateTask(task.id, { parentId: correctParentId })
+                    reconciledCount++
+                } catch (error) {
+                    console.error(`   ❌ Failed to update task ${task.id}:`, error)
+                }
+            } else {
+                reconciledCount++ // Count as reconciled in dry run
+            }
+        }
+
+        if (!silent) {
+            console.log(`✅ [RECONCILE] ${writeToDb ? 'Updated' : 'Would update'} ${reconciledCount} tasks`)
+        }
+    } else if (!silent) {
+        console.log(`✓ [RECONCILE] All ${tasks.filter(t => t.canvasPosition).length} canvas tasks have correct parentId`)
+    }
+
+    return {
+        reconciled: reconciledCount,
+        total: tasks.filter(t => t.canvasPosition).length
+    }
 }

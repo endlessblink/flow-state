@@ -547,24 +547,60 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   /**
+   * Reactive version counter - incremented when task parentIds change
+   * Used to force recomputation of task counts in computed properties.
+   */
+  const taskParentVersion = ref(0)
+
+  /**
+   * Increment this to force task count recomputation.
+   * Call this whenever a task's parentId changes.
+   */
+  const bumpTaskParentVersion = () => {
+    taskParentVersion.value++
+  }
+
+  /**
    * Computed: Task counts derived from task.parentId relationship
    *
    * This is the SOURCE OF TRUTH for group task counts.
    * Use this instead of relying on cached taskCount field on groups.
    *
+   * REACTIVITY: Depends on taskParentVersion ref to detect parentId changes.
+   * Call bumpTaskParentVersion() after updating any task's parentId.
+   *
    * @returns Map<groupId, taskCount> - reactive count of tasks per group
    */
+  /**
+   * Helper: Check if a task is considered "done" for counting purposes
+   */
+  const isTaskDone = (task: Task): boolean => {
+    return task.status === 'done'
+  }
+
   const taskCountByGroupId = computed(() => {
     const counts = new Map<string, number>()
+
+    // Access version to create reactive dependency for parentId changes
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _version = taskParentVersion.value
 
     // taskStore is loaded asynchronously - check if available
     if (!taskStore || !taskStore.tasks) {
       return counts
     }
 
+    // FIX: Explicitly access .length to create reactive dependency on deletions/additions
+    // Without this, Vue may not track array mutations (splice) and counts won't update on delete
+    const tasks = taskStore.tasks
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _taskCount = tasks.length
+
     // Count tasks by their parentId (direct membership)
-    for (const task of taskStore.tasks) {
+    // Only count non-done tasks (done tasks are excluded from header counts)
+    for (const task of tasks) {
       if (task._soft_deleted) continue // Skip deleted tasks
+      if (isTaskDone(task)) continue   // Skip done/completed tasks
       if (task.parentId) {
         counts.set(task.parentId, (counts.get(task.parentId) ?? 0) + 1)
       }
@@ -622,21 +658,35 @@ export const useCanvasStore = defineStore('canvas', () => {
    *
    * This is what should be displayed in group headers for accurate counts.
    *
+   * REACTIVITY: Depends on taskParentVersion ref to detect parentId changes.
+   * Call bumpTaskParentVersion() after updating any task's parentId.
+   *
    * @returns Map<groupId, aggregatedCount>
    */
   const aggregatedTaskCountByGroupId = computed(() => {
     const aggregatedCounts = new Map<string, number>()
     const groups = _rawGroups.value
 
+    // Access version to create reactive dependency for parentId changes
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _version = taskParentVersion.value
+
     // taskStore is loaded asynchronously - check if available
     if (!taskStore || !taskStore.tasks) {
       return aggregatedCounts
     }
 
+    // FIX: Explicitly access .length to create reactive dependency on deletions/additions
+    const tasks = taskStore.tasks
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _taskCount = tasks.length
+
     // Step 1: Pre-index tasks by parentId (direct membership)
+    // Only count non-done tasks (done tasks are excluded from header counts)
     const directCountsByGroupId = new Map<string, number>()
-    for (const task of taskStore.tasks) {
-      if (task._soft_deleted) continue
+    for (const task of tasks) {
+      if (task._soft_deleted) continue // Skip deleted tasks
+      if (isTaskDone(task)) continue   // Skip done/completed tasks
       if (task.parentId) {
         directCountsByGroupId.set(task.parentId, (directCountsByGroupId.get(task.parentId) ?? 0) + 1)
       }
@@ -1058,6 +1108,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     getAllDescendantGroupIds, // Helper: get rootId + all nested child group IDs
     aggregatedTaskCountByGroupId, // Reactive computed: Map<groupId, aggregatedCount> (includes descendants)
     getAggregatedTaskCountForGroup, // Helper: get aggregated count for a group (includes descendants)
+    bumpTaskParentVersion,   // Call this when task.parentId changes to trigger count recomputation
     debugGroupHierarchy, // DEBUG: Log group hierarchy
     debugAllAggregatedCounts, // DEBUG: Log all aggregated counts
     calculateContentBounds,

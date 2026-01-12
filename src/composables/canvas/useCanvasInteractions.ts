@@ -1,4 +1,4 @@
-import { ref, reactive, computed, type Ref } from 'vue'
+import { ref, reactive, computed, nextTick, type Ref } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -15,6 +15,7 @@ import { useNodeSync } from './useNodeSync'
 import { useNodeStateManager, NodeState } from './state-machine'
 import { storeToRefs } from 'pinia'
 import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
+import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -173,6 +174,15 @@ export function useCanvasInteractions(deps?: {
     const { updateSectionTaskCounts } = useCanvasGroups()
     const { startDrag, endDrag, startResize, endResize } = useCanvasOperationState()
     const { setNodeState } = useNodeStateManager()
+
+    // Smart Section Properties
+    const { getSectionProperties } = useCanvasSectionProperties({
+        taskStore,
+        getAllContainingSections: (x, y, w, h) => {
+            // This is used for nesting, but onNodeDragStop handles its own containment
+            return []
+        }
+    })
 
     // Interaction sub-states
     const { resizeState, isResizeSettling, resizeLineStyle, edgeHandleStyle } = useCanvasResizeState()
@@ -455,6 +465,8 @@ export function useCanvasInteractions(deps?: {
 
                 if (oldParentId !== newParentId) {
                     updateSectionTaskCounts(oldParentId || undefined, newParentId || undefined)
+                    // REACTIVITY FIX: Bump version to trigger count recomputation
+                    canvasStore.bumpTaskParentVersion()
                 }
 
                 // 5. Update Vue Flow parentNode to match new containment
@@ -464,7 +476,16 @@ export function useCanvasInteractions(deps?: {
                     node.parentNode = undefined
                 }
 
-                // 6. Sync task to DB with optimistic locking
+                // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)
+                if (targetGroup) {
+                    const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
+                    if (Object.keys(smartUpdates).length > 0) {
+                        console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, smartUpdates)
+                        taskStore.updateTask(task.id, smartUpdates)
+                    }
+                }
+
+                // 7. Sync task to DB with optimistic locking
                 setNodeState(task.id, NodeState.SYNCING)
                 await syncNodePosition(task.id, node, taskAllGroups, 'tasks')
                 setNodeState(task.id, NodeState.IDLE)

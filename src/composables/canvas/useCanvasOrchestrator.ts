@@ -341,6 +341,22 @@ export function useCanvasOrchestrator() {
         }
     })
 
+    // REACTIVITY FIX: Watch for task parentId changes (via version counter)
+    // This triggers when a task is dragged between groups, updating the counters
+    watch(() => canvasStore.taskCountByGroupId.value, () => {
+        // Skip during initialization - onMounted handles initial sync
+        if (!isInitialized.value) return
+        if (isSyncingFromWatcher) return
+        isSyncingFromWatcher = true
+        try {
+            if (persistence.isSyncing.value) return
+            console.log('👀 [ORCHESTRATOR] taskCountByGroupId changed - syncing nodes')
+            syncNodes()
+        } finally {
+            isSyncingFromWatcher = false
+        }
+    }, { deep: true })
+
     // Retry Logic
     const retryFailedOperation = async () => {
         if (!operationError.value?.retryable) return

@@ -1,5 +1,5 @@
-**Last Updated**: January 11, 2026 (TASK-210 QA Testing Skill v2.0)
-**Version**: 5.41 (QA Testing Enhancement)
+**Last Updated**: January 12, 2026 (BUG-245 Today Smart Group Date Fix)
+**Version**: 5.42 (Canvas Group Quality)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -68,6 +68,7 @@
 | ~~**TASK-242**~~ | ✅ **DONE** **Commit and Push Changes** | **P2** | ✅ **DONE** (2026-01-12) | - |
 | ~~**BUG-243**~~ | ✅ **DONE** **Canvas Filter Persistence Fix** | **P0** | ✅ **DONE** (2026-01-12) | TASK-194 |
 | ~~**BUG-244**~~ | ✅ **DONE** **Canvas Selection (Ctrl+Click) Wonkiness** | **P1** | ✅ **DONE** (2026-01-12) | ROAD-013 |
+| ~~**BUG-245**~~ | ✅ **DONE** **Today Smart Group Date Not Updating** | **P0** | ✅ **DONE** (2026-01-12) | TASK-184 |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
 | ~~**TASK-230**~~ | ~~**Fix Deps & Locks Tab**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/locks endpoint, fixed dependency parser |
 | ~~**TASK-231**~~ | ~~**Dynamic Skills & Docs API**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/skills and /api/docs endpoints |

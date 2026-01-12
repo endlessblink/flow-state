@@ -31,6 +31,10 @@
         {{ taskCount }}
         <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
       </div>
+      <!-- DEBUG: Show group ID for deletion debugging -->
+      <span class="debug-id" style="position: absolute; top: -18px; right: 4px; font-size: 9px; color: #888; font-family: monospace;">
+        {{ (props.data as any)?.id?.slice(0, 8) }} · d:{{ (props.data as any)?.directTaskCount }} a:{{ (props.data as any)?.aggregatedTaskCount }}
+      </span>
     </div>
 
     <!-- TASK-141: ADD SLOT FOR CHILD NODES (CRITICAL FOR VUE FLOW NESTING) -->
@@ -110,6 +114,21 @@ const taskCount = computed(() => {
 
 // Local State
 const sectionName = ref(props.data?.name || '')
+
+// DEBUG: Watch for count changes to verify reactivity pipeline
+watch(
+  () => [props.data?.directTaskCount, props.data?.aggregatedTaskCount],
+  (newVal, oldVal) => {
+    if (newVal[0] !== oldVal?.[0] || newVal[1] !== oldVal?.[1]) {
+      console.log('[DEBUG HEADER REACT]', props.data?.id, {
+        direct: newVal[0],
+        aggregated: newVal[1],
+        oldDirect: oldVal?.[0],
+        oldAggregated: oldVal?.[1],
+      })
+    }
+  }
+)
 
 // TASK-130: Compute upcoming date for day-of-week groups
 const dayOfWeekDateSuffix = computed(() => {

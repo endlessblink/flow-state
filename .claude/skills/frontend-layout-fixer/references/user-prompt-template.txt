@@ -1,0 +1,26 @@
+Analyze this front-end layout issue and provide CSS/HTML patches.
+
+=== HTML ===
+{html}
+
+=== CSS ===
+{css}
+
+=== ISSUE DESCRIPTION ===
+{issue_description}
+
+=== SELECTOR HINTS ===
+These selectors are likely involved (prioritize these when analyzing):
+{target_selector_hints_list}
+
+=== CONSTRAINTS ===
+Do NOT violate these requirements:
+{constraints_list}
+
+=== VIEWPORT CONTEXT ===
+Width: {viewport_width}px
+Height: {viewport_height}px
+
+---
+
+Task: Diagnose the root cause of the layout issue and return CSS/HTML patches in the exact JSON schema format. Be precise about which selectors need changes and why. Include clear rationale for each patch and a testing checklist.

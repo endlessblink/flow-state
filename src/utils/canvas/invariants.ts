@@ -31,7 +31,14 @@ import type { Node } from '@vue-flow/core'
 import type { CanvasGroup } from '@/stores/canvas/types'
 import type { Task } from '@/types/tasks'
 import { CanvasIds } from './canvasIds'
-import { getGroupAbsolutePosition, toRelativePosition, positionsEqual } from './coordinates'
+import {
+    getGroupAbsolutePosition,
+    toRelativePosition,
+    sanitizePosition
+} from './coordinates'
+
+// Epsilon for position comparison - must match tolerance used in sync code
+const POSITION_EPSILON = 0.5
 
 // Only log in development mode
 const isDev = import.meta.env.DEV
@@ -149,19 +156,10 @@ export function validateInvariantA(
                 })
             }
 
-            if (!hasExtent) {
-                violations.push({
-                    invariant: 'A',
-                    severity: InvariantSeverity.WARNING,
-                    nodeId: groupId,
-                    nodeType: 'group',
-                    message: `Store has parentGroupId but Vue Flow node missing extent: 'parent'`,
-                    details: {
-                        storeParentGroupId: storeGroup.parentGroupId,
-                        extent: node.extent
-                    }
-                })
-            }
+            // NOTE: We intentionally do NOT check for extent: 'parent' here.
+            // Groups are allowed to NOT have extent set so they can be dragged outside
+            // their parent for child→root transitions. The containment check in
+            // onNodeDragStop handles re-parenting via spatial detection.
 
             // Check parent exists
             if (!groupById.has(storeGroup.parentGroupId!)) {
@@ -184,9 +182,22 @@ export function validateInvariantA(
 }
 
 /**
+ * Helper: Compare positions with epsilon tolerance
+ */
+function positionsMatch(
+    actual: { x: number; y: number },
+    expected: { x: number; y: number }
+): boolean {
+    const dx = Math.abs(actual.x - expected.x)
+    const dy = Math.abs(actual.y - expected.y)
+    return dx <= POSITION_EPSILON && dy <= POSITION_EPSILON
+}
+
+/**
  * Validate Invariant B: Position Architecture
  *
- * Checks that Vue Flow positions are correctly computed from store absolute positions
+ * Checks that Vue Flow positions are correctly computed from store absolute positions.
+ * Uses the exact same conversion logic as useCanvasSync.ts to ensure consistency.
  */
 export function validateInvariantB(
     vueFlowNodes: Node[],
@@ -194,7 +205,6 @@ export function validateInvariantB(
     storeTasks: Task[]
 ): InvariantViolation[] {
     const violations: InvariantViolation[] = []
-    const tolerance = 1 // Allow 1px tolerance for rounding
 
     // Check groups
     for (const node of vueFlowNodes) {
@@ -204,9 +214,11 @@ export function validateInvariantB(
         const storeGroup = storeGroups.find(g => g.id === groupId)
         if (!storeGroup) continue
 
-        const storeAbsolute = { x: storeGroup.position.x, y: storeGroup.position.y }
+        // Use sanitizePosition to match what useCanvasSync does
+        const storeAbsolute = sanitizePosition(storeGroup.position)
         const hasParent = storeGroup.parentGroupId && storeGroup.parentGroupId !== 'NONE'
 
+        // Compute expected Vue Flow position using same logic as groupPositionToVueFlow
         let expectedVueFlowPos: { x: number; y: number }
         if (hasParent) {
             const parentAbsolute = getGroupAbsolutePosition(storeGroup.parentGroupId!, storeGroups)
@@ -215,7 +227,9 @@ export function validateInvariantB(
             expectedVueFlowPos = storeAbsolute
         }
 
-        if (!positionsEqual(node.position, expectedVueFlowPos, tolerance)) {
+        const actualVueFlowPos = sanitizePosition(node.position)
+
+        if (!positionsMatch(actualVueFlowPos, expectedVueFlowPos)) {
             violations.push({
                 invariant: 'B',
                 severity: InvariantSeverity.WARNING,
@@ -226,10 +240,10 @@ export function validateInvariantB(
                     storeAbsolute,
                     parentGroupId: storeGroup.parentGroupId,
                     expectedVueFlowPos,
-                    actualVueFlowPos: { x: node.position.x, y: node.position.y },
+                    actualVueFlowPos,
                     delta: {
-                        x: node.position.x - expectedVueFlowPos.x,
-                        y: node.position.y - expectedVueFlowPos.y
+                        x: actualVueFlowPos.x - expectedVueFlowPos.x,
+                        y: actualVueFlowPos.y - expectedVueFlowPos.y
                     }
                 }
             })
@@ -243,9 +257,11 @@ export function validateInvariantB(
         const task = storeTasks.find(t => t.id === node.id)
         if (!task || !task.canvasPosition) continue
 
-        const storeAbsolute = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+        // Use sanitizePosition to match what useCanvasSync does
+        const storeAbsolute = sanitizePosition(task.canvasPosition)
         const hasParent = task.parentId && task.parentId !== 'NONE'
 
+        // Compute expected Vue Flow position using same logic as taskPositionToVueFlow
         let expectedVueFlowPos: { x: number; y: number }
         if (hasParent) {
             const parentAbsolute = getGroupAbsolutePosition(task.parentId!, storeGroups)
@@ -254,7 +270,9 @@ export function validateInvariantB(
             expectedVueFlowPos = storeAbsolute
         }
 
-        if (!positionsEqual(node.position, expectedVueFlowPos, tolerance)) {
+        const actualVueFlowPos = sanitizePosition(node.position)
+
+        if (!positionsMatch(actualVueFlowPos, expectedVueFlowPos)) {
             violations.push({
                 invariant: 'B',
                 severity: InvariantSeverity.WARNING,

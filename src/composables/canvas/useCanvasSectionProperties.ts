@@ -18,7 +18,7 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
     const getSectionProperties = (section: CanvasSection): Partial<Task> => {
         const updates: Partial<Task> = {}
 
-        // 0. TASK-130: Check for day-of-week groups first (Monday-Sunday)
+        // 0. DAY-OF-WEEK GROUPS (Monday-Sunday)
         const dayOfWeekMap: Record<string, number> = {
             'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
             'thursday': 4, 'friday': 5, 'saturday': 6
@@ -27,7 +27,7 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         if (dayOfWeekMap[lowerName] !== undefined) {
             const today = new Date()
             const targetDay = dayOfWeekMap[lowerName]
-            // Same formula: next occurrence, same-day → next week
+            // Calculate next occurrence: ((7 + target - current) % 7) || 7
             const daysUntilTarget = ((7 + targetDay - today.getDay()) % 7) || 7
             const resultDate = new Date(today)
             resultDate.setDate(today.getDate() + daysUntilTarget)
@@ -48,13 +48,12 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             return updates
         }
 
-        // 2. Auto-detect from section name
+        // 2. Auto-detect from section name (Power Keywords)
         const keyword = detectPowerKeyword(section.name)
         if (keyword) {
+            const today = new Date()
             switch (keyword.category) {
                 case 'date':
-                    // For date keywords, compute the actual date
-                    const today = new Date()
                     switch (keyword.value) {
                         case 'today':
                             updates.dueDate = formatDateKey(today)
@@ -89,7 +88,6 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
                     updates.status = keyword.value as Task['status']
                     break
                 case 'duration':
-                    // TASK-144: Use centralized duration defaults
                     updates.estimatedDuration = DURATION_DEFAULTS[keyword.value as DurationCategory] ?? 0
                     break
             }
@@ -103,6 +101,15 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             updates.status = section.propertyValue as Task['status']
         } else if (section.type === 'project' && section.propertyValue) {
             updates.projectId = section.propertyValue
+        } else if (section.type === 'custom' || section.type === 'timeline') {
+            if (shouldUseSmartGroupLogic(section.name)) {
+                // For smart group logic, we'd ideally call moveTaskToSmartGroup
+                // but since this is a pure "get properties" function, we'll let
+                // the keyword detection above handle it, or return the propertyValue as dueDate.
+                if (section.propertyValue) updates.dueDate = section.propertyValue
+            } else if (section.propertyValue) {
+                updates.dueDate = section.propertyValue
+            }
         }
 
         return updates
@@ -113,147 +120,29 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         const containingSections = getAllContainingSections(taskX, taskY)
         if (containingSections.length === 0) return
 
-        // Collect properties from all sections (largest/parent first, then children override)
         const mergedUpdates: Partial<Task> = {}
-        const appliedSections: string[] = []
 
         for (const section of containingSections) {
             const sectionProps = getSectionProperties(section)
             if (Object.keys(sectionProps).length > 0) {
                 Object.assign(mergedUpdates, sectionProps)
-                appliedSections.push(section.name)
             }
         }
 
         if (Object.keys(mergedUpdates).length > 0) {
-            //     sections: appliedSections,
-            //     mergedUpdates
-            // })
             taskStore.updateTaskWithUndo(taskId, mergedUpdates)
         }
     }
 
-    // Helper: Apply section properties to task (single section - legacy)
+    // Helper: Apply section properties to task (single section - legacy/manual)
     const applySectionPropertiesToTask = (taskId: string, section: CanvasSection) => {
-        const updates: Partial<Task> = {}
-
-        // 0. DAY-OF-WEEK GROUPS (Monday-Sunday)
-        // TASK-130: Support all days of the week, not just Friday/Saturday
-        const dayOfWeekMap: Record<string, number> = {
-            'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
-            'thursday': 4, 'friday': 5, 'saturday': 6
-        }
-        const lowerName = section.name.toLowerCase().trim()
-
-        if (dayOfWeekMap[lowerName] !== undefined) {
-            const today = new Date()
-            const targetDay = dayOfWeekMap[lowerName]
-
-            // TASK-130 FIX: Calculate next occurrence of this day
-            // If today IS the target day, we want NEXT week's occurrence (7 days ahead)
-            // Formula: ((7 + target - current) % 7) || 7
-            // The || 7 ensures same-day returns 7 (next week) instead of 0 (today)
-            const daysUntilTarget = ((7 + targetDay - today.getDay()) % 7) || 7
-            const resultDate = new Date(today)
-            resultDate.setDate(today.getDate() + daysUntilTarget)
-
-            updates.dueDate = formatDateKey(resultDate)
-
-            if (Object.keys(updates).length > 0) {
-                taskStore.updateTaskWithUndo(taskId, updates)
-                return
-            }
-        }
-
-        // 1. UNIFIED APPROACH: Check for explicit assignOnDrop settings first
-        if (section.assignOnDrop) {
-            const settings = section.assignOnDrop
-
-            if (settings.priority) {
-                updates.priority = settings.priority
-            }
-            if (settings.status) {
-                updates.status = settings.status
-            }
-            if (settings.projectId) {
-                updates.projectId = settings.projectId
-            }
-            if (settings.dueDate) {
-                // Resolve smart date values like 'today', 'tomorrow' to actual dates
-                const resolvedDate = resolveDueDate(settings.dueDate)
-                if (resolvedDate !== null) {
-                    updates.dueDate = resolvedDate
-                }
-            }
-
-            if (Object.keys(updates).length > 0) {
-                taskStore.updateTaskWithUndo(taskId, updates)
-                return
-            }
-        }
-
-        // 2. AUTO-DETECT: If no assignOnDrop settings, try keyword detection on section name
-        const keyword = detectPowerKeyword(section.name)
-        if (keyword) {
-
-            switch (keyword.category) {
-                case 'date':
-                    taskStore.moveTaskToSmartGroup(taskId, keyword.value)
-                    return
-
-                case 'priority':
-                    updates.priority = keyword.value as 'high' | 'medium' | 'low'
-                    break
-
-                case 'status':
-                    updates.status = keyword.value as Task['status']
-                    break
-
-                case 'duration':
-                    // TASK-144: Use centralized duration defaults
-                    updates.estimatedDuration = DURATION_DEFAULTS[keyword.value as DurationCategory] ?? 0
-                    break
-            }
-
-            if (Object.keys(updates).length > 0) {
-                taskStore.updateTaskWithUndo(taskId, updates)
-                return
-            }
-        }
-
-        // 3. LEGACY FALLBACK: Use old type-based behavior for backward compatibility
-        switch (section.type) {
-            case 'priority':
-                if (!section.propertyValue) return
-                updates.priority = section.propertyValue as 'high' | 'medium' | 'low'
-                break
-            case 'status':
-                if (!section.propertyValue) return
-                updates.status = section.propertyValue as Task['status']
-                break
-            case 'project':
-                if (!section.propertyValue) return
-                updates.projectId = section.propertyValue
-                break
-            case 'custom':
-            case 'timeline':
-                if (shouldUseSmartGroupLogic(section.name)) {
-                    const smartGroupType = getSmartGroupType(section.name)
-                    if (smartGroupType) {
-                        taskStore.moveTaskToSmartGroup(taskId, smartGroupType)
-                    } else {
-                        taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
-                    }
-                } else {
-                    taskStore.moveTaskToDate(taskId, section.propertyValue || section.name)
-                }
-                return
-        }
+        const updates = getSectionProperties(section)
 
         if (Object.keys(updates).length > 0) {
             taskStore.updateTaskWithUndo(taskId, updates)
         }
     }
+
 
     return {
         getSectionProperties,

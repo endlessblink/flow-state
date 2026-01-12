@@ -192,16 +192,19 @@ export function useCanvasSync() {
                 const directTaskCount = taskCountByGroupId.value.get(group.id) ?? 0
                 const aggregatedTaskCount = aggregatedTaskCountByGroupId.value.get(group.id) ?? directTaskCount
 
+                // Compute parentNode for hierarchy
+                const parentNodeId = parentId ? CanvasIds.groupNodeId(parentId) : undefined
+
                 newNodes.push({
                     id: nodeId,
                     type: 'sectionNode',
                     position: displayPos,
-                    parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
-                    // FIX: Removed extent: 'parent' for groups so they can be dragged OUT of parent.
+                    parentNode: parentNodeId,
+                    // FIX: Removed extent: 'parent' so groups can be dragged OUT of their parent.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
-                    // preventing child groups from being dragged outside to become root groups.
-                    // Without it, groups can be freely dragged, and onNodeDragStop handles
-                    // re-parenting via spatial containment (same pattern as tasks).
+                    // preventing groups from being detached via drag. Without it, groups can be
+                    // freely dragged, and onNodeDragStop handles re-parenting via spatial containment.
+                    // (Same approach as tasks - see line ~284)
                     expandParent: false,
                     data: {
                         id: group.id,

@@ -125,46 +125,51 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         const section = groupPendingDelete.value
         if (!section) return
 
-        const sectionNodeId = CanvasIds.groupNodeId(section.id)
+        try {
+            const sectionNodeId = CanvasIds.groupNodeId(section.id)
 
-        // TASK-158 FIX: Use persistent deleted groups tracker
-        markGroupDeleted(section.id)
-        if (deps.recentlyDeletedGroups) {
-            deps.recentlyDeletedGroups.value.add(section.id)
-        }
-
-        // BUG-091 FIX: Check if section exists in store (might be a ghost)
-        const existsInStore = canvasStore.sections.some(s => s.id === section.id)
-
-        if (!existsInStore) {
-            removeGhostNodeRef(section.id)
-
-            // Confirm deletion since there's nothing in Supabase to delete
-            confirmGroupDeleted(section.id)
+            // TASK-158 FIX: Use persistent deleted groups tracker
+            markGroupDeleted(section.id)
             if (deps.recentlyDeletedGroups) {
-                deps.recentlyDeletedGroups.value.delete(section.id)
+                deps.recentlyDeletedGroups.value.add(section.id)
             }
-        } else {
-            try {
-                await canvasStore.deleteSection(section.id)
+
+            // BUG-091 FIX: Check if section exists in store (might be a ghost)
+            const existsInStore = canvasStore.sections.some(s => s.id === section.id)
+
+            if (!existsInStore) {
+                removeGhostNodeRef(section.id)
+
+                // Confirm deletion since there's nothing in Supabase to delete
                 confirmGroupDeleted(section.id)
                 if (deps.recentlyDeletedGroups) {
                     deps.recentlyDeletedGroups.value.delete(section.id)
                 }
-            } catch (e) {
-                // Don't clear from tracker on failure - let TTL handle cleanup
+            } else {
+                try {
+                    await canvasStore.deleteSection(section.id)
+                    confirmGroupDeleted(section.id)
+                    if (deps.recentlyDeletedGroups) {
+                        deps.recentlyDeletedGroups.value.delete(section.id)
+                    }
+                } catch (e) {
+                    console.error('[ASYNC-ERROR] confirmDeleteGroup deleteSection failed', e)
+                    // Don't clear from tracker on failure - let TTL handle cleanup
+                }
             }
-        }
 
-        // Force high priority sync which cleans up/re-verifies
-        if (deps.batchSyncNodes) {
-            nextTick(() => deps.batchSyncNodes!('high'))
-        } else {
-            nextTick(() => deps.syncNodes())
-        }
+            // Force high priority sync which cleans up/re-verifies
+            if (deps.batchSyncNodes) {
+                nextTick(() => deps.batchSyncNodes!('high'))
+            } else {
+                nextTick(() => deps.syncNodes())
+            }
 
-        // Close the modal
-        cancelDeleteGroup()
+            // Close the modal
+            cancelDeleteGroup()
+        } catch (error) {
+            console.error('[ASYNC-ERROR] confirmDeleteGroup failed', error)
+        }
     }
 
     const cancelDeleteGroup = () => {

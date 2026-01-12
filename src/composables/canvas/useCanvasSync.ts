@@ -29,11 +29,45 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
  */
 export function useCanvasSync() {
     const canvasStore = useCanvasStore()
-    const { nodeVersionMap } = storeToRefs(canvasStore)
+    const { nodeVersionMap, aggregatedTaskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
     const { getNodes, setNodes, addNodes, removeNodes } = useVueFlow()
 
     const isSyncing = ref(false)
+
+    /**
+     * Sort groups by hierarchy depth (parents before children)
+     * Ensures Vue Flow can resolve parentNode references correctly.
+     *
+     * Uses topological sort: root groups (no parent) first, then their children, etc.
+     * This guarantees that when a child group is added, its parent already exists.
+     */
+    const sortGroupsByHierarchy = (groups: any[]): any[] => {
+        const result: any[] = []
+        const processed = new Set<string>()
+
+        // Helper to get depth (0 = root, 1 = direct child of root, etc.)
+        const getDepth = (groupId: string, visited: Set<string> = new Set()): number => {
+            const group = groups.find(g => g.id === groupId)
+            if (!group) return 0
+            if (!group.parentGroupId || group.parentGroupId === 'NONE') return 0
+            if (visited.has(groupId)) return 0 // Cycle protection
+
+            visited.add(groupId)
+            return 1 + getDepth(group.parentGroupId, visited)
+        }
+
+        // Calculate depth for each group and sort by depth (ascending)
+        const groupsWithDepth = groups.map(g => ({
+            group: g,
+            depth: getDepth(g.id)
+        }))
+
+        // Sort by depth: root groups (depth 0) first, then children (depth 1), etc.
+        groupsWithDepth.sort((a, b) => a.depth - b.depth)
+
+        return groupsWithDepth.map(g => g.group)
+    }
 
     /**
      * Helper to detect if assigning a parent would create a cycle
@@ -98,7 +132,12 @@ export function useCanvasSync() {
             // ================================================================
             // PROCESS GROUPS
             // ================================================================
-            for (const group of groups) {
+            // CRITICAL: Sort groups so that parent groups are processed before children.
+            // Vue Flow needs parent nodes to exist before children reference them via parentNode.
+            // This ensures correct parent-child relationships on initial render after reload.
+            const sortedGroups = sortGroupsByHierarchy(groups)
+
+            for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
 
                 // FULLY ABSOLUTE ARCHITECTURE:
@@ -119,6 +158,9 @@ export function useCanvasSync() {
                     parentId = null
                 }
 
+                // Get aggregated task count (includes tasks in descendant groups)
+                const taskCount = aggregatedTaskCountByGroupId.value.get(group.id) ?? 0
+
                 newNodes.push({
                     id: nodeId,
                     type: 'sectionNode',
@@ -137,7 +179,9 @@ export function useCanvasSync() {
                         color: group.color || '#3b82f6',
                         width: group.position?.width || 300,
                         height: group.position?.height || 200,
-                        collapsed: group.isCollapsed || false
+                        collapsed: group.isCollapsed || false,
+                        // AGGREGATED COUNT: Includes tasks in this group + all descendant groups
+                        taskCount
                     },
                     style: {
                         width: `${group.position?.width || 300}px`,
@@ -151,13 +195,19 @@ export function useCanvasSync() {
             // ================================================================
             // Initialize task position versions in nodeVersionMap for optimistic locking
             // This ensures syncNodePosition has version info when saving positions
+
+            // Defensive: ensure nodeVersionMap.value is a valid Map
+            if (!nodeVersionMap.value || !(nodeVersionMap.value instanceof Map)) {
+                nodeVersionMap.value = new Map()
+            }
+            const versionMap = nodeVersionMap.value
+
             for (const task of tasksToSync) {
                 if (!task.canvasPosition) continue
 
                 // Initialize version if not already tracked
-                // nodeVersionMap is Ref<Map> from storeToRefs
-                if (nodeVersionMap.value && nodeVersionMap.value instanceof Map && !nodeVersionMap.value.has(task.id)) {
-                    nodeVersionMap.value.set(task.id, task.positionVersion ?? 0)
+                if (!versionMap.has(task.id)) {
+                    versionMap.set(task.id, task.positionVersion ?? 0)
                 }
 
                 const nodeId = task.id

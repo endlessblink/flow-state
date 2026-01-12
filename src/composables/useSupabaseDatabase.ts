@@ -866,6 +866,8 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
                             console.log('📡 [REALTIME] Attempting emergency auth refresh...')
                             supabase.auth.refreshSession().then(() => {
                                 console.log('📡 [REALTIME] Session refreshed, system will auto-retry connection')
+                            }).catch((refreshErr) => {
+                                console.error('[ASYNC-ERROR] initRealtimeSubscription refreshSession failed', refreshErr)
                             })
                         }
                     }

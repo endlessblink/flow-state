@@ -108,11 +108,22 @@ async function initializeApp() {
     console.error('App error:', err, info);
   };
 
-  // Handle unhandled promise rejections
+  // Handle unhandled promise rejections - comprehensive logging for debugging
   window.addEventListener('unhandledrejection', (event) => {
-    const reason = String(event.reason)
-    if (reason.match(/chrome is not defined|ResizeObserver loop/i)) {
-      event.preventDefault(); // Don't crash the app
+    const reason = event.reason
+    const reasonStr = String(reason)
+
+    // Log ALL unhandled rejections for debugging visibility
+    console.error('[GLOBAL] Unhandled promise rejection:', {
+      reason: reason,
+      message: reason?.message || reasonStr,
+      stack: reason?.stack || 'No stack available',
+      promise: event.promise
+    })
+
+    // Prevent app crash for known harmless browser/extension errors
+    if (reasonStr.match(/chrome is not defined|ResizeObserver loop/i)) {
+      event.preventDefault()
     }
   });
 

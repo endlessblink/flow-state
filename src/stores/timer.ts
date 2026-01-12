@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, reactive, onUnmounted } from 'vue'
 import { useTaskStore } from './tasks'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useSettingsStore } from './settings'
 import { formatTime } from '@/utils/timer/formatTime'
 import { getCrossTabSync } from '@/composables/useCrossTabSync'

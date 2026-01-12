@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
 import { useTaskStore } from './tasks'
 

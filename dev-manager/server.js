@@ -388,6 +388,221 @@ app.get('/api/health/report/json', async (req, res) => {
     });
 });
 
+// GET /api/skills - Dynamically scan .claude/skills/ directory
+app.get('/api/skills', (req, res) => {
+    const skillsDir = path.join(__dirname, '../.claude/skills');
+
+    try {
+        if (!fs.existsSync(skillsDir)) {
+            return res.json({ nodes: [], links: [] });
+        }
+
+        const nodes = [];
+        const links = [];
+        const categoryColors = {
+            'debugging': '#ef4444',
+            'architecture': '#3b82f6',
+            'workflow': '#10b981',
+            'review': '#f59e0b',
+            'research': '#8b5cf6',
+            'design': '#ec4899',
+            'default': '#6b7280'
+        };
+
+        const dirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+            .filter(d => d.isDirectory());
+
+        for (let i = 0; i < dirs.length; i++) {
+            const dir = dirs[i];
+            const skillPath = path.join(skillsDir, dir.name, 'SKILL.md');
+
+            if (!fs.existsSync(skillPath)) continue;
+
+            try {
+                const content = fs.readFileSync(skillPath, 'utf8');
+                const lines = content.split('\n');
+
+                // Extract title from first # heading
+                const titleLine = lines.find(l => l.startsWith('# '));
+                const title = titleLine ? titleLine.replace('# ', '').trim() : dir.name;
+
+                // Extract description from first paragraph
+                const descStart = lines.findIndex(l => l.trim() && !l.startsWith('#'));
+                const description = descStart >= 0 ? lines[descStart].slice(0, 150) : '';
+
+                // Detect category from name or content
+                let category = 'default';
+                const nameLower = dir.name.toLowerCase();
+                if (nameLower.includes('debug') || nameLower.includes('fix')) category = 'debugging';
+                else if (nameLower.includes('arch') || nameLower.includes('plan')) category = 'architecture';
+                else if (nameLower.includes('workflow') || nameLower.includes('ops')) category = 'workflow';
+                else if (nameLower.includes('review')) category = 'review';
+                else if (nameLower.includes('research') || nameLower.includes('doc')) category = 'research';
+                else if (nameLower.includes('design') || nameLower.includes('ui')) category = 'design';
+
+                nodes.push({
+                    id: `skill-${i}`,
+                    name: dir.name,
+                    title,
+                    description,
+                    category,
+                    color: categoryColors[category] || categoryColors.default,
+                    usage: 0
+                });
+
+                // Find dependencies (skills that reference each other)
+                const refs = content.match(/skill[s]?[:\s]+["']?([a-z-]+)["']?/gi) || [];
+                for (const ref of refs) {
+                    const targetName = ref.replace(/skill[s]?[:\s]+["']?/i, '').replace(/["']$/, '');
+                    const targetIdx = dirs.findIndex(d => d.name.toLowerCase().includes(targetName.toLowerCase()));
+                    if (targetIdx >= 0 && targetIdx !== i) {
+                        links.push({ source: `skill-${i}`, target: `skill-${targetIdx}` });
+                    }
+                }
+            } catch (e) {
+                // Skip invalid skill files
+            }
+        }
+
+        // Compute stats for frontend
+        const uniqueCategories = [...new Set(nodes.map(n => n.category))];
+        const stats = {
+            totalSkills: nodes.length,
+            categories: uniqueCategories
+        };
+
+        res.json({ nodes, links, stats });
+    } catch (err) {
+        res.json({ nodes: [], links: [], stats: { totalSkills: 0, categories: [] }, error: err.message });
+    }
+});
+
+// GET /api/docs - Dynamically scan docs/ directory
+app.get('/api/docs', (req, res) => {
+    const docsDir = path.join(__dirname, '../docs');
+
+    try {
+        if (!fs.existsSync(docsDir)) {
+            return res.json({ nodes: [], links: [] });
+        }
+
+        const nodes = [];
+        const links = [];
+        const categoryColors = {
+            'architecture': '#3b82f6',
+            'process': '#10b981',
+            'reference': '#f59e0b',
+            'guide': '#8b5cf6',
+            'plan': '#ec4899',
+            'default': '#6b7280'
+        };
+
+        function scanDir(dir, parentId = null, depth = 0) {
+            if (depth > 3) return; // Max depth
+
+            const items = fs.readdirSync(dir, { withFileTypes: true });
+
+            for (const item of items) {
+                if (item.name.startsWith('.')) continue;
+
+                const fullPath = path.join(dir, item.name);
+                const relativePath = path.relative(docsDir, fullPath);
+                const nodeId = `doc-${relativePath.replace(/[/\\]/g, '-')}`;
+
+                if (item.isDirectory()) {
+                    // Detect category
+                    let category = 'default';
+                    const nameLower = item.name.toLowerCase();
+                    if (nameLower.includes('arch')) category = 'architecture';
+                    else if (nameLower.includes('process') || nameLower.includes('sop')) category = 'process';
+                    else if (nameLower.includes('ref')) category = 'reference';
+                    else if (nameLower.includes('guide')) category = 'guide';
+                    else if (nameLower.includes('plan')) category = 'plan';
+
+                    nodes.push({
+                        id: nodeId,
+                        name: item.name,
+                        title: item.name,
+                        type: 'folder',
+                        category,
+                        color: categoryColors[category] || categoryColors.default
+                    });
+
+                    if (parentId) {
+                        links.push({ source: parentId, target: nodeId });
+                    }
+
+                    scanDir(fullPath, nodeId, depth + 1);
+                } else if (item.name.endsWith('.md')) {
+                    try {
+                        const content = fs.readFileSync(fullPath, 'utf8');
+                        const lines = content.split('\n');
+                        const titleLine = lines.find(l => l.startsWith('# '));
+                        const title = titleLine ? titleLine.replace('# ', '').trim() : item.name;
+
+                        nodes.push({
+                            id: nodeId,
+                            name: item.name,
+                            title,
+                            type: 'file',
+                            path: relativePath,
+                            category: 'default',
+                            color: '#6b7280'
+                        });
+
+                        if (parentId) {
+                            links.push({ source: parentId, target: nodeId });
+                        }
+                    } catch (e) {
+                        // Skip unreadable files
+                    }
+                }
+            }
+        }
+
+        scanDir(docsDir);
+        res.json({ nodes, links });
+    } catch (err) {
+        res.json({ nodes: [], links: [], error: err.message });
+    }
+});
+
+// GET /api/locks - List active task locks
+app.get('/api/locks', (req, res) => {
+    const locksDir = path.join(__dirname, '../.claude/locks');
+
+    try {
+        if (!fs.existsSync(locksDir)) {
+            return res.json({ locks: [] });
+        }
+
+        const files = fs.readdirSync(locksDir).filter(f => f.endsWith('.lock'));
+        const locks = [];
+
+        for (const file of files) {
+            try {
+                const content = fs.readFileSync(path.join(locksDir, file), 'utf8');
+                const lock = JSON.parse(content);
+                const taskId = file.replace('.lock', '');
+
+                locks.push({
+                    task_id: taskId,
+                    session_id: lock.session_id || 'unknown',
+                    session_short: (lock.session_id || '').slice(0, 8),
+                    locked_at: lock.locked_at || new Date(lock.timestamp * 1000).toLocaleString(),
+                    files: lock.files || []
+                });
+            } catch (e) {
+                // Skip invalid lock files
+            }
+        }
+
+        res.json({ locks });
+    } catch (err) {
+        res.json({ locks: [], error: err.message });
+    }
+});
+
 // SSE Endpoint for live updates
 app.get('/api/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');

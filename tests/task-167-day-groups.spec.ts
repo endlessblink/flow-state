@@ -11,6 +11,13 @@ test.describe('TASK-167: Day Group Date Formatting', () => {
         // Wait for canvas to be effectively loaded
         await page.waitForSelector('.vue-flow__pane', { state: 'visible', timeout: 10000 });
 
+        // Monitor console logs
+        page.on('console', msg => {
+            if (msg.type() === 'error' || msg.text().includes('[GroupNodeSimple]')) {
+                console.log(`BROWSER LOG: ${msg.text()}`);
+            }
+        });
+
         // Click center of screen to ensure focus
         // We use viewport size to calculate center to be safe
         const viewportSize = page.viewportSize();

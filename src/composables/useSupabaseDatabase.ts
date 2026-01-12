@@ -16,6 +16,7 @@ import {
 } from '@/utils/supabaseMappers'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
+// FORCE_HMR_UPDATE: Clearing stale cache for position_version schema
 // App Types are defined locally or imported for convenience
 export interface TimerSettings {
     workDuration: number
@@ -30,7 +31,7 @@ export interface TimerSettings {
 interface DatabaseDependencies { }
 
 export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
-    console.log('>>> 🔄 [HMR-CHECK] useSupabaseDatabase loaded at ' + new Date().toISOString())
+
     const authStore = useAuthStore()
     const isSyncing = ref(false)
     const lastSyncError = ref<string | null>(null)
@@ -127,9 +128,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveProject = async (project: Project): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveProject - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = toSupabaseProject(project, userId)
             const { error } = await supabase.from('projects').upsert(payload)
             if (error) throw error
@@ -143,15 +148,26 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
     const saveProjects = async (projects: Project[]): Promise<void> => {
         if (projects.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveProjects - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = projects.map(p => toSupabaseProject(p, userId))
-            const { error } = await supabase.from('projects').upsert(payload)
+            // BUG-171 FIX: Add .select() and verify data.length to detect RLS partial write failures
+            const { data, error } = await supabase.from('projects').upsert(payload).select('id')
             if (error) throw error
+            if (!data || data.length !== payload.length) {
+                const writtenCount = data?.length ?? 0
+                const failedCount = payload.length - writtenCount
+                throw new Error(`RLS blocked ${failedCount} of ${payload.length} project writes (only ${writtenCount} succeeded)`)
+            }
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveProjects')
+            throw e // BUG-171: Re-throw so callers know the save failed
         } finally {
             isSyncing.value = false
         }
@@ -254,9 +270,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveTask = async (task: Task): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveTask - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = toSupabaseTask(task, userId)
 
             await withRetry(async () => {
@@ -275,9 +295,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
     const saveTasks = async (tasks: Task[]): Promise<void> => {
         if (tasks.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveTasks - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = tasks.map(t => toSupabaseTask(t, userId))
 
             // TASK-142 DEBUG: Log what we're sending
@@ -318,11 +342,14 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const deleteTask = async (taskId: string): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping deleteTask - not authenticated')
+            return
+        }
         console.log(`🗑️ [SUPABASE-DELETE] Starting soft-delete for task: ${taskId}`)
         try {
             isSyncing.value = true
-            // Ensure user is authenticated, will throw if not
-            getUserId()
 
             const { error, count } = await supabase
                 .from('tasks')
@@ -376,13 +403,77 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         }
     }
 
+    // TASK-153: Fetch IDs of deleted tasks (for golden backup validation)
+    const fetchDeletedTaskIds = async (): Promise<string[]> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('id')
+                .eq('is_deleted', true)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return data?.map((d: any) => d.id) || []
+        } catch (e: unknown) {
+            console.error('[TASK-153] Failed to fetch deleted task IDs:', e)
+            return []
+        }
+    }
+
+    // TASK-153: Fetch IDs of deleted projects (for golden backup validation)
+    const fetchDeletedProjectIds = async (): Promise<string[]> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
+            const { data, error } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('is_deleted', true)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return data?.map((d: any) => d.id) || []
+        } catch (e: unknown) {
+            console.error('[TASK-153] Failed to fetch deleted project IDs:', e)
+            return []
+        }
+    }
+
+    // TASK-153: Fetch IDs of deleted groups (for golden backup validation)
+    const fetchDeletedGroupIds = async (): Promise<string[]> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
+            const { data, error } = await supabase
+                .from('groups')
+                .select('id')
+                .eq('is_deleted', true)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return data?.map((d: any) => d.id) || []
+        } catch (e: unknown) {
+            console.error('[TASK-153] Failed to fetch deleted group IDs:', e)
+            return []
+        }
+    }
+
     // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
     const bulkDeleteTasks = async (taskIds: string[]): Promise<void> => {
         if (taskIds.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping bulkDeleteTasks - not authenticated')
+            return
+        }
         console.log(`🗑️ [SUPABASE-BULK-DELETE] Starting atomic soft-delete for ${taskIds.length} tasks`)
         try {
             isSyncing.value = true
-            getUserId() // Ensure authenticated
 
             const { error, count } = await supabase
                 .from('tasks')
@@ -417,6 +508,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
             if (error) throw error
             if (!data) return []
 
+            // DEBUG: Log loaded groups and their dimensions
+            (data as SupabaseGroup[]).forEach((g: any) => {
+                const pos = g.position_json
+                console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
+            })
+
             return (data as SupabaseGroup[]).map(fromSupabaseGroup)
         } catch (e: unknown) {
             handleError(e, 'fetchGroups')
@@ -425,9 +522,13 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveGroup = async (group: any): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveGroup - not authenticated')
+            return
+        }
         try {
             isSyncing.value = true
-            const userId = getUserId()
             const payload = toSupabaseGroup(group, userId)
 
             // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
@@ -440,7 +541,8 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
                 }
                 // Log position save for debugging
                 if (data[0]?.position_json) {
-                    console.log(`📍 [GROUP-SAVE] Saved group "${group.name}" pos=(${data[0].position_json.x?.toFixed(0)}, ${data[0].position_json.y?.toFixed(0)}) to Supabase - VERIFIED`)
+                    const pos = data[0].position_json
+                    console.log(`📍 [GROUP-SAVE] Saved group "${group.name}" pos=(${pos.x?.toFixed(0)}, ${pos.y?.toFixed(0)}) size=${pos.width}x${pos.height} to Supabase - VERIFIED`)
                 }
             }, 'saveGroup')
 
@@ -454,10 +556,14 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const deleteGroup = async (groupId: string): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping deleteGroup - not authenticated')
+            return
+        }
         console.log(`🗑️ [SUPABASE-DELETE-GROUP] Starting soft-delete for group: ${groupId}`)
         try {
             isSyncing.value = true
-            const userId = getUserId() // Ensure user is authenticated
 
             // TASK-149 FIX: Add user_id filter and verify rows affected
             const { data, error, count } = await supabase
@@ -474,15 +580,17 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
             // Verify the delete actually worked
             if (!data || data.length === 0) {
-                console.error(`❌ [SUPABASE-DELETE-GROUP] No rows updated - group may not exist or RLS blocked`)
-                throw new Error(`Delete failed for group ${groupId} - no rows affected`)
+                // BUG-208 FIX: Treat "no rows updated" as success (idempotent delete).
+                // This handles cases where the group is already deleted in DB but stuck in UI.
+                console.warn(`⚠️ [SUPABASE-DELETE-GROUP] No rows updated - group ${groupId} likely already deleted or RLS blocked. Proceeding with local removal.`)
+                // We do NOT throw here anymore, allowing the UI to proceed with removing the node.
+            } else {
+                console.log(`✅ [SUPABASE-DELETE-GROUP] Group ${groupId} marked as deleted`)
             }
-
-            console.log(`✅ [SUPABASE-DELETE-GROUP] Group ${groupId} marked as deleted`)
         } catch (e: unknown) {
             console.error(`❌ [SUPABASE-DELETE-GROUP] Failed:`, e)
             handleError(e, 'deleteGroup')
-            throw e // Re-throw so callers know the delete failed
+            throw e // Only re-throw actual errors (network, auth, etc)
         } finally {
             isSyncing.value = false
         }
@@ -508,8 +616,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveNotification = async (notification: ScheduledNotification): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveNotification - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = toSupabaseNotification(notification, userId)
             const { error } = await supabase.from('notifications').upsert(payload)
             if (error) throw error
@@ -520,8 +632,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
 
     const saveNotifications = async (notifications: ScheduledNotification[]): Promise<void> => {
         if (notifications.length === 0) return
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveNotifications - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = notifications.map(n => toSupabaseNotification(n, userId))
             const { error } = await supabase.from('notifications').upsert(payload)
             if (error) throw error
@@ -614,8 +730,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveUserSettings = async (settings: any): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveUserSettings - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = toSupabaseUserSettings(settings, userId)
 
             await withRetry(async () => {
@@ -648,8 +768,12 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
     }
 
     const saveQuickSortSession = async (summary: any): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveQuickSortSession - not authenticated')
+            return
+        }
         try {
-            const userId = getUserId()
             const payload = toSupabaseQuickSortSession(summary, userId)
             const { error } = await supabase.from('quick_sort_sessions').upsert(payload)
             if (error) throw error
@@ -666,24 +790,25 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         onTimerChange?: (payload: unknown) => void,
         onNotificationChange?: (payload: unknown) => void
     ) => {
-        if (!authStore.user?.id) return null
+        const userId = authStore.user?.id
+        if (!userId) return null
 
-        const channel = supabase.channel('db-changes')
+        // Use a unique channel name per user and purpose
+        const channelName = `db-changes-${userId.substring(0, 8)}`
+        const channel = supabase.channel(channelName)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'projects' },
+                { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
                 (payload: any) => {
                     // SAFETY: Explicitly verify table to prevent cross-talk
                     if (payload.table === 'projects') {
                         onProjectChange(payload)
-                    } else if (payload.table) {
-                        console.warn(`[SYNC-WARN] Project handler received event for table: ${payload.table}`)
                     }
                 }
             )
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'tasks' },
+                { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
                 (payload: any) => {
                     // SAFETY: Explicitly verify table
                     if (payload.table === 'tasks') {
@@ -695,7 +820,7 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         if (onTimerChange) {
             channel.on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'timer_sessions' },
+                { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
                 (payload: any) => onTimerChange(payload)
             )
         }
@@ -703,12 +828,56 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         if (onNotificationChange) {
             channel.on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'notifications' },
+                { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
                 (payload: any) => onNotificationChange(payload)
             )
         }
 
-        channel.subscribe()
+        // DEBUG: Log auth state before subscription
+        const session = authStore.session
+        console.log(`📡 [REALTIME] Initializing subscription. Auth state: ${session ? 'Authenticated' : 'Anonymous'}, Role: ${session?.user?.role || 'none'}`)
+
+        // PHASE 4 FIX: Clear any existing active channel to prevent zombies
+        if (supabase.realtime.channels.length > 0) {
+            console.log(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
+            supabase.removeAllChannels()
+        }
+
+        // Delay subscription to ensure client state is synced and auth is stable
+        const connectRealtime = async () => {
+            console.log('📡 [REALTIME] Preparing connection...')
+
+            try {
+                // BUG-202: CRITICAL - Ensure we have a fresh token BEFORE any .subscribe() call
+                const { data: { session: freshSession } } = await supabase.auth.getSession()
+                if (freshSession?.access_token) {
+                    console.log('📡 [REALTIME] Setting fresh auth token for WebSocket')
+                    supabase.realtime.setAuth(freshSession.access_token)
+                }
+
+                channel.subscribe((status: any, err?: any) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('📡 [REALTIME] Successfully subscribed to database changes')
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('📡 [REALTIME] Handshake failed or connection error:', err || 'Check RLS and JWT expiration')
+
+                        // Retrying auth refresh if we get a 403
+                        if (String(err).includes('403') || !err) {
+                            console.log('📡 [REALTIME] Attempting emergency auth refresh...')
+                            supabase.auth.refreshSession().then(() => {
+                                console.log('📡 [REALTIME] Session refreshed, system will auto-retry connection')
+                            })
+                        }
+                    }
+                })
+            } catch (authErr) {
+                console.warn('📡 [REALTIME] Initialization failed:', authErr)
+            }
+        }
+
+        // Start connection
+        connectRealtime()
+
         return channel
     }
 
@@ -729,6 +898,10 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
         bulkDeleteTasks,
         restoreTask,
         permanentlyDeleteTask,
+        // TASK-153: Fetch deleted item IDs for golden backup validation
+        fetchDeletedTaskIds,
+        fetchDeletedProjectIds,
+        fetchDeletedGroupIds,
         fetchGroups,
         saveGroup,
         deleteGroup,

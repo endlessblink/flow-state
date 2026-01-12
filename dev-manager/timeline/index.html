@@ -678,14 +678,16 @@
             let colIndices = { id: -1, status: -1, depends: -1, blocks: -1 };
 
             for (const line of lines) {
-                // Look for dependency table header
-                if (line.includes('| ID |') && line.includes('Depends') && line.includes('Blocks')) {
+                // Look for dependency table header (matches "| ID |" with "Dependencies" column)
+                if (line.includes('| ID |') && (line.includes('Depend') || line.includes('Status'))) {
                     inDepTable = true;
                     const cols = line.split('|').map(c => c.trim().toLowerCase());
                     colIndices.id = cols.findIndex(c => c === 'id');
                     colIndices.status = cols.findIndex(c => c === 'status');
                     colIndices.depends = cols.findIndex(c => c.includes('depend'));
                     colIndices.blocks = cols.findIndex(c => c.includes('block'));
+                    // If no blocks column, use depends column for both
+                    if (colIndices.blocks === -1) colIndices.blocks = colIndices.depends;
                     continue;
                 }
 

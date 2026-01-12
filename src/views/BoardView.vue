@@ -103,7 +103,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
 import { useSettingsStore } from '@/stores/settings'
 

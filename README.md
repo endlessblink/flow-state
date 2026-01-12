@@ -8,7 +8,7 @@ A sophisticated Vue 3 productivity application combining Pomodoro timer function
 - **Pomodoro Timer**: Work/break sessions with browser notifications
 - **Task Management**: Projects, priorities, due dates, subtasks, recurring tasks
 - **Canvas Organization**: Free-form spatial task arrangement with Vue Flow
-- **Persistent Storage**: IndexedDB via LocalForage with automatic backup
+- **Cloud Sync**: Supabase (PostgreSQL) with RLS and automatic backup
 - **Glass Morphism UI**: Modern design system with dark/light themes
 
 ## Quick Start
@@ -22,31 +22,21 @@ npm run dev
 # Open http://localhost:5546
 ```
 
-## Optional: Multi-Device Sync
+## Cloud Sync (Supabase)
 
-Pomo-Flow works fully offline with local browser storage (IndexedDB). No account required!
+Pomo-Flow uses Supabase for cloud sync with Row Level Security (RLS).
 
-For multi-device sync, you can self-host CouchDB:
-
-### Quick Start (Docker)
+### Local Development
 
 ```bash
-docker run -d --name pomoflow-couchdb \
-  -p 5984:5984 \
-  -e COUCHDB_USER=admin \
-  -e COUCHDB_PASSWORD=your-secure-password \
-  couchdb:3
+# Start local Supabase
+npx supabase start
+
+# Generate JWT keys (if needed)
+npm run generate:keys
 ```
 
-Then create a `.env` file:
-
-```env
-VITE_COUCHDB_URL=http://localhost:5984/pomoflow
-VITE_COUCHDB_USERNAME=admin
-VITE_COUCHDB_PASSWORD=your-secure-password
-```
-
-See `.env.example` for all configuration options.
+See `.env.example` for configuration options.
 
 ## Development Commands
 
@@ -67,7 +57,7 @@ npm run lint:fix     # Fix linting issues
 - **UI**: Tailwind CSS + Naive UI + Lucide Icons
 - **Canvas**: Vue Flow (@vue-flow/core)
 - **Calendar**: vue-cal
-- **Storage**: PouchDB (IndexedDB) + optional CouchDB sync
+- **Storage**: Supabase (PostgreSQL) with RLS
 - **Build**: Vite 7.2.4
 - **Testing**: Vitest + Playwright
 

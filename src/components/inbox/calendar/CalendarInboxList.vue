@@ -68,6 +68,7 @@ const isTimerActive = computed(() => (taskId: string) => {
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-2);
+  padding-bottom: var(--space-8); /* BUG-203: prevent last task cropping */
 }
 
 .empty-inbox {

@@ -138,6 +138,7 @@
 .table-scroll-container {
     overflow-x: auto;
     overflow-y: visible;
+    /* BUG-207: allow bleed into header area */
     width: 100%;
     scrollbar-width: thin;
     scrollbar-color: var(--border-subtle) transparent;

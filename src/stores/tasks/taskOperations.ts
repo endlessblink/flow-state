@@ -6,7 +6,7 @@ import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
-import { useCanvasOptimisticSync } from '@/composables/canvas/useCanvasOptimisticSync'
+
 
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
@@ -95,6 +95,8 @@ export function useTaskOperations(
                 instances,
                 isInInbox: taskData.isInInbox !== false,
                 canvasPosition: explicitCanvasPosition || undefined,
+                positionVersion: 1, // Start at version 1
+                positionFormat: taskData.positionFormat || 'absolute', // Default to absolute
                 ...taskDataWithoutPosition
             }
 
@@ -137,18 +139,13 @@ export function useTaskOperations(
             // BUG-FIX: Explicitly unlock position if removing from canvas
             // This prevents sync from restoring the position due to "Preserve local canvasPosition" logic
             if (updates.canvasPosition === null) {
-                const { pendingChanges } = useCanvasOptimisticSync()
-                pendingChanges.value.delete(taskId)
+
             }
 
             // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
             // If a position lock (pending change) exists, use that position instead of the update
             if (updates.canvasPosition && updates.canvasPosition !== null) {
-                const { getPendingPosition } = useCanvasOptimisticSync()
-                const pendingPos = getPendingPosition(taskId)
-                if (pendingPos) {
-                    updates.canvasPosition = { x: pendingPos.x, y: pendingPos.y }
-                }
+
             }
 
             if (updates.canvasPosition === undefined && task.canvasPosition && !updates.instances && (!task.instances || !task.instances.length)) {
@@ -171,7 +168,16 @@ export function useTaskOperations(
                 // updates.isInInbox = true
             }
 
-            _rawTasks.value[index] = { ...task, ...updates, updatedAt: new Date() }
+            // TASK-240: Handle position versioning
+            const currentVersion = task.positionVersion || 0
+            const newVersion = updates.canvasPosition ? currentVersion + 1 : currentVersion
+
+            _rawTasks.value[index] = {
+                ...task,
+                ...updates,
+                positionVersion: newVersion,
+                updatedAt: new Date()
+            }
 
             // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
             try {

@@ -5,7 +5,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import type {
   ScheduledNotification,

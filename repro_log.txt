@@ -1,0 +1,40 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] › tests/repro_functionality.spec.ts:5:5 › Canvas Functionality Repro › should create group and drag task
+[1A[2K[chromium] › tests/repro_functionality.spec.ts:5:5 › Canvas Functionality Repro › should create group and drag task
+Groups found: 0
+
+[1A[2K❌ Failed to create group via Shift+G
+
+[1A[2K  1) [chromium] › tests/repro_functionality.spec.ts:5:5 › Canvas Functionality Repro › should create group and drag task 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('text=New Group')[22m
+
+
+      29 |             await page.mouse.click(500, 300, { button: 'right' });
+      30 |             await page.waitForSelector('.context-menu', { timeout: 2000 });
+    > 31 |             await page.locator('text=New Group').click();
+         |                                                  ^
+      32 |             await page.waitForTimeout(1000);
+      33 |         }
+      34 |
+        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/repro_functionality.spec.ts:31:50
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/repro_functionality-Canvas-fce67--create-group-and-drag-task-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/repro_functionality-Canvas-fce67--create-group-and-drag-task-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/repro_functionality-Canvas-fce67--create-group-and-drag-task-chromium/error-context.md
+
+
+[1A[2K  1 failed
+    [chromium] › tests/repro_functionality.spec.ts:5:5 › Canvas Functionality Repro › should create group and drag task 

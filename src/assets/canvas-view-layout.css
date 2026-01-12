@@ -232,7 +232,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Container merged from .canvas-container-wrapper + .canvas-container */
@@ -250,8 +250,8 @@
     height: 100%;
     overflow: clip;
     /* Modern clipping with margin support */
-    overflow-clip-margin: 20px;
-    /* Allow 20px overflow before clipping */
+    overflow-clip-margin: 40px;
+    /* Allow 40px overflow before clipping (accommodates larger shadows) */
 
     /* No visible border - clean canvas workspace */
 }

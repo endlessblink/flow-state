@@ -15,11 +15,11 @@
 4. Verify mouse event propagation
 
 ### Database Not Persisting
-1. Check PouchDB instance is initialized (singleton pattern)
-2. Verify browser supports IndexedDB
-3. Check for quota exceeded errors
-4. Test with manual save operations
-5. Check CouchDB sync status if remote sync enabled
+1. Check Supabase connection status in browser DevTools
+2. Verify JWT keys: run `npm run generate:keys` if needed
+3. Check RLS policies in Supabase dashboard
+4. Verify auth state: user must be logged in for RLS to work
+5. Check for network errors in console (403 = JWT issue, 401 = auth issue)
 
 ### Theme Switching Issues
 1. Verify CSS custom properties are loaded
@@ -67,7 +67,7 @@ window.taskLogger.exportLogs()            // Export for analysis
 - Auth watcher now ALWAYS sets `_rawGroups.value` from Supabase (even if empty)
 - `ensureActionGroups()` is disabled - users create groups manually via context menu
 
-**SOP**: `docs/sop/active/CANVAS-group-resurrection-fix.md`
+**SOP**: `docs/sop/archived/CANVAS-group-resurrection-fix.md` (issue resolved Jan 9, 2026)
 
 **Key Files**:
 - `src/stores/canvas.ts` (auth watcher)

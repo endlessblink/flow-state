@@ -63,7 +63,11 @@
 | ~~**BUG-211**~~ | ✅ **DONE** **Canvas Delete Key Not Working** | **P0** | ✅ **DONE** (2026-01-11) - Fixed state disconnect: useCanvasTaskActions now uses Pinia store refs | - |
 | ~~**BUG-212**~~ | ✅ **DONE** **Task Creation from Empty Canvas State** | **P0** | ✅ **DONE** (2026-01-11) - Fixed createTaskHere to handle empty canvas gracefully with fallbacks | - |
 | ~~**TASK-CLEANUP-001**~~ | ✅ **DONE** **Migrate to useSupabaseDatabaseV2** | **P0** | ✅ **DONE** (2026-01-11) - Replaced legacy V1 composable, silenced Realtime errors. | - |
+| **TASK-240** | **Canvas Architecture Redesign (SSOT/Relative/Normalized)** | **P0** | 🔄 **IN PROGRESS** (Phase 2 Component Migration Complete) | TASK-232 |
+| ~~**BUG-241**~~ | ✅ **DONE** **Fix nodeVersionMap Undefined in Optimistic Sync** | **P0** | ✅ **DONE** (2026-01-12) | TASK-198 |
 | ROAD-025 | Backup Containerization (VPS) | P3 | [See Detailed Plan](#roadmaps) | - |
+| ~~**TASK-230**~~ | ~~**Fix Deps & Locks Tab**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/locks endpoint, fixed dependency parser |
+| ~~**TASK-231**~~ | ~~**Dynamic Skills & Docs API**~~ | **P2** | ✅ **DONE** (2026-01-11) | Added /api/skills and /api/docs endpoints |
 
 ---
 
@@ -116,10 +120,11 @@
 <details id="roadmaps">
 <summary><b>Detailed Feature Roadmaps</b></summary>
 
-### ROAD-013: Sync Hardening (🔄 IN PROGRESS)
-1. Audit current sync issues.
-2. Fix conflict resolution UI.
-3. Test multi-device scenarios E2E.
+### ROAD-013: Sync Hardening (🔄 Phase 2 Complete)
+1. Audit current sync issues. ✅ DONE
+2. Implement "Triple Shield" Drag/Resize Locks. ✅ DONE
+3. Fix conflict resolution UI. 🔄 IN PROGRESS
+4. Test multi-device scenarios E2E. 📋 PLANNED
 
 ### ROAD-010: Gamification - "Cyberflow"
 - **XP Sources**: Task completion, Pomodoro sessions, Streaks.
@@ -675,21 +680,7 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ---
 
-### ~~BUG-218~~: Task Position Drift Regression (✅ DONE)
-**Priority**: P1-HIGH
-**Status**: DONE
-**Created**: January 11, 2026
-**Completed**: January 11, 2026
-
-**Problem**: User reports task position drift is happening again.
-**Likely Causes**:
-- Competing sources of truth (Vue Flow vs Supabase).
-- `useCanvasSync` overwriting local state too aggressively.
-- Drag operations not updating `parentId` / coordinates correctly.
-**Investigation**:
-- [ ] Review `useCanvasSync.ts` for recent changes.
-- [ ] Check `useCanvasDragDrop.ts` coordinate calculation.
-- [ ] Verify if it happens on simple drag or during group interactions.
+| ~~**BUG-218**~~ | ✅ **DONE** **Persistent Task Position Drift** | **P0** | ✅ **RECOVERY FIXED** (TASK-232) | - |
 
 ---
 
@@ -706,23 +697,7 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ---
 
-### BUG-220: New Task Resets Outside Group on Drag (🆕 NEW)
-**Priority**: P2-MEDIUM
-**Status**: REVIEW
-**Created**: January 11, 2026
-
-**Problem**:
-- Moving a newly created task into a group immediately after creation causes it to reset to its original position outside the group.
-- **Update (User Report)**: Dragging a task in one group can cause *another* group to visually "jump" or shift position.
-
-**Likely Causes**:
-- Race condition between "Create Task" sync and "Update Task (Parent)" sync.
-- Optimistic UI not handling `parentId` updates correctly for fresh nodes.
-- **Group Jump**: Possible Z-index elevation conflict or coordinate system recalculation affecting unrelated nodes during drag start/stop.
-**Investigation**:
-- [ ] Check `useCanvasDragDrop.ts` parenting logic.
-- [ ] Verify if `parentId` is being optimistically updated.
-- [ ] Investigate `useCanvasTaskDrag.ts` for side effects on other groups.
+| ~~**BUG-220**~~ | ✅ **DONE** **Group Counter Accuracy** | **P0** | ✅ **RECOVERY FIXED** (TASK-232) | - |
 
 ---
 
@@ -752,6 +727,9 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ---
 
+
+---
+
 ### TASK-217: Enable Enter Key Submission for Modals (🆕 NEW)
 **Priority**: P2-MEDIUM
 **Status**: TODO
@@ -762,6 +740,166 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 - All input-focused modals (Task Edit, Create Group, etc.).
 - Ensure `Shift+Enter` still allows newlines in textareas.
 - Prevent accidental submission if validation fails.
+
+---
+
+### BUG-225: Group Color Update Reactivity (🆕 NEW)
+**Priority**: P2-MEDIUM
+**Status**: TODO
+**Created**: January 11, 2026
+
+**Problem**: Changing group color in the modal does not update the visual color immediately. It requires a page refresh.
+**Likely Cause**: Reactivity loss in `GroupNode.vue` or `useCanvasGroups`. The store updates, but the node doesn't re-render.
+**Investigation**:
+- [ ] Check `GroupNode.vue` props/computed for color binding.
+- [ ] Verify `useCanvasGroups.ts` update logic.
+
+### BUG-226: Nested Group Z-Index Layering (🔥 URGENT)
+**Priority**: P1-HIGH
+**Status**: IN PROGRESS
+**Created**: January 11, 2026
+
+**Problem**: Nested groups appear *behind* or *under* their parent group container, limiting interaction and visibility.
+**Cause**: Z-index calculation currently relies on Area (smaller = higher), but this might be insufficient or overridden by stacking contexts.
+**Fix**: Introduce explicit "depth" or "hierarchy" bonus to Z-index calculation. Child Z must be > Parent Z.
+
+### TASK-227: Fix Group/Task Containment Drift (🔥 URGENT)
+**Priority**: P1-HIGH
+**Status**: ✅ DONE
+**Created**: January 11, 2026
+
+**Problem**: Tasks and nested groups "drift" out of parents or detach unexpectedly.
+**Cause**: `useCanvasNodeSync.ts` performs a strict `isActuallyInsideParent` check. If a child is slightly outside (e.g. dragged to edge), it auto-detaches visually, overriding the DB relationship.
+**Fix**:
+- [x] Remove `isActuallyInsideParent` check for groups in sync. Trust `parentGroupId`.
+- [x] Ensure Tasks also strictly follow `parentId` without geometric fallbacks when set.
+- [x] Fixed Persistence: Added `parentId` to Task schema and Supabase mappers to prevent data loss on reload.
+- [x] Fixed Creation Parenting: Updated `createTaskInGroup` to explicitly set `parentId` on creation, preventing orphan tasks.
+- [x] Restored Geometric Fallback: Re-enabled "Visual Adoption" for legacy tasks in `useCanvasNodeSync`. If a task has no `parentId` but is inside a group, it is now correctly adopted and moved with the group (preventing regression).
+
+### BUG-228: Group Context Menu on Pane Click
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE
+**Created**: January 11, 2026
+
+**Problem**: Right-clicking on the empty canvas (pane) opens the context menu for a group (likely the selected one) instead of the global pane menu.
+**Cause**: Probable fallback logic in `useCanvasContextMenus.ts` using `selectedNodes` when no target is found, or event propagation issue.
+**Fix**: Ensure Pane Context Menu ignores selected nodes and only shows global actions (Create Group, Paste, etc.).
+
+### BUG-218: [RE-OPENED] Fix Persistent Canvas Drift (Root Cause Validated: DOM Dependency)
+### BUG-220: [RE-OPENED] Fix Group Counter and Task Movement Counter Issues
+### TASK-232: Canvas System Stability Solution (🔄 IN PROGRESS)
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS
+**Started**: January 11, 2026
+**Goal**: 100% stable and reliable canvas position sync, group counting, and parent-child management.
+**Architecture Changes**:
+- **Single Authority**: Vue Flow is the ONLY position authority during editing. ✅ DONE
+- **Versioned Sync**: Simple version numbers instead of timestamps/locks. ✅ DONE
+- **Relative Only**: Eliminate absolute<->relative conversion logic. ✅ DONE
+- **Consolidated Composables**: Reduce 30+ files to 5 core composables. 🔄 IN PROGRESS
+- **Logic Simplification**: Counting based purely on `parentId`, no spatial fallbacks. ✅ DONE
+
+---
+
+### TASK-240: Canvas Architecture Redesign (SSOT/Relative/Normalized) (🆕 NEW)
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS
+**Started**: January 12, 2026
+**Goal**: Replace patchy fixes with a stable, maintainable architecture based on SSOT, relative coordinates, and normalized IDs.
+**Phases**:
+- [x] **Phase 1: Foundation (Non-Breaking)**: Create `CanvasIds` utility and `useCanvasOperationState` machine. ✅ DONE (TASK-241)
+- [ ] **Phase 2: Gradual Migration**: Migrate ID usage and lock flags; introduce position format flag.
+- [ ] **Phase 3: Consolidation**: Merge 29 composables into 15 focused modules and convert to relative coordinates.
+- [ ] **Phase 4: Verification**: Integration tests, manual verification, and performance validation.
+
+### TASK-241: Position Versioning & Conflict Detection (✅ FOUNDATION COMPLETE)
+**Priority**: P0-CRITICAL
+**Status**: ✅ Phase 1 COMPLETE
+**Started**: January 12, 2026
+**Source**: [Perplexity Research](./plans/perplexity%20research-12.1.26-7-53/README.md)
+**Goal**: Implement the 3 core fixes from Perplexity research to eliminate 80% of canvas bugs.
+
+**The 3 Fixes**:
+1. **Store absolute coordinates** → Eliminate conversion bugs
+2. **Add version numbers** → Detect sync conflicts (optimistic locking)
+3. **State machine** → Replace 7+ boolean flags with single state
+
+**Completed (Phase 1)**:
+- [x] SQL migration for position_version auto-increment triggers
+- [x] `src/utils/canvas/coordinates.ts` - Single source of truth for position conversion
+- [x] `src/composables/canvas/useCanvasOperationState.ts` - State machine (enhanced with `shouldBlockUpdates`, `isSettling`, `getDebugInfo`)
+
+**Next Steps (Phase 2)**:
+- [ ] Run SQL migration in Supabase Dashboard
+- [ ] Wire `useCanvasOperationState` into `useCanvasOrchestrator` (replace boolean flags)
+- [ ] Use `coordinates.ts` in `useCanvasSync` (single conversion point)
+- [ ] Test: drag → refresh → verify position persists
+
+---
+
+**Current Focus**:
+- [x] Eliminate `position_version` errors in `useSupabaseDatabase.ts`.
+- [x] Fix `Vue Flow node not found` error in `GroupNodeSimple.vue`.
+- [ ] Stabilize and pass `repro_group_independence.spec.ts`.
+- [ ] Address "unrelated groups moving together" (Scenario 21).
+
+**Phases**:
+- [ ] **Phase 1: Database Migration** (Add `position_version` columns)
+- [ ] **Phase 2: Simplify Position Storage** (Remove coord conversion, update types)
+- [ ] **Phase 3: Consolidate Composables** (`useCanvasCore`, `useCanvasDrag`, `useCanvasPersistence`)
+- [ ] **Phase 4: Implement Editing Session** (Unified editing state shield)
+- [ ] **Phase 5: Clean Up** (Remove deprecated code and locks)
+
+**Problem**: Creating a new group (e.g., "Tomorrow") causes the entire canvas view to drift or pan unexpectedly.
+**Cause**: Viewport was neither saving to storage locally/database correctly nor loading on mount, causing resets to (0,0) on any reload (including HMR or error boundaries).
+**Fix**: Implemented Viewport Persistence in `useCanvasOrchestrator`. Viewport is now confirmed loaded on mount and saved on `move-end`.
+
+---
+
+## Codebase Health Sprint (Jan 11, 2026)
+
+Based on [Health Report 2026-01-11](./reports/health-report-2026-01-11.md).
+
+### TASK-221: Fix Security Vulnerabilities
+**Priority**: P0-CRITICAL
+**Status**: TODO
+**Created**: January 11, 2026
+
+**Goal**: resolve 8 reported vulnerabilities (2 High, 6 Low).
+- [ ] Run `npm audit fix`
+- [ ] Verify no breaking changes
+
+### TASK-222: Fix TypeScript Errors
+**Priority**: P1-HIGH
+**Status**: TODO
+**Created**: January 11, 2026
+
+**Goal**: Fix 53 compilation errors across 18 files.
+- [ ] Component prop mismatches (SignupForm, Calendar components)
+- [ ] Duplicate identifiers (Calendar views)
+- [ ] Type narrowing issues (Inbox components)
+- [ ] `useCanvasDragDrop` number/undefined issues
+
+### TASK-223: Remove Dead Code
+**Priority**: P2-MEDIUM
+**Status**: TODO
+**Created**: January 11, 2026
+
+**Goal**: Remove 115 unused files identified in report.
+- [ ] Delete unused scripts (`scripts/perform-cleanup.cjs`, etc.)
+- [ ] Remove unused backend stubs (`dev-manager/server.js` - verify if needed for dev manager first!)
+- [ ] Clean up unused assets
+
+### TASK-224: Update Outdated Dependencies
+**Priority**: P3-LOW
+**Status**: TODO
+**Created**: January 11, 2026
+
+**Goal**: Update 39 packages.
+- [ ] Update safe minor/patch versions first
+- [ ] Review major updates separately (@types/node, vite, etc.)
+
 
 ---
 

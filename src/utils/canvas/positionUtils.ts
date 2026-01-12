@@ -115,6 +115,40 @@ export function getRelativePosition(
 }
 
 /**
+ * Ensure a position is relative given a parent.
+ * If current format is absolute, converts to relative and returns 'relative' format.
+ */
+export function ensureRelative(
+  pos: Position,
+  format: 'absolute' | 'relative' | undefined,
+  parentPos: Position | null
+): { position: Position; format: 'relative' } {
+  if (format === 'relative' || !parentPos) {
+    return { position: { ...pos }, format: 'relative' }
+  }
+
+  // Convert Absolute to Relative
+  return {
+    position: {
+      x: pos.x - parentPos.x,
+      y: pos.y - parentPos.y
+    },
+    format: 'relative'
+  }
+}
+
+/**
+ * Convert world (absolute) delta to relative delta.
+ * For groups, this is usually 1:1, but centralized here for clarity.
+ */
+export function worldToRelativeDelta(
+  delta: Position,
+  _parentScale: number = 1
+): Position {
+  return { ...delta }
+}
+
+/**
  * Clamp a position within canvas bounds.
  * Useful for preventing nodes from being dragged off-canvas.
  */

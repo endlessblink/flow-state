@@ -48,10 +48,26 @@ The lock restoration code was putting width/height at the wrong level:
 }
 
 // CORRECT:
-{
   position: { x, y, width, height }  // All inside position
 }
 ```
+
+### Issue 4: Visual Detachment due to Strict Geometry Check (Jan 11, 2026)
+**Location**: `src/composables/canvas/useCanvasNodeSync.ts`
+
+Tasks that were logically inside a group (database `parentId` set correctly) were sometimes visually "detached" or floating because `useCanvasNodeSync` relied **exclusively** on geometric calculation (`findSectionForTask`). If the geometric check failed (e.g., slight border offset, task drifted 1px out), the visual engine set `parentNode: undefined`, causing the task to ignore group drags even though the database said it was inside.
+
+> [!CAUTION]
+> **CRITICAL: DO NOT DISABLE GEOMETRIC FALLBACK**
+> On Jan 11, 2026, we attempted to switch to "Strict Database Truth" by disabling the geometric check for tasks without a saved `parentId`. This caused a **critical regression** where legacy tasks or tasks dragged into groups without an immediate DB update became "orphans" and refused to move with groups.
+>
+> **The Fix**: The geometric check ("Visual Adoption") MUST remain enabled as a fallback in `useCanvasNodeSync.ts`.
+> 1. Check `task.parentId` FIRST (DB Truth).
+> 2. If valid, use it.
+> 3. If NO parentId, perform Geometric Check (`findSectionForTask`).
+> 4. If found, adopt the task and **CONVERT TO RELATIVE POSITION** to prevent jumping.
+>
+> **Do NOT remove this fallback logic.** It is essential for "fixing the task and group drifts" for legacy data.
 
 ## Solution
 
@@ -241,6 +257,34 @@ if (taskStore.isLoadingFromDatabase) {
     console.log(`✅ [CANVAS] Task store ready after ${waitAttempts * 100}ms`)
 }
 syncNodes()  // Now tasks are loaded!
+```
+
+### Fix 11: Prioritize Database Truth for Parent Containment (Jan 11, 2026)
+**Issue**: Tasks inside groups (per database) were not moving when the group was dragged.
+
+**Root Cause**: `useCanvasNodeSync` completely ignored `task.parentId` from the store, relying 100% on geometric overlap calculation to assign the visual `parentNode`.
+
+**Files Fixed**:
+- `src/composables/canvas/useCanvasNodeSync.ts:273-306` - Added logic to check `task.parentId` BEFORE running geometric checks.
+
+**Code Pattern**:
+```typescript
+// Before: Pure geometry
+// If geometry check fails (even slightly), parentNode is undefined
+const section = findSectionForTask(center)
+if (section) { parentNode = section.id }
+
+// After: Trust the Database First
+if ((task as any).parentId) {
+    // 1. Trust the store
+    const parent = sections.find(s => s.id === task.parentId)
+    if (parent) {
+        parentNode = `section-${parent.id}`
+        // 2. Calculate relative position manually to keep it visual
+        position = calculateRelativePosition(...)
+        skipContainmentCalc = true
+    }
+}
 ```
 
 ## Files Modified

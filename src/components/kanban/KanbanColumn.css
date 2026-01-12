@@ -140,11 +140,18 @@
     gap: var(--gap-sm);
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--space-1);
-    /* Added padding to prevent hover effects from being clipped */
-    padding-right: var(--space-1);
+    padding: var(--space-4);
+    /* BUG-207: significant padding to prevent hover clipping */
+    padding-bottom: var(--space-10);
+    /* BLEED SPACE for last card glow */
     /* Maintain space for scrollbar */
+    padding-right: var(--space-1);
     min-height: 100px;
+}
+
+.drag-area {
+    overflow: visible !important;
+    /* BUG-207: prevent sortable-wrapper clipping */
 }
 
 /* Custom Scrollbar */

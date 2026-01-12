@@ -59,113 +59,74 @@ import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
 // TASK-072: Import useNode for reactive node data from Vue Flow state
+// TASK-072: Use reactive node data if needed
 // BUG-043: Import Position for edge resize handles
-import { useNode, Position } from '@vue-flow/core'
+import { Position } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
-import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTaskSmartGroups'
+// TASK-167: Direct import to ensure latest logic
+import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/usePowerKeywords'
 
-interface SectionData {
+// Define Props
+const props = defineProps<{
   id: string
-  name: string
-  color: string
-  taskCount: number
-  type?: 'priority' | 'status' | 'project' | 'timeline' | 'custom'
-  propertyValue?: string
-}
-
-interface Props {
-  data: SectionData
+  data: any
   selected?: boolean
   dragging?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  selected: false
-})
-const emit = defineEmits<{
-  update: [data: Partial<SectionData>]
-  collect: [sectionId: string]
-  contextMenu: [event: MouseEvent, section: SectionData]
-  openSettings: [sectionId: string]
-  resizeStart: [data: { sectionId: string; event: unknown }]
-  resize: [data: { sectionId: string; event: unknown }]
-  resizeEnd: [data: { sectionId: string; event: unknown }]
 }>()
 
-// TASK-072: Use useNode() to get reactive node data directly from Vue Flow state
-// This ensures taskCount updates in real-time when updateNodeData is called
-// See: https://vueflow.dev/guide/node.html
-const { node } = useNode()
+// Define Emits
+const emit = defineEmits([
+  'update',
+  'collect',
+  'contextMenu',
+  'open-settings',
+  'resizeStart',
+  'resize',
+  'resizeEnd'
+])
 
-const section = computed(() => props.data)
-const sectionName = ref(props.data.name)
-// TASK-072 FIX: Use node.data.taskCount from Vue Flow state for real-time reactivity
-// props.data doesn't update reactively when updateNodeData is called
-const taskCount = computed(() => node.data?.taskCount ?? props.data.taskCount ?? 0)
+// Initialize Stores
 const canvasStore = useCanvasStore()
 const taskStore = useTaskStore()
 
-const isCollapsed = computed(() => {
-  const sectionData = canvasStore.sections.find(s => s.id === props.data.id)
-  return sectionData?.isCollapsed || false
-})
+// Computed Properties
+// Ensure we handle both structure formats (direct props or nested in data)
+const section = computed(() => props.data?.section || props.data)
+const isCollapsed = computed(() => !!props.data?.isCollapsed)
+const taskCount = computed(() => props.data?.taskCount || 0)
 
-// TASK-068: Removed unused computed properties (autoCollectEnabled, sectionTypeIcon, sectionTypeLabel)
-// These were for UI elements that cluttered the header
-
-
-
-const powerKeyword = computed((): PowerKeywordResult | null => {
-  // Get section from store to check for stored power keyword
-  const sectionData = canvasStore.sections.find(s => s.id === props.data.id)
-  if (sectionData?.powerKeyword !== undefined) {
-    return sectionData.powerKeyword
-  }
-  // Auto-detect from local name (instant feedback) or stored name
-  const name = sectionName.value || props.data?.name || sectionData?.name
-  return name ? detectPowerKeyword(name) : null
-})
-
-const isPowerMode = computed(() => {
-  const sectionData = canvasStore.sections.find(s => s.id === props.data.id)
-  // Use stored value if explicitly set
-  if (sectionData?.isPowerMode !== undefined) {
-    return sectionData.isPowerMode
-  }
-  // Otherwise, auto-detect from name
-  return powerKeyword.value !== null
-})
+// Local State
+const sectionName = ref(props.data?.name || '')
 
 // TASK-130: Compute upcoming date for day-of-week groups
 const dayOfWeekDateSuffix = computed(() => {
-  if (!powerKeyword.value || powerKeyword.value.category !== 'day_of_week') {
+  // Use local name ref for immediate reactivity
+  const currentName = sectionName.value
+  if (!currentName) return null
+  
+  // Re-detect keyword locally to ensure reactivity allows "instant" feedback
+  const explicitKeyword = detectPowerKeyword(currentName)
+  
+  if (!explicitKeyword || explicitKeyword.category !== 'day_of_week') {
     return null
   }
 
-  const targetDayIndex = parseInt(powerKeyword.value.value, 10)
+  const targetDayIndex = parseInt(explicitKeyword.value, 10)
   if (isNaN(targetDayIndex)) return null
 
   const today = new Date()
   // Calculate next occurrence: same formula as drag-drop
-  // If today IS the target day, show NEXT week's date
   const daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
   const targetDate = new Date(today)
   targetDate.setDate(today.getDate() + daysUntilTarget)
 
-  // Format as "10.1.26" (D.M.YY)
+  // Format as "D.M.YY" (e.g. 10.1.26)
   const day = targetDate.getDate()
   const month = targetDate.getMonth() + 1
   const year = targetDate.getFullYear().toString().slice(-2)
   
-  const formatted = `${day}.${month}.${year}`
-  console.log('[GroupNodeSimple] Computed Date Suffix:', { 
-    group: sectionName.value, 
-    keyword: powerKeyword.value?.keyword, 
-    formatted 
-  })
-  
-  return formatted
+  return `${day}.${month}.${year}`
 })
 
 // Watch for external name changes
@@ -180,7 +141,7 @@ const updateName = () => {
 }
 
 const toggleCollapse = () => {
-  canvasStore.toggleSectionCollapse(props.data.id)
+  canvasStore.toggleSectionCollapse(props.id)
 }
 
 // TASK-068: Removed toggleAutoCollect - feature consolidated
@@ -191,37 +152,56 @@ const handleContextMenu = (event: MouseEvent) => {
 
 // Resize event handlers
 const handleResizeStart = (event: unknown) => {
-  emit('resizeStart', { sectionId: props.data.id, event })
+  emit('resizeStart', { sectionId: props.id, event })
 }
 
+const rafId = ref<number | null>(null)
+const isMounting = ref(true)
+
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  // Guard against spurious resize events during initial render
+  setTimeout(() => {
+    isMounting.value = false
+  }, 500)
+})
+
 const handleResize = (event: unknown) => {
-  // Try to cast for logging
-  const resizeEvent = event as { height?: number; params?: { height?: number } }
-  // Extract height being requested by NodeResizer
-  const nodeResizerHeight = resizeEvent?.height || resizeEvent?.params?.height
+  if (isMounting.value) return
+  if (rafId.value) cancelAnimationFrame(rafId.value)
 
-  // Only log when near constraints to reduce noise
-  const nearMin = nodeResizerHeight && nodeResizerHeight <= 120
-  const nearMax = nodeResizerHeight && nodeResizerHeight >= 1950
+  rafId.value = requestAnimationFrame(() => {
+    // Try to cast for logging
+    const resizeEvent = event as { height?: number; params?: { height?: number } }
+    // Extract height being requested by NodeResizer
+    const nodeResizerHeight = resizeEvent?.height || resizeEvent?.params?.height
 
-  if (nearMin || nearMax) {
-    console.log('🔍 Resize Debug:', {
-      sectionId: props.data.id,
-      nodeResizerHeight,
-      minHeight: 80,
-      maxHeight: 2000,
-      hitMinConstraint: nodeResizerHeight && nodeResizerHeight <= 80,
-      hitMaxConstraint: nodeResizerHeight && nodeResizerHeight >= 2000,
-      distanceFromMin: nodeResizerHeight ? nodeResizerHeight - 80 : 0,
-      distanceFromMax: nodeResizerHeight ? 2000 - nodeResizerHeight : 0
-    })
-  }
+    // Only log when near constraints to reduce noise
+    const nearMin = nodeResizerHeight && nodeResizerHeight <= 120
+    const nearMax = nodeResizerHeight && nodeResizerHeight >= 1950
 
-  emit('resize', { sectionId: props.data.id, event })
+    if (nearMin || nearMax) {
+      console.log('🔍 Resize Debug:', {
+        sectionId: props.id,
+        nodeResizerHeight,
+        minHeight: 80,
+        maxHeight: 2000,
+        hitMinConstraint: nodeResizerHeight && nodeResizerHeight <= 80,
+        hitMaxConstraint: nodeResizerHeight && nodeResizerHeight >= 2000,
+        distanceFromMin: nodeResizerHeight ? nodeResizerHeight - 80 : 0,
+        distanceFromMax: nodeResizerHeight ? 2000 - nodeResizerHeight : 0
+      })
+    }
+
+    emit('resize', { sectionId: props.id, event })
+    rafId.value = null
+  })
 }
 
 const handleResizeEnd = (event: unknown) => {
-  emit('resizeEnd', { sectionId: props.data.id, event })
+  if (isMounting.value) return
+  emit('resizeEnd', { sectionId: props.id, event })
 }
 </script>
 

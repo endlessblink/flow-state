@@ -30,8 +30,13 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
 
     const formattedDueDate = computed(() => {
         if (!props.task.dueDate) return ''
-        const [year, month, day] = props.task.dueDate.split('-')
-        return `${day}-${month}-${year}`
+        // Handle ISO with potential time, or plain YYYY-MM-DD
+        const dateStr = props.task.dueDate.split('T')[0]
+        const [year, month, day] = dateStr.split('-')
+
+        // Return human readable format (Jan 11) using stable logic
+        const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dateObj)
     })
 
     // Format duration

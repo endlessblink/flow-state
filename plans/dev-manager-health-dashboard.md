@@ -1,5 +1,19 @@
 # feat: Dev Manager Health Dashboard - System Status at a Glance
 
+## Enhancement Summary
+
+**Deepened on:** January 11, 2026
+**Research agents used:** Dashboard UI patterns, Node.js scanner patterns, Metrics/scoring research, Frontend design
+
+### Key Improvements Added
+1. **Concrete scoring algorithm** with weighted metrics (coverage 20%, complexity 20%, etc.)
+2. **Industry-standard thresholds** based on SonarQube/CodeClimate research
+3. **Production-ready Node.js scanner** with parallel execution, caching, timeout handling
+4. **Accessible UI patterns** with colorblind-safe indicators and progressive disclosure
+5. **Real-time updates** via SSE with polling fallback
+
+---
+
 ## Overview
 
 Add a comprehensive **Health Dashboard** tab to the dev-manager that provides real-time visibility into code quality, type safety, test coverage, dead code, dependencies, and build health. All metrics scannable at a glance with drill-down capability.
@@ -64,6 +78,41 @@ Runs these checks and returns JSON:
 // POST /api/health/scan - Trigger background scan
 ```
 
+### Research Insights: Backend Scanner
+
+**Best Practices (from Node.js research):**
+- Use `spawn()` over `exec()` for large output (ESLint can produce megabytes)
+- Native `signal` option with `AbortController` for clean timeout handling
+- Use `Promise.allSettled()` to get ALL results even if some scanners fail
+- Check tool installation before running: `which` on Unix, `where` on Windows
+
+**Parallel Execution Pattern:**
+```javascript
+// Run all scanners in parallel, collect all results
+const results = await Promise.allSettled(
+  scanners.map(scanner => runWithTimeout(scanner, 60000))
+);
+// Promise.allSettled never rejects - always get partial results
+```
+
+**Caching Strategy:**
+- Cache key = hash of (tool version + config files + source file mtimes)
+- TTL: 1 hour for full scans, invalidate on any source file change
+- Store in `.health-cache/` directory (gitignored)
+
+**Timeout Handling:**
+```javascript
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 60000);
+spawn(command, args, { signal: controller.signal });
+```
+
+**JSON Output Parsing:**
+- ESLint: Array of file results with `errorCount`, `warningCount`, `messages[]`
+- Knip: Object with `files[]`, `dependencies[]`, `exports[]` arrays
+- npm audit: `metadata.vulnerabilities.{critical,high,moderate,low}`
+- TypeScript: Parse stderr with regex `/^(.+?)\((\d+),(\d+)\):\s+(error|warning)/`
+
 ### Frontend: Health Dashboard
 
 **New file: `dev-manager/health/index.html`**
@@ -100,6 +149,46 @@ Visual dashboard with:
 │   src/stores/canvas.ts:142 - Type 'string' not...      │
 │   src/composables/useSync.ts:89 - Property 'foo'...    │
 └─────────────────────────────────────────────────────────┘
+```
+
+### Research Insights: Frontend Dashboard
+
+**UI Design Best Practices:**
+- Use GitHub dark theme colors: `#0d1117` background, `#161b22` cards
+- Glass morphism with `backdrop-filter: blur(12px)` for modern look
+- Status colors must be WCAG AA compliant AND colorblind-safe:
+  - Healthy: `#3fb950` (green) + checkmark icon
+  - Warning: `#d29922` (amber) + triangle icon
+  - Critical: `#f85149` (red) + X icon + pulse animation
+- **Never rely on color alone** - always combine with icons/shapes
+
+**Accessible Status Indicators:**
+```css
+/* Different shapes for colorblind accessibility */
+[data-status="healthy"] .status-dot { border-radius: 50%; }     /* Circle */
+[data-status="warning"] .status-dot { clip-path: polygon(...); } /* Triangle */
+[data-status="critical"] .status-dot { border-radius: 2px; }    /* Square */
+```
+
+**Real-Time Updates (SSE preferred over WebSockets):**
+```javascript
+const eventSource = new EventSource('/api/health/stream');
+eventSource.onmessage = (event) => updateDashboard(JSON.parse(event.data));
+// Auto-reconnects, simpler than WebSockets, HTTP/2 compatible
+```
+
+**Progressive Disclosure Pattern:**
+- Show summary cards first (scannable at glance)
+- Click card to expand detailed issue list below
+- Use CSS `max-height` transition for smooth expansion
+
+**Skeleton Loading States:**
+```css
+.skeleton {
+  background: linear-gradient(90deg, #1a1a2e 25%, #16213e 50%, #1a1a2e 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
 ```
 
 ### Implementation Phases
@@ -152,7 +241,60 @@ Visual dashboard with:
 | Vulnerabilities | 0 | 1-3 low | >3 or any high |
 | Outdated Deps | 0-5 | 6-15 | >15 |
 
-**Overall Score**: Weighted average (TS errors and vulnerabilities weighted higher)
+### Research Insights: Scoring Algorithm
+
+**Industry-Standard Weights (based on SonarQube/CodeClimate):**
+```javascript
+const WEIGHTS = {
+  typeErrors: 0.25,      // High - blocks runtime
+  eslintIssues: 0.15,    // Medium - code quality
+  deadCode: 0.10,        // Low - maintenance burden
+  testCoverage: 0.20,    // High - confidence
+  bundleSize: 0.10,      // Low - performance
+  vulnerabilities: 0.15, // High - security
+  outdatedDeps: 0.05     // Low - maintenance
+};
+```
+
+**Overall Score Formula:**
+```javascript
+function calculateHealthScore(metrics) {
+  // Normalize each metric to 0-100 scale
+  const scores = {
+    typeErrors: metrics.tsErrors === 0 ? 100 : Math.max(0, 100 - metrics.tsErrors * 5),
+    eslintIssues: Math.max(0, 100 - metrics.eslintErrors * 10 - metrics.eslintWarnings * 2),
+    deadCode: Math.max(0, 100 - metrics.unusedFiles * 5),
+    testCoverage: metrics.coverage,  // Already 0-100
+    bundleSize: metrics.bundleMB < 1.5 ? 100 : Math.max(0, 100 - (metrics.bundleMB - 1.5) * 50),
+    vulnerabilities: metrics.vulns === 0 ? 100 : Math.max(0, 100 - metrics.criticalVulns * 30 - metrics.highVulns * 15),
+    outdatedDeps: Math.max(0, 100 - metrics.outdated * 3)
+  };
+
+  // Weighted sum
+  return Object.keys(WEIGHTS).reduce((sum, key) => sum + scores[key] * WEIGHTS[key], 0);
+}
+```
+
+**SonarQube-Style Letter Grades:**
+```javascript
+function getGrade(score) {
+  if (score >= 90) return 'A';  // Excellent
+  if (score >= 80) return 'B';  // Good
+  if (score >= 60) return 'C';  // Acceptable
+  if (score >= 40) return 'D';  // Poor
+  return 'E';                    // Critical
+}
+```
+
+**Trend Detection:**
+```javascript
+function getTrend(current, previous, threshold = 2) {
+  const delta = current - previous;
+  if (delta >= threshold) return 'improving';   // ↑
+  if (delta <= -threshold) return 'declining';  // ↓
+  return 'stable';                              // →
+}
+```
 
 ## Acceptance Criteria
 
@@ -207,3 +349,12 @@ After implementation:
 - [Knip Documentation](https://knip.dev/)
 - [ESLint JSON Formatter](https://eslint.org/docs/latest/use/formatters/)
 - [Chart.js Doughnut Charts](https://www.chartjs.org/docs/latest/charts/doughnut.html)
+
+### Research Sources (from /deepen-plan)
+- [SonarQube Metrics Definition](https://docs.sonarsource.com/sonarqube-server/user-guide/code-metrics/metrics-definition)
+- [CodeClimate Default Configuration](https://docs.codeclimate.com/docs/default-analysis-configuration)
+- [Node.js child_process documentation](https://nodejs.org/api/child_process.html)
+- [Server-Sent Events for Real-Time Updates](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
+- [WCAG Color Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/Understanding/use-of-color.html)
+- [Progressive Disclosure Patterns (NNGroup)](https://www.nngroup.com/articles/progressive-disclosure/)
+- [Skeleton Loading States (NNGroup)](https://www.nngroup.com/articles/skeleton-screens/)

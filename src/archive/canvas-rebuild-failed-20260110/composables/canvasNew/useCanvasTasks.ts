@@ -5,7 +5,7 @@
  */
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasNewStore } from '@/stores/canvasNew'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
 import type { CanvasNode } from './useCanvasCore'
 import type { CanvasGroup } from '@/stores/canvas/types'

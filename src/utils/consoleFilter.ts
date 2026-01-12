@@ -236,6 +236,10 @@ function shouldFilter(message: string): boolean {
     msg.includes('🎨') ||
     msg.includes('🖱️') ||
     msg.includes('✂️')) {
+    // Whitelist specific debugging strings even if they contain filtered emojis
+    if (msg.includes('[SHIELD]') || msg.includes('[LOCK]') || msg.includes('[DRAG-SHIELD]') || msg.includes('[CANVAS-STORE]')) {
+      return false
+    }
     return true
   }
 

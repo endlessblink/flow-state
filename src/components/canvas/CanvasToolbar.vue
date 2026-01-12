@@ -1,55 +1,67 @@
 <template>
-  <div class="canvas-toolbar absolute flex items-center gap-3 top-4 right-4 z-[100]">
-    <!-- Primary Actions Group -->
-    <div class="toolbar-group flex items-center gap-1 p-1 rounded-lg glass-panel">
-      <!-- Add Task -->
-      <button
-        class="toolbar-btn primary"
-        title="Add Task to Inbox"
-        @click="$emit('addTask')"
-      >
-        <Plus :size="16" />
-        <span class="text-xs font-semibold ml-1">New Task</span>
-      </button>
+  <!-- Teleport to body to render OUTSIDE canvas containment -->
+  <Teleport to="body">
+    <div class="canvas-toolbar-edge">
+      <!-- Primary Actions Group -->
+      <div class="toolbar-group">
+        <!-- Add Task -->
+        <button
+          class="toolbar-btn primary"
+          title="Add Task to Inbox"
+          aria-label="Add new task"
+          @click="$emit('addTask')"
+        >
+          <Plus :size="14" />
+        </button>
 
-      <!-- Add Group -->
-      <button
-        class="toolbar-btn"
-        title="Create New Group"
-        @click="$emit('createGroup', $event)"
-      >
-        <FolderPlus :size="16" />
-      </button>
+        <!-- Add Group -->
+        <button
+          class="toolbar-btn"
+          title="Create New Group"
+          aria-label="Create new group"
+          @click="$emit('createGroup', $event)"
+        >
+          <FolderPlus :size="14" />
+        </button>
+      </div>
+
+      <!-- Separator -->
+      <div class="toolbar-separator" />
+
+      <!-- Filter Controls Group -->
+      <div class="toolbar-group">
+        <!-- Hide Overdue Tasks Toggle (TASK-082) -->
+        <button
+          class="toolbar-btn toggle"
+          :class="{ 'active overdue': taskStore.hideCanvasOverdueTasks }"
+          :title="taskStore.hideCanvasOverdueTasks ? 'Show overdue tasks' : 'Hide overdue tasks'"
+          :aria-label="taskStore.hideCanvasOverdueTasks ? 'Show overdue tasks' : 'Hide overdue tasks'"
+          :aria-pressed="taskStore.hideCanvasOverdueTasks"
+          @click="taskStore.hideCanvasOverdueTasks = !taskStore.hideCanvasOverdueTasks"
+        >
+          <CalendarX v-if="taskStore.hideCanvasOverdueTasks" :size="14" />
+          <Calendar v-else :size="14" />
+        </button>
+
+        <!-- Hide Done Tasks Toggle (TASK-080) -->
+        <button
+          class="toolbar-btn toggle"
+          :class="{ 'active done': taskStore.hideCanvasDoneTasks }"
+          :title="taskStore.hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+          :aria-label="taskStore.hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+          :aria-pressed="taskStore.hideCanvasDoneTasks"
+          @click="taskStore.toggleCanvasDoneTasks()"
+        >
+          <EyeOff v-if="taskStore.hideCanvasDoneTasks" :size="14" />
+          <Eye v-else :size="14" />
+        </button>
+      </div>
     </div>
-
-    <!-- Filter Controls Group -->
-    <div class="toolbar-group flex items-center gap-1 p-1 rounded-lg glass-panel">
-      <!-- Hide Overdue Tasks Toggle (TASK-082) -->
-      <button
-        class="toolbar-toggle"
-        :class="{ 'active overdue': taskStore.hideCanvasOverdueTasks }"
-        :title="taskStore.hideCanvasOverdueTasks ? 'Show overdue tasks' : 'Hide overdue tasks'"
-        @click="taskStore.hideCanvasOverdueTasks = !taskStore.hideCanvasOverdueTasks"
-      >
-        <CalendarX v-if="taskStore.hideCanvasOverdueTasks" :size="16" />
-        <Calendar v-else :size="16" />
-      </button>
-
-      <!-- Hide Done Tasks Toggle (TASK-080) -->
-      <button
-        class="toolbar-toggle"
-        :class="{ 'active done': taskStore.hideCanvasDoneTasks }"
-        :title="taskStore.hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-        @click="taskStore.toggleCanvasDoneTasks()"
-      >
-        <EyeOff v-if="taskStore.hideCanvasDoneTasks" :size="16" />
-        <Eye v-else :size="16" />
-      </button>
-    </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
+import { Teleport } from 'vue'
 import { Plus, FolderPlus, Calendar, CalendarX, Eye, EyeOff } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -62,31 +74,75 @@ const taskStore = useTaskStore()
 </script>
 
 <style scoped>
-.glass-panel {
-  background: rgba(30, 30, 40, 0.85); /* Dark glass */
+/* Edge-mounted vertical toolbar - positioned at viewport right edge, aligned with canvas top */
+.canvas-toolbar-edge {
+  position: fixed;
+  right: 0;
+
+  /* ADJUST THIS VALUE to align with canvas top */
+  top: 239px;
+
+  z-index: 1000;
+
+  /* Vertical flex layout */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+
+  /* Edge-mounted styling - rounded left corners only */
+  border-radius: 8px 0 0 8px;
+
+  /* Glass morphism */
+  background: rgba(30, 30, 40, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-right: none;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.2);
 }
 
+.toolbar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-separator {
+  width: 16px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 2px 0;
+}
+
+/* Icon buttons - compact size */
 .toolbar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  padding: 0 10px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-  cursor: pointer;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  background: transparent;
   border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .toolbar-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  color: var(--text-primary, #fff);
 }
 
+.toolbar-btn:focus-visible {
+  outline: 2px solid var(--brand-primary, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Primary action button (Add Task) */
 .toolbar-btn.primary {
   background: rgba(99, 102, 241, 0.2);
   color: #818cf8;
@@ -94,41 +150,34 @@ const taskStore = useTaskStore()
 }
 
 .toolbar-btn.primary:hover {
-  background: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
 }
 
-.toolbar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
-  cursor: pointer;
+/* Toggle buttons */
+.toolbar-btn.toggle {
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
 }
 
-.toolbar-toggle:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+.toolbar-btn.toggle:hover {
+  color: var(--text-primary, #fff);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.toolbar-toggle.active {
+.toolbar-btn.toggle.active {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  color: var(--text-primary, #fff);
 }
 
-.toolbar-toggle.active.overdue {
+.toolbar-btn.toggle.active.overdue {
   color: #fb923c; /* Orange-400 */
   background: rgba(251, 146, 60, 0.15);
-  border: 1px solid rgba(251, 146, 60, 0.2);
+  border-color: rgba(251, 146, 60, 0.25);
 }
 
-.toolbar-toggle.active.done {
+.toolbar-btn.toggle.active.done {
   color: #a78bfa; /* Purple-400 */
   background: rgba(167, 139, 250, 0.15);
-  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-color: rgba(167, 139, 250, 0.25);
 }
 </style>

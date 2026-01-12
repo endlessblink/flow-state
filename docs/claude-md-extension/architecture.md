@@ -35,7 +35,7 @@ src/
 - Task CRUD operations with undo/redo support
 - Project hierarchy with nesting support
 - Task instances system for calendar scheduling
-- PouchDB persistence with debounced saves
+- Supabase persistence with optimistic updates
 - Smart views (Today, Weekend) with complex filtering
 - Backward compatibility with legacy scheduled fields
 
@@ -65,11 +65,12 @@ Application UI state:
 - Active view management
 
 ### Additional Stores
-- **auth.ts** - Authentication state
-- **local-auth.ts** - Local authentication
+- **auth.ts** - Authentication state (Supabase Auth)
+- **local-auth.ts** - Local authentication fallback
 - **notifications.ts** - Notification management
+- **projects.ts** - Project organization
 - **quickSort.ts** - Quick sort view state
-- **taskCanvas.ts** - Canvas task state
+- **settings.ts** - User preferences and app settings
 - **taskCore.ts** - Core task utilities
 - **taskScheduler.ts** - Task scheduling
 - **theme.ts** - Theme management
@@ -83,14 +84,14 @@ Application UI state:
 - Task operations: create, update, delete with undo support
 - JSON-based state serialization for persistence
 
-### Database Operations (`src/composables/useDatabase.ts`)
-**PouchDB abstraction layer**:
-- Direct PouchDB integration with IndexedDB adapter
-- Optional CouchDB remote sync via useReliableSyncManager
-- Conflict detection and monitoring
-- Health monitoring with automatic retry logic
+### Database Operations (`src/composables/useSupabaseDatabaseV2.ts`)
+**Supabase abstraction layer**:
+- PostgreSQL backend with Row Level Security (RLS)
+- Real-time subscriptions via Supabase Realtime
+- Type mappers in `src/utils/supabaseMappers.ts`
+- Optimistic UI updates with conflict resolution
 - Type-safe generic save/load operations
-- Singleton pattern for shared database instance
+- Auth integration via `src/stores/auth.ts`
 
 ## Task Data Model
 ```typescript

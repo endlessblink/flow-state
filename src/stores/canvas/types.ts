@@ -62,6 +62,9 @@ export interface CanvasGroup {
     parentGroupId?: string | null
     updatedAt?: string
     isPinned?: boolean
+    positionVersion?: number // Version for conflict resolution
+    taskCount?: number // Number of tasks currently in this group
+    positionFormat?: 'absolute' | 'relative' // TASK-240: Transition to relative-only
 }
 
 // Backward compatibility alias - keeping CanvasSection as alias for CanvasGroup

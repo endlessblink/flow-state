@@ -29,6 +29,7 @@ function loadEnv(filename) {
 const env = { ...loadEnv('.env'), ...loadEnv('.env.local') };
 
 const BACKUP_DIR = path.join(__dirname, '../backups');
+const PUBLIC_DIR = path.join(__dirname, '../public');
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
 
 // Key Priority: Service Role (Bypass RLS) > Anon (Respect RLS)
@@ -117,6 +118,10 @@ async function runShadowSync() {
         const checksum = `len:${json.length}`;
 
         insert.run(timestamp, json, tasks.length + groups.length, checksum);
+
+        // 4. Export JSON for Frontend (Seamless Bridge)
+        const exportPath = path.join(PUBLIC_DIR, 'shadow-latest.json');
+        fs.writeFileSync(exportPath, json);
 
         console.log(`[Shadow] ✅ Snapshot saved! (${tasks.length} tasks, ${groups.length} groups)`);
 

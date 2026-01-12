@@ -14,7 +14,7 @@ import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import { useCanvasStore } from '@/stores/canvas'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabaseV2'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
 import type { Task, Project } from '@/types/tasks'
 import type { CanvasGroup } from '@/stores/canvas'
@@ -941,7 +941,36 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     },
 
     // TASK-153: Get validation info for UI display before restore
-    getGoldenBackupValidation: validateGoldenBackup
+    getGoldenBackupValidation: validateGoldenBackup,
+
+    // TASK-154: Shadow Mirror (System 3) Recovery
+    fetchShadowBackup: async () => {
+      try {
+        const response = await fetch('/shadow-latest.json?t=' + Date.now())
+        if (!response.ok) throw new Error('Shadow snapshot not found')
+        return await response.json()
+      } catch (error) {
+        console.warn('[Backup] Shadow sync info not available:', error)
+        return null
+      }
+    },
+
+    restoreFromShadow: async (shadowData: any) => {
+      console.log(`[Backup] Restoring from Shadow Hub: ${shadowData.meta?.counts?.tasks} tasks`)
+      return await restoreBackup({
+        ...shadowData,
+        id: `shadow_${shadowData.meta.timestamp}`,
+        timestamp: shadowData.meta.timestamp,
+        type: 'emergency',
+        version: BACKUP_SCHEMA_VERSION,
+        checksum: '',
+        metadata: {
+          taskCount: shadowData.meta.counts.tasks,
+          projectCount: shadowData.meta.counts.projects,
+          groupCount: shadowData.meta.counts.groups
+        }
+      })
+    }
   }
 }
 

@@ -1,950 +1,992 @@
 ---
-name: dev-implement-ui-ux
-emoji: "🛠️"
-description: Systematically implement UI/UX fixes from audits including design token migration, component consolidation, accessibility improvements, and visual consistency
+name: dev-ui-ux-design
+emoji: "🎨"
+description: Comprehensive UI/UX design and implementation skill covering visual design principles, color theory, typography, spacing systems, layout composition, accessibility (WCAG 2.2), animation, and systematic implementation workflows
 ---
 
-# Implement UI/UX Fixes
+# UI/UX Design & Implementation
 
-**Version:** 1.0.0
-**Category:** Implement
-**Related Skills:** qa-audit-ui-ux, dev-vue, dev-css-design-system
+**Version:** 2.0.0
+**Category:** Design + Implement
+**Related Skills:** dev-storybook, dev-vue, dev-css-design-system
 
 ## Overview
 
-Systematically implement UI/UX fixes identified in audits. This skill provides step-by-step implementation guidance for design system compliance, component consistency, accessibility improvements, and visual polish.
+Comprehensive skill for both **designing** and **implementing** UI/UX. Covers visual design principles (color, typography, spacing, layout, hierarchy), accessibility compliance (WCAG 2.2), animation patterns, and systematic implementation workflows.
 
 ## When to Activate This Skill
 
 Invoke this skill when:
-- User requests UI/UX improvements based on audit findings
-- Implementing design token migration
-- Fixing component consistency issues
-- Adding accessibility improvements (ARIA labels, focus indicators)
-- Standardizing button/card/modal styles
-- Implementing composition and alignment fixes
-- User provides a reference design to match
+- Designing color palettes or visual systems
+- Creating typography hierarchies
+- Building spacing and layout systems
+- Implementing UI/UX fixes from audits
+- Ensuring WCAG 2.2 accessibility compliance
+- Adding animations and microinteractions
+- Avoiding AI-generic design patterns
+- Matching reference designs
 
-## Core Principles
+---
 
-### 1. Always Create Feature Branch First
+# PART 1: COLOR THEORY & PALETTE GENERATION
 
-**CRITICAL:** Never implement UI changes on main branch.
+## 1.1 HSL Color Model
+
+```
+HSL = Hue, Saturation, Lightness
+
+Hue (0-360°):
+- 0° = Red
+- 60° = Yellow
+- 120° = Green
+- 180° = Cyan
+- 240° = Blue
+- 300° = Magenta
+
+Saturation (0-100%):
+- 0% = Grayscale
+- 100% = Pure color
+
+Lightness (0-100%):
+- 0% = Black
+- 50% = Pure color
+- 100% = White
+```
+
+## 1.2 Color Wheel Relationships
+
+| Relationship | Formula | Degrees | Use Case |
+|--------------|---------|---------|----------|
+| Analogous | H ± 30° | -30°, 0°, +30° | Harmonious, safe |
+| Complementary | H + 180° | Opposite | High contrast |
+| Triadic | H + 120°, H + 240° | Equally spaced | Vibrant, balanced |
+| Split-Complementary | H + 150°, H + 210° | 150° apart | Less harsh |
+| Tetradic | H + 90°, H + 180°, H + 270° | 90° apart | Complex but harmonious |
+
+### Example: Building Palette from Blue (210°)
+
+```
+Primary Blue: 210° (hsl(210, 70%, 50%))
+
+Analogous (210° ± 30°):
+- 180° Cyan
+- 210° Blue ← Primary
+- 240° Indigo
+
+Complementary:
+- 30° Orange
+
+Triadic:
+- 210° Blue
+- 330° Magenta
+- 90° Yellow-Green
+```
+
+## 1.3 Tints, Shades, and Tones
+
+```css
+:root {
+  /* Base color */
+  --hue-primary: 210;
+  --sat-primary: 70%;
+
+  /* Tints (increase lightness) */
+  --color-primary-50: hsl(var(--hue-primary), var(--sat-primary), 95%);
+  --color-primary-100: hsl(var(--hue-primary), var(--sat-primary), 90%);
+  --color-primary-200: hsl(var(--hue-primary), var(--sat-primary), 80%);
+  --color-primary-300: hsl(var(--hue-primary), var(--sat-primary), 70%);
+  --color-primary-400: hsl(var(--hue-primary), var(--sat-primary), 60%);
+
+  /* Core */
+  --color-primary-500: hsl(var(--hue-primary), var(--sat-primary), 50%);
+  --color-primary-600: hsl(var(--hue-primary), var(--sat-primary), 40%);
+
+  /* Shades (decrease lightness) */
+  --color-primary-700: hsl(var(--hue-primary), var(--sat-primary), 30%);
+  --color-primary-800: hsl(var(--hue-primary), var(--sat-primary), 20%);
+  --color-primary-900: hsl(var(--hue-primary), var(--sat-primary), 10%);
+}
+```
+
+## 1.4 Color Psychology
+
+| Color | Hue | Psychology | UI Uses |
+|-------|-----|------------|---------|
+| Red | 0° | Energy, urgency, danger | Error states, delete actions, alerts |
+| Orange | 30° | Enthusiasm, warmth | Friendly CTAs, warnings |
+| Yellow | 60° | Happiness, caution | Warning messages, highlights |
+| Green | 120° | Growth, safety, success | Success states, "go" actions |
+| Blue | 240° | Trust, stability, calm | Primary brand, links, info |
+| Purple | 270° | Creativity, luxury | Premium features, AI/magic |
+| Gray | Neutral | Balance, sophistication | Secondary actions, disabled |
+
+## 1.5 The 60-30-10 Rule
+
+```
+60% - Primary (dominant, background/large areas)
+30% - Secondary (supporting, surface colors)
+10% - Accent (emphasis, CTAs, highlights)
+```
+
+```css
+:root {
+  /* 60% - Primary: light neutral background */
+  --color-60: #F5F5F5;
+
+  /* 30% - Secondary: surface/card color */
+  --color-30: #FFFFFF;
+
+  /* 10% - Accent: brand for CTAs */
+  --color-10: #0EA5E9;
+}
+
+body { background: var(--color-60); }
+.card { background: var(--color-30); }
+button { background: var(--color-10); }
+```
+
+## 1.6 WCAG Contrast Requirements
+
+| Content Type | Minimum Ratio | Example |
+|--------------|---------------|---------|
+| Normal text | 4.5:1 | Black on white = 21:1 ✓ |
+| Large text (18px+) | 3:1 | Navy on light blue = 8.6:1 ✓ |
+| UI components | 3:1 | Button border on background |
+| Focus indicator | 3:1 | Focus outline on element |
+
+### Quick Reference: Common Contrast Ratios
+
+```
+White #FFFFFF on:
+- Black #000000 = 21:1 ✓ Excellent
+- Navy #003366 = 11.3:1 ✓ Excellent
+- Blue #0EA5E9 = 5.74:1 ✓ Good (AA)
+- Gray #6B7280 = 7.5:1 ✓ Good (AAA)
+- Light gray #D1D5DB = 2.1:1 ✗ Fail
+```
+
+## 1.7 Dark Mode Strategy
+
+**Key Principle:** Adjust LIGHTNESS and SATURATION, not HUE.
+
+```css
+/* Light Mode */
+:root {
+  --color-primary: hsl(210, 70%, 50%);
+  --color-text: hsl(0, 0%, 15%);
+  --color-bg: hsl(0, 0%, 97%);
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Brighter, less saturated for dark backgrounds */
+    --color-primary: hsl(210, 60%, 65%);
+
+    /* Text: white with opacity */
+    --color-text: hsla(0, 0%, 100%, 0.87);
+    --color-text-secondary: hsla(0, 0%, 100%, 0.60);
+
+    /* Background: dark neutral */
+    --color-bg: hsl(0, 0%, 12%);
+    --color-surface: hsl(0, 0%, 18%);
+  }
+}
+```
+
+### Dark Mode Elevation (Lighter = More Elevated)
+
+```css
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface-base: hsl(210, 10%, 12%);    /* Darkest */
+    --color-surface-1: hsl(210, 10%, 16%);       /* Raised */
+    --color-surface-2: hsl(210, 10%, 20%);       /* More raised */
+    --color-surface-3: hsl(210, 10%, 24%);       /* Even more */
+    --color-surface-4: hsl(210, 10%, 28%);       /* Highest */
+  }
+
+  body { background: var(--color-surface-base); }
+  .card { background: var(--color-surface-2); }
+  .modal { background: var(--color-surface-3); }
+}
+```
+
+---
+
+# PART 2: TYPOGRAPHY SYSTEM
+
+## 2.1 Type Scale Ratios
+
+| Ratio | Name | Best For |
+|-------|------|----------|
+| 1.067 | Minor Second | Small UI, dense |
+| 1.125 | Major Second | Apps, compact |
+| 1.200 | Minor Third | Balanced web |
+| **1.250** | **Major Third** | **Web apps (recommended)** |
+| 1.333 | Perfect Fourth | Editorial |
+| 1.414 | Augmented Fourth | Magazine |
+| 1.500 | Perfect Fifth | Large displays |
+| 1.618 | Golden Ratio | Art, luxury |
+
+### Complete Type Scale (1.25 ratio, 16px base)
+
+```
+-2 (11px) - caption, small labels
+-1 (13px) - fine print, helper text
+ 0 (16px) - body text, default
+ 1 (20px) - subheading, emphasis
+ 2 (25px) - section heading
+ 3 (31px) - large section heading
+ 4 (39px) - page heading
+ 5 (49px) - hero text
+```
+
+## 2.2 Fluid Typography with clamp()
+
+```css
+:root {
+  --text-xs: clamp(11px, 1.5vw, 13px);
+  --text-sm: clamp(12px, 1.8vw, 14px);
+  --text-base: clamp(14px, 2vw, 16px);
+  --text-md: clamp(16px, 2.2vw, 18px);
+  --text-lg: clamp(18px, 2.5vw, 20px);
+  --text-xl: clamp(20px, 3vw, 24px);
+  --text-2xl: clamp(24px, 4vw, 30px);
+  --text-3xl: clamp(28px, 5vw, 36px);
+  --text-4xl: clamp(32px, 6vw, 42px);
+  --text-5xl: clamp(36px, 8vw, 52px);
+}
+
+body { font-size: var(--text-base); }
+h3 { font-size: var(--text-2xl); }
+h2 { font-size: var(--text-3xl); }
+h1 { font-size: var(--text-5xl); }
+```
+
+## 2.3 Line Height Guidelines
+
+| Context | Line Height | Usage |
+|---------|-------------|-------|
+| Body text | 1.5 - 1.7 | Comfortable reading |
+| Headings | 1.1 - 1.3 | Compact, readable |
+| Dense UI | 1.4 - 1.5 | Forms, lists |
+| Code/mono | 1.6 - 1.8 | Extra clarity |
+
+```css
+p { line-height: 1.6; }
+h1, h2, h3 { line-height: 1.2; }
+label { line-height: 1.5; }
+code { line-height: 1.7; }
+```
+
+## 2.4 Line Length (Measure)
+
+**Optimal: 45-75 characters (65ch ideal)**
+
+```css
+.prose {
+  max-width: 65ch;  /* ~65 characters */
+  margin: 0 auto;
+}
+```
+
+## 2.5 Font Weight Usage
+
+| Weight | Name | Usage |
+|--------|------|-------|
+| 400 | Regular | Body text (default) |
+| 500 | Medium | Subtle emphasis, labels |
+| 600 | Semi-bold | UI elements, captions |
+| 700 | Bold | Strong emphasis, headings |
+
+**Rule: Use only 2-3 weights for clarity (400, 600, 700)**
+
+```css
+body { font-weight: 400; }
+label { font-weight: 600; }
+h1, h2, strong { font-weight: 700; }
+```
+
+## 2.6 Font Pairing
+
+| Heading | Body | Best For |
+|---------|------|----------|
+| Poppins | Inter | Tech, SaaS |
+| Playfair Display | Lato | Luxury, editorial |
+| Montserrat | Open Sans | Modern, friendly |
+
+```css
+:root {
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'Fira Code', monospace;
+}
+
+h1, h2, h3 { font-family: var(--font-display); }
+body { font-family: var(--font-body); }
+code { font-family: var(--font-mono); }
+```
+
+---
+
+# PART 3: SPACING & RHYTHM SYSTEMS
+
+## 3.1 8-Point Grid System
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| 0.5 | 2px | Hairlines, minimal |
+| 1 | 4px | Micro spacing |
+| 2 | 8px | Small gaps (xs) |
+| 3 | 12px | Compact |
+| 4 | 16px | Standard (sm) |
+| 5 | 20px | Medium |
+| 6 | 24px | Comfortable (md) |
+| 8 | 32px | Large (lg) |
+| 10 | 40px | Extra large (xl) |
+| 12 | 48px | Huge (2xl) |
+| 16 | 64px | Page spacing (3xl) |
+| 20 | 80px | Section gaps |
+| 24 | 96px | Hero spacing |
+
+```css
+:root {
+  --space-0: 0;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+}
+
+.btn { padding: var(--space-2) var(--space-4); }  /* 8px 16px */
+.card { padding: var(--space-6); }                 /* 24px */
+section { padding: var(--space-16) 0; }            /* 64px */
+```
+
+## 3.2 Fibonacci Spacing (Alternative)
+
+```
+8 × 1  = 8px
+8 × 2  = 16px
+8 × 3  = 24px
+8 × 5  = 40px
+8 × 8  = 64px
+8 × 13 = 104px
+8 × 21 = 168px
+```
+
+**Use Fibonacci for:** Editorial, landing pages, organic feel
+**Use 8-Point for:** Apps, forms, UI components
+
+## 3.3 Golden Ratio Spacing (1.618)
+
+```css
+:root {
+  --golden-1: 8px;
+  --golden-2: 13px;   /* 8 × 1.618 */
+  --golden-3: 21px;   /* 13 × 1.618 */
+  --golden-4: 34px;
+  --golden-5: 55px;
+  --golden-6: 89px;
+}
+```
+
+## 3.4 Proximity Principle
+
+**Rule: Related items < 16px apart, unrelated > 24px apart**
+
+```css
+.form-group {
+  margin-bottom: 24px;  /* Between groups - LARGE */
+}
+
+.form-group label {
+  margin-bottom: 8px;   /* Label to input - SMALL */
+}
+```
+
+---
+
+# PART 4: LAYOUT COMPOSITION & GRIDS
+
+## 4.1 Golden Ratio Layouts (1.618:1)
+
+```
+For container W pixels wide:
+Main content = W ÷ 1.618
+Sidebar = W - Main content
+
+1200px container:
+Main: 742px, Sidebar: 458px
+```
+
+```css
+.golden-layout {
+  display: grid;
+  grid-template-columns: 1fr 0.618fr;
+  gap: 24px;
+  max-width: 1200px;
+}
+
+@media (max-width: 768px) {
+  .golden-layout {
+    grid-template-columns: 1fr;
+  }
+}
+```
+
+## 4.2 Rule of Thirds
+
+Place focal points at grid intersections for natural visual flow.
+
+```css
+.rule-of-thirds {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+}
+
+.focal-point {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  place-self: end;
+}
+```
+
+## 4.3 12-Column Grid
+
+```css
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+  max-width: 1200px;
+}
+
+.col-4 { grid-column: span 4; }   /* 33% */
+.col-6 { grid-column: span 6; }   /* 50% */
+.col-8 { grid-column: span 8; }   /* 66% */
+.col-12 { grid-column: span 12; } /* 100% */
+```
+
+## 4.4 Container Widths
+
+| Size | Width | Use Case |
+|------|-------|----------|
+| xs | 480px | Mobile |
+| sm | 640px | Large mobile |
+| md | 768px | Tablet |
+| lg | 1024px | Desktop |
+| xl | 1280px | Wide desktop |
+| 2xl | 1536px | Maximum |
+
+```css
+.container {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.prose-container {
+  max-width: 65ch;  /* Readable */
+}
+```
+
+## 4.5 Auto-Fit Responsive Grids
+
+```css
+.grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+```
+
+---
+
+# PART 5: VISUAL HIERARCHY & BALANCE
+
+## 5.1 Creating Hierarchy
+
+### Size (1.2-1.5× each level)
+
+```css
+.caption { font-size: 13px; }
+.body { font-size: 16px; }
+.subhead { font-size: 20px; }
+.h3 { font-size: 25px; }
+.h2 { font-size: 31px; }
+.h1 { font-size: 39px; }
+```
+
+### Color (Opacity)
+
+```css
+.text-primary { color: rgba(0, 0, 0, 0.87); }
+.text-secondary { color: rgba(0, 0, 0, 0.60); }
+.text-tertiary { color: rgba(0, 0, 0, 0.38); }
+.text-disabled { color: rgba(0, 0, 0, 0.26); }
+```
+
+### Weight
+
+```css
+.body { font-weight: 400; }
+.label { font-weight: 500; }
+.subhead { font-weight: 600; }
+.h1 { font-weight: 700; }
+```
+
+## 5.2 Gestalt Principles
+
+| Principle | Rule | CSS Example |
+|-----------|------|-------------|
+| Proximity | Related < 16px | `gap: 8px` between label and input |
+| Similarity | Same style = related | All buttons have same padding |
+| Continuity | Aligned elements are path | `align-items: start` |
+| Closure | Mind completes shapes | Dashed borders, outlined buttons |
+| Figure-Ground | Elevated stands out | Cards with shadow on page |
+
+## 5.3 Focal Point Creation
+
+```css
+.cta-primary {
+  background: var(--color-primary);
+  color: white;
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  margin: 48px 0;  /* Isolated */
+}
+
+.cta-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+}
+```
+
+---
+
+# PART 6: WCAG 2.2 ACCESSIBILITY (2024-2025)
+
+## 6.1 All 9 New WCAG 2.2 Criteria
+
+### 2.4.11 Focus Not Obscured (Minimum) - Level A
+
+```css
+*:focus {
+  scroll-margin-top: 80px;  /* Account for sticky header */
+}
+```
+
+### 2.4.12 Focus Not Obscured (Enhanced) - Level AA
+
+No part of focused component hidden.
+
+### 2.4.13 Focus Appearance - Level AAA
+
+2px thick, 3:1 contrast.
+
+```css
+button:focus-visible {
+  outline: 2px solid #0066CC;  /* 5.7:1 contrast ✓ */
+  outline-offset: 2px;
+}
+```
+
+### 2.5.7 Dragging Movements - Level AA
+
+Provide single-pointer alternative to drag.
+
+```html
+<input type="range" id="slider">
+<button onclick="setValue(0)">Min</button>
+<button onclick="setValue(100)">Max</button>
+```
+
+### 2.5.8 Target Size (Minimum) - Level AA
+
+**24×24px minimum, 44×44px recommended**
+
+```css
+button, a, input[type="checkbox"] {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.icon-btn {
+  width: 20px;
+  height: 20px;
+  padding: 12px;  /* Total: 44×44px */
+}
+```
+
+### 3.2.6 Consistent Help - Level A
+
+Help in same location on all pages.
+
+### 3.3.7 Redundant Entry - Level A
+
+Don't ask for same info twice. Use `autocomplete`.
+
+### 3.3.8 Accessible Authentication (Minimum) - Level AA
+
+No CAPTCHA as ONLY option.
+
+```html
+<button onclick="sendEmailLink()">Email me a sign-in link</button>
+<button onclick="useWebAuthn()">Sign in with passkey</button>
+<input type="password" autocomplete="current-password">
+```
+
+### 3.3.9 Accessible Authentication (Enhanced) - Level AAA
+
+No cognitive test at all.
+
+## 6.2 Complete Focus Implementation
+
+```css
+*:focus { outline: none; }
+
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-contrast: more) {
+  *:focus-visible {
+    outline-width: 3px;
+    outline-color: Highlight;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+}
+
+.skip-link:focus {
+  top: 8px;
+  left: 8px;
+  padding: 12px 16px;
+  background: white;
+}
+```
+
+---
+
+# PART 7: MICROINTERACTIONS & ANIMATION
+
+## 7.1 Animation Timing
+
+| Duration | Name | Use Case |
+|----------|------|----------|
+| 100-150ms | Micro | Instant feedback, hover |
+| 150-200ms | Fast | Click, press |
+| 200-300ms | Normal | Standard UI, modal |
+| 300-400ms | Moderate | Panel slide |
+| 400-500ms | Slow | Page transition |
+
+```css
+:root {
+  --duration-micro: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-moderate: 350ms;
+  --duration-slow: 450ms;
+}
+```
+
+## 7.2 Easing Curves
+
+```css
+:root {
+  /* Entrances: fast start, slow end */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Exits: slow start, fast end */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* State changes */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Standard */
+  --ease-standard: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.modal-enter { animation: fadeIn 250ms var(--ease-out); }
+.modal-exit { animation: fadeOut 200ms var(--ease-in); }
+button:hover { transition: all 150ms var(--ease-standard); }
+```
+
+## 7.3 Reduced Motion Support
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+```
+
+---
+
+# PART 8: AVOIDING AI-GENERIC DESIGN
+
+## 8.1 Anti-Patterns to Avoid
+
+### Blue/Purple Gradients
+
+```css
+/* ❌ AI-GENERIC */
+.hero { background: linear-gradient(135deg, #667eea, #764ba2); }
+
+/* ✅ DISTINCTIVE */
+.hero { background: var(--brand-primary); }
+```
+
+### Excessive Rounding
+
+```css
+/* ❌ AI-GENERIC */
+* { border-radius: 12px; }
+
+/* ✅ DISTINCTIVE - Strategic rounding */
+.card { border-radius: 8px; }
+.button { border-radius: 6px; }
+.badge { border-radius: 16px; }
+.input { border-radius: 4px; }
+```
+
+### Safe Sans-Serif Only
+
+```css
+/* ❌ AI-GENERIC */
+body { font-family: -apple-system, sans-serif; }
+
+/* ✅ DISTINCTIVE */
+:root {
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+}
+```
+
+## 8.2 Creating Distinctive Aesthetics
+
+```css
+:root {
+  /* Brand-named colors, not generic "primary" */
+  --color-ocean: #0891B2;
+  --color-sunset: #F59E0B;
+  --color-forest: #10B981;
+
+  /* Intentional radius strategy */
+  --radius-sm: 4px;
+  --radius-brand: 6px;
+  --radius-lg: 8px;
+}
+
+/* Distinctive hover */
+.btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+```
+
+---
+
+# PART 9: IMPLEMENTATION WORKFLOWS
+
+## 9.1 Design Token Migration
 
 ```bash
-# Create descriptive branch
-git checkout -b ui/design-system-fixes
-# or
-git checkout -b ui/accessibility-improvements
-# or
-git checkout -b ui/button-consolidation
+# Find hardcoded colors
+grep -rn "color: #\|background: #" src/components --include="*.vue"
+
+# Find hardcoded spacing
+grep -rn "padding: [0-9]\|margin: [0-9]" src/components --include="*.vue"
 ```
 
-### 2. Implement in Priority Order
-
-**Phase 1: Critical Fixes (Week 1)**
-- Theme breaks (white cards in dark app)
-- Accessibility violations (ARIA labels, focus indicators)
-- Primary color standardization
-
-**Phase 2: High Priority (Week 2)**
-- Button consolidation (use BaseButton everywhere)
-- Design token migration (colors, spacing, typography)
-- Composition fixes (alignment, spacing rhythm)
-
-**Phase 3: Medium Priority (Week 3-4)**
-- Visual hierarchy improvements
-- Typography system enforcement
-- Grid system implementation
-
-### 3. Test After Each Change
-
-**Mandatory Testing:**
-- Visual verification in browser
-- Test both light and dark themes
-- Test all component states (hover, focus, active, disabled)
-- Verify accessibility with keyboard navigation
-- Check responsive behavior
-
-### 4. Document What Changed
-
-**Create changelog:**
-- List all files modified
-- Note what was changed and why
-- Reference audit report section
-- Screenshot before/after if visual change
-
----
-
-## Implementation Workflows
-
-### Workflow 1: Design Token Migration
-
-**Goal:** Replace hardcoded values with design tokens
-
-**Process:**
-
-1. **Identify Target Files**
-   ```bash
-   # Find hardcoded colors
-   grep -rn "color: #\|background: #\|border.*#" src/components --include="*.vue"
-
-   # Find hardcoded spacing
-   grep -rn "padding: [0-9]\|margin: [0-9]" src/components --include="*.vue"
-
-   # Find hardcoded font sizes
-   grep -rn "font-size: [0-9]" src/components --include="*.vue"
-   ```
-
-2. **Create Mapping Spreadsheet**
-   ```
-   Hardcoded Value → Design Token
-   #4ECDC4 → var(--brand-primary)
-   #000 → var(--surface-elevated)
-   padding: 12px 24px → padding: var(--space-3) var(--space-6)
-   font-size: 14px → font-size: var(--font-size-sm)
-   ```
-
-3. **Implement Systematically**
-   ```vue
-   <!-- BEFORE -->
-   <style scoped>
-   .button {
-     color: #4ECDC4;
-     background: #000;
-     padding: 12px 24px;
-     font-size: 14px;
-   }
-   </style>
-
-   <!-- AFTER -->
-   <style scoped>
-   .button {
-     color: var(--brand-primary);
-     background: var(--surface-elevated);
-     padding: var(--space-3) var(--space-6);
-     font-size: var(--font-size-sm);
-   }
-   </style>
-   ```
-
-4. **Verify in Browser**
-   - Check color matches expected
-   - Verify spacing looks correct
-   - Test theme switching (if applicable)
-
----
-
-### Workflow 2: Button Consolidation
-
-**Goal:** Replace all button variants with BaseButton component
-
-**Process:**
-
-1. **Audit Current Button Usage**
-   ```bash
-   # Find all button implementations
-   grep -rn "<button" src/components --include="*.vue" | wc -l
-
-   # Find BaseButton usage
-   grep -rn "BaseButton" src/components --include="*.vue" | wc -l
-   ```
-
-2. **Identify Button Patterns**
-   - List all custom button classes
-   - Document what each pattern does
-   - Map to BaseButton variants
-
-3. **Create Migration Plan**
-   ```
-   Custom Pattern → BaseButton Equivalent
-   .menu-icon-button → <BaseIconButton variant="ghost" size="sm">
-   .bulk-menu-item → <BaseButton variant="secondary" size="sm">
-   .btn-secondary → <BaseButton variant="secondary">
-   .cancel-btn → <BaseButton variant="ghost">
-   ```
-
-4. **Implement Component by Component**
-   ```vue
-   <!-- BEFORE -->
-   <template>
-     <button class="menu-icon-button" @click="handleClick">
-       <TrashIcon />
-     </button>
-   </template>
-
-   <!-- AFTER -->
-   <template>
-     <BaseIconButton
-       variant="ghost"
-       size="sm"
-       aria-label="Delete item"
-       @click="handleClick"
-     >
-       <TrashIcon />
-     </BaseIconButton>
-   </template>
-
-   <script setup>
-   import BaseIconButton from '@/components/base/BaseIconButton.vue'
-   import TrashIcon from '@/components/icons/TrashIcon.vue'
-   </script>
-   ```
-
-5. **Remove Old CSS**
-   - Delete custom button classes after migration
-   - Keep design tokens only
-
----
-
-### Workflow 3: Accessibility Improvements
-
-**Goal:** Add ARIA labels and focus indicators to all interactive elements
-
-**Process:**
-
-1. **Find Missing ARIA Labels**
-   ```bash
-   # Find buttons without aria-label
-   grep -rn "<button" src/components --include="*.vue" | grep -v "aria-label"
-   ```
-
-2. **Create ARIA Label Mapping**
-   ```
-   Button Purpose → ARIA Label
-   <TrashIcon /> → "Delete task"
-   <EditIcon /> → "Edit task"
-   <CloseIcon /> → "Close modal"
-   <SettingsIcon /> → "Open settings"
-   ```
-
-3. **Add ARIA Labels Systematically**
-   ```vue
-   <!-- Icon-only buttons MUST have aria-label -->
-   <BaseIconButton
-     aria-label="Delete task"
-     @click="deleteTask"
-   >
-     <TrashIcon />
-   </BaseIconButton>
-
-   <!-- Buttons with text don't need aria-label -->
-   <BaseButton @click="save">
-     Save Changes
-   </BaseButton>
-
-   <!-- Decorative icons should be aria-hidden -->
-   <BaseButton @click="save">
-     <CheckIcon aria-hidden="true" />
-     Save Changes
-   </BaseButton>
-   ```
-
-4. **Fix Focus Indicators**
-   ```vue
-   <!-- BEFORE: Removes focus outline -->
-   <style>
-   button:focus {
-     outline: none;
-   }
-   </style>
-
-   <!-- AFTER: Custom focus-visible indicator -->
-   <style>
-   button:focus-visible {
-     outline: 2px solid var(--brand-primary);
-     outline-offset: 2px;
-     box-shadow: var(--purple-glow-focus);
-   }
-   </style>
-   ```
-
-5. **Test with Keyboard**
-   - Tab through all interactive elements
-   - Verify focus indicators are visible
-   - Test Enter/Space activation
-   - Verify screen reader announcements (if possible)
-
----
-
-### Workflow 4: Visual Consistency (Reference Design)
-
-**Goal:** Match a reference design across all views
-
-**Process:**
-
-1. **Analyze Reference Design**
-   - Document colors used (exact hex values)
-   - Measure spacing between elements
-   - Note border radius, shadows, fonts
-   - Identify button styles, card styles, modal styles
-
-2. **Update Design Tokens to Match**
-   ```css
-   /* src/assets/design-tokens.css */
-
-   /* Update colors to match reference */
-   --brand-primary: #4ECDC4; /* Teal from reference */
-   --surface-elevated: #252a3e; /* Dark background from reference */
-
-   /* Update spacing to match reference */
-   --space-3: 0.75rem; /* 12px - button padding */
-   --space-6: 1.5rem; /* 24px - modal padding */
-
-   /* Update border radius to match reference */
-   --radius-md: 8px; /* Rounded corners from reference */
-   ```
-
-3. **Update BaseButton to Match Reference**
-   ```vue
-   <style scoped>
-   .base-button {
-     /* Match reference design */
-     padding: var(--space-3) var(--space-6);
-     border-radius: var(--radius-md);
-     background: var(--brand-primary);
-     color: white;
-     font-size: var(--font-size-sm);
-     font-weight: 500;
-
-     /* Match hover state from reference */
-     transition: all 0.2s ease;
-   }
-
-   .base-button:hover {
-     background: var(--brand-primary-hover);
-     transform: translateY(-1px);
-     box-shadow: var(--shadow-md);
-   }
-   </style>
-   ```
-
-4. **Apply to All Components**
-   - Update modals to match reference
-   - Update cards to match reference
-   - Update form inputs to match reference
-   - Verify consistency across all views
-
-5. **Screenshot Comparison**
-   - Take screenshots of each view
-   - Compare side-by-side with reference
-   - Adjust until match is exact
-
----
-
-### Workflow 5: Composition & Alignment Fixes
-
-**Goal:** Align elements to grid, fix spacing rhythm, improve visual balance
-
-**Process:**
-
-1. **Fix Toolbar Button Alignment**
-   ```vue
-   <!-- BEFORE: Inconsistent button sizes -->
-   <style>
-   .toolbar-button {
-     width: 32px; /* Some 32px */
-     height: 32px;
-   }
-   .toolbar-button-large {
-     width: 40px; /* Some 40px */
-     height: 40px;
-   }
-   </style>
-
-   <!-- AFTER: Consistent sizing -->
-   <style>
-   .toolbar-button {
-     width: 40px; /* All same size */
-     height: 40px;
-     padding: var(--space-2);
-   }
-   </style>
-   ```
-
-2. **Fix Spacing Rhythm**
-   ```vue
-   <!-- BEFORE: Random spacing -->
-   <style>
-   .section-header {
-     margin-bottom: 13px; /* Not on 8px grid */
-   }
-   .card-content {
-     padding: 15px; /* Not on 8px grid */
-   }
-   </style>
-
-   <!-- AFTER: 8px grid alignment -->
-   <style>
-   .section-header {
-     margin-bottom: var(--space-4); /* 16px */
-   }
-   .card-content {
-     padding: var(--space-4); /* 16px */
-   }
-   </style>
-   ```
-
-3. **Fix Modal Centering**
-   ```vue
-   <!-- BEFORE: Centered by eye -->
-   <style>
-   .modal {
-     position: fixed;
-     top: 50%;
-     left: 50%;
-     transform: translate(-50%, -50%);
-   }
-   </style>
-
-   <!-- AFTER: Grid-based centering -->
-   <style>
-   .modal {
-     position: fixed;
-     top: 50%;
-     left: 50%;
-     transform: translate(-50%, -50%);
-     max-width: calc(100% - var(--space-8) * 2); /* 32px margin */
-     width: 600px; /* Standard modal width */
-   }
-   </style>
-   ```
-
-4. **Verify with Grid Overlay**
-   - Add grid overlay in development
-   - Check elements snap to grid lines
-   - Adjust until properly aligned
-
----
-
-### Workflow 6: Theme Consistency Fix
-
-**Goal:** Ensure all components respect theme (dark/light)
-
-**Process:**
-
-1. **Identify Theme Breaks**
-   ```bash
-   # Find hardcoded white backgrounds
-   grep -rn "background.*white\|background.*#fff" src/components --include="*.vue"
-
-   # Find hardcoded black text
-   grep -rn "color.*black\|color.*#000" src/components --include="*.vue"
-   ```
-
-2. **Replace with Theme Tokens**
-   ```vue
-   <!-- BEFORE: Breaks in dark theme -->
-   <style>
-   .card {
-     background: white;
-     color: black;
-   }
-   </style>
-
-   <!-- AFTER: Respects theme -->
-   <style>
-   .card {
-     background: var(--surface-elevated);
-     color: var(--text-primary);
-   }
-   </style>
-   ```
-
-3. **Test Both Themes**
-   - Switch to light theme → verify readability
-   - Switch to dark theme → verify no white cards
-   - Check all states (hover, active, disabled)
-
----
-
-## Common Implementation Patterns
-
-### Pattern 1: Standardize Button Styles
-
 ```vue
-<template>
-  <!-- Primary action -->
-  <BaseButton variant="primary" size="lg" @click="submit">
-    Create Task
-  </BaseButton>
-
-  <!-- Secondary action -->
-  <BaseButton variant="secondary" size="md" @click="cancel">
-    Cancel
-  </BaseButton>
-
-  <!-- Tertiary action -->
-  <BaseButton variant="ghost" size="sm" @click="reset">
-    Reset
-  </BaseButton>
-
-  <!-- Danger action -->
-  <BaseButton variant="danger" size="md" @click="deleteTask">
-    Delete
-  </BaseButton>
-
-  <!-- Icon-only button -->
-  <BaseIconButton variant="ghost" size="sm" aria-label="Close modal" @click="close">
-    <XIcon />
-  </BaseIconButton>
-</template>
-```
-
-### Pattern 2: Standardize Card Styles
-
-```vue
-<template>
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">Card Title</h3>
-    </div>
-    <div class="card-content">
-      <!-- Content here -->
-    </div>
-    <div class="card-actions">
-      <BaseButton variant="primary">Action</BaseButton>
-    </div>
-  </div>
-</template>
-
+<!-- BEFORE -->
 <style scoped>
+.button {
+  color: #4ECDC4;
+  background: #000;
+  padding: 12px 24px;
+}
+</style>
+
+<!-- AFTER -->
+<style scoped>
+.button {
+  color: var(--brand-primary);
+  background: var(--surface-elevated);
+  padding: var(--space-3) var(--space-6);
+}
+</style>
+```
+
+## 9.2 Button Consolidation
+
+```vue
+<!-- BEFORE -->
+<button class="menu-icon-button" @click="handleClick">
+  <TrashIcon />
+</button>
+
+<!-- AFTER -->
+<BaseIconButton
+  variant="ghost"
+  size="sm"
+  aria-label="Delete item"
+  @click="handleClick"
+>
+  <TrashIcon />
+</BaseIconButton>
+```
+
+## 9.3 Accessibility Implementation
+
+```bash
+# Find buttons without aria-label
+grep -rn "<button" src/components --include="*.vue" | grep -v "aria-label"
+```
+
+```vue
+<!-- Icon-only buttons MUST have aria-label -->
+<BaseIconButton aria-label="Delete task" @click="deleteTask">
+  <TrashIcon />
+</BaseIconButton>
+
+<!-- Decorative icons should be aria-hidden -->
+<BaseButton @click="save">
+  <CheckIcon aria-hidden="true" />
+  Save Changes
+</BaseButton>
+```
+
+## 9.4 Theme Consistency
+
+```bash
+# Find hardcoded white backgrounds
+grep -rn "background.*white\|background.*#fff" src/components --include="*.vue"
+```
+
+```vue
+<!-- BEFORE: Breaks in dark theme -->
+<style>
+.card { background: white; color: black; }
+</style>
+
+<!-- AFTER: Respects theme -->
+<style>
 .card {
   background: var(--surface-elevated);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-sm);
-}
-
-.card-header {
-  margin-bottom: var(--space-4);
-}
-
-.card-title {
-  font-size: var(--font-size-xl);
-  font-weight: 600;
   color: var(--text-primary);
-  margin: 0;
-}
-
-.card-content {
-  margin-bottom: var(--space-6);
-}
-
-.card-actions {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: flex-end;
-}
-</style>
-```
-
-### Pattern 3: Standardize Modal Styles
-
-```vue
-<template>
-  <BaseModal :show="isOpen" @close="close">
-    <template #header>
-      <h2 class="modal-title">Modal Title</h2>
-    </template>
-
-    <template #default>
-      <div class="modal-content">
-        <!-- Content here -->
-      </div>
-    </template>
-
-    <template #footer>
-      <div class="modal-actions">
-        <BaseButton variant="ghost" @click="close">
-          Cancel
-        </BaseButton>
-        <BaseButton variant="primary" @click="submit">
-          Confirm
-        </BaseButton>
-      </div>
-    </template>
-  </BaseModal>
-</template>
-
-<style scoped>
-.modal-title {
-  font-size: var(--font-size-2xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.modal-content {
-  padding: var(--space-6) 0;
-}
-
-.modal-actions {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: flex-end;
-}
-</style>
-```
-
-### Pattern 4: Standardize Form Input Styles
-
-```vue
-<template>
-  <div class="form-field">
-    <label class="form-label" :for="inputId">
-      {{ label }}
-      <span v-if="required" class="required-indicator">*</span>
-    </label>
-    <BaseInput
-      :id="inputId"
-      v-model="modelValue"
-      :placeholder="placeholder"
-      :disabled="disabled"
-      :aria-required="required"
-      :aria-describedby="errorId"
-    />
-    <span v-if="error" :id="errorId" class="form-error">
-      {{ error }}
-    </span>
-  </div>
-</template>
-
-<style scoped>
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.form-label {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.required-indicator {
-  color: var(--status-error);
-}
-
-.form-error {
-  font-size: var(--font-size-xs);
-  color: var(--status-error);
 }
 </style>
 ```
 
 ---
 
-## Quality Checklist
+# PART 10: QUALITY CHECKLISTS
 
-Before marking implementation complete, verify:
+## Color Checklist
 
-### Design Token Compliance
-- [ ] No hardcoded colors (all use var(--*))
-- [ ] No hardcoded spacing (all use var(--space-*))
-- [ ] No hardcoded font sizes (all use var(--font-size-*))
-- [ ] All border radius uses var(--radius-*)
-- [ ] All shadows use var(--shadow-*)
+- [ ] Primary color chosen with brand intention
+- [ ] Accent colors from color wheel (complementary/triadic)
+- [ ] 60-30-10 rule applied
+- [ ] WCAG AA contrast verified (4.5:1 normal, 3:1 large)
+- [ ] Dark mode uses same hue, adjusted S/L
 
-### Component Consistency
-- [ ] All buttons use BaseButton or BaseIconButton
-- [ ] All modals use BaseModal
-- [ ] All inputs use BaseInput
-- [ ] No duplicate component implementations
-- [ ] Consistent prop naming across components
+## Typography Checklist
 
-### Accessibility
-- [ ] All icon-only buttons have aria-label
-- [ ] All form inputs have associated labels
-- [ ] All interactive elements show focus indicators
-- [ ] No outline: none without replacement
-- [ ] Keyboard navigation works everywhere
-- [ ] Color contrast meets WCAG 2.1 AA (4.5:1)
+- [ ] Type scale ratio chosen (1.25 recommended)
+- [ ] Fluid sizing with clamp()
+- [ ] Line heights: 1.5-1.7 body, 1.1-1.3 headings
+- [ ] Line length: 65ch max
+- [ ] Font weights: 400, 600, 700 only
 
-### Visual Consistency
-- [ ] Same button styles across all views
-- [ ] Same card styles across all views
-- [ ] Same modal styles across all views
-- [ ] Consistent spacing rhythm (8px grid)
-- [ ] Consistent typography hierarchy
+## Spacing Checklist
 
-### Theme Support
-- [ ] Works in dark theme
-- [ ] Works in light theme
-- [ ] No hardcoded black or white
-- [ ] Theme switching doesn't break layout
+- [ ] 8-point grid implemented
+- [ ] Semantic tokens defined
+- [ ] Related items < 16px, unrelated > 24px
+- [ ] Vertical rhythm maintained
 
-### Composition & Alignment
-- [ ] Elements align to grid
-- [ ] Spacing uses 8px multiples
-- [ ] Visual balance is good
-- [ ] No ragged edges on button groups
-- [ ] Modals are properly centered
+## Layout Checklist
 
----
+- [ ] Golden ratio where appropriate
+- [ ] 12-column grid for responsive
+- [ ] Container widths: sm/md/lg/xl
+- [ ] Whitespace used strategically
 
-## Testing Workflow
+## Accessibility Checklist (WCAG 2.2 AA)
 
-### 1. Visual Testing
+- [ ] Focus indicators: 2px, 3:1 contrast
+- [ ] Touch targets: ≥24px (44px recommended)
+- [ ] Keyboard navigation complete
+- [ ] Color not only indicator
+- [ ] Contrast: 4.5:1 normal text
+- [ ] Help consistent across pages
+- [ ] No CAPTCHA-only auth
+- [ ] Dragging has alternatives
+- [ ] prefers-reduced-motion respected
 
-```bash
-# Start dev server
-npm run dev
+## Animation Checklist
 
-# Open browser to localhost:5546
-# Test each view:
-# - Board view
-# - Calendar view
-# - Canvas view
-# - All Tasks view
-```
+- [ ] Timing: 100-500ms appropriate
+- [ ] Easing: ease-out for entrances
+- [ ] prefers-reduced-motion supported
+- [ ] Animations serve purpose
 
-**Check:**
-- Does it match reference design?
-- Are all buttons consistent?
-- Is spacing rhythm consistent?
-- Do colors match design tokens?
+## Distinctiveness Checklist
 
-### 2. Theme Testing
-
-```bash
-# Toggle theme in app
-# Verify:
-# - No white cards in dark theme
-# - No black text in light theme
-# - All elements respect theme
-# - Contrast is good in both themes
-```
-
-### 3. Accessibility Testing
-
-```bash
-# Keyboard test:
-# - Tab through all interactive elements
-# - Verify focus indicators visible
-# - Test Enter/Space activation
-
-# Screen reader test (if possible):
-# - Verify ARIA labels are announced
-# - Check form input labels
-# - Verify button purposes clear
-```
-
-### 4. Responsive Testing
-
-```bash
-# Test at different screen sizes:
-# - 1920x1080 (desktop)
-# - 1366x768 (laptop)
-# - 768x1024 (tablet)
-# - 375x667 (mobile)
-```
-
-### 5. Component State Testing
-
-**Test all states:**
-- Default
-- Hover
-- Focus
-- Active
-- Disabled
-- Loading (if applicable)
-- Error (if applicable)
-
----
-
-## Rollback Strategy
-
-If implementation doesn't look right:
-
-```bash
-# See what changed
-git diff main
-
-# If need to revert
-git checkout main
-git branch -D ui/design-system-fixes
-
-# Start over with different approach
-git checkout -b ui/design-system-fixes-v2
-```
-
-**Always save screenshots before major changes:**
-
-```bash
-# Create screenshots directory
-mkdir -p docs/screenshots/before
-mkdir -p docs/screenshots/after
-
-# Document what you're changing
-# Take before screenshots
-# Implement changes
-# Take after screenshots
-# Compare side-by-side
-```
-
----
-
-## Implementation Time Estimates
-
-### Quick Fixes (< 1 hour)
-- Fix single component theme break
-- Add ARIA labels to one view
-- Standardize button sizing in one component
-
-### Small Tasks (1-3 hours)
-- Migrate one component to design tokens
-- Consolidate buttons in one view
-- Fix spacing rhythm in one section
-
-### Medium Tasks (3-8 hours)
-- Migrate all components in one view to design tokens
-- Consolidate all buttons across app
-- Fix composition issues across all views
-
-### Large Tasks (8-20 hours)
-- Complete design token migration (all components)
-- Complete button consolidation (all views)
-- Complete accessibility overhaul
-
----
-
-## Success Metrics
-
-**Implementation is successful when:**
-
-1. **Visual Consistency Score** increases to 90%+
-2. **Design Token Adoption** increases to 90%+
-3. **Accessibility Score** reaches 100% (WCAG 2.1 AA)
-4. **Component Consistency** reaches 95%+
-5. **User feedback** confirms improved UX
-
-**Measure with:**
-- Re-run UI/UX audit
-- Compare before/after scores
-- Visual regression tests
-- User testing feedback
-
----
-
-## Example Implementation Session
-
-**Goal:** Fix Settings Modal to match reference design
-
-**Reference:** image copy 9.png (teal buttons, glass morphism, dark theme)
-
-**Steps:**
-
-1. **Create branch**
-   ```bash
-   git checkout -b ui/settings-modal-redesign
-   ```
-
-2. **Analyze reference**
-   - Teal buttons (#4ECDC4)
-   - 8px border radius
-   - 12px 24px button padding
-   - Glass morphism background
-   - 24px modal padding
-
-3. **Update design tokens** (if needed)
-   ```css
-   --brand-primary: #4ECDC4;
-   --radius-md: 8px;
-   ```
-
-4. **Update SettingsModal.vue**
-   - Replace custom buttons with BaseButton
-   - Add variant="primary" for action buttons
-   - Use design tokens for spacing
-   - Ensure glass morphism background
-
-5. **Test**
-   - Visual check in browser
-   - Compare with reference
-   - Test theme switching
-   - Test keyboard navigation
-
-6. **Commit**
-   ```bash
-   git add src/components/SettingsModal.vue
-   git commit -m "feat(ui): redesign Settings modal to match reference design
-
-   - Replace custom buttons with BaseButton
-   - Use teal primary color consistently
-   - Apply glass morphism background
-   - Standardize spacing with design tokens
-   - Add ARIA labels to all buttons"
-   ```
-
-7. **Screenshot comparison**
-   - Save before/after screenshots
-   - Document in PR
-
----
-
-**Skill Activation Keywords:**
-- implement UI fixes, apply design system, fix accessibility
-- consolidate buttons, migrate to design tokens
-- match reference design, standardize components
-- fix theme break, improve visual consistency
-- align to grid, fix spacing rhythm
-
-**Skill Context:**
-- Vue 3 components
-- Design system implementation
-- CSS/styling improvements
-- Accessibility compliance
-- Component refactoring
+- [ ] Brand colors intentional (not generic blue)
+- [ ] Rounding strategic (not 12px everywhere)
+- [ ] Typography has personality
+- [ ] Hover states distinctive
+- [ ] No AI-generic patterns
 
 ---
 
 ## MANDATORY USER VERIFICATION REQUIREMENT
 
-### Policy: No Fix Claims Without User Confirmation
+**CRITICAL**: Before claiming ANY issue is "fixed" or "complete":
 
-**CRITICAL**: Before claiming ANY issue, bug, or problem is "fixed", "resolved", "working", or "complete", the following verification protocol is MANDATORY:
+1. **Technical Verification**: Run tests, verify no console errors
+2. **Ask User**: Use `AskUserQuestion` to request verification
+3. **Wait for Confirmation**: Do NOT claim success until user confirms
 
-#### Step 1: Technical Verification
-- Run all relevant tests (build, type-check, unit tests)
-- Verify no console errors
-- Take screenshots/evidence of the fix
+**Remember: The user is the final authority on whether something is fixed.**
 
-#### Step 2: User Verification Request
-**REQUIRED**: Use the `AskUserQuestion` tool to explicitly ask the user to verify the fix:
+---
 
-```
-"I've implemented [description of fix]. Before I mark this as complete, please verify:
-1. [Specific thing to check #1]
-2. [Specific thing to check #2]
-3. Does this fix the issue you were experiencing?
+**Skill Keywords:** UI design, UX, color theory, typography, spacing, layout, grid, accessibility, WCAG 2.2, animation, design tokens, visual hierarchy, Gestalt
 
-Please confirm the fix works as expected, or let me know what's still not working."
-```
+**Standards:** WCAG 2.2 (June 2024), Material Design 3, Apple HIG
 
-#### Step 3: Wait for User Confirmation
-- **DO NOT** proceed with claims of success until user responds
-- **DO NOT** mark tasks as "completed" without user confirmation
-- **DO NOT** use phrases like "fixed", "resolved", "working" without user verification
-
-#### Step 4: Handle User Feedback
-- If user confirms: Document the fix and mark as complete
-- If user reports issues: Continue debugging, repeat verification cycle
-
-### Prohibited Actions (Without User Verification)
-- Claiming a bug is "fixed"
-- Stating functionality is "working"
-- Marking issues as "resolved"
-- Declaring features as "complete"
-- Any success claims about fixes
-
-### Required Evidence Before User Verification Request
-1. Technical tests passing
-2. Visual confirmation via Playwright/screenshots
-3. Specific test scenarios executed
-4. Clear description of what was changed
-
-**Remember: The user is the final authority on whether something is fixed. No exceptions.**
+**Last Updated:** January 2026

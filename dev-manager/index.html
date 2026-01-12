@@ -33,6 +33,7 @@
             --color-docs: #8b5cf6;
             --color-stats: #06b6d4;
             --color-timeline: #ef4444; /* Locks red */
+            --color-health: #22c55e;   /* Health green */
 
             /* Transitions */
             --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -147,6 +148,7 @@
         .tab.active.docs::after { background: var(--color-docs); box-shadow: 0 0 8px var(--color-docs); }
         .tab.active.stats::after { background: var(--color-stats); box-shadow: 0 0 8px var(--color-stats); }
         .tab.active.timeline::after { background: var(--color-timeline); box-shadow: 0 0 8px var(--color-timeline); }
+        .tab.active.health::after { background: var(--color-health); box-shadow: 0 0 8px var(--color-health); }
 
         .tab .icon {
             width: 18px;
@@ -189,6 +191,11 @@
         .tab.timeline:hover .icon svg,
         .tab.timeline.active .icon svg {
             stroke: var(--color-timeline);
+        }
+
+        .tab.health:hover .icon svg,
+        .tab.health.active .icon svg {
+            stroke: var(--color-health);
         }
 
         .spacer {
@@ -305,6 +312,14 @@
                 </span>
                 <span>Deps & Locks</span>
             </button>
+            <button class="tab health" data-panel="health">
+                <span class="icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                </span>
+                <span>Health</span>
+            </button>
         </nav>
 
         <div class="spacer"></div>
@@ -337,6 +352,10 @@
         <div id="timeline" class="panel">
             <!-- Lazy load: src set on first tab activation -->
             <iframe data-src="timeline/index.html" title="Dependencies & Locks"></iframe>
+        </div>
+        <div id="health" class="panel">
+            <!-- Lazy load: src set on first tab activation -->
+            <iframe data-src="health/index.html" title="Health Dashboard"></iframe>
         </div>
     </main>
 

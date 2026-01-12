@@ -4,6 +4,7 @@ import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
+import { CanvasIds } from '@/utils/canvas/canvasIds'
 
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
@@ -113,6 +114,11 @@ export function useCanvasEvents(syncNodes?: () => void) {
             return
         }
         event.preventDefault()
+
+        // BUG-228 FIX: Explicitly clear any stale section context
+        // so we don't accidentally open a group menu
+        canvasContextSection.value = null
+
         canvasContextMenuX.value = event.clientX
         canvasContextMenuY.value = event.clientY
         showCanvasContextMenu.value = true
@@ -211,7 +217,7 @@ export function useCanvasEvents(syncNodes?: () => void) {
             closeAllContextMenus()
         } else if (node.type === 'sectionNode') {
             // Bridge to CanvasContextMenu with Section context
-            const sectionId = node.id.replace('section-', '')
+            const { id: sectionId } = CanvasIds.parseNodeId(node.id)
             const section = canvasStore.groups.find(s => s.id === sectionId)
 
             canvasContextMenuX.value = clientX

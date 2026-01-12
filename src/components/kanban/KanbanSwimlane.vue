@@ -147,11 +147,11 @@ const { isDragging, isScrolling } = useHorizontalDragScroll(scrollContainer, {
   touchEnabled: true
 })
 
-// Store local view type to respect user selection
-const localViewType = ref(props.project.viewType || 'status')
+// Store local view type to respect user selection (TASK-243: Default to priority)
+const localViewType = ref(props.project.viewType || 'priority')
 
-// Current view type
-const currentViewType = computed(() => localViewType.value || props.project.viewType || 'status')
+// Current view type (TASK-243: Default to priority view instead of status)
+const currentViewType = computed(() => localViewType.value || props.project.viewType || 'priority')
 
 // Column definitions
 const statusColumns = computed(() => {

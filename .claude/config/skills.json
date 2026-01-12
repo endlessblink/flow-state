@@ -187,6 +187,47 @@
         "arch-architect"
       ],
       "description": "Unified dead code detection and cleanup tool combining Knip, depcheck, TypeScript, and Vue-specific analysis."
+    },
+    "frontend-layout-fixer": {
+      "name": "Frontend Layout Fixer",
+      "category": "fix",
+      "triggers": [
+        "layout",
+        "clipping",
+        "overflow",
+        "spacing",
+        "rtl",
+        "text clipped",
+        "accessibility",
+        "a11y",
+        "wcag",
+        "contrast",
+        "performance",
+        "cls",
+        "lcp",
+        "fcp",
+        "lighthouse",
+        "event handler",
+        "click not working"
+      ],
+      "keywords": [
+        "layout",
+        "css",
+        "fix",
+        "clipping",
+        "overflow",
+        "accessibility",
+        "performance",
+        "javascript",
+        "debug"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "dev-frontend-master",
+        "dev-bug-fixer"
+      ],
+      "description": "Comprehensive frontend debugging toolkit: fix layout issues (clipping, spacing, overflow), accessibility (WCAG), JavaScript bugs, and performance (Core Web Vitals)."
     }
   },
   "categories": {

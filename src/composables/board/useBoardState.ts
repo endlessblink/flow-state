@@ -54,12 +54,10 @@ export function useBoardState(deps: BoardStateDependencies) {
             return tasksInProject.length > 0
         })
 
-        // Add virtual "Uncategorized" project if there are uncategorized tasks
-        const hasUncategorizedTasks = taskStore.filteredTasks.some(
-            t => !t.projectId || t.projectId === 'uncategorized'
-        )
-
-        if (hasUncategorizedTasks) {
+        // Add virtual "Uncategorized" project only if there are VISIBLE uncategorized tasks
+        // TASK-243: Use tasksByProject which already applies hideDoneTasks filter
+        const uncategorizedTasks = tasksByProject.value['uncategorized'] || []
+        if (uncategorizedTasks.length > 0) {
             projects.push({
                 id: 'uncategorized',
                 name: 'Uncategorized',

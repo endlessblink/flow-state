@@ -25,12 +25,11 @@ defineEmits<{
 <style scoped>
 .canvas-empty-state {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 1.5rem;
   z-index: 10;
   pointer-events: none; /* Allow clicking through to canvas if needed, but button needs pointer-events auto */

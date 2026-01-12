@@ -363,13 +363,32 @@ export const useCanvasStore = defineStore('canvas', () => {
   const updateGroup = async (id: string, updates: Partial<CanvasGroup>) => {
     const index = _rawGroups.value.findIndex(g => g.id === id)
     if (index !== -1) {
+      const group = _rawGroups.value[index]
+
+      // DRIFT LOGGING: Track when parentGroupId or position is changed
+      // This helps identify non-drag flows that mutate hierarchy/positions
+      if ('parentGroupId' in updates && updates.parentGroupId !== group.parentGroupId) {
+        console.log(`📍 [GROUP-PARENT-WRITE] Group ${id.slice(0, 8)}... (${group.name}) parentGroupId: "${group.parentGroupId ?? 'none'}" → "${updates.parentGroupId ?? 'none'}"`, {
+          stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
+        })
+      }
+      if ('position' in updates && updates.position) {
+        const oldPos = group.position
+        const newPos = updates.position
+        if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
+          console.log(`📍 [GROUP-POSITION-WRITE] Group ${id.slice(0, 8)}... (${group.name}) pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? '?'},${newPos?.y?.toFixed(0) ?? '?'})`, {
+            stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
+          })
+        }
+      }
+
       // Apply normalizations if name is changing
       if (updates.name) {
         applySmartGroupNormalizations(updates)
       }
 
       // TASK-240: Handle position versioning
-      const currentVersion = _rawGroups.value[index].positionVersion || 0
+      const currentVersion = group.positionVersion || 0
       const newVersion = updates.position ? currentVersion + 1 : currentVersion
 
       _rawGroups.value[index] = {
@@ -950,56 +969,56 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // Watch for auth becoming ready
       watch(
-      () => [authStore.isInitialized, authStore.isAuthenticated],
-      async ([isInitialized, isAuthenticated], [, wasAuthenticated]) => {
-        // Only reload when:
-        // 1. Auth just became initialized (first load)
-        // 2. AND user is authenticated
-        // 3. AND groups were loaded from Guest Mode (localStorage)
-        if (isInitialized && isAuthenticated && !wasAuthenticated) {
+        () => [authStore.isInitialized, authStore.isAuthenticated],
+        async ([isInitialized, isAuthenticated], [, wasAuthenticated]) => {
+          // Only reload when:
+          // 1. Auth just became initialized (first load)
+          // 2. AND user is authenticated
+          // 3. AND groups were loaded from Guest Mode (localStorage)
+          if (isInitialized && isAuthenticated && !wasAuthenticated) {
 
-          // Force reload from Supabase (not localStorage)
-          try {
-            const loadedGroups = await fetchGroups()
+            // Force reload from Supabase (not localStorage)
+            try {
+              const loadedGroups = await fetchGroups()
 
-            // BUG-169 FIX: Safety guard - don't overwrite existing groups with empty array
-            // during the first 10 seconds of the session (prevents auth race conditions)
-            if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
-              const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
-              const timeSinceSessionStart = Date.now() - sessionStart
+              // BUG-169 FIX: Safety guard - don't overwrite existing groups with empty array
+              // during the first 10 seconds of the session (prevents auth race conditions)
+              if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
+                const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+                const timeSinceSessionStart = Date.now() - sessionStart
 
-              if (timeSinceSessionStart < 10000) {
-                console.warn(`🛡️ [AUTH-WATCHER] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost (session ${timeSinceSessionStart}ms old)`)
-                return
+                if (timeSinceSessionStart < 10000) {
+                  console.warn(`🛡️ [AUTH-WATCHER] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost (session ${timeSinceSessionStart}ms old)`)
+                  return
+                }
+
+                console.warn(`⚠️ [AUTH-WATCHER] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty`)
               }
 
-              console.warn(`⚠️ [AUTH-WATCHER] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty`)
+              // Break any parent cycles before loading
+              _rawGroups.value = breakGroupCycles(loadedGroups)
+
+              // Populate nodeVersionMap with loaded group versions for optimistic locking
+              // Defensive: ensure nodeVersionMap.value is a valid Map
+              if (!nodeVersionMap.value || !(nodeVersionMap.value instanceof Map)) {
+                nodeVersionMap.value = new Map()
+              }
+
+              // Always initialize version entries (default to 0 if positionVersion is undefined)
+              loadedGroups.forEach(g => {
+                nodeVersionMap.value.set(g.id, g.positionVersion ?? 0)
+              })
+
+              if (loadedGroups.length > 0) {
+                console.log(`📦 [AUTH-WATCHER] Reloaded ${loadedGroups.length} groups, ${nodeVersionMap.value.size} version entries`)
+              }
+            } catch (e) {
+              console.error('❌ [CANVAS] Failed to reload groups after auth:', e)
             }
-
-            // Break any parent cycles before loading
-            _rawGroups.value = breakGroupCycles(loadedGroups)
-
-            // Populate nodeVersionMap with loaded group versions for optimistic locking
-            // Defensive: ensure nodeVersionMap.value is a valid Map
-            if (!nodeVersionMap.value || !(nodeVersionMap.value instanceof Map)) {
-              nodeVersionMap.value = new Map()
-            }
-
-            // Always initialize version entries (default to 0 if positionVersion is undefined)
-            loadedGroups.forEach(g => {
-              nodeVersionMap.value.set(g.id, g.positionVersion ?? 0)
-            })
-
-            if (loadedGroups.length > 0) {
-              console.log(`📦 [AUTH-WATCHER] Reloaded ${loadedGroups.length} groups, ${nodeVersionMap.value.size} version entries`)
-            }
-          } catch (e) {
-            console.error('❌ [CANVAS] Failed to reload groups after auth:', e)
           }
-        }
-      },
-      { immediate: false }
-    )
+        },
+        { immediate: false }
+      )
     } catch (err) {
       console.error('[ASYNC-ERROR] canvas.ts: Failed to setup auth watcher', err)
     }
@@ -1038,7 +1057,23 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (g) await updateGroup(groupId, { isCollapsed: !g.isCollapsed })
   }
   const clearSelection = () => { selectedNodeIds.value = [] }
-  const requestSync = async () => { /* ... */ }
+  // DRIFT FIX: requestSync now requires a source to prevent automated sync loops
+  // Only user-action sources trigger actual sync
+  const USER_ACTION_SOURCES = [
+    'user:drag-drop', 'user:create', 'user:delete', 'user:undo', 'user:redo',
+    'user:resize', 'user:connect', 'user:context-menu', 'user:manual'
+  ] as const
+  type SyncSource = typeof USER_ACTION_SOURCES[number] | 'smart-group' | 'watcher' | 'reconcile' | 'auto' | 'unknown'
+
+  const requestSync = async (source: SyncSource = 'unknown') => {
+    const isUserAction = USER_ACTION_SOURCES.includes(source as typeof USER_ACTION_SOURCES[number])
+    if (isUserAction) {
+      syncTrigger.value++
+      console.log(`🔄 [CANVAS-STORE] Sync accepted from ${source} - syncTrigger:`, syncTrigger.value)
+    } else {
+      console.log(`⏭️ [CANVAS-STORE] Sync blocked from ${source} (not a user action)`)
+    }
+  }
   // Restored Selection methods
   const setSelectionMode = (mode: string) => { selectionMode.value = mode }
   const startSelection = (x: number, y: number) => { isSelecting.value = true; selectionRect.value = { x, y, width: 0, height: 0 } }

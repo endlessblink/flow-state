@@ -10,7 +10,7 @@
   >
     <component
       :is="statusIcon"
-      :size="14"
+      :size="12"
       :stroke-width="1.5"
       aria-hidden="true"
     />
@@ -61,14 +61,15 @@ const statusTooltip = computed(() => {
 
 <style scoped>
 .status-icon-button {
-  width: var(--task-card-icon-size, 24px);
-  height: var(--task-card-icon-size, 24px);
+  width: 18px;
+  height: 18px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-inline-start: 2px;
   margin-inline-end: var(--space-2);
   transition: all var(--duration-fast) ease;
   cursor: pointer;

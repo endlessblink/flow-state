@@ -456,10 +456,7 @@
     background-color: var(--accent-primary) !important;
 }
 
-.vue-flow__node[data-id^="section-"].resizing {
-    z-index: 50 !important;
-}
-
+/* z-index for resizing is now controlled by depth bonus in useCanvasSync.ts */
 .vue-flow__node[data-id^="section-"].resizing .section-node {
     box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3) !important;
     border-color: var(--accent-primary) !important;

@@ -189,7 +189,7 @@ const dueStatus = computed(() => {
   cursor: grab;
   user-select: none;
   transition: all 0.2s ease;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .task-card:hover {

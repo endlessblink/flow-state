@@ -271,7 +271,7 @@ const confirmMoveToSection = async (sectionId: string) => {
     }
 
     await taskStore.updateTaskWithUndo(task.id, updates)
-    canvasStore.requestSync()
+    canvasStore.requestSync('user:context-menu')
   }
 
   showSectionSelectionModal.value = false

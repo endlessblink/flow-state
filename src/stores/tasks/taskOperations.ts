@@ -36,11 +36,12 @@ export function useTaskOperations(
 
     // Helper to trigger canvas sync after task operations
     // This bypasses Vue's watch system which has timing issues in Tauri/WebKitGTK
-    const triggerCanvasSync = () => {
+    // DRIFT FIX: Now requires explicit source to prevent automated sync loops
+    const triggerCanvasSync = (source: 'user:create' | 'user:delete' | 'user:context-menu' = 'user:create') => {
         // Dynamic import to avoid circular dependency and context issues
         import('../canvas/canvasUi').then(({ useCanvasUiStore }) => {
             const canvasUiStore = useCanvasUiStore()
-            canvasUiStore.requestSync()
+            canvasUiStore.requestSync(source)
         }).catch(_e => {
             // Ignore if canvas store not available (e.g., in non-canvas views)
         })
@@ -129,6 +130,25 @@ export function useTaskOperations(
         try {
             const task = _rawTasks.value[index]
 
+            // DRIFT LOGGING: Track when parentId or canvasPosition is changed
+            // This helps identify non-drag flows that mutate hierarchy/positions
+            if ('parentId' in updates && updates.parentId !== task.parentId) {
+                console.log(`📍 [PARENT-WRITE] Task ${taskId.slice(0, 8)}... parentId: "${task.parentId ?? 'none'}" → "${updates.parentId ?? 'none'}"`, {
+                    taskTitle: task.title?.slice(0, 30),
+                    stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
+                })
+            }
+            if ('canvasPosition' in updates && updates.canvasPosition !== undefined) {
+                const oldPos = task.canvasPosition
+                const newPos = updates.canvasPosition
+                if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
+                    console.log(`📍 [POSITION-WRITE] Task ${taskId.slice(0, 8)}... pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? 'null'},${newPos?.y?.toFixed(0) ?? 'null'})`, {
+                        taskTitle: task.title?.slice(0, 30),
+                        stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
+                    })
+                }
+            }
+
             // BUG-045 FIX: Removed auto-archive behavior
             // Tasks now stay on canvas when marked as done (no position/inbox changes)
 
@@ -184,8 +204,11 @@ export function useTaskOperations(
             try {
                 await saveSpecificTasks([_rawTasks.value[index]], `updateTask-${taskId}`)
 
-                // Trigger canvas sync for Tauri reactivity
-                triggerCanvasSync()
+                // DRIFT FIX: REMOVED triggerCanvasSync() - this was causing sync loops!
+                // When Smart-Group applied properties → updateTask → triggerCanvasSync →
+                // syncNodes → Smart-Group applied again → infinite loop
+                // Canvas sync should ONLY happen on explicit user drag/drop actions,
+                // not on every task property update. Vue reactivity handles UI updates.
             } catch (error) {
                 console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
                 // Note: We don't rollback memory state here to preserve UX, relying on "last write wins" locally

@@ -34,7 +34,7 @@ interface HierarchicalGroup {
  * @param groups - Array of groups with id and optional parentGroupId
  * @returns Sorted array with root groups first, then depth 1, depth 2, etc.
  */
-function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): T[] {
+function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): Array<T & { _depth: number }> {
     // Helper to get depth (0 = root, 1 = direct child of root, etc.)
     const getDepth = (groupId: string, visited: Set<string> = new Set()): number => {
         const group = groups.find(g => g.id === groupId)
@@ -46,16 +46,16 @@ function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): T[] {
         return 1 + getDepth(group.parentGroupId, visited)
     }
 
-    // Calculate depth for each group and sort by depth (ascending)
+    // Calculate depth for each group
     const groupsWithDepth = groups.map(g => ({
-        group: g,
-        depth: getDepth(g.id)
+        ...g,
+        _depth: getDepth(g.id)
     }))
 
     // Sort by depth: root groups (depth 0) first, then children (depth 1), etc.
-    groupsWithDepth.sort((a, b) => a.depth - b.depth)
+    groupsWithDepth.sort((a, b) => a._depth - b._depth)
 
-    return groupsWithDepth.map(gwd => gwd.group)
+    return groupsWithDepth
 }
 
 // =============================================================================
@@ -119,7 +119,24 @@ export function useCanvasSync() {
     }
 
     /**
-     * Sync store data to canvas nodes
+     * Sync store data to canvas nodes (READ PATH)
+     *
+     * =========================================================================
+     * CRITICAL CONTRACT: READ-ONLY FOR POSITION/HIERARCHY DATA
+     * =========================================================================
+     * This function MUST NEVER write to:
+     *   - taskStore (task positions, parentId, any task data)
+     *   - canvasStore.groups (group positions, parentGroupId, any group data)
+     *
+     * ALLOWED writes:
+     *   - nodeVersionMap (optimistic locking metadata, not user data)
+     *   - Vue Flow nodes via setNodes() (display layer, not persistence)
+     *
+     * RATIONALE:
+     * Writing to stores from sync would create feedback loops:
+     *   Store changes → sync runs → sync writes to store → sync runs → ...
+     * This causes position drift and groups "merging back together".
+     * =========================================================================
      *
      * READ PATH FLOW:
      * 1. Read groups/tasks from store (absolute positions)
@@ -195,11 +212,17 @@ export function useCanvasSync() {
                 // Compute parentNode for hierarchy
                 const parentNodeId = parentId ? CanvasIds.groupNodeId(parentId) : undefined
 
+                // BUG-226 FIX: Apply depth-based zIndex bonus
+                // ensures child groups (higher depth) are always on top of parent groups
+                const depth = (group as any)._depth || 0
+                const zIndex = 11 + (depth * 10) // Base group Z is 10 (CANVAS.Z_INDEX_GROUP)
+
                 newNodes.push({
                     id: nodeId,
                     type: 'sectionNode',
                     position: displayPos,
                     parentNode: parentNodeId,
+                    zIndex, // Explicit zIndex bonus
                     // FIX: Removed extent: 'parent' so groups can be dragged OUT of their parent.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
                     // preventing groups from being detached via drag. Without it, groups can be
@@ -262,6 +285,8 @@ export function useCanvasSync() {
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })
 
                 // Determine parent node for Vue Flow
+                // DRIFT LOGGING: Track original parentId before any modifications
+                const originalParentId = task.parentId
                 let parentId = task.parentId && task.parentId !== 'NONE'
                     ? task.parentId
                     : null
@@ -274,7 +299,13 @@ export function useCanvasSync() {
 
                 // FIX: Only set parentNode if parent group is VISIBLE (will be rendered in Vue Flow)
                 // If parent group is hidden, treat task as root node
+                const parentWasVisible = parentId ? visibleGroupIds.has(parentId) : true
                 if (parentId && !visibleGroupIds.has(parentId)) {
+                    console.warn(`⚠️ [SYNC-PARENT-CLEARED] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) parent ${parentId?.slice(0, 8)} is NOT visible - treating as root`, {
+                        originalParentId,
+                        visibleGroupCount: visibleGroupIds.size,
+                        visibleGroupIds: Array.from(visibleGroupIds).map(id => id.slice(0, 8))
+                    })
                     parentId = null
                 }
 
@@ -319,12 +350,48 @@ export function useCanvasSync() {
                     // Check Dimensions (for groups)
                     if (nodeA.data?.width !== nodeB.data?.width ||
                         nodeA.data?.height !== nodeB.data?.height) return true
+
+                    // TASK-DATA REACTION: Check critical task properties
+                    // If these change, we MUST update the node even if position is same
+                    if (nodeA.type === 'taskNode' && nodeB.type === 'taskNode') {
+                        const taskA = nodeA.data?.task
+                        const taskB = nodeB.data?.task
+
+                        if (taskA && taskB) {
+                            if (taskA.status !== taskB.status) return true
+                            if (taskA.priority !== taskB.priority) return true
+                            if (taskA.dueDate !== taskB.dueDate) return true
+                            if (taskA.title !== taskB.title) return true
+                        }
+                    }
+
+                    // GROUP-DATA REACTION: Check group labels/colors
+                    if (nodeA.type === 'sectionNode' && nodeB.type === 'sectionNode') {
+                        if (nodeA.data?.label !== nodeB.data?.label ||
+                            nodeA.data?.color !== nodeB.data?.color ||
+                            nodeA.data?.collapsed !== nodeB.data?.collapsed) return true
+                    }
                 }
 
                 return false
             }
 
             if (isDifferent(newNodes, currentNodes)) {
+                // DRIFT LOGGING: Track when nodes change parent status
+                const taskNodesOld = currentNodes.filter(n => n.type === 'taskNode')
+                const taskNodesNew = newNodes.filter((n: any) => n.type === 'taskNode')
+
+                for (const newNode of taskNodesNew) {
+                    const oldNode = taskNodesOld.find((o: any) => o.id === newNode.id)
+                    if (oldNode && oldNode.parentNode !== newNode.parentNode) {
+                        console.warn(`🔀 [SYNC-PARENT-CHANGE] Task ${newNode.id.slice(0, 8)}... parentNode: "${oldNode.parentNode ?? 'root'}" → "${newNode.parentNode ?? 'root'}"`, {
+                            taskTitle: newNode.data?.label?.slice(0, 20),
+                            oldPosition: oldNode.position,
+                            newPosition: newNode.position
+                        })
+                    }
+                }
+
                 setNodes(newNodes)
 
                 // ================================================================

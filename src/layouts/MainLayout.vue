@@ -131,6 +131,7 @@ defineExpose({
 
 .main-content.sidebar-hidden {
   padding: var(--space-10) var(--space-6) 0;
+  padding-left: 64px; /* Space for floating sidebar toggle button */
 }
 
 .view-wrapper {

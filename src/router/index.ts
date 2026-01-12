@@ -7,27 +7,31 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'canvas',
+      component: () => import('@/views/CanvasView.vue'),
+      meta: { requiresAuth: false } // Temporarily disabled for development
+    },
+    {
+      path: '/board',
       name: 'board',
       component: () => import('@/views/BoardView.vue'),
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
+      path: '/canvas',
+      redirect: '/'
+    },
+    {
       path: '/calendar',
       name: 'calendar',
       component: () => import('@/views/CalendarView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/canvas',
-      name: 'canvas',
-      component: () => import('@/views/CanvasView.vue'),
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
       path: '/calendar-test',
       name: 'calendar-test',
       component: () => import('@/views/CalendarViewVueCal.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
       path: '/design-system',
@@ -42,7 +46,7 @@ const router = createRouter({
       path: '/tasks',
       name: 'all-tasks',
       component: () => import('@/views/AllTasksView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
       path: '/catalog',
@@ -54,7 +58,7 @@ const router = createRouter({
       path: '/quick-sort',
       name: 'quick-sort',
       component: () => import('@/views/QuickSortView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
       path: '/focus/:taskId',

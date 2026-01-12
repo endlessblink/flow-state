@@ -166,6 +166,7 @@
 
 .swimlane-body {
     display: flex;
+    justify-content: center; /* ADHD-friendly: Center columns in viewport */
     gap: var(--space-4);
     padding-bottom: var(--space-3);
     padding-right: var(--space-3); /* TASK-243: More space for shadow bleed */

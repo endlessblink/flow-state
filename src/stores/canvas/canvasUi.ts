@@ -45,8 +45,57 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
     // Sync trigger for external components
     const syncTrigger = ref(0)
-    const requestSync = () => {
-        syncTrigger.value++
+
+    // ==========================================================================
+    // DRIFT FIX: Gated sync trigger to prevent feedback loops
+    // ==========================================================================
+    // ALLOWED sources (user actions):
+    //   'user:drag-drop', 'user:create', 'user:delete', 'user:undo', 'user:redo',
+    //   'user:resize', 'user:connect', 'user:context-menu'
+    // BLOCKED sources (automated):
+    //   'smart-group', 'watcher', 'reconcile', 'auto'
+    // ==========================================================================
+    const USER_ACTION_SOURCES = [
+        'user:drag-drop',
+        'user:create',
+        'user:delete',
+        'user:undo',
+        'user:redo',
+        'user:resize',
+        'user:connect',
+        'user:context-menu',
+        'user:manual'
+    ] as const
+
+    type SyncSource = typeof USER_ACTION_SOURCES[number] | 'smart-group' | 'watcher' | 'reconcile' | 'auto' | 'unknown'
+
+    /**
+     * Request a canvas sync. Only user-action sources will trigger a sync.
+     * Automated sources are logged but ignored to prevent feedback loops.
+     *
+     * @param source - The source of the sync request (e.g., 'user:drag-drop')
+     */
+    const requestSync = (source: SyncSource = 'unknown') => {
+        const isUserAction = USER_ACTION_SOURCES.includes(source as typeof USER_ACTION_SOURCES[number])
+
+        if (isUserAction) {
+            console.log(`🔄 [SYNC-TRIGGER] Accepted from ${source}`)
+            syncTrigger.value++
+        } else {
+            console.log(`⏭️ [SYNC-TRIGGER] Blocked from ${source} (not a user action)`)
+        }
+    }
+
+    /**
+     * Legacy sync request - BLOCKED to prevent sync loops.
+     * Use requestSync(source) with explicit user-action source instead.
+     * @deprecated Use requestSync(source) instead
+     */
+    const requestSyncLegacy = () => {
+        // DRIFT FIX: BLOCKED - legacy calls without source were causing sync loops
+        // All sync requests must now use requestSync(source) with an explicit user-action source
+        console.warn('⛔ [SYNC-TRIGGER] Legacy requestSync BLOCKED - use requestSync(source) with explicit user-action source')
+        // syncTrigger.value++ // REMOVED - no longer allowed
     }
 
     // Node display preferences
@@ -231,6 +280,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         hasInitialFit,
         viewportInitializedAt,
         requestSync,
+        requestSyncLegacy,
         setViewport,
         saveZoomToHistory,
         setViewportWithHistory,

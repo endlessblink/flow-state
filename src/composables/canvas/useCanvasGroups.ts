@@ -115,14 +115,30 @@ export function useCanvasGroups() {
     }
 
     // Update a single section's task count node data
-    const updateSingleSectionCount = (sectionId: string, tasks: Task[]) => {
+    // FIX: Update BOTH directTaskCount and aggregatedTaskCount (not just taskCount)
+    // GroupNodeSimple.vue reads directTaskCount/aggregatedTaskCount from props.data
+    const updateSingleSectionCount = (sectionId: string, _tasks: Task[]) => {
         const sectionNodeId = CanvasIds.groupNodeId(sectionId)
-        const newCount = getTaskCountInGroupRecursive(sectionId, tasks)
 
-        // Direct reactivity update
+        // Read from store's reactive computeds (source of truth)
+        const directCount = canvasStore.taskCountByGroupId.get(sectionId) ?? 0
+        const aggregatedCount = canvasStore.aggregatedTaskCountByGroupId.get(sectionId) ?? directCount
+
+        // Direct reactivity update on Vue Flow node data
         const node = getNodes.value.find(n => n.id === sectionNodeId)
         if (node && node.data) {
-            node.data.taskCount = newCount
+            const oldDirect = node.data.directTaskCount
+            const oldAggregated = node.data.aggregatedTaskCount
+
+            // Update ALL count properties to ensure UI consistency
+            node.data.directTaskCount = directCount
+            node.data.aggregatedTaskCount = aggregatedCount
+            node.data.taskCount = aggregatedCount // Legacy compat
+
+            // Log when counts actually change for debugging
+            if (oldDirect !== directCount || oldAggregated !== aggregatedCount) {
+                console.log(`📊 [COUNT-UPDATE] ${sectionId.slice(0, 8)}: direct ${oldDirect}→${directCount}, aggregated ${oldAggregated}→${aggregatedCount}`)
+            }
         }
     }
 

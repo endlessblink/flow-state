@@ -1,5 +1,11 @@
 <template>
-  <div class="unified-inbox-panel" :class="{ collapsed: isCollapsed }">
+  <div 
+    class="unified-inbox-panel" 
+    :class="{ 
+      collapsed: isCollapsed,
+      'is-right-side': context === 'canvas'
+    }"
+  >
     
     <!-- 1. Header -->
     <UnifiedInboxHeader
@@ -18,6 +24,7 @@
       :hide-done-tasks="currentHideDoneTasks"
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
+      :context="context"
       
       @toggle-collapse="isCollapsed = !isCollapsed"
       @toggle-today="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
@@ -185,8 +192,18 @@ const handleStartTimer = (task: Task) => {
   z-index: 100;
 }
 
+/* FEATURE-254: Right-side positioning for Canvas Inbox */
+.unified-inbox-panel.is-right-side {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  height: auto;
+}
+
 .unified-inbox-panel.collapsed {
   width: v-bind(maxCollapsedWidth);
+  padding: var(--space-2);
 }
 
 .collapsed-badges-container {

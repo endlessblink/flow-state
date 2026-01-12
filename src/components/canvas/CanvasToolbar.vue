@@ -77,7 +77,7 @@ const taskStore = useTaskStore()
 /* Edge-mounted vertical toolbar - positioned at viewport right edge, aligned with canvas top */
 .canvas-toolbar-edge {
   position: fixed;
-  right: 0;
+  right: 0px;
 
   /* ADJUST THIS VALUE to align with canvas top */
   top: 239px;
@@ -89,18 +89,17 @@ const taskStore = useTaskStore()
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 4px;
+  padding: 6px;
 
-  /* Edge-mounted styling - rounded left corners only */
-  border-radius: 8px 0 0 8px;
+  /* Rounded corners */
+  border-radius: 8px;
 
   /* Glass morphism */
   background: rgba(30, 30, 40, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-right: none;
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .toolbar-group {
@@ -122,8 +121,8 @@ const taskStore = useTaskStore()
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
   color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   background: transparent;

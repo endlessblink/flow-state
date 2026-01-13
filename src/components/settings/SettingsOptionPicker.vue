@@ -1,6 +1,6 @@
 <script setup lang="ts">
 interface Option {
-  value: string
+  value: string | number
   label: string
 }
 
@@ -8,7 +8,7 @@ defineProps<{
   label: string
   description?: string
   options: Option[]
-  value: string
+  value: string | number
 }>()
 
 const emit = defineEmits<{

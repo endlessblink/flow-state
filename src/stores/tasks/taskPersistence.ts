@@ -3,6 +3,7 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'
+import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
 
 export function useTaskPersistence(
     // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
@@ -185,6 +186,13 @@ export function useTaskPersistence(
 
                 console.warn(`⚠️ [TASK-LOAD] Supabase returned 0 tasks but ${_rawTasks.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
             }
+
+            // ================================================================
+            // DUPLICATE DETECTION - Supabase Load Layer (AUTHORITATIVE)
+            // ================================================================
+            // Uses centralized helper for consistent detection across all layers
+            // A duplicate here means the bug is at the database level
+            logSupabaseTaskIdHistogram(loadedTasks, 'loadFromDatabase')
 
             _rawTasks.value = loadedTasks
             console.log(`✅ [SUPABASE] Loaded ${loadedTasks.length} tasks (${tasksWithPositions.length} with canvas positions)`)

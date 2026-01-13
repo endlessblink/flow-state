@@ -36,15 +36,9 @@
       <slot name="icon" />
     </div>
 
-    <!-- Color dot or emoji (for projects) -->
-    <ProjectEmojiIcon
-      v-if="colorType === 'emoji' && emoji"
-      :emoji="emoji"
-      size="xs"
-      class="project-emoji"
-    />
+    <!-- Color dot for projects (standardized - always show color, never emoji) -->
     <div
-      v-else-if="colorDot"
+      v-if="colorDot"
       class="color-dot"
       :style="{ backgroundColor: colorDot }"
     />
@@ -82,7 +76,6 @@ import { ref, computed, useSlots } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 import BaseBadge from './BaseBadge.vue'
 import OverflowTooltip from './OverflowTooltip.vue'
-import ProjectEmojiIcon from './ProjectEmojiIcon.vue'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
 
@@ -468,22 +461,6 @@ const handleDrop = (event: DragEvent) => {
   flex: 1;
   min-width: 0;
   position: relative;
-}
-
-/* Project emoji */
-.project-emoji {
-  font-size: 16px;
-  flex-shrink: 0;
-  opacity: 0.9;
-  transition: all var(--duration-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.base-nav-item:hover .project-emoji {
-  opacity: 1;
-  transform: scale(1.1);
 }
 
 /* Drag states - Use isDragTarget (set on dragenter) instead of :hover */

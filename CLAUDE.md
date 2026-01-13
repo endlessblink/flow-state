@@ -61,6 +61,7 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 6. **NEVER Create Demo Data** - First-time users MUST see empty app, not sample data
 7. **Database Safety** - NEVER run destructive database commands without user approval (see below)
 8. **Atomic Tasks** - ALWAYS break broad requests into single-action steps (see below)
+9. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
 
 ## Atomic Task Breakdown (CRITICAL)
 
@@ -199,6 +200,51 @@ To fix, run: npm run generate:keys
 | `useCanvasDragDrop.ts` | Drag-drop handlers and position updates |
 | `useCanvasEvents.ts` | Vue Flow event handlers |
 | `useCanvasActions.ts` | Task/group CRUD operations |
+
+## Canvas Geometry Invariants (CRITICAL - TASK-255)
+
+**Position drift and "jumping" tasks occur when multiple code paths mutate geometry. Follow these invariants:**
+
+### Core Rules
+
+1. **Single Writer for Geometry** - Only drag handlers may change `parentId`, `canvasPosition`, `parentGroupId`, `position`
+2. **Sync is Read-Only** - `useCanvasSync.ts` MUST NEVER write to stores (no `updateTask`, `updateGroup`)
+3. **Metadata vs Layout** - Smart-Groups update `dueDate`/`status`/`priority` only, NEVER geometry
+
+### Allowed Geometry Writers
+
+| File | Function | OK to Change Geometry? |
+|------|----------|------------------------|
+| `useCanvasInteractions.ts` | `onMoveEnd()` | ✅ YES (drag handler) |
+| `useCanvasTaskActions.ts` | `handleQuickTaskCreate()` | ✅ YES (task creation) |
+| `useCanvasTaskActions.ts` | `moveSelectedTasksToInbox()` | ✅ YES (explicit move) |
+| `spatialContainment.ts` | `reconcileTaskParentsByContainment()` | ⚠️ ONE-TIME on load only |
+| Smart-Group logic | Any | ❌ NO - metadata only |
+| Sync/orchestrator | Any | ❌ NO - read-only |
+
+### Permanently Disabled Features (QUARANTINED)
+
+These features are **permanently disabled** (code removed, stubs remain for API compatibility):
+- `useMidnightTaskMover.ts` - Auto-moved tasks at midnight (violated geometry invariants)
+- `useCanvasOverdueCollector.ts` - Auto-collected overdue tasks into groups (violated geometry invariants)
+
+**Why quarantined**: These features mutated `canvasPosition` and `parentId` automatically,
+which caused position drift and sync cascades. Only user-initiated drag operations may change geometry.
+
+**DO NOT re-enable** without full sync architecture review. See ADR comments in each file.
+
+### Drift Detection
+
+When calling `updateTask()` with geometry changes, pass a source:
+```typescript
+taskStore.updateTask(taskId, updates, 'DRAG')        // ✅ Allowed
+taskStore.updateTask(taskId, updates, 'SMART-GROUP') // ⚠️ Warning if geometry
+taskStore.updateTask(taskId, updates, 'SYNC')        // ⚠️ Warning if geometry
+```
+
+Console will show: `📍 [GEOMETRY-DRAG]` or `⚠️ [GEOMETRY-DRIFT]` warnings.
+
+**Full SOP**: `docs/sop/SOP-002-canvas-geometry-invariants.md`
 
 ## MASTER_PLAN.md Task ID Format
 

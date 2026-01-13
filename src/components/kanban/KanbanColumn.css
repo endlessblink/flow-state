@@ -145,9 +145,10 @@
     /* BUG-207: significant padding to prevent hover clipping */
     padding-bottom: var(--space-10);
     /* BLEED SPACE for last card glow */
-    /* TASK-243: Extra padding for shadow bleed */
-    padding-right: var(--space-3);
-    padding-top: var(--space-2);
+    /* TASK-243: Extra padding for shadow bleed on all sides */
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
+    padding-top: var(--space-4);
     min-height: 100px;
 }
 

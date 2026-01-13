@@ -97,6 +97,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         isQuickTaskCreateOpen.value = true
     }
 
+    /**
+     * GEOMETRY WRITER: Creates task with initial canvas position (TASK-255)
+     * This is an ALLOWED geometry write as it's an explicit user action (creating a task).
+     */
     const handleQuickTaskCreate = async (title: string, description: string) => {
         try {
             if (!title?.trim()) return
@@ -134,6 +138,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         quickTaskPosition.value = { x: 0, y: 0 }
     }
 
+    /**
+     * GEOMETRY WRITER: Removes tasks from canvas by clearing canvasPosition (TASK-255)
+     * This is an ALLOWED geometry write as it's an explicit user action (move to inbox).
+     */
     const moveSelectedTasksToInbox = async () => {
         const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
         if (selectedNodeIds.length === 0) return

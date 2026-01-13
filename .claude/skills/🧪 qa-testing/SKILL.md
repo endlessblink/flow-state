@@ -1,7 +1,7 @@
 ---
-name: QA Testing for Personal Productivity App
+name: qa-testing
 version: "2.0"
-description: Ensure data integrity, stability, and basic security for a personal productivity app. Focus on preventing data loss, memory leaks, and sync failures during daily 8-hour usage sessions. Skip enterprise-grade testing.
+description: Ensure data integrity, stability, and basic security for a personal productivity app. Focus on preventing data loss, memory leaks, and sync failures during daily 8-hour usage sessions. Skip enterprise-grade testing. Use when testing, verifying, validating, checking features, running tests, or before claiming anything is "done" or "fixed".
 triggers:
   - "test task persistence"
   - "verify offline sync"
@@ -12,6 +12,12 @@ triggers:
   - "test Supabase RLS"
   - "check Pomodoro timer accuracy"
   - "before marking features complete"
+  - "test canvas geometry"
+  - "run geometry tests"
+  - "test sync behavior"
+  - "verify smart group"
+  - "canvas invariants"
+  - "check position stability"
 ---
 
 # QA Testing Skill for Personal Productivity App
@@ -711,6 +717,121 @@ Pass Criteria: All steps complete without errors, memory < 100MB
 
 ---
 
+## Canvas Geometry Invariant Tests (TASK-256)
+
+### Critical Canvas Stability Tests
+
+The canvas system has automated tests protecting the three most fragile parts. **Run these tests when modifying any canvas-related code:**
+
+```bash
+# Run all geometry/sync/smartgroup tests
+npm test -- --run tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts
+```
+
+### Test Files
+
+| File | Purpose | When to Run |
+|------|---------|-------------|
+| `tests/unit/geometry-invariants.test.ts` | Verify single-writer rule: only drag handlers change positions | Modifying drag/drop, position updates |
+| `tests/unit/sync-readonly.test.ts` | Verify sync is read-only: never mutates stores | Modifying useCanvasSync, sync logic |
+| `tests/unit/smartgroup-metadata.test.ts` | Verify Smart-Groups only change metadata, not geometry | Modifying power keywords, overdue collector |
+
+### Key Invariants Being Tested
+
+**1. Geometry Single-Writer Rule:**
+- Only `useCanvasInteractions.ts` drag handlers can modify:
+  - Task: `parentId`, `canvasPosition`
+  - Group: `parentGroupId`, `position`
+- All other code must be READ-ONLY for these fields
+
+**2. Sync Read-Only Behavior:**
+- `syncStoreToCanvas` reads from stores, writes only to Vue Flow nodes
+- NEVER calls `updateTask` or `updateGroup` from sync
+- Position mismatches log warnings but don't mutate store
+
+**3. Smart-Group Metadata-Only:**
+- Power keywords (Today, Friday, High Priority) update metadata only
+- `applySmartGroupProperties` returns only metadata fields (dueDate, status, priority)
+- Never changes parentId or canvasPosition
+
+### Test Helpers Location
+
+```
+tests/unit/helpers/geometry-test-helpers.ts
+```
+
+Key helpers:
+- `changedTaskGeometryFields(before, after)` - Detect geometry changes
+- `changedGroupGeometryFields(before, after)` - Detect group geometry changes
+- `assertNoTaskGeometryChanged(beforeMap, afterMap)` - Bulk assertion
+- `createTestTask()`, `createTestGroup()` - Fixtures
+
+### When to Run These Tests
+
+**ALWAYS run before:**
+- Modifying `useCanvasInteractions.ts` (drag handlers)
+- Modifying `useCanvasSync.ts` (sync logic)
+- Modifying `usePowerKeywords.ts` or `useCanvasOverdueCollector.ts`
+- Modifying `useCanvasSectionProperties.ts`
+- Any changes to task/group position or parent fields
+
+**Quick validation command:**
+```bash
+npm test -- --run tests/unit/geometry
+```
+
+### Expected Output
+
+```
+✓ tests/unit/geometry-invariants.test.ts (20 tests)
+✓ tests/unit/sync-readonly.test.ts (12 tests)
+✓ tests/unit/smartgroup-metadata.test.ts (26 tests)
+
+Test Files  3 passed
+Tests       58 passed
+```
+
+### If Tests Fail
+
+**Geometry invariant failure:**
+- Check if your code accidentally mutates `parentId`, `canvasPosition`, `parentGroupId`, or `position`
+- Ensure only drag handlers call position-changing methods
+
+**Sync read-only failure:**
+- Remove any `updateTask`/`updateGroup` calls from sync functions
+- Sync should only call `setNodes` (Vue Flow display layer)
+
+**Smart-Group failure:**
+- Ensure `applySmartGroupProperties` only returns metadata fields
+- Check `ENABLE_SMART_GROUP_REPARENTING` flag is false
+
+---
+
 **Version History:**
 - v1.0 (Jan 2026): Original functional testing skill
 - v2.0 (Jan 2026): Enhanced with data integrity, memory testing, offline sync, backup verification, and security testing for personal app use
+- v2.1 (Jan 2026): Added Canvas Geometry Invariant Tests (TASK-256)
+
+---
+
+## Automatic Skill Chaining
+
+**IMPORTANT**: After QA testing, Claude should automatically invoke related skills based on findings:
+
+1. **If tests fail due to bugs** → Use `Skill(dev-debugging)` to investigate and fix
+2. **If canvas geometry issues** → Use `Skill(vue-flow-debug)` for specialized debugging
+3. **If planning needed for fixes** → Use `Skill(arch-planning)` to break down complex work
+4. **If UI/UX issues found** → Use `Skill(dev-implement-ui-ux)` for design fixes
+
+**Mandatory Pre-Success Chain**:
+Before claiming ANY feature is "done", "fixed", or "complete":
+```
+1. Run relevant tests (this skill)
+2. If tests pass → Ask user to verify
+3. Only after user confirms → Mark as complete
+```
+
+**This skill is automatically invoked by other skills after:**
+- Bug fixes (dev-debugging chains to qa-testing)
+- Feature implementation (arch-planning chains to qa-testing)
+- UI changes (dev-implement-ui-ux chains to qa-testing)

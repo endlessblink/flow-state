@@ -7,6 +7,17 @@ import { formatDateKey } from '@/utils/dateUtils'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
+// =============================================================================
+// GEOMETRY WRITE SOURCE (TASK-255 Geometry Invariants)
+// =============================================================================
+// Tracks the origin of geometry mutations for drift detection.
+// - 'DRAG': User drag/drop operations (ALLOWED)
+// - 'RECONCILE': One-time parent reconciliation on load (CONTROLLED)
+// - 'USER': Explicit user actions like move-to-inbox (ALLOWED)
+// - 'SYNC': Remote sync updates (SHOULD NOT change geometry)
+// - 'SMART-GROUP': Smart group property application (METADATA ONLY - no geometry!)
+// =============================================================================
+export type GeometryWriteSource = 'DRAG' | 'RECONCILE' | 'USER' | 'SYNC' | 'SMART-GROUP'
 
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
@@ -118,7 +129,18 @@ export function useTaskOperations(
         }
     }
 
-    const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    /**
+     * Update a task with optional geometry write source tracking (TASK-255)
+     *
+     * @param taskId - The ID of the task to update
+     * @param updates - Partial task updates to apply
+     * @param source - Origin of the update for drift detection (default: 'USER')
+     *
+     * GEOMETRY INVARIANT: Only 'DRAG' and 'USER' sources should include
+     * parentId or canvasPosition changes. If 'SYNC' or 'SMART-GROUP' sources
+     * include geometry changes, a warning will be logged.
+     */
+    const updateTask = async (taskId: string, updates: Partial<Task>, source: GeometryWriteSource = 'USER') => {
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
@@ -130,11 +152,28 @@ export function useTaskOperations(
         try {
             const task = _rawTasks.value[index]
 
+            // GEOMETRY DRIFT DETECTION (TASK-255): Track and warn about geometry changes
+            const hasGeometryChange = ('parentId' in updates && updates.parentId !== task.parentId) ||
+                ('canvasPosition' in updates && updates.canvasPosition !== undefined &&
+                    (task.canvasPosition?.x !== updates.canvasPosition?.x ||
+                        task.canvasPosition?.y !== updates.canvasPosition?.y))
+
+            // Warn if non-allowed sources try to change geometry
+            if (hasGeometryChange && (source === 'SYNC' || source === 'SMART-GROUP')) {
+                console.warn(`⚠️ [GEOMETRY-DRIFT] Source '${source}' is changing geometry - this may cause position drift!`, {
+                    taskId: taskId.slice(0, 8),
+                    taskTitle: task.title?.slice(0, 30),
+                    parentIdChange: 'parentId' in updates,
+                    positionChange: 'canvasPosition' in updates
+                })
+            }
+
             // DRIFT LOGGING: Track when parentId or canvasPosition is changed
             // This helps identify non-drag flows that mutate hierarchy/positions
             if ('parentId' in updates && updates.parentId !== task.parentId) {
-                console.log(`📍 [PARENT-WRITE] Task ${taskId.slice(0, 8)}... parentId: "${task.parentId ?? 'none'}" → "${updates.parentId ?? 'none'}"`, {
+                console.log(`📍 [GEOMETRY-${source}] Task ${taskId.slice(0, 8)}... parentId: "${task.parentId ?? 'none'}" → "${updates.parentId ?? 'none'}"`, {
                     taskTitle: task.title?.slice(0, 30),
+                    source,
                     stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
                 })
             }
@@ -142,8 +181,9 @@ export function useTaskOperations(
                 const oldPos = task.canvasPosition
                 const newPos = updates.canvasPosition
                 if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
-                    console.log(`📍 [POSITION-WRITE] Task ${taskId.slice(0, 8)}... pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? 'null'},${newPos?.y?.toFixed(0) ?? 'null'})`, {
+                    console.log(`📍 [GEOMETRY-${source}] Task ${taskId.slice(0, 8)}... pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? 'null'},${newPos?.y?.toFixed(0) ?? 'null'})`, {
                         taskTitle: task.title?.slice(0, 30),
+                        source,
                         stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
                     })
                 }
@@ -622,6 +662,20 @@ export function useTaskOperations(
         moveTaskToDate,
         unscheduleTask,
         moveTaskToPriority,
+        moveTaskToProject: async (taskId: string, targetProjectId: string) => {
+            const task = _rawTasks.value.find(t => t.id === taskId)
+            if (task) {
+                manualOperationInProgress.value = true
+                try {
+                    task.projectId = targetProjectId
+                    task.updatedAt = new Date()
+                    console.log(`Task "${task.title}" moved to project "${projectStore.getProjectDisplayName(targetProjectId)}"`)
+                    await saveTasksToStorage(_rawTasks.value, `moveTaskToProject-${taskId}`)
+                } finally {
+                    manualOperationInProgress.value = false
+                }
+            }
+        },
         setActiveProject,
         setSmartView,
         toggleHideDoneTasks,

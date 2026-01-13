@@ -9,6 +9,18 @@
     flex: 1;
 }
 
+/* ====================================================================
+   BUG-251 FIX: Force visibility on section nodes
+
+   Vue Flow sets visibility: hidden inline on nodes until they're
+   properly dimensioned by the resize observer. For our section nodes
+   which have explicit width/height, we can safely force visibility.
+   This fixes right-click context menus not working on group nodes.
+   ==================================================================== */
+.vue-flow__node-sectionNode {
+    visibility: visible !important;
+}
+
 /* Focus-visible for keyboard accessibility - subtle purple glow only */
 .vue-flow:focus-visible {
     outline: none;

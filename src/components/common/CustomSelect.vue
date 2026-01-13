@@ -60,7 +60,7 @@ interface SelectOption {
 }
 
 interface Props {
-  modelValue: string | number
+  modelValue: string | number | null
   options: SelectOption[]
   placeholder?: string
 }

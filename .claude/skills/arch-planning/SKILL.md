@@ -1,7 +1,29 @@
 ---
-name: Systematic Project Planning
-description: PLAN complex features and projects systematically. Use when user requests task breakdown, project planning, feature implementation strategy, or needs multi-step development approach. Break down work into phases, tasks, and dependencies.
+name: arch-planning
+description: PLAN complex features and projects systematically. Use when user requests task breakdown, project planning, feature implementation strategy, or needs multi-step development approach. Break down work into phases, tasks, and dependencies. Trigger on "plan", "break down", "how should I implement", "roadmap", "architecture", or "strategy".
 ---
+
+<!-- SKILL CHAINING: After planning, Claude should invoke implementation and testing skills -->
+## Automatic Skill Chaining
+
+**IMPORTANT**: After completing planning work, automatically invoke these skills:
+
+1. **After plan is approved** → Use `Skill(dev-debugging)` or appropriate dev skill to implement
+2. **After implementation complete** → Use `Skill(qa-testing)` to verify the implementation
+3. **If architectural decisions needed** → Use `Skill(chief-architect)` for strategic guidance
+4. **If documentation needed** → Use `Skill(smart-doc-manager)` for doc updates
+
+**Example chaining workflow**:
+```
+User: "Plan how to add recurring tasks"
+1. Claude uses arch-planning skill (this skill)
+2. Creates detailed plan with phases and tasks
+3. User approves plan
+4. Claude invokes: Skill(dev-debugging) or appropriate dev skill
+5. After implementation → Claude invokes: Skill(qa-testing)
+6. After tests pass → Ask user to verify
+```
+
 
 # Systematic Project Planning
 

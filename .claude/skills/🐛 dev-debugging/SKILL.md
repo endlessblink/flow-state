@@ -1,7 +1,28 @@
 ---
-name: Comprehensive Debugging
+name: dev-debugging
 description: Use when tasks disappear, data is lost, things are broken, or bugs need fixing. Debug Vue.js reactivity issues, Pinia state problems, canvas position resets, tasks vanishing, drag-drop not working, cache problems, memory leaks, and performance issues. Invoke for any "not working", "broken", "fix bug", "debug issue", "tasks missing", or "state not updating" requests.
 ---
+
+<!-- SKILL CHAINING: After completing debugging work, Claude MUST invoke related skills -->
+## Automatic Skill Chaining
+
+**IMPORTANT**: After completing debugging work, automatically invoke these skills:
+
+1. **After fixing a bug** → Use `Skill(qa-testing)` to verify the fix with proper tests
+2. **If canvas issues** → Use `Skill(vue-flow-debug)` for specialized Vue Flow debugging
+3. **If timer issues** → Use `Skill(dev-fix-timer)` for Pomodoro-specific debugging
+4. **If task store issues** → Use `Skill(dev-fix-task-store)` for task CRUD debugging
+5. **If keyboard shortcuts broken** → Use `Skill(dev-fix-keyboard)` for keyboard handler debugging
+
+**Example chaining**:
+```
+User: "Fix the bug where tasks disappear"
+1. Claude uses dev-debugging skill (this skill)
+2. After fix implemented → Claude invokes: Skill(qa-testing)
+3. QA skill runs verification tests
+4. Only then claim the fix is complete
+```
+
 
 # Comprehensive Debugging
 

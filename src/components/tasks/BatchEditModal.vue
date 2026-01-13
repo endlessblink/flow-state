@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')" @keydown.escape="$emit('close')">
     <div class="modal-content" @click.stop>
       <!-- Header -->
       <div class="modal-header">

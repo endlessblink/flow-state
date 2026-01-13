@@ -375,7 +375,7 @@ watch(() => props.modelValue, (newValue) => {
   const currentHtml = editor.value.getHTML()
   // Only update if content actually changed (prevents cursor jump)
   if (currentHtml !== newHtml) {
-    editor.value.commands.setContent(newHtml, false)
+    editor.value.commands.setContent(newHtml, { emitUpdate: false })
   }
 })
 

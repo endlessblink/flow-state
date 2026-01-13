@@ -150,20 +150,29 @@ export function useCanvasOrchestrator() {
 
     // Sync Helpers (Adapter for legacy calls)
     const syncNodes = (tasks?: any[]) => {
-        console.log('👉 [ORCHESTRATOR] Calling syncNodes', { hasTasks: !!tasks })
-        try {
-            console.log('👉 [ORCHESTRATOR] Resolving tasks...')
-            const tasksToSync = tasks || tasksWithCanvasPosition.value
-            console.log('👉 [ORCHESTRATOR] Tasks resolved:', { count: tasksToSync?.length })
+        // Prevent sync if explicitly unwanted (e.g. during specific interactions)
+        if (canvasUiStore.operationLoading.syncing) return
 
+        console.debug('👉 [ORCHESTRATOR] Calling syncNodes', { hasTasks: !!tasks })
+        try {
+            const tasksToSync = tasks || tasksWithCanvasPosition.value
             persistence.syncStoreToCanvas(tasksToSync)
         } catch (e) {
             console.error('💥 [ORCHESTRATOR] syncNodes failed:', e)
         }
     }
+
+    // OPTIMIZATION: True batching (only runs once per tick)
+    let isSyncScheduled = false
     const batchedSyncNodes = (priority?: string) => {
-        nextTick(() => syncNodes())
+        if (isSyncScheduled) return
+        isSyncScheduled = true
+        nextTick(() => {
+            syncNodes()
+            isSyncScheduled = false
+        })
     }
+
     const syncEdges = () => { /* Edges sync implemented in Persistence later if needed, mostly static for now */ }
 
     // Events (Selection, Connection)
@@ -273,8 +282,9 @@ export function useCanvasOrchestrator() {
                 canvasStore.groups,
                 async (taskId, updates) => {
                     // Update store (will auto-sync to Supabase via existing persistence)
+                    // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
                     console.log(`🔧 [RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
-                    taskStore.updateTask(taskId, updates)
+                    taskStore.updateTask(taskId, updates, 'RECONCILE')
                 },
                 { writeToDb: true, silent: false }
             )
@@ -302,6 +312,8 @@ export function useCanvasOrchestrator() {
     // Persist Viewport on Change
     onMoveEnd((flow) => {
         if (flow && flow.flowTransform) {
+            // Debounce viewport saves slightly to strictly avoid slamming store
+            // (VueFlow handles throttling internal events, but good to be safe)
             canvasStore.setViewport(flow.flowTransform.x, flow.flowTransform.y, flow.flowTransform.zoom)
         }
     })
@@ -309,30 +321,31 @@ export function useCanvasOrchestrator() {
     // Watchers are now largely handled by persistence.initRealtimeSubscription which watches Stores
     // But we still need to watch Filter changes here as they affect WHICH tasks we show
     // CRITICAL: All watchers check isInitialized to prevent firing during startup
+    // OPTIMIZATION: Use batchedSyncNodes to coalesce multiple updates
     watch(() => taskStore.activeStatusFilter, () => {
         if (!isInitialized.value) return
-        syncNodes()
+        batchedSyncNodes()
     })
     watch(() => taskStore.hideCanvasDoneTasks, () => {
         if (!isInitialized.value) return
-        syncNodes()
+        batchedSyncNodes()
     })
     watch(() => taskStore.hideCanvasOverdueTasks, () => {
         if (!isInitialized.value) return
-        syncNodes()
+        batchedSyncNodes()
     })
 
     // REACTIVITY FIX: Watch for manual sync requests from context menus
     watch(() => canvasStore.syncTrigger, () => {
         if (!isInitialized.value) return
         console.log('🔔 [ORCHESTRATOR] canvasStore.syncTrigger changed - forcing sync')
-        syncNodes()
+        batchedSyncNodes()
     })
 
     watch(() => canvasUiStore.syncTrigger, () => {
         if (!isInitialized.value) return
         console.log('🔔 [ORCHESTRATOR] canvasUiStore.syncTrigger changed - forcing sync')
-        syncNodes()
+        batchedSyncNodes()
     })
 
     // Global guard to prevent recursive watcher triggers
@@ -348,7 +361,7 @@ export function useCanvasOrchestrator() {
         try {
             if (persistence.isSyncing.value) return
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
-            syncNodes()
+            batchedSyncNodes()
         } finally {
             isSyncingFromWatcher = false
         }
@@ -364,7 +377,7 @@ export function useCanvasOrchestrator() {
             if (persistence.isSyncing.value) return
             console.log('👀 [ORCHESTRATOR] canvasStore.groups changed', { count: canvasStore.groups.length })
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
-            syncNodes()
+            batchedSyncNodes()
         } finally {
             isSyncingFromWatcher = false
         }

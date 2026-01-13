@@ -1,6 +1,7 @@
 import { computed, ref, type Ref } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useWindowSize } from '@vueuse/core'
+import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 
 interface TaskStoreSettings {
     hideCanvasDoneTasks?: boolean
@@ -66,6 +67,29 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
             const pos = task.canvasPosition
             return pos && typeof pos.x === 'number' && typeof pos.y === 'number'
         })
+
+        // ================================================================
+        // DUPLICATE DETECTION - Canvas Selector Layer (AUTHORITATIVE)
+        // ================================================================
+        // This detects if the store/filtering layer is returning duplicates
+        // A duplicate here means the bug is upstream (in task store or filtering)
+        // Uses assertNoDuplicateIds for consistent detection across layers
+        if (import.meta.env.DEV) {
+            const checkResult = assertNoDuplicateIds(result, 'tasksWithCanvasPosition')
+
+            if (checkResult.hasDuplicates) {
+                console.error('[TASK-ID-HISTOGRAM] DUPLICATES in tasksWithCanvasPosition', {
+                    duplicates: checkResult.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+                    totalCount: checkResult.totalCount,
+                    uniqueIdCount: checkResult.uniqueIdCount
+                })
+            } else if (result.length > 0) {
+                console.debug('[TASK-ID-HISTOGRAM] tasksWithCanvasPosition', {
+                    uniqueIdCount: checkResult.uniqueIdCount,
+                    totalCount: checkResult.totalCount
+                })
+            }
+        }
 
         lastCanvasTasksHash = currentHash
         lastCanvasTasks = result

@@ -132,6 +132,23 @@ export const useTaskStore = defineStore('tasks', () => {
   // SAFETY: Uses _rawTasks for mutations
   const updateTaskFromSync = (taskId: string, taskDoc: Task | null, isDeleted = false) => {
     syncInProgress.value = true
+
+    // ================================================================
+    // DUPLICATE DETECTION - Realtime Sync Entry Point
+    // ================================================================
+    // This tracks what's coming in from realtime and whether the task exists
+    // A duplicate after this function means the push logic is racing with initial load
+    if (import.meta.env.DEV) {
+      const existsInStore = _rawTasks.value.some(t => t.id === taskId)
+      console.debug('[SYNC-INCOMING]', {
+        taskId: taskId.slice(0, 8),
+        isDeleted,
+        existsInStore,
+        storeCount: _rawTasks.value.length,
+        taskTitle: taskDoc?.title?.slice(0, 20) || '(deleted)'
+      })
+    }
+
     try {
       if (isDeleted || !taskDoc) {
         // Remove deleted task
@@ -205,7 +222,46 @@ export const useTaskStore = defineStore('tasks', () => {
         } else {
           // Add new task - ONLY if not deleted
           if (!normalizedTask._soft_deleted) {
-            _rawTasks.value.push(normalizedTask)
+            // ================================================================
+            // RACE CONDITION GUARD - Double-check before push
+            // ================================================================
+            // Even though findIndex returned -1, another async operation might
+            // have added this task between findIndex and now. Check again.
+            const existingCount = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
+
+            if (existingCount > 0) {
+              // Task already exists - this is a race condition
+              // Update instead of push to avoid duplication
+              console.error('[SYNC-DUPLICATE-CREATED]', {
+                taskId: taskId.slice(0, 8),
+                existingCount,
+                taskTitle: normalizedTask.title?.slice(0, 20),
+                action: 'UPDATE_INSTEAD_OF_PUSH',
+                storeSize: _rawTasks.value.length
+              })
+
+              // Find and update the existing task instead
+              const existingIdx = _rawTasks.value.findIndex(t => t.id === normalizedTask.id)
+              if (existingIdx !== -1) {
+                _rawTasks.value[existingIdx] = normalizedTask
+              }
+            } else {
+              // Safe to push
+              _rawTasks.value.push(normalizedTask)
+
+              // Verify no duplicate was created (should never happen now)
+              if (import.meta.env.DEV) {
+                const countAfterPush = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
+                if (countAfterPush > 1) {
+                  console.error('[SYNC-DUPLICATE-UNEXPECTED]', {
+                    taskId: taskId.slice(0, 8),
+                    occurrences: countAfterPush,
+                    taskTitle: normalizedTask.title?.slice(0, 20),
+                    storeSize: _rawTasks.value.length
+                  })
+                }
+              }
+            }
           }
         }
       }
@@ -229,7 +285,6 @@ export const useTaskStore = defineStore('tasks', () => {
     deleteProject: projectStore.deleteProject,
     deleteProjects: projectStore.deleteProjects,
     setProjectColor: projectStore.setProjectColor,
-    moveTaskToProject: projectStore.moveTaskToProject,
     getProjectById: projectStore.getProjectById,
     getProjectDisplayName: projectStore.getProjectDisplayName,
     getProjectEmoji: projectStore.getProjectEmoji,

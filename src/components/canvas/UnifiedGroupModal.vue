@@ -1,6 +1,5 @@
 <template>
-  <Teleport to="body">
-    <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')" @keydown="handleKeydown">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2 class="modal-title">
@@ -200,7 +199,6 @@
         </div>
       </div>
     </div>
-  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -323,6 +321,31 @@ const colorPresets = [
   '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
   '#ec4899', '#f43f5e', '#64748b', '#475569', '#71717a'
 ]
+
+// Keyboard handler for Enter/Escape
+const handleKeydown = (event: KeyboardEvent) => {
+  // Escape - close modal
+  if (event.key === 'Escape') {
+    emit('close')
+    return
+  }
+
+  // Enter - save (if valid)
+  if (event.key === 'Enter') {
+    // Don't submit if in dropdown or other interactive element
+    const target = event.target as HTMLElement
+    if (target.tagName === 'SELECT' || target.closest('.n-dropdown')) return
+
+    // Don't submit with Shift+Enter
+    if (event.shiftKey) return
+
+    // Submit if name is valid
+    if (groupData.value.name.trim()) {
+      event.preventDefault()
+      saveGroup()
+    }
+  }
+}
 
 // Methods
 const selectColor = (color: string) => {
@@ -584,8 +607,9 @@ watch(() => props.isOpen, async (isOpen) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px) saturate(100%);
+  -webkit-backdrop-filter: blur(20px) saturate(100%);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -20,7 +20,7 @@
 import { computed, defineProps, defineEmits } from 'vue'
 
 const props = defineProps<{
-  priority?: string
+  priority?: string | null
 }>()
 
 defineEmits<{

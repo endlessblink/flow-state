@@ -24,9 +24,6 @@ defineProps<{
   workingHours: number[]
   weekEvents: WeekEvent[]
   currentTaskId?: string | null
-  
-  weekEvents: WeekEvent[]
-  currentTaskId?: string | null
 }>()
 
 defineEmits<{

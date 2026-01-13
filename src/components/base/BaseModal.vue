@@ -113,6 +113,7 @@ interface Props {
   variant?: 'default' | 'danger' | 'warning' | 'success'
   closeOnOverlayClick?: boolean
   closeOnEscape?: boolean
+  submitOnEnter?: boolean
   showHeader?: boolean
   showFooter?: boolean
   showCloseButton?: boolean
@@ -137,6 +138,7 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   closeOnOverlayClick: true,
   closeOnEscape: true,
+  submitOnEnter: true,
   showHeader: true,
   showFooter: false,
   showCloseButton: true,
@@ -187,10 +189,44 @@ const handleOverlayClick = () => {
   }
 }
 
-// Handle escape key
+// Check if target is a text input area (textarea, contenteditable, or multiline input)
+const isTextAreaOrContentEditable = (target: EventTarget | null): boolean => {
+  if (!target || !(target instanceof HTMLElement)) return false
+
+  // Check for textarea
+  if (target.tagName === 'TEXTAREA') return true
+
+  // Check for contenteditable
+  if (target.isContentEditable) return true
+
+  // Check for TipTap editor (has ProseMirror class)
+  if (target.classList.contains('ProseMirror')) return true
+  if (target.closest('.ProseMirror')) return true
+
+  return false
+}
+
+// Handle keyboard events (Escape and Enter)
 const handleEscapeKey = (event: KeyboardEvent) => {
+  // Handle Escape key - close modal
   if (props.closeOnEscape && event.key === 'Escape') {
     handleClose()
+    return
+  }
+
+  // Handle Enter key - submit modal (if enabled)
+  if (props.submitOnEnter && event.key === 'Enter') {
+    // Don't submit if in textarea or contenteditable
+    if (isTextAreaOrContentEditable(event.target)) return
+
+    // Don't submit if Shift+Enter (common for newlines)
+    if (event.shiftKey) return
+
+    // Don't submit if loading or disabled
+    if (props.loading || props.confirmDisabled) return
+
+    event.preventDefault()
+    handleConfirm()
   }
 }
 

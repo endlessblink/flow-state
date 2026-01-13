@@ -9,7 +9,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { viewport, screenToFlowCoordinate, setNodes, getNodes, updateNode, findNode } = useVueFlow()
+    const { viewport, screenToFlowCoordinate, setNodes, getNodes, updateNode, findNode, removeSelectedNodes, getSelectedNodes } = useVueFlow()
 
     // --- Interaction State ---
     const isConnecting = ref(false)
@@ -84,7 +84,12 @@ export function useCanvasEvents(syncNodes?: () => void) {
             return
         }
 
-        // Regular click on empty pane - clear selection
+        // Regular click on empty pane - clear selection (TASK-262)
+        // Clear both Vue Flow's internal selection AND the store
+        const selectedNodes = getSelectedNodes.value
+        if (selectedNodes.length > 0) {
+            removeSelectedNodes(selectedNodes)
+        }
         canvasStore.setSelectedNodes([])
         closeAllContextMenus()
     }

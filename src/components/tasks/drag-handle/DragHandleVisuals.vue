@@ -78,7 +78,7 @@ defineEmits<{
   (e: 'hover-start'): void
   (e: 'hover-end'): void
   (e: 'keydown', event: KeyboardEvent): void
-  (e: 'arrow-key', direction: string): void
+  (e: 'arrow-key', direction: 'up' | 'down' | 'left' | 'right'): void
   (e: 'focus'): void
   (e: 'blur'): void
 }>()

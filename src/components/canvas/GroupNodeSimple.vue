@@ -178,6 +178,11 @@ const toggleCollapse = () => {
 // TASK-068: Removed toggleAutoCollect - feature consolidated
 
 const handleContextMenu = (event: MouseEvent) => {
+  console.debug('[BUG-251] GroupNodeSimple.handleContextMenu raw event', {
+    nodeId: props.id,
+    eventType: event.type,
+    target: (event.target as HTMLElement)?.className
+  })
   emit('contextMenu', event, props.data)
 }
 
@@ -241,6 +246,9 @@ const handleResizeEnd = (event: unknown) => {
 .section-node {
   width: 100%;
   height: 100%;
+  /* BUG-251 FIX: Use flexbox so section-body can fill remaining space */
+  display: flex;
+  flex-direction: column;
   /* TASK-073: Double-line border effect - inner solid + outer subtle */
   border: 2px solid rgba(255, 255, 255, 0.35) !important;
   border-radius: var(--radius-lg);
@@ -313,6 +321,7 @@ const handleResizeEnd = (event: unknown) => {
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   min-height: 40px; /* Ensure consistent header height */
   overflow: hidden; /* Prevent header overflow */
+  flex-shrink: 0; /* BUG-251: Don't shrink header when using flexbox layout */
 }
 
 .section-color-dot {
@@ -458,6 +467,15 @@ const handleResizeEnd = (event: unknown) => {
     opacity: 1;
     transform: scale(1.1);
   }
+}
+
+/* BUG-251 FIX: Ensure section body captures right-click events */
+.section-body {
+  flex: 1;
+  min-height: 40px; /* Minimum clickable area even when empty */
+  position: relative;
+  /* Ensure clicks on empty space are captured by the group, not the pane */
+  pointer-events: auto;
 }
 
 .section-node.collapsed {

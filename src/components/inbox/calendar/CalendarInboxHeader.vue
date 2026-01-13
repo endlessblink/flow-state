@@ -62,8 +62,8 @@
   <!-- Canvas Group Filter -->
   <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
     <CustomSelect
-      :model-value="selectedCanvasGroups"
-      @update:model-value="$emit('update:selectedCanvasGroups', $event)"
+      :model-value="Array.from(selectedCanvasGroups)[0] || ''"
+      @update:model-value="$emit('update:selectedCanvasGroups', new Set($event ? [String($event)] : []))"
       :options="canvasGroupOptions"
       placeholder="Show from: All Tasks"
     />

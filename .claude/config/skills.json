@@ -1,7 +1,7 @@
 {
   "project": "PomoFlow",
   "version": "2.0.0",
-  "last_updated": "2026-01-08",
+  "last_updated": "2026-01-13",
   "skills": {
     "meta-skill-router": {
       "name": "Meta Skill Router",
@@ -115,9 +115,51 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "dev-bug-fixer"
+        "dev-bug-fixer",
+        "qa-testing"
       ],
       "description": "Master skill for Testing, Verification (E2E/Unit), and Audits."
+    },
+    "qa-testing": {
+      "name": "QA Testing for Personal Productivity App",
+      "category": "test",
+      "triggers": [
+        "test task persistence",
+        "verify offline sync",
+        "check for memory leaks",
+        "test data integrity",
+        "run QA checklist",
+        "verify backup restore",
+        "test Supabase RLS",
+        "check Pomodoro timer accuracy",
+        "test canvas geometry",
+        "run geometry tests",
+        "test sync behavior",
+        "verify smart group",
+        "canvas invariants",
+        "check position stability",
+        "geometry invariants",
+        "sync readonly"
+      ],
+      "keywords": [
+        "qa",
+        "test",
+        "geometry",
+        "canvas",
+        "sync",
+        "smart group",
+        "invariants",
+        "position",
+        "drag"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "qa-master",
+        "vue-flow-debug",
+        "dev-bug-fixer"
+      ],
+      "description": "Comprehensive QA testing skill including canvas geometry invariants (TASK-256). Covers data integrity, memory testing, offline sync, and geometry stability tests."
     },
     "dev-bug-fixer": {
       "name": "Bug Fixer",

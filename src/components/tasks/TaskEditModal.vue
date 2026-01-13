@@ -108,7 +108,7 @@ const canvasStore = useCanvasStore()
 
 // Template Refs
 const headerRef = ref<InstanceType<typeof TaskEditHeader> | null>(null)
-const titleInputRef = computed(() => headerRef.value?.titleInput)
+const titleInputRef = computed(() => headerRef.value?.titleInput || undefined)
 
 // State Composable
 const {

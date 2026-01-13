@@ -27,7 +27,7 @@
  * The old file re-exports from here for backwards compatibility.
  */
 
-import type { Task } from '@/stores/taskCore'
+import type { Task } from '@/types/tasks'
 
 /**
  * Smart group definitions (date-based)

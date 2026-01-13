@@ -2127,11 +2127,11 @@
           // \s+              - At least one space
           // (?:~~)?          - Optional strikethrough start
           // (?:.*?)          - Non-greedy match for any chars (emojis like ✅, 🔴, text like "BUG:")
-          // ((?:TASK|BUG|ISSUE)-\d+) - CAPTURE GROUP 1: The ID itself
+          // ((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+) - CAPTURE GROUP 1: The ID itself
           // (?:~~)?          - Optional strikethrough end
-          if (currentSection === 'activeWork' && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?/)) {
+          if (currentSection === 'activeWork' && trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+)(?:~~)?/)) {
             // Save previous task's subtasks before starting new one
-            if (currentItem && currentItem.id?.match(/^(?:TASK|BUG|ISSUE)-/)) {
+            if (currentItem && currentItem.id?.match(/^(?:TASK|BUG|ISSUE|FEATURE|ROAD)-/)) {
               const taskIdx = data.activeWork.findIndex(t => t.id === currentItem.id);
               if (taskIdx >= 0) {
                 data.activeWork[taskIdx].subtasks = currentItem.subtasks || [];
@@ -2163,7 +2163,7 @@
               }
             }
 
-            const match = trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE)-\d+)(?:~~)?(?::| - | )?\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+            const match = trimmed.match(/^###\s+(?:~~)?(?:.*?)((?:TASK|BUG|ISSUE|FEATURE|ROAD)-\d+)(?:~~)?(?::| - | )?\s*(.+?)(?:\s*\(([^)]+)\))?$/);
             if (match) {
               // Check both parentheses status AND title for status indicators
               // Title might contain "✅ DONE" or similar without parentheses

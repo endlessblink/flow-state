@@ -1,6 +1,6 @@
 import { storeToRefs } from 'pinia'
 import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
-import type { CanvasSection } from '@/stores/canvas'
+
 
 export function useCanvasContextMenus() {
     const store = useCanvasContextMenuStore()

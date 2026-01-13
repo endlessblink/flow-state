@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -75,10 +76,8 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background: conic-gradient(
-                var(--score-color, var(--status-neutral)) calc(var(--score, 0) * 3.6deg),
-                var(--surface-primary) 0
-            );
+            background: conic-gradient(var(--score-color, var(--status-neutral)) calc(var(--score, 0) * 3.6deg),
+                    var(--surface-primary) 0);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -259,8 +258,15 @@
         }
 
         @keyframes pulse-error {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
 
         .metric-value {
@@ -329,8 +335,13 @@
         }
 
         @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         .loading .metric-value {
@@ -355,7 +366,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Empty state */
@@ -398,8 +411,33 @@
                 justify-content: center;
             }
         }
+
+        /* Terminal */
+        .terminal {
+            background: #0d1117;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.8125rem;
+            color: #c9d1d9;
+            height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .terminal.visible {
+            display: block;
+        }
+
+        .term-line {
+            white-space: pre-wrap;
+            line-height: 1.4;
+        }
     </style>
 </head>
+
 <body>
     <div class="dashboard">
         <!-- Status Banner -->
@@ -418,186 +456,223 @@
             <div class="scan-actions">
                 <button class="btn btn-primary" id="scanBtn" onclick="runFullScan()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
-                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                        <path d="M21 3v5h-5" />
                     </svg>
                     Full Scan
                 </button>
                 <button class="btn btn-secondary" onclick="runQuickScan()">
                     Quick Scan
                 </button>
-                <button class="btn btn-secondary" id="reportBtn" onclick="downloadReport()" title="Download AI-friendly report">
+                <button class="btn btn-secondary" id="reportBtn" onclick="downloadReport()"
+                    title="Download AI-friendly report">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
                     Report
                 </button>
             </div>
         </div>
 
-        <!-- Metrics Grid -->
-        <div class="metrics-grid" id="metricsGrid">
-            <!-- TypeScript -->
-            <div class="metric-card" data-metric="typescript" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M3 3h18v18H3z"/>
-                            <path d="M14 14v4"/>
-                            <path d="M10 10h4v8"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">TypeScript Errors</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">errors found</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
-            </div>
+    </div>
 
-            <!-- ESLint -->
-            <div class="metric-card" data-metric="eslint" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                            <path d="M2 17l10 5 10-5"/>
-                            <path d="M2 12l10 5 10-5"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">ESLint Issues</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">errors / warnings</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
-            </div>
+    <!-- Terminal (Logs) -->
+    <div class="terminal" id="scanTerminal">
+        <div class="term-line" style="color: var(--text-muted)">// Terminal ready... waiting for scan</div>
+    </div>
 
-            <!-- Dead Code -->
-            <div class="metric-card" data-metric="deadCode" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M3 6h18"/>
-                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>
-                            <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">Dead Code</span>
-                    <div class="status-indicator" data-status="neutral"></div>
+    <!-- Metrics Grid -->
+    <div class="metrics-grid" id="metricsGrid">
+        <!-- TypeScript -->
+        <div class="metric-card" data-metric="typescript" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 3h18v18H3z" />
+                        <path d="M14 14v4" />
+                        <path d="M10 10h4v8" />
+                    </svg>
                 </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">unused files</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
+                <span class="metric-title">TypeScript Errors</span>
+                <div class="status-indicator" data-status="neutral"></div>
             </div>
-
-            <!-- Coverage -->
-            <div class="metric-card" data-metric="coverage" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">Test Coverage</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">average coverage</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
-            </div>
-
-            <!-- Bundle Size -->
-            <div class="metric-card" data-metric="bundleSize" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                            <line x1="12" y1="22.08" x2="12" y2="12"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">Bundle Size</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">total bundle</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
-            </div>
-
-            <!-- Vulnerabilities -->
-            <div class="metric-card" data-metric="audit" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">Vulnerabilities</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">security issues</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
-            </div>
-
-            <!-- Outdated Deps -->
-            <div class="metric-card" data-metric="outdated" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">Outdated Deps</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">outdated packages</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
-            </div>
-
-            <!-- Build Status -->
-            <div class="metric-card" data-metric="buildStatus" onclick="toggleExpand(this)">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-                        </svg>
-                    </div>
-                    <span class="metric-title">Build Status</span>
-                    <div class="status-indicator" data-status="neutral"></div>
-                </div>
-                <div class="metric-value">--</div>
-                <div class="metric-label">last build</div>
-                <div class="metric-details">
-                    <ul class="detail-list"></ul>
-                </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">errors found</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
             </div>
         </div>
+
+        <!-- ESLint -->
+        <div class="metric-card" data-metric="eslint" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                    </svg>
+                </div>
+                <span class="metric-title">ESLint Issues</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">errors / warnings</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+
+        <!-- Dead Code -->
+        <div class="metric-card" data-metric="deadCode" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+                        <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                    </svg>
+                </div>
+                <span class="metric-title">Dead Code</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">unused files</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+
+        <!-- Coverage -->
+        <div class="metric-card" data-metric="coverage" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                </div>
+                <span class="metric-title">Test Coverage</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">average coverage</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+
+        <!-- Bundle Size -->
+        <div class="metric-card" data-metric="bundleSize" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                        <line x1="12" y1="22.08" x2="12" y2="12" />
+                    </svg>
+                </div>
+                <span class="metric-title">Bundle Size</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">total bundle</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+
+        <!-- Vulnerabilities -->
+        <div class="metric-card" data-metric="audit" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                </div>
+                <span class="metric-title">Vulnerabilities</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">security issues</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+
+        <!-- Outdated Deps -->
+        <div class="metric-card" data-metric="outdated" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                </div>
+                <span class="metric-title">Outdated Deps</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">outdated packages</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+
+        <!-- Build Status -->
+        <div class="metric-card" data-metric="buildStatus" onclick="toggleExpand(this)">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                    </svg>
+                </div>
+                <span class="metric-title">Build Status</span>
+                <div class="status-indicator" data-status="neutral"></div>
+            </div>
+            <div class="metric-value">--</div>
+            <div class="metric-label">last build</div>
+            <div class="metric-details">
+                <ul class="detail-list"></ul>
+            </div>
+        </div>
+    </div>
     </div>
 
     <script>
         const API_BASE = 'http://localhost:6010';
         let currentData = null;
+
+        // Setup Log Stream
+        const terminal = document.getElementById('scanTerminal');
+        const evtSource = new EventSource('/api/events');
+
+        evtSource.onmessage = (event) => {
+            // Ignore keep-alive
+            if (event.data && event.data.trim() === ': keep-alive') return;
+
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'log') {
+                    // Show terminal when logs start arriving
+                    terminal.classList.add('visible');
+
+                    const line = document.createElement('div');
+                    line.className = 'term-line';
+                    line.textContent = data.message;
+                    terminal.appendChild(line);
+
+                    // Auto-scroll
+                    terminal.scrollTop = terminal.scrollHeight;
+                }
+            } catch (e) {
+                // Ignore parse errors from non-JSON messages if any
+            }
+        };
 
         // Load cached data on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -627,16 +702,28 @@
         async function runFullScan() {
             const btn = document.getElementById('scanBtn');
             btn.disabled = true;
+            btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span> Scanning...';
+
+            // Show and clear terminal
+            const term = document.getElementById('scanTerminal');
+            term.innerHTML = '';
+            term.classList.add('visible');
 
             document.getElementById('statusSubtitle').textContent = 'Running full system scan... This may take up to 60 seconds.';
 
             try {
                 const res = await fetch(`${API_BASE}/api/health`);
+
+                if (!res.ok) {
+                    throw new Error(`Server returned ${res.status}`);
+                }
+
                 const data = await res.json();
                 currentData = data;
                 renderResults(data);
             } catch (err) {
+                console.error(err);
                 document.getElementById('statusSubtitle').textContent = `Error: ${err.message}`;
             } finally {
                 btn.disabled = false;
@@ -683,8 +770,8 @@
             document.getElementById('scoreGrade').textContent = `Grade ${grade}`;
 
             const scoreColor = score >= 80 ? 'var(--status-healthy)' :
-                              score >= 60 ? 'var(--status-warning)' :
-                              'var(--status-error)';
+                score >= 60 ? 'var(--status-warning)' :
+                    'var(--status-error)';
 
             const circle = document.getElementById('scoreCircle');
             circle.style.setProperty('--score', score);
@@ -694,10 +781,10 @@
 
             // Update status text
             const statusText = score >= 80 ? 'System is healthy' :
-                              score >= 60 ? 'Some issues detected' :
-                              'Critical issues found';
+                score >= 60 ? 'Some issues detected' :
+                    'Critical issues found';
             document.getElementById('statusTitle').textContent = statusText;
-            document.getElementById('statusSubtitle').textContent = `Scan completed in ${data.duration}ms`;
+            document.getElementById('statusSubtitle').textContent = `Scan completed in ${data.duration ?? 'unknown '}ms`;
 
             // Update last scan time
             if (data.timestamp) {
@@ -834,9 +921,9 @@
 
         function escapeHtml(str) {
             return str.replace(/&/g, '&amp;')
-                      .replace(/</g, '&lt;')
-                      .replace(/>/g, '&gt;')
-                      .replace(/"/g, '&quot;');
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         async function downloadReport() {
@@ -900,4 +987,5 @@
         }
     </script>
 </body>
+
 </html>

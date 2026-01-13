@@ -397,9 +397,7 @@ const toggleCollectMenu = (event: MouseEvent) => {
 }
 
 // Close collect menu when clicking outside
-const _closeCollectMenu = () => {
-  showCollectMenu.value = false
-}
+
 
 // Duration Helpers
 const getDurationClass = (d: number) => {

@@ -19,7 +19,6 @@ import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 
 const { 
   config, 
-  stats, 
   backupHistory, 
   createBackup, 
   downloadBackup, 
@@ -69,10 +68,7 @@ const handleFileUpload = async (event: Event) => {
   }
 }
 
-const prepareGoldenRestore = async () => {
-  validationInfo.value = await getGoldenBackupValidation()
-  showValidation.value = true
-}
+
 
 const confirmGoldenRestore = async () => {
   isRestoring.value = true

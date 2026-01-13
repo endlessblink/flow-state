@@ -1,4 +1,4 @@
-import { ref, type Ref as _Ref } from 'vue'
+import { ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent, DragGhost, Task } from '@/types/tasks'
@@ -117,7 +117,7 @@ export function useCalendarDrag() {
    * Start dragging a calendar event
    * Used by day/week/month views for dragging existing events
    */
-  const startDrag = (event: DragEvent | MouseEvent, calendarEvent: CalendarEvent, viewMode: 'day' | 'week' | 'month') => {
+  const startDrag = (event: DragEvent | MouseEvent, calendarEvent: CalendarEvent, _viewMode: 'day' | 'week' | 'month') => {
     dragState.value = {
       isDragging: true,
       draggedTaskId: calendarEvent.taskId,

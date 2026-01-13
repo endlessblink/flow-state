@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 import { PanelLeft } from 'lucide-vue-next'

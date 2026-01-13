@@ -2,11 +2,11 @@ import type { UnifiedTask } from '@/types/unified-task';
 import type { ConflictDiff } from './threeWayMerge';
 import type {
   ConflictInfo,
-  ResolutionResult} from '@/types/conflicts';
+  ResolutionResult
+} from '@/types/conflicts';
 import {
   ConflictType,
-  ResolutionType,
-  DocumentVersion
+  ResolutionType
 } from '@/types/conflicts';
 
 export interface TaskConflict {
@@ -181,8 +181,7 @@ export class ConflictResolutionService {
 
   private smartMerge(conflict: TaskConflict): UnifiedTask {
     const mergedTask = { ...conflict.localTask };
-    const localData = conflict.localTask as any;
-    const remoteData = conflict.remoteTask as any;
+
 
     for (const diff of conflict.conflicts) {
       const field = diff.field;

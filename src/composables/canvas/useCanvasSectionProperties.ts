@@ -1,7 +1,7 @@
 import type { useTaskStore } from '@/stores/tasks'
 import { type Task } from '@/stores/tasks'
 import { type CanvasSection } from '@/stores/canvas'
-import { shouldUseSmartGroupLogic, getSmartGroupType, detectPowerKeyword } from '../useTaskSmartGroups'
+import { shouldUseSmartGroupLogic, detectPowerKeyword } from '../useTaskSmartGroups'
 import { resolveDueDate } from '../useGroupSettings'
 import { formatDateKey } from '@/utils/dateUtils'
 import { DURATION_DEFAULTS, type DurationCategory } from '@/utils/durationCategories'

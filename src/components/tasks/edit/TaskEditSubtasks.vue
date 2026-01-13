@@ -89,7 +89,7 @@ const props = defineProps<{
   subtasks: Subtask[]
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'add'): void
   (e: 'delete', id: string): void
   (e: 'update', subtask: Subtask): void

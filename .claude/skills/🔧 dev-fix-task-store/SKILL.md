@@ -1,5 +1,5 @@
 ---
-name: Fix Task Store Issues
+name: dev-fix-task-store
 description: MASTER Pinia task store debugging covering synchronization, CRUD operations, state persistence, IndexedDB conflicts, advanced state management, and complex store architecture. Fix when tasks don't save, disappear unexpectedly, don't update in UI, backup systems read wrong data, store actions fail, or advanced performance issues occur. CRITICAL: All store fixes MUST be tested with Playwright before claiming success.
 ---
 

@@ -1,5 +1,5 @@
-import { type Ref } from 'vue'
-import { type VueFlow, type Node, type Edge, useVueFlow } from '@vue-flow/core'
+
+import { type VueFlow, useVueFlow } from '@vue-flow/core'
 
 export interface NodeBatcher {
     flush: () => void
@@ -74,7 +74,7 @@ class CanvasResourceManager {
         this.watchers.forEach(unwatch => {
             try {
                 unwatch()
-            } catch (error) {
+            } catch (_error) {
                 // Ignore errors during cleanup
             }
         })
@@ -86,7 +86,7 @@ class CanvasResourceManager {
                 if (element && typeof element.removeEventListener === 'function') {
                     element.removeEventListener(event, handler, options)
                 }
-            } catch (error) {
+            } catch (_error) {
                 // Ignore
             }
         })
@@ -96,7 +96,7 @@ class CanvasResourceManager {
         this.timers.forEach(timerId => {
             try {
                 clearTimeout(timerId)
-            } catch (error) {
+            } catch (_error) {
                 // Ignore
             }
         })
@@ -106,7 +106,7 @@ class CanvasResourceManager {
         this.intervals.forEach(intervalId => {
             try {
                 clearInterval(intervalId)
-            } catch (error) {
+            } catch (_error) {
                 // Ignore
             }
         })
@@ -116,7 +116,7 @@ class CanvasResourceManager {
         this.cleanupCallbacks.forEach(callback => {
             try {
                 callback()
-            } catch (error) {
+            } catch (_error) {
                 // Ignore
             }
         })
@@ -129,7 +129,7 @@ class CanvasResourceManager {
         if (this.nodeBatcher) {
             try {
                 this.nodeBatcher.clear()
-            } catch (error) {
+            } catch (_error) {
                 // Ignore
             }
             this.nodeBatcher = null

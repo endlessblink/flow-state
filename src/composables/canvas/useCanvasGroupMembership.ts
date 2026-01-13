@@ -13,7 +13,7 @@
 import { computed } from 'vue'
 import { useCanvasStore, type CanvasGroup } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
-import { findSmallestContainingRect, type Rect } from '@/utils/canvas/positionCalculator'
+import { findSmallestContainingRect } from '@/utils/canvas/positionCalculator'
 
 export function useCanvasGroupMembership() {
   const canvasStore = useCanvasStore()

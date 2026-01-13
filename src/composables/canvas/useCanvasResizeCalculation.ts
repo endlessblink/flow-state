@@ -4,12 +4,7 @@
  * Segregated for testability and clarity.
  */
 
-interface Bounds {
-    x: number
-    y: number
-    width: number
-    height: number
-}
+
 
 interface Constraints {
     minWidth: number

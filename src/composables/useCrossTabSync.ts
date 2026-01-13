@@ -125,8 +125,8 @@ export function useCrossTabSync() {
 
     if (authStore.user?.id) {
       subscribeRealtime(
-        (payload) => { /* handle task change */ },
-        (payload) => { /* handle timer change */ }
+        (_payload) => { /* handle task change */ },
+        (_payload) => { /* handle timer change */ }
       )
     }
   }

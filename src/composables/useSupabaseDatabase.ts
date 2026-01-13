@@ -30,20 +30,13 @@ export interface TimerSettings {
 // Define DatabaseDependencies for the new function signature
 interface DatabaseDependencies { }
 
-export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
+export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const authStore = useAuthStore()
     const isSyncing = ref(false)
     const lastSyncError = ref<string | null>(null)
 
     // -- Helpers --
-
-    const getUserId = () => {
-        if (!authStore.user?.id) {
-            throw new Error('User not authenticated')
-        }
-        return authStore.user.id
-    }
 
     const getUserIdSafe = (): string | null => {
         return authStore.user?.id || null

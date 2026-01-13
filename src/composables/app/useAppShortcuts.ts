@@ -5,7 +5,7 @@ import { getUndoSystem } from '@/composables/undoSingleton'
 export function useAppShortcuts() {
     const router = useRouter()
     const taskStore = useTaskStore()
-    const undoHistory = getUndoSystem()
+
 
     // Route mapping for keyboard shortcuts
     const viewRouteMap = {

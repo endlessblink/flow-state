@@ -99,12 +99,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -112,7 +111,6 @@ import { useSettingsStore } from '@/stores/settings'
 import { useBoardModals } from '@/composables/board/useBoardModals'
 import { useBoardContextMenu } from '@/composables/board/useBoardContextMenu'
 import { useBoardActions } from '@/composables/board/useBoardActions'
-import { useBoardDensity } from '@/composables/board/useBoardDensity'
 import { useBoardState } from '@/composables/board/useBoardState'
 
 import './BoardView.css'
@@ -131,6 +129,7 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 const supabaseDb = useSupabaseDatabase()
 
 // Provide progressive disclosure state for TaskCard components
@@ -233,17 +232,5 @@ const cancelDeleteTask = () => {
   closeConfirmModal()
 }
 
-// Toggle Today filter
-const _handleToggleTodayFilter = (event: MouseEvent) => {
-  event.stopPropagation()
-  try {
-    if (taskStore.activeSmartView === 'today') {
-      taskStore.setSmartView(null)
-    } else {
-      taskStore.setSmartView('today')
-    }
-  } catch (error) {
-    // Error toggling Today filter
-  }
-}
+
 </script>

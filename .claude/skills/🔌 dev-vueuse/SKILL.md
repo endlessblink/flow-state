@@ -1,5 +1,5 @@
 ---
-name: Implement VueUse Features
+name: dev-vueuse
 description: IMPLEMENT VueUse composables for browser APIs, event handling, and performance optimization. Add keyboard shortcuts, local storage, clipboard functionality, drag-and-drop, and responsive design. Use when you need browser integration or enhanced reactivity.
 ---
 

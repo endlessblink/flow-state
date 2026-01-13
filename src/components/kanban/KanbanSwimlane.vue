@@ -193,7 +193,7 @@ const handleAddTask = (statusOrDateKey: string) => { emit('addTask', statusOrDat
 const handleGroupContextMenu = (event: MouseEvent) => {
   try {
     emit('groupContextMenu', event, props.project)
-  } catch (error) {
+  } catch (_error) {
     // Error emitting groupContextMenu
   }
 }

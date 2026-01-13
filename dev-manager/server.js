@@ -14,6 +14,18 @@ const PORT = process.env.PORT || 6010;
 let healthCache = null;
 let healthScanInProgress = false;
 
+// SSE Clients
+let clients = [];
+
+// Helper to broadcast logs to SSE clients
+const broadcastLog = (message) => {
+    // Send log event
+    const payload = JSON.stringify({ type: 'log', message });
+    clients.forEach(client => {
+        client.write(`data: ${payload}\n\n`);
+    });
+};
+
 // Enable CORS
 app.use(cors());
 
@@ -54,6 +66,45 @@ const getMasterPlanPath = () => {
         ? path.resolve(process.env.MASTER_PLAN_PATH)
         : defaultPath;
 };
+
+// Helper to scan for existing IDs and find the next available one
+const getNextId = (content, prefix = 'TASK') => {
+    const regex = new RegExp(`${prefix}-(\\d+)`, 'g');
+    let maxId = 0;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxId) {
+            maxId = num;
+        }
+    }
+
+    return `${prefix}-${maxId + 1}`;
+};
+
+// API Endpoint to get the next available ID
+app.get('/api/next-id', (req, res) => {
+    const prefix = req.query.prefix || 'TASK';
+    const masterPlanPath = getMasterPlanPath();
+
+    console.log(`[API] Calculating next ID for prefix: ${prefix}`);
+
+    fs.readFile(masterPlanPath, 'utf8', (err, data) => {
+        if (err) {
+            console.error(`[API] Error reading MASTER_PLAN.md: ${err.message}`);
+            return res.status(500).json({ error: 'Failed to read MASTER_PLAN.md' });
+        }
+
+        try {
+            const nextId = getNextId(data, prefix);
+            res.json({ prefix, nextId });
+        } catch (error) {
+            console.error(`[API] Error calculating next ID: ${error.message}`);
+            res.status(500).json({ error: 'Failed to calculate next ID' });
+        }
+    });
+});
 
 // API Endpoint to update task status
 app.post('/api/task/:id/status', (req, res) => {
@@ -238,7 +289,7 @@ app.get('/api/health', async (req, res) => {
 
     try {
         healthScanInProgress = true;
-        const result = await healthScanner.runFullScan();
+        const result = await healthScanner.runFullScan((msg) => broadcastLog(msg));
         healthCache = result;
         healthScanInProgress = false;
 
@@ -308,7 +359,7 @@ app.post('/api/health/scan', (req, res) => {
     healthScanInProgress = true;
     console.log('[API] Background scan triggered...');
 
-    healthScanner.runFullScan()
+    healthScanner.runFullScan((msg) => broadcastLog(msg))
         .then(result => {
             healthCache = result;
             healthScanInProgress = false;
@@ -612,15 +663,19 @@ app.get('/api/events', (req, res) => {
     // Send initial ping
     res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
 
-    // Keep connection open (simple placeholder)
-    // In a real app, we'd add this client to a list and send updates
-    // when file watcher detects changes. For now, this stops the client errors.
+    // Add client to list
+    clients.push(res);
+    console.log(`[API] SSE Client connected. (Total: ${clients.length})`);
+
+    // Keep connection open with heartbeat
     const keepAlive = setInterval(() => {
         res.write(`: keep-alive\n\n`);
     }, 15000);
 
     req.on('close', () => {
+        console.log(`[API] SSE Client disconnected.`);
         clearInterval(keepAlive);
+        clients = clients.filter(c => c !== res);
     });
 });
 

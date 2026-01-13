@@ -428,10 +428,7 @@ const insertTable = () => {
 }
 
 // Close dropdowns when clicking outside
-const closeDropdowns = () => {
-  showColorPicker.value = false
-  showTableMenu.value = false
-}
+
 </script>
 
 <style scoped>

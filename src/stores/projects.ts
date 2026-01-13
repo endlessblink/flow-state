@@ -47,7 +47,7 @@ export const useProjectStore = defineStore('projects', () => {
     })
 
     // -- Supabase Integration --
-    const { fetchProjects, saveProjects, saveProject, deleteProject: deleteProjectRemote, isSyncing } = useSupabaseDatabase()
+    const { fetchProjects, saveProjects, saveProject, deleteProject: deleteProjectRemote } = useSupabaseDatabase()
 
     // Actions
     const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {

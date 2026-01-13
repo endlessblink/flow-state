@@ -1,4 +1,4 @@
-import type { Task, useTaskStore } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import type { useTimerStore } from '@/stores/timer'
 
 interface BoardActionsDependencies {
@@ -15,7 +15,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
     ): Promise<T | null> => {
         try {
             return await operation()
-        } catch (error) {
+        } catch (_error) {
             return null
         }
     }

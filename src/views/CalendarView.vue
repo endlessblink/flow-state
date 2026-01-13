@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -152,10 +152,7 @@ import CalendarMonthView from '@/components/calendar/CalendarMonthView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
-import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, ListTodo as _ListTodo, Play as _Play, Check as _Check, Video as _Video, VideoOff as _VideoOff, Download as _Download } from 'lucide-vue-next'
-import { dragRecorder as _dragRecorder, type InteractionAnalysis } from '@/utils/DragInteractionRecorder'
+
 import type { CalendarEvent } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 
@@ -176,9 +173,6 @@ const operationError = ref<OperationError | null>(null)
 const systemHealthy = computed(() => !!taskStore && !!timerStore && !!uiStore)
 const systemHealthMessage = computed(() => !systemHealthy.value ? 'Critical stores failed to initialize' : '')
 
-// 📍 TASK-192: Fix memory leak using AbortController
-let dragAbortController: AbortController | null = null
-const DRAG_CAPTURE_OPTIONS = { capture: true }
 
 const handleValidateStores = () => {
   // Store validation logic
@@ -230,19 +224,18 @@ const {
 // Use global status filter directly from store (maintains reactivity)
 const statusFilter = computed(() => taskStore.activeStatusFilter)
 
-// Recording state
-const _isRecording = ref(false)
-const _recordingStatus = ref({ duration: 0, eventsCaptured: 0 })
-const _lastAnalysis = ref<InteractionAnalysis | null>(null)
-const _showRecordingPanel = ref(false)
-
-// Status filter change handler using global TaskStore
-const _handleStatusFilterChange = (_event: MouseEvent, newFilter: 'planned' | 'in_progress' | 'done' | null) => {
-  taskStore.setActiveStatusFilter(newFilter)
-}
 
 // Composables - Refactored logic into focused modules
+// Restore missing definitions
+let timeUpdateInterval: any = null
+let dragAbortController: AbortController | null = null
+const DRAG_CAPTURE_OPTIONS = { capture: true, passive: false }
+
 const dragCreate = useCalendarDragCreate()
+
+const handleTaskCreated = () => {
+  dragCreate.showQuickCreateModal.value = false
+}
 const eventHelpers = useCalendarCore()
 const calendarScroll = useCalendarScroll()
 const dayView = useCalendarDayView(currentDate, statusFilter)
@@ -251,23 +244,18 @@ const monthView = useCalendarMonthView(currentDate, statusFilter)
 
 // Reactive current time for time indicator
 const currentTime = ref(new Date())
-let timeUpdateInterval: NodeJS.Timeout | null = null
 
-// Hover state tracking (Moved to useCalendarInteractionHandlers)
 
 // Destructure commonly used items from composables
-const { hours, timeSlots, calendarEvents: _calendarEvents, dragGhost, dragMode: _dragMode, getEventStyle: _getEventStyle, getGhostStyle: _getGhostStyle,
-        isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd,
-        handleEventMouseDown: _handleEventMouseDown, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
+const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
-const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekEventMouseDown: _handleWeekEventMouseDown,
-        handleWeekDragOver, handleWeekDrop, startWeekResize, isCurrentWeekTimeCell } = weekView
+const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekDragOver, handleWeekDrop, startWeekResize, isCurrentWeekTimeCell } = weekView
 
 const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
 
 const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
         getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus,
-        getProjectColor, getProjectEmoji: _getProjectEmoji, getProjectName, getProjectVisual,
+        getProjectColor, getProjectName, getProjectVisual,
         formatSlotTime, isCurrentTimeSlot: checkCurrentTimeSlot } = eventHelpers
 
 // Destructure scroll composable
@@ -551,41 +539,7 @@ watch(currentDate, (newDate, _oldDate) => {
 
 // NAVIGATION HANDLERS (Moved to useCalendarNavigation)
 
-const _handleAddTask = () => {
-  // Open QuickTaskCreate modal instead of creating a hardcoded task
-  const now = new Date()
-  const dateStr = currentDate.value.toISOString().split('T')[0]
-  const timeStr = `${now.getHours().toString().padStart(2, '0')}:00`
 
-  // Store task data for the modal
-  dragCreate.quickCreateData.startTime = new Date(`${dateStr}T${timeStr}`)
-  dragCreate.quickCreateData.duration = 60
-  dragCreate.showQuickCreateModal.value = true
-}
-
-const _handleStartTimer = (taskId: string) => {
-  timerStore.startTimer(taskId)
-}
-
-// MODAL HANDLERS (Moved to useCalendarModals)
-
-// CONTEXT MENU HANDLERS (Moved to useCalendarInteractionHandlers)
-
-// DELETE HANDLERS (Moved to useCalendarModals)
-
-const handleTaskCreated = (_task: Task) => {
-  
-  dragCreate.showQuickCreateModal.value = false
-  dragCreate.resetCreateDrag()
-}
-
-// Event interaction handlers
-// EVENT HANDLERS (Moved to useCalendarInteractionHandlers)
-
-// Toggle hide done tasks (TASK-076: calendar-specific)
-const _handleToggleDoneTasks = (_event: MouseEvent) => {
-  taskStore.toggleCalendarDoneTasks()
-}
 </script>
 
 <style scoped>

@@ -1,4 +1,4 @@
-import { ref, reactive, computed, nextTick, type Ref } from 'vue'
+import { ref, reactive, type Ref } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -336,7 +336,7 @@ export function useCanvasInteractions(deps?: {
     // Smart Section Properties
     const { getSectionProperties } = useCanvasSectionProperties({
         taskStore,
-        getAllContainingSections: (x, y, w, h) => {
+        getAllContainingSections: (_x, _y, _w, _h) => {
             // This is used for nesting, but onNodeDragStop handles its own containment
             return []
         }
@@ -622,7 +622,7 @@ export function useCanvasInteractions(deps?: {
     }
 
     const onSectionResize = ({ sectionId: rawSectionId, event }: { sectionId: string; event: any }) => {
-        const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
+        // const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
         const typedEvent = event as { params?: { width?: number; height?: number; x?: number; y?: number } }
         const width = typedEvent?.params?.width
         const height = typedEvent?.params?.height
@@ -745,18 +745,61 @@ export function useCanvasInteractions(deps?: {
 
     // --- SELECTION HANDLERS ---
 
+    /**
+     * TASK-262 FIX: Sync store selection to Vue Flow's internal node state
+     *
+     * Vue Flow manages its own selection state via node.selected property.
+     * Our store's selectedNodeIds and Vue Flow's visual selection (.selected CSS class)
+     * are separate - we must sync them manually.
+     */
+    const syncSelectionToVueFlow = (selectedIds: string[]) => {
+        nodes.value.forEach((n) => {
+            n.selected = selectedIds.includes(n.id)
+        })
+    }
+
     const handleTaskSelect = (task: Task, multiSelect: boolean) => {
+        console.log('%c[TASK-262] handleTaskSelect CALLED', 'background: purple; color: white; font-size: 14px;', {
+            taskId: task?.id?.slice(0, 20),
+            multiSelect,
+            hasNodes: nodes.value?.length
+        })
+
         if (!task.id) return
+
+        let newSelection: string[]
+        const currentSelection = [...canvasStore.selectedNodeIds]
+
         if (multiSelect) {
-            canvasStore.toggleNodeSelection(task.id)
+            // Ctrl+click: Toggle this task in selection
+            if (currentSelection.includes(task.id)) {
+                newSelection = currentSelection.filter(id => id !== task.id)
+            } else {
+                newSelection = [...currentSelection, task.id]
+            }
         } else {
-            canvasStore.setSelectedNodes([task.id])
+            // TASK-262: Regular click adds to selection (doesn't replace)
+            // Only pane-click should clear selection
+            if (currentSelection.includes(task.id)) {
+                // Already selected - keep current selection unchanged
+                return
+            }
+            newSelection = [...currentSelection, task.id]
         }
+
+        // Update store
+        canvasStore.setSelectedNodes(newSelection)
+
+        // TASK-262 FIX: Also update Vue Flow's internal selection state
+        // This ensures the visual .selected CSS class is applied
+        syncSelectionToVueFlow(newSelection)
     }
 
     const clearSelection = () => {
         canvasStore.setSelectedNodes([])
         selectedTask.value = null
+        // TASK-262 FIX: Also clear Vue Flow's internal selection
+        syncSelectionToVueFlow([])
     }
 
     const updateSelection = (event: MouseEvent) => {
@@ -827,7 +870,11 @@ export function useCanvasInteractions(deps?: {
             if (intersects) selectedIds.push(node.id)
         })
 
-        if (selectedIds.length > 0) canvasStore.setSelectedNodes(selectedIds)
+        if (selectedIds.length > 0) {
+            canvasStore.setSelectedNodes(selectedIds)
+            // TASK-262 FIX: Also sync to Vue Flow's internal selection
+            syncSelectionToVueFlow(selectedIds)
+        }
         selectionBox.isVisible = false
     }
 

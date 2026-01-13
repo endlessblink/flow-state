@@ -1,4 +1,4 @@
-import { ref, computed, nextTick, type Ref } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
@@ -564,7 +564,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
   }
 
-  const handleEventDragEnd = (event: DragEvent, calendarEvent: CalendarEvent) => {
+  const handleEventDragEnd = (_event: DragEvent, _calendarEvent: CalendarEvent) => {
 
     // Clean up drag state to prevent stuck states
     if (isDragging.value) {

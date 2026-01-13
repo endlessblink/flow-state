@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { type Task } from '@/stores/tasks'
 import MarkdownEditor from '@/components/common/MarkdownEditor.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
@@ -33,7 +33,7 @@ const props = defineProps<{
   modelValue: Task
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'update:modelValue', value: Task): void
 }>()
 

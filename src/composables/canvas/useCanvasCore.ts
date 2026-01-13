@@ -1,5 +1,5 @@
-import { computed, ref, onBeforeUnmount } from 'vue'
-import { useVueFlow, type Node, type Edge, type ViewportTransform } from '@vue-flow/core'
+import { onBeforeUnmount } from 'vue'
+import { useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { storeToRefs } from 'pinia'
 

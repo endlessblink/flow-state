@@ -6,7 +6,7 @@ import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTrac
 import { storeToRefs } from 'pinia'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
-import { CANVAS } from '@/constants/canvas'
+
 
 export interface TaskActionsDeps {
     syncNodes: (tasks?: Task[]) => void
@@ -69,7 +69,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             deps.closeCanvasContextMenu()
             isQuickTaskCreateOpen.value = true
 
-        } catch (error) {
+        } catch (_error) {
             quickTaskPosition.value = { x: 0, y: 0 }
             deps.closeCanvasContextMenu()
             isQuickTaskCreateOpen.value = true

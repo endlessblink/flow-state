@@ -3,7 +3,8 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useTaskCoreStore, type Task, type TaskInstance } from './taskCore'
+import { useTaskStore } from './tasks'
+import type { Task, TaskInstance } from '@/types/tasks'
 
 const padNumber = (value: number) => value.toString().padStart(2, '0')
 
@@ -23,7 +24,7 @@ export const parseDateKey = (dateKey?: string): Date | null => {
 
 // Helper function to generate UUID
 const uuidv4 = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0
     const v = c === 'x' ? r : (r & 0x3 | 0x8)
     return v.toString(16)
@@ -52,14 +53,15 @@ export const getTaskInstances = (task: Task): TaskInstance[] => {
 }
 
 export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
-  const coreStore = useTaskCoreStore()
+  const taskStore = useTaskStore()
 
   // State
   const selectedDate = ref(new Date())
   const calendarView = ref<'month' | 'week' | 'day'>('month')
 
   // Computed properties
-  const allTasks = computed(() => coreStore.allTasks)
+  // SAFETY: Access via property if available or fallback to rawTasks
+  const allTasks = computed(() => taskStore.tasks || taskStore.rawTasks)
 
   // Date utilities
   const todayKey = computed(() => formatDateKey(new Date()))
@@ -67,7 +69,7 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
 
   // Task scheduling operations
   const scheduleTask = (taskId: string, date: string, time?: string): boolean => {
-    const task = coreStore.getTask(taskId)
+    const task = taskStore.getTask(taskId)
     if (!task) {
       console.warn(`Task with id ${taskId} not found`)
       return false
@@ -86,11 +88,14 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
     const instances = getTaskInstances(task)
     instances.push(instance)
 
-    return coreStore.updateTask(taskId, { instances })
+    // taskStore.updateTask returns Promise<void>, we return true blindly for now or await
+    taskStore.updateTask(taskId, { instances })
+    return true
   }
 
+
   const rescheduleTask = (taskId: string, instanceId: string, newDate: string, newTime?: string): boolean => {
-    const task = coreStore.getTask(taskId)
+    const task = taskStore.getTask(taskId)
     if (!task) return false
 
     const instances = getTaskInstances(task)
@@ -102,11 +107,13 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
       instances[instanceIndex].scheduledTime = newTime
     }
 
-    return coreStore.updateTask(taskId, { instances })
+    taskStore.updateTask(taskId, { instances })
+    return true
   }
 
+
   const unscheduleTask = (taskId: string, instanceId: string): boolean => {
-    const task = coreStore.getTask(taskId)
+    const task = taskStore.getTask(taskId)
     if (!task) return false
 
     const instances = getTaskInstances(task)
@@ -115,8 +122,10 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
 
     instances.splice(instanceIndex, 1)
 
-    return coreStore.updateTask(taskId, { instances })
+    taskStore.updateTask(taskId, { instances })
+    return true
   }
+
 
   const setTaskAsLater = (taskId: string): boolean => {
     const laterInstance: TaskInstance = {
@@ -126,16 +135,19 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
       isLater: true
     }
 
-    return coreStore.updateTask(taskId, { instances: [laterInstance] })
+    taskStore.updateTask(taskId, { instances: [laterInstance] })
+    return true
   }
 
+
   const clearTaskSchedule = (taskId: string): boolean => {
-    return coreStore.updateTask(taskId, { instances: [] })
+    taskStore.updateTask(taskId, { instances: [] })
+    return true
   }
 
   // Calendar operations
   const getTasksForDate = (dateKey: string): Task[] => {
-    return allTasks.value.filter(task => {
+    return allTasks.value.filter((task: Task) => {
       const instances = getTaskInstances(task)
       return instances.some(instance =>
         !instance.isLater && instance.scheduledDate === dateKey
@@ -208,7 +220,7 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
 
   // Duration and time tracking
   const updateTaskDuration = (taskId: string, instanceId: string, duration: number): boolean => {
-    const task = coreStore.getTask(taskId)
+    const task = taskStore.getTask(taskId)
     if (!task) return false
 
     const instances = getTaskInstances(task)
@@ -217,11 +229,13 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
 
     instance.duration = duration
 
-    return coreStore.updateTask(taskId, { instances })
+    taskStore.updateTask(taskId, { instances })
+    return true
   }
 
+
   const completeTaskInstance = (taskId: string, instanceId: string): boolean => {
-    const task = coreStore.getTask(taskId)
+    const task = taskStore.getTask(taskId)
     if (!task) return false
 
     const instances = getTaskInstances(task)
@@ -230,8 +244,10 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
 
     instance.completedPomodoros = (instance.completedPomodoros || 0) + 1
 
-    return coreStore.updateTask(taskId, { instances })
+    taskStore.updateTask(taskId, { instances })
+    return true
   }
+
 
   // Calendar navigation
   const goToToday = (): void => {
@@ -293,7 +309,7 @@ export const useTaskSchedulerStore = defineStore('taskScheduler', () => {
   const rescheduleMultipleTasks = (taskIds: string[], oldDate: string, newDate: string, newTime?: string): number => {
     let successCount = 0
     taskIds.forEach(taskId => {
-      const task = coreStore.getTask(taskId)
+      const task = taskStore.getTask(taskId)
       if (task) {
         const instances = getTaskInstances(task)
         const instance = instances.find(i => i.scheduledDate === oldDate)

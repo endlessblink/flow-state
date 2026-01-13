@@ -56,7 +56,7 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     const createGroup = async (screenPos?: { x: number; y: number }) => {
 
         const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
-        if (!vueFlowElement) return
+        // Relaxed check: Logic doesn't strict depend on this being present for state update
 
         // If no position provided, use viewport center
         let flowCoords: { x: number; y: number }

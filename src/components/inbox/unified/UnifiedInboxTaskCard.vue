@@ -2,6 +2,8 @@
   <div
     class="task-card"
     :class="[{ selected: isSelected }]"
+    :data-priority="task.priority || 'none'"
+    :data-status="task.status"
     draggable="true"
     tabindex="0"
     @dragstart="$emit('drag-start', $event)"
@@ -11,7 +13,7 @@
     @contextmenu.prevent="$emit('task-contextmenu', $event)"
     @keydown="$emit('task-keydown', $event)"
   >
-    <!-- Priority Stripe (top) -->
+    <!-- ADHD-friendly: Priority shown via left border on .task-card, not this stripe -->
     <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`" />
 
     <!-- Timer Active Badge -->
@@ -25,9 +27,15 @@
         {{ task.title }}
       </div>
 
-      <!-- Metadata Badges -->
+      <!-- ADHD-friendly: Minimal metadata - show only essentials -->
       <div class="task-metadata">
-        <!-- Project Badge -->
+        <!-- Due Date Badge (essential for planning) -->
+        <span v-if="dueStatus" class="metadata-badge due-date-badge" :class="`due-badge-${dueStatus.type}`">
+          <Calendar :size="12" />
+          {{ dueStatus.text }}
+        </span>
+
+        <!-- Project Badge (only if assigned) -->
         <span v-if="task.projectId" class="metadata-badge project-badge">
           <ProjectEmojiIcon
             v-if="projectVisual.type === 'emoji'"
@@ -44,32 +52,11 @@
           <span v-else>{{ projectVisual.content }}</span>
         </span>
 
-        <!-- Priority Tag -->
-        <NTag
-          v-if="task.priority"
-          :type="task.priority === 'high' ? 'error' : task.priority === 'medium' ? 'warning' : 'info'"
-          size="small"
-          round
-          class="priority-badge"
-        >
-          {{ task.priority }}
-        </NTag>
-
-        <!-- Due Date Badge -->
-        <span v-if="dueStatus" class="metadata-badge due-date-badge" :class="`due-badge-${dueStatus.type}`">
-          <Calendar :size="12" />
-          {{ dueStatus.text }}
-        </span>
-
-        <!-- Duration Badge -->
+        <!-- ADHD-friendly: Removed redundant NTag priority badge - left stripe is sufficient -->
+        <!-- Duration shown only on hover (progressive disclosure) via CSS -->
         <span v-if="task.estimatedDuration" class="metadata-badge duration-badge">
           <Clock :size="12" />
           {{ task.estimatedDuration }}m
-        </span>
-
-        <!-- Status Indicator -->
-        <span class="metadata-badge status-badge" :class="`status-${task.status}`">
-          {{ getStatusIndicator(task.status) }}
         </span>
       </div>
     </div>
@@ -97,7 +84,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Timer, Calendar, Clock, Play, Edit2 } from 'lucide-vue-next'
-import { NTag } from 'naive-ui'
+// ADHD-friendly: Removed NTag - redundant with priority stripe
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -144,20 +131,29 @@ const getStatusIndicator = (status: string) => {
   return indicators[status] || '📝'
 }
 
+// ADHD-friendly: Human-readable date formatting
+const formatHumanDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en', { month: 'short', day: 'numeric' })
+}
+
 const dueStatus = computed(() => {
   const task = props.task
   const today = new Date().toISOString().split('T')[0]
 
   if (task.dueDate) {
-    if (task.dueDate < today) {
-      return { type: 'overdue', text: `Overdue ${task.dueDate}` }
-    } else if (task.dueDate === today) {
+    // Extract just the date part (handles ISO strings with time)
+    const dueDateOnly = task.dueDate.split('T')[0]
+
+    if (dueDateOnly < today) {
+      // ADHD-friendly: Show simple "Overdue" with human-readable date
+      return { type: 'overdue', text: `Overdue ${formatHumanDate(dueDateOnly)}` }
+    } else if (dueDateOnly === today) {
       return { type: 'today', text: 'Today' }
-    } else if (task.dueDate === new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
+    } else if (dueDateOnly === new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
       return { type: 'tomorrow', text: 'Tomorrow' }
     } else {
-      const date = new Date(task.dueDate)
-      return { type: 'future', text: date.toLocaleDateString('en', { month: 'short', day: 'numeric' }) }
+      return { type: 'future', text: formatHumanDate(dueDateOnly) }
     }
   }
 
@@ -165,13 +161,14 @@ const dueStatus = computed(() => {
     (task.instances?.length && task.instances.find(inst => inst.scheduledDate)?.scheduledDate)
 
   if (effectiveDate) {
-    if (effectiveDate === today) {
+    const effectiveDateOnly = effectiveDate.split('T')[0]
+
+    if (effectiveDateOnly === today) {
       return { type: 'scheduled-today', text: 'Today' }
-    } else if (effectiveDate === new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
+    } else if (effectiveDateOnly === new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
       return { type: 'scheduled-tomorrow', text: 'Tomorrow' }
     } else {
-      const date = new Date(effectiveDate)
-      return { type: 'scheduled-future', text: date.toLocaleDateString('en', { month: 'short', day: 'numeric' }) }
+      return { type: 'scheduled-future', text: formatHumanDate(effectiveDateOnly) }
     }
   }
 
@@ -180,22 +177,26 @@ const dueStatus = computed(() => {
 </script>
 
 <style scoped>
+/* ADHD-friendly: Calm, compact task card */
 .task-card {
   position: relative;
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  padding: var(--space-3);
+  /* ADHD-friendly: Priority shown via left border only */
+  border-left: 4px solid transparent;
+  padding: var(--space-2) var(--space-3);
   cursor: grab;
   user-select: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   overflow: visible;
+  min-height: 40px;
 }
 
 .task-card:hover {
   border-color: var(--border-hover);
+  border-left-color: inherit; /* Preserve priority color on hover */
   box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
 }
 
 .task-card.selected {
@@ -208,18 +209,23 @@ const dueStatus = computed(() => {
   cursor: grabbing;
 }
 
+/* ADHD-friendly: Priority as subtle left border only */
 .priority-stripe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  bottom: 0;
-  background: transparent;
+  display: none; /* Hide the old stripe - we use border-left on .task-card now */
 }
 
-.priority-high { background: var(--color-priority-high); }
-.priority-medium { background: var(--color-priority-medium); }
-.priority-low { background: var(--color-priority-low); }
+/* ADHD-friendly: Priority colors via left border - calm, not overwhelming */
+.task-card[data-priority="high"] {
+  border-left-color: var(--color-priority-high);
+}
+
+.task-card[data-priority="medium"] {
+  border-left-color: var(--color-priority-medium);
+}
+
+.task-card[data-priority="low"] {
+  border-left-color: var(--color-priority-low);
+}
 
 .timer-indicator {
   position: absolute;
@@ -262,14 +268,20 @@ const dueStatus = computed(() => {
   border-radius: 4px;
 }
 
-.status-badge {
-  margin-left: auto;
+/* ADHD-friendly: Progressive disclosure - duration hidden by default */
+.duration-badge {
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-/* Due Date Colors */
+.task-card:hover .duration-badge {
+  opacity: 1;
+}
+
+/* ADHD-friendly: Due Date Colors - muted for calm appearance */
 .due-badge-overdue { color: var(--color-error); font-weight: var(--font-medium); }
-.due-badge-today { color: var(--color-warning); font-weight: var(--font-medium); }
-.due-badge-tomorrow { color: var(--color-info); }
+.due-badge-today { color: var(--text-secondary); font-weight: var(--font-medium); }
+.due-badge-tomorrow { color: var(--text-muted); }
 
 /* Quick Actions */
 .task-actions {

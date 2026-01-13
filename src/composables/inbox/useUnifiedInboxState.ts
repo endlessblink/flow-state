@@ -38,10 +38,17 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         hideInboxDoneTasks.value = !hideInboxDoneTasks.value
     }
 
+    interface GroupOption {
+        label: string
+        value: string
+        color?: string
+        count?: number
+    }
+
     // --- Canvas Group Options ---
-    const canvasGroupOptions = computed(() => {
-        const options = [
-            { label: 'All', value: '', color: undefined as string | undefined }
+    const canvasGroupOptions = computed((): GroupOption[] => {
+        const options: GroupOption[] = [
+            { label: 'All', value: '', color: undefined }
         ]
 
         groupsWithCounts.value.forEach(group => {

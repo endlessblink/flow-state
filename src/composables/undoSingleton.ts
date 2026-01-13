@@ -5,7 +5,6 @@
 import { ref, computed, nextTick } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
-import { useTaskStore } from '../stores/tasks'
 import type { Task } from '../stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import type { CanvasGroup } from '@/stores/canvas/types'
@@ -41,11 +40,8 @@ let clear: (() => void) | null = null
  */
 function initializeRefHistory() {
   if (refHistoryInstance) {
-    console.log('🔄 [UNDO-INIT] Early return - refHistoryInstance already exists')
     return
   }
-
-  console.log('🔄 Creating SINGLE refHistory instance for entire application (tasks + groups)...')
 
   // CRITICAL FIX: Start with empty state to avoid circular dependency during store setup
   // The state will be populated after stores are fully initialized
@@ -56,19 +52,19 @@ function initializeRefHistory() {
   })
 
   // Schedule state population after stores are ready (next tick ensures store setup is complete)
-  nextTick(() => {
+  nextTick(async () => {
     try {
+      // Dynamic import to break circular dependency (tasks -> taskHistory -> undoSingleton -> tasks)
+      const { useTaskStore } = await import('../stores/tasks')
       const taskStore = useTaskStore()
       const canvasStore = useCanvasStore()
 
       // Now safely populate the state - stores should be fully initialized
       if (taskStore.tasks && Array.isArray(taskStore.tasks)) {
         unifiedState!.value.tasks = [...taskStore.tasks]
-        console.log('✅ [UNDO] Populated tasks state:', taskStore.tasks.length, 'tasks')
       }
       if (canvasStore.groups && Array.isArray(canvasStore.groups)) {
         unifiedState!.value.groups = [...canvasStore.groups]
-        console.log('✅ [UNDO] Populated groups state:', canvasStore.groups.length, 'groups')
       }
     } catch (error) {
       console.warn('⚠️ [UNDO] Could not populate initial state (stores may not be ready):', error)
@@ -122,8 +118,6 @@ function initializeRefHistory() {
       }
     }
   }
-
-  console.log('✅ SINGLE refHistory instance created and shared across app')
 }
 
 // ✅ FIXED - Functions defined at module level (outside return object)
@@ -131,33 +125,26 @@ function initializeRefHistory() {
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 const performUndo = async () => {
   if (!refHistoryInstance || !unifiedState) return false
-  console.log('🔄 Executing undo with SHARED refHistory instance (tasks + groups)...')
   refHistoryInstance.undo()
 
   // After undo, unifiedState.value now contains the previous state
   // Restore both tasks and groups
   const previousState = unifiedState.value
   if (previousState && typeof previousState === 'object' && 'tasks' in previousState) {
+    // Dynamic import
+    const { useTaskStore } = await import('../stores/tasks')
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
     const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
     const canvasUiStore = useCanvasUiStore()
 
-    console.log('🔄 [UNDO] Restoring:', previousState.tasks.length, 'tasks,', previousState.groups.length, 'groups')
-
-    // DEBUG: Log canvas tasks being restored
-    const canvasTasks = previousState.tasks.filter(t => t.isInInbox === false && t.canvasPosition)
-    console.log(`🔄 [UNDO-DEBUG] Restoring ${canvasTasks.length} canvas tasks`)
-
     // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
     // This ensures groups are restored immediately even if task DB save hangs
     canvasStore.setGroups([...previousState.groups])
-    console.log('🔄 [UNDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
     // Request canvas sync IMMEDIATELY after group restore
     try {
       canvasUiStore.requestSync('user:undo')
-      console.log('🔄 [UNDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
     }
@@ -165,7 +152,6 @@ const performUndo = async () => {
     // Restore tasks (async - may take time for DB operations)
     // Don't await - let it run in background to avoid blocking UI
     taskStore.restoreState(previousState.tasks).then(() => {
-      console.log('🔄 [UNDO] Task store restore completed. Tasks:', taskStore.tasks.length)
     }).catch((err: any) => {
       console.error('❌ [UNDO] Task store restore failed:', err)
     })
@@ -179,28 +165,25 @@ const performUndo = async () => {
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 const performRedo = async () => {
   if (!refHistoryInstance || !unifiedState) return false
-  console.log('🔄 Executing redo with SHARED refHistory instance (tasks + groups)...')
   refHistoryInstance.redo()
 
   // After redo, unifiedState.value now contains the next state
   // Restore both tasks and groups
   const nextState = unifiedState.value
   if (nextState && typeof nextState === 'object' && 'tasks' in nextState) {
+    // Dynamic import
+    const { useTaskStore } = await import('../stores/tasks')
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
     const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
     const canvasUiStore = useCanvasUiStore()
 
-    console.log('🔄 [REDO] Restoring:', nextState.tasks.length, 'tasks,', nextState.groups.length, 'groups')
-
     // BUG-008 FIX: Restore groups FIRST (synchronous, no DB dependency)
     canvasStore.setGroups([...nextState.groups])
-    console.log('🔄 [REDO] Canvas store now has:', canvasStore.groups.length, 'groups')
 
     // Request canvas sync IMMEDIATELY after group restore
     try {
       canvasUiStore.requestSync('user:redo')
-      console.log('🔄 [REDO] Requested canvas sync after group restore')
     } catch (error) {
       console.warn('⚠️ [REDO] Could not request canvas sync:', error)
     }
@@ -208,7 +191,6 @@ const performRedo = async () => {
     // Restore tasks (async - may take time for DB operations)
     // Don't await - let it run in background to avoid blocking UI
     taskStore.restoreState(nextState.tasks).then(() => {
-      console.log('🔄 [REDO] Task store restore completed. Tasks:', taskStore.tasks.length)
     }).catch((err: any) => {
       console.error('❌ [REDO] Task store restore failed:', err)
     })
@@ -219,7 +201,7 @@ const performRedo = async () => {
 }
 
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
-const saveState = (description?: string) => {
+const saveState = async (description?: string) => {
   // BUG-008 DEBUG: Log when refHistoryInstance is null
   if (!refHistoryInstance) {
     console.error('❌ [UNDO-CRITICAL] saveState() called but refHistoryInstance is NULL! Calling initializeRefHistory()...')
@@ -228,7 +210,6 @@ const saveState = (description?: string) => {
       console.error('❌ [UNDO-CRITICAL] Still null after init retry!')
       return false
     }
-    console.log('✅ [UNDO-CRITICAL] refHistoryInstance recovered after init')
   }
   // FIX: Add null check for commit function to prevent silent failures
   if (!commit) {
@@ -240,6 +221,8 @@ const saveState = (description?: string) => {
     }
   }
   try {
+    // Dynamic import
+    const { useTaskStore } = await import('../stores/tasks')
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
 
@@ -248,10 +231,6 @@ const saveState = (description?: string) => {
       tasks: [...taskStore.tasks],
       groups: [...canvasStore.groups]
     }
-
-    // DEBUG: Log what's being saved
-    const canvasTasks = taskStore.tasks.filter(t => t.isInInbox === false && t.canvasPosition)
-    console.log(`💾 [UNDO-DEBUG] Saving state: ${canvasTasks.length} canvas tasks, ${canvasStore.groups.length} groups`)
 
     commit()
     return true
@@ -262,7 +241,8 @@ const saveState = (description?: string) => {
 }
 
 const deleteTaskWithUndo = async (taskId: string) => {
-  console.log('🗑️ deleteTaskWithUndo called for:', taskId)
+  // Dynamic import
+  const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
   const taskToDelete = taskStore.tasks.find(t => t.id === taskId)
@@ -271,19 +251,16 @@ const deleteTaskWithUndo = async (taskId: string) => {
     return
   }
 
-  console.log(`🗑️ Deleting task: ${taskToDelete.title}`)
-
   // FIXED: Use proper VueUse pattern - save state before operation
-  saveState('Before task deletion')
+  await saveState('Before task deletion')
 
   try {
     // Perform the deletion
     await taskStore.deleteTask(taskId)
-    console.log(`✅ Task deleted. Current tasks count: ${taskStore.tasks.length}`)
 
     // FIXED: Save state after operation
     await nextTick()
-    saveState('After task deletion')
+    await saveState('After task deletion')
   } catch (error) {
     console.error('❌ deleteTaskWithUndo failed:', error)
     throw error
@@ -291,7 +268,8 @@ const deleteTaskWithUndo = async (taskId: string) => {
 }
 
 const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
-  console.log('✏️ updateTaskWithUndo called for:', taskId, updates)
+  // Dynamic import
+  const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
   const taskToUpdate = taskStore.tasks.find(t => t.id === taskId)
@@ -300,58 +278,52 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
     return
   }
 
-  console.log(`✏️ Updating task: ${taskToUpdate.title}`)
-
   // FIXED: Use proper VueUse pattern - save state before operation
-  saveState('Before task update')
+  await saveState('Before task update')
 
   // Perform the update
   taskStore.updateTask(taskId, updates)
-  console.log(`✅ Task updated: ${taskId}`)
 
   // FIXED: Save state after operation
   await nextTick()
-  saveState('After task update')
+  await saveState('After task update')
 }
 
 const createTaskWithUndo = async (taskData: Partial<Task>) => {
-  console.log('➕ createTaskWithUndo called with:', taskData)
-
   // TASK-061: Demo content guard - defense in depth (also checked in taskStore.createTask)
   if (taskData.title) {
     guardTaskCreation(taskData.title)
   }
 
   // FIXED: Use proper VueUse pattern - save state before operation
-  saveState('Before task creation')
+  await saveState('Before task creation')
 
   // Create the task
+  // Dynamic import
+  const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const newTask = await taskStore.createTask(taskData)
-  console.log(`✅ Task created: ${newTask.title}`)
 
   // FIXED: Save state after operation
   await nextTick()
-  saveState('After task creation')
+  await saveState('After task creation')
   return newTask
 }
 
 // NEW: Create group with undo support (BUG-008 fix)
 const createGroupWithUndo = async (groupData: Omit<CanvasGroup, 'id'>) => {
-  console.log('➕ createGroupWithUndo called with:', groupData.name)
   const canvasStore = useCanvasStore()
 
   // Save state before operation
-  saveState('Before group creation')
+  await saveState('Before group creation')
 
   try {
     // Perform the creation
     const newGroup = await canvasStore.createGroup(groupData)
-    console.log(`✅ Group created: ${newGroup.name}`)
 
     // Save state after operation
     await nextTick()
-    saveState('After group creation')
+    await saveState('After group creation')
     return newGroup
   } catch (error) {
     console.error('❌ createGroupWithUndo failed:', error)
@@ -361,7 +333,6 @@ const createGroupWithUndo = async (groupData: Omit<CanvasGroup, 'id'>) => {
 
 // NEW: Update group with undo support (BUG-008 fix)
 const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup>) => {
-  console.log('✏️ updateGroupWithUndo called for:', groupId, updates)
   const canvasStore = useCanvasStore()
 
   const groupToUpdate = canvasStore.groups.find(g => g.id === groupId)
@@ -370,19 +341,16 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
     return
   }
 
-  console.log(`✏️ Updating group: ${groupToUpdate.name}`)
-
   // Save state before operation
-  saveState('Before group update')
+  await saveState('Before group update')
 
   try {
     // Perform the update
     await canvasStore.updateGroup(groupId, updates)
-    console.log(`✅ Group updated: ${groupId}`)
 
     // Save state after operation
     await nextTick()
-    saveState('After group update')
+    await saveState('After group update')
   } catch (error) {
     console.error('❌ updateGroupWithUndo failed:', error)
     throw error
@@ -391,7 +359,6 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
 
 // NEW: Delete group with undo support (ISSUE-008 fix)
 const deleteGroupWithUndo = async (groupId: string) => {
-  console.log('🗑️ deleteGroupWithUndo called for:', groupId)
   const canvasStore = useCanvasStore()
 
   const groupToDelete = canvasStore.groups.find(g => g.id === groupId)
@@ -400,19 +367,16 @@ const deleteGroupWithUndo = async (groupId: string) => {
     return
   }
 
-  console.log(`🗑️ Deleting group: ${groupToDelete.name}`)
-
   // Save state before operation
-  saveState('Before group deletion')
+  await saveState('Before group deletion')
 
   try {
     // Perform the deletion
     await canvasStore.deleteGroup(groupId)
-    console.log(`✅ Group deleted. Current groups count: ${canvasStore.groups.length}`)
 
     // Save state after operation
     await nextTick()
-    saveState('After group deletion')
+    await saveState('After group deletion')
   } catch (error) {
     console.error('❌ deleteGroupWithUndo failed:', error)
     throw error
@@ -421,10 +385,11 @@ const deleteGroupWithUndo = async (groupId: string) => {
 
 // BUG-036 FIX: Batch delete support in singleton
 const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
-  console.log(`🗑️ bulkDeleteTasksWithUndo called for ${taskIds.length} tasks`)
+  // Dynamic import
+  const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  saveState(`Before bulk delete of ${taskIds.length} tasks`)
+  await saveState(`Before bulk delete of ${taskIds.length} tasks`)
 
   try {
     if (taskStore.bulkDeleteTasks) {
@@ -436,10 +401,9 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
         await taskStore.deleteTask(id)
       }
     }
-    console.log(`✅ Bulk delete completed. Current tasks: ${taskStore.tasks.length}`)
 
     await nextTick()
-    saveState('After bulk delete')
+    await saveState('After bulk delete')
   } catch (error) {
     console.error('❌ bulkDeleteTasksWithUndo failed:', error)
     throw error
@@ -450,12 +414,8 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
  * Get the global undo system functions that use the shared refHistory instance
  */
 export function getUndoSystem() {
-  console.log('🔍 [DEBUG] getUndoSystem() called - creating or returning singleton instance')
   if (!refHistoryInstance) {
-    console.log('🔍 [DEBUG] No refHistoryInstance exists, calling initializeRefHistory()')
     initializeRefHistory()
-  } else {
-    console.log('🔍 [DEBUG] refHistoryInstance already exists, reusing it')
   }
 
   return {
@@ -510,5 +470,4 @@ export function resetUndoSystem() {
   if (typeof window !== 'undefined') {
     delete (window as Window & typeof globalThis).__pomoFlowUndoSystem
   }
-  console.log('🔄 UndoSingleton: Reset global refHistory instance')
 }

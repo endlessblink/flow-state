@@ -508,8 +508,10 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
             if (error) throw error
             if (!data) return []
 
+
             // DEBUG: Log loaded groups and their dimensions
-            (data as SupabaseGroup[]).forEach((g: any) => {
+            const groups = data as SupabaseGroup[]
+            groups.forEach((g: any) => {
                 const pos = g.position_json
                 console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
             })
@@ -866,7 +868,7 @@ export function useSupabaseDatabase(deps: DatabaseDependencies = {}) {
                             console.log('📡 [REALTIME] Attempting emergency auth refresh...')
                             supabase.auth.refreshSession().then(() => {
                                 console.log('📡 [REALTIME] Session refreshed, system will auto-retry connection')
-                            }).catch((refreshErr) => {
+                            }).catch((refreshErr: unknown) => {
                                 console.error('[ASYNC-ERROR] initRealtimeSubscription refreshSession failed', refreshErr)
                             })
                         }

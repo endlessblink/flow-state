@@ -1,6 +1,7 @@
 import { type Ref, ref, nextTick } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
+import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
@@ -38,6 +39,7 @@ export function useCanvasActions(
     undoHistory: any
 ) {
     const canvasStore = useCanvasStore()
+    const contextMenuStore = useCanvasContextMenuStore()
     const { getSelectedNodes, screenToFlowCoordinate, removeNodes } = useVueFlow()
 
     // --- Instantiate Sub-Composables ---
@@ -71,13 +73,14 @@ export function useCanvasActions(
     const nodeContextMenuX = ref(0)
     const nodeContextMenuY = ref(0)
 
-    // Canvas Context Menu State (Shared)
-    const showCanvasContextMenu = ref(false)
-    const canvasContextMenuX = ref(0)
-    const canvasContextMenuY = ref(0)
-    const canvasContextSection = ref<CanvasSection | null>(null)
-
+    // BUG-208 FIX: Use Pinia store for context menu state
+    // Previously local refs were used but CanvasContextMenus.vue reads from the store
     const handleNodeContextMenu = (event: { node: Node; event: MouseEvent | TouchEvent }) => {
+        console.debug('[BUG-251] handleNodeContextMenu called', {
+            nodeId: event.node.id,
+            eventType: event.event.type,
+            isGroupNode: CanvasIds.isGroupNode(event.node.id)
+        })
         event.event.preventDefault()
         event.event.stopPropagation()
 
@@ -89,10 +92,7 @@ export function useCanvasActions(
 
         if (section) {
             // Show the canvas context menu with group actions (TASK-070)
-            canvasContextMenuX.value = mouseEvent.clientX || 0
-            canvasContextMenuY.value = mouseEvent.clientY || 0
-            canvasContextSection.value = section
-            showCanvasContextMenu.value = true
+            contextMenuStore.openCanvasContextMenu(mouseEvent.clientX || 0, mouseEvent.clientY || 0, section)
         } else {
             // Ghost handling
             const ghostSection: CanvasSection = {
@@ -105,10 +105,7 @@ export function useCanvasActions(
                 layout: 'freeform',
                 isVisible: true
             }
-            canvasContextMenuX.value = mouseEvent.clientX || 0
-            canvasContextMenuY.value = mouseEvent.clientY || 0
-            canvasContextSection.value = ghostSection
-            showCanvasContextMenu.value = true
+            contextMenuStore.openCanvasContextMenu(mouseEvent.clientX || 0, mouseEvent.clientY || 0, ghostSection)
         }
 
         deps.closeEdgeContextMenu()
@@ -194,10 +191,7 @@ export function useCanvasActions(
         selectedNode,
         showNodeContextMenu,
         nodeContextMenuX,
-        nodeContextMenuY,
-        showCanvasContextMenu,
-        canvasContextMenuX,
-        canvasContextMenuY,
-        canvasContextSection
+        nodeContextMenuY
+        // BUG-208: Canvas context menu state removed - now managed by useCanvasContextMenuStore
     }
 }

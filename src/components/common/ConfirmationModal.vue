@@ -8,7 +8,9 @@
     :show-footer="false"
     close-on-overlay-click
     close-on-escape
+    submit-on-enter
     @close="$emit('cancel')"
+    @confirm="$emit('confirm')"
     @after-open="handleAfterOpen"
   >
     <!-- Icon -->

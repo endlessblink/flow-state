@@ -4,7 +4,7 @@ import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 
 export function useTaskRowActions(
     props: { task: Task; indentLevel: number; hasSubtasks: boolean; isExpanded: boolean },
-    emit: (event: string, ...args: any[]) => void,
+    emit: any,
     state: {
         isDragging: Ref<boolean>
         isDropTarget: Ref<boolean>
@@ -174,7 +174,7 @@ export function useTaskRowActions(
         emit('updateTask', taskId, { status })
     }
 
-    const cyclePriority = (taskId: string, currentPriority?: string) => {
+    const cyclePriority = (taskId: string, currentPriority?: string | null) => {
         const priorities = ['low', 'medium', 'high'] as const
         const currentIndex = priorities.indexOf((currentPriority || 'medium') as typeof priorities[number])
         const nextIndex = (currentIndex + 1) % priorities.length

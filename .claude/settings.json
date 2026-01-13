@@ -8,7 +8,16 @@
     "SessionStart": [],
     "SessionEnd": [],
     "PreToolUse": [],
-    "UserPromptSubmit": [],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-router-hook.sh"
+          }
+        ]
+      }
+    ],
     "PostToolUse": []
   }
 }

@@ -356,7 +356,7 @@ import { useTaskStore, type Project } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import {
-  Plus, PanelLeftClose, Settings, FolderOpen,
+  Plus, PanelLeftClose, Settings, FolderOpen, FolderPlus,
   Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle,
   ChevronRight, Coffee, Hourglass, Mountain, Trash2, X,
   Layers // Added Layers icon

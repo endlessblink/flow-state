@@ -241,7 +241,7 @@ async function handleSubmit() {
     await authStore.signUpWithEmail(
       email.value.trim(),
       password.value,
-      displayName.value.trim() || undefined
+      displayName.value.trim() ? { full_name: displayName.value.trim() } : undefined
     )
 
     // Success - emit event

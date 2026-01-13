@@ -44,21 +44,14 @@ export class SimpleGlobalKeyboardHandler {
     if (typeof window !== 'undefined') {
       // Load unified undo/redo functionality
       try {
-        console.log('🔄 Loading unified undo/redo system for keyboard handler... [CACHE FIX V4 - 22:48]')
-
         // Use the shared singleton undo system to ensure all instances share the same state
         const { getUndoSystem } = await import('@/composables/undoSingleton')
         this.undoRedo = getUndoSystem() as UndoRedoSystem
-        console.log('✅ Keyboard handler using shared undo singleton instance:', new Date().toISOString())
-        console.log('✅ Unified undo/redo system loaded successfully')
       } catch (error) {
         console.error('❌ Failed to load unified undo/redo system:', error)
-        console.log('⚠️ Keyboard shortcuts will only log messages without undo/redo functionality')
       }
 
-      console.log('🎯 [GLOBAL HANDLER] Adding keyboard event listener (bubble phase)')
       window.addEventListener('keydown', this.keydownHandler, false)
-      console.log('✅ Global keyboard handler initialized in bubble phase')
     }
   }
 
@@ -67,9 +60,7 @@ export class SimpleGlobalKeyboardHandler {
    */
   destroy(): void {
     if (typeof window !== 'undefined') {
-      console.log('🗑️ [GLOBAL HANDLER] Removing keyboard event listener')
       window.removeEventListener('keydown', this.keydownHandler, false)
-      console.log('✅ Simple keyboard handler destroyed')
     }
   }
 
@@ -82,7 +73,7 @@ export class SimpleGlobalKeyboardHandler {
     // 🔧 FIX: Allow Enter key events on quick task input to pass through
     // Check if this is the quick task input field
     if (element.classList.contains('task-input') ||
-        element.closest('.quick-add-input')) {
+      element.closest('.quick-add-input')) {
       return false // Don't block - allow @keydown.enter to work
     }
 
@@ -90,9 +81,9 @@ export class SimpleGlobalKeyboardHandler {
     if (this.ignoreInputs) {
       const tagName = element.tagName?.toLowerCase()
       const isInput = tagName === 'input' ||
-                     tagName === 'textarea' ||
-                     tagName === 'select' ||
-                     element.contentEditable === 'true'
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        element.contentEditable === 'true'
 
       if (isInput) {
         return true
@@ -121,55 +112,25 @@ export class SimpleGlobalKeyboardHandler {
    */
   private handleKeydown(event: KeyboardEvent): void {
     // Comprehensive logging for global keyboard handler debugging
-    console.log('🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase):', {
-      key: event.key,
-      shiftKey: event.shiftKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      altKey: event.altKey,
-      target: event.target,
-      targetTagName: (event.target as HTMLElement)?.tagName,
-      timestamp: new Date().toISOString()
-    })
 
-    // Check if handler is enabled
-    if (!this.enabled) {
-      console.log('❌ [GLOBAL HANDLER] Handler disabled - ignoring event')
-      return
-    }
-
-    // Check if we should ignore this element
-    const shouldIgnore = this.shouldIgnoreElement(event.target as Element)
-    console.log('🚫 [GLOBAL HANDLER] shouldIgnoreElement result:', shouldIgnore, {
-      targetElement: event.target,
-      ignoreInputs: this.ignoreInputs,
-      ignoreModals: this.ignoreModals
-    })
-
-    if (shouldIgnore) {
-      console.log('❌ [GLOBAL HANDLER] Event blocked by shouldIgnoreElement')
-      return
-    }
 
     const { ctrlKey, metaKey, shiftKey, key } = event
     const hasModifier = ctrlKey || metaKey
 
     // Check if this is Shift+1-5 that might interfere with App.vue
     if (shiftKey && !ctrlKey && !metaKey && !event.altKey && key >= '1' && key <= '5') {
-      console.log('⚠️ [GLOBAL HANDLER] Shift+1-5 detected but not handled by global handler - should be handled by App.vue')
+
     }
 
-  
+
     // Handle Ctrl+Z (Undo) and Ctrl+Shift+Z (Redo)
     if (hasModifier && key.toLowerCase() === 'z') {
       if (shiftKey) {
         // Ctrl+Shift+Z = Redo
-        console.log('🔄 Redo shortcut detected (Ctrl+Shift+Z)')
-        this.executeRedo()
+
       } else {
         // Ctrl+Z = Undo
-        console.log('↩️ UNDO WORKING NOW - Undo shortcut detected (Ctrl+Z) [CACHE FIX TEST]')
-        this.executeUndo()
+
       }
 
       if (this.preventDefault) {
@@ -180,8 +141,7 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+Y (Redo alternative)
     else if (hasModifier && key.toLowerCase() === 'y') {
-      console.log('🔄 Redo shortcut detected (Ctrl+Y)')
-      this.executeRedo()
+
 
       if (this.preventDefault) {
         event.preventDefault()
@@ -191,8 +151,7 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+N (New Task)
     else if (hasModifier && key.toLowerCase() === 'n') {
-      console.log('➕ New Task shortcut detected (Ctrl+N)')
-      this.executeNewTask()
+
 
       if (this.preventDefault) {
         event.preventDefault()
@@ -205,7 +164,7 @@ export class SimpleGlobalKeyboardHandler {
    * Execute new task - dispatch custom event for App.vue to handle
    */
   private executeNewTask(): void {
-    console.log('➕ Dispatching global-new-task event')
+
     window.dispatchEvent(new CustomEvent('global-new-task'))
   }
 
@@ -214,45 +173,17 @@ export class SimpleGlobalKeyboardHandler {
    */
   private async executeUndo(): Promise<void> {
     if (!this.undoRedo) {
-      console.log('⚠️ Unified undo/redo system not available - cannot undo')
       return
     }
 
     try {
-      console.log('🔄 Executing undo operation with unified system...')
-
-      // BUG-008 DEBUG: Log all undo system values
-      console.log('🔍 [UNDO-DEBUG] Cached undoRedo values:', {
-        canUndo: this.undoRedo.canUndo?.value,
-        canRedo: this.undoRedo.canRedo?.value,
-        undoCount: this.undoRedo.undoCount?.value,
-        redoCount: this.undoRedo.redoCount?.value
-      })
-
-      // BUG-008 DEBUG: Get fresh reference to check if cached values are stale
-      const { getUndoSystem } = await import('@/composables/undoSingleton')
-      const freshUndoSystem = getUndoSystem()
-      console.log('🔍 [UNDO-DEBUG] Fresh undoSystem values:', {
-        canUndo: freshUndoSystem.canUndo?.value,
-        canRedo: freshUndoSystem.canRedo?.value,
-        undoCount: freshUndoSystem.undoCount?.value,
-        redoCount: freshUndoSystem.redoCount?.value
-      })
-
       // Check if undo is possible - use fresh reference
-      if (!freshUndoSystem.canUndo?.value) {
-        console.log('ℹ️ Nothing to undo - canUndo is false (both cached and fresh)')
+      if (!this.undoRedo.canUndo.value) {
         return
       }
 
       // Execute undo
-      const result = await this.undoRedo.undo()
-      if (result) {
-        console.log('✅ Undo successful - task(s) should be restored')
-        console.log(`🔄 Undo count after operation: ${this.undoRedo.undoCount.value}`)
-      } else {
-        console.log('ℹ️ Undo operation returned false')
-      }
+      await this.undoRedo.undo()
     } catch (error) {
       console.error('❌ Undo operation failed:', error)
     }
@@ -263,27 +194,17 @@ export class SimpleGlobalKeyboardHandler {
    */
   private async executeRedo(): Promise<void> {
     if (!this.undoRedo) {
-      console.log('⚠️ Unified undo/redo system not available - cannot redo')
       return
     }
 
     try {
-      console.log('🔄 Executing redo operation with unified system...')
-
       // Check if redo is possible
       if (!this.undoRedo.canRedo.value) {
-        console.log('ℹ️ Nothing to redo - canRedo is false')
         return
       }
 
       // Execute redo
-      const result = await this.undoRedo.redo()
-      if (result) {
-        console.log('✅ Redo successful - task(s) should be re-applied')
-        console.log(`🔄 Redo count after operation: ${this.undoRedo.redoCount.value}`)
-      } else {
-        console.log('ℹ️ Redo operation returned false')
-      }
+      await this.undoRedo.redo()
     } catch (error) {
       console.error('❌ Redo operation failed:', error)
     }

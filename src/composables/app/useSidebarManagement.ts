@@ -40,39 +40,36 @@ export function useSidebarManagement() {
   // Helper function to filter projects for sidebar display
   const filterSidebarProjects = (projects: Project[]): Project[] => {
     // ... (rest of function unchanged, just need to make sure we don't break indentation)
-    console.log('🔍 filterSidebarProjects input:', projects.length, 'projects')
+
 
     // FIX: More robust filtering logic
     const filtered = projects.filter((p): p is Project => {
       if (!p) return false // Remove null/undefined projects
 
       if (!p.id) {
-        console.log('❌ Filtering out project without ID:', p)
         return false // Remove projects without ID
       }
 
       // Keep ALL real projects, filter out only synthetic ones
       const isSynthetic = p.id.startsWith('synthetic')
       if (isSynthetic) {
-        console.log('❌ Filtering out synthetic project:', p.id)
         return false
       }
 
       // FIX: Additional validation for real projects
       if (!p.name || p.name.trim() === '') {
-        console.log('❌ Filtering out project without valid name:', p.id)
         return false
       }
 
-      console.log('✅ Keeping real project:', p.id, p.name)
+
       return true
     })
 
-    console.log('🔍 filterSidebarProjects output:', filtered.length, 'projects')
+
 
     // No projects is valid - user can have uncategorized tasks without any projects
     if (filtered.length === 0) {
-      console.log('ℹ️ No projects found - tasks will be uncategorized')
+
     }
 
     return filtered
@@ -82,11 +79,6 @@ export function useSidebarManagement() {
   // Use centralized rootProjects from task store
   const rootProjects = computed(() => {
     const result = taskStore.rootProjects || []
-    console.log('🔍 [useSidebarManagement] rootProjects computed:', {
-      length: result.length,
-      firstProject: result[0]?.name || 'none',
-      taskStoreRootProjects: taskStore.rootProjects
-    })
     return result
   })
 
@@ -447,7 +439,7 @@ export function useSidebarManagement() {
 
   // Start Quick Sort from uncategorized view
   const handleStartQuickSort = () => {
-    console.log('🔧 Sidebar: Starting Quick Sort from uncategorized view')
+
     router.push({ name: 'quick-sort' })
   }
 
@@ -479,7 +471,7 @@ export function useSidebarManagement() {
     if (data.projectId) {
       // Remove parent relationship by setting parentId to null
       taskStore.updateProject(data.projectId, { parentId: null })
-      console.log(`Project "${data.title}" un-nested to root level`)
+
     }
   }
 

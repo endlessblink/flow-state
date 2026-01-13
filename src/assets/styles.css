@@ -31,6 +31,20 @@
   min-height: 0;
 }
 
+/* Thin scrollbar for inbox task list (global - Vue scoped styles don't work with ::webkit-scrollbar) */
+.inbox-tasks::-webkit-scrollbar {
+  width: 6px;
+}
+
+.inbox-tasks::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.inbox-tasks::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
 /* Horizontal scroll variant */
 .scroll-container-x {
   flex: 1;

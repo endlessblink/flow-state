@@ -227,7 +227,16 @@ export interface ReconcilableTask {
  * This function runs on load to fix legacy tasks whose parentId doesn't
  * match their actual spatial position. Uses center-based containment logic.
  *
- * SAFE: Only updates parentId, does not touch positions or other properties.
+ * =========================================================================
+ * GEOMETRY WRITER: ONE-TIME on load only (TASK-255 Geometry Invariants)
+ * =========================================================================
+ * - CONTROLLED: Only runs ONCE per browser session (guarded in orchestrator)
+ * - SAFE: Only updates parentId, does not touch positions or other properties
+ * - PURPOSE: Fix legacy data where parentId doesn't match spatial containment
+ *
+ * This is an ALLOWED geometry write because it's a controlled one-time
+ * initialization operation, not a runtime sync or automated process.
+ * =========================================================================
  *
  * @param tasks - Tasks to reconcile
  * @param groups - All canvas groups (with absolute positions)

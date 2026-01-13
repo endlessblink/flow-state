@@ -1,8 +1,9 @@
-import { ref, toRef, computed } from 'vue'
+import { ref, toRef, computed, watch } from 'vue'
 import { useProjectStore } from '../projects'
 import { useUIStore } from '../ui' // Import UI Store
 import { useTaskMigrations } from '@/composables/tasks/useTaskMigrations'
 import { useTaskFiltering } from '@/composables/tasks/useTaskFiltering'
+import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import type { Task } from '@/types/tasks'
 
 export function useTaskStates() {
@@ -12,6 +13,35 @@ export function useTaskStates() {
     // State - Start with empty tasks array
     // SAFETY: Named _rawTasks to discourage direct access - use filteredTasks (exported as 'tasks') instead
     const _rawTasks = ref<Task[]>([])
+
+    // ================================================================
+    // DUPLICATE DETECTION - Store Level Watcher (Dev Only) (AUTHORITATIVE)
+    // ================================================================
+    // This watches for any moment when _rawTasks contains duplicates
+    // Helps identify if duplication happens via push, splice, or assignment
+    // Uses assertNoDuplicateIds for consistent detection across layers
+    if (import.meta.env.DEV) {
+        watch(_rawTasks, (newTasks) => {
+            const checkResult = assertNoDuplicateIds(newTasks, '_rawTasks store')
+
+            if (checkResult.hasDuplicates) {
+                // Get more details about the duplicate tasks
+                const duplicateIds = checkResult.duplicates.map(d => d.id)
+                const duplicateTasks = newTasks
+                    .filter(t => duplicateIds.includes(t.id))
+                    .slice(0, 5)
+                    .map(t => ({ id: t.id.slice(0, 8), title: t.title?.slice(0, 20) }))
+
+                console.error('[STORE-DUPLICATE-DETECTED]', {
+                    duplicates: checkResult.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+                    totalCount: checkResult.totalCount,
+                    uniqueIdCount: checkResult.uniqueIdCount,
+                    duplicateTasks,
+                    snapshotSize: newTasks.length
+                })
+            }
+        }, { deep: true }) // TASK-260: Changed to deep: true to catch mutations, not just array replacement
+    }
 
     // State for filtering
     const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)

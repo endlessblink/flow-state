@@ -7,6 +7,20 @@
 
 export class IntegrityService {
     /**
+     * Compute SHA-256 hash or similar for tasks
+     */
+    public computeTaskHash(tasks: unknown[]): string {
+        return this.calculateChecksum(tasks)
+    }
+
+    /**
+     * Create fingerprint for tasks
+     */
+    public createTaskFingerprint(tasks: unknown[]): string {
+        return this.calculateChecksum(tasks)
+    }
+
+    /**
      * Calculates a simple hash for any data structure.
      * Ensures consistent results by sorting object keys.
      */

@@ -397,6 +397,23 @@ export function useCanvasInteractions(deps?: {
     /**
      * Handle drag stop - save new absolute positions to DB
      *
+     * =========================================================================
+     * GEOMETRY WRITE POLICY (TASK-240 Phase 2.5)
+     * =========================================================================
+     * This function (onNodeDragStop) is the ONLY place where user-initiated
+     * geometry changes are allowed:
+     *   - task.parentId
+     *   - task.canvasPosition
+     *   - group.parentGroupId
+     *   - group.position
+     *
+     * All other code paths (Smart Groups, sync, orchestrator, overdue collectors)
+     * must be READ-ONLY for geometry fields. They may change metadata (dueDate,
+     * priority, status, tags) but NEVER parent or position fields.
+     *
+     * This policy prevents sync loops and position drift.
+     * =========================================================================
+     *
      * FULLY ABSOLUTE ARCHITECTURE:
      * 1. Use computedPosition for absolute world coordinates
      * 2. Detect new parent using spatial containment
@@ -525,11 +542,12 @@ export function useCanvasInteractions(deps?: {
                 }
 
                 // 4. Optimistic Store Update (Absolute position + parentId)
+                // GEOMETRY WRITER: Primary drag handler (TASK-255)
                 taskStore.updateTask(task.id, {
                     parentId: newParentId ?? undefined,
                     canvasPosition: absolutePos,
                     positionFormat: 'absolute'
-                })
+                }, 'DRAG')
 
                 if (oldParentId !== newParentId) {
                     // REACTIVITY FIX: Bump version FIRST to trigger count recomputation
@@ -546,11 +564,12 @@ export function useCanvasInteractions(deps?: {
                 }
 
                 // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)
+                // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
                 if (targetGroup) {
                     const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
                     if (Object.keys(smartUpdates).length > 0) {
                         console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, smartUpdates)
-                        taskStore.updateTask(task.id, smartUpdates)
+                        taskStore.updateTask(task.id, smartUpdates, 'SMART-GROUP')
                     }
                 }
 

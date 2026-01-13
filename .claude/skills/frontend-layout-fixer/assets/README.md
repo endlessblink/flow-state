@@ -1,6 +1,6 @@
-# Frontend Layout Fixer - Quick Start
+# Frontend Layout Fixer - Unified Bug Fixer
 
-Fix frontend layout issues (clipping, spacing, overflow) with structured CSS patches.
+Fix ALL frontend issues with ONE skill: state hydration, data persistence, CSS layout, badges, and text overflow.
 
 ## Setup
 
@@ -9,104 +9,180 @@ npm install @anthropic-ai/sdk
 export ANTHROPIC_API_KEY="your-key-here"
 ```
 
-## Basic Usage
+## Quick Usage
 
 ```javascript
-import fixLayoutIssue from "./scripts/skill.js";
-import { applyAllPatches } from "./scripts/patch-applier.js";
+// For ANY frontend bug, use the same function
+const result = await fixFrontend({
+  javascript: yourCode,           // For state/persistence bugs
+  html: yourHTML,                 // For CSS bugs
+  css: yourCSS,                   // For CSS bugs
+  issue_description: "Your bug",
+  context: { project_type: "vue" }
+});
 
-const input = {
-  html: `<div class="card"><h2>Title</h2></div>`,
-  css: `.card { height: 60px; overflow: hidden; }`,
-  context: {
-    issue_description: "Text is clipped at top and bottom",
-    target_selector_hints: [".card"],
-    constraints: ["Do not change colors"],
-    viewport_width: 360,
-    viewport_height: 800
-  }
-};
-
-const result = await fixLayoutIssue(input);
-const fixed = applyAllPatches({ html: input.html, css: input.css, patches: result });
-console.log(fixed.css);
+console.log(result.bug_category);     // Which bug type
+console.log(result.diagnosis);         // Root causes
+console.log(result.fixes);             // Exact code/CSS changes
+console.log(result.testing_checklist); // How to verify
 ```
 
-## Common Fixes
+## Bug Categories
 
-| Issue | Solution |
-|-------|----------|
-| Text clipped | `height` -> `min-height`, `overflow: visible` |
-| Tight spacing | Increase `padding` |
-| RTL text issues | Increase `line-height` to 1.5 |
-| Alignment problems | `justify-content: flex-start` |
+| Category | Symptoms | Input Needed |
+|----------|----------|--------------|
+| **State Hydration** | Phantom duplicates, stale data | `javascript` |
+| **Data Persistence** | Data vanishes after refresh | `javascript` |
+| **CSS Layout** | Shadow clipping, content cutoff | `html` + `css` |
+| **Badge Styling** | Misaligned badges/labels | `html` + `css` |
+| **Text Overflow** | Unwanted truncation | `html` + `css` |
 
-## Input Schema
+## Bug-to-Usage Mapping
+
+### State Hydration Bug (Phantom Tasks)
 
 ```javascript
-{
-  html: String,           // HTML source
-  css: String,            // CSS stylesheet
+const result = await fixFrontend({
+  javascript: `
+    const [tasks, setTasks] = useState(
+      JSON.parse(localStorage.getItem('tasks') || '[]')  // Problem
+    );
+  `,
+  issue_description: "Phantom duplicate tasks appearing",
+  context: { project_type: "react" }
+});
+```
+
+### Data Persistence Bug (Vanishing Tasks)
+
+```javascript
+const result = await fixFrontend({
+  javascript: `
+    useEffect(() => {
+      fetch('/api/tasks')
+        .then(r => r.json())
+        .then(data => setTasks(data));  // Missing: localStorage.setItem()
+    }, []);
+  `,
+  issue_description: "Tasks vanish after refresh",
+  context: { storage_type: "localStorage" }
+});
+```
+
+### CSS Layout Bug (Shadow Clipping)
+
+```javascript
+const result = await fixFrontend({
+  html: `<div class="card"><h3>Title</h3></div>`,
+  css: `.card { overflow: hidden; box-shadow: 0 -4px 8px rgba(0,0,0,0.15); }`,
+  issue_description: "Box shadow clipped at top",
+  context: { target_selectors: [".card"] }
+});
+```
+
+### Badge Styling Bug (Misalignment)
+
+```javascript
+const result = await fixFrontend({
+  html: `<span class="priority-badge">H</span>`,
+  css: `.priority-badge { width: 20px; height: 20px; font-size: 10px; }`,
+  issue_description: "Badge text not centered",
   context: {
-    issue_description: String,        // What's broken
-    target_selector_hints: String[],  // CSS selectors to check
-    constraints: String[],            // What NOT to change
-    viewport_width?: Number,          // Width in px
-    viewport_height?: Number          // Height in px
+    target_selectors: [".priority-badge"],
+    layout_direction: "rtl"
   }
-}
+});
+```
+
+### Text Overflow Bug (Truncation)
+
+```javascript
+const result = await fixFrontend({
+  html: `<span class="task-title">Long task title</span>`,
+  css: `.task-title { flex: 1; white-space: nowrap; overflow: hidden; }`,
+  issue_description: "Task title truncated",
+  context: { target_selectors: [".task-title"] }
+});
 ```
 
 ## Output Schema
 
 ```javascript
 {
-  explanation: String,              // Summary
+  skill_type: "frontend",
+  bug_category: "state|persistence|css_layout|badge|text_overflow",
+
   diagnosis: {
-    root_cause: String,
-    affected_selectors: String[]
+    severity: "critical|high|medium|low",
+    root_causes: ["cause 1", "cause 2"],
+    category_details: { /* type-specific */ }
   },
-  css_patches: [{
-    selector: String,
-    old_block: String,
-    new_block: String,
-    rationale: String
-  }],
-  html_patches: [{
-    search: String,
-    replace: String,
-    rationale: String
-  }],
-  testing_checklist: String[]
+
+  explanation: "Detailed explanation",
+
+  fixes: {
+    javascript_patches: [...],  // For state/persistence bugs
+    css_patches: [...]          // For CSS bugs
+  },
+
+  testing_checklist: [
+    "Step 1 to verify",
+    "Step 2 to test",
+    "Step 3 to confirm"
+  ],
+
+  prevention: "How to prevent in future"
 }
+```
+
+## Quick Reference
+
+### State Hydration Fixes
+```javascript
+useState([])              // Not useState(localStorage.getItem(...))
+key={item.id}             // Not key={index}
+return () => abort();     // Cleanup useEffect
+```
+
+### Data Persistence Fixes
+```javascript
+localStorage.setItem('key', JSON.stringify(data));  // Save after fetch
+localStorage.removeItem('key');                      // Invalidate on update
+```
+
+### CSS Layout Fixes
+```css
+overflow: visible;   /* Not hidden (shadow clipping) */
+min-height: 60px;    /* Not height (content cutoff) */
+padding: 12px;       /* Not 0 */
+line-height: 1.5;    /* Not 1.2 */
+```
+
+### Badge Styling Fixes
+```css
+display: inline-flex;
+align-items: center;
+justify-content: center;
+inset-inline-end: 0;       /* RTL-safe, not right */
+margin-inline-start: 8px;  /* RTL-safe, not margin-left */
+```
+
+### Text Overflow Fixes
+```css
+white-space: normal;   /* Not nowrap */
+word-break: break-word;
+min-width: 0;          /* Required for flex items */
 ```
 
 ## Best Practices
 
-1. **Provide 3-5 selector hints** - More specific = better results
-2. **Specify constraints** - What NOT to change
-3. **Include viewport size** - Mobile vs desktop matters
-4. **Validate before applying** - Use validator.js functions
-
-## Validation
-
-```javascript
-import { validateInput, validateOutput, validatePatches } from "./scripts/validator.js";
-
-const inputCheck = validateInput(input);
-const outputCheck = validateOutput(result);
-const constraintCheck = validatePatches(result, input.context.constraints);
-
-if (inputCheck.valid && outputCheck.valid && constraintCheck.valid) {
-  // Safe to apply
-}
-```
+1. **Provide context** - `project_type`, `storage_type`, `layout_direction`
+2. **Add selector hints** - 3-5 likely CSS selectors
+3. **Specify constraints** - What NOT to change
+4. **Follow testing checklist** - Verify fixes work
 
 ## Files
 
-- `scripts/skill.js` - Core API caller
-- `scripts/patch-applier.js` - Apply patches
-- `scripts/validator.js` - Validation functions
-- `references/schema.json` - Full JSON schema
-- `references/system-prompt.txt` - System prompt
-- `references/user-prompt-template.txt` - User prompt template
+- `SKILL.md` - Complete documentation with 80+ patterns
+- `README.md` - This quick start guide
+- `examples/` - Example inputs and outputs

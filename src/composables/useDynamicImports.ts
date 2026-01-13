@@ -125,7 +125,7 @@ export class DynamicImportManager {
 
       const module = await Promise.race([importPromise, timeoutPromise]) as { default?: T } | T
 
-      console.log(`✅ Successfully imported: ${key}`)
+
       return (module as { default?: T }).default || module as T
 
     } catch (error) {
@@ -144,7 +144,7 @@ export class DynamicImportManager {
       .filter(([_, config]) => config.preload)
       .map(([key]) => key as ImportKey)
 
-    console.log('🔄 Preloading critical imports...', criticalImports)
+
 
     await Promise.allSettled(
       criticalImports.map(key =>
@@ -155,7 +155,7 @@ export class DynamicImportManager {
       )
     )
 
-    console.log('✅ Critical imports preloaded')
+
   }
 
   /**
@@ -308,16 +308,16 @@ export const getCanvasStore = async () => {
  * Call this early in app startup
  */
 export const initializeDynamicImports = async (): Promise<void> => {
-  console.log('🚀 Initializing dynamic import system...')
+
 
   // Preload critical imports
   await dynamicImportManager.preloadCritical()
 
-  console.log('✅ Dynamic import system initialized')
+
 
   // Log statistics
   const stats = dynamicImportManager.getStats()
-  console.log('📊 Import system stats:', stats)
+
 }
 
 // Export the ImportKey type for external use

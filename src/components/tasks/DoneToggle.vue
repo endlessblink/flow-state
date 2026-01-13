@@ -10,7 +10,7 @@
       :size="size"
       :variant="variant"
       :title="title"
-      :aria-label="ariaLabel"
+      :ariaLabel="ariaLabel"
       :show-hints="showHints"
       :show-progress="showProgress"
       :progress-percentage="progressPercentage"

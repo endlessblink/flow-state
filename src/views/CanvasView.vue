@@ -54,6 +54,7 @@
       <CanvasEmptyState
         v-if="hasNoTasks"
         @addTask="handleAddTask"
+        @createGroup="createGroup()"
       />
 
       <!-- Filter Status Indicator -->
@@ -241,6 +242,7 @@ import { useEventListener } from '@vueuse/core'
 import { useTaskStore } from '../stores/tasks'
 import { useCanvasStore } from '../stores/canvas'
 import { useUIStore } from '../stores/ui'
+import { useCanvasContextMenuStore } from '../stores/canvas/contextMenus'
 
 import TaskNode from '../components/canvas/TaskNode.vue'
 import GroupNodeSimple from '../components/canvas/GroupNodeSimple.vue'
@@ -248,6 +250,8 @@ import UnifiedInboxPanel from '../components/inbox/UnifiedInboxPanel.vue'
 import CanvasModals from '../components/canvas/CanvasModals.vue'
 import CanvasEmptyState from '../components/canvas/CanvasEmptyState.vue'
 import CanvasContextMenus from '../components/canvas/CanvasContextMenus.vue'
+
+import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import CanvasToolbar from '../components/canvas/CanvasToolbar.vue'
 import CanvasStatusBanner from '../components/canvas/CanvasStatusBanner.vue'
 import CanvasLoadingOverlay from '../components/canvas/CanvasLoadingOverlay.vue'
@@ -258,8 +262,9 @@ import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrat
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const uiStore = useUIStore()
+const modalsStore = useCanvasModalsStore()
+const contextMenuStore = useCanvasContextMenuStore()
 
-// Register custom node types
 // Register custom node types
 const nodeTypes: Record<string, any> = {
   taskNode: markRaw(TaskNode),
@@ -275,7 +280,7 @@ const {
   handleSectionResizeStart, handleSectionResize, handleSectionResizeEnd,
   onPaneReady, fitCanvas, zoomToSelection, retryFailedOperation,
   handlePaneClick, handleCanvasRightClick, handlePaneContextMenu, handleDrop,
-  showCanvasContextMenu, canvasContextMenuX, canvasContextMenuY, canvasContextSection,
+  // BUG-208: Canvas context menu state now comes from contextMenuStore, not orchestrator
   showNodeContextMenu, nodeContextMenuX, nodeContextMenuY,
   showEdgeContextMenu, edgeContextMenuX, edgeContextMenuY,
   closeCanvasContextMenu, createTaskHere, createGroup, editGroup, deleteGroup,
@@ -321,7 +326,8 @@ const handleOpenSectionSettings = (id: string) => {
     if (section) { editingSection.value = section; isSectionSettingsOpen.value = true }
 }
 const handleOpenSectionSettingsFromContext = () => {
-    if (canvasContextSection.value) handleOpenSectionSettings(canvasContextSection.value.id)
+    // BUG-208: Use store for context menu state
+    if (contextMenuStore.canvasContextSection) handleOpenSectionSettings(contextMenuStore.canvasContextSection.id)
 }
 const handleToggleFocusMode = () => uiStore.toggleFocusMode()
 const handleSectionUpdate = (id: string, data: any) => canvasStore.updateSection(id, data)
@@ -335,20 +341,21 @@ const handleTaskContextMenu = (event: MouseEvent, task: any) => {
 }
 
 const handleSectionContextMenu = (event: MouseEvent, section: any) => {
+    console.debug('[BUG-251] handleSectionContextMenu called', {
+        sectionId: section?.id,
+        sectionName: section?.name,
+        eventType: event?.type
+    })
     if (event) {
         event.preventDefault()
         event.stopPropagation() // STOP PROPAGATION to prevent pane menu
     }
-    // Open Canvas Context Menu with section context
-    // NOTE: Removed updateSection call - it was causing unnecessary writes
-    // and potential position drift. The store already has the section data.
+    // BUG-208 FIX: Use Pinia store instead of local refs
+    // CanvasContextMenus.vue reads from the store, so we must write to it
+    contextMenuStore.openCanvasContextMenu(event.clientX, event.clientY, section)
+}
 
-    // Position menu
-    canvasContextMenuX.value = event.clientX
-    canvasContextMenuY.value = event.clientY
-    canvasContextSection.value = section
-    showCanvasContextMenu.value = true
-}// Expose for testing purposes (Fundamental Stability)
+// Expose for testing purposes (Fundamental Stability)
 if (process.env.NODE_ENV === 'development' || (window as any).PLAYWRIGHT_TEST) {
   (window as any).__POMO_FLOW_DEBUG__ = {
     orchestrator,

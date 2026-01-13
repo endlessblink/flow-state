@@ -421,3 +421,314 @@ export function logHierarchySummary(storeGroups: CanvasGroup[]): void {
 
     console.groupEnd()
 }
+
+// ============================================================================
+// GEOMETRY CHANGE GUARD
+// ============================================================================
+
+/**
+ * Assert that no geometry fields are being changed by a non-authorized source.
+ *
+ * Smart Groups may only update METADATA (dueDate, priority, status, tags).
+ * This guard catches any accidental geometry writes before they happen.
+ *
+ * @param oldTask - The current task state
+ * @param newUpdates - The proposed updates
+ * @param context - Description of where this check is being called from
+ */
+export function assertNoGeometryChange(
+    oldTask: { id: string; title?: string; parentId?: string | null; canvasPosition?: { x: number; y: number } | null },
+    newUpdates: { parentId?: string | null; canvasPosition?: { x: number; y: number } | null },
+    context: string
+): void {
+    if (!import.meta.env.DEV) return
+
+    const changedFields: string[] = []
+
+    // Check parentId change
+    if ('parentId' in newUpdates && newUpdates.parentId !== oldTask.parentId) {
+        changedFields.push('parentId')
+    }
+
+    // Check canvasPosition change
+    if ('canvasPosition' in newUpdates) {
+        const oldPos = oldTask.canvasPosition
+        const newPos = newUpdates.canvasPosition
+        if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
+            changedFields.push('canvasPosition')
+        }
+    }
+
+    if (changedFields.length > 0) {
+        console.error('[ASSERT-FAILED] Smart group attempted geometry change', {
+            context,
+            taskId: oldTask.id?.slice(0, 8),
+            taskTitle: oldTask.title?.slice(0, 30),
+            changedFields,
+            oldParentId: oldTask.parentId,
+            newParentId: newUpdates.parentId,
+            oldPosition: oldTask.canvasPosition,
+            newPosition: newUpdates.canvasPosition
+        })
+    }
+}
+
+// ============================================================================
+// DUPLICATE ID DETECTION
+// ============================================================================
+
+/**
+ * Result of duplicate ID check
+ */
+export interface DuplicateIdResult {
+    duplicates: Array<{ id: string; count: number }>
+    totalCount: number
+    uniqueIdCount: number
+    hasDuplicates: boolean
+}
+
+/**
+ * Assert that no duplicate IDs exist in an array of items
+ *
+ * This is the authoritative helper for duplicate detection across all layers.
+ * Use it in:
+ * - tasksWithCanvasPosition (selector layer)
+ * - visibleGroups (store layer)
+ * - Node builders (final layer)
+ *
+ * @param items - Array of items with 'id' property
+ * @param context - Descriptive context for error messages (e.g., 'tasksToSync', 'groups')
+ * @returns DuplicateIdResult with stats and duplicate list
+ */
+export function assertNoDuplicateIds<T extends { id: string }>(
+    items: T[],
+    context: string
+): DuplicateIdResult {
+    const counts = new Map<string, number>()
+
+    for (const item of items) {
+        counts.set(item.id, (counts.get(item.id) ?? 0) + 1)
+    }
+
+    const duplicates = Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([id, count]) => ({ id, count }))
+
+    const result: DuplicateIdResult = {
+        duplicates,
+        totalCount: items.length,
+        uniqueIdCount: counts.size,
+        hasDuplicates: duplicates.length > 0
+    }
+
+    if (result.hasDuplicates) {
+        console.error(`[ASSERT-FAILED] Duplicate ids in ${context}`, {
+            duplicates: duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+            totalCount: result.totalCount,
+            uniqueIdCount: result.uniqueIdCount
+        })
+    }
+
+    return result
+}
+
+/**
+ * Alias for assertNoDuplicateIds - preferred naming convention
+ */
+export const checkForDuplicateIds = assertNoDuplicateIds
+
+// ============================================================================
+// GEOMETRY DRIFT DETECTION
+// ============================================================================
+
+/**
+ * Fields that constitute "geometry" - only drag handlers should modify these
+ */
+const GEOMETRY_FIELDS = ['canvasPosition', 'position', 'parentId', 'parentGroupId'] as const
+type GeometryField = typeof GEOMETRY_FIELDS[number]
+
+/**
+ * Allowed sources that can modify geometry
+ */
+const ALLOWED_GEOMETRY_SOURCES = ['DRAG', 'CREATE', 'MOVE_TO_INBOX', 'INITIAL_RECONCILE'] as const
+type GeometrySource = typeof ALLOWED_GEOMETRY_SOURCES[number]
+
+/**
+ * Check if an update object contains geometry fields
+ */
+export function containsGeometryFields(updates: Record<string, any>): GeometryField[] {
+    return GEOMETRY_FIELDS.filter(field => field in updates)
+}
+
+/**
+ * Assert that geometry changes come from an allowed source
+ *
+ * Call this from updateTask/updateGroup with a source parameter.
+ * Logs [GEOMETRY-DRIFT] warning if non-allowed source tries to modify geometry.
+ *
+ * @param updates - The update object being applied
+ * @param source - Who is making the change ('DRAG', 'SYNC', 'SMART-GROUP', etc.)
+ * @param entityType - 'task' or 'group'
+ * @param entityId - The ID of the entity being updated
+ */
+export function assertGeometrySource(
+    updates: Record<string, any>,
+    source: string | undefined,
+    entityType: 'task' | 'group',
+    entityId: string
+): void {
+    if (!isDev) return
+
+    const geometryFields = containsGeometryFields(updates)
+    if (geometryFields.length === 0) return // No geometry changes
+
+    const isAllowed = source && ALLOWED_GEOMETRY_SOURCES.includes(source as GeometrySource)
+
+    if (isAllowed) {
+        console.debug(`📍 [GEOMETRY-${source}]`, {
+            entityType,
+            entityId: entityId.slice(0, 8),
+            fields: geometryFields,
+            values: geometryFields.reduce((acc, f) => ({ ...acc, [f]: updates[f] }), {})
+        })
+    } else {
+        console.warn(`⚠️ [GEOMETRY-DRIFT] Non-drag source "${source || 'UNKNOWN'}" modifying geometry`, {
+            entityType,
+            entityId: entityId.slice(0, 8),
+            fields: geometryFields,
+            values: geometryFields.reduce((acc, f) => ({ ...acc, [f]: updates[f] }), {}),
+            stack: new Error().stack?.split('\n').slice(2, 5).join('\n')
+        })
+    }
+}
+
+// ============================================================================
+// SUPABASE DEBUG HELPERS
+// ============================================================================
+//
+// SQL QUERIES FOR FINDING DUPLICATES:
+// ====================================
+//
+// Find duplicate task IDs in database:
+// ```sql
+// SELECT id, COUNT(*) AS cnt
+// FROM tasks
+// GROUP BY id
+// HAVING COUNT(*) > 1;
+// ```
+//
+// Find duplicate group IDs in database:
+// ```sql
+// SELECT id, COUNT(*) AS cnt
+// FROM groups
+// GROUP BY id
+// HAVING COUNT(*) > 1;
+// ```
+//
+// ONE-TIME CLEANUP (DANGEROUS - run manually in Supabase SQL editor):
+// ===================================================================
+// For tasks - keep the row with latest updated_at, delete others:
+// ```sql
+// WITH duplicates AS (
+//   SELECT id, ctid, ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC) as rn
+//   FROM tasks
+//   WHERE id IN (
+//     SELECT id FROM tasks GROUP BY id HAVING COUNT(*) > 1
+//   )
+// )
+// DELETE FROM tasks WHERE ctid IN (
+//   SELECT ctid FROM duplicates WHERE rn > 1
+// );
+// ```
+//
+// For groups - keep the row with latest updated_at, delete others:
+// ```sql
+// WITH duplicates AS (
+//   SELECT id, ctid, ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC) as rn
+//   FROM groups
+//   WHERE id IN (
+//     SELECT id FROM groups GROUP BY id HAVING COUNT(*) > 1
+//   )
+// )
+// DELETE FROM groups WHERE ctid IN (
+//   SELECT ctid FROM duplicates WHERE rn > 1
+// );
+// ```
+//
+// ============================================================================
+
+/**
+ * Log task ID histogram from Supabase fetch results
+ *
+ * Call after fetchTasks() to detect if Supabase returns duplicates.
+ * This would indicate a database-level issue (multiple rows with same ID).
+ *
+ * @param tasks - Array of tasks from Supabase
+ * @param context - Description of the fetch (e.g., 'loadFromDatabase')
+ */
+export function logSupabaseTaskIdHistogram(
+    tasks: Array<{ id: string; title?: string }>,
+    context: string
+): void {
+    if (!isDev) return
+
+    const counts = new Map<string, number>()
+    for (const task of tasks) {
+        counts.set(task.id, (counts.get(task.id) ?? 0) + 1)
+    }
+
+    const duplicates = Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([id, count]) => ({ id: id.slice(0, 8), count }))
+
+    if (duplicates.length > 0) {
+        console.error(`[SUPABASE-DUPLICATES] ${context}`, {
+            duplicates,
+            totalCount: tasks.length,
+            uniqueCount: counts.size
+        })
+    } else {
+        console.debug(`[SUPABASE-HISTOGRAM] ${context}`, {
+            totalCount: tasks.length,
+            uniqueCount: counts.size
+        })
+    }
+}
+
+/**
+ * Log group ID histogram from Supabase fetch results
+ *
+ * Call after fetchGroups() to detect if Supabase returns duplicates.
+ * This would indicate a database-level issue (multiple rows with same ID).
+ *
+ * @param groups - Array of groups from Supabase
+ * @param context - Description of the fetch (e.g., 'loadFromDatabase')
+ */
+export function logSupabaseGroupIdHistogram(
+    groups: Array<{ id: string; name?: string }>,
+    context: string
+): void {
+    if (!isDev) return
+
+    const counts = new Map<string, number>()
+    for (const group of groups) {
+        counts.set(group.id, (counts.get(group.id) ?? 0) + 1)
+    }
+
+    const duplicates = Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([id, count]) => ({ id: id.slice(0, 8), count }))
+
+    if (duplicates.length > 0) {
+        console.error(`[SUPABASE-GROUP-DUPLICATES] ${context}`, {
+            duplicates,
+            totalCount: groups.length,
+            uniqueCount: counts.size
+        })
+    } else {
+        console.debug(`[SUPABASE-GROUP-HISTOGRAM] ${context}`, {
+            totalCount: groups.length,
+            uniqueCount: counts.size
+        })
+    }
+}

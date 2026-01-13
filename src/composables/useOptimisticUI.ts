@@ -6,7 +6,30 @@
 import { ref, computed, reactive } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 // import { useToast } from '@/composables/useToast' // Not implemented
-import type { QueuedOperation, OnlineStatus } from '@/utils/offlineQueue'
+// Types for optimistic operations
+export interface QueuedOperation {
+  id: string
+  type: 'create' | 'update' | 'delete'
+  entityType: 'task' | 'project' | 'group'
+  entityId: string
+  data: any
+  timestamp: number
+  retryCount: number
+  priority?: string | number
+  originalData?: any
+  optimisticId?: string
+  maxRetries?: number
+  status?: string
+  dependencies?: string[]
+}
+
+export interface OnlineStatus {
+  isOnline: boolean
+  connectionType: 'online' | 'offline' | 'slow'
+  lastConnected: number
+  connectionQuality: number // 0-1
+  syncStrategy: 'immediate' | 'batch' | 'manual'
+}
 
 interface OptimisticUpdate {
   id: string

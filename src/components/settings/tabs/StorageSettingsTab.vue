@@ -27,7 +27,8 @@ const {
   restoreFromGoldenBackup,
   getGoldenBackupValidation,
   fetchShadowBackup,
-  restoreFromShadow
+  restoreFromShadow,
+  restoreBackup
 } = useBackupSystem()
 
 const isRestoring = ref(false)

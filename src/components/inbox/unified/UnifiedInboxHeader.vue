@@ -110,7 +110,7 @@ const props = defineProps<{
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
-  selectedPriority: string | null
+  selectedPriority: 'high' | 'medium' | 'low' | null
   selectedProject: string | null
   selectedDuration: DurationCategory | null
   hideDoneTasks: boolean
@@ -125,7 +125,7 @@ const emit = defineEmits<{
   (e: 'toggle-advanced-filters'): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void
-  (e: 'update:selected-priority', value: string | null): void
+  (e: 'update:selected-priority', value: 'high' | 'medium' | 'low' | null): void
   (e: 'update:selected-project', value: string | null): void
   (e: 'update:selected-duration', value: DurationCategory | null): void
   (e: 'update:hide-done-tasks', value: boolean): void

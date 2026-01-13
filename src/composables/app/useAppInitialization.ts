@@ -28,7 +28,7 @@ export function useAppInitialization() {
         if (typeof window !== 'undefined') {
             (window as any).PomoFlowSessionStart = Date.now()
         }
-        console.log('🚀 [APP] Starting strictly ordered initialization (Supabase Mode)...')
+
 
         // 0. Initialize auth and clear guest data if not authenticated
         const authStore = useAuthStore()
@@ -37,11 +37,11 @@ export function useAppInitialization() {
         if (!authStore.isAuthenticated) {
             // Guest mode: clear all persisted data for fresh experience
             clearGuestData()
-            console.log('👤 [APP] Guest mode: starting with fresh empty app')
+
         }
 
         // 1. Initial Load from Supabase
-        console.log('⚡ [APP] Loading stores from Supabase...')
+
         uiStore.loadState()
 
         await Promise.all([
@@ -50,7 +50,7 @@ export function useAppInitialization() {
             canvasStore.loadFromDatabase()
         ])
 
-        console.log('✅ [APP] Core stores loaded')
+
 
         // Initialize notification system
         try {
@@ -93,7 +93,7 @@ export function useAppInitialization() {
             ))
 
             if (isLocked) {
-                console.log('[SHIELD] Ignoring project update during active canvas operation')
+
                 return
             }
 
@@ -120,7 +120,7 @@ export function useAppInitialization() {
             ))
 
             if (isLocked) {
-                console.log('[SHIELD] Ignoring task update during active canvas operation')
+
                 return
             }
 
@@ -129,12 +129,12 @@ export function useAppInitialization() {
             if (!taskId) return
 
             // BUG-169 DEBUG: Log ALL realtime events to diagnose task disappearance
-            console.log(`[REALTIME] Task event:`, {
+            /* console.log(`[REALTIME] Task event:`, {
                 eventType,
                 taskId: taskId?.substring(0, 8),
                 is_deleted: newDoc?.is_deleted,
                 title: newDoc?.title?.substring(0, 20) || oldDoc?.title?.substring(0, 20)
-            })
+            }) */
 
             // BUG-169 FIX: Safety guards to prevent spurious task deletions
             // 1. Check for hard DELETE event (eventType === 'DELETE')
@@ -159,7 +159,7 @@ export function useAppInitialization() {
                 // BUG-FIX: Map raw Supabase data to app format
                 // This ensures is_deleted -> _soft_deleted, position -> canvasPosition, etc.
                 const mappedTask = fromSupabaseTask(newDoc as SupabaseTask)
-                console.log(`[REALTIME] Updating task ${taskId.substring(0, 8)}`)
+
                 tasks.updateTaskFromSync(taskId, mappedTask, false)
             }
         }
@@ -168,15 +168,15 @@ export function useAppInitialization() {
         activeChannel.value = channel
 
         if (channel) {
-            console.log('📡 [APP] Realtime subscriptions active')
+
         }
 
-        console.log('✅ [APP] Initialization complete')
+
     })
 
     onUnmounted(() => {
         if (activeChannel.value) {
-            console.log('📡 [APP] Cleaning up zombie realtime subscription...')
+
             activeChannel.value.unsubscribe()
             activeChannel.value = null
         }

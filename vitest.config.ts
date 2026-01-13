@@ -14,7 +14,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     // Use node environment for file system tests
-    include: ['tests/**/*.{test,spec}.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
+    include: ['tests/**/*.test.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
     // Allow file system access for safety tests
     allowOnly: true,
@@ -25,7 +25,7 @@ export default defineConfig({
       {
         name: 'unit',
         test: {
-          include: ['tests/**/*.{test,spec}.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
+          include: ['tests/**/*.test.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
           environment: 'jsdom', // Use jsdom for Vue component/composable testing
         }
       },

@@ -10,7 +10,7 @@ import {
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import type { CanvasGroup } from '@/stores/canvas/types'
-import { validateAllInvariants, logHierarchySummary } from '@/utils/canvas/invariants'
+import { validateAllInvariants, logHierarchySummary, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -122,8 +122,10 @@ export function useCanvasSync() {
      * Sync store data to canvas nodes (READ PATH)
      *
      * =========================================================================
-     * CRITICAL CONTRACT: READ-ONLY FOR POSITION/HIERARCHY DATA
+     * GEOMETRY WRITE POLICY (TASK-240 Phase 2.5)
      * =========================================================================
+     * Sync is a READ-ONLY projection from store → Vue Flow display.
+     *
      * This function MUST NEVER write to:
      *   - taskStore (task positions, parentId, any task data)
      *   - canvasStore.groups (group positions, parentGroupId, any group data)
@@ -136,6 +138,8 @@ export function useCanvasSync() {
      * Writing to stores from sync would create feedback loops:
      *   Store changes → sync runs → sync writes to store → sync runs → ...
      * This causes position drift and groups "merging back together".
+     *
+     * Only useCanvasInteractions.onNodeDragStop() may write geometry.
      * =========================================================================
      *
      * READ PATH FLOW:
@@ -170,6 +174,20 @@ export function useCanvasSync() {
             // CRITICAL: Sort groups so that parent groups are processed before children.
             // Vue Flow needs parent nodes to exist before children reference them via parentNode.
             // This ensures correct parent-child relationships on initial render after reload.
+
+            // === ASSERT: No duplicate group IDs before node creation (AUTHORITATIVE) ===
+            // Uses assertNoDuplicateIds for consistent detection across layers
+            if (import.meta.env.DEV) {
+                const groupCheck = assertNoDuplicateIds(groups, 'groups input to syncStoreToCanvas')
+                if (groupCheck.hasDuplicates) {
+                    console.error('[ASSERT-FAILED] Duplicate groupIds in groups before node creation', {
+                        duplicates: groupCheck.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+                        totalCount: groupCheck.totalCount,
+                        uniqueIdCount: groupCheck.uniqueIdCount
+                    })
+                }
+            }
+
             const sortedGroups = sortGroupsByHierarchy(groups)
 
             // Create a Set of visible group IDs for fast lookup
@@ -389,6 +407,130 @@ export function useCanvasSync() {
                             oldPosition: oldNode.position,
                             newPosition: newNode.position
                         })
+                    }
+                }
+
+                // ================================================================
+                // DUPLICATE DETECTION - Node Builder Layer (AUTHORITATIVE)
+                // ================================================================
+                // Uses assertNoDuplicateIds for consistent detection across layers
+                // This is the final checkpoint before nodes are rendered
+                if (import.meta.env.DEV) {
+                    // 1. Check tasksToSync for duplicates (upstream issue)
+                    const taskSyncCheck = assertNoDuplicateIds(tasksToSync, 'tasksToSync')
+                    if (taskSyncCheck.hasDuplicates) {
+                        console.error('[ASSERT-FAILED] Duplicate taskIds in tasksToSync before node creation', {
+                            duplicates: taskSyncCheck.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+                            totalCount: taskSyncCheck.totalCount,
+                            uniqueIdCount: taskSyncCheck.uniqueIdCount
+                        })
+                    }
+
+                    // 2. Check task nodes for duplicates
+                    const taskNodes = newNodes.filter((n: any) => n.type === 'taskNode')
+                    const taskNodeObjects = taskNodes.map((n: any) => ({
+                        id: n.data?.task?.id || n.id
+                    }))
+                    const taskNodeCheck = assertNoDuplicateIds(taskNodeObjects, 'taskNodes')
+
+                    if (taskNodeCheck.hasDuplicates) {
+                        console.error('[DUPLICATE-NODES]', {
+                            duplicates: taskNodeCheck.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+                            totalTaskNodes: taskNodeCheck.totalCount,
+                            uniqueTaskIds: taskNodeCheck.uniqueIdCount,
+                            source: 'syncStoreToCanvas'
+                        })
+                    }
+
+                    console.debug('[NODE-BUILDER]', {
+                        totalNodes: newNodes.length,
+                        taskNodes: taskNodeCheck.totalCount,
+                        uniqueTaskIds: taskNodeCheck.uniqueIdCount,
+                        hasDuplicates: taskNodeCheck.hasDuplicates
+                    })
+
+                    // 3. Check group nodes for duplicates
+                    const groupNodes = newNodes.filter((n: any) => n.type === 'sectionNode')
+                    const groupNodeObjects = groupNodes.map((n: any) => ({
+                        id: n.data?.id || n.id
+                    }))
+                    const groupNodeCheck = assertNoDuplicateIds(groupNodeObjects, 'groupNodes')
+
+                    if (groupNodeCheck.hasDuplicates) {
+                        console.error('[DUPLICATE-GROUP-NODES]', {
+                            duplicates: groupNodeCheck.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+                            totalGroupNodes: groupNodeCheck.totalCount,
+                            uniqueGroupIds: groupNodeCheck.uniqueIdCount,
+                            source: 'syncStoreToCanvas'
+                        })
+                    }
+
+                    console.debug('[GROUP-NODE-BUILDER]', {
+                        totalNodes: newNodes.length,
+                        groupNodes: groupNodeCheck.totalCount,
+                        uniqueGroupIds: groupNodeCheck.uniqueIdCount
+                    })
+
+                    // ================================================================
+                    // GEOMETRY DRIFT DETECTION - Compare store positions vs node positions
+                    // ================================================================
+                    // This catches drift at the moment nodes are about to be rendered.
+                    // For root nodes (no parent), store position should equal node position.
+                    // Any mismatch indicates position drift from an unexpected source.
+                    const DRIFT_EPSILON = 0.5
+
+                    // Check task nodes for drift
+                    for (const taskNode of taskNodes) {
+                        const task = taskNode.data?.task
+                        if (!task?.canvasPosition) continue
+
+                        const storeAbsolute = task.canvasPosition
+                        const nodePosition = taskNode.position
+                        const hasParent = task.parentId && task.parentId !== 'NONE'
+
+                        // For root tasks, store position should match node position directly
+                        if (!hasParent) {
+                            const dx = Math.abs((storeAbsolute.x ?? 0) - (nodePosition?.x ?? 0))
+                            const dy = Math.abs((storeAbsolute.y ?? 0) - (nodePosition?.y ?? 0))
+                            if (dx > DRIFT_EPSILON || dy > DRIFT_EPSILON) {
+                                console.warn('[GEOMETRY-DRIFT]', {
+                                    type: 'task',
+                                    id: task.id?.slice(0, 8),
+                                    title: task.title?.slice(0, 20),
+                                    parentId: task.parentId,
+                                    storePosition: { x: storeAbsolute.x, y: storeAbsolute.y },
+                                    nodePosition: { x: nodePosition?.x, y: nodePosition?.y },
+                                    delta: { x: dx.toFixed(1), y: dy.toFixed(1) }
+                                })
+                            }
+                        }
+                    }
+
+                    // Check group nodes for drift
+                    for (const groupNode of groupNodes) {
+                        const group = groupNode.data?.group || canvasStore._rawGroups?.find((g: any) => g.id === groupNode.data?.id)
+                        if (!group?.position) continue
+
+                        const storeAbsolute = group.position
+                        const nodePosition = groupNode.position
+                        const hasParent = group.parentGroupId && group.parentGroupId !== 'NONE'
+
+                        // For root groups, store position should match node position directly
+                        if (!hasParent) {
+                            const dx = Math.abs((storeAbsolute.x ?? 0) - (nodePosition?.x ?? 0))
+                            const dy = Math.abs((storeAbsolute.y ?? 0) - (nodePosition?.y ?? 0))
+                            if (dx > DRIFT_EPSILON || dy > DRIFT_EPSILON) {
+                                console.warn('[GEOMETRY-DRIFT]', {
+                                    type: 'group',
+                                    id: group.id?.slice(0, 8),
+                                    name: group.name?.slice(0, 20),
+                                    parentGroupId: group.parentGroupId,
+                                    storePosition: { x: storeAbsolute.x, y: storeAbsolute.y },
+                                    nodePosition: { x: nodePosition?.x, y: nodePosition?.y },
+                                    delta: { x: dx.toFixed(1), y: dy.toFixed(1) }
+                                })
+                            }
+                        }
                     }
                 }
 

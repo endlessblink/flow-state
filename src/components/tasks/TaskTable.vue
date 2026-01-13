@@ -65,6 +65,7 @@
         'row-selected': selectedTasks.includes(task.id),
         [`priority-${task.priority || 'none'}`]: true
       }"
+      :data-status="task.status"
       @click="$emit('select', task.id)"
       @contextmenu.prevent="$emit('contextMenu', $event, task)"
     >
@@ -138,19 +139,19 @@
       <div class="table-cell due-date-cell">
         <span v-if="task.dueDate" class="due-date">
           <Calendar :size="14" />
-          {{ task.dueDate }}
+          {{ formatDueDate(task.dueDate) }}
         </span>
         <span v-else class="no-date">-</span>
       </div>
 
       <div class="table-cell progress-cell">
-        <div class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
-          <!-- Gray background stroke (always visible) -->
+        <!-- ADHD-friendly: Only show progress when > 0% to reduce visual noise -->
+        <div v-if="task.progress > 0" class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
           <div class="progress-bg" />
-          <!-- Colored progress stroke (clips left-to-right) -->
           <div class="progress-fill" />
           <span class="progress-text">{{ task.progress }}%</span>
         </div>
+        <span v-else class="no-progress">-</span>
       </div>
 
       <div class="table-cell actions-cell">
@@ -258,6 +259,20 @@ const toggleTaskSelect = (taskId: string) => {
 // Helper function to get project visual for a task
 const getProjectVisual = (task: Task) => {
   return taskStore.getProjectVisual(task.projectId)
+}
+
+// ADHD-friendly: Human-readable date formatting
+const formatDueDate = (dueDate: string | undefined) => {
+  if (!dueDate) return '-'
+  const date = new Date(dueDate)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  if (date.toDateString() === today.toDateString()) return 'Today'
+  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const startEdit = (taskId: string, field: string) => {
@@ -735,5 +750,56 @@ onUnmounted(() => {
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin: 0;
+}
+
+/* ADHD-friendly: Status-colored left border for instant visual recognition */
+.table-row {
+  border-left: 4px solid transparent;
+}
+
+.table-row[data-status="planned"] {
+  border-left-color: var(--status-planned-border);
+}
+
+.table-row[data-status="in_progress"] {
+  border-left-color: var(--status-in-progress-border);
+}
+
+.table-row[data-status="done"] {
+  border-left-color: var(--status-done-border);
+}
+
+.table-row[data-status="backlog"] {
+  border-left-color: var(--status-backlog-border);
+}
+
+.table-row[data-status="on_hold"] {
+  border-left-color: var(--status-on-hold-border);
+}
+
+/* ADHD-friendly: Compact density for 40px rows */
+.task-table--compact .table-row {
+  min-height: 40px;
+  padding: var(--space-1_5) var(--space-3);
+}
+
+.task-table--compact .table-header {
+  min-height: 36px;
+  padding: var(--space-1_5) var(--space-3);
+}
+
+/* ADHD-friendly: Subtle row striping for scanability */
+.table-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table-row:nth-child(even):hover {
+  background-color: var(--glass-bg-medium);
+}
+
+/* No progress indicator styling */
+.no-progress {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
 }
 </style>

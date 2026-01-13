@@ -16,6 +16,7 @@
         'task-row--overdue': isOverdue,
         'task-row--high-priority': task.priority === 'high'
       }"
+      :data-status="task.status"
       :style="{
         paddingLeft: `${indentLevel * 20 + 40}px`,
         '--indent-level': indentLevel
@@ -92,13 +93,14 @@
         <span v-else class="task-row__no-date">-</span>
       </div>
 
-      <!-- Progress Bar (Stroke-only design) -->
+      <!-- Progress Bar - ADHD-friendly: Only show when > 0% -->
       <div class="task-row__progress">
-        <div class="task-row__progress-bar" :style="{ '--progress': `${task.progress || 0}%` }">
+        <div v-if="task.progress && task.progress > 0" class="task-row__progress-bar" :style="{ '--progress': `${task.progress}%` }">
           <div class="task-row__progress-bg" />
           <div class="task-row__progress-fill" />
-          <span class="task-row__progress-text">{{ task.progress || 0 }}%</span>
+          <span class="task-row__progress-text">{{ task.progress }}%</span>
         </div>
+        <span v-else class="task-row__no-progress">-</span>
       </div>
 
       <!-- Action Buttons -->
@@ -189,8 +191,24 @@ const statusOptions = [
 const taskStore = useTaskStore()
 
 // --- Initialize Composables ---
-const state = useTaskRowState(props)
-const actions = useTaskRowActions(props, emit, state)
+const state = useTaskRowState({
+  task: props.task,
+  indentLevel: props.indentLevel,
+  selected: props.selected,
+  expandedTasks: props.expandedTasks,
+  visitedIds: props.visitedIds
+})
+
+const actions = useTaskRowActions(
+  { 
+    task: props.task, 
+    indentLevel: props.indentLevel, 
+    hasSubtasks: state.hasSubtasks.value, 
+    isExpanded: state.isExpanded.value 
+  }, 
+  emit, 
+  state
+)
 
 // --- Destructure State ---
 const {
@@ -407,5 +425,51 @@ const {
   .task-row__action-btn {
     transition: none;
   }
+}
+
+/* ADHD-friendly: Status-colored left border for instant visual recognition */
+.task-row {
+  border-left: 4px solid transparent;
+}
+
+.task-row[data-status="planned"] {
+  border-left-color: var(--status-planned-border);
+}
+
+.task-row[data-status="in_progress"] {
+  border-left-color: var(--status-in-progress-border);
+}
+
+.task-row[data-status="done"] {
+  border-left-color: var(--status-done-border);
+}
+
+.task-row[data-status="backlog"] {
+  border-left-color: var(--status-backlog-border);
+}
+
+.task-row[data-status="on_hold"] {
+  border-left-color: var(--status-on-hold-border);
+}
+
+/* ADHD-friendly: Compact row height (40px) */
+.task-row {
+  min-height: 40px;
+  padding: var(--space-1_5) var(--space-3);
+}
+
+/* No progress indicator styling */
+.task-row__no-progress {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* ADHD-friendly: Subtle row striping for scanability */
+.hierarchical-task-row:nth-child(even) .task-row {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.hierarchical-task-row:nth-child(even) .task-row:hover {
+  background-color: var(--glass-bg-medium);
 }
 </style>

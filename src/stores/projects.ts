@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
-import { useTaskStore } from './tasks'
 
 export const useProjectStore = defineStore('projects', () => {
 
@@ -136,6 +135,7 @@ export const useProjectStore = defineStore('projects', () => {
                 const parentId = projectToDelete.parentId
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { useTaskStore } = await import('./tasks')
                 const taskStore = useTaskStore() as any
                 // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,6 +176,7 @@ export const useProjectStore = defineStore('projects', () => {
 
         manualOperationInProgress = true
         try {
+            const { useTaskStore } = await import('./tasks')
             const taskStore = useTaskStore() as any
             const projectIdSet = new Set(projectIds)
 
@@ -251,23 +252,8 @@ export const useProjectStore = defineStore('projects', () => {
         }
     }
 
-    const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
-        const taskStore = useTaskStore() as any
-        // SAFETY: Use _rawTasks to find any task including soft-deleted
-        const task = (taskStore._rawTasks as any).find((t: any) => t.id === taskId)
-        if (task) {
-            manualOperationInProgress = true
-            try {
-                task.projectId = targetProjectId
-                task.updatedAt = new Date()
-                console.log(`Task "${task.title}" moved to project "${getProjectDisplayName(targetProjectId)}"`)
-                // SAFETY: Save all raw tasks including soft-deleted
-                await (taskStore as any).saveTasksToStorage(taskStore._rawTasks, `moveTaskToProject-${taskId}`)
-            } finally {
-                manualOperationInProgress = false
-            }
-        }
-    }
+    // moveTaskToProject MOVED to taskOperations.ts to break circular dependency
+    // (tasks -> projects -> tasks)
 
     const getProjectById = (projectId: string | null | undefined): Project | undefined => {
         if (!projectId) return undefined
@@ -482,7 +468,7 @@ export const useProjectStore = defineStore('projects', () => {
         setActiveProject,
         saveProjectsToStorage,
         setProjectViewType,
-        moveTaskToProject,
+        // moveTaskToProject, // Removed: Moved to taskOperations.ts
         initializeFromDatabase,
         updateProjectFromSync,
         removeProjectFromSync,

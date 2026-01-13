@@ -1,278 +1,105 @@
 /**
- * Canvas Overdue Task Collector
+ * =============================================================================
+ * ADR: CANVAS OVERDUE COLLECTOR - AUTO-MOVE PERMANENTLY DISABLED (TASK-255)
+ * =============================================================================
  *
- * Automatically collects and organizes overdue tasks on the canvas view.
- * Creates an "Overdue" group and moves overdue tasks into it.
+ * STATUS: The auto-move/auto-reparenting functionality is permanently disabled.
+ *         Only metadata-only helpers remain active.
  *
- * Features:
- * - Auto-creates "Overdue" group if not present
- * - Moves overdue tasks (dueDate < today) into the group
- * - Only affects tasks already on the canvas (doesn't pull from inbox)
- * - Ignores recurring and completed tasks
- * - Ensures day-of-week groups (Friday, Saturday) for action planning
+ * WHAT THE AUTO-MOVE DID:
+ * - Automatically created "Overdue" groups
+ * - Moved tasks into groups based on dueDate (auto-reparenting)
+ * - Modified task.canvasPosition without user interaction
  *
- * NOTE: This file was renamed from useCanvasSmartGroups.ts for clarity.
- * The old file re-exports from here for backwards compatibility.
+ * WHY AUTO-MOVE WAS DISABLED:
+ * - Violated TASK-255 Geometry Invariants (only drag handlers may change positions)
+ * - Caused position drift and sync cascades
+ * - Tasks would "jump" unexpectedly when dates changed
+ * - Smart Groups changing geometry conflicted with sync architecture
  *
- * @example
- * ```ts
- * import { useCanvasOverdueCollector } from '@/composables/canvas/useCanvasOverdueCollector'
+ * GEOMETRY INVARIANT RULES (SOP-002):
+ * - Only user-initiated drag operations may change:
+ *   - task.parentId
+ *   - task.canvasPosition
+ *   - group.parentGroupId
+ *   - group.position
+ * - Smart Groups may ONLY change METADATA (dueDate, status, priority, tags)
+ * - Sync operations are READ-ONLY projections
  *
- * const { autoCollectOverdueTasks, ensureActionGroups } = useCanvasOverdueCollector()
+ * WHAT REMAINS ACTIVE:
+ * - getNextDayOfWeek() helper for date calculations (metadata-only)
+ * - Count badges via aggregatedTaskCountByGroupId (read-only computed)
  *
- * // Run on canvas mount to organize overdue tasks
- * await autoCollectOverdueTasks()
- * ```
+ * ALTERNATIVE APPROACHES (if needed):
+ * - Use smart views/filters to show overdue tasks differently
+ * - Require explicit user action to move tasks between groups
+ * - Use metadata (dueDate) changes, not visual/position changes
+ *
+ * HISTORY:
+ * - Original as useCanvasSmartGroups.ts
+ * - Renamed to useCanvasOverdueCollector.ts
+ * - Auto-move disabled via ENABLE_SMART_GROUP_REPARENTING flag: TASK-255
+ * - Auto-move code removed: January 2026
+ *
+ * See: docs/sop/SOP-002-canvas-geometry-invariants.md
+ * =============================================================================
  */
 
 import { useTaskStore } from '@/stores/tasks'
-import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
-import { startOfDay } from 'date-fns'
+import { useCanvasStore } from '@/stores/canvas'
 
-// =============================================================================
-// FEATURE FLAG: Smart-Group Reparenting
-// =============================================================================
-// When FALSE: Smart-Groups are metadata-only (read counts, display badges)
-// When TRUE: Smart-Groups can move tasks and modify positions
-//
-// DRIFT FIX: Set to FALSE to prevent auto-collection from causing position drift.
-// The auto-collect feature was moving tasks into the Overdue group, which triggered
-// sync cascades and caused tasks to drift back together after manual separation.
-// =============================================================================
-const ENABLE_SMART_GROUP_REPARENTING = false
-
+/**
+ * Canvas Overdue Collector - Metadata-Only Version
+ *
+ * The auto-move functionality has been permanently removed.
+ * Only helper functions for metadata/date calculations remain.
+ */
 export function useCanvasOverdueCollector() {
-    const taskStore = useTaskStore()
-    const canvasStore = useCanvasStore()
+    // Stores are kept for potential future metadata-only operations
+    const _taskStore = useTaskStore()
+    const _canvasStore = useCanvasStore()
 
-    const OVERDUE_GROUP_NAME = 'Overdue'
-    const OVERDUE_GROUP_COLOR = '#ef4444' // Red-500
-
-    // Helper to find or create the Overdue group
-    const ensureOverdueGroup = async (): Promise<CanvasSection> => {
-        // Cast type check to avoid literal type mismatch since we are introducing a new 'smart_overdue' type
-        // that might not be in the CanvasSection type definition yet
-
-        // Find ALL matching groups (case-insensitive)
-        const groups = canvasStore.sections.filter(s =>
-            s.name.toLowerCase() === OVERDUE_GROUP_NAME.toLowerCase() ||
-            (s.type as string) === 'smart_overdue'
-        )
-
-        let group: CanvasSection | undefined
-
-        if (groups.length === 0) {
-            // Create new group
-            // Default position: Top-left area, maybe offset to avoid overlap
-            const newGroup: CanvasSection = {
-                id: crypto.randomUUID(),
-                name: OVERDUE_GROUP_NAME,
-                type: 'custom', // Use 'custom' as compliant type, store 'smart_overdue' in metadata if possible or rely on name
-                color: OVERDUE_GROUP_COLOR,
-                layout: 'grid',
-                position: { x: 50, y: 50, width: 400, height: 600 },
-                isCollapsed: false,
-                isVisible: true
-            }
-
-            await canvasStore.createSection(newGroup)
-            group = newGroup
-        } else {
-            // Handle duplicates: Pick the "best" one (e.g. strict name match or first one)
-            // If multiple exist, we just use the first valid one found, which effectively "activates" it
-            // Future improvement: Merge/Delete duplicates? For now, safer to just pick one.
-
-            // Prioritize strict name match
-            group = groups.find(s => s.name === OVERDUE_GROUP_NAME) || groups[0]
-
-            // TASK-100 FIX: Ensure selected group has the correct color and type
-            // Also fix casing if needed (e.g. 'overdue' -> 'Overdue')
-            const needsUpdate =
-                group.color !== OVERDUE_GROUP_COLOR ||
-                (group.type as string) !== 'smart_overdue' ||
-                group.name !== OVERDUE_GROUP_NAME
-
-            if (needsUpdate) {
-                // We can't easily change type if strictly typed, but we can update color and name
-                await canvasStore.updateSection(group.id, {
-                    name: OVERDUE_GROUP_NAME,
-                    color: OVERDUE_GROUP_COLOR,
-                    // Update type if possible, or just rely on color/name
-                    type: 'custom' // Keep compliant
-                })
-                // Optimistically update local reference
-                group.name = OVERDUE_GROUP_NAME
-                group.color = OVERDUE_GROUP_COLOR
-            }
-        }
-
-        return group
-    }
-
-    // Main logic to collect overdue tasks
+    /**
+     * DISABLED: Previously collected overdue tasks into a group.
+     *
+     * This function is now a no-op stub. Automatic geometry changes
+     * (moving tasks, changing positions) are forbidden by TASK-255.
+     *
+     * Count badges for overdue tasks are handled via read-only computed
+     * properties in the canvas store, not by this function.
+     */
     const autoCollectOverdueTasks = async () => {
-        // DRIFT FIX: When ENABLE_SMART_GROUP_REPARENTING is false, this function
-        // becomes a no-op. Smart-Groups will still display count badges via
-        // computed properties, but won't move tasks or modify positions.
-        if (!ENABLE_SMART_GROUP_REPARENTING) {
-            console.log('ℹ️ [SMART-GROUP] autoCollectOverdueTasks skipped (ENABLE_SMART_GROUP_REPARENTING = false)')
-            return
-        }
-
-        // 1. Get Overdue Tasks
-        // Criteria: dueDate < today (00:00) AND not recurring
-        const today = startOfDay(new Date())
-
-        const overdueTasks = taskStore.tasks.filter(task => {
-            if (task.status === 'done' || (task.status as string) === 'archive') return false // Ignore completed/archived
-            if (task.recurrence) return false // User requested to ignore recurring tasks
-
-            // TASK-100 REFINEMENT: Only collect tasks that are ALREADY on the canvas
-            // User feedback: "tasks... in the calendar inbox... shouldn't move to the canvas just to appear there"
-            if (!task.canvasPosition) return false
-
-            if (!task.dueDate) return false
-
-            // Compare dates
-            const dueDate = new Date(task.dueDate) // Assuming YYYY-MM-DD string
-            // Fix timezone offset issue by comparing strings or setting hours carefully
-            // Since dueDate is YYYY-MM-DD, we can check if it's strictly less than today's date string
-            const todayStr = today.toISOString().split('T')[0]
-
-            return task.dueDate < todayStr
-        })
-
-        if (overdueTasks.length === 0) return
-
-        // 2. Ensure Group Exists
-        const group = await ensureOverdueGroup()
-
-        // 3. Move tasks into group
-        // We update canvasPosition to be relative to the group
-        // Or simpler: put them visually inside the group's bounds
-        // The sync logic (`useCanvasSync`) automatically parents them if they are visually inside
-
-        const startX = group.position.x + 20
-        let currentY = group.position.y + 60 // Header offset
-        const GAP = 120 // Height of task + gap
-
-        let updatedCount = 0
-
-        for (const task of overdueTasks) {
-            // Check if ALREADY inside the group (by checking overlap or current position)
-            // If task already has a position within group bounds, skip
-            const currentPos = task.canvasPosition
-            if (currentPos) {
-                if (currentPos.x >= group.position.x &&
-                    currentPos.x <= group.position.x + group.position.width! &&
-                    currentPos.y >= group.position.y &&
-                    currentPos.y <= group.position.y + group.position.height!) {
-                    continue // Already in group
-                }
-            }
-
-            // Move to group
-            // DRIFT LOGGING: Track when autoCollect modifies positions
-            console.warn(`⚠️ [AUTO-COLLECT POSITION WRITE] Task ${task.id.slice(0, 8)}... moved to Overdue group`, {
-                from: task.canvasPosition,
-                to: { x: startX, y: currentY },
-                caller: 'autoCollectOverdueTasks',
-                stack: new Error().stack?.split('\n').slice(1, 4).join('\n')
-            })
-            await taskStore.updateTask(task.id, {
-                canvasPosition: {
-                    x: startX,
-                    y: currentY
-                }
-            })
-
-            currentY += GAP
-            updatedCount++
-
-            // Expand group height if needed
-            if (currentY > group.position.y + group.position.height! - 50) {
-                // Increase height
-                const newHeight = (currentY - group.position.y) + 100
-                await canvasStore.updateSection(group.id, {
-                    position: { ...group.position, height: newHeight }
-                })
-            }
-        }
-
-        if (updatedCount > 0) {
-        }
-    }
-
-    // Action Groups Logic (Friday & Saturday)
-    const FRIDAY_GROUP_NAME = 'Friday'
-    const FRIDAY_GROUP_COLOR = '#ec4899' // Pink-500
-
-    const SATURDAY_GROUP_NAME = 'Saturday'
-    const SATURDAY_GROUP_COLOR = '#8b5cf6' // Violet-500
-
-    const ensureActionGroups = async () => {
-        // BUG-061 FIX: DISABLED auto-creation of Friday/Saturday groups
-        // This was causing groups to reappear after deletion because the function
-        // ran on every app startup and recreated them if they didn't exist.
-        // Users should manually create groups via the canvas context menu.
+        // ADR: Automatic geometry changes are forbidden
+        // Smart-Groups display count badges via computed properties (read-only)
+        // but must NEVER move tasks or modify positions
+        console.debug('ℹ️ [SMART-GROUP] autoCollectOverdueTasks is permanently disabled (TASK-255 geometry invariants)')
         return
-
-        // --- DISABLED CODE BELOW ---
-        // BUG-022 FIX: Wait for sections to be loaded to prevent duplicate group creation
-        // If no sections exist yet, wait a bit for canvas store to initialize
-        // let retries = 0
-        // const maxRetries = 10
-        // while (canvasStore.sections.length === 0 && retries < maxRetries) {
-        //     await new Promise(resolve => setTimeout(resolve, 100))
-        //     retries++
-        // }
-
-        // If still no sections after waiting, the store might legitimately be empty
-        // Continue with creation in that case
-
-        // Check _rawGroups to find ANY existing group, even if hidden
-        // accessing _rawGroups via public getter or direct access if valid
-        // const allGroups = canvasStore._rawGroups || canvasStore.groups // Fallback
-
-        // Helper for robust name matching
-        // const findGroup = (name: string, type: string) => {
-        //     const targetName = name.toLowerCase().trim()
-        //     return allGroups.find(s =>
-        //         (s.name && s.name.toLowerCase().trim() === targetName) ||
-        //         (s.type as string) === type
-        //     )
-        // }
-
-        // Ensure Friday Group
-        // if (!findGroup(FRIDAY_GROUP_NAME, 'smart_friday')) {
-        //     await canvasStore.createSection({
-        //         name: FRIDAY_GROUP_NAME,
-        //         type: 'custom',
-        //         color: FRIDAY_GROUP_COLOR,
-        //         layout: 'grid',
-        //         position: { x: 500, y: 50, width: 400, height: 600 },
-        //         isCollapsed: false,
-        //         isVisible: true
-        //     })
-        // } else {
-        // }
-
-        // Ensure Saturday Group
-        // if (!findGroup(SATURDAY_GROUP_NAME, 'smart_saturday')) {
-        //     await canvasStore.createSection({
-        //         name: SATURDAY_GROUP_NAME,
-        //         type: 'custom',
-        //         color: SATURDAY_GROUP_COLOR,
-        //         layout: 'grid',
-        //         position: { x: 950, y: 50, width: 400, height: 600 },
-        //         isCollapsed: false,
-        //         isVisible: true
-        //     })
-        // }
     }
 
-    // Helper to calculate closest upcoming Friday/Saturday
-    const getNextDayOfWeek = (date: Date, dayOfWeek: number) => {
+    /**
+     * DISABLED: Previously auto-created Friday/Saturday groups.
+     *
+     * This function is now a no-op stub. Automatic group creation
+     * caused groups to reappear after deletion (BUG-061).
+     * Users should create groups manually via context menu.
+     */
+    const ensureActionGroups = async () => {
+        // ADR: Auto-creation of groups is disabled
+        // Users create groups manually via canvas context menu
+        return
+    }
+
+    /**
+     * METADATA-ONLY: Calculate the next occurrence of a day of week.
+     *
+     * This is a pure calculation helper that does NOT modify any geometry.
+     * It can be used for metadata operations like setting dueDate.
+     *
+     * @param date - Starting date
+     * @param dayOfWeek - 0=Sunday, 1=Monday, ..., 6=Saturday
+     * @returns Next date that falls on the specified day of week
+     */
+    const getNextDayOfWeek = (date: Date, dayOfWeek: number): Date => {
         const resultDate = new Date(date.getTime())
         resultDate.setDate(date.getDate() + (7 + dayOfWeek - date.getDay()) % 7)
         return resultDate

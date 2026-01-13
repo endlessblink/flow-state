@@ -7,6 +7,7 @@ import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
 import { isPointInRect } from '@/utils/canvas/positionCalculator'
 import { isNodeCompletelyInside, type ContainerBounds } from '@/utils/canvas/spatialContainment'
 import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
+import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
 import { type Node } from '@vue-flow/core'
 import type {
@@ -26,6 +27,30 @@ export type {
   CollectFilterSettings,
   CanvasGroup,
   CanvasSection
+}
+
+/**
+ * DIAGNOSTIC HELPER: Log group ID histogram to detect duplicates (AUTHORITATIVE)
+ * Called from selectors/computeds to trace where duplicates enter the pipeline
+ * Uses assertNoDuplicateIds for consistent detection across layers
+ */
+const logGroupIdHistogram = (label: string, groups: CanvasGroup[]) => {
+  if (!import.meta.env.DEV) return
+
+  const checkResult = assertNoDuplicateIds(groups, label)
+
+  if (checkResult.hasDuplicates) {
+    console.error('[GROUP-ID-HISTOGRAM] DUPLICATES', label, {
+      duplicates: checkResult.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+      totalCount: checkResult.totalCount,
+      uniqueIdCount: checkResult.uniqueIdCount
+    })
+  } else if (groups.length > 0) {
+    console.debug('[GROUP-ID-HISTOGRAM]', label, {
+      uniqueIdCount: checkResult.uniqueIdCount,
+      totalCount: checkResult.totalCount
+    })
+  }
 }
 
 // Task store import for safe sync functionality
@@ -137,7 +162,12 @@ export const useCanvasStore = defineStore('canvas', () => {
   const nodeVersionMap = ref<Map<string, number>>(new Map())
 
   // SAFETY: Filtered groups for display - excludes hidden groups
-  const visibleGroups = computed(() => _rawGroups.value.filter(g => g.isVisible !== false))
+  const visibleGroups = computed(() => {
+    const result = _rawGroups.value.filter(g => g.isVisible !== false)
+    // Log histogram to detect duplicates at selector level
+    logGroupIdHistogram('visibleGroups', result)
+    return result
+  })
   const showGroupGuides = ref(true)
   const snapToGroups = ref(true)
 
@@ -190,6 +220,28 @@ export const useCanvasStore = defineStore('canvas', () => {
       // TASK-142 FIX: ALWAYS try Supabase first - it has the most up-to-date positions
       // Only fall back to localStorage if Supabase fails or returns empty
       const loadedGroups = await fetchGroups()
+
+      // ================================================================
+      // DUPLICATE DETECTION - Supabase Group Load Layer (AUTHORITATIVE)
+      // ================================================================
+      // This detects if Supabase itself is returning duplicate group IDs
+      // A duplicate here means the bug is at the database level
+      if (import.meta.env.DEV) {
+        const checkResult = assertNoDuplicateIds(loadedGroups, 'Supabase groups load')
+
+        if (checkResult.hasDuplicates) {
+          console.error('[SUPABASE-GROUP-DUPLICATES] Database returned duplicate group IDs!', {
+            duplicates: checkResult.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+            totalCount: checkResult.totalCount,
+            uniqueIdCount: checkResult.uniqueIdCount
+          })
+        }
+
+        console.debug('[GROUP-LOAD-HISTOGRAM]', {
+          fromSupabase: checkResult.totalCount,
+          uniqueIds: checkResult.uniqueIdCount
+        })
+      }
 
       // TASK-142: Position integrity validation - detect invalid positions early
       const invalidGroups = loadedGroups.filter(g =>
@@ -1026,6 +1078,31 @@ export const useCanvasStore = defineStore('canvas', () => {
     console.error('[ASYNC-ERROR] canvas.ts: Failed to import auth store', err)
   })
 
+  // === DEV: Watch for duplicate groups in store (AUTHORITATIVE) ===
+  // Uses assertNoDuplicateIds for consistent detection across layers
+  if (import.meta.env.DEV) {
+    watch(_rawGroups, (newGroups) => {
+      const checkResult = assertNoDuplicateIds(newGroups, '_rawGroups store')
+
+      if (checkResult.hasDuplicates) {
+        // Get more details about the duplicate groups
+        const duplicateIds = checkResult.duplicates.map(d => d.id)
+        const duplicateGroups = newGroups
+          .filter(g => duplicateIds.includes(g.id))
+          .slice(0, 5)
+          .map(g => ({ id: g.id.slice(0, 8), name: g.name?.slice(0, 20) }))
+
+        console.error('[GROUP-STORE-DUPLICATE-DETECTED]', {
+          duplicates: checkResult.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
+          totalCount: checkResult.totalCount,
+          uniqueIdCount: checkResult.uniqueIdCount,
+          duplicateGroups,
+          snapshotSize: newGroups.length
+        })
+      }
+    }, { deep: true }) // TASK-260: Changed to deep: true to catch mutations, not just array replacement
+  }
+
   // Aliases for compatibility
   // export type CanvasSection = CanvasGroup // Moved to top level
 
@@ -1057,8 +1134,23 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (g) await updateGroup(groupId, { isCollapsed: !g.isCollapsed })
   }
   const clearSelection = () => { selectedNodeIds.value = [] }
-  // DRIFT FIX: requestSync now requires a source to prevent automated sync loops
-  // Only user-action sources trigger actual sync
+  // =========================================================================
+  // GEOMETRY WRITE POLICY - CONTROLLED SYNC TRIGGERING (TASK-240 Phase 2.5)
+  // =========================================================================
+  // requestSync requires a source to prevent automated sync loops.
+  // ONLY user-action sources trigger actual sync:
+  //   - 'user:drag-drop': After drag operations
+  //   - 'user:create': After task/group creation
+  //   - 'user:delete': After task/group deletion
+  //   - 'user:resize': After group resize
+  //   - 'user:manual': Explicit user action
+  //
+  // BLOCKED sources (do not trigger sync):
+  //   - 'smart-group': Smart group metadata changes
+  //   - 'watcher': Store watchers
+  //   - 'reconcile': One-time reconciliation
+  //   - 'auto': Automatic operations
+  // =========================================================================
   const USER_ACTION_SOURCES = [
     'user:drag-drop', 'user:create', 'user:delete', 'user:undo', 'user:redo',
     'user:resize', 'user:connect', 'user:context-menu', 'user:manual'

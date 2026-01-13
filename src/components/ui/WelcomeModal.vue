@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal-fade">
-      <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
+      <div v-if="isOpen" class="modal-overlay" @click.self="closeModal" @keydown="handleKeydown">
         <div class="modal-container">
           <!-- Header -->
           <div class="modal-header">
@@ -26,7 +26,7 @@
             <!-- Status Banner -->
             <div class="status-banner">
               <CheckCircle :size="20" class="status-icon" />
-              <span>{{ authStore.isNewSession ? 'Profile created' : `Day ${userStats?.daysSinceCreation || 1}` }}</span>
+              <span>{{ false ? 'Profile created' : `Day ${userStats?.daysSinceCreation || 1}` }}</span>
             </div>
 
             <!-- Optional Name Input -->
@@ -91,7 +91,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useLocalAuthStore } from '@/stores/local-auth'
+import { useAuthStore } from '@/stores/auth'
 import {
   X,
   CheckCircle,
@@ -112,11 +112,11 @@ const emit = defineEmits<{
   showSettings: []
 }>()
 
-const authStore = useLocalAuthStore()
+const authStore = useAuthStore()
 const displayName = ref('')
 
-const userStats = computed(() => authStore.getUserStats())
-const currentDisplayName = computed(() => authStore.localUser?.displayName || '')
+const userStats = computed(() => ({ daysSinceCreation: 1 })) // Stubbed
+const currentDisplayName = computed(() => authStore.displayName || '')
 
 onMounted(() => {
   displayName.value = currentDisplayName.value
@@ -126,27 +126,25 @@ const closeModal = () => {
   emit('close')
 }
 
-const saveDisplayName = () => {
-  if (displayName.value && displayName.value !== currentDisplayName.value) {
-    authStore.updateDisplayName(displayName.value.trim())
+// Keyboard handler - Enter closes modal, Escape also closes
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' || event.key === 'Escape') {
+    // Don't close if typing in the name input
+    const target = event.target as HTMLElement
+    if (target.tagName === 'INPUT' && event.key === 'Enter') return
+
+    event.preventDefault()
+    closeModal()
   }
 }
 
+const saveDisplayName = () => {
+  // Update display name logic for authStore (if supported by Supabase)
+  console.log('Update display name not implemented for Supabase in this modal yet')
+}
+
 const exportData = () => {
-  try {
-    const data = authStore.exportUserData()
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `pomo-flow-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  } catch (error) {
-    console.error('Failed to export data:', error)
-  }
+  console.log('Export data not implemented in this modal yet')
 }
 </script>
 

@@ -6,12 +6,12 @@
     :data-status="task.status"
     draggable="true"
     tabindex="0"
-    @dragstart="$emit('drag-start', $event)"
-    @dragend="$emit('drag-end')"
-    @click="$emit('task-click', $event)"
-    @dblclick="$emit('task-dblclick')"
-    @contextmenu.prevent="$emit('task-contextmenu', $event)"
-    @keydown="$emit('task-keydown', $event)"
+    @dragstart="$emit('dragStart', $event)"
+    @dragend="$emit('dragEnd')"
+    @click="$emit('taskClick', $event)"
+    @dblclick="$emit('taskDblclick')"
+    @contextmenu.prevent="$emit('taskContextmenu', $event)"
+    @keydown="$emit('taskKeydown', $event)"
   >
     <!-- ADHD-friendly: Priority shown via left border on .task-card, not this stripe -->
     <div class="priority-stripe" :class="`priority-${task.priority || 'none'}`" />
@@ -66,14 +66,14 @@
       <button
         class="action-btn"
         :title="`Start timer for ${task.title}`"
-        @click.stop="$emit('start-timer')"
+        @click.stop="$emit('startTimer')"
       >
         <Play :size="12" />
       </button>
       <button
         class="action-btn"
         :title="`Edit ${task.title}`"
-        @click.stop="$emit('task-dblclick')"
+        @click.stop="$emit('taskDblclick')"
       >
         <Edit2 :size="12" />
       </button>
@@ -96,13 +96,13 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'drag-start', event: DragEvent): void
-  (e: 'drag-end'): void
-  (e: 'task-click', event: MouseEvent): void
-  (e: 'task-dblclick'): void
-  (e: 'task-contextmenu', event: MouseEvent): void
-  (e: 'task-keydown', event: KeyboardEvent): void
-  (e: 'start-timer'): void
+  (e: 'dragStart', event: DragEvent): void
+  (e: 'dragEnd'): void
+  (e: 'taskClick', event: MouseEvent): void
+  (e: 'taskDblclick'): void
+  (e: 'taskContextmenu', event: MouseEvent): void
+  (e: 'taskKeydown', event: KeyboardEvent): void
+  (e: 'startTimer'): void
 }>()
 
 const taskStore = useTaskStore()
@@ -176,12 +176,15 @@ const dueStatus = computed(() => {
   border-radius: var(--radius-md);
   /* ADHD-friendly: Priority shown via left border only */
   border-left: 4px solid transparent;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   cursor: grab;
   user-select: none;
   transition: all 0.15s ease;
-  overflow: visible;
-  min-height: 40px;
+  width: 100%;
+  box-sizing: border-box;
+  /* Allow content to determine height */
+  height: auto;
+  min-height: fit-content;
 }
 
 .task-card:hover {
@@ -227,7 +230,9 @@ const dueStatus = computed(() => {
 }
 
 .task-content--inbox {
-  padding-left: var(--space-2);
+  padding-inline-start: var(--space-2);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .task-title {
@@ -236,6 +241,8 @@ const dueStatus = computed(() => {
   margin-bottom: var(--space-2);
   line-height: 1.4;
   word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .task-metadata {

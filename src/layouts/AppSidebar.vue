@@ -356,10 +356,10 @@ import { useTaskStore, type Project } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import {
-  Plus, PanelLeftClose, Settings, FolderOpen, FolderPlus,
-  Calendar, List, Inbox, Zap, Clock, Timer, HelpCircle,
+  Plus, PanelLeftClose, Settings, FolderOpen,
+  Calendar, List, Inbox, Zap, Clock, HelpCircle,
   ChevronRight, Coffee, Hourglass, Mountain, Trash2, X,
-  Layers // Added Layers icon
+  Layers
 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -542,11 +542,8 @@ const todayTaskCount = computed(() => taskStore.smartViewTaskCounts.today)
 const weekTaskCount = computed(() => taskStore.smartViewTaskCounts.week)
 const allActiveCount = computed(() => taskStore.smartViewTaskCounts.allActive)
 const uncategorizedCount = computed(() => taskStore.getUncategorizedTaskCount())
-const quickCount = computed(() => taskStore.smartViewTaskCounts.quick)
-const shortCount = computed(() => taskStore.smartViewTaskCounts.short)
-const mediumCount = computed(() => taskStore.smartViewTaskCounts.medium)
-const longCount = computed(() => taskStore.smartViewTaskCounts.long)
-const unestimatedCount = computed(() => taskStore.smartViewTaskCounts.unestimated)
+// Reactive counts using the store getters
+
 
 // Methods
 const selectSmartView = (view: string) => {

@@ -1,0 +1,1166 @@
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/base/ProjectEmojiIcon.vue
+  21:7  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/calendar/CalendarDayView.vue
+   8:47  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  25:1   error    defineProps should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/calendar/CalendarMonthView.vue
+   8:47  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  21:1   error    defineProps should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/calendar/CalendarWeekView.vue
+   7:47  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  21:1   error    defineProps should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+  22:13  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasContextMenus.vue
+  64:1  error  defineEmits should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasGroup.vue
+  157:25  error  'onMounted' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasModals.vue
+  87:1   error    defineEmits should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+  90:46  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  91:36  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  92:36  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+  93:46  warning  Unexpected any. Specify a different type                                                                                   @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasStatusBanner.vue
+  11:21  error  Custom event name 'clear-filter' must be camelCase  vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/CanvasToolbar.vue
+  64:10  error  'Teleport' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/GroupNodeSimple.vue
+   47:7   error    Boolean prop with 'true' value should be written in shorthand form                    vue/prefer-true-attribute-shorthand
+   72:35  error    'PowerKeywordResult' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   77:9   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+   95:7   error    'taskStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  102:30  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/TaskNode.vue
+  116:1  error  defineProps should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/UnifiedGroupModal.vue
+    2:68  error  '@keydown' should be on a new line                     vue/max-attributes-per-line
+    3:1   error  Expected indentation of 4 spaces but found 6 spaces    vue/html-indent
+    4:1   error  Expected indentation of 6 spaces but found 8 spaces    vue/html-indent
+    5:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+    6:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+    7:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+    8:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+    9:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   10:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   11:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   12:1   error  Expected indentation of 6 spaces but found 8 spaces    vue/html-indent
+   14:1   error  Expected indentation of 6 spaces but found 8 spaces    vue/html-indent
+   15:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   16:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   17:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   18:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   19:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   20:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   21:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   22:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   23:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   24:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   25:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   26:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   27:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   28:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   30:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   31:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   32:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   34:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   35:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   36:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   37:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   38:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   39:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   40:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   41:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   42:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   43:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   44:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   45:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   46:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   48:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   49:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   50:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   51:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   52:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   53:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+   54:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   55:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   56:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   57:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   58:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   59:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+   60:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+   61:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   62:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   63:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   64:1   error  Expected indentation of 18 spaces but found 20 spaces  vue/html-indent
+   65:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+   66:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   67:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   69:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   70:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   71:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   72:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+   73:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+   74:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   75:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   76:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   77:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   78:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   80:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   81:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+   82:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   83:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   84:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   85:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   86:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   87:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   88:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   89:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   90:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   91:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   92:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   93:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   94:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+   95:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   96:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+   97:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+   99:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  100:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  101:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  102:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  104:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  105:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  106:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  107:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  108:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  109:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  110:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  111:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  112:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  113:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  115:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  116:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  117:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  118:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  119:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  120:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  121:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  122:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  123:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  124:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  126:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  127:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  128:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  129:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  130:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  131:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  132:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  133:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  134:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  135:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  136:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  137:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  138:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  139:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  140:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  141:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  142:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  143:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  144:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  145:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  147:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  148:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  149:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  150:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  151:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  152:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  153:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  154:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  155:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  156:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  158:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  159:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  160:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  161:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  162:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  164:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  165:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  166:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  167:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  168:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  169:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  170:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  171:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  172:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  173:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  174:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  175:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  176:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  177:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  178:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  179:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  180:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  181:1   error  Expected indentation of 16 spaces but found 18 spaces  vue/html-indent
+  182:1   error  Expected indentation of 14 spaces but found 16 spaces  vue/html-indent
+  183:1   error  Expected indentation of 12 spaces but found 14 spaces  vue/html-indent
+  184:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  185:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+  186:1   error  Expected indentation of 6 spaces but found 8 spaces    vue/html-indent
+  188:1   error  Expected indentation of 6 spaces but found 8 spaces    vue/html-indent
+  189:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+  190:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  191:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+  192:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+  193:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  194:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  195:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  196:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+  197:1   error  Expected indentation of 10 spaces but found 12 spaces  vue/html-indent
+  198:1   error  Expected indentation of 8 spaces but found 10 spaces   vue/html-indent
+  199:1   error  Expected indentation of 6 spaces but found 8 spaces    vue/html-indent
+  200:1   error  Expected indentation of 4 spaces but found 6 spaces    vue/html-indent
+  201:1   error  Expected indentation of 2 spaces but found 4 spaces    vue/html-indent
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/node/TaskNodeDescription.vue
+   6:30  error  Custom event name 'checkbox-click' must be camelCase                                      vue/custom-event-name-casing
+  13:26  error  Custom event name 'toggle-expand' must be camelCase                                       vue/custom-event-name-casing
+  27:21  error  Prefer using the primitive `object` as a type name, rather than the upper-cased `Object`  @typescript-eslint/no-wrapper-object-types
+  27:30  error  Prefer using the primitive `string` as a type name, rather than the upper-cased `String`  @typescript-eslint/no-wrapper-object-types
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/node/TaskNodeHeader.vue
+  21:21  error  Prefer using the primitive `object` as a type name, rather than the upper-cased `Object`  @typescript-eslint/no-wrapper-object-types
+  21:30  error  Prefer using the primitive `string` as a type name, rather than the upper-cased `String`  @typescript-eslint/no-wrapper-object-types
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/canvas/node/TaskNodeMeta.vue
+  49:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/common/GroupModal.vue
+  153:8  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/common/MarkdownRenderer.vue
+   7:5   warning  'v-html' directive can lead to XSS attack             vue/no-v-html
+  50:12  error    Custom event name 'checkbox-click' must be camelCase  vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/common/TiptapEditor.vue
+  223:62   warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  223:80   warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  224:98   warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  224:143  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  224:160  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  225:97   warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  225:141  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  225:157  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  226:95   warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  226:137  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  226:150  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  228:95   warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  228:137  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  228:151  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  229:94   warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  229:135  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  229:148  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  230:92   warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  230:131  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  230:141  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  232:101  warning  Attribute ":disabled" should go before "@click"                                   vue/attributes-order
+  232:142  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  232:154  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/CalendarInboxPanel.vue
+   5:7  warning  Attribute 'v-model:isCollapsed' must be hyphenated                                 vue/attribute-hyphenation
+   7:7  warning  Attribute "v-model:showTodayOnly" should go before ":inbox-count"                  vue/attributes-order
+   7:7  warning  Attribute 'v-model:showTodayOnly' must be hyphenated                               vue/attribute-hyphenation
+  12:7  warning  Attribute "v-model:selectedCanvasGroups" should go before ":canvas-group-options"  vue/attributes-order
+  12:7  warning  Attribute 'v-model:selectedCanvasGroups' must be hyphenated                        vue/attribute-hyphenation
+  13:7  warning  Attribute "v-model:showAdvancedFilters" should go before ":canvas-group-options"   vue/attributes-order
+  13:7  warning  Attribute 'v-model:showAdvancedFilters' must be hyphenated                         vue/attribute-hyphenation
+  14:7  warning  Attribute "v-model:unscheduledOnly" should go before ":canvas-group-options"       vue/attributes-order
+  14:7  warning  Attribute 'v-model:unscheduledOnly' must be hyphenated                             vue/attribute-hyphenation
+  15:7  warning  Attribute "v-model:selectedPriority" should go before ":canvas-group-options"      vue/attributes-order
+  15:7  warning  Attribute 'v-model:selectedPriority' must be hyphenated                            vue/attribute-hyphenation
+  16:7  warning  Attribute "v-model:selectedProject" should go before ":canvas-group-options"       vue/attributes-order
+  16:7  warning  Attribute 'v-model:selectedProject' must be hyphenated                             vue/attribute-hyphenation
+  17:7  warning  Attribute "v-model:selectedDuration" should go before ":canvas-group-options"      vue/attributes-order
+  17:7  warning  Attribute 'v-model:selectedDuration' must be hyphenated                            vue/attribute-hyphenation
+  21:7  warning  v-on event '@toggleHideDoneTasks' must be hyphenated                               vue/v-on-event-hyphenation
+  22:7  warning  v-on event '@clearAllFilters' must be hyphenated                                   vue/v-on-event-hyphenation
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/UnifiedInboxPanel.vue
+   8:4   error  Expected 1 line break after opening tag (`<div>`), but 2 line breaks found  vue/multiline-html-element-content-newline
+  52:54  error  'class' should be on a new line                                             vue/max-attributes-per-line
+  55:53  error  'class' should be on a new line                                             vue/max-attributes-per-line
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/calendar/CalendarInboxHeader.vue
+   67:7   warning  Attribute ":options" should go before "@update:model-value"                 vue/attributes-order
+   68:7   warning  Attribute "placeholder" should go before "@update:model-value"              vue/attributes-order
+   89:9   warning  Attribute ":selected-priority" should go before "@update:unscheduled-only"  vue/attributes-order
+   91:9   warning  Attribute ":selected-project" should go before "@update:selected-priority"  vue/attributes-order
+   93:9   warning  Attribute ":selected-duration" should go before "@update:selected-project"  vue/attributes-order
+   95:9   warning  Attribute ":hide-done-tasks" should go before "@update:selected-duration"   vue/attributes-order
+   96:9   warning  Attribute ":tasks" should go before "@update:selected-duration"             vue/attributes-order
+   97:9   warning  Attribute ":projects" should go before "@update:selected-duration"          vue/attributes-order
+  121:23  warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+  130:17  warning  Unexpected any. Specify a different type                                    @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/calendar/CalendarInboxInput.vue
+   7:7   warning  Attribute ":dir" should go before "@input"         vue/attributes-order
+   8:7   warning  Attribute "placeholder" should go before "@input"  vue/attributes-order
+   9:7   warning  Attribute "class" should go before "@input"        vue/attributes-order
+  10:29  error    Custom event name 'add-task' must be camelCase     vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/calendar/CalendarInboxList.vue
+  22:25  error  Custom event name 'task-dragstart' must be camelCase    vue/custom-event-name-casing
+  23:23  error  Custom event name 'task-dragend' must be camelCase      vue/custom-event-name-casing
+  24:21  error  Custom event name 'task-click' must be camelCase        vue/custom-event-name-casing
+  25:24  error  Custom event name 'task-dblclick' must be camelCase     vue/custom-event-name-casing
+  26:27  error  Custom event name 'task-contextmenu' must be camelCase  vue/custom-event-name-casing
+  27:23  error  Custom event name 'task-keydown' must be camelCase      vue/custom-event-name-casing
+  28:27  error  Custom event name 'task-start-timer' must be camelCase  vue/custom-event-name-casing
+  29:20  error  Custom event name 'task-edit' must be camelCase         vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/calendar/CalendarTaskCard.vue
+  75:28  error  Custom event name 'start-timer' must be camelCase  vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/unified/UnifiedInboxHeader.vue
+    7:21  error    Custom event name 'toggle-collapse' must be camelCase          vue/custom-event-name-casing
+   31:21  error    Custom event name 'toggle-today' must be camelCase             vue/custom-event-name-casing
+   61:21  error    Custom event name 'toggle-advanced-filters' must be camelCase  vue/custom-event-name-casing
+   83:27  error    Custom event name 'clear-all' must be camelCase                vue/custom-event-name-casing
+  118:17  warning  Unexpected any. Specify a different type                       @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/unified/UnifiedInboxInput.vue
+  79:8  error  Custom event name 'add-task' must be camelCase  vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/unified/UnifiedInboxList.vue
+  19:98  error  Custom event name 'delete-selected' must be camelCase   vue/custom-event-name-casing
+  23:97  error  Custom event name 'clear-selection' must be camelCase   vue/custom-event-name-casing
+  35:26  error  Custom event name 'drag-start' must be camelCase        vue/custom-event-name-casing
+  36:24  error  Custom event name 'drag-end' must be camelCase          vue/custom-event-name-casing
+  37:26  error  Custom event name 'task-click' must be camelCase        vue/custom-event-name-casing
+  38:29  error  Custom event name 'task-dblclick' must be camelCase     vue/custom-event-name-casing
+  39:32  error  Custom event name 'task-contextmenu' must be camelCase  vue/custom-event-name-casing
+  40:28  error  Custom event name 'task-keydown' must be camelCase      vue/custom-event-name-casing
+  41:27  error  Custom event name 'start-timer' must be camelCase       vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/inbox/unified/UnifiedInboxTaskCard.vue
+   9:23  error  Custom event name 'drag-start' must be camelCase        vue/custom-event-name-casing
+  10:21  error  Custom event name 'drag-end' must be camelCase          vue/custom-event-name-casing
+  11:19  error  Custom event name 'task-click' must be camelCase        vue/custom-event-name-casing
+  12:22  error  Custom event name 'task-dblclick' must be camelCase     vue/custom-event-name-casing
+  13:33  error  Custom event name 'task-contextmenu' must be camelCase  vue/custom-event-name-casing
+  14:21  error  Custom event name 'task-keydown' must be camelCase      vue/custom-event-name-casing
+  69:28  error  Custom event name 'start-timer' must be camelCase       vue/custom-event-name-casing
+  76:28  error  Custom event name 'task-dblclick' must be camelCase     vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/KanbanColumn.vue
+   25:9   error    Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+   32:9   error    Boolean prop with 'true' value should be written in shorthand form  vue/prefer-true-attribute-shorthand
+  111:40  warning  Unexpected any. Specify a different type                            @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/TaskCard.vue
+  113:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/kanban/card/TaskCardBadges.vue
+  118:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/layout/SettingsModal.vue
+  5:36  warning  Expected 1 line break after opening tag (`<h2>`), but no line breaks found    vue/singleline-html-element-content-newline
+  5:44  warning  Expected 1 line break before closing tag (`</h2>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/layout/SidebarSmartItem.vue
+   90:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  157:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/layout/ViewControls.vue
+  117:1  error  defineProps should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/projects/ProjectTreeItem.vue
+  78:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/settings/SettingsOptionPicker.vue
+  15:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/settings/tabs/AccountSettingsTab.vue
+   7:1  error  defineEmits should be the first statement in `<script setup>` (after any potential import statements or type definitions)  vue/define-macros-order
+  11:8  error  Custom event name 'close-modal' must be camelCase                                                                          vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/settings/tabs/StorageSettingsTab.vue
+   34:28   warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+   35:28   warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  166:52   error    '@change' should be on a new line                                                 vue/max-attributes-per-line
+  183:1    error    Expected indentation of 12 spaces but found 13 spaces                             vue/html-indent
+  199:1    error    Expected indentation of 10 spaces but found 11 spaces                             vue/html-indent
+  200:1    error    Expected indentation of 12 spaces but found 13 spaces                             vue/html-indent
+  201:1    error    Expected indentation of 12 spaces but found 13 spaces                             vue/html-indent
+  202:1    error    Expected indentation of 10 spaces but found 11 spaces                             vue/html-indent
+  203:1    error    Expected indentation of 10 spaces but found 11 spaces                             vue/html-indent
+  203:35   warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found         vue/singleline-html-element-content-newline
+  203:103  warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found       vue/singleline-html-element-content-newline
+  242:36   warning  Expected 1 line break after opening tag (`<p>`), but no line breaks found         vue/singleline-html-element-content-newline
+  242:60   warning  Expected 1 line break before closing tag (`</p>`), but no line breaks found       vue/singleline-html-element-content-newline
+  244:71   warning  Expected 1 line break after opening tag (`<li>`), but no line breaks found        vue/singleline-html-element-content-newline
+  244:81   warning  Expected 1 line break before closing tag (`</li>`), but no line breaks found      vue/singleline-html-element-content-newline
+  274:69   warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  274:76   warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/BatchEditModal.vue
+  2:68  error  '@keydown.escape' should be on a new line  vue/max-attributes-per-line
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/DoneToggle.vue
+  13:7  warning  Attribute ':ariaLabel' must be hyphenated                                 vue/attribute-hyphenation
+  19:7  warning  Attribute "v-model:is-hovered" should go before ":celebration-particles"  vue/attributes-order
+  20:7  warning  Attribute "v-model:is-focused" should go before ":celebration-particles"  vue/attributes-order
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/TaskContextMenu.vue
+  29:76  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  29:81  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  30:79  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  30:83  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  31:78  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  31:82  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+  32:79  warning  Expected 1 line break after opening tag (`<button>`), but no line breaks found    vue/singleline-html-element-content-newline
+  32:83  warning  Expected 1 line break before closing tag (`</button>`), but no line breaks found  vue/singleline-html-element-content-newline
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/TaskEditModal.vue
+   4:46  error    Expected 1 line break after opening tag (`<div>`), but 2 line breaks found    vue/multiline-html-element-content-newline
+   8:35  warning  Expected 1 line break after opening tag (`<h2>`), but no line breaks found    vue/singleline-html-element-content-newline
+   8:44  warning  Expected 1 line break before closing tag (`</h2>`), but no line breaks found  vue/singleline-html-element-content-newline
+  17:39  warning  Expected 1 line break after opening tag (`<h3>`), but no line breaks found    vue/singleline-html-element-content-newline
+  17:51  warning  Expected 1 line break before closing tag (`</h3>`), but no line breaks found  vue/singleline-html-element-content-newline
+  72:17  error    Expected 1 line break before closing tag (`</div>`), but 2 line breaks found  vue/multiline-html-element-content-newline
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/drag-handle/DragHandleVisuals.vue
+   8:23  error  Custom event name 'mouse-down' must be camelCase   vue/custom-event-name-casing
+   9:24  error  Custom event name 'touch-start' must be camelCase  vue/custom-event-name-casing
+  10:24  error  Custom event name 'hover-start' must be camelCase  vue/custom-event-name-casing
+  11:24  error  Custom event name 'hover-end' must be camelCase    vue/custom-event-name-casing
+  15:32  error  Custom event name 'arrow-key' must be camelCase    vue/custom-event-name-casing
+  16:34  error  Custom event name 'arrow-key' must be camelCase    vue/custom-event-name-casing
+  17:34  error  Custom event name 'arrow-key' must be camelCase    vue/custom-event-name-casing
+  18:35  error  Custom event name 'arrow-key' must be camelCase    vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/edit/TaskEditHeader.vue
+   4:5   warning  Disallow self-closing on HTML void elements (<input/>)  vue/html-self-closing
+   6:16  error    Unexpected mutation of "modelValue" prop                vue/no-mutating-props
+  19:16  error    Unexpected mutation of "modelValue" prop                vue/no-mutating-props
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/edit/TaskEditMetadata.vue
+   39:27  error  Unexpected mutation of "modelValue" prop               vue/no-mutating-props
+   92:38  error  Custom event name 'section-change' must be camelCase   vue/custom-event-name-casing
+  128:39  error  Custom event name 'schedule-change' must be camelCase  vue/custom-event-name-casing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/edit/TaskEditSubtasks.vue
+  44:13  warning  Disallow self-closing on HTML void elements (<input/>)  vue/html-self-closing
+  54:15  warning  Disallow self-closing on HTML void elements (<input/>)  vue/html-self-closing
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/row/TaskRowProject.vue
+  32:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/tasks/row/TaskRowTitle.vue
+  38:26  error  Prefer using the primitive `object` as a type name, rather than the upper-cased `Object`  @typescript-eslint/no-wrapper-object-types
+  38:35  error  Prefer using the primitive `string` as a type name, rather than the upper-cased `String`  @typescript-eslint/no-wrapper-object-types
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/components/ui/WelcomeModal.vue
+  4:73  error  '@keydown' should be on a new line  vue/max-attributes-per-line
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/__tests__/useDateTransition.spec.ts
+  2:24  error  'expect' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  6:10  error  'useDateTransition' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useAppInitialization.ts
+   24:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   29:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   83:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   90:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   92:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  147:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  170:22  error    Empty block statement                     no-empty
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useAppShortcuts.ts
+  3:10  error  'getUndoSystem' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/app/useSidebarManagement.ts
+   71:32  error    Empty block statement                     no-empty
+  437:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/board/useBoardActions.ts
+   1:15  error  'Task' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  14:9   error  'errorMessage' is defined but never used. Allowed unused args must match /^_/u    @typescript-eslint/no-unused-vars
+  18:18  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/board/useBoardState.ts
+  82:18  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/bulk/useBulkActions.ts
+  14:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarDayView.ts
+  179:18  error  'taskError' is defined but never used. Allowed unused caught errors must match /^_/u      @typescript-eslint/no-unused-vars
+  188:16  error  'positionError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  192:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  320:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  418:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  418:21  error  Empty block statement                                                                     no-empty
+  555:18  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  560:12  error  Empty block statement                                                                     no-empty
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarDrag.ts
+  157:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  244:16  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  294:14  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  299:16  error  'rollbackError' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  299:31  error  Empty block statement                                                                     no-empty
+  364:14  error  Empty block statement                                                                     no-empty
+  377:14  error  Empty block statement                                                                     no-empty
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarInteractionHandlers.ts
+  3:15  error  'Task' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarModals.ts
+  55:22  error  'error' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  55:29  error  Empty block statement                                                             no-empty
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarMonthView.ts
+  53:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  54:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/calendar/useCalendarWeekView.ts
+   77:32  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+   83:33  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  110:18  error    'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/state-machine.ts
+  105:15  error    'previousState' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  208:16  warning  Forbidden non-null assertion                                                              @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasActions.ts
+    5:10  error    'markGroupDeleted' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+    5:28  error    'confirmGroupDeleted' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   38:19  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   39:18  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+   43:13  error    'getSelectedNodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   43:55  error    'removeNodes' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  136:61  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasConnections.ts
+   3:29   error    'Task' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  12:60   warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  12:70   warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  12:85   warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  12:104  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  12:114  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasCore.ts
+  2:27  error  'Node' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  2:38  error  'Edge' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  2:49  error  'ViewportTransform' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasEvents.ts
+  3:31  error  'CanvasSection' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasFilteredState.ts
+  1:20  error  'ref' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasGroupActions.ts
+    3:10  error    'useTaskStore' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+   58:15  error    'vueFlowElement' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  129:19  error    'sectionNodeId' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  163:32  warning  Forbidden non-null assertion                                                               @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasGroups.ts
+  62:20  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasHotkeys.ts
+  27:19  error  'viewport' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasInteractions.ts
+  109:11   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  253:28   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  312:31   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  313:36   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  314:16   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  320:14   error    'e' is defined but never used. Allowed unused caught errors must match /^_/u          @typescript-eslint/no-unused-vars
+  327:69   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  339:36   error    'x' is defined but never used. Allowed unused args must match /^_/u                   @typescript-eslint/no-unused-vars
+  339:39   error    'y' is defined but never used. Allowed unused args must match /^_/u                   @typescript-eslint/no-unused-vars
+  339:42   error    'w' is defined but never used. Allowed unused args must match /^_/u                   @typescript-eslint/no-unused-vars
+  339:45   error    'h' is defined but never used. Allowed unused args must match /^_/u                   @typescript-eslint/no-unused-vars
+  525:37   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  526:38   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  589:92   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  624:94   warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+  625:21   error    'sectionId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  662:103  warning  Unexpected any. Specify a different type                                              @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasNavigation.ts
+  29:15  error  'xs' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  30:15  error  'ys' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasOperationState.ts
+  48:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  93:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasOrchestrator.ts
+   42:46  error    'args' is defined but never used. Allowed unused args must match /^_/u             @typescript-eslint/no-unused-vars
+   86:13  error    'width' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+   86:20  error    'height' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  136:32  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  491:33  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  505:38  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  509:52  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  513:54  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  518:58  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  526:61  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasSync.ts
+   93:87  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  168:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  234:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  351:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  351:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  354:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  399:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  402:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  429:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  430:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  452:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  453:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  510:97  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useCanvasTaskActions.ts
+  17:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  79:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/canvas/useNodeSync.ts
+  108:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  142:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  258:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/inbox/useCalendarInboxState.ts
+  113:65  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/inbox/useUnifiedInboxState.ts
+    1:25  error    'onMounted' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  144:65  warning  Forbidden non-null assertion                                                 @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/sync/useBroadcastChannelSync.ts
+   7:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/sync/useSupabaseRealtimeSync.ts
+  16:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/sync/useTimerLeaderElection.ts
+  11:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  83:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/tasks/card/useTaskCardActions.ts
+  7:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/tasks/row/useTaskRowActions.ts
+    7:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   14:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:17  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/tasks/useTaskEditActions.ts
+  127:52  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/tasks/useTaskFiltering.ts
+  158:21  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  295:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/ui/drag-handle/useDragHandleInteraction.ts
+  1:28  error  'nextTick' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  1:38  error  'watch' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/ui/drag-handle/useDragHandleState.ts
+  1:15  error  'computed' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/undoSingleton.ts
+   15:28  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+   64:9   warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+   67:9   warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+  155:20  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  194:20  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  204:26  error    'description' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  230:5   warning  Forbidden non-null assertion                                                   @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useBackupSystem.ts
+  958:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useCrossTabSync.ts
+   56:9   error    'canvasStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   74:29  warning  Unexpected any. Specify a different type                                                @typescript-eslint/no-explicit-any
+  144:60  warning  Forbidden non-null assertion                                                            @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDateTransition.ts
+  14:39  error  'watch' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useDynamicImports.ts
+  319:9  error  'stats' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useHorizontalDragScroll.ts
+  325:7  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  327:7  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useInboxFiltering.ts
+  150:65  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useOptimisticUI.ts
+  15:9   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  19:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/usePerformanceManager.ts
+  71:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  84:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  97:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useRenderOptimization.ts
+  228:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useSafeI18n.ts
+  11:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useSupabaseDatabase.ts
+   31:11  error    An empty interface declaration allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowInterfaces' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+   33:37  error    'deps' is assigned a value but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   41:11  error    'getUserId' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   56:22  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+   61:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  238:54  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  241:46  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  326:55  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  329:47  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  419:34  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  439:34  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  459:34  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  501:43  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  514:32  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  526:37  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  662:55  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  686:52  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  713:49  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  734:47  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  755:53  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  772:50  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  804:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  814:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  826:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  834:27  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  860:44  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  860:55  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useVueFlowStability.ts
+  564:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/composables/useVueFlowStateManager.ts
+  127:13  error  'oldVal' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  146:13  error  'oldVal' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/AppSidebar.vue
+  359:47  error    'FolderPlus' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  360:38  error    'Timer' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  545:7   error    'quickCount' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  546:7   error    'shortCount' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  547:7   error    'mediumCount' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  548:7   error    'longCount' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  549:7   error    'unestimatedCount' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  554:39  warning  Unexpected any. Specify a different type                                                     @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/MainLayout.vue
+  35:15  error  'computed' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/layouts/ModalManager.vue
+  125:7   error    'timerStore' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  255:20  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  403:50  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  412:53  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/main.ts
+  16:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/auth/supabase.ts
+  17:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/data/MarkdownExportService.ts
+  204:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  221:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  224:78  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:90  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/__tests__/canvas.test.ts
+  448:13  error  'nodes' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/__tests__/tasks.test.ts
+  141:43  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  164:43  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/canvas.ts
+     7:10  error    'isPointInRect' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    11:10  error    'CANVAS' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+    57:16  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+   147:29  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+   176:21  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+   177:21  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+   274:73  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+   317:37  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+   348:14  error    'e' is defined but never used. Allowed unused caught errors must match /^_/u     @typescript-eslint/no-unused-vars
+  1040:81  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+  1130:60  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+  1180:37  warning  Unexpected any. Specify a different type                                         @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/canvas/modals.ts
+  109:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/notifications.ts
+  359:9  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/projects.ts
+  139:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  180:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  195:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:53  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  308:31  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  348:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks.ts
+   22:40   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+   73:5    error    'tasks' is assigned a value but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+   89:157  error    'importTasksFromJSON' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   89:178  error    'importFromRecoveryTool' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  168:30   warning  Unexpected any. Specify a different type                                                           @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskOperations.ts
+  550:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskPersistence.ts
+  178:81  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/tasks/taskStates.ts
+  88:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stores/timer.ts
+  145:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  309:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  318:18  error    Empty block statement                     no-empty
+  324:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  333:18  error    Empty block statement                     no-empty
+  360:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/test-coordinates.ts
+  11:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  11:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvas/NodeUpdateBatcher.ts
+  11:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  13:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvas/coordinates.ts
+  195:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  221:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  236:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvas/invariants.ts
+   65:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:65  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  166:32  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  225:61  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  268:61  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  317:54  warning  Forbidden non-null assertion              @typescript-eslint/no-non-null-assertion
+  559:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  575:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/canvas/resourceManager.ts
+    2:1   error    All imports in the declaration are only used as types. Use `import type`                                             @typescript-eslint/consistent-type-imports
+  144:17  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  146:21  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  151:17  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  153:17  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  171:18  error    'error' is defined but never used. Allowed unused caught errors must match /^_/u                                     @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/conflict-detector.ts
+  6:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/conflict-resolution.ts
+   88:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  194:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  200:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  218:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/event-bus.ts
+  16:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/globalKeyboardHandlerSimple.ts
+  121:88  error  Empty block statement  no-empty
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/markdown.ts
+  80:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  87:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/performanceBenchmark.ts
+  161:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  170:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  183:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  185:9  warning  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/supabaseMappers.ts
+  110:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  121:20  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  125:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  128:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  179:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  180:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  197:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  238:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  298:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  299:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  300:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  300:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  429:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  447:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  497:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  521:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  546:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  565:81  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/utils/taskValidation.ts
+  314:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/BoardView.vue
+    6:33  warning  Expected 1 line break after opening tag (`<h2>`), but no line breaks found             vue/singleline-html-element-content-newline
+    6:38  warning  Expected 1 line break before closing tag (`</h2>`), but no line breaks found           vue/singleline-html-element-content-newline
+  102:36  error    'onUnmounted' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  115:10  error    'useBoardDensity' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  126:15  error    'Task' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  134:7   error    'supabaseDb' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CalendarView.vue
+  134:29  error  'Task' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  155:8   error  'ProjectFilterDropdown' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  156:8   error  'ProjectEmojiIcon' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  159:15  error  'CalendarEvent' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+  267:45  error  'getWeekEventStyle' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  268:62  error  'isCurrentWeekTimeCell' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  363:36  error  'evt' is defined but never used. Allowed unused args must match /^_/u                             @typescript-eslint/no-unused-vars
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CanvasView.vue
+   45:6    error    Expected 1 line break after opening tag (`<div>`), but 2 line breaks found                            vue/multiline-html-element-content-newline
+   56:9    warning  v-on event '@addTask' must be hyphenated                                                              vue/v-on-event-hyphenation
+   57:9    warning  v-on event '@createGroup' must be hyphenated                                                          vue/v-on-event-hyphenation
+   71:9    warning  v-on event '@addTask' must be hyphenated                                                              vue/v-on-event-hyphenation
+   72:9    warning  v-on event '@createGroup' must be hyphenated                                                          vue/v-on-event-hyphenation
+   83:1    error    Expected indentation of 8 spaces but found 10 spaces                                                  vue/html-indent
+   84:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   85:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   86:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   87:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   88:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   89:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   90:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   91:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   92:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   93:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   94:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   95:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   96:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   97:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   98:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+   99:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  100:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  101:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  102:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  103:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  104:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  105:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  105:13   error    Boolean prop with 'true' value should be written in shorthand form                                    vue/prefer-true-attribute-shorthand
+  106:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  107:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  108:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  109:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  110:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  111:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  112:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  113:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  114:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  115:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  116:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  117:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  118:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  119:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  120:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  121:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  122:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  123:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  124:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  125:1    error    Expected indentation of 8 spaces but found 10 spaces                                                  vue/html-indent
+  126:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  127:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  128:1    error    Expected indentation of 12 spaces but found 14 spaces                                                 vue/html-indent
+  129:1    error    Expected indentation of 12 spaces but found 14 spaces                                                 vue/html-indent
+  130:1    error    Expected indentation of 12 spaces but found 14 spaces                                                 vue/html-indent
+  131:1    error    Expected indentation of 12 spaces but found 14 spaces                                                 vue/html-indent
+  132:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  134:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  135:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  136:1    error    Expected indentation of 12 spaces but found 14 spaces                                                 vue/html-indent
+  137:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  138:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  138:17   warning  Attribute ":id" should go before "v-memo"                                                             vue/attributes-order
+  139:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  140:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  141:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  142:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  143:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  144:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  145:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  146:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  147:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  148:1    error    Expected indentation of 14 spaces but found 16 spaces                                                 vue/html-indent
+  149:1    error    Expected indentation of 12 spaces but found 14 spaces                                                 vue/html-indent
+  150:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  154:1    error    Expected indentation of 10 spaces but found 14 spaces                                                 vue/html-indent
+  155:1    error    Expected indentation of 10 spaces but found 14 spaces                                                 vue/html-indent
+  156:1    error    Expected indentation of 12 spaces but found 16 spaces                                                 vue/html-indent
+  157:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  158:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  159:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  160:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  161:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  162:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  163:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  164:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  165:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  166:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  167:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  168:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  169:1    error    Expected indentation of 12 spaces but found 16 spaces                                                 vue/html-indent
+  170:1    error    Expected indentation of 10 spaces but found 14 spaces                                                 vue/html-indent
+  172:1    error    Expected indentation of 10 spaces but found 14 spaces                                                 vue/html-indent
+  173:1    error    Expected indentation of 10 spaces but found 14 spaces                                                 vue/html-indent
+  174:1    error    Expected indentation of 12 spaces but found 16 spaces                                                 vue/html-indent
+  175:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  175:77   error    'refX' should be on a new line                                                                        vue/max-attributes-per-line
+  175:86   error    'refY' should be on a new line                                                                        vue/max-attributes-per-line
+  175:95   error    'orient' should be on a new line                                                                      vue/max-attributes-per-line
+  175:109  error    'markerUnits' should be on a new line                                                                 vue/max-attributes-per-line
+  176:1    error    Expected indentation of 16 spaces but found 20 spaces                                                 vue/html-indent
+  177:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  178:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  178:83   error    'refX' should be on a new line                                                                        vue/max-attributes-per-line
+  178:92   error    'refY' should be on a new line                                                                        vue/max-attributes-per-line
+  178:101  error    'orient' should be on a new line                                                                      vue/max-attributes-per-line
+  178:115  error    'markerUnits' should be on a new line                                                                 vue/max-attributes-per-line
+  179:1    error    Expected indentation of 16 spaces but found 20 spaces                                                 vue/html-indent
+  180:1    error    Expected indentation of 14 spaces but found 18 spaces                                                 vue/html-indent
+  181:1    error    Expected indentation of 12 spaces but found 16 spaces                                                 vue/html-indent
+  182:1    error    Expected indentation of 10 spaces but found 14 spaces                                                 vue/html-indent
+  183:1    error    Expected indentation of 8 spaces but found 12 spaces                                                  vue/html-indent
+  186:1    error    Expected indentation of 8 spaces but found 10 spaces                                                  vue/html-indent
+  187:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  188:1    error    Expected indentation of 10 spaces but found 12 spaces                                                 vue/html-indent
+  189:1    error    Expected indentation of 8 spaces but found 10 spaces                                                  vue/html-indent
+  234:10   error    'ref' is defined but never used. Allowed unused vars must match /^_/u                                 @typescript-eslint/no-unused-vars
+  234:15   error    'computed' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  235:24   error    'EdgeMouseEvent' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+  266:7    error    'modalsStore' is assigned a value but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  270:33   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  282:16   error    'fitCanvas' is assigned a value but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  282:27   error    'zoomToSelection' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  282:44   error    'retryFailedOperation' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  285:3    error    'showNodeContextMenu' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  285:24   error    'nodeContextMenuX' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  285:42   error    'nodeContextMenuY' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  286:3    error    'showEdgeContextMenu' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  286:24   error    'edgeContextMenuX' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  286:42   error    'edgeContextMenuY' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  289:3    error    'closeEdgeContextMenu' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  289:25   error    'closeNodeContextMenu' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  290:34   error    'isQuickTaskCreateOpen' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  290:57   error    'isBatchEditModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  291:3    error    'batchEditTaskIds' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  291:60   error    'isGroupModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  292:3    error    'selectedGroup' is assigned a value but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  292:18   error    'groupModalPosition' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  292:38   error    'isGroupEditModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  292:60   error    'selectedSectionForEdit' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  293:3    error    'isDeleteGroupModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  293:27   error    'deleteGroupMessage' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  293:47   error    'isBulkDeleteModalOpen' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  294:3    error    'bulkDeleteTitle' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  294:20   error    'bulkDeleteMessage' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  294:39   error    'bulkDeleteItems' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  294:56   error    'bulkDeleteIsPermanent' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  295:3    error    'closeEditModal' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  295:19   error    'closeQuickTaskCreate' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  295:64   error    'closeBatchEditModal' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  296:27   error    'closeSectionSettingsModal' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  297:3    error    'closeGroupModal' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  297:60   error    'closeGroupEditModal' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  298:44   error    'cancelDeleteGroup' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  299:3    error    'cancelBulkDelete' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  299:36   error    'handleConnectStart' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  299:56   error    'handleConnectEnd' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  322:73   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  364:27   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  374:40   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  382:47   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  402:48   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  403:31   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  404:57   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  412:63   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  428:58   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  429:14   warning  Unexpected any. Specify a different type                                                              @typescript-eslint/no-explicit-any
+  439:1    error    Expected blank line before this block                                                                 vue/padding-line-between-blocks
+
+/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/PerformanceView.vue
+  138:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  220:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  264:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 885 problems (521 errors, 364 warnings)
+  319 errors and 86 warnings potentially fixable with the `--fix` option.
+

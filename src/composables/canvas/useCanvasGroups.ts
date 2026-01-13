@@ -1,4 +1,4 @@
-import { computed, nextTick, unref } from 'vue'
+import { nextTick } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
@@ -17,7 +17,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 export function useCanvasGroups() {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
-    const { nodes, getNodes } = useCanvasCore()
+    const { getNodes } = useCanvasCore()
 
     // --- Helpers ---
 
@@ -70,7 +70,7 @@ export function useCanvasGroups() {
         return findSectionForTask({ x: centerX, y: centerY })
     }
 
-    const findAllContainingSections = (nodeRect: { x: number, y: number, width: number, height: number }) => {
+    const findAllContainingSections = (_nodeRect: { x: number, y: number, width: number, height: number }) => {
         // Implementation for group-in-group drag could go here if needed.
         // For now, focusing on Task->Group drop.
         return []

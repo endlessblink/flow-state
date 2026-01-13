@@ -1,4 +1,4 @@
-import { type Ref, ref, nextTick } from 'vue'
+import { type Ref, ref } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'

@@ -1,5 +1,4 @@
-import { ref, computed, watch, nextTick, onMounted, type Ref } from 'vue'
-import { type Node, type Edge } from '@vue-flow/core'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -36,10 +35,11 @@ import { useCanvasNavigation } from './useCanvasNavigation' // Keeping for speci
 import { useCanvasZoom } from './useCanvasZoom' // Keeping for cleanup hooks
 import { useCanvasAlignment } from './useCanvasAlignment'
 import { useCanvasConnections } from './useCanvasConnections'
+import { useCanvasEdgeSync } from './useCanvasEdgeSync'
 
 // Helper for error boundaries
 const mockErrorBoundary = (_name: string, fn: (...args: unknown[]) => unknown) => {
-    if (typeof fn !== 'function') return (...args: unknown[]) => {
+    if (typeof fn !== 'function') return (..._args: unknown[]) => {
         return null
     }
     return (...args: unknown[]) => {
@@ -74,32 +74,16 @@ export function useCanvasOrchestrator() {
         edges,
         onPaneReady,
         viewport,
-        setViewport,
-        getNodes,
-        setNodes,
         updateNode,
         findNode,
-        screenToFlowCoordinate, // Proxy
-        isNodeIntersecting,
-        getIntersectingNodes,
         onMoveEnd,
-        addEdges,
-        removeEdges,
-        onConnect,
-        onEdgesChange,
-        onNodesChange,
         applyNodeChanges,
-        applyEdgeChanges,
-        toObject,
-        fitView, // Core now exposes fitView
-        zoomTo, // Core now exposes zoomTo
-        project,
-        panOnDrag
+        applyEdgeChanges
     } = useCanvasCore()
 
     const { hasInitialFit, operationLoading, operationError } = storeToRefs(canvasUiStore)
     const { setOperationLoading, setOperationError, clearOperationError } = canvasUiStore
-    const { width, height } = useWindowSize()
+    const { width: _width, height: _height } = useWindowSize()
     const { shift, control, meta } = useMagicKeys()
 
     // --- 2. Computed Data ---
@@ -137,7 +121,7 @@ export function useCanvasOrchestrator() {
     })
 
     // Groups (Unified)
-    const groups = useCanvasGroups()
+    useCanvasGroups()
 
     // Navigation & Zoom (Legacy cleanup support, transitioning to Core)
     const { initialViewport, fitCanvas: legacyFitCanvas, zoomToSelection: legacyZoomToSelection } = useCanvasNavigation(canvasStore)
@@ -164,7 +148,7 @@ export function useCanvasOrchestrator() {
 
     // OPTIMIZATION: True batching (only runs once per tick)
     let isSyncScheduled = false
-    const batchedSyncNodes = (priority?: string) => {
+    const batchedSyncNodes = (_priority?: string) => {
         if (isSyncScheduled) return
         isSyncScheduled = true
         nextTick(() => {
@@ -173,7 +157,21 @@ export function useCanvasOrchestrator() {
         })
     }
 
-    const syncEdges = () => { /* Edges sync implemented in Persistence later if needed, mostly static for now */ }
+    // Edge sync: build edges from task.dependsOn arrays
+    const recentlyRemovedEdges = ref(new Set<string>())
+    const edgeSync = useCanvasEdgeSync({ recentlyRemovedEdges })
+    const syncEdges = () => edgeSync.syncEdges()
+
+    // Batched edge sync to coalesce multiple updates
+    let isEdgeSyncScheduled = false
+    const batchedSyncEdges = () => {
+        if (isEdgeSyncScheduled) return
+        isEdgeSyncScheduled = true
+        nextTick(() => {
+            syncEdges()
+            isEdgeSyncScheduled = false
+        })
+    }
 
     // Events (Selection, Connection)
     const isVueFlowReady = ref(false)
@@ -192,6 +190,16 @@ export function useCanvasOrchestrator() {
         closeNodeContextMenu: events.closeNodeContextMenu,
         recentlyDeletedGroups
     }, modals, getUndoSystem())
+
+    // Wrapper for createTaskHere to use stored context menu position
+    // This ensures tasks are created at the exact right-click location
+    const createTaskHere = () => {
+        const screenPos = {
+            x: events.canvasContextMenuX.value,
+            y: events.canvasContextMenuY.value
+        }
+        actions.createTaskHere(screenPos)
+    }
 
     // Hotkeys
     const { handleKeyDown } = useCanvasHotkeys({
@@ -248,7 +256,7 @@ export function useCanvasOrchestrator() {
         withVueFlowErrorBoundary: mockErrorBoundary
     }, {
         isConnecting: ref(false),
-        recentlyRemovedEdges: ref(new Set()), // Persistence handles this internally now?
+        recentlyRemovedEdges, // Shared with useCanvasEdgeSync for zombie edge prevention
         showEdgeContextMenu: ref(false),
         edgeContextMenuX: ref(0),
         edgeContextMenuY: ref(0),
@@ -304,6 +312,10 @@ export function useCanvasOrchestrator() {
         console.log('🚀 [ORCHESTRATOR] Initial syncNodes...')
         syncNodes()
 
+        // Sync edges from task.dependsOn arrays
+        console.log('🚀 [ORCHESTRATOR] Initial syncEdges...')
+        syncEdges()
+
         // Mark initialization complete - watchers can now fire
         isInitialized.value = true
         console.log('✅ [ORCHESTRATOR] Initialization complete')
@@ -340,6 +352,7 @@ export function useCanvasOrchestrator() {
         if (!isInitialized.value) return
         console.log('🔔 [ORCHESTRATOR] canvasStore.syncTrigger changed - forcing sync')
         batchedSyncNodes()
+        batchedSyncEdges()
     })
 
     watch(() => canvasUiStore.syncTrigger, () => {
@@ -362,6 +375,7 @@ export function useCanvasOrchestrator() {
             if (persistence.isSyncing.value) return
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
             batchedSyncNodes()
+            batchedSyncEdges() // Also sync edges when tasks change
         } finally {
             isSyncingFromWatcher = false
         }
@@ -440,6 +454,7 @@ export function useCanvasOrchestrator() {
 
         // Actions & Handlers
         ...actions,
+        createTaskHere, // Override to use stored context menu position
         ...modals,
         closeSectionSettingsModal: actions.closeGroupEditModal,
         handleSectionSettingsSave: actions.handleGroupEditSave,
@@ -485,15 +500,75 @@ export function useCanvasOrchestrator() {
         retryFailedOperation,
 
         // Vue Flow Handlers
-        // Vue Flow Handlers
-        handleNodesChange: applyNodeChanges,
+        // TASK-262: Filter selection changes to prevent unwanted deselection on node click
+        // Vue Flow default: clicking a node deselects all others. We only want pane click to deselect.
+        handleNodesChange: (changes: any[]) => {
+            // Debug: Log ALL changes (not just selection) to verify this handler is called
+            console.log('%c[TASK-262] handleNodesChange CALLED', 'background: navy; color: yellow; font-size: 14px;', {
+                totalChanges: changes.length,
+                types: [...new Set(changes.map((c: any) => c.type))]
+            })
+
+            // Debug: Log ALL changes to understand what Vue Flow sends
+            const selectChanges = changes.filter((c: any) => c.type === 'select')
+            if (selectChanges.length > 0) {
+                console.log('%c[TASK-262] handleNodesChange - Selection changes incoming:', 'background: blue; color: white; padding: 2px 6px;', {
+                    allowBulkDeselect: canvasStore.allowBulkDeselect,
+                    totalChanges: changes.length,
+                    selectChanges: selectChanges.map((c: any) => ({
+                        id: c.id?.slice(0, 20),
+                        selected: c.selected,
+                        type: c.type
+                    }))
+                })
+            }
+
+            const filteredChanges = changes.filter((change: any) => {
+                // Allow all non-selection changes (position, dimensions, add, remove, etc.)
+                if (change.type !== 'select') return true
+
+                // Allow selection (selected: true)
+                if (change.selected === true) {
+                    console.log('%c[TASK-262] ALLOWING selection:', 'background: green; color: white;', change.id?.slice(0, 20))
+                    return true
+                }
+
+                // Block deselection (selected: false) unless explicitly allowed via pane click
+                if (change.selected === false) {
+                    const allowed = canvasStore.allowBulkDeselect
+                    if (!allowed) {
+                        console.log('%c[TASK-262] BLOCKING deselection:', 'background: red; color: white;', change.id?.slice(0, 20))
+                    } else {
+                        console.log('%c[TASK-262] ALLOWING deselection (bulk):', 'background: orange; color: white;', change.id?.slice(0, 20))
+                    }
+                    return allowed
+                }
+
+                return true
+            })
+
+            // Reset flag after filtering
+            if (canvasStore.allowBulkDeselect) {
+                canvasStore.allowBulkDeselect = false
+                console.log('%c[TASK-262] Reset allowBulkDeselect flag', 'background: gray; color: white;')
+            }
+
+            console.log('%c[TASK-262] Applying filtered changes:', 'background: purple; color: white;', {
+                original: changes.length,
+                filtered: filteredChanges.length
+            })
+            applyNodeChanges(filteredChanges)
+        },
         handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {
             connections.handleConnect(params)
         },
+        handleConnectStart: connections.handleConnectStart,
+        handleConnectEnd: connections.handleConnectEnd,
 
         // Debug
         syncNodes,
+        syncEdges,
         performSystemRestart: () => window.location.reload(), // Simple fallback
         storeHealth: lifecycle.storeHealth,
 

@@ -49,7 +49,7 @@ import { ref, computed } from 'vue'
 import { NButton } from 'naive-ui'
 import { useBrainDump } from '@/composables/useBrainDump'
 
-const props = defineProps<{
+defineProps<{
   showBrainDump: boolean
 }>()
 

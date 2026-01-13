@@ -1,5 +1,5 @@
 ---
-name: Vue Flow Nested Node Debugger
+name: vue-flow-debug
 description: Expert skill for debugging Vue Flow parent-child relationships, coordinate systems, and nesting logic. Contains deep knowledge on coordinate conversion and event handling.
 triggers:
   - debug vue flow

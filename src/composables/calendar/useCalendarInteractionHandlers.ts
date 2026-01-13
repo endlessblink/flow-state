@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
-import type { Task } from '@/stores/tasks'
+
 import type { CalendarEvent } from '@/types/tasks'
 
 /**

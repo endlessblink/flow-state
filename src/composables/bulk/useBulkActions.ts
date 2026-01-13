@@ -1,4 +1,4 @@
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+
 import { useTaskStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth' // Added import for useAuthStore
 import { supabase } from '@/services/auth/supabase'

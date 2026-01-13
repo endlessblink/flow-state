@@ -1,6 +1,5 @@
 import { ref, type Ref, nextTick } from 'vue'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
-import { useTaskStore } from '@/stores/tasks'
 // TASK-158: Persistent deleted groups tracking
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
@@ -86,11 +85,11 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         groupModalPosition.value = { x: 100, y: 100 }
     }
 
-    const handleGroupCreated = (group: CanvasSection) => {
+    const handleGroupCreated = (_group: CanvasSection) => {
         deps.syncNodes()
     }
 
-    const handleGroupUpdated = (group: CanvasSection) => {
+    const handleGroupUpdated = (_group: CanvasSection) => {
         deps.syncNodes()
     }
 

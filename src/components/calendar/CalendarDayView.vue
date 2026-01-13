@@ -9,7 +9,6 @@ const helpers = inject('calendar-helpers') as any
 const {
   formatHour,
   isCurrentTimeSlot,
-  formatSlotTime,
   getTasksForSlot,
   isTaskPrimarySlot,
   getSlotTaskStyle,

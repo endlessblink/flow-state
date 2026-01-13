@@ -122,7 +122,6 @@ import { useSettingsStore } from '@/stores/settings'
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
 const taskStore = useTaskStore()
-const timerStore = useTimerStore()
 const canvasStore = useCanvasStore()
 const sidebar = useSidebarManagement()
 

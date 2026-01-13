@@ -120,16 +120,7 @@ const isTimerActive = computed(() => {
 })
 
 // Helpers
-const getStatusIndicator = (status: string) => {
-  const indicators: Record<string, string> = {
-    planned: '📝',
-    in_progress: '🎬',
-    done: '✅',
-    backlog: '📚',
-    on_hold: '⏸️'
-  }
-  return indicators[status] || '📝'
-}
+
 
 // ADHD-friendly: Human-readable date formatting
 const formatHumanDate = (dateStr: string) => {
@@ -180,8 +171,8 @@ const dueStatus = computed(() => {
 /* ADHD-friendly: Calm, compact task card */
 .task-card {
   position: relative;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md);
   /* ADHD-friendly: Priority shown via left border only */
   border-left: 4px solid transparent;

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
-import type { Task as _Task } from '@/stores/tasks'
+
 
 interface TestResult {
   testName: string
@@ -27,7 +27,7 @@ const selectedTaskId = ref<string>('')
 const testTaskId = ref<string>('')
 
 // Computed properties
-const filteredTasks = computed(() => taskStore.tasks.filter(task => task.status === 'planned'))
+
 
 const hasTestTask = computed(() => !!testTaskId.value && taskStore.tasks.find(t => t.id === testTaskId.value))
 

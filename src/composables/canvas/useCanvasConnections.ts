@@ -1,6 +1,6 @@
 
 import { type Ref } from 'vue'
-import { useTaskStore, type Task } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
@@ -27,7 +27,7 @@ export function useCanvasConnections(
 ) {
     const taskStore = useTaskStore()
 
-    const handleConnectStart = (event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
+    const handleConnectStart = (_event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
         state.isConnecting.value = true
 
         deps.closeCanvasContextMenu()
@@ -35,7 +35,7 @@ export function useCanvasConnections(
         deps.closeNodeContextMenu()
     }
 
-    const handleConnectEnd = (event?: MouseEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
+    const handleConnectEnd = (_event?: MouseEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
         setTimeout(() => {
             state.isConnecting.value = false
         }, 100)

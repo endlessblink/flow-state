@@ -1,5 +1,5 @@
 ---
-name: dev-ui-ux-design
+name: dev-implement-ui-ux
 emoji: "🎨"
 description: Comprehensive UI/UX design and implementation skill covering visual design principles, color theory, typography, spacing systems, layout composition, accessibility (WCAG 2.2), animation, and systematic implementation workflows
 ---

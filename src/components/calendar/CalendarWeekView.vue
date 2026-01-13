@@ -15,7 +15,6 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusLabel,
   getStatusIcon
 } = helpers
 

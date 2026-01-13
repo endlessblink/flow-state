@@ -1,5 +1,5 @@
 ---
-name: Systematic Code Refactoring
+name: dev-refactoring
 description: AUTO-ACTIVATE when working in pomo-flow-refactor worktree or refactoring large components. MANDATORY port 5550 for refactor worktree. Extract Vue composables, split large files, reduce component size, baseline testing, zero regressions. Triggers on keywords refactor, composable, extract, split component, reduce file size, pomo-flow-refactor directory.
 ---
 

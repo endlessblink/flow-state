@@ -1,4 +1,4 @@
-import { ref, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onUnmounted } from 'vue'
 
 export interface DragHandleProps {
     disabled: boolean

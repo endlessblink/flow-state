@@ -79,6 +79,10 @@ export function useTaskNodeActions(
             emit('edit', props.task)
         } else {
             // Single click on unselected task - select it (replacing other selections)
+            console.log('%c[TASK-262] TaskNode EMITTING select', 'background: cyan; color: black; font-size: 14px;', {
+                taskId: props.task?.id?.slice(0, 20),
+                multiSelect: false
+            })
             emit('select', props.task, false)
         }
     }

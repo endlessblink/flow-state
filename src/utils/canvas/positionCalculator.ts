@@ -1,5 +1,3 @@
-import { type Node } from '@vue-flow/core'
-import type { CanvasGroup, TaskPosition } from '@/stores/canvas/types'
 import { CANVAS } from '@/constants/canvas'
 
 // --- Interfaces ---

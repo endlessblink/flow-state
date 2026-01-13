@@ -1,7 +1,41 @@
 ---
-name: Skill Router
+name: meta-skill-router
 description: Intelligent skill selection system that automatically routes to appropriate skills based on user intent, context, and project requirements. Enforces quality gates and optimizes development workflow.
 ---
+
+<!-- PROACTIVE SKILL INVOCATION: Claude MUST use the Skill tool to invoke matched skills -->
+## CRITICAL: Automatic Skill Invocation
+
+**When this skill is loaded, Claude MUST immediately:**
+
+1. **Analyze the user's request** using the routing patterns below
+2. **Invoke the matched skill** using: `Skill(skill-name)`
+3. **Chain additional skills** as required by quality gates
+
+**DO NOT just document which skill to use - INVOKE IT with the Skill tool.**
+
+### Quick Reference - Invoke These Skills:
+
+| User Says | Invoke This |
+|-----------|-------------|
+| "fix", "bug", "broken", "not working" | `Skill(dev-debugging)` |
+| "test", "verify", "check" | `Skill(qa-testing)` |
+| "plan", "break down", "strategy" | `Skill(arch-planning)` |
+| "canvas", "drag", "position", "node" | `Skill(vue-flow-debug)` |
+| "timer", "pomodoro", "countdown" | `Skill(dev-fix-timer)` |
+| "keyboard", "shortcut", "hotkey" | `Skill(dev-fix-keyboard)` |
+| "task store", "tasks disappear" | `Skill(dev-fix-task-store)` |
+| "port", "server won't start" | `Skill(ops-port-manager)` |
+| "undo", "redo", "history" | `Skill(dev-undo-redo)` |
+| "dead code", "unused", "cleanup" | `Skill(codebase-health-auditor)` |
+| "layout", "overflow", "clipping" | `Skill(frontend-layout-fixer)` |
+
+### Mandatory Chaining
+
+After ANY skill completes work that modifies code:
+```
+→ Skill(qa-testing) MUST be invoked before claiming success
+```
 
 # Skill Router
 

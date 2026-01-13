@@ -1,4 +1,5 @@
-import { ref, computed, onMounted, watch } from 'vue'
+
+import { ref, computed, watch } from 'vue'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
@@ -157,15 +158,26 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         selectedCanvasGroups.value = new Set()
     }
 
-    // FEATURE-254: Canvas inbox starts minimized always unless it has tasks inside
-    // Reactive behavior: auto-collapse when empty, auto-expand when tasks appear (on start)
-    watch(() => inboxTasks.value.length, (count) => {
-        if (props.context === 'canvas') {
-            if (count === 0) {
+    // FEATURE-254: Canvas Inbox Smart Minimization
+    // Logic: Auto-collapse if empty on load, but respect manual toggles afterwards
+    const hasInitialized = ref(false)
+
+    watch(() => [taskStore.isLoadingFromDatabase, inboxTasks.value.length], ([isLoading, count]) => {
+        // Only run initialization once, when DB load finishes
+        if (!isLoading && !hasInitialized.value && props.context === 'canvas') {
+            const taskCount = count as number
+
+            if (taskCount === 0) {
                 isCollapsed.value = true
+                console.log('[UnifiedInbox] Smart Minimization: Empty on load -> Collapsed')
             } else {
+                // Determine if we should be collapsed or expanded based on preference (or default expanded)
+                // For now, default to expanded if tasks exist
                 isCollapsed.value = false
+                console.log('[UnifiedInbox] Smart Minimization: Has tasks -> Expanded')
             }
+
+            hasInitialized.value = true
         }
     }, { immediate: true })
 

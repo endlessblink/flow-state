@@ -1,5 +1,5 @@
 ---
-name: Fix & Design Undo/Redo Systems
+name: dev-undo-redo
 description: FIX conflicting undo/redo implementations with VueUse + Pinia and DESIGN robust patterns for complex applications. Use for both stabilizing existing systems and implementing advanced undo/redo architecture.
 ---
 

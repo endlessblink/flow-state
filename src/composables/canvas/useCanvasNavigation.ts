@@ -26,14 +26,9 @@ export function useCanvasNavigation(canvasStore: ReturnType<typeof useCanvasStor
         if (selectedNodes.length === 0) return
 
         // Calculate bounding box
-        const xs = selectedNodes.map(n => n.position.x)
-        const ys = selectedNodes.map(n => n.position.y)
-        const minX = Math.min(...xs)
-        const minY = Math.min(...ys)
-        // Approximate dimensions since actual dimensions might vary
-        // Ideally we'd use node.dimensions if measured, but position is improved
-        const maxX = Math.max(...xs) + 220
-        const maxY = Math.max(...ys) + 100
+        const _xs = selectedNodes.map(n => n.position.x)
+        const _ys = selectedNodes.map(n => n.position.y)
+
 
         vueFlowFitView({
             nodes: selectedIds,

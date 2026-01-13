@@ -26,7 +26,7 @@ const props = defineProps<{
   activeStatusFilter: string | null
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'clear-filter'): void
 }>()
 

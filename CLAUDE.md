@@ -63,6 +63,79 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 8. **Atomic Tasks** - ALWAYS break broad requests into single-action steps (see below)
 9. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
 
+## Design Token Usage (MANDATORY)
+
+**Problem:** Hardcoded CSS values (rgba, px, hex) cause visual inconsistency and make theming impossible. Currently 52+ files have this issue.
+
+**Solution:** ALWAYS use design tokens from `src/assets/design-tokens.css`.
+
+### Required Token Usage
+
+| Property | Never Use | Always Use |
+|----------|-----------|------------|
+| **Background colors** | `rgba(18, 18, 20, 0.98)` | `var(--overlay-component-bg)` |
+| **Glass effects** | `rgba(255, 255, 255, 0.06)` | `var(--glass-bg-heavy)` |
+| **Borders** | `rgba(255, 255, 255, 0.12)` | `var(--glass-border)` |
+| **Backdrop blur** | `blur(20px)` | `var(--overlay-component-backdrop)` |
+| **Border radius** | `12px`, `8px` | `var(--radius-lg)`, `var(--radius-md)` |
+| **Spacing** | `8px`, `12px`, `16px` | `var(--space-2)`, `var(--space-3)`, `var(--space-4)` |
+| **Font sizes** | `10px`, `13px` | `var(--text-xs)`, `var(--text-sm)` |
+| **Transitions** | `0.15s ease-out` | `var(--duration-fast) var(--ease-out)` |
+| **Shadows** | `0 12px 40px rgba(...)` | `var(--overlay-component-shadow)` |
+
+### Common Token Reference
+
+```css
+/* Overlay backgrounds */
+--overlay-component-bg        /* Dark overlay panels */
+--glass-bg-light             /* rgba(255,255,255,0.02) */
+--glass-bg-medium            /* rgba(255,255,255,0.04) */
+--glass-bg-heavy             /* rgba(255,255,255,0.06) */
+
+/* Borders */
+--glass-border               /* rgba(255,255,255,0.10) */
+--glass-border-hover         /* rgba(255,255,255,0.15) */
+--overlay-component-border   /* Full border declaration */
+
+/* Spacing (8px grid) */
+--space-1 (4px), --space-2 (8px), --space-3 (12px), --space-4 (16px)
+--space-1_5 (6px), --space-2_5 (10px)
+
+/* Typography */
+--text-xs (12px), --text-sm (14px), --text-base (16px)
+
+/* Border radius */
+--radius-sm (6px), --radius-md (8px), --radius-lg (16px), --radius-xl (20px)
+
+/* Animation */
+--duration-fast (150ms), --duration-normal (200ms)
+--ease-out, --spring-smooth
+```
+
+### Example: Correct vs Incorrect
+
+```css
+/* ❌ WRONG - Hardcoded values */
+.menu {
+  background: rgba(18, 18, 20, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.15s ease-out;
+}
+
+/* ✅ CORRECT - Design tokens */
+.menu {
+  background: var(--overlay-component-bg);
+  border: var(--overlay-component-border);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+```
+
+**Full token reference:** `src/assets/design-tokens.css` (1,220 lines)
+
 ## Atomic Task Breakdown (CRITICAL)
 
 **Problem:** Broad tasks like "test all features" or "fix everything" cause extended thinking loops (3+ minutes stuck).

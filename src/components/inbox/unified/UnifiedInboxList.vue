@@ -57,7 +57,7 @@ const props = defineProps<{
   areGlobalsFiltered: boolean // If global sidebar filters are active
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'drag-start', event: DragEvent, task: Task): void
   (e: 'drag-end'): void
   (e: 'task-click', event: MouseEvent, task: Task): void

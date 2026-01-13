@@ -43,11 +43,15 @@ function runCommand(command, args = [], options = {}) {
         let stderr = '';
 
         proc.stdout?.on('data', (data) => {
-            stdout += data.toString();
+            const str = data.toString();
+            stdout += str;
+            if (options.onLog) options.onLog(str);
         });
 
         proc.stderr?.on('data', (data) => {
-            stderr += data.toString();
+            const str = data.toString();
+            stderr += str;
+            if (options.onLog) options.onLog(str);
         });
 
         proc.on('close', (code) => {
@@ -69,9 +73,11 @@ function runCommand(command, args = [], options = {}) {
 /**
  * Scan TypeScript errors using vue-tsc
  */
-async function scanTypeScript() {
+async function scanTypeScript(onLog) {
+    if (onLog) onLog('Starting TypeScript scan...\n');
     const result = await runCommand('npx', ['vue-tsc', '--noEmit', '--pretty', 'false'], {
-        timeout: SCANNER_TIMEOUT
+        timeout: SCANNER_TIMEOUT,
+        onLog
     });
 
     if (result.timedOut) {
@@ -112,7 +118,9 @@ async function scanTypeScript() {
 /**
  * Scan ESLint issues
  */
-async function scanESLint() {
+async function scanESLint(onLog) {
+    if (onLog) onLog('Starting ESLint scan...\n');
+    // Don't pass onLog to runCommand to avoid streaming raw JSON
     const result = await runCommand('npx', ['eslint', 'src', '--format', 'json', '--max-warnings', '9999'], {
         timeout: SCANNER_TIMEOUT
     });
@@ -171,7 +179,8 @@ async function scanESLint() {
 /**
  * Scan dead code using knip
  */
-async function scanDeadCode() {
+async function scanDeadCode(onLog) {
+    if (onLog) onLog('Starting Dead Code scan (knip)...\n');
     const result = await runCommand('npx', ['knip', '--reporter', 'json'], {
         timeout: SCANNER_TIMEOUT
     });
@@ -213,7 +222,8 @@ async function scanDeadCode() {
 /**
  * Scan npm audit for security vulnerabilities
  */
-async function scanAudit() {
+async function scanAudit(onLog) {
+    if (onLog) onLog('Starting Security Audit...\n');
     const result = await runCommand('npm', ['audit', '--json'], {
         timeout: SCANNER_TIMEOUT
     });
@@ -252,7 +262,8 @@ async function scanAudit() {
 /**
  * Check for outdated dependencies
  */
-async function scanOutdated() {
+async function scanOutdated(onLog) {
+    if (onLog) onLog('Checking for outdated dependencies...\n');
     const result = await runCommand('npm', ['outdated', '--json'], {
         timeout: SCANNER_TIMEOUT
     });
@@ -301,7 +312,8 @@ async function scanOutdated() {
 /**
  * Calculate bundle size from dist folder
  */
-async function scanBundleSize() {
+async function scanBundleSize(onLog) {
+    if (onLog) onLog('Analyzing bundle size...\n');
     const distPath = path.join(PROJECT_ROOT, 'dist', 'assets');
 
     try {
@@ -349,7 +361,8 @@ async function scanBundleSize() {
 /**
  * Check test coverage
  */
-async function scanCoverage() {
+async function scanCoverage(onLog) {
+    if (onLog) onLog('Checking test coverage...\n');
     const coveragePath = path.join(PROJECT_ROOT, 'coverage', 'coverage-summary.json');
 
     try {
@@ -387,7 +400,8 @@ async function scanCoverage() {
 /**
  * Check build status
  */
-async function scanBuildStatus() {
+async function scanBuildStatus(onLog) {
+    if (onLog) onLog('Checking build status...\n');
     const distPath = path.join(PROJECT_ROOT, 'dist');
 
     try {
@@ -458,10 +472,11 @@ function calculateHealthScore(results) {
 /**
  * Run full health scan (all scanners in parallel)
  */
-async function runFullScan() {
+async function runFullScan(onLog) {
     const startTime = Date.now();
 
     console.log('[Health Scanner] Starting full scan...');
+    if (onLog) onLog('[Health Scanner] Starting full scan...\n');
 
     // Run all scanners in parallel using Promise.allSettled
     const [
@@ -474,14 +489,14 @@ async function runFullScan() {
         coverage,
         buildStatus
     ] = await Promise.allSettled([
-        scanTypeScript(),
-        scanESLint(),
-        scanDeadCode(),
-        scanAudit(),
-        scanOutdated(),
-        scanBundleSize(),
-        scanCoverage(),
-        scanBuildStatus()
+        scanTypeScript(onLog),
+        scanESLint(onLog),
+        scanDeadCode(onLog),
+        scanAudit(onLog),
+        scanOutdated(onLog),
+        scanBundleSize(onLog),
+        scanCoverage(onLog),
+        scanBuildStatus(onLog)
     ]);
 
     // Extract results, handling any rejected promises
@@ -501,6 +516,7 @@ async function runFullScan() {
 
     const duration = Date.now() - startTime;
     console.log(`[Health Scanner] Scan completed in ${duration}ms`);
+    if (onLog) onLog(`[Health Scanner] Scan completed in ${duration}ms\n`);
 
     return {
         timestamp: new Date().toISOString(),

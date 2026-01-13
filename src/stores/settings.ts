@@ -18,6 +18,9 @@ export interface AppSettings {
     language: string
     textDirection: 'auto' | 'ltr' | 'rtl'
     theme: 'light' | 'dark' | 'system'
+
+    // Suggestions
+    enableDayGroupSuggestions: boolean
 }
 
 const STORAGE_KEY = 'pomo-flow-settings-v2'
@@ -40,7 +43,10 @@ export const useSettingsStore = defineStore('settings', {
         // Appearance defaults
         language: 'en',
         textDirection: 'auto',
-        theme: 'system'
+        theme: 'system',
+
+        // Suggestions defaults
+        enableDayGroupSuggestions: true
     }),
 
     actions: {

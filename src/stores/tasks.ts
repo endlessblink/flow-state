@@ -5,6 +5,7 @@ import { useTaskPersistence } from './tasks/taskPersistence'
 import { useTaskOperations } from './tasks/taskOperations'
 import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
+import { useCanvasStore } from './canvas'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
@@ -19,7 +20,7 @@ export { parseDateKey, formatDateKey } from '@/utils/dateUtils'
  * getTaskInstances function - for compatibility with TaskEditModal
  * Returns recurring instances for a task, simplified for current system
  */
-export const getTaskInstances = (task: any) => task.recurringInstances || []
+export const getTaskInstances = (task: Task) => task.recurringInstances || []
 
 /**
  * Clear only hardcoded test tasks while preserving user's real tasks
@@ -30,7 +31,7 @@ export const clearHardcodedTestTasks = async () => {
   const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
   const { useDemoGuard } = await import('@/composables/useDemoGuard')
 
-  const { fetchTasks, saveTasks, deleteTask } = useSupabaseDatabase()
+  const { fetchTasks, deleteTask } = useSupabaseDatabase()
   const demoGuard = useDemoGuard()
 
   try {
@@ -70,7 +71,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const states = useTaskStates()
   const {
     // SAFETY: tasks is now filteredTasks (safe for dis-
-    tasks, _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
+    _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     activeSmartView, activeStatusFilter,
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
     isLoadingFilters, syncInProgress, runAllTaskMigrations, calendarFilteredTasks
@@ -86,7 +87,7 @@ export const useTaskStore = defineStore('tasks', () => {
     syncInProgress,
     runAllTaskMigrations
   )
-  const { saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasksFromJSON, importFromRecoveryTool, importTasks } = persistence
+  const { saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, loadFromDatabase, loadPersistedFilters, persistFilters, importTasks } = persistence
 
   // 3. Initialize Operations
   // SAFETY: Pass _rawTasks for CRUD operations
@@ -165,12 +166,15 @@ export const useTaskStore = defineStore('tasks', () => {
 
         // DEBUG: Trace sync payload for connections (BUG-023)
         // Handle strings, timestamps, or Date objects safely
-        const toDate = (val: any): Date => {
+        const toDate = (val: unknown): Date => {
           if (!val) return new Date()
           if (val instanceof Date) return val
           // If string or number, try to parse
-          const d = new Date(val)
-          return isNaN(d.getTime()) ? new Date() : d
+          if (typeof val === 'string' || typeof val === 'number') {
+            const d = new Date(val)
+            return isNaN(d.getTime()) ? new Date() : d
+          }
+          return new Date()
         }
 
         const normalizedTask: Task = {
@@ -193,12 +197,12 @@ export const useTaskStore = defineStore('tasks', () => {
           // 1. If we are actively dragging/editing (manualOperationInProgress), ignore sync for now
           // 2. If local task is newer than incoming task (based on updatedAt), ignore sync (Last Write Wins)
           if (manualOperationInProgress.value) {
-            console.log(`🛡️ [SYNC-PROTECT] Ignoring sync for ${taskId} during manual operation`)
+            console.log(`🛡️[SYNC - PROTECT] Ignoring sync for ${taskId} during manual operation`)
             return
           }
 
           if (currentTask.updatedAt > normalizedTask.updatedAt) {
-            console.log(`🛡️ [SYNC-PROTECT] Ignoring sync for ${taskId} - local version is newer (${currentTask.updatedAt.toISOString()} vs ${normalizedTask.updatedAt.toISOString()})`)
+            console.log(`🛡️[SYNC - PROTECT] Ignoring sync for ${taskId} - local version is newer(${currentTask.updatedAt.toISOString()} vs ${normalizedTask.updatedAt.toISOString()})`)
             return
           }
 
@@ -207,7 +211,7 @@ export const useTaskStore = defineStore('tasks', () => {
           // BUG-FIX: Preserve local canvasPosition if remote doesn't have one
           // This prevents sync from clearing positions when remote has no position data
           if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {
-            console.log(`🛡️ [SYNC-PROTECT] Preserving local canvasPosition for ${taskId} - remote has no position`)
+            console.log(`🛡️[SYNC - PROTECT] Preserving local canvasPosition for ${taskId} - remote has no position`)
             normalizedTask.canvasPosition = currentTask.canvasPosition
             normalizedTask.isInInbox = currentTask.isInInbox
           }
@@ -218,6 +222,13 @@ export const useTaskStore = defineStore('tasks', () => {
             _rawTasks.value.splice(idx, 1)
           } else {
             _rawTasks.value[idx] = normalizedTask
+            // BUG-FIX: Trigger canvas sync for realtime updates
+            // The orchestrator only watches array length changes, not property updates
+            // Bumping syncTrigger ensures canvas re-renders when tasks are updated
+            try {
+              const canvasStore = useCanvasStore()
+              canvasStore.syncTrigger++
+            } catch { /* Canvas store may not be initialized in all contexts */ }
           }
         } else {
           // Add new task - ONLY if not deleted

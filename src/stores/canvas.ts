@@ -1,15 +1,17 @@
+
 import { defineStore, acceptHMRUpdate } from 'pinia'
-import { ref, watch, computed } from 'vue'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-// Force HMR update
-import { type Task } from './tasks'
-import { detectPowerKeyword } from '@/composables/useTaskSmartGroups'
-import { isPointInRect } from '@/utils/canvas/positionCalculator'
-import { isNodeCompletelyInside, type ContainerBounds } from '@/utils/canvas/spatialContainment'
+import { ref, computed, watch } from 'vue'
+import type { Node, Edge } from '@vue-flow/core'
+
+// Removed invalid import from @/types/canvas
+import type { Task } from '@/types/tasks'
+import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
+
+import { type ContainerBounds } from '@/utils/canvas/spatialContainment'
 import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
-import { CANVAS } from '@/constants/canvas'
-import { type Node } from '@vue-flow/core'
+
+
 import type {
   GroupFilter,
   TaskPosition,
@@ -18,6 +20,9 @@ import type {
   CanvasGroup,
   CanvasSection
 } from './canvas/types'
+
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
 // Re-export types for consumers
 export type {
@@ -54,6 +59,7 @@ const logGroupIdHistogram = (label: string, groups: CanvasGroup[]) => {
 }
 
 // Task store import for safe sync functionality
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let taskStore: any = null
 
 /**
@@ -137,6 +143,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Selection state
   const selectedNodeIds = ref<string[]>([])
   const skipNextSelectionChange = ref(false) // Flag to prevent Vue Flow overriding manual Ctrl+click
+  const allowBulkDeselect = ref(false) // TASK-262: Flag to allow bulk deselection only from pane click
   const connectMode = ref(false)
   const connectingFrom = ref<string | null>(null)
 
@@ -172,8 +179,8 @@ export const useCanvasStore = defineStore('canvas', () => {
   const snapToGroups = ref(true)
 
   // Vue Flow integration
-  const nodes = ref<any[]>([])
-  const edges = ref<any[]>([])
+  const nodes = ref<Node[]>([])
+  const edges = ref<Edge[]>([])
 
   // --- SQL INTERACTION ---
 
@@ -252,13 +259,13 @@ export const useCanvasStore = defineStore('canvas', () => {
         !Number.isFinite(g.position.height)
       )
       if (invalidGroups.length > 0) {
-        console.error(`❌ [INTEGRITY] ${invalidGroups.length} groups have invalid positions:`,
+        console.error(`❌[INTEGRITY] ${invalidGroups.length} groups have invalid positions: `,
           invalidGroups.map(g => `${g.name}: ${JSON.stringify(g.position)}`))
 
         // Auto-repair invalid positions
         loadedGroups.forEach(g => {
           if (!g.position || !Number.isFinite(g.position.x) || !Number.isFinite(g.position.y)) {
-            console.warn(`🛠️ [INTEGRITY] Auto-repairing position for group ${g.name}`)
+            console.warn(`🛠️[INTEGRITY] Auto - repairing position for group ${g.name}`)
             g.position = { x: 0, y: 0, width: g.position?.width || 600, height: g.position?.height || 400 }
           }
         })
@@ -270,15 +277,15 @@ export const useCanvasStore = defineStore('canvas', () => {
       // BUG-169 FIX: Safety guard - don't overwrite existing groups with empty array
       // during the first 10 seconds of the session (prevents auth race conditions)
       if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
-        const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+        const sessionStart = typeof window !== 'undefined' ? (window as unknown as { PomoFlowSessionStart: number }).PomoFlowSessionStart || 0 : 0
         const timeSinceSessionStart = Date.now() - sessionStart
 
         if (timeSinceSessionStart < 10000) {
-          console.warn(`🛡️ [GROUP-LOAD] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost (session ${timeSinceSessionStart}ms old)`)
+          console.warn(`🛡️[GROUP - LOAD] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost(session ${timeSinceSessionStart}ms old)`)
           return
         }
 
-        console.warn(`⚠️ [GROUP-LOAD] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
+        console.warn(`⚠️[GROUP - LOAD] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty(session ${timeSinceSessionStart}ms old)`)
       }
 
       // Break any parent cycles before loading
@@ -313,13 +320,13 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // Also populate from taskStore if available
       if (taskStore && taskStore.tasks) {
-        taskStore.tasks.forEach((t: any) => {
+        taskStore.tasks.forEach((t: Task) => {
           nodeVersionMap.value.set(t.id, t.positionVersion ?? 0)
         })
       }
 
       if (loadedGroups.length > 0) {
-        console.log(`📦 [CANVAS] Loaded ${loadedGroups.length} groups, nodeVersionMap size: ${nodeVersionMap.value.size}`)
+        console.log(`📦[CANVAS] Loaded ${loadedGroups.length} groups, nodeVersionMap size: ${nodeVersionMap.value.size}`)
       }
 
       // NOTE: Authenticated users use Supabase as single source of truth
@@ -344,9 +351,9 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     try {
       await saveGroup(group)
-    } catch (e) {
+    } catch (_e) {
       // Supabase failed or skipped (guest mode) - localStorage backup is still saved
-      console.debug(`⏭️ [GROUP-SAVE] Supabase skipped/failed - localStorage backup saved`)
+      console.debug(`⏭️[GROUP - SAVE] Supabase skipped / failed - localStorage backup saved`)
     }
   }
 
@@ -400,7 +407,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Nesting should only happen via explicit UX action, not containment detection
     const newGroup: CanvasGroup = {
       ...groupData,
-      id: `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: `group - ${Date.now()} -${Math.random().toString(36).substring(2, 9)} `,
       isVisible: true,
       isCollapsed: false,
       parentGroupId: null, // Explicitly top-level - never auto-nest new groups
@@ -420,7 +427,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       // DRIFT LOGGING: Track when parentGroupId or position is changed
       // This helps identify non-drag flows that mutate hierarchy/positions
       if ('parentGroupId' in updates && updates.parentGroupId !== group.parentGroupId) {
-        console.log(`📍 [GROUP-PARENT-WRITE] Group ${id.slice(0, 8)}... (${group.name}) parentGroupId: "${group.parentGroupId ?? 'none'}" → "${updates.parentGroupId ?? 'none'}"`, {
+        console.log(`📍[GROUP - PARENT - WRITE] Group ${id.slice(0, 8)}... (${group.name}) parentGroupId: "${group.parentGroupId ?? 'none'}" → "${updates.parentGroupId ?? 'none'}"`, {
           stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
         })
       }
@@ -428,7 +435,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         const oldPos = group.position
         const newPos = updates.position
         if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
-          console.log(`📍 [GROUP-POSITION-WRITE] Group ${id.slice(0, 8)}... (${group.name}) pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? '?'},${newPos?.y?.toFixed(0) ?? '?'})`, {
+          console.log(`📍[GROUP - POSITION - WRITE] Group ${id.slice(0, 8)}... (${group.name}) pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? '?'},${newPos?.y?.toFixed(0) ?? '?'})`, {
             stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
           })
         }
@@ -554,30 +561,32 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Priority 2: Local Storage (fallback for guests or if Supabase returns nothing)
       const local = localStorage.getItem('canvas-viewport')
       if (local) {
-        const parsed = JSON.parse(local)
-        if (
-          Number.isFinite(parsed.x) &&
-          Number.isFinite(parsed.y) &&
-          Number.isFinite(parsed.zoom) &&
-          parsed.zoom > 0
-        ) {
-          viewport.value = parsed
-          return true
+        try {
+          const parsed = JSON.parse(local)
+          if (
+            Number.isFinite(parsed.x) &&
+            Number.isFinite(parsed.y) &&
+            Number.isFinite(parsed.zoom) &&
+            parsed.zoom > 0
+          ) {
+            viewport.value = parsed
+            return true
+          }
+        } catch (_e) {
+          console.error('Failed to parse local viewport:', _e)
         }
-        console.warn('⚠️ [CANVAS] Invalid viewport in localStorage, using defaults')
       }
       return false
-    } catch (e) {
-      console.error('Failed to load viewport:', e)
+    } catch (_e) {
+      console.error('Failed to load viewport:', _e)
       return false
     }
   }
-
   // Visual Containment Count - counts tasks that are VISUALLY inside the group bounds
   const getTaskCountInGroupRecursive = (groupId: string, tasks: Task[], visited = new Set<string>()): number => {
     // Prevent infinite recursion in cyclic graphs
     if (visited.has(groupId)) {
-      console.warn(`🔄 [CANVAS] Cycle detected in group hierarchy at ${groupId}`)
+      console.warn(`🔄[CANVAS] Cycle detected in group hierarchy at ${groupId}`)
       return 0
     }
     visited.add(groupId)
@@ -1036,15 +1045,15 @@ export const useCanvasStore = defineStore('canvas', () => {
               // BUG-169 FIX: Safety guard - don't overwrite existing groups with empty array
               // during the first 10 seconds of the session (prevents auth race conditions)
               if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
-                const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+                const sessionStart = typeof window !== 'undefined' ? (window as unknown as { PomoFlowSessionStart: number }).PomoFlowSessionStart || 0 : 0
                 const timeSinceSessionStart = Date.now() - sessionStart
 
                 if (timeSinceSessionStart < 10000) {
-                  console.warn(`🛡️ [AUTH-WATCHER] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost (session ${timeSinceSessionStart}ms old)`)
+                  console.warn(`🛡️[AUTH - WATCHER] BLOCKED empty overwrite - ${_rawGroups.value.length} existing groups would be lost(session ${timeSinceSessionStart}ms old)`)
                   return
                 }
 
-                console.warn(`⚠️ [AUTH-WATCHER] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty`)
+                console.warn(`⚠️[AUTH - WATCHER] Supabase returned 0 groups but ${_rawGroups.value.length} exist locally - proceeding with empty`)
               }
 
               // Break any parent cycles before loading
@@ -1062,7 +1071,7 @@ export const useCanvasStore = defineStore('canvas', () => {
               })
 
               if (loadedGroups.length > 0) {
-                console.log(`📦 [AUTH-WATCHER] Reloaded ${loadedGroups.length} groups, ${nodeVersionMap.value.size} version entries`)
+                console.log(`📦[AUTH - WATCHER] Reloaded ${loadedGroups.length} groups, ${nodeVersionMap.value.size} version entries`)
               }
             } catch (e) {
               console.error('❌ [CANVAS] Failed to reload groups after auth:', e)
@@ -1126,7 +1135,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   const updateSectionWithUndo = updateGroup
 
   // Missing stubs to satisfy vue-tsc
-  const getMatchingTaskCount = (_groupId: string, _tasks?: any[]): number => 0
+  const getMatchingTaskCount = (_groupId: string, _tasks?: Task[]): number => 0
   const toggleSectionVisibility = async (_groupId: string) => { /* ... */ }
   const toggleSectionCollapse = async (groupId: string) => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
@@ -1161,9 +1170,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     const isUserAction = USER_ACTION_SOURCES.includes(source as typeof USER_ACTION_SOURCES[number])
     if (isUserAction) {
       syncTrigger.value++
-      console.log(`🔄 [CANVAS-STORE] Sync accepted from ${source} - syncTrigger:`, syncTrigger.value)
+      console.log(`🔄[CANVAS - STORE] Sync accepted from ${source} - syncTrigger: `, syncTrigger.value)
     } else {
-      console.log(`⏭️ [CANVAS-STORE] Sync blocked from ${source} (not a user action)`)
+      console.log(`⏭️[CANVAS - STORE] Sync blocked from ${source} (not a user action)`)
     }
   }
   // Restored Selection methods
@@ -1176,7 +1185,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
   const endSelection = () => { isSelecting.value = false; selectionRect.value = null }
-  const selectNodesInRect = (_rect: any) => { /* ... */ }
+  const selectNodesInRect = (_rect: Record<string, unknown>) => { /* ... */ }
   const toggleMultiSelectMode = () => { multiSelectMode.value = !multiSelectMode.value }
 
   const togglePriorityIndicator = () => { showPriorityIndicator.value = !showPriorityIndicator.value }
@@ -1205,6 +1214,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     edges,
     selectedNodeIds,
     skipNextSelectionChange, // Flag to prevent Vue Flow overriding manual Ctrl+click
+    allowBulkDeselect, // TASK-262: Flag to allow bulk deselection only from pane click
     connectMode,
     connectingFrom,
 

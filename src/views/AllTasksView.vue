@@ -86,7 +86,7 @@ import TaskList from '@/components/tasks/TaskList.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { Eye, EyeOff } from 'lucide-vue-next'
+
 import type { Task } from '@/stores/tasks'
 
 // Stores

@@ -5,7 +5,16 @@
     "padding": 0
   },
   "hooks": {
-    "SessionStart": [],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-announcer.sh"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [],
     "PreToolUse": [],
     "UserPromptSubmit": [

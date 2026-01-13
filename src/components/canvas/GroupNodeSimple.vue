@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { NodeResizer } from '@vue-flow/node-resizer'
 import '@vue-flow/node-resizer/dist/style.css'
@@ -193,8 +193,6 @@ const handleResizeStart = (event: unknown) => {
 
 const rafId = ref<number | null>(null)
 const isMounting = ref(true)
-
-import { onMounted } from 'vue'
 
 onMounted(() => {
   // Guard against spurious resize events during initial render

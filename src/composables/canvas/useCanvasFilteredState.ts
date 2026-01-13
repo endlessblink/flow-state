@@ -1,6 +1,6 @@
 import { computed, ref, type Ref } from 'vue'
 import type { Task } from '@/stores/tasks'
-import { useWindowSize } from '@vueuse/core'
+
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 
 interface TaskStoreSettings {
@@ -14,7 +14,7 @@ interface CanvasStore {
 }
 
 export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: CanvasStore) {
-    const { width } = useWindowSize()
+
 
     // --- Caching Variables ---
     let lastCanvasTasks: Task[] = []

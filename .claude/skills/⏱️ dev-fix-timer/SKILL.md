@@ -1,5 +1,5 @@
 ---
-name: Fix Timer State Bugs
+name: dev-fix-timer
 description: DEBUG Pomodoro timer state issues, incorrect countdown behavior, and timer synchronization problems. Fix when timer won't start, time display is wrong, or timer gets stuck. Use for timer state management, countdown logic, and session persistence.
 ---
 

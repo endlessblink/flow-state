@@ -132,7 +132,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { performanceBenchmark } from '@/utils/performanceBenchmark'
-import { useRouter } from 'vue-router'
+
 import { Zap, Save } from 'lucide-vue-next' // Import icons
 
 const results = ref<any>({})

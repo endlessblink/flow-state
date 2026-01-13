@@ -58,6 +58,7 @@
 | ~~**BUG-206**~~ | ✅ **DONE** **Fix Kanban Card Date Formatting** | **P1** | ✅ **DONE** (2026-01-11) | - |
 | ~~**BUG-207**~~ | ✅ **DONE** **Fix Kanban Card Clipping on Hover** | **P1** | ✅ **DONE** (2026-01-11) | - |
 | **TASK-208** | **App-Wide Code Quality Refactoring** | **P1** | 📋 PLANNED | [See Details](#task-208-app-wide-code-quality-refactoring-planned) |
+| ~~TASK-270~~ | ✅ **DONE** **Manual ESLint Remediation** | **P1** | ✅ **DONE** (2026-01-13) | [See Details](#task-270-manual-eslint-remediation-done) |
 | ~~TASK-209~~ | ✅ **DONE** | TypeScript & Test Suite Cleanup | P0 | ✅ **DONE** (2026-01-13) | [See Details](#task-209-typescript-test-suite-cleanup) |
 | ~~**TASK-215**~~ | ✅ **DONE** **Global Group Creation & Canvas Navigation** | **P2** | ✅ **DONE** (2026-01-13) | [See Details](#task-215-global-group-creation--canvas-navigation-done) |
 | ~~**TASK-210**~~ | ✅ **DONE** **QA Testing Skill v2.0** | **P1** | ✅ **DONE** (2026-01-11) - Enhanced with data integrity, memory testing, offline sync, backup verification for personal app use. | - |
@@ -76,7 +77,8 @@
 | ~~**TASK-253**~~ | ✅ **DONE** **Reorder App Views** | **P2** | ✅ **DONE** (2026-01-12) | Support user preference: Canvas - Calendar - Board - Catalog - Quick Sort |
 | ~~**BUG-226**~~ | ✅ **DONE** **Nested Group Z-Index Layering** | **P1** | ✅ **DONE** (2026-01-12) | Depth-based Z-index bonus. |
 | ~~**BUG-214**~~ | ✅ **DONE** **Fix Blurry Text in Empty Canvas State** | **P3** | ✅ **DONE** (2026-01-13) | Centering fix with flexbox. |
-| **FEATURE-254** | **Canvas Inbox Smart Minimization** | **P2** | 🔄 **IN PROGRESS** | - |
+| ~~**BUG-261**~~ | ✅ **DONE** **Group Modal Blurry Background** | **P2** | ✅ **DONE** (2026-01-13) | Removed Teleport, fixed stacking context. |
+| ~~**FEATURE-254**~~ | ✅ **DONE** **Canvas Inbox Smart Minimization** | **P2** | ✅ **DONE** (2026-01-13) | Auto-collapse on empty load. |
 | **TASK-260** | **Authoritative Duplicate Detection Diagnostics** | **P0** | 👀 **REVIEW** | Canvas task/group duplication logging tightened with assertNoDuplicateIds helper |
 | ~~**TASK-255**~~ | ✅ **DONE** **Canvas Stability Hardening (Geometry Invariants)** | **P0** | ✅ **DONE** (2026-01-13) - [SOP](./sop/SOP-002-canvas-geometry-invariants.md) | ROAD-013, TASK-184 |
 | ~~**TASK-256**~~ | ✅ **DONE** **Standardize Project Identifiers (Color Dots)** | **P2** | ✅ **DONE** (2026-01-13) | - |
@@ -149,7 +151,8 @@
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
-### ROAD-004: Mobile PWA (🔄 IN PROGRESS - Phase 1)
+### ROAD-004: Mobile PWA (⏸️ PAUSED)
+**Status**: Paused
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
 - **Status**: Phase 1 - PWA Foundation in progress
 - **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
@@ -357,13 +360,32 @@
 - [x] Create `src/utils/canvas/positionCalculator.ts` - centralize coordinate transforms
 - [x] Standardize containment: always use `isPointInRect` for tasks, `isNodeMoreThanHalfInside` for groups
 - [x] Remove redundant helpers from individual composables
-- [x] Update all consumers to use centralized utilities
+- [x] Updated all consumers to use centralized utilities
 
 ---
 
-### BUG-261: Group Modal Shows Blurry Background While Task Modal Doesn't (🔄 IN PROGRESS)
+### ~~TASK-270~~: Manual ESLint Remediation (✅ DONE)
+**Priority**: P1-HIGH
+**Started**: January 13, 2026
+**Status**: Done
+**Completed**: January 13, 2026
+
+**Goal**: Address `@typescript-eslint/no-unused-vars` and parsing errors across the codebase to improve code quality and maintainability.
+
+**Progress**:
+- [x] Batch 1: `src/utils` (Legacy & Core)
+- [x] Batch 2: `src/composables`
+- [x] Batch 3: `src/stores` & `src/views`
+- [x] Batch 4: `src/components` (Completed)
+- [x] Final Sweep: Layouts & Regressions (Fixed `any` types in `tasks.ts` and `canvas.ts`)
+
+---
+
+### ~~BUG-261~~: Group Modal Shows Blurry Background While Task Modal Doesn't (✅ DONE)
 **Priority**: P2
+**Status**: Done
 **Created**: January 13, 2026
+**Completed**: January 13, 2026
 
 **Bug**: When clicking "Create Group" from the empty canvas state, a blurry/visible background shows through the modal overlay. When clicking "Add Task", the background is properly obscured.
 
@@ -418,11 +440,7 @@ Questions:
 
 **Recommended Solution**: Refactor UnifiedGroupModal to use BaseModal wrapper (like QuickTaskCreateModal does) instead of custom Teleport implementation.
 
-**Next Steps**:
-- [ ] Refactor UnifiedGroupModal to wrap content in BaseModal component
-- [ ] Remove custom Teleport and modal-overlay CSS
-- [ ] Test both modals have identical blur behavior
-- [ ] Alternative: Remove Teleport from UnifiedGroupModal and render in-place like BaseModal
+**Resolution**: Removed Teleport from UnifiedGroupModal - now renders as fixed-position overlay with z-index: 10000, avoiding stacking context issues. Both modals now have identical blur behavior.
 
 **Sources**:
 - [Why backdrop-filter Fails with Positioned Child Elements](https://medium.com/@aqib-2/why-backdrop-filter-fails-with-positioned-child-elements-0b82b504f440)
@@ -431,8 +449,9 @@ Questions:
 
 ---
 
-### BUG-259: Canvas Task Layout Changes on Click (📋 PLANNED)
+### BUG-259: Canvas Task Layout Changes on Click (🔄 IN PROGRESS)
 **Priority**: P1
+**Status**: In Progress
 **Created**: January 13, 2026
 
 **Bug**: Clicking on a task in the canvas changes its layout/width when it shouldn't.
@@ -452,20 +471,19 @@ Questions:
 
 ---
 
-### TASK-262: Click Empty Canvas Space to Deselect All (📋 PLANNED)
+### ~~TASK-262~~: Click Empty Canvas Space to Deselect All (✅ DONE)
 **Priority**: P2
+**Status**: Done
 **Created**: January 13, 2026
+**Completed**: January 13, 2026
 
 **Feature**: When several tasks and groups are highlighted/selected on the canvas, clicking anywhere on empty canvas space should deselect (uncheck) all of them.
 
-**Current Behavior**: Selection may persist after clicking empty space.
-
-**Expected Behavior**: Clicking on empty canvas background deselects all selected nodes (tasks and groups).
-
-**Implementation Notes**:
-1. **Event**: Listen for `click` or `paneClick` event on Vue Flow pane
-2. **Logic**: Clear selection state when click target is the pane background (not a node)
-3. **Vue Flow API**: Use `useVueFlow()` composable's selection methods or dispatch deselect action
+**Implementation**:
+- `useCanvasEvents.ts`: `handlePaneClick` detects clicks on empty space (not nodes).
+- Handles `ctrl/cmd` modifier to preserve selection.
+- Sets `allowBulkDeselect` flag to permit Vue Flow's selection change event to proceed.
+- `CanvasView.vue`: `handleSelectionChange` respects the `allowBulkDeselect` flag.
 
 **Files to Modify**:
 - `src/composables/canvas/useCanvasInteractions.ts` - Add pane click handler
@@ -510,7 +528,7 @@ Questions:
 ---
 
 ### TASK-208: App-Wide Code Quality Refactoring (📋 PLANNED)
-**Priority**: P1-HIGH
+**Priority**: P3-LOW
 **Estimated Effort**: 10-15 hours
 **Created**: January 11, 2026
 
@@ -857,12 +875,18 @@ Right-clicking directly on a group node in the Vue Flow canvas did not reliably 
 
 ---
 
-### TASK-211: Prevent Task ID Reuse in Dev Manager (🆕 NEW)
+### ~~TASK-211~~: Prevent Task ID Reuse in Dev Manager (✅ DONE)
 **Priority**: P1-HIGH
-**Status**: TODO
+**Status**: Done
 **Created**: January 11, 2026
+**Completed**: January 13, 2026
 
 Ensure unique IDs are always generated and never reused for tasks, bugs, or issues. Duplicate IDs confuse the system and the user.
+
+**Implementation**:
+- Added `scanExistingIds` logic to `dev-manager/server.js`
+- Implemented `GET /api/next-id` endpoint
+- Logic correctly identifies gaps and next available IDs (e.g. `TASK-271`, `BUG-262`)
 
 ---
 
@@ -884,14 +908,16 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ---
 
-### FEATURE-254: Canvas Inbox Smart Minimization (🔄 IN PROGRESS)
+### ~~FEATURE-254~~: Canvas Inbox Smart Minimization (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: In Progress
+**Status**: ✅ DONE
 **Goal**: Canvas inbox starts minimized always unless it has tasks inside.
-**Tasks**:
-- [ ] Implement initial state check for Inbox tasks.
-- [ ] Auto-collapse Inbox if empty on mount/initialization.
-- [ ] Ensure user can still expand it manually if desired.
+**Completed**: January 13, 2026
+
+**Implementation**:
+- `useUnifiedInboxState.ts`: Added `hasInitialized` flag to track first load vs subsequent updates.
+- Watches `isLoadingFromDatabase` to trigger one-time auto-collapse if empty.
+- User manual toggles are respected after initialization.
 
 | ~~**BUG-218**~~ | ✅ **DONE** **Persistent Task Position Drift** | **P0** | ✅ **RECOVERY FIXED** (TASK-232) | - |
 
@@ -946,7 +972,7 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 ---
 
 ### TASK-217: Enable Enter Key Submission for Modals (🆕 NEW)
-**Priority**: P2-MEDIUM
+**Priority**: P1-HIGH
 **Status**: TODO
 **Created**: January 11, 2026
 
@@ -959,7 +985,7 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 ---
 
 ### BUG-225: Group Color Update Reactivity (🆕 NEW)
-**Priority**: P2-MEDIUM
+**Priority**: P1-HIGH
 **Status**: TODO
 **Created**: January 11, 2026
 
@@ -1097,16 +1123,18 @@ Based on [Health Report 2026-01-11](./reports/health-report-2026-01-11.md).
 - [ ] Run `npm audit fix`
 - [ ] Verify no breaking changes
 
-### TASK-222: Fix TypeScript Errors
+### ~~TASK-222~~: Fix TypeScript Errors (✅ DONE)
 **Priority**: P1-HIGH
-**Status**: TODO
+**Status**: Done
 **Created**: January 11, 2026
+**Completed**: January 13, 2026
 
 **Goal**: Fix 53 compilation errors across 18 files.
-- [ ] Component prop mismatches (SignupForm, Calendar components)
-- [ ] Duplicate identifiers (Calendar views)
-- [ ] Type narrowing issues (Inbox components)
-- [ ] `useCanvasDragDrop` number/undefined issues
+- [x] Component prop mismatches (SignupForm, Calendar components)
+- [x] Duplicate identifiers (Calendar views)
+- [x] Type narrowing issues (Inbox components)
+- [x] `useCanvasDragDrop` number/undefined issues
+- [x] Verified with `npm run type-check` (0 errors)
 
 ### TASK-223: Remove Dead Code
 **Priority**: P2-MEDIUM
@@ -2170,7 +2198,7 @@ Guest Mode:
 - Implement auto-collection of overdue non-recurring tasks.
 
 ### TASK-096: System Refactor Analysis (📋 TODO)
-**Priority**: P1-HIGH
+**Priority**: P3-LOW
 - Analyze codebase for refactoring opportunities.
 
 ### ~~TASK-101~~: Store Safety Pattern (`_raw*` prefix) (✅ DONE)
@@ -2229,8 +2257,9 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
   - Cloud ($7/mo): Our hosted Supabase + backups + support
   - Pro ($14/mo): AI features + gamification
 
-### TASK-108: Tauri/Web Design Parity (📋 PLANNED)
+### TASK-108: Tauri/Web Design Parity (⏸️ PAUSED)
 **Priority**: P1-HIGH
+**Status**: Paused
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
 
 ### TASK-165: AI Text Generation in Markdown Editor (📋 PLANNED)
@@ -3429,7 +3458,7 @@ Multi-part fix for canvas group issues affecting day-of-week groups and z-index 
 ---
 
 ### TASK-213: Canvas Position System Refactor (📋 PLANNED)
-**Priority**: P1-HIGH
+**Priority**: P3-LOW
 **Created**: January 8, 2026
 **Plan**: [plans/canvas-position-system-refactor.md](../plans/canvas-position-system-refactor.md)
 **SOP**: [docs/sop/active/canvas-position-debugging.md](./sop/active/canvas-position-debugging.md)

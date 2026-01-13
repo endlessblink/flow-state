@@ -1,4 +1,4 @@
-import { ref, watch, nextTick } from 'vue'
+import { ref, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -9,8 +9,7 @@ import {
     taskPositionToVueFlow
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
-import type { CanvasGroup } from '@/stores/canvas/types'
-import { validateAllInvariants, logHierarchySummary, assertNoDuplicateIds } from '@/utils/canvas/invariants'
+import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -83,7 +82,7 @@ export function useCanvasSync() {
     const canvasStore = useCanvasStore()
     const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
-    const { getNodes, setNodes, addNodes, removeNodes } = useVueFlow()
+    const { getNodes, setNodes } = useVueFlow()
 
     const isSyncing = ref(false)
 
@@ -317,7 +316,7 @@ export function useCanvasSync() {
 
                 // FIX: Only set parentNode if parent group is VISIBLE (will be rendered in Vue Flow)
                 // If parent group is hidden, treat task as root node
-                const parentWasVisible = parentId ? visibleGroupIds.has(parentId) : true
+
                 if (parentId && !visibleGroupIds.has(parentId)) {
                     console.warn(`⚠️ [SYNC-PARENT-CLEARED] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) parent ${parentId?.slice(0, 8)} is NOT visible - treating as root`, {
                         originalParentId,

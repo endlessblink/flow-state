@@ -83,7 +83,7 @@ const props = withDefaults(defineProps<Props>(), {
   wipLimit: 10
 })
 
-const emit = defineEmits<{
+defineEmits<{
   addTask: [status: Task['status']]
   selectTask: [taskId: string]
   startTimer: [taskId: string]
@@ -112,7 +112,7 @@ const handleDragChange = async (event: any) => {
   if (event.added) {
     try {
       await taskStore.moveTaskWithUndo(event.added.element.id, props.status)
-    } catch (error) {
+    } catch (_error) {
       // Error moving task
     }
   }

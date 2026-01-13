@@ -1,6 +1,6 @@
 import { ref, nextTick, computed } from 'vue'
 import { useVueFlow, type Node, type Edge } from '@vue-flow/core'
-import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
+import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
@@ -9,7 +9,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { viewport, screenToFlowCoordinate, setNodes, getNodes, updateNode, findNode, removeSelectedNodes, getSelectedNodes } = useVueFlow()
+    const { screenToFlowCoordinate, setNodes, getNodes, findNode, removeSelectedNodes, getSelectedNodes } = useVueFlow()
 
     // --- Interaction State ---
     const isConnecting = ref(false)
@@ -85,6 +85,10 @@ export function useCanvasEvents(syncNodes?: () => void) {
         }
 
         // Regular click on empty pane - clear selection (TASK-262)
+        // TASK-262: Set flag to allow deselection changes through the filter
+        // This flag is checked in handleNodesChange to permit bulk deselection
+        canvasStore.allowBulkDeselect = true
+
         // Clear both Vue Flow's internal selection AND the store
         const selectedNodes = getSelectedNodes.value
         if (selectedNodes.length > 0) {

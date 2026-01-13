@@ -277,7 +277,7 @@ export function positionsEqual(
  */
 export function getTaskAbsolutePosition(
   task: Task,
-  allGroups: CanvasGroup[]
+  _allGroups: CanvasGroup[]
 ): Position | null {
   if (!task.canvasPosition) {
     return null

@@ -124,7 +124,7 @@ export function useVueFlowStateManager(
     // Watch for node changes - guarded by isInteracting to prevent traversal during movement
     watch(
       () => (isInteracting?.value ? null : nodes.value),
-      (val, oldVal) => {
+      (val, _oldVal) => {
         if (isInitialized.value && val) {
           handleNodeChanges(val, oldNodes || [])
         }
@@ -143,7 +143,7 @@ export function useVueFlowStateManager(
     // Watch for edge changes - guarded by isInteracting
     watch(
       () => (isInteracting?.value ? null : edges.value),
-      (val, oldVal) => {
+      (val, _oldVal) => {
         if (isInitialized.value && val) {
           handleEdgeChanges(val, oldEdges || [])
         }

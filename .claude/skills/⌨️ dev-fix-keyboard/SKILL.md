@@ -1,5 +1,5 @@
 ---
-name: Fix Keyboard Shortcuts
+name: dev-fix-keyboard
 description: DEBUG keyboard shortcuts not working, conflicting hotkeys, and event handling issues. Fix when Ctrl+Z, Ctrl+S, or other shortcuts fail. Use for global keyboard handlers, event conflicts, and shortcut key debugging.
 ---
 

@@ -102,13 +102,14 @@
             :min-zoom="0.05"
             :max-zoom="4.0"
             :fit-view-on-init="false"
-            :connect-on-drag-nodes="false"
+            :connect-on-drag-nodes="true"
             :zoom-scroll-sensitivity="1.0"
             :zoom-activation-key-code="null"
             prevent-scrolling
             :default-viewport="initialViewport"
             dir="ltr"
             @pane-ready="onPaneReady"
+            @node-click="handleNodeClick"
             @node-drag-start="handleNodeDragStart"
             @node-drag="handleNodeDrag"
             @node-drag-stop="handleNodeDragStop"
@@ -151,9 +152,9 @@
 
 
               <!-- Custom Task Node Template -->
+              <!-- TASK-262: Removed v-memo temporarily to debug click handler issue -->
               <template #node-taskNode="nodeProps">
                 <TaskNode
-                  v-memo="[nodeProps.id, nodeProps.data.task, nodeProps.selected, nodeProps.dragging, canvasStore.multiSelectMode]"
                   :task="nodeProps.data.task"
                   :is-selected="nodeProps.selected"
                   :is-dragging="nodeProps.dragging"
@@ -230,8 +231,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw } from 'vue'
-import { VueFlow, type EdgeMouseEvent } from '@vue-flow/core'
+import { markRaw } from 'vue'
+import { VueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -257,6 +258,7 @@ import CanvasStatusBanner from '../components/canvas/CanvasStatusBanner.vue'
 import CanvasLoadingOverlay from '../components/canvas/CanvasLoadingOverlay.vue'
 import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 
+import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 
 const taskStore = useTaskStore()
@@ -278,24 +280,21 @@ const {
   tasksWithCanvasPosition, dynamicNodeExtent, hasNoTasks,
   handleNodeDragStart, handleNodeDrag, handleNodeDragStop, handleKeyDown,
   handleSectionResizeStart, handleSectionResize, handleSectionResizeEnd,
-  onPaneReady, fitCanvas, zoomToSelection, retryFailedOperation,
+  onPaneReady,
   handlePaneClick, handleCanvasRightClick, handlePaneContextMenu, handleDrop,
   // BUG-208: Canvas context menu state now comes from contextMenuStore, not orchestrator
-  showNodeContextMenu, nodeContextMenuX, nodeContextMenuY,
-  showEdgeContextMenu, edgeContextMenuX, edgeContextMenuY,
-  closeCanvasContextMenu, createTaskHere, createGroup, editGroup, deleteGroup,
+  createTaskHere, createGroup, editGroup, deleteGroup,
   moveSelectedTasksToInbox, deleteSelectedTasks, createTaskInGroup,
-  closeEdgeContextMenu, closeNodeContextMenu, deleteNode,
+  deleteNode,
   isEditModalOpen, selectedTask, isQuickTaskCreateOpen, isBatchEditModalOpen,
-  batchEditTaskIds, isSectionSettingsOpen, editingSection, isGroupModalOpen,
-  selectedGroup, groupModalPosition, isGroupEditModalOpen, selectedSectionForEdit,
-  isDeleteGroupModalOpen, deleteGroupMessage, isBulkDeleteModalOpen,
-  bulkDeleteTitle, bulkDeleteMessage, bulkDeleteItems, bulkDeleteIsPermanent,
+  isSectionSettingsOpen, editingSection, isGroupModalOpen,
+  selectedGroup, isGroupEditModalOpen, selectedSectionForEdit,
+  isDeleteGroupModalOpen, isBulkDeleteModalOpen,
   closeEditModal, closeQuickTaskCreate, handleQuickTaskCreate, closeBatchEditModal,
   handleBatchEditApplied, closeSectionSettingsModal, handleSectionSettingsSave,
   closeGroupModal, handleGroupCreated, handleGroupUpdated, closeGroupEditModal,
-  handleGroupEditSave, confirmDeleteGroup, cancelDeleteGroup, confirmBulkDelete,
-  cancelBulkDelete, handleConnect, handleEdgesChange, handleNodesChange,
+  handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect,
+  handleEdgesChange, handleNodesChange,
   handleNodeContextMenu, handleEdgeContextMenu,
   
   // From consolidated features
@@ -316,8 +315,75 @@ const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }
+// TASK-262: Handle node click - add to selection without deselecting others
+const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: any }) => {
+  const { node } = event
+  const nodeId = node.id
+  const currentSelection = [...canvasStore.selectedNodeIds]
+
+  // Type guard for mouse event
+  const mouseEvent = event.event as MouseEvent
+
+  console.log('%c[TASK-262] NODE CLICK', 'background: green; color: white; font-size: 14px;', {
+    nodeId: nodeId?.slice(0, 30),
+    currentSelection: currentSelection.length,
+    ctrlKey: mouseEvent.ctrlKey,
+    metaKey: mouseEvent.metaKey
+  })
+
+  let newSelection: string[]
+
+  // If Ctrl/Cmd is held, toggle selection
+  if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
+    if (currentSelection.includes(nodeId)) {
+      // Deselect this node
+      newSelection = currentSelection.filter(id => id !== nodeId)
+    } else {
+      // Add to selection
+      newSelection = [...currentSelection, nodeId]
+    }
+  } else {
+    // Regular click - ADD to selection (don't replace)
+    // This is the key change for TASK-262
+    if (!currentSelection.includes(nodeId)) {
+      newSelection = [...currentSelection, nodeId]
+    } else {
+      // Already selected - keep current selection
+      newSelection = currentSelection
+    }
+  }
+
+  // Update store
+  canvasStore.selectedNodeIds = newSelection
+
+  // Update Vue Flow's visual selection state
+  // Set selected:true for all nodes in newSelection, false for others
+  nodes.value.forEach((n: any) => {
+    n.selected = newSelection.includes(n.id)
+  })
+
+  console.log('%c[TASK-262] Selection updated', 'background: teal; color: white;', {
+    newSelection: newSelection.length,
+    nodesUpdated: nodes.value.length
+  })
+}
+
 const handleSelectionChange = (params: any) => {
-  if (params) canvasStore.selectedNodeIds = params.nodes.map((n: any) => n.id)
+  // TASK-262: We manage selection ourselves in handleNodeClick
+  // Only process this event when explicitly allowed (pane click to clear all)
+  if (!canvasStore.allowBulkDeselect) {
+    // Ignore Vue Flow's selection changes - we handle them ourselves
+    return
+  }
+
+  const newSelection = params?.nodes?.map((n: any) => n.id) ?? []
+
+  console.log('%c[TASK-262] @selection-change (bulk deselect)', 'background: orange; color: black;', {
+    new: newSelection.length
+  })
+
+  canvasStore.selectedNodeIds = newSelection
+  canvasStore.allowBulkDeselect = false
 }
 
 // UI Wrappers
@@ -331,6 +397,7 @@ const handleOpenSectionSettingsFromContext = () => {
 }
 const handleToggleFocusMode = () => uiStore.toggleFocusMode()
 const handleSectionUpdate = (id: string, data: any) => canvasStore.updateSection(id, data)
+const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
 const handleEditTask = (task: any) => { selectedTask.value = task; isEditModalOpen.value = true; closeCanvasContextMenu() }
 const handleTaskContextMenu = (event: MouseEvent, task: any) => {
     if (event) event.preventDefault()

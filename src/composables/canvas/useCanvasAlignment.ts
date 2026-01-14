@@ -1,9 +1,66 @@
+/**
+ * useCanvasAlignment - TASK-258
+ *
+ * Multi-select task alignment for canvas context menu.
+ * Provides Figma/Sketch-like alignment operations.
+ *
+ * CRITICAL INVARIANTS (TASK-255):
+ * - Uses ABSOLUTE positions (computedPosition) for correct alignment of nested tasks
+ * - Updates via taskStore.updateTask() with 'DRAG' source to respect geometry invariants
+ * - Batches all updates into a single undo action via saveState()
+ */
 
-import { type Ref } from 'vue'
+import { type Ref, nextTick } from 'vue'
 import { type Node } from '@vue-flow/core'
 import { useMessage } from 'naive-ui'
-import { useTaskStore } from '@/stores/tasks'
-import { useCanvasStore } from '@/stores/canvas'
+import { useTaskStore } from '../../stores/tasks'
+import { useCanvasStore } from '../../stores/canvas'
+import { getUndoSystem } from '../../composables/undoSingleton'
+
+interface NodeWithComputed extends Node {
+    computedPosition?: { x: number; y: number }
+    width?: number
+    height?: number
+}
+
+// TASK-258: Standard dimensions for fallback
+const DEFAULT_WIDTH = 200
+const DEFAULT_HEIGHT = 80
+
+/**
+ * Get absolute position for a node.
+ * Uses computedPosition if available (nested nodes), falls back to position (root nodes).
+ */
+function getAbsolutePosition(node: NodeWithComputed): { x: number; y: number } {
+    // computedPosition is always absolute (world coordinates)
+    if (node.computedPosition &&
+        typeof node.computedPosition.x === 'number' &&
+        typeof node.computedPosition.y === 'number') {
+        return { x: node.computedPosition.x, y: node.computedPosition.y }
+    }
+    // For root nodes without parent, position IS absolute
+    return { x: node.position.x, y: node.position.y }
+}
+
+/**
+ * Get full bounding box for a node in absolute coordinates.
+ */
+function getNodeBounds(node: NodeWithComputed) {
+    const abs = getAbsolutePosition(node)
+    const width = node.width ?? (node as any).dimensions?.width ?? DEFAULT_WIDTH
+    const height = node.height ?? (node as any).dimensions?.height ?? DEFAULT_HEIGHT
+
+    return {
+        left: abs.x,
+        top: abs.y,
+        right: abs.x + width,
+        bottom: abs.y + height,
+        width,
+        height,
+        centerX: abs.x + width / 2,
+        centerY: abs.y + height / 2
+    }
+}
 
 export function useCanvasAlignment(
     nodes: Ref<Node[]>,
@@ -14,6 +71,7 @@ export function useCanvasAlignment(
     },
     actions: {
         closeCanvasContextMenu: () => void
+        requestSync?: () => void
     }
 ) {
     const message = useMessage()
@@ -72,9 +130,15 @@ export function useCanvasAlignment(
         return { canProceed: true }
     }
 
-    const executeAlignmentOperation = (
+    /**
+     * Execute an alignment operation with batch undo support.
+     *
+     * GEOMETRY INVARIANT: Uses 'DRAG' source for all position updates.
+     * UNDO SUPPORT: Wraps all updates in saveState() for single undo action.
+     */
+    const executeAlignmentOperation = async (
         operationName: string,
-        operation: (selectedNodes: Node[]) => void,
+        operation: (selectedNodes: NodeWithComputed[]) => void,
         minNodes: number = 2
     ) => {
         // Pre-alignment state validation
@@ -86,7 +150,7 @@ export function useCanvasAlignment(
 
         const selectedNodes = nodes.value.filter(n =>
             canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
-        )
+        ) as NodeWithComputed[]
 
         if (selectedNodes.length < minNodes) {
             const errorMsg = `Need at least ${minNodes} selected tasks for ${operationName.toLowerCase()}, have ${selectedNodes.length}`
@@ -98,11 +162,24 @@ export function useCanvasAlignment(
             // Show temporary loading state
             message.loading(`Performing ${operationName.toLowerCase()}...`, { duration: 300 })
 
+            // BATCH UNDO: Save state BEFORE all operations
+            await getUndoSystem().saveState(`Before ${operationName}`)
+
             // Execute the alignment operation
             operation(selectedNodes)
 
+            // BATCH UNDO: Save state AFTER all operations
+            await nextTick()
+            await getUndoSystem().saveState(`After ${operationName}`)
+
             // Show success feedback
             message.success(`Successfully aligned ${selectedNodes.length} tasks ${operationName.toLowerCase().replace('align ', '')}`)
+
+            // TASK-258 FIX: Force visual sync since orchestrator doesn't watch property changes
+            if (actions.requestSync) {
+                actions.requestSync()
+            }
+
             return true
         } catch (error) {
             message.error(`Alignment operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -110,14 +187,21 @@ export function useCanvasAlignment(
         }
     }
 
+    // =========================================================================
+    // ALIGNMENT OPERATIONS
+    // All use ABSOLUTE positions via getAbsolutePosition() and 'DRAG' source
+    // =========================================================================
+
     const alignLeft = () => {
         executeAlignmentOperation('Align Left', (selectedNodes) => {
-            const minX = Math.min(...selectedNodes.map(n => n.position.x))
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            const minX = Math.min(...boundsMapping.map(b => b.bounds.left))
 
-            selectedNodes.forEach((node) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: minX, y: node.position.y }
-                })
+            boundsMapping.forEach(({ node, bounds }) => {
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: minX, y: bounds.top },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -126,12 +210,15 @@ export function useCanvasAlignment(
 
     const alignRight = () => {
         executeAlignmentOperation('Align Right', (selectedNodes) => {
-            const maxX = Math.max(...selectedNodes.map(n => n.position.x))
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            const maxX = Math.max(...boundsMapping.map(b => b.bounds.right))
 
-            selectedNodes.forEach((node) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: maxX, y: node.position.y }
-                })
+            boundsMapping.forEach(({ node, bounds }) => {
+                // To align right edge, substract width from maxRight
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: maxX - bounds.width, y: bounds.top },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -140,12 +227,14 @@ export function useCanvasAlignment(
 
     const alignTop = () => {
         executeAlignmentOperation('Align Top', (selectedNodes) => {
-            const minY = Math.min(...selectedNodes.map(n => n.position.y))
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            const minY = Math.min(...boundsMapping.map(b => b.bounds.top))
 
-            selectedNodes.forEach((node) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: node.position.x, y: minY }
-                })
+            boundsMapping.forEach(({ node, bounds }) => {
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: bounds.left, y: minY },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -154,12 +243,15 @@ export function useCanvasAlignment(
 
     const alignBottom = () => {
         executeAlignmentOperation('Align Bottom', (selectedNodes) => {
-            const maxY = Math.max(...selectedNodes.map(n => n.position.y))
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            const maxY = Math.max(...boundsMapping.map(b => b.bounds.bottom))
 
-            selectedNodes.forEach((node) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: node.position.x, y: maxY }
-                })
+            boundsMapping.forEach(({ node, bounds }) => {
+                // To align bottom edge, substract height from maxBottom
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: bounds.left, y: maxY - bounds.height },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -168,12 +260,15 @@ export function useCanvasAlignment(
 
     const alignCenterHorizontal = () => {
         executeAlignmentOperation('Center Horizontal', (selectedNodes) => {
-            const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            const avgCenterX = boundsMapping.reduce((sum, b) => sum + b.bounds.centerX, 0) / boundsMapping.length
 
-            selectedNodes.forEach((node) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: avgX, y: node.position.y }
-                })
+            boundsMapping.forEach(({ node, bounds }) => {
+                // To center, subtract half width from avg center X
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: avgCenterX - bounds.width / 2, y: bounds.top },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -182,12 +277,15 @@ export function useCanvasAlignment(
 
     const alignCenterVertical = () => {
         executeAlignmentOperation('Center Vertical', (selectedNodes) => {
-            const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            const avgCenterY = boundsMapping.reduce((sum, b) => sum + b.bounds.centerY, 0) / boundsMapping.length
 
-            selectedNodes.forEach((node) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: node.position.x, y: avgY }
-                })
+            boundsMapping.forEach(({ node, bounds }) => {
+                // To middle-align, subtract half height from avg center Y
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: bounds.left, y: avgCenterY - bounds.height / 2 },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -198,16 +296,20 @@ export function useCanvasAlignment(
         executeAlignmentOperation('Distribute Horizontal', (selectedNodes) => {
             if (selectedNodes.length < 3) return
 
-            // Sort by x position
-            const sorted = [...selectedNodes].sort((a, b) => a.position.x - b.position.x)
-            const minX = sorted[0].position.x
-            const maxX = sorted[sorted.length - 1].position.x
-            const spacing = (maxX - minX) / (sorted.length - 1)
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            // Sort by current absolute centerX
+            const sorted = [...boundsMapping].sort((a, b) => a.bounds.centerX - b.bounds.centerX)
 
-            sorted.forEach((node, index) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: minX + (spacing * index), y: node.position.y }
-                })
+            const startX = sorted[0].bounds.centerX
+            const endX = sorted[sorted.length - 1].bounds.centerX
+            const spacing = (endX - startX) / (sorted.length - 1)
+
+            sorted.forEach(({ node, bounds }, index) => {
+                const targetCenterX = startX + (spacing * index)
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: targetCenterX - bounds.width / 2, y: bounds.top },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -218,16 +320,20 @@ export function useCanvasAlignment(
         executeAlignmentOperation('Distribute Vertical', (selectedNodes) => {
             if (selectedNodes.length < 3) return
 
-            // Sort by y position
-            const sorted = [...selectedNodes].sort((a, b) => a.position.y - b.position.y)
-            const minY = sorted[0].position.y
-            const maxY = sorted[sorted.length - 1].position.y
-            const spacing = (maxY - minY) / (sorted.length - 1)
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            // Sort by current absolute centerY
+            const sorted = [...boundsMapping].sort((a, b) => a.bounds.centerY - b.bounds.centerY)
 
-            sorted.forEach((node, index) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: node.position.x, y: minY + (spacing * index) }
-                })
+            const startY = sorted[0].bounds.centerY
+            const endY = sorted[sorted.length - 1].bounds.centerY
+            const spacing = (endY - startY) / (sorted.length - 1)
+
+            sorted.forEach(({ node, bounds }, index) => {
+                const targetCenterY = startY + (spacing * index)
+                taskStore.updateTask(node.id, {
+                    canvasPosition: { x: bounds.left, y: targetCenterY - bounds.height / 2 },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -236,22 +342,27 @@ export function useCanvasAlignment(
 
     const arrangeInRow = () => {
         executeAlignmentOperation('Arrange in Row', (selectedNodes) => {
-            // Sort by current x position
-            const sorted = [...selectedNodes].sort((a, b) => a.position.x - b.position.x)
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            // Sort by current absolute X
+            const sorted = [...boundsMapping].sort((a, b) => a.bounds.left - b.bounds.left)
 
-            // Calculate average Y position
-            const avgY = sorted.reduce((sum, n) => sum + n.position.y, 0) / sorted.length
+            // Calculate average Center Y position (absolute)
+            const avgCenterY = sorted.reduce((sum, b) => sum + b.bounds.centerY, 0) / sorted.length
 
-            // Find the leftmost X position
-            const startX = sorted[0].position.x
+            // Find the leftmost X position (absolute)
+            const startX = sorted[0].bounds.left
 
             // Standard task node width is 200px, add 40px gap = 240px spacing
             const SPACING = 240
 
-            sorted.forEach((node, index) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: startX + (SPACING * index), y: avgY }
-                })
+            sorted.forEach(({ node, bounds }, index) => {
+                taskStore.updateTask(node.id, {
+                    canvasPosition: {
+                        x: startX + (SPACING * index),
+                        y: avgCenterY - bounds.height / 2
+                    },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -260,22 +371,27 @@ export function useCanvasAlignment(
 
     const arrangeInColumn = () => {
         executeAlignmentOperation('Arrange in Column', (selectedNodes) => {
-            // Sort by current y position
-            const sorted = [...selectedNodes].sort((a, b) => a.position.y - b.position.y)
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+            // Sort by current absolute Y
+            const sorted = [...boundsMapping].sort((a, b) => a.bounds.top - b.bounds.top)
 
-            // Calculate average X position
-            const avgX = sorted.reduce((sum, n) => sum + n.position.x, 0) / sorted.length
+            // Calculate average Center X position (absolute)
+            const avgCenterX = sorted.reduce((sum, b) => sum + b.bounds.centerX, 0) / sorted.length
 
-            // Find the topmost Y position
-            const startY = sorted[0].position.y
+            // Find the topmost Y position (absolute)
+            const startY = sorted[0].bounds.top
 
             // Standard task node height is 80px, add 40px gap = 120px spacing
             const SPACING = 120
 
-            sorted.forEach((node, index) => {
-                taskStore.updateTaskWithUndo(node.id, {
-                    canvasPosition: { x: avgX, y: startY + (SPACING * index) }
-                })
+            sorted.forEach(({ node, bounds }, index) => {
+                taskStore.updateTask(node.id, {
+                    canvasPosition: {
+                        x: avgCenterX - bounds.width / 2,
+                        y: startY + (SPACING * index)
+                    },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()
@@ -284,37 +400,39 @@ export function useCanvasAlignment(
 
     const arrangeInGrid = () => {
         executeAlignmentOperation('Arrange in Grid', (selectedNodes) => {
+            const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
+
             // Calculate grid dimensions - prefer wider grids
-            const count = selectedNodes.length
+            const count = boundsMapping.length
             const cols = Math.ceil(Math.sqrt(count))
 
-            // Calculate average position as grid center
-            const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
-            const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+            // Calculate average position as grid center (absolute)
+            const avgCenterX = boundsMapping.reduce((sum, b) => sum + b.bounds.centerX, 0) / boundsMapping.length
+            const avgCenterY = boundsMapping.reduce((sum, b) => sum + b.bounds.centerY, 0) / boundsMapping.length
 
             // Spacing constants
             const SPACING_X = 240 // Task width (200) + gap (40)
             const SPACING_Y = 120 // Task height (80) + gap (40)
 
             // Calculate grid starting position (centered around average position)
-            // rows = Math.ceil(count / cols)
             const rows = Math.ceil(count / cols)
             const gridWidth = (cols - 1) * SPACING_X
             const gridHeight = (rows - 1) * SPACING_Y
-            const startX = avgX - (gridWidth / 2)
-            const startY = avgY - (gridHeight / 2)
+            const startX = avgCenterX - (gridWidth / 2)
+            const startY = avgCenterY - (gridHeight / 2)
 
             // Arrange nodes in grid
-            selectedNodes.forEach((node, index) => {
+            boundsMapping.forEach(({ node, bounds }, index) => {
                 const row = Math.floor(index / cols)
                 const col = index % cols
 
-                taskStore.updateTaskWithUndo(node.id, {
+                taskStore.updateTask(node.id, {
                     canvasPosition: {
-                        x: startX + (col * SPACING_X),
-                        y: startY + (row * SPACING_Y)
-                    }
-                })
+                        x: startX + (col * SPACING_X) - bounds.width / 2, // Centering node in cell
+                        y: startY + (row * SPACING_Y) - bounds.height / 2
+                    },
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             })
 
             actions.closeCanvasContextMenu()

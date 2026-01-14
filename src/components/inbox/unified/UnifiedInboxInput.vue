@@ -54,7 +54,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'add-task', title: string): void
+  (e: 'addTask', title: string): void
 }>()
 
 const newTaskTitle = ref('')
@@ -76,7 +76,7 @@ const quickAddDirection = computed(() => {
 
 const handleAddTask = () => {
   if (!newTaskTitle.value.trim()) return
-  emit('add-task', newTaskTitle.value)
+  emit('addTask', newTaskTitle.value)
   newTaskTitle.value = ''
 }
 </script>

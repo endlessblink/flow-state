@@ -1,0 +1,250 @@
+/* Hierarchical task row wrapper */
+.hierarchical-task-row {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: var(--glass-bg-medium);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    transition: all var(--spring-smooth);
+}
+
+.hierarchical-task-row:hover {
+    background: var(--glass-bg-heavy);
+    border-color: var(--glass-border-hover);
+    box-shadow: var(--shadow-md);
+}
+
+/* Table-style task row matching TaskTable exactly */
+.task-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 40px 120px 100px 120px 100px 100px;
+    grid-template-areas: "done title project status priority due progress actions";
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--glass-border);
+    background: transparent;
+    /* Remove default gray fill */
+    cursor: pointer;
+    transition: background-color var(--duration-fast) ease;
+    position: relative;
+    --indent-level: 0;
+}
+
+/* Match TaskTable hover and selected states */
+.task-row:hover {
+    background-color: var(--glass-bg-medium);
+}
+
+.task-row--selected {
+    background-color: rgba(78, 205, 196, 0.05);
+    border-left: 3px solid var(--brand-primary);
+    border-bottom-color: rgba(78, 205, 196, 0.2);
+}
+
+.task-row--completed {
+    opacity: 0.7;
+}
+
+/* Mobile optimizations */
+.task-row--mobile {
+    grid-template-columns: 40px 1fr 40px;
+    grid-template-areas: "done title project";
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+}
+
+.task-row--mobile .task-row__status,
+.task-row--mobile .task-row__priority,
+.task-row--mobile .task-row__due-date,
+.task-row--mobile .task-row__progress,
+.task-row--mobile .task-row__actions {
+    display: none;
+}
+
+/* Table Cells - Match TaskTable exactly */
+.task-row__done-toggle {
+    grid-area: done;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.task-row__status {
+    grid-area: status;
+    display: flex;
+    align-items: center;
+}
+
+.task-row__status-select {
+    padding: var(--space-1) var(--space-2);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.task-row__status-select:hover {
+    background-color: var(--glass-bg-medium);
+    border-color: var(--glass-border-hover);
+}
+
+/* Due Date cell - Match TaskTable */
+.task-row__due-date {
+    grid-area: due;
+    display: flex;
+    align-items: center;
+}
+
+.task-row__due-date-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+}
+
+.task-row__no-date {
+    color: var(--text-disabled);
+    font-size: var(--text-xs);
+}
+
+/* Progress cell - Stroke-only design */
+.task-row__progress {
+    grid-area: progress;
+    display: flex;
+    align-items: center;
+}
+
+/* Progress bar styles */
+.task-row__progress-bar {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    /* Slightly thicker */
+    background: transparent;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+}
+
+.task-row__progress-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-bg-subtle);
+}
+
+.task-row__progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    /* Clip based on progress percentage */
+    width: var(--progress);
+    background: var(--brand-gradient-primary);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.task-row__progress-text {
+    margin-left: calc(100% + 8px);
+    /* Push text outside bar */
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    min-width: 32px;
+}
+
+/* Subtasks container - Preserve nesting functionality */
+.subtasks-container {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.subtasks-container .task-row {
+    opacity: 0.9;
+    border-inline-start: 2px solid var(--border-subtle);
+    /* RTL: subtask indent border */
+}
+
+.subtasks-container .task-row:hover {
+    opacity: 1;
+    border-inline-start-color: var(--color-primary);
+    /* RTL: hover border color */
+}
+
+/* Drag and drop states */
+.task-row--dragging {
+    opacity: 0.5;
+}
+
+.task-row--drop-target {
+    background-color: var(--color-primary-alpha-10);
+    border-top: 2px solid var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
+}
+
+/* Accessibility support */
+@media (prefers-reduced-motion: reduce) {
+    .task-row {
+        transition: none;
+    }
+
+    .task-row__action-btn {
+        transition: none;
+    }
+}
+
+/* ADHD-friendly: Status-colored left border for instant visual recognition */
+.task-row {
+    border-left: 4px solid transparent;
+}
+
+.task-row[data-status="planned"] {
+    border-left-color: var(--status-planned-border);
+}
+
+.task-row[data-status="in_progress"] {
+    border-left-color: var(--status-in-progress-border);
+}
+
+.task-row[data-status="done"] {
+    border-left-color: var(--status-done-border);
+}
+
+.task-row[data-status="backlog"] {
+    border-left-color: var(--status-backlog-border);
+}
+
+.task-row[data-status="on_hold"] {
+    border-left-color: var(--status-on-hold-border);
+}
+
+/* ADHD-friendly: Compact row height (40px) */
+.task-row {
+    min-height: 40px;
+    padding: var(--space-1_5) var(--space-3);
+}
+
+/* No progress indicator styling */
+.task-row__no-progress {
+    color: var(--text-tertiary);
+    font-size: var(--text-xs);
+}
+
+/* ADHD-friendly: Subtle row striping for scanability */
+.hierarchical-task-row:nth-child(even) .task-row {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.hierarchical-task-row:nth-child(even) .task-row:hover {
+    background-color: var(--glass-bg-medium);
+}

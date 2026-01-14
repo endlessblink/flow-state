@@ -29,6 +29,7 @@ export function useCanvasConnections(
 
     const handleConnectStart = (_event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
         state.isConnecting.value = true
+        document.body.classList.add('connecting-active')
 
         deps.closeCanvasContextMenu()
         deps.closeEdgeContextMenu()
@@ -38,10 +39,11 @@ export function useCanvasConnections(
     const handleConnectEnd = (_event?: MouseEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
         setTimeout(() => {
             state.isConnecting.value = false
+            document.body.classList.remove('connecting-active')
         }, 100)
     }
 
-    const handleConnect = deps.withVueFlowErrorBoundary('handleConnect', (connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string }) => {
+    const handleConnect = deps.withVueFlowErrorBoundary('handleConnect', async (connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string }) => {
         const { source, target } = connection
 
         deps.closeCanvasContextMenu()
@@ -64,7 +66,8 @@ export function useCanvasConnections(
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
             const dependsOn = targetTask.dependsOn || []
             if (!dependsOn.includes(source)) {
-                taskStore.updateTaskWithUndo(target, { dependsOn: [...dependsOn, source] })
+                // Await the async update before syncing edges
+                await taskStore.updateTaskWithUndo(target, { dependsOn: [...dependsOn, source] })
                 deps.syncEdges()
             }
         }
@@ -111,12 +114,40 @@ export function useCanvasConnections(
         state.selectedEdge.value = null
     }
 
+    /**
+     * Handle double-click on edge to disconnect it immediately
+     */
+    const handleEdgeDoubleClick = async (event: EdgeMouseEvent) => {
+        event.event.preventDefault()
+        event.event.stopPropagation()
+
+        const edge = event.edge
+        if (!edge) return
+
+        const { source, target, id: edgeId } = edge
+        const targetTask = taskStore.tasks.find(t => t.id === target)
+
+        // Add to recently removed to prevent zombie edge reappearing
+        state.recentlyRemovedEdges.value.add(edgeId)
+        setTimeout(() => {
+            state.recentlyRemovedEdges.value.delete(edgeId)
+        }, 2000)
+
+        // Update task dependencies
+        if (targetTask && targetTask.dependsOn) {
+            const updatedDependsOn = targetTask.dependsOn.filter(id => id !== source)
+            await taskStore.updateTaskWithUndo(targetTask.id, { dependsOn: updatedDependsOn })
+            deps.syncEdges()
+        }
+    }
+
     return {
         handleConnectStart,
         handleConnectEnd,
         handleConnect,
         disconnectEdge,
         handleEdgeContextMenu,
+        handleEdgeDoubleClick,
         closeEdgeContextMenu
     }
 }

@@ -58,9 +58,6 @@ import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
 import CanvasContextMenu from '@/components/canvas/CanvasContextMenu.vue'
 import EdgeContextMenu from '@/components/canvas/EdgeContextMenu.vue'
 
-const canvasStore = useCanvasStore()
-const contextMenus = useCanvasContextMenuStore()
-
 defineEmits<{
   (e: 'createTaskHere'): void
   (e: 'createGroup'): void
@@ -86,4 +83,7 @@ defineEmits<{
   (e: 'togglePowerMode', section: CanvasSection): void
   (e: 'collectTasks', section: CanvasSection): void
 }>()
+const canvasStore = useCanvasStore()
+const contextMenus = useCanvasContextMenuStore()
+
 </script>

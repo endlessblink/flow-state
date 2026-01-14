@@ -4,6 +4,19 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent } from '@/types/tasks'
 import type { MonthDay } from '@/composables/calendar/useCalendarMonthView'
 
+defineProps<{
+  monthDays: MonthDay[]
+  currentTaskId?: string | null
+}>()
+defineEmits<{
+  (e: 'monthDrop', event: DragEvent, dateString: string): void
+  (e: 'monthDayClick', dateString: string): void
+  (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
+  (e: 'eventDragEnd', event: DragEvent): void
+  (e: 'eventDblClick', calEvent: CalendarEvent): void
+  (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
+  (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
+}>()
 // Inject helpers from parent CalendarView
 const helpers = inject('calendar-helpers') as any
 const {
@@ -18,20 +31,6 @@ const {
   formatEventTime
 } = helpers
 
-defineProps<{
-  monthDays: MonthDay[]
-  currentTaskId?: string | null
-}>()
-
-defineEmits<{
-  (e: 'monthDrop', event: DragEvent, dateString: string): void
-  (e: 'monthDayClick', dateString: string): void
-  (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
-  (e: 'eventDragEnd', event: DragEvent): void
-  (e: 'eventDblClick', calEvent: CalendarEvent): void
-  (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
-  (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
-}>()
 </script>
 
 <template>

@@ -2,10 +2,11 @@
   <Teleport to="body">
     <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
       <div class="modal-content" @click.stop>
-        
         <!-- Header -->
         <div class="modal-header">
-          <h2 class="modal-title">Edit Task</h2>
+          <h2 class="modal-title">
+            Edit Task
+          </h2>
           <button class="close-btn" @click="$emit('close')">
             <X :size="16" />
           </button>
@@ -14,7 +15,9 @@
         <div class="modal-body">
           <!-- Main Task Details -->
           <section class="form-section">
-            <h3 class="section-title">Task Details</h3>
+            <h3 class="section-title">
+              Task Details
+            </h3>
             
             <TaskEditHeader
               ref="headerRef"
@@ -70,7 +73,6 @@
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </div>

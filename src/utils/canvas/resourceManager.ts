@@ -1,5 +1,6 @@
 
-import { type VueFlow, useVueFlow } from '@vue-flow/core'
+import type { useVueFlow } from '@vue-flow/core';
+import { type VueFlow } from '@vue-flow/core'
 
 export interface NodeBatcher {
     flush: () => void

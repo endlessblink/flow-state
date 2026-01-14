@@ -2,12 +2,12 @@
   <div
     class="section-node"
     :class="[`section-type-${section.type}`, { 'collapsed': isCollapsed, 'is-dragging': dragging }]"
-    :style="{ borderColor: section.color, backgroundColor: section.color + '25' }"
+    :style="{ borderColor: groupColor, backgroundColor: groupColor + '25' }"
     @contextmenu.prevent="handleContextMenu"
   >
     <!-- Section Header -->
-    <div class="section-header" :style="{ background: section.color + '20' }">
-      <div class="section-color-dot" :style="{ background: section.color }" />
+    <div class="section-header" :style="{ background: groupColor + '20' }">
+      <div class="section-color-dot" :style="{ background: groupColor }" />
       <button class="collapse-btn" :title="isCollapsed ? 'Expand group' : 'Collapse group'" @click="toggleCollapse">
         <ChevronDown v-if="!isCollapsed" :size="14" />
         <ChevronRight v-else :size="14" />
@@ -21,9 +21,30 @@
         @keydown.enter="($event.target as HTMLInputElement).blur()"
       >
       <!-- TASK-130: Show date suffix for day-of-week groups (e.g., "/ Jan 10") -->
-      <span v-if="dayOfWeekDateSuffix" class="section-date-suffix">
-        / {{ dayOfWeekDateSuffix }}
-      </span>
+      <!-- TASK-166: Clickable date picker for bi-directional editing -->
+      <NPopover
+        v-if="dayOfWeekDateSuffix"
+        trigger="click"
+        placement="bottom"
+        :show="showDatePicker"
+        @update:show="showDatePicker = $event"
+      >
+        <template #trigger>
+          <span
+            class="section-date-suffix clickable"
+            title="Click to change date"
+            @click.stop="showDatePicker = true"
+          >
+            / {{ dayOfWeekDateSuffix }}
+          </span>
+        </template>
+        <NDatePicker
+          panel
+          type="date"
+          :value="currentTargetTimestamp"
+          @update:value="handleDateSelect"
+        />
+      </NPopover>
 
       <!-- TASK-068: All actions moved to context menu for cleaner header -->
 
@@ -44,7 +65,7 @@
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
     <NodeResizer
-      :is-visible="true"
+      is-visible
       :min-width="200"
       :min-height="80"
       :max-width="50000"
@@ -69,7 +90,9 @@ import { Position } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 // TASK-167: Direct import to ensure latest logic
-import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/usePowerKeywords'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+// TASK-166: Date picker for bi-directional day group editing
+import { NPopover, NDatePicker } from 'naive-ui'
 
 // Define Props
 const props = defineProps<{
@@ -92,12 +115,20 @@ const emit = defineEmits([
 
 // Initialize Stores
 const canvasStore = useCanvasStore()
-const taskStore = useTaskStore()
 
 // Computed Properties
 // Ensure we handle both structure formats (direct props or nested in data)
 const section = computed(() => props.data?.section || props.data)
 const isCollapsed = computed(() => !!props.data?.isCollapsed)
+
+// BUG-225 FIX: Get color reactively from store instead of static props.data
+// This ensures color updates immediately when changed in the modal without page refresh
+const groupColor = computed(() => {
+  const groupId = props.data?.id
+  if (!groupId) return props.data?.color || '#3b82f6'
+  const storeGroup = canvasStore.groups.find(g => g.id === groupId)
+  return storeGroup?.color || props.data?.color || '#3b82f6'
+})
 const taskCount = computed(() => {
   const data = props.data as any
   if (!data) return 0
@@ -114,6 +145,44 @@ const taskCount = computed(() => {
 
 // Local State
 const sectionName = ref(props.data?.name || '')
+
+// TASK-166: Date picker state for bi-directional day group editing
+const showDatePicker = ref(false)
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// Get the current target date as timestamp for the date picker
+const currentTargetTimestamp = computed(() => {
+  const currentName = sectionName.value
+  if (!currentName) return Date.now()
+
+  const explicitKeyword = detectPowerKeyword(currentName)
+  if (!explicitKeyword || explicitKeyword.category !== 'day_of_week') {
+    return Date.now()
+  }
+
+  const targetDayIndex = parseInt(explicitKeyword.value, 10)
+  if (isNaN(targetDayIndex)) return Date.now()
+
+  const today = new Date()
+  const daysUntilTarget = ((7 + targetDayIndex - today.getDay()) % 7) || 7
+  const targetDate = new Date(today)
+  targetDate.setDate(today.getDate() + daysUntilTarget)
+  return targetDate.getTime()
+})
+
+// Handle date selection from picker
+const handleDateSelect = (timestamp: number | null) => {
+  if (!timestamp) return
+
+  const selectedDate = new Date(timestamp)
+  const dayName = DAY_NAMES[selectedDate.getDay()]
+
+  // Update the group name to the new day
+  sectionName.value = dayName
+  emit('update', { name: dayName })
+
+  showDatePicker.value = false
+}
 
 // DEBUG: Watch for count changes to verify reactivity pipeline
 watch(
@@ -172,7 +241,9 @@ const updateName = () => {
 }
 
 const toggleCollapse = () => {
-  canvasStore.toggleSectionCollapse(props.id)
+  // Use props.data.id (raw group ID), not props.id (Vue Flow node ID 'section-xxx')
+  const groupId = props.data?.id || props.id.replace('section-', '')
+  canvasStore.toggleSectionCollapse(groupId)
 }
 
 // TASK-068: Removed toggleAutoCollect - feature consolidated
@@ -408,6 +479,7 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 /* TASK-130: Day-of-week date suffix styling */
+/* TASK-166: Made clickable for date picker */
 .section-date-suffix {
   color: var(--text-secondary);
   font-size: var(--text-xs);
@@ -415,6 +487,18 @@ const handleResizeEnd = (event: unknown) => {
   white-space: nowrap;
   flex-shrink: 0;
   padding-left: var(--space-1);
+}
+
+.section-date-suffix.clickable {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.section-date-suffix.clickable:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
 }
 
 /* TASK-068: Removed .section-type-badge CSS - non-actionable element removed */

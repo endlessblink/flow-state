@@ -28,7 +28,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits } from 'vue'
 import { Play, Edit, Copy } from 'lucide-vue-next'
 
 defineEmits<{

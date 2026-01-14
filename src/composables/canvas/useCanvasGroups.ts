@@ -4,6 +4,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useCanvasCore } from './useCanvasCore'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { CANVAS } from '@/constants/canvas'
 
 /**
  * useCanvasGroups
@@ -39,8 +40,8 @@ export function useCanvasGroups() {
             // Use computed position (absolute) from Vue Flow
             const absX = node.computedPosition?.x ?? node.position.x
             const absY = node.computedPosition?.y ?? node.position.y
-            const width = node.data?.width ?? 300
-            const height = node.data?.height ?? 200
+            const width = node.data?.width ?? CANVAS.DEFAULT_GROUP_WIDTH
+            const height = node.data?.height ?? CANVAS.DEFAULT_GROUP_HEIGHT
 
             return isPointInRect(taskCenter.x, taskCenter.y, {
                 x: absX,
@@ -54,8 +55,8 @@ export function useCanvasGroups() {
 
         // Sort by area (ascending: smallest first) - we want the most specific (deepest) group
         return validContainers.sort((a, b) => {
-            const areaA = (a.data?.width ?? 300) * (a.data?.height ?? 200)
-            const areaB = (b.data?.width ?? 300) * (b.data?.height ?? 200)
+            const areaA = (a.data?.width ?? CANVAS.DEFAULT_GROUP_WIDTH) * (a.data?.height ?? CANVAS.DEFAULT_GROUP_HEIGHT)
+            const areaB = (b.data?.width ?? CANVAS.DEFAULT_GROUP_WIDTH) * (b.data?.height ?? CANVAS.DEFAULT_GROUP_HEIGHT)
             return areaA - areaB
         }).map(n => {
             const { id } = CanvasIds.parseNodeId(n.id)
@@ -64,7 +65,7 @@ export function useCanvasGroups() {
     }
 
     // Used during drag to find where a task is hovering
-    const getContainingGroupForTask = (x: number, y: number, w: number = 220, h: number = 100) => {
+    const getContainingGroupForTask = (x: number, y: number, w: number = CANVAS.DEFAULT_TASK_WIDTH, h: number = CANVAS.DEFAULT_TASK_HEIGHT) => {
         const centerX = x + w / 2
         const centerY = y + h / 2
         return findSectionForTask({ x: centerX, y: centerY })

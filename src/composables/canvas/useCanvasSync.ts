@@ -10,6 +10,7 @@ import {
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
+import { CANVAS } from '@/constants/canvas'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -251,8 +252,8 @@ export function useCanvasSync() {
                         label: group.name || 'Group',
                         name: group.name || 'Group',
                         color: group.color || '#3b82f6',
-                        width: group.position?.width || 300,
-                        height: group.position?.height || 200,
+                        width: group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH,
+                        height: group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT,
                         collapsed: group.isCollapsed || false,
                         // Pass BOTH counts - component decides which to show
                         directTaskCount,
@@ -264,8 +265,8 @@ export function useCanvasSync() {
                         taskCount: aggregatedTaskCount
                     },
                     style: {
-                        width: `${group.position?.width || 300}px`,
-                        height: `${group.position?.height || 200}px`
+                        width: `${group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH}px`,
+                        height: `${group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT}px`
                     }
                 })
             }

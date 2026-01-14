@@ -10,6 +10,7 @@ import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { type ContainerBounds } from '@/utils/canvas/spatialContainment'
 import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
+import { CANVAS } from '@/constants/canvas'
 
 
 import type {
@@ -888,8 +889,8 @@ export const useCanvasStore = defineStore('canvas', () => {
             hasContent = true
             minX = Math.min(minX, x)
             minY = Math.min(minY, y)
-            maxX = Math.max(maxX, x + 200) // Approx width
-            maxY = Math.max(maxY, y + 100) // Approx height
+            maxX = Math.max(maxX, x + CANVAS.DEFAULT_TASK_WIDTH)
+            maxY = Math.max(maxY, y + CANVAS.DEFAULT_TASK_HEIGHT)
           }
         }
       })
@@ -901,8 +902,8 @@ export const useCanvasStore = defineStore('canvas', () => {
         if (g && g.isVisible && g.position) {
           const x = Number(g.position.x)
           const y = Number(g.position.y)
-          const w = Number(g.position.width) || 300
-          const h = Number(g.position.height) || 300
+          const w = Number(g.position.width) || CANVAS.DEFAULT_GROUP_WIDTH
+          const h = Number(g.position.height) || CANVAS.DEFAULT_GROUP_HEIGHT
 
           if (!isNaN(x) && !isNaN(y)) {
             hasContent = true

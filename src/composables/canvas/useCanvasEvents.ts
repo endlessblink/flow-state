@@ -9,7 +9,7 @@ import { CanvasIds } from '@/utils/canvas/canvasIds'
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { screenToFlowCoordinate, setNodes, getNodes, findNode, removeSelectedNodes, getSelectedNodes } = useVueFlow()
+    const { screenToFlowCoordinate, setNodes, getNodes, findNode } = useVueFlow()
 
     // --- Interaction State ---
     const isConnecting = ref(false)
@@ -49,6 +49,12 @@ export function useCanvasEvents(syncNodes?: () => void) {
     // --- Event Handlers ---
 
     const handlePaneClick = (event: MouseEvent) => {
+        console.log('%c[DEBUG] handlePaneClick FIRED', 'background: red; color: white; font-size: 16px;', {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            target: (event.target as HTMLElement)?.className
+        })
+
         // Only Ctrl/Cmd+click toggles group selection
         // Shift is reserved for rubber-band drag selection (handled in useCanvasSelection)
         const isMultiSelectClick = event.ctrlKey || event.metaKey
@@ -84,16 +90,9 @@ export function useCanvasEvents(syncNodes?: () => void) {
             return
         }
 
-        // Regular click on empty pane - clear selection (TASK-262)
-        // TASK-262: Set flag to allow deselection changes through the filter
-        // This flag is checked in handleNodesChange to permit bulk deselection
-        canvasStore.allowBulkDeselect = true
-
-        // Clear both Vue Flow's internal selection AND the store
-        const selectedNodes = getSelectedNodes.value
-        if (selectedNodes.length > 0) {
-            removeSelectedNodes(selectedNodes)
-        }
+        // Regular click on empty pane - clear selection
+        // TASK-262 FIX: Vue Flow handles deselection automatically via its internal pane click handling
+        // We just need to sync our store and close menus
         canvasStore.setSelectedNodes([])
         closeAllContextMenus()
     }

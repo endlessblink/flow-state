@@ -3,11 +3,11 @@
   <div class="quick-add">
     <input
       :value="modelValue"
-      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       :dir="quickAddDirection"
       placeholder="Quick add task (Enter)..."
       class="quick-add-input"
-      @keydown.enter="$emit('add-task')"
+      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      @keydown.enter="$emit('addTask')"
     >
   </div>
 
@@ -55,7 +55,7 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'update:modelValue', value: string): void
-  (e: 'add-task'): void
+  (e: 'addTask'): void
 }>()
 
 const {

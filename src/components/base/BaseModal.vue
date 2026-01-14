@@ -104,6 +104,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useDirection } from '@/i18n/useDirection'
 import BaseButton from './BaseButton.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
 
 interface Props {
   isOpen: boolean
@@ -189,22 +190,6 @@ const handleOverlayClick = () => {
   }
 }
 
-// Check if target is a text input area (textarea, contenteditable, or multiline input)
-const isTextAreaOrContentEditable = (target: EventTarget | null): boolean => {
-  if (!target || !(target instanceof HTMLElement)) return false
-
-  // Check for textarea
-  if (target.tagName === 'TEXTAREA') return true
-
-  // Check for contenteditable
-  if (target.isContentEditable) return true
-
-  // Check for TipTap editor (has ProseMirror class)
-  if (target.classList.contains('ProseMirror')) return true
-  if (target.closest('.ProseMirror')) return true
-
-  return false
-}
 
 // Handle keyboard events (Escape and Enter)
 const handleEscapeKey = (event: KeyboardEvent) => {

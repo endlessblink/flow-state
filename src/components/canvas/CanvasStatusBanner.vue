@@ -8,7 +8,7 @@
     <button
       class="ml-2 text-indigo-400 hover:text-white transition-colors"
       title="Clear filter"
-      @click="$emit('clear-filter')"
+      @click="$emit('clearFilter')"
     >
       <X :size="14" />
     </button>
@@ -27,7 +27,7 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'clear-filter'): void
+  (e: 'clearFilter'): void
 }>()
 
 const filterLabel = computed(() => {

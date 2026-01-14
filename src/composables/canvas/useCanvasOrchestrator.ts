@@ -230,7 +230,8 @@ export function useCanvasOrchestrator() {
         isVueFlowReady,
         isCanvasReady
     }, {
-        closeCanvasContextMenu: events.closeCanvasContextMenu
+        closeCanvasContextMenu: events.closeCanvasContextMenu,
+        requestSync: batchedSyncNodes // Fix TASK-258
     })
 
     // Smart Groups

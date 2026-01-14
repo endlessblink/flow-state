@@ -14,6 +14,7 @@
  */
 
 import type { CanvasSection } from '@/stores/canvas'
+import { CANVAS } from '@/constants/canvas'
 
 export interface NodePosition {
     x: number
@@ -32,9 +33,9 @@ export interface ContainerBounds {
     height: number
 }
 
-// Default task dimensions - exported for callers to use when building SpatialNode
-export const DEFAULT_TASK_WIDTH = 220
-export const DEFAULT_TASK_HEIGHT = 100
+// Re-export from centralized constants for backward compatibility
+export const DEFAULT_TASK_WIDTH = CANVAS.DEFAULT_TASK_WIDTH
+export const DEFAULT_TASK_HEIGHT = CANVAS.DEFAULT_TASK_HEIGHT
 
 /**
  * Check if a node's center is inside a container's bounds

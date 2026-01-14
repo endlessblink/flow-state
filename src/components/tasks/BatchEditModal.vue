@@ -1,5 +1,10 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')" @keydown.escape="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    @click="$emit('close')"
+    @keydown="handleKeydown"
+  >
     <div class="modal-content" @click.stop>
       <!-- Header -->
       <div class="modal-header">
@@ -234,6 +239,7 @@ import {
   X, CheckSquare, CheckCircle, Zap, Trash2, ChevronDown
 } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
 
 const props = defineProps<Props>()
 
@@ -364,6 +370,30 @@ const applyChanges = () => {
 
   emit('applied')
   emit('close')
+}
+
+// Keyboard handler for Enter/Escape
+const handleKeydown = (event: KeyboardEvent) => {
+  // Escape - close modal
+  if (event.key === 'Escape') {
+    emit('close')
+    return
+  }
+
+  // Enter - apply (if valid)
+  if (event.key === 'Enter') {
+    // Don't submit if in textarea or contenteditable
+    if (isTextAreaOrContentEditable(event.target)) return
+
+    // Don't submit with Shift+Enter
+    if (event.shiftKey) return
+
+    // Submit if there are changes
+    if (hasChanges.value) {
+      event.preventDefault()
+      applyChanges()
+    }
+  }
 }
 
 // Reset form when modal closes

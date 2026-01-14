@@ -19,14 +19,14 @@
       :key="task.id"
       :task="task"
       :is-timer-active="isTimerActive(task.id)"
-      @dragstart="$emit('task-dragstart', $event, task)"
-      @dragend="$emit('task-dragend')"
-      @click="$emit('task-click', $event, task)"
-      @dblclick="$emit('task-dblclick', task)"
-      @contextmenu="$emit('task-contextmenu', $event, task)"
-      @keydown="$emit('task-keydown', $event, task)"
-      @start-timer="$emit('task-start-timer', task)"
-      @edit="$emit('task-edit', task)"
+      @dragstart="$emit('taskDragstart', $event, task)"
+      @dragend="$emit('taskDragend')"
+      @click="$emit('taskClick', $event, task)"
+      @dblclick="$emit('taskDblclick', task)"
+      @contextmenu="$emit('taskContextmenu', $event, task)"
+      @keydown="$emit('taskKeydown', $event, task)"
+      @startTimer="$emit('taskStartTimer', task)"
+      @edit="$emit('taskEdit', task)"
     />
   </div>
 </template>
@@ -43,14 +43,14 @@ defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'task-dragstart', event: DragEvent, task: Task): void
-  (e: 'task-dragend'): void
-  (e: 'task-click', event: MouseEvent, task: Task): void
-  (e: 'task-dblclick', task: Task): void
-  (e: 'task-contextmenu', event: MouseEvent, task: Task): void
-  (e: 'task-keydown', event: KeyboardEvent, task: Task): void
-  (e: 'task-start-timer', task: Task): void
-  (e: 'task-edit', task: Task): void
+  (e: 'taskDragstart', event: DragEvent, task: Task): void
+  (e: 'taskDragend'): void
+  (e: 'taskClick', event: MouseEvent, task: Task): void
+  (e: 'taskDblclick', task: Task): void
+  (e: 'taskContextmenu', event: MouseEvent, task: Task): void
+  (e: 'taskKeydown', event: KeyboardEvent, task: Task): void
+  (e: 'taskStartTimer', task: Task): void
+  (e: 'taskEdit', task: Task): void
 }>()
 
 const timerStore = useTimerStore()

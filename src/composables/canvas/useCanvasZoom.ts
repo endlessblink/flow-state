@@ -1,7 +1,7 @@
-
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import { storeToRefs } from 'pinia'
+import { CANVAS } from '@/constants/canvas'
 
 interface ResourceManager {
     addTimer(id: number): number
@@ -75,8 +75,8 @@ export function useCanvasZoom(resourceManager: ResourceManager) {
             const nodeBounds = {
                 x: node.position.x,
                 y: node.position.y,
-                width: 220,
-                height: 100
+                width: CANVAS.DEFAULT_TASK_WIDTH,
+                height: CANVAS.DEFAULT_TASK_HEIGHT
             }
 
             // Check if node is in viewport

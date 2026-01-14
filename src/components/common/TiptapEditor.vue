@@ -220,16 +220,32 @@
           <ChevronDown :size="10" class="dropdown-arrow" />
         </button>
         <div v-if="showTableMenu" class="table-menu-dropdown">
-          <button class="dropdown-item" @click="insertTable">Insert Table (3×3)</button>
-          <button class="dropdown-item" @click="editor?.chain().focus().addColumnBefore().run()" :disabled="!editor?.can().addColumnBefore()">Add Column Before</button>
-          <button class="dropdown-item" @click="editor?.chain().focus().addColumnAfter().run()" :disabled="!editor?.can().addColumnAfter()">Add Column After</button>
-          <button class="dropdown-item" @click="editor?.chain().focus().deleteColumn().run()" :disabled="!editor?.can().deleteColumn()">Delete Column</button>
+          <button class="dropdown-item" @click="insertTable">
+            Insert Table (3×3)
+          </button>
+          <button class="dropdown-item" :disabled="!editor?.can().addColumnBefore()" @click="editor?.chain().focus().addColumnBefore().run()">
+            Add Column Before
+          </button>
+          <button class="dropdown-item" :disabled="!editor?.can().addColumnAfter()" @click="editor?.chain().focus().addColumnAfter().run()">
+            Add Column After
+          </button>
+          <button class="dropdown-item" :disabled="!editor?.can().deleteColumn()" @click="editor?.chain().focus().deleteColumn().run()">
+            Delete Column
+          </button>
           <div class="dropdown-divider" />
-          <button class="dropdown-item" @click="editor?.chain().focus().addRowBefore().run()" :disabled="!editor?.can().addRowBefore()">Add Row Before</button>
-          <button class="dropdown-item" @click="editor?.chain().focus().addRowAfter().run()" :disabled="!editor?.can().addRowAfter()">Add Row After</button>
-          <button class="dropdown-item" @click="editor?.chain().focus().deleteRow().run()" :disabled="!editor?.can().deleteRow()">Delete Row</button>
+          <button class="dropdown-item" :disabled="!editor?.can().addRowBefore()" @click="editor?.chain().focus().addRowBefore().run()">
+            Add Row Before
+          </button>
+          <button class="dropdown-item" :disabled="!editor?.can().addRowAfter()" @click="editor?.chain().focus().addRowAfter().run()">
+            Add Row After
+          </button>
+          <button class="dropdown-item" :disabled="!editor?.can().deleteRow()" @click="editor?.chain().focus().deleteRow().run()">
+            Delete Row
+          </button>
           <div class="dropdown-divider" />
-          <button class="dropdown-item danger" @click="editor?.chain().focus().deleteTable().run()" :disabled="!editor?.can().deleteTable()">Delete Table</button>
+          <button class="dropdown-item danger" :disabled="!editor?.can().deleteTable()" @click="editor?.chain().focus().deleteTable().run()">
+            Delete Table
+          </button>
         </div>
       </div>
     </div>
@@ -241,7 +257,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount, nextTick } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import TaskList from '@tiptap/extension-task-list'
@@ -310,6 +327,18 @@ const textColors = [
   { name: 'Gray', value: '#6b7280' },
 ]
 
+// BUG-276 FIX: Track internal updates to prevent watcher from re-setting content during typing
+const isInternalUpdate = ref(false)
+
+// BUG-276 FIX: Debounced emit to prevent rapid-fire conversions during typing
+const debouncedEmit = useDebounceFn((markdown: string) => {
+  isInternalUpdate.value = true
+  emit('update:modelValue', markdown)
+  nextTick(() => {
+    isInternalUpdate.value = false
+  })
+}, 150)
+
 // Create editor with NO auto-conversion input rules
 // StarterKit includes input rules by default, so we disable them
 // BUG-013 FIX: Convert markdown to HTML for Tiptap, then HTML back to markdown on emit
@@ -360,16 +389,18 @@ const editor = useEditor({
   onUpdate: ({ editor }) => {
     // BUG-013 FIX: Convert HTML output to markdown before emitting
     // The app stores task descriptions as markdown, not HTML
+    // BUG-276 FIX: Use debounced emit to prevent rapid-fire conversions
     const html = editor.getHTML()
     const markdown = htmlToMarkdown(html)
-    emit('update:modelValue', markdown)
+    debouncedEmit(markdown)
   },
 })
 
 // Watch for external changes to modelValue
 // BUG-013 FIX: Convert incoming markdown to HTML for comparison and setting
+// BUG-276 FIX: Skip if this is an internal update from typing to prevent race conditions
 watch(() => props.modelValue, (newValue) => {
-  if (!editor.value) return
+  if (!editor.value || isInternalUpdate.value) return
   // Convert incoming markdown to HTML for comparison
   const newHtml = parseMarkdown(newValue)
   const currentHtml = editor.value.getHTML()

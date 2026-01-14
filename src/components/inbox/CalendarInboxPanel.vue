@@ -2,24 +2,24 @@
   <div class="calendar-inbox-panel" :class="{ collapsed: isCollapsed }">
     <!-- Header -->
     <CalendarInboxHeader
-      v-model:isCollapsed="isCollapsed"
+      v-model:is-collapsed="isCollapsed"
+      v-model:show-today-only="showTodayOnly"
+      v-model:selected-canvas-groups="selectedCanvasGroups"
+      v-model:show-advanced-filters="showAdvancedFilters"
+      v-model:unscheduled-only="unscheduledOnly"
+      v-model:selected-priority="selectedPriority"
+      v-model:selected-project="selectedProject"
+      v-model:selected-duration="selectedDuration"
       :inbox-count="inboxTasks.length"
-      v-model:showTodayOnly="showTodayOnly"
       :today-count="todayCount"
       :has-active-filters="hasActiveFilters"
       :base-count="baseInboxTasks.length"
       :canvas-group-options="canvasGroupOptions"
-      v-model:selectedCanvasGroups="selectedCanvasGroups"
-      v-model:showAdvancedFilters="showAdvancedFilters"
-      v-model:unscheduledOnly="unscheduledOnly"
-      v-model:selectedPriority="selectedPriority"
-      v-model:selectedProject="selectedProject"
-      v-model:selectedDuration="selectedDuration"
       :hide-done-tasks="hideCalendarDoneTasks"
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
-      @toggleHideDoneTasks="toggleHideDoneTasks"
-      @clearAllFilters="clearAllFilters"
+      @toggle-hide-done-tasks="toggleHideDoneTasks"
+      @clear-all-filters="clearAllFilters"
     />
 
     <!-- Quick Add & Brain Dump -->

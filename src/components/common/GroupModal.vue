@@ -1,5 +1,10 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    @click="$emit('close')"
+    @keydown="handleKeydown"
+  >
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h2 class="modal-title">
@@ -106,6 +111,7 @@ import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { X } from 'lucide-vue-next'
 import BaseInput from '@/components/base/BaseInput.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
 
 interface Props {
   isOpen: boolean
@@ -274,6 +280,24 @@ const saveGroup = async () => {
   }
 
   emit('close')
+}
+
+// Keyboard handler for Enter/Escape
+const handleKeydown = (event: KeyboardEvent) => {
+  // Enter - save (if valid)
+  if (event.key === 'Enter') {
+    // Don't submit if in textarea or contenteditable
+    if (isTextAreaOrContentEditable(event.target)) return
+
+    // Don't submit with Shift+Enter
+    if (event.shiftKey) return
+
+    // Submit if name is valid
+    if (groupData.value.name.trim()) {
+      event.preventDefault()
+      saveGroup()
+    }
+  }
 }
 
 // Watch for group changes (editing mode)

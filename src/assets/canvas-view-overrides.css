@@ -159,6 +159,13 @@
     filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.4));
 }
 
+/* Edge interaction layer - makes edges easier to click */
+.vue-flow__edge-interaction {
+    stroke-width: 20px !important;
+    stroke: transparent !important;
+    cursor: pointer;
+}
+
 .vue-flow__controls {
     display: none;
     /* Using custom controls */
@@ -259,17 +266,24 @@
     background-color: transparent !important;
 }
 
-/* Remove handle borders completely */
-.vue-flow__handle,
-.vue-flow__handle-top,
-.vue-flow__handle-bottom,
-.vue-flow__handle-left,
-.vue-flow__handle-right,
-.vue-flow__handle-source,
-.vue-flow__handle-target {
-    border: none !important;
-    outline: none !important;
-    box-shadow: var(--shadow-sm);
+/* Connection handles - subtle, larger, and easy to grab */
+.vue-flow__handle {
+    width: 12px !important;
+    height: 12px !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 2px solid rgba(255, 255, 255, 0.4) !important;
+    border-radius: 50% !important;
+    cursor: crosshair !important;
+    transition: all 0.2s ease !important;
+    z-index: 10 !important;
+}
+
+.vue-flow__handle:hover {
+    width: 16px !important;
+    height: 16px !important;
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
 }
 
 
@@ -679,10 +693,41 @@ body.dragging-active .vue-flow__edge {
     transition: opacity 0.2s ease !important;
 }
 
-/* Ensure clean connection handles during drag */
-body.dragging-active .vue-flow__handle {
+/* Ensure clean connection handles during drag (but not during connections) */
+body.dragging-active:not(.connecting-active) .vue-flow__handle {
     transition: none !important;
     opacity: 0.7 !important;
+}
+
+/* Keep handles fully visible during connection creation */
+body.connecting-active .vue-flow__handle {
+    opacity: 1 !important;
+    transition: all 0.15s ease !important;
+}
+
+/* Connection line while dragging - make it visible and styled */
+.vue-flow__connection-line {
+    stroke: var(--brand-primary) !important;
+    stroke-width: 3px !important;
+    stroke-linecap: round !important;
+}
+
+.vue-flow__connection-line path {
+    stroke: var(--brand-primary) !important;
+    stroke-width: 3px !important;
+    animation: connection-pulse 1s infinite !important;
+}
+
+@keyframes connection-pulse {
+
+    0%,
+    100% {
+        opacity: 0.8;
+    }
+
+    50% {
+        opacity: 1;
+    }
 }
 
 /* Prevent any background effects during drag */
@@ -823,7 +868,6 @@ body.dragging-active .vue-flow__background {
    so the drag event falls through to the Pane to start the selection box.
    This enables rubber-band selection starting from inside a group.
 */
-.shift-selecting .vue-flow__node-sectionNode,
-.shift-selecting .vue-flow__node-taskNode {
+.shift-selecting .vue-flow__node-sectionNode {
     pointer-events: none !important;
 }

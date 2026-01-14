@@ -209,6 +209,83 @@ app.post('/api/task/:id/status', (req, res) => {
     });
 });
 
+// API Endpoint to update task complexity
+app.post('/api/task/:id/complexity', (req, res) => {
+    const { id } = req.params;
+    const { complexity } = req.body;
+    const masterPlanPath = getMasterPlanPath();
+    console.log(`[API] Updating task ${id} complexity to ${complexity}`);
+
+    fs.readFile(masterPlanPath, 'utf8', (err, data) => {
+        if (err) return res.status(500).json({ error: 'Failed to read file' });
+
+        const lines = data.split('\n');
+        let updated = false;
+        let inTargetTask = false;
+        let foundComplexityLine = false;
+        let headerLineIdx = -1;
+
+        // Regex to match the target task header
+        const taskHeaderRegex = new RegExp(`^###\\s+(?:~~)?${id}(?:~~)?:`);
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Find task header
+            if (line.match(taskHeaderRegex)) {
+                headerLineIdx = i;
+                updated = true;
+                inTargetTask = true;
+                continue;
+            }
+
+            // Detect next task start (stop processing scope)
+            if (inTargetTask && line.startsWith('### ')) {
+                inTargetTask = false;
+            }
+
+            // Update Complexity line if exists
+            if (inTargetTask && line.trim().startsWith('**Complexity**:')) {
+                lines[i] = `**Complexity**: ${complexity}`;
+                foundComplexityLine = true;
+            }
+        }
+
+        // If we found header but not complexity line, insert it after Priority or after header
+        if (updated && !foundComplexityLine && headerLineIdx >= 0) {
+            let insertIdx = headerLineIdx + 1;
+            // Skip empty lines, Priority line, and Status line to find proper insertion point
+            while (insertIdx < lines.length &&
+                   (lines[insertIdx].trim() === '' ||
+                    lines[insertIdx].trim().startsWith('**Priority**:') ||
+                    lines[insertIdx].trim().startsWith('**Status**:'))) {
+                insertIdx++;
+            }
+            // Insert before the next content line, but after Priority if it exists
+            // Actually, let's insert right after Priority line if found, otherwise after header
+            let priorityIdx = -1;
+            for (let j = headerLineIdx + 1; j < lines.length && j < headerLineIdx + 10; j++) {
+                if (lines[j].trim().startsWith('**Priority**:')) {
+                    priorityIdx = j;
+                    break;
+                }
+                if (lines[j].startsWith('### ')) break;
+            }
+            insertIdx = priorityIdx >= 0 ? priorityIdx + 1 : headerLineIdx + 1;
+            lines.splice(insertIdx, 0, `**Complexity**: ${complexity}`);
+        }
+
+        if (updated) {
+            fs.writeFile(masterPlanPath, lines.join('\n'), 'utf8', (err) => {
+                if (err) return res.status(500).json({ error: 'Failed to write file' });
+                res.json({ success: true, message: 'Complexity updated' });
+            });
+        } else {
+            res.status(404).json({ error: 'Task not found' });
+        }
+    });
+});
+
 // API Endpoint to update task properties (priority, etc)
 app.post('/api/task/:id', (req, res) => {
     const { id } = req.params;
@@ -615,6 +692,616 @@ app.get('/api/docs', (req, res) => {
         res.json({ nodes, links });
     } catch (err) {
         res.json({ nodes: [], links: [], error: err.message });
+    }
+});
+
+// ============== BEADS API ==============
+const { execSync, spawn } = require('child_process');
+const BD_PATH = process.env.BD_PATH || `${process.env.HOME}/go/bin/bd`;
+
+// Track running agents
+const runningAgents = new Map(); // id -> { process, task, startTime, outputBuffer, clients }
+
+// SSE clients for agent output
+const agentOutputClients = new Map(); // agentId -> [res, res, ...]
+
+// Helper to run bd commands
+const runBd = (args) => {
+    try {
+        const result = execSync(`${BD_PATH} ${args} --json`, {
+            cwd: path.join(__dirname, '..'),
+            encoding: 'utf8',
+            timeout: 10000
+        });
+        return JSON.parse(result);
+    } catch (err) {
+        console.error(`[Beads] Error running bd ${args}:`, err.message);
+        return null;
+    }
+};
+
+// GET /api/beads/list - All issues
+app.get('/api/beads/list', (req, res) => {
+    const issues = runBd('list --limit 0');
+    res.json({ issues: issues || [], error: issues ? null : 'Failed to fetch issues' });
+});
+
+// GET /api/beads/ready - Ready issues (unblocked)
+app.get('/api/beads/ready', (req, res) => {
+    const issues = runBd('ready');
+    res.json({ issues: issues || [], error: issues ? null : 'Failed to fetch ready issues' });
+});
+
+// GET /api/beads/deps/:id - Dependencies for an issue
+app.get('/api/beads/deps/:id', (req, res) => {
+    const deps = runBd(`dep list ${req.params.id}`);
+    res.json({ dependencies: deps || [], error: deps ? null : 'Failed to fetch dependencies' });
+});
+
+// GET /api/beads/graph - Full dependency graph for D3
+app.get('/api/beads/graph', (req, res) => {
+    const issues = runBd('list --limit 0');
+    if (!issues) return res.json({ nodes: [], links: [] });
+
+    const nodes = issues.map(issue => ({
+        id: issue.id,
+        title: issue.title,
+        status: issue.status,
+        priority: issue.priority,
+        type: issue.issue_type,
+        owner: issue.owner,
+        dependencyCount: issue.dependency_count || 0,
+        dependentCount: issue.dependent_count || 0
+    }));
+
+    // Build links from dependencies
+    const links = [];
+    for (const issue of issues) {
+        if (issue.dependency_count > 0) {
+            const deps = runBd(`dep list ${issue.id}`);
+            if (deps) {
+                for (const dep of deps) {
+                    links.push({ source: dep.id, target: issue.id, type: dep.dependency_type });
+                }
+            }
+        }
+    }
+
+    res.json({ nodes, links });
+});
+
+// Helper: Load supervisor template
+const SUPERVISORS_DIR = path.join(__dirname, 'supervisors');
+
+function loadSupervisorTemplate(supervisorType) {
+    const templatePath = path.join(SUPERVISORS_DIR, `${supervisorType}-supervisor.md`);
+    try {
+        if (fs.existsSync(templatePath)) {
+            return fs.readFileSync(templatePath, 'utf8');
+        }
+    } catch (err) {
+        console.error(`[Agent] Error loading supervisor template: ${err.message}`);
+    }
+    return null;
+}
+
+// Helper: Create git worktree for agent isolation
+function createAgentWorktree(taskId) {
+    const projectRoot = path.join(__dirname, '..');
+    const worktreePath = path.join(projectRoot, '.agent-worktrees', taskId);
+    const branchName = `bd-${taskId}`;
+
+    try {
+        // Create worktrees directory if needed
+        const worktreesDir = path.join(projectRoot, '.agent-worktrees');
+        if (!fs.existsSync(worktreesDir)) {
+            fs.mkdirSync(worktreesDir, { recursive: true });
+        }
+
+        // Check if worktree already exists
+        if (fs.existsSync(worktreePath)) {
+            console.log(`[Agent] Worktree already exists at ${worktreePath}`);
+            return { worktreePath, branchName, created: false };
+        }
+
+        // Create branch if not exists
+        try {
+            execSync(`git branch ${branchName}`, { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' });
+            console.log(`[Agent] Created branch ${branchName}`);
+        } catch (e) {
+            // Branch may already exist
+            console.log(`[Agent] Branch ${branchName} already exists or error: ${e.message}`);
+        }
+
+        // Create worktree
+        execSync(`git worktree add "${worktreePath}" ${branchName}`, {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: 'pipe'
+        });
+
+        console.log(`[Agent] Created worktree at ${worktreePath}`);
+        return { worktreePath, branchName, created: true };
+    } catch (err) {
+        console.error(`[Agent] Error creating worktree: ${err.message}`);
+        // Fallback to main project directory
+        return { worktreePath: projectRoot, branchName: null, created: false };
+    }
+}
+
+// Helper: Clean up worktree after agent completes
+function cleanupWorktree(taskId) {
+    const projectRoot = path.join(__dirname, '..');
+    const worktreePath = path.join(projectRoot, '.agent-worktrees', taskId);
+
+    try {
+        if (fs.existsSync(worktreePath)) {
+            execSync(`git worktree remove "${worktreePath}" --force`, {
+                cwd: projectRoot,
+                encoding: 'utf8',
+                stdio: 'pipe'
+            });
+            console.log(`[Agent] Removed worktree at ${worktreePath}`);
+        }
+    } catch (err) {
+        console.error(`[Agent] Error removing worktree: ${err.message}`);
+    }
+}
+
+// GET /api/beads/supervisors - List available supervisors
+app.get('/api/beads/supervisors', (req, res) => {
+    try {
+        const supervisors = [];
+        if (fs.existsSync(SUPERVISORS_DIR)) {
+            const files = fs.readdirSync(SUPERVISORS_DIR);
+            for (const file of files) {
+                if (file.endsWith('-supervisor.md')) {
+                    const name = file.replace('-supervisor.md', '');
+                    supervisors.push({ name, file });
+                }
+            }
+        }
+        res.json({ supervisors });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/beads/claim/:id - Claim a task AND spawn an agent with supervisor
+app.post('/api/beads/claim/:id', (req, res) => {
+    const taskId = req.params.id;
+    const { supervisorType = 'worker', autoStart = true } = req.body;
+
+    try {
+        // First update status in beads
+        execSync(`${BD_PATH} update ${taskId} --status in_progress`, {
+            cwd: path.join(__dirname, '..'),
+            encoding: 'utf8'
+        });
+
+        // Get task details
+        const taskDetails = runBd(`show ${taskId}`);
+        if (!taskDetails) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        // If autoStart, spawn a Claude agent
+        if (autoStart) {
+            // Check if already running
+            if (runningAgents.has(taskId)) {
+                return res.json({
+                    success: true,
+                    claimed_by: 'agent',
+                    agent_status: 'already_running',
+                    message: 'Agent already working on this task'
+                });
+            }
+
+            // Create isolated worktree for agent
+            const { worktreePath, branchName, created: worktreeCreated } = createAgentWorktree(taskId);
+
+            // Load supervisor template
+            const supervisorTemplate = loadSupervisorTemplate(supervisorType);
+
+            // Build the prompt for Claude
+            let prompt;
+            if (supervisorTemplate) {
+                // Use supervisor template with placeholders replaced
+                prompt = supervisorTemplate
+                    .replace(/\{\{BEAD_ID\}\}/g, taskId)
+                    .replace(/---[\s\S]*?---/, '') // Remove YAML frontmatter
+                    + `\n\n## Current Task\n\nBEAD_ID: ${taskId}
+Title: ${taskDetails.title || 'No title'}
+Description: ${taskDetails.description || 'No description'}
+Priority: ${taskDetails.priority || 'P3'}
+Type: ${taskDetails.issue_type || 'task'}
+
+${branchName ? `You are working on branch: ${branchName}` : ''}
+
+Start working now. Follow the beads workflow.`;
+            } else {
+                // Fallback to basic prompt
+                prompt = `You are working on Beads task: ${taskId}
+
+Title: ${taskDetails.title || 'No title'}
+Description: ${taskDetails.description || 'No description'}
+Priority: ${taskDetails.priority || 'P3'}
+Type: ${taskDetails.issue_type || 'task'}
+
+${branchName ? `Working on branch: ${branchName}` : ''}
+
+Instructions:
+1. Read the task requirements carefully
+2. Implement the requested changes
+3. Test your changes
+4. When complete: bd update ${taskId} --status inreview
+
+Start working now. Be thorough and complete the task.`;
+            }
+
+            console.log(`[Agent] Spawning ${supervisorType}-supervisor for task ${taskId}...`);
+            console.log(`[Agent] Working directory: ${worktreePath}`);
+
+            // Spawn claude process with FIXED configuration
+            // Critical: inherit stdin and set ANTHROPIC_API_KEY to empty string
+            // Note: --verbose is required when using --print with --output-format stream-json
+            const agentProcess = spawn('claude', [
+                '--print',
+                '--verbose',
+                '--output-format', 'stream-json',
+                '--dangerously-skip-permissions',
+                '--max-turns', '50',
+                '-p', prompt
+            ], {
+                cwd: worktreePath,
+                stdio: ['inherit', 'pipe', 'pipe'],  // FIX: inherit stdin
+                env: { ...process.env, ANTHROPIC_API_KEY: '' }  // FIX: empty API key
+            });
+
+            const agentData = {
+                process: agentProcess,
+                task: taskDetails,
+                taskId: taskId,
+                supervisorType: supervisorType,
+                worktreePath: worktreePath,
+                branchName: branchName,
+                startTime: Date.now(),
+                outputBuffer: [],
+                status: 'running'
+            };
+
+            runningAgents.set(taskId, agentData);
+
+            // Handle stdout
+            agentProcess.stdout.on('data', (data) => {
+                const output = data.toString();
+                agentData.outputBuffer.push({ type: 'stdout', text: output, time: Date.now() });
+
+                // Broadcast to SSE clients watching this agent
+                broadcastAgentOutput(taskId, { type: 'stdout', text: output });
+
+                // Also broadcast to main SSE for activity indicator
+                broadcastLog(`[Agent ${taskId}] ${output.slice(0, 100)}...`);
+            });
+
+            // Handle stderr
+            agentProcess.stderr.on('data', (data) => {
+                const output = data.toString();
+                agentData.outputBuffer.push({ type: 'stderr', text: output, time: Date.now() });
+                broadcastAgentOutput(taskId, { type: 'stderr', text: output });
+            });
+
+            // Handle exit
+            agentProcess.on('close', (code) => {
+                console.log(`[Agent] Task ${taskId} agent exited with code ${code}`);
+                agentData.status = code === 0 ? 'completed' : 'failed';
+                agentData.exitCode = code;
+                agentData.endTime = Date.now();
+
+                broadcastAgentOutput(taskId, {
+                    type: 'exit',
+                    code: code,
+                    message: code === 0 ? 'Task completed successfully' : 'Task failed'
+                });
+
+                // Clean up after a delay (keep for logs viewing)
+                setTimeout(() => {
+                    if (runningAgents.get(taskId)?.status !== 'running') {
+                        runningAgents.delete(taskId);
+                    }
+                }, 300000); // 5 minutes
+            });
+
+            // Handle error
+            agentProcess.on('error', (err) => {
+                console.error(`[Agent] Error spawning agent for ${taskId}:`, err.message);
+                agentData.status = 'error';
+                agentData.error = err.message;
+                broadcastAgentOutput(taskId, { type: 'error', message: err.message });
+            });
+
+            res.json({
+                success: true,
+                claimed_by: 'agent',
+                agent_status: 'started',
+                message: `Agent spawned and working on task ${taskId}`
+            });
+        } else {
+            res.json({ success: true, claimed_by: agent || 'manual' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Helper to broadcast output to agent watchers
+function broadcastAgentOutput(taskId, data) {
+    const clients = agentOutputClients.get(taskId) || [];
+    const payload = JSON.stringify({ taskId, ...data, timestamp: Date.now() });
+
+    clients.forEach(client => {
+        try {
+            client.write(`data: ${payload}\n\n`);
+        } catch (e) {
+            // Client disconnected
+        }
+    });
+}
+
+// GET /api/beads/agents - List all running agents
+app.get('/api/beads/agents', (req, res) => {
+    const agents = [];
+
+    for (const [taskId, data] of runningAgents.entries()) {
+        agents.push({
+            taskId,
+            title: data.task?.title || 'Unknown',
+            supervisorType: data.supervisorType || 'worker',
+            branchName: data.branchName,
+            status: data.status,
+            startTime: data.startTime,
+            runningFor: Date.now() - data.startTime,
+            outputLines: data.outputBuffer.length,
+            exitCode: data.exitCode
+        });
+    }
+
+    res.json({ agents });
+});
+
+// POST /api/beads/merge/:id - Merge agent's branch to main
+app.post('/api/beads/merge/:id', (req, res) => {
+    const taskId = req.params.id;
+    const projectRoot = path.join(__dirname, '..');
+    const branchName = `bd-${taskId}`;
+
+    try {
+        // Check we're on main
+        const currentBranch = execSync('git branch --show-current', {
+            cwd: projectRoot,
+            encoding: 'utf8'
+        }).trim();
+
+        if (currentBranch !== 'main' && currentBranch !== 'master') {
+            // Switch to main
+            execSync('git checkout main || git checkout master', {
+                cwd: projectRoot,
+                encoding: 'utf8',
+                shell: true
+            });
+        }
+
+        // Merge the branch
+        execSync(`git merge ${branchName} --no-ff -m "Merge ${branchName}: Task completed"`, {
+            cwd: projectRoot,
+            encoding: 'utf8'
+        });
+
+        // Clean up worktree
+        cleanupWorktree(taskId);
+
+        // Delete the branch
+        try {
+            execSync(`git branch -d ${branchName}`, {
+                cwd: projectRoot,
+                encoding: 'utf8'
+            });
+        } catch (e) {
+            console.log(`[Agent] Could not delete branch ${branchName}: ${e.message}`);
+        }
+
+        // Close the bead
+        execSync(`${BD_PATH} close ${taskId} --reason "Merged to main"`, {
+            cwd: projectRoot,
+            encoding: 'utf8'
+        });
+
+        res.json({ success: true, message: `Merged ${branchName} to main and closed bead` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/beads/agents/:id/stream - SSE stream for agent output
+app.get('/api/beads/agents/:id/stream', (req, res) => {
+    const taskId = req.params.id;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Send existing output buffer first
+    const agentData = runningAgents.get(taskId);
+    if (agentData) {
+        for (const entry of agentData.outputBuffer) {
+            res.write(`data: ${JSON.stringify({ taskId, ...entry })}\n\n`);
+        }
+
+        // If agent already finished, send exit event
+        if (agentData.status !== 'running') {
+            res.write(`data: ${JSON.stringify({
+                taskId,
+                type: 'exit',
+                code: agentData.exitCode,
+                status: agentData.status
+            })}\n\n`);
+        }
+    }
+
+    // Add to clients list for live updates
+    if (!agentOutputClients.has(taskId)) {
+        agentOutputClients.set(taskId, []);
+    }
+    agentOutputClients.get(taskId).push(res);
+
+    console.log(`[Agent] SSE client connected for task ${taskId}`);
+
+    // Keep alive
+    const keepAlive = setInterval(() => {
+        res.write(`: keep-alive\n\n`);
+    }, 15000);
+
+    req.on('close', () => {
+        clearInterval(keepAlive);
+        const clients = agentOutputClients.get(taskId) || [];
+        agentOutputClients.set(taskId, clients.filter(c => c !== res));
+        console.log(`[Agent] SSE client disconnected for task ${taskId}`);
+    });
+});
+
+// POST /api/beads/agents/:id/stop - Stop a running agent
+app.post('/api/beads/agents/:id/stop', (req, res) => {
+    const taskId = req.params.id;
+    const agentData = runningAgents.get(taskId);
+
+    if (!agentData) {
+        return res.status(404).json({ error: 'No agent running for this task' });
+    }
+
+    if (agentData.status !== 'running') {
+        return res.json({ success: true, message: 'Agent already stopped' });
+    }
+
+    try {
+        agentData.process.kill('SIGTERM');
+        agentData.status = 'stopped';
+
+        // Also update beads status back to ready
+        execSync(`${BD_PATH} update ${taskId} --status todo`, {
+            cwd: path.join(__dirname, '..'),
+            encoding: 'utf8'
+        });
+
+        res.json({ success: true, message: 'Agent stopped' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/beads/agents/:id/command - Send a command to an agent (spawns follow-up)
+app.post('/api/beads/agents/:id/command', (req, res) => {
+    const taskId = req.params.id;
+    const { command } = req.body;
+    const agentData = runningAgents.get(taskId);
+
+    if (!command) {
+        return res.status(400).json({ error: 'Command is required' });
+    }
+
+    // Build context from previous output
+    const recentOutput = agentData?.outputBuffer?.slice(-20).map(o => o.text).join('') || '';
+
+    // Broadcast the user command to the UI
+    broadcastAgentOutput(taskId, {
+        type: 'user',
+        text: `> ${command}`
+    });
+
+    console.log(`[Agent] Sending command to ${taskId}: ${command.slice(0, 50)}...`);
+
+    // Spawn a new claude process with the command as context
+    const prompt = `You are continuing work on Beads task: ${taskId}
+
+${agentData?.task?.title ? `Task: ${agentData.task.title}` : ''}
+
+The user has sent you this instruction:
+${command}
+
+Recent context from previous work:
+${recentOutput.slice(-2000)}
+
+Execute the user's instruction now.`;
+
+    const followUpProcess = spawn('claude', [
+        '--print',
+        '-p', prompt
+    ], {
+        cwd: path.join(__dirname, '..'),
+        env: { ...process.env },
+        stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    // If there was a previous process, update reference
+    if (agentData) {
+        // Keep the old process running if it exists
+        agentData.commandCount = (agentData.commandCount || 0) + 1;
+    }
+
+    // Track this follow-up process
+    const followUpData = agentData || {
+        task: { title: 'Follow-up command' },
+        taskId: taskId,
+        startTime: Date.now(),
+        outputBuffer: [],
+        status: 'running'
+    };
+
+    followUpData.process = followUpProcess;
+    followUpData.status = 'running';
+    runningAgents.set(taskId, followUpData);
+
+    followUpProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        followUpData.outputBuffer.push({ type: 'stdout', text: output, time: Date.now() });
+        broadcastAgentOutput(taskId, { type: 'stdout', text: output });
+    });
+
+    followUpProcess.stderr.on('data', (data) => {
+        const output = data.toString();
+        followUpData.outputBuffer.push({ type: 'stderr', text: output, time: Date.now() });
+        broadcastAgentOutput(taskId, { type: 'stderr', text: output });
+    });
+
+    followUpProcess.on('close', (code) => {
+        console.log(`[Agent] Follow-up for ${taskId} exited with code ${code}`);
+        followUpData.status = code === 0 ? 'idle' : 'failed';
+        followUpData.exitCode = code;
+        broadcastAgentOutput(taskId, {
+            type: 'status',
+            status: 'idle',
+            message: 'Ready for next command'
+        });
+    });
+
+    followUpProcess.on('error', (err) => {
+        console.error(`[Agent] Follow-up error for ${taskId}:`, err.message);
+        broadcastAgentOutput(taskId, { type: 'error', message: err.message });
+    });
+
+    res.json({ success: true, message: 'Command sent' });
+});
+
+// POST /api/beads/close/:id - Close a task
+app.post('/api/beads/close/:id', (req, res) => {
+    const { reason } = req.body;
+    try {
+        execSync(`${BD_PATH} close ${req.params.id} --reason "${reason || 'Completed'}"`, {
+            cwd: path.join(__dirname, '..'),
+            encoding: 'utf8'
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

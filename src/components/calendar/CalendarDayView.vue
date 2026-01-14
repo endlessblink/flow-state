@@ -4,24 +4,6 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 
-// Inject helpers from parent CalendarView
-const helpers = inject('calendar-helpers') as any
-const {
-  formatHour,
-  isCurrentTimeSlot,
-  getTasksForSlot,
-  isTaskPrimarySlot,
-  getSlotTaskStyle,
-  getProjectVisual,
-  getProjectName,
-  getProjectColor,
-  getPriorityClass,
-  getPriorityLabel,
-  getTaskStatus,
-  getStatusLabel,
-  getStatusIcon
-} = helpers
-
 defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
@@ -40,7 +22,6 @@ defineProps<{
     direction: 'top' | 'bottom'
   } | null
 }>()
-
 defineEmits<{
   (e: 'dragover', event: DragEvent, slot: TimeSlot): void
   (e: 'dragenter', event: DragEvent, slot: TimeSlot): void
@@ -58,6 +39,24 @@ defineEmits<{
   (e: 'removeFromCalendar', calEvent: CalendarEvent): void
   (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
 }>()
+// Inject helpers from parent CalendarView
+const helpers = inject('calendar-helpers') as any
+const {
+  formatHour,
+  isCurrentTimeSlot,
+  getTasksForSlot,
+  isTaskPrimarySlot,
+  getSlotTaskStyle,
+  getProjectVisual,
+  getProjectName,
+  getProjectColor,
+  getPriorityClass,
+  getPriorityLabel,
+  getTaskStatus,
+  getStatusLabel,
+  getStatusIcon
+} = helpers
+
 </script>
 
 <template>

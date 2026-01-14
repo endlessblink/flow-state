@@ -221,14 +221,25 @@ export const useTaskStore = defineStore('tasks', () => {
             // If it's now deleted, remove it instead of updating
             _rawTasks.value.splice(idx, 1)
           } else {
+            // TASK-272 FIX: Only trigger canvas sync if task actually changed
+            // This prevents reactive loops where unchanged data causes re-renders
+            const hasRelevantChange =
+              currentTask.title !== normalizedTask.title ||
+              currentTask.status !== normalizedTask.status ||
+              currentTask.priority !== normalizedTask.priority ||
+              currentTask.dueDate !== normalizedTask.dueDate ||
+              currentTask.parentId !== normalizedTask.parentId ||
+              JSON.stringify(currentTask.canvasPosition) !== JSON.stringify(normalizedTask.canvasPosition)
+
             _rawTasks.value[idx] = normalizedTask
-            // BUG-FIX: Trigger canvas sync for realtime updates
-            // The orchestrator only watches array length changes, not property updates
-            // Bumping syncTrigger ensures canvas re-renders when tasks are updated
-            try {
-              const canvasStore = useCanvasStore()
-              canvasStore.syncTrigger++
-            } catch { /* Canvas store may not be initialized in all contexts */ }
+
+            // Only trigger canvas sync if there was an actual visual change
+            if (hasRelevantChange) {
+              try {
+                const canvasStore = useCanvasStore()
+                canvasStore.syncTrigger++
+              } catch { /* Canvas store may not be initialized in all contexts */ }
+            }
           }
         } else {
           // Add new task - ONLY if not deleted

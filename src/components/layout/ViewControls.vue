@@ -103,17 +103,6 @@ import CustomSelect from '@/components/common/CustomSelect.vue'
 export type ViewType = 'table' | 'list'
 export type DensityType = 'compact' | 'comfortable' | 'spacious'
 
-// TASK-157: Filters hidden by default for cleaner look
-const showFilters = ref(false)
-
-interface Props {
-  viewType: ViewType
-  density: DensityType
-  sortBy: string
-  filterStatus: string
-  hideDoneTasks?: boolean
-}
-
 defineProps<Props>()
 
 // Use explicit function signature to avoid emit type inference issues
@@ -126,6 +115,17 @@ const _emit = defineEmits<{
   (e: 'expandAll'): void
   (e: 'collapseAll'): void
 }>()
+
+// TASK-157: Filters hidden by default for cleaner look
+const showFilters = ref(false)
+
+interface Props {
+  viewType: ViewType
+  density: DensityType
+  sortBy: string
+  filterStatus: string
+  hideDoneTasks?: boolean
+}
 
 const densityOptions = [
   { value: 'compact' as DensityType, label: 'Compact', icon: AlignJustify },

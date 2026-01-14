@@ -117,7 +117,8 @@ export function useCanvasOrchestrator() {
     const interactions = useCanvasInteractions({
         nodes,
         findNode,
-        updateNode
+        updateNode,
+        applyNodeChanges
     })
 
     // Groups (Unified)
@@ -236,8 +237,26 @@ export function useCanvasOrchestrator() {
     const smartGroups = useCanvasOverdueCollector()
 
     // Events Wrapper
-    const handleCanvasContainerClick = (_e: MouseEvent) => {
-        interactions.clearSelection()
+    const handleCanvasContainerClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement
+
+        // Only clear selection when clicking on empty canvas (pane/viewport)
+        // Don't clear when clicking on nodes, edges, or other interactive elements
+        const isEmptyCanvasClick = target.classList.contains('vue-flow__pane') ||
+            target.classList.contains('vue-flow__viewport') ||
+            target.classList.contains('vue-flow__container') ||
+            target.classList.contains('vue-flow__background')
+
+        console.log('%c[DEBUG] handleCanvasContainerClick FIRED', 'background: purple; color: white; font-size: 16px;', {
+            target: target.className,
+            isEmptyCanvasClick
+        })
+
+        if (isEmptyCanvasClick) {
+            interactions.clearSelection()
+        }
+
+        // Always close context menus
         events.closeCanvasContextMenu()
         events.closeEdgeContextMenu()
         events.closeNodeContextMenu()
@@ -503,61 +522,10 @@ export function useCanvasOrchestrator() {
         // TASK-262: Filter selection changes to prevent unwanted deselection on node click
         // Vue Flow default: clicking a node deselects all others. We only want pane click to deselect.
         handleNodesChange: (changes: any[]) => {
-            // Debug: Log ALL changes (not just selection) to verify this handler is called
-            console.log('%c[TASK-262] handleNodesChange CALLED', 'background: navy; color: yellow; font-size: 14px;', {
-                totalChanges: changes.length,
-                types: [...new Set(changes.map((c: any) => c.type))]
-            })
-
-            // Debug: Log ALL changes to understand what Vue Flow sends
-            const selectChanges = changes.filter((c: any) => c.type === 'select')
-            if (selectChanges.length > 0) {
-                console.log('%c[TASK-262] handleNodesChange - Selection changes incoming:', 'background: blue; color: white; padding: 2px 6px;', {
-                    allowBulkDeselect: canvasStore.allowBulkDeselect,
-                    totalChanges: changes.length,
-                    selectChanges: selectChanges.map((c: any) => ({
-                        id: c.id?.slice(0, 20),
-                        selected: c.selected,
-                        type: c.type
-                    }))
-                })
-            }
-
-            const filteredChanges = changes.filter((change: any) => {
-                // Allow all non-selection changes (position, dimensions, add, remove, etc.)
-                if (change.type !== 'select') return true
-
-                // Allow selection (selected: true)
-                if (change.selected === true) {
-                    console.log('%c[TASK-262] ALLOWING selection:', 'background: green; color: white;', change.id?.slice(0, 20))
-                    return true
-                }
-
-                // Block deselection (selected: false) unless explicitly allowed via pane click
-                if (change.selected === false) {
-                    const allowed = canvasStore.allowBulkDeselect
-                    if (!allowed) {
-                        console.log('%c[TASK-262] BLOCKING deselection:', 'background: red; color: white;', change.id?.slice(0, 20))
-                    } else {
-                        console.log('%c[TASK-262] ALLOWING deselection (bulk):', 'background: orange; color: white;', change.id?.slice(0, 20))
-                    }
-                    return allowed
-                }
-
-                return true
-            })
-
-            // Reset flag after filtering
-            if (canvasStore.allowBulkDeselect) {
-                canvasStore.allowBulkDeselect = false
-                console.log('%c[TASK-262] Reset allowBulkDeselect flag', 'background: gray; color: white;')
-            }
-
-            console.log('%c[TASK-262] Applying filtered changes:', 'background: purple; color: white;', {
-                original: changes.length,
-                filtered: filteredChanges.length
-            })
-            applyNodeChanges(filteredChanges)
+            // TASK-262 FIX: Allow all changes to pass through including deselection
+            // Previously, deselection was blocked which prevented clicking on empty canvas
+            // from clearing selection. Vue Flow's default behavior is correct - let it work.
+            applyNodeChanges(changes)
         },
         handleEdgesChange: applyEdgeChanges,
         handleConnect: (params: import('@vue-flow/core').Connection) => {

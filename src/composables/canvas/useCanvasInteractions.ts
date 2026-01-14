@@ -312,6 +312,7 @@ export function useCanvasInteractions(deps?: {
     findNode: (id: string) => any
     updateNode: (id: string, node: any) => void
     nodes: Ref<any[]>
+    applyNodeChanges?: (changes: any[]) => void
 }) {
     // Vue Flow context hooks with fallback
     let vueFlow: ReturnType<typeof useVueFlow> | null = null
@@ -324,6 +325,7 @@ export function useCanvasInteractions(deps?: {
     const { getNodes } = useCanvasCore()
     const findNode = deps?.findNode || vueFlow?.findNode || (() => null)
     const updateNode = deps?.updateNode || vueFlow?.updateNode || (() => { })
+    const applyNodeChanges = deps?.applyNodeChanges || vueFlow?.applyNodeChanges || (() => { })
     const nodes = (deps?.nodes || vueFlow?.nodes || ref([])) as Ref<any[]>
 
     const canvasStore = useCanvasStore()
@@ -565,11 +567,20 @@ export function useCanvasInteractions(deps?: {
 
                 // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)
                 // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
+                // TASK-272 FIX: Only apply if values actually differ to prevent reactive loops
                 if (targetGroup) {
                     const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
-                    if (Object.keys(smartUpdates).length > 0) {
-                        console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, smartUpdates)
-                        taskStore.updateTask(task.id, smartUpdates, 'SMART-GROUP')
+                    // Filter out updates where the task already has the same value
+                    const actualChanges: any = {}
+                    for (const [key, value] of Object.entries(smartUpdates)) {
+                        const taskKey = key as keyof typeof task
+                        if (task[taskKey] !== value) {
+                            actualChanges[key] = value
+                        }
+                    }
+                    if (Object.keys(actualChanges).length > 0) {
+                        console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, actualChanges)
+                        taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP')
                     }
                 }
 
@@ -745,18 +756,6 @@ export function useCanvasInteractions(deps?: {
 
     // --- SELECTION HANDLERS ---
 
-    /**
-     * TASK-262 FIX: Sync store selection to Vue Flow's internal node state
-     *
-     * Vue Flow manages its own selection state via node.selected property.
-     * Our store's selectedNodeIds and Vue Flow's visual selection (.selected CSS class)
-     * are separate - we must sync them manually.
-     */
-    const syncSelectionToVueFlow = (selectedIds: string[]) => {
-        nodes.value.forEach((n) => {
-            n.selected = selectedIds.includes(n.id)
-        })
-    }
 
     const handleTaskSelect = (task: Task, multiSelect: boolean) => {
         console.log('%c[TASK-262] handleTaskSelect CALLED', 'background: purple; color: white; font-size: 14px;', {
@@ -778,28 +777,45 @@ export function useCanvasInteractions(deps?: {
                 newSelection = [...currentSelection, task.id]
             }
         } else {
-            // TASK-262: Regular click adds to selection (doesn't replace)
-            // Only pane-click should clear selection
-            if (currentSelection.includes(task.id)) {
-                // Already selected - keep current selection unchanged
-                return
-            }
-            newSelection = [...currentSelection, task.id]
+            // Standard behavior: Single click replaces selection
+            // This fixes "multi selects without ctrl+ click" issue
+            newSelection = [task.id]
         }
 
         // Update store
         canvasStore.setSelectedNodes(newSelection)
 
-        // TASK-262 FIX: Also update Vue Flow's internal selection state
-        // This ensures the visual .selected CSS class is applied
-        syncSelectionToVueFlow(newSelection)
+        // TASK-262 FIX: Use applyNodeChanges to update Vue Flow's internal selection state
+        // This is more reliable than manual object mutation and ensures the visual .selected 
+        // CSS class is applied immediately.
+        const selectionChanges = nodes.value.map(node => ({
+            id: node.id,
+            type: 'select' as const,
+            selected: newSelection.includes(node.id)
+        }))
+
+        applyNodeChanges(selectionChanges)
     }
 
     const clearSelection = () => {
+        console.log('%c[DEBUG] clearSelection() CALLED', 'background: orange; color: black; font-size: 16px;')
+
         canvasStore.setSelectedNodes([])
         selectedTask.value = null
-        // TASK-262 FIX: Also clear Vue Flow's internal selection
-        syncSelectionToVueFlow([])
+
+        // TASK-262 FIX: Directly mutate node.selected property
+        // applyNodeChanges doesn't work for programmatic selection changes
+        const selectedBefore = nodes.value.filter(n => n.selected).map(n => n.id.slice(0, 15))
+        console.log('%c[DEBUG] BEFORE - selected nodes:', 'background: orange; color: black;', selectedBefore)
+
+        nodes.value.forEach(node => {
+            if (node.selected) {
+                node.selected = false
+            }
+        })
+
+        const selectedAfter = nodes.value.filter(n => n.selected).map(n => n.id.slice(0, 15))
+        console.log('%c[DEBUG] AFTER direct mutation - selected nodes:', 'background: green; color: white;', selectedAfter)
     }
 
     const updateSelection = (event: MouseEvent) => {
@@ -872,8 +888,13 @@ export function useCanvasInteractions(deps?: {
 
         if (selectedIds.length > 0) {
             canvasStore.setSelectedNodes(selectedIds)
-            // TASK-262 FIX: Also sync to Vue Flow's internal selection
-            syncSelectionToVueFlow(selectedIds)
+            // TASK-262 FIX: Use applyNodeChanges to update Vue Flow's internal selection state
+            const selectionChanges = nodes.value.map(node => ({
+                id: node.id,
+                type: 'select' as const,
+                selected: selectedIds.includes(node.id)
+            }))
+            applyNodeChanges(selectionChanges)
         }
         selectionBox.isVisible = false
     }

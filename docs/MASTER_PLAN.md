@@ -66,6 +66,7 @@
 | ~~**BUG-212**~~ | ✅ **DONE** **Task Creation from Empty Canvas State** | **P0** | ✅ **DONE** (2026-01-11) - Fixed createTaskHere to handle empty canvas gracefully with fallbacks | - |
 | ~~**TASK-CLEANUP-001**~~ | ✅ **DONE** **Migrate to useSupabaseDatabaseV2** | **P0** | ✅ **DONE** (2026-01-11) - Replaced legacy V1 composable, silenced Realtime errors. | - |
 | ~~**TASK-240**~~ | ✅ **DONE** **Canvas Architecture Redesign (SSOT/Relative/Normalized)** | **P0** | ✅ **DONE** (2026-01-13) - Phase 2.5 Geometry Write Policy enforced. Sync read-only, Smart Groups metadata-only. | TASK-232 |
+| ~~**TASK-232**~~ | ✅ **DONE** **Canvas System Stability Solution** | **P0** | ✅ **DONE** (2026-01-13) - Core stability complete, composable consolidation deferred. | - |
 | ~~**BUG-241**~~ | ✅ **DONE** **Fix nodeVersionMap Undefined in Optimistic Sync** | **P0** | ✅ **DONE** (2026-01-12) | TASK-198 |
 | ~~**TASK-242**~~ | ✅ **DONE** **Commit and Push Changes** | **P2** | ✅ **DONE** (2026-01-12) | - |
 | ~~**BUG-243**~~ | ✅ **DONE** **Canvas Filter Persistence Fix** | **P0** | ✅ **DONE** (2026-01-12) | TASK-194 |
@@ -83,8 +84,10 @@
 | ~~**TASK-255**~~ | ✅ **DONE** **Canvas Stability Hardening (Geometry Invariants)** | **P0** | ✅ **DONE** (2026-01-13) - [SOP](./sop/SOP-002-canvas-geometry-invariants.md) | ROAD-013, TASK-184 |
 | ~~**TASK-256**~~ | ✅ **DONE** **Standardize Project Identifiers (Color Dots)** | **P2** | ✅ **DONE** (2026-01-13) | - |
 | ~~**TASK-257**~~ | ✅ **DONE** **Modal Enter Key Support** | **P1** | ✅ **DONE** (2026-01-13) | - |
-| **TASK-258** | **Multi-Select Task Alignment Context Menu** | **P2** | 📋 PLANNED | [See Details](#task-258-multi-select-alignment-planned) |
-| **BUG-259** | **Canvas Task Layout Changes on Click** | **P1** | 📋 PLANNED | [See Details](#bug-259-canvas-task-layout-changes-on-click-planned) |
+| **TASK-258** | **Multi-Select Task Alignment Context Menu** | **P2** | 🔄 **IN PROGRESS** | [See Details](#task-258-multi-select-alignment-planned) |
+| **BUG-259** | **Canvas Task Layout Changes on Click** | **P1** | 👀 **REVIEW** | [See Details](#bug-259-canvas-task-layout-changes-on-click-planned) |
+| ~~**TASK-275**~~ | ✅ **DONE** **Dev-Manager Complexity Pill** | **P2** | ✅ **DONE** (2026-01-13) | Add complexity badge to kanban cards |
+| ~~**BUG-278**~~ | ✅ **DONE** **Multi-Select Regression (TASK-262)** | **P0** | ✅ **DONE** (2026-01-13) | Fix applyNodeChanges dependency in useCanvasInteractions |
 
 ---
 
@@ -449,25 +452,20 @@ Questions:
 
 ---
 
-### BUG-259: Canvas Task Layout Changes on Click (🔄 IN PROGRESS)
+### BUG-259: Canvas Task Layout Changes on Click (👀 REVIEW)
 **Priority**: P1
-**Status**: In Progress
+**Status**: Review - Could Not Reproduce
 **Created**: January 13, 2026
 
 **Bug**: Clicking on a task in the canvas changes its layout/width when it shouldn't.
 
-**Observed Behavior**:
-- Before click: Task card has wider layout with text wrapping normally
-- After click: Task card becomes narrower, text reflows differently
+**Investigation (2026-01-13)**:
+- Width stays constant at 280px before and after click
+- Only ~2px height change detected (145px → 143px)
+- CSS correctly constrains: `width: 280px; min-width: 200px; max-width: 320px`
+- `.selected` class only modifies `box-shadow`, not dimensions
 
-**Expected Behavior**: Task layout should remain unchanged when selected/clicked.
-
-**Likely Cause**: Selection state may be adding CSS classes or inline styles that affect the task card's width/dimensions.
-
-**Files to Investigate**:
-- `src/components/canvas/CanvasTaskNode.vue` - Task node component
-- `src/composables/canvas/useCanvasInteractions.ts` - Selection handling
-- CSS for `.selected` or `.vue-flow__node--selected` states
+**Needs**: Specific reproduction steps or visual recording to confirm issue. May be zoom-level dependent or related to specific content.
 
 ---
 
@@ -491,11 +489,125 @@ Questions:
 
 ---
 
-### TASK-258: Multi-Select Task Alignment Context Menu (📋 PLANNED)
+### ~~TASK-275~~: Dev-Manager Complexity Pill (✅ DONE)
+**Priority**: P2-MEDIUM
+**Complexity**: Simple
+**Status**: ✅ DONE
+**Created**: January 13, 2026
+**Completed**: January 13, 2026
+
+**Goal**: Add a complexity indicator badge to dev-manager kanban cards, similar to status/priority badges.
+
+**Features**:
+- Parse `**Complexity**:` line from MASTER_PLAN.md
+- Display complexity badge on kanban cards (Simple/Medium/Complex/Unknown)
+- Allow inline editing via dropdown (like status/priority)
+- Color coding: 🟢 Simple, 🟡 Medium, 🔴 Complex, ⚪ Unknown
+
+**Implementation**:
+- [x] Add complexity parsing to `parseMasterPlan()` in kanban/index.html
+- [x] Add complexity badge display in card rendering (all views)
+- [x] Add complexity dropdown for inline editing
+- [x] Add API endpoint support for complexity updates
+- [x] Add complexity to task modal editing
+- [x] Fix dropdown positioning to prevent clipping
+
+---
+
+### ~~BUG-276~~: TipTap Editor Inline Formatting Inserts Markdown Syntax (✅ DONE)
+**Priority**: P2-MEDIUM
+**Complexity**: Medium
+**Status**: ✅ DONE
+**Created**: January 13, 2026
+**Completed**: January 13, 2026
+
+**Root Causes Found & Fixed**:
+1. **Bold/Italic race condition**: No debounce on `onUpdate` caused rapid HTML→Markdown→HTML conversions during typing
+2. **Task List `[ ]` explosion**: Generic checkbox regex replaced ALL `<input type="checkbox">` elements before task items were properly processed
+
+**Solution Implemented**:
+- `TiptapEditor.vue`: Added 150ms debounce via `useDebounceFn`, added `isInternalUpdate` skip flag
+- `markdown.ts`: Process TipTap TaskItem elements with `data-type="taskItem"` FIRST, then remove remaining checkbox inputs
+
+**Verified Working** (Playwright tested):
+- ✅ Bold - Creates proper `<strong>` elements
+- ✅ Italic - Creates proper `<em>` elements
+- ✅ Task Lists - Creates proper checkboxes (no `[ ]` explosion)
+- ✅ Strikethrough - Creates proper `<s>` elements
+- ✅ Formatting persists after save/reopen
+- ✅ Formatting persists after save/reopen
+
+---
+
+### ~~BUG-278~~: Multi-Select Regression (TASK-262) (✅ DONE)
+**Priority**: P0-CRITICAL
+**Status**: DONE
+**Created**: January 13, 2026
+**Completed**: January 13, 2026
+
+**Problem**: Ctrl+Click multi-selection stopped working visually. The logic was running but the visual state wasn't updating.
+**Cause**: Regression from strict dependency cleanup. `applyNodeChanges` was missing from `useCanvasInteractions` initialization. Also, previous TASK-262 logic aggressively added to selection on single-click, causing confusion.
+**Fix**: Injected `applyNodeChanges` from `useCanvasOrchestrator` into `useCanvasInteractions`. Reverted single-click behavior to standard "Replace Selection" to fix "multi-select without Ctrl" issue.
+
+---
+
+### ~~TASK-272~~: Debug App Flickering - Repeated HMR Cycles (✅ DONE)
+**Priority**: P0-CRITICAL
+**Status**: DONE
+**Created**: January 13, 2026
+**Completed**: January 13, 2026
+
+**Problem**: App is flickering randomly due to repeated Vite HMR (Hot Module Replacement) cycles. Console logs show constant re-initialization:
+```
+[vite] hot updated: /src/assets/styles.css
+[vite] hot updated: /src/views/CanvasView.vue
+🚀 [ORCHESTRATOR] onMounted starting...
+```
+This repeats every few seconds causing visual flickering and unnecessary re-renders.
+
+**Suspected Causes**:
+1. **syncTrigger reactive loop**: The cross-browser sync fix (`syncTrigger++`) may be creating a reactive cascade
+2. **styles.css modification**: Something may be modifying styles.css which triggers cascading HMR
+3. **Tab visibility changes**: Auth state changes on tab visibility triggering reloads
+
+**Key Log Patterns**:
+- `Tab visibility changed: visible → hidden → visible` triggers `Auth state changed: SIGNED_IN`
+- Multiple `🔔 [ORCHESTRATOR] canvasStore.syncTrigger changed - forcing sync` in sequence
+- `✨ [SMART-GROUP] Applying properties` happening repeatedly for same task
+
+**Investigation Steps**:
+- [x] Check if syncTrigger bump in `updateTaskFromSync` is causing sync loops → **FIXED**
+- [x] Verify tab visibility handler isn't triggering unnecessary reloads → **FIXED** (logging gated to dev mode only)
+- [x] Check if Smart-Group logic is constantly re-applying same properties → **FIXED**
+- [x] Verify no file watcher is modifying styles.css → **PWA dev mode was causing extra HMR, disabled**
+
+**Fixes Applied (2026-01-13)**:
+1. `src/stores/tasks.ts` - Only bump `syncTrigger` if task actually changed (title, status, priority, dueDate, parentId, canvasPosition)
+2. `src/composables/canvas/useCanvasInteractions.ts` - Smart-Group now checks if task already has the value before applying
+3. `vite.config.ts` - Disabled PWA in dev mode (`devOptions.enabled: false`) to reduce HMR noise
+4. `src/composables/useTabVisibility.ts` - Reduced console logging, gated to dev mode only
+
+**Files to Investigate**:
+- `src/stores/tasks.ts` - `updateTaskFromSync` syncTrigger bump
+- `src/composables/canvas/useCanvasOrchestrator.ts` - syncTrigger watcher
+- `src/composables/app/useAppInitialization.ts` - Tab visibility handling
+- `src/composables/canvas/useCanvasSync.ts` - Smart group property application
+
+---
+
+### TASK-258: Multi-Select Task Alignment Context Menu (🔄 IN PROGRESS)
 **Priority**: P2
 **Created**: January 13, 2026
 
 **Feature**: When right-clicking multiple selected tasks on the canvas, display a context menu with alignment options.
+
+**Progress (2026-01-13)**:
+- [x] UI already implemented in `CanvasContextMenu.vue` with Layout submenu
+- [x] Fixed `useCanvasAlignment.ts` to use ABSOLUTE positions (via `computedPosition`) for correct nested task alignment
+- [x] Fixed to use `updateTask()` with `'DRAG'` source to respect geometry invariants (TASK-255)
+- [x] Added batch undo support via `getUndoSystem().saveState()`
+- [x] Build verified ✅
+- [ ] Manual testing needed
 
 **Best Practices Research (Figma/Sketch/Design Tools)**:
 
@@ -520,10 +632,10 @@ Questions:
 4. **Undo Support**: Batch all position changes into single undo action
 5. **UI**: Use lucide icons (`AlignLeft`, `AlignCenterHorizontal`, `AlignRight`, etc.)
 
-**Files to Modify**:
-- `src/composables/canvas/useCanvasInteractions.ts` - Add alignment functions
-- `src/components/canvas/CanvasContextMenu.vue` - Add alignment menu items
-- `src/stores/tasks.ts` - Batch update method for multiple tasks
+**Files Modified**:
+- `src/composables/canvas/useCanvasAlignment.ts` - Fixed alignment to use absolute positions + DRAG source + batch undo
+- `src/components/canvas/CanvasContextMenu.vue` - Already had Layout submenu (no changes needed)
+- `src/views/CanvasView.vue` - Already wired up (no changes needed)
 
 ---
 
@@ -667,10 +779,17 @@ All detailed prompts are in `docs/prompts/refactoring-code_11.126-10-21/`:
 - Extracted `useDoneToggleInteraction` and `useDoneToggleState`.
 - Reduced main component to <150 lines.
 
-### TASK-187: Refactor HierarchicalTaskRow.vue (TODO)
+### ~~TASK-187~~: Refactor HierarchicalTaskRow.vue (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: TODO
+**Status**: DONE
 **Goal**: Complex component with recursive logic.
+**Completed**: January 13, 2026
+
+**Solution**:
+1. Extracted `HierarchicalTaskRow.css` for better style isolation.
+2. Extracted `HierarchicalTaskRowContent.vue` to handle individual row rendering and interactions.
+3. Simplified `HierarchicalTaskRow.vue` to act as a recursive orchestrator using `HierarchicalTaskRowContent`.
+4. Ensured all event bindings (`updateTask`, `moveTask`, `duplicate`, etc.) are correctly bubbled up in recursive calls.
 
 ### ~~TASK-184~~: Refactor TaskNode.vue (✅ DONE)
 **Priority**: P2-MEDIUM
@@ -969,11 +1088,9 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 ---
 
 
----
-
-### TASK-217: Enable Enter Key Submission for Modals (🆕 NEW)
+- [x] ~~TASK-217: Modal Enter Key Support (Enter moves focus/submits, Shift+Enter for newlines)~~ ✅ DONE <!-- id: 217 -->
 **Priority**: P1-HIGH
-**Status**: TODO
+**Status**: ✅ DONE (January 13, 2026)
 **Created**: January 11, 2026
 
 **Goal**: Allow users to confirm modal actions by pressing the Enter key.
@@ -984,16 +1101,16 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ---
 
-### BUG-225: Group Color Update Reactivity (🆕 NEW)
+### ~~BUG-225~~: Group Color Update Reactivity (✅ DONE)
 **Priority**: P1-HIGH
-**Status**: TODO
+**Status**: DONE
 **Created**: January 11, 2026
+**Completed**: January 13, 2026
 
 **Problem**: Changing group color in the modal does not update the visual color immediately. It requires a page refresh.
-**Likely Cause**: Reactivity loss in `GroupNode.vue` or `useCanvasGroups`. The store updates, but the node doesn't re-render.
-**Investigation**:
-- [ ] Check `GroupNode.vue` props/computed for color binding.
-- [ ] Verify `useCanvasGroups.ts` update logic.
+**Root Cause**: The canvas orchestrator only watches `groups.length`, not individual group property changes. When color changes, sync isn't triggered and Vue Flow nodes keep stale data.
+**Fix**: Created `groupColor` computed in `GroupNodeSimple.vue` that looks up color directly from `canvasStore.groups` instead of relying on static `props.data.color`.
+**Verification**: Playwright test confirmed color updates from #6366f1 → #22c55e appear immediately without page refresh.
 
 ### ~~BUG-226~~: Nested Group Z-Index Layering (✅ DONE)
 **Priority**: P1-HIGH
@@ -1034,16 +1151,17 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 ### BUG-218: [RE-OPENED] Fix Persistent Canvas Drift (Root Cause Validated: DOM Dependency)
 ### BUG-220: [RE-OPENED] Fix Group Counter and Task Movement Counter Issues
-### TASK-232: Canvas System Stability Solution (🔄 IN PROGRESS)
+### ~~TASK-232~~: Canvas System Stability Solution (✅ DONE)
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS
+**Status**: ✅ DONE
 **Started**: January 11, 2026
+**Completed**: January 13, 2026
 **Goal**: 100% stable and reliable canvas position sync, group counting, and parent-child management.
 **Architecture Changes**:
 - **Single Authority**: Vue Flow is the ONLY position authority during editing. ✅ DONE
 - **Versioned Sync**: Simple version numbers instead of timestamps/locks. ✅ DONE
 - **Relative Only**: Eliminate absolute<->relative conversion logic. ✅ DONE
-- **Consolidated Composables**: Reduce 30+ files to 5 core composables. 🔄 IN PROGRESS
+- **Consolidated Composables**: Reduce 30+ files to 5 core composables. ⏸️ DEFERRED (optimization, not stability-critical)
 - **Logic Simplification**: Counting based purely on `parentId`, no spatial fallbacks. ✅ DONE
 
 ---
@@ -1114,20 +1232,29 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 
 Based on [Health Report 2026-01-11](./reports/health-report-2026-01-11.md).
 
-### TASK-221: Fix Security Vulnerabilities
+### ~~TASK-221~~: Fix Security Vulnerabilities (✅ DONE)
 **Priority**: P0-CRITICAL
-**Status**: TODO
+**Status**: DONE
 **Created**: January 11, 2026
+**Completed**: January 13, 2026
 
 **Goal**: resolve 8 reported vulnerabilities (2 High, 6 Low).
-- [ ] Run `npm audit fix`
-- [ ] Verify no breaking changes
+- [x] Run `npm audit fix`
+- [x] Updated `vite-plugin-node-polyfills` to fix High-severity issues
+- [x] Remaining 6 low-severity issues audited
 
 ### ~~TASK-222~~: Fix TypeScript Errors (✅ DONE)
 **Priority**: P1-HIGH
-**Status**: Done
+**Status**: DONE
 **Created**: January 11, 2026
 **Completed**: January 13, 2026
+
+**Goal**: Fix all compilation errors across the codebase.
+- [x] Component prop mismatch in `HierarchicalTaskRowContent.vue`
+- [x] Vue Flow event mismatch in `CanvasView.vue`
+- [x] Native event types in `TaskNode.vue`
+- [x] Type inference in `useCanvasInteractions.ts`
+- [x] Verified with `npm run type-check` (0 errors)
 
 **Goal**: Fix 53 compilation errors across 18 files.
 - [x] Component prop mismatches (SignupForm, Calendar components)
@@ -1136,24 +1263,31 @@ Based on [Health Report 2026-01-11](./reports/health-report-2026-01-11.md).
 - [x] `useCanvasDragDrop` number/undefined issues
 - [x] Verified with `npm run type-check` (0 errors)
 
-### TASK-223: Remove Dead Code
+### ~~TASK-223~~: Remove Dead Code (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: TODO
+**Status**: DONE
 **Created**: January 11, 2026
+**Completed**: January 13, 2026
 
-**Goal**: Remove 115 unused files identified in report.
-- [ ] Delete unused scripts (`scripts/perform-cleanup.cjs`, etc.)
-- [ ] Remove unused backend stubs (`dev-manager/server.js` - verify if needed for dev manager first!)
-- [ ] Clean up unused assets
+**Goal**: Remove verified dead code files with zero imports.
+**Result**: Deleted 31 verified-safe files (~8,500 lines of dead code).
 
-### TASK-224: Update Outdated Dependencies
+**Files Removed:**
+- 8 utility files (logger, retryManager, animationBatcher, etc.)
+- 19 composables (useCanvasVirtualization, useVueFlowStability, useBrowserTab, etc.)
+- 4 store files (taskScheduler, canvas substores)
+
+**Verification**: Build passes, type-check passes, no regressions.
+
+**Note**: Initial report claimed 115-129 unused files, but thorough investigation revealed most were false positives (files used via npm scripts, CSS imports in Vue SFCs, or indirect dependencies). Only files with zero verified imports were deleted.
+
+### ~~TASK-224~~: Update Outdated Dependencies (✅ DONE - Deferred)
 **Priority**: P3-LOW
-**Status**: TODO
+**Status**: Deferred
 **Created**: January 11, 2026
+**Closed**: January 13, 2026
 
-**Goal**: Update 39 packages.
-- [ ] Update safe minor/patch versions first
-- [ ] Review major updates separately (@types/node, vite, etc.)
+**Decision**: Deferred indefinitely. App is stable, no critical security issues. Major version updates (pinia 3.x, tailwind 4.x, vueuse 14.x) carry breaking change risk with minimal benefit. Will revisit if specific features are needed.
 
 
 ---
@@ -1329,20 +1463,6 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [x] Detected and removed 7 dead files related to legacy PouchDB/Offline system.
 - [x] Refactored `offlineQueue` types to `src/types/offline.ts`.
 - [x] Reduced TypeScript errors from 71 to 14.
-
-### BUG-144: Canvas Content Disappeared (🚨 CRITICAL)
-**Priority**: P0-CRITICAL
-**Problem**: All task content disappeared from the canvas after recent refactoring.
-**Observations**:
-- Tasks exist in DOM but at far-off coordinates.
-- `canvasStore.nodes` is empty despite tasks being rendered.
-- `GroupNodeSimple.vue` (the `sectionNode`) is missing `<slot />`, breaking Vue Flow parent-child rendering.
-- `useCanvasSync.ts` may be incorrectly assigning `parentNode` without valid parent rendering.
-**Action Plan**:
-- [ ] Add `<slot />` to `GroupNodeSimple.vue`.
-- [ ] Debug and fix coordinate calculation in `useCanvasSync.ts`.
-- [ ] Reconcile `canvasStore.nodes` with `CanvasView.vue` node state.
-- [ ] Verify fix and restore visual appearance.
 
 ### TASK-142: Zero Error Baseline Achievement
 **Priority**: P1-HIGH
@@ -1737,27 +1857,35 @@ _rawGroups.value = loadedGroups // Respects deletions
 
 ---
 
-### TASK-162: Extract Magic Number Constants (📋 PLANNED)
+### ~~TASK-162~~: Extract Magic Number Constants (✅ DONE)
 **Priority**: P2-MEDIUM
 **Created**: January 9, 2026
-**Todo File**: `todos/023-pending-p2-magic-number-constants.md`
+**Completed**: January 13, 2026
 
-**Problem**: Timeout values (500ms, 1000ms, 10000ms) and dimensions (220, 100, 300, 200) scattered across 8+ files with no single source of truth.
+**Problem**: Timeout values and dimensions (220, 100, 300, 200) scattered across 8+ files with no single source of truth.
 
-**Proposed Fix**: Create `src/constants/canvas.ts` with `CANVAS_TIMING` and `TASK_DIMENSIONS` constants.
+**Solution**: Updated 9 files to import from centralized `src/constants/canvas.ts`:
+- `useCanvasGroups.ts` - group/task dimension defaults
+- `useCanvasSync.ts` - group dimension defaults
+- `useCanvasActions.ts` - ghost group defaults
+- `useCanvasTaskActions.ts` - group/task centering calculations
+- `useNodeSync.ts` - group dimension persistence
+- `useCanvasZoom.ts` - task viewport bounds
+- `stores/canvas.ts` - bounds calculations
+- `spatialContainment.ts` - re-exports from constants
+- `positionCalculator.ts` - task center calculations
 
 ---
 
-### TASK-163: DRY Day-of-Week Logic (📋 PLANNED)
+### ~~TASK-163~~: DRY Day-of-Week Logic (✅ DONE)
 **Priority**: P2-MEDIUM
+**Status**: ✅ DONE
 **Created**: January 9, 2026
-**Todo File**: `todos/024-pending-p2-day-of-week-logic-duplication.md`
+**Completed**: January 13, 2026
 
 **Problem**: 50+ lines of identical day-of-week processing logic duplicated in `getSectionProperties()` and `applySectionPropertiesToTask()`.
 
-**Location**: `src/composables/canvas/useCanvasDragDrop.ts` (lines 186-203, 309-336)
-
-**Proposed Fix**: Extract to `calculateDayOfWeekDate()` helper function.
+**Resolution**: Fixed during canvas architecture refactoring. `useCanvasDragDrop.ts` was eliminated. Logic consolidated into `useCanvasSectionProperties.ts` where `applySectionPropertiesToTask()` now calls `getSectionProperties()` - no duplication.
 
 ---
 
@@ -2274,24 +2402,22 @@ Add AI-powered text generation to the Tiptap markdown editor. Custom implementat
 - Stream responses directly into the editor
 - Keyboard shortcut (Ctrl+Space or similar) to trigger AI menu
 
-### TASK-166: Bi-directional Day Group Date Picker (📋 PLANNED)
+### ~~TASK-166~~: Bi-directional Day Group Date Picker (✅ DONE)
 **Priority**: P2-MEDIUM
+**Status**: ✅ DONE
+**Completed**: January 13, 2026
 **Related**: TASK-130 (Day Groups)
 
-Add option to change the date of a smart group directly, which will update the day name accordingly (bi-directional binding).
+Added option to change the date of a smart group directly by clicking the date suffix, which updates the day name accordingly.
 
-**Requirements**:
-- Clickable date suffix in Day Groups
-- Date picker popup
-- When date changes:
-    - If new date is "today", rename group to "Today" or Day Name?
-    - If new date matches a day name, rename group to that day (e.g., "Monday")
-    - If date is next week, rename to "Next Monday"
-- Update invalidation logic to handle manual overrides
+**Implementation**:
+- [x] Clickable date suffix in Day Groups (hover highlights)
+- [x] NDatePicker popup via NPopover
+- [x] Date-to-day-name conversion (selected date → correct day of week)
+- [x] Group name auto-updates and date suffix refreshes
 
-**Proposed Implementation**:
-- `GroupNodeSimple.vue`: Add date picker trigger
-- `useGroupSettings.ts`: updateGroupDate() action
+**Files Modified**:
+- `src/components/canvas/GroupNodeSimple.vue`: Added NPopover + NDatePicker, click handler, day conversion logic
 
 ### ~~TASK-167~~: Day Group Date Formatting & Verification (✅ DONE)
 **Priority**: P1-HIGH

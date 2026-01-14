@@ -43,7 +43,6 @@
       @dragover.prevent
       @contextmenu.prevent="handleCanvasRightClick"
     >
-      
       <!-- Loading overlay while canvas initializes -->
       <CanvasLoadingOverlay 
         v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
@@ -53,8 +52,8 @@
       <!-- Empty state when no tasks exist -->
       <CanvasEmptyState
         v-if="hasNoTasks"
-        @addTask="handleAddTask"
-        @createGroup="createGroup()"
+        @add-task="handleAddTask"
+        @create-group="createGroup()"
       />
 
       <!-- Filter Status Indicator -->
@@ -68,125 +67,146 @@
 
       <!-- Canvas Toolbar - Actions & Filters (MUST be after InboxPanel for z-index stacking) -->
       <CanvasToolbar
-        @addTask="handleAddTask"
-        @createGroup="handleToolbarCreateGroup"
+        @add-task="handleAddTask"
+        @create-group="handleToolbarCreateGroup"
       />
 
       <!-- Canvas Container -->
       <div
         class="canvas-container"
-        @mousedown.capture="handleMouseDown"
+        @mousedown="handleMouseDown"
         @mousemove="handleMouseMove"
         @mouseup="handleMouseUp"
         @click="handleCanvasContainerClick"
       >
-          <VueFlow
-            ref="vueFlowRef"
-            :nodes="nodes"
-            :edges="edges"
-            :class="{ 'canvas-ready': isCanvasReady }"
-            class="vue-flow-container"
-            :node-types="nodeTypes"
-            edges-focusable
-            :elevate-nodes-on-select="false"
-            elevate-edges-on-select
-            zoom-on-scroll
-            :pan-on-scroll="false"
-            zoom-on-pinch
-            :pan-on-drag="!shift && !control && !meta"
-            :nodes-draggable="!shift && !control && !meta"
-            :multi-selection-key-code="['Control', 'Meta']"
-            snap-to-grid
-            :snap-grid="[16, 16]"
-            :node-extent="dynamicNodeExtent"
-            :min-zoom="0.05"
-            :max-zoom="4.0"
-            :fit-view-on-init="false"
-            :connect-on-drag-nodes="true"
-            :zoom-scroll-sensitivity="1.0"
-            :zoom-activation-key-code="null"
-            prevent-scrolling
-            :default-viewport="initialViewport"
-            dir="ltr"
-            @pane-ready="onPaneReady"
-            @node-click="handleNodeClick"
-            @node-drag-start="handleNodeDragStart"
-            @node-drag="handleNodeDrag"
-            @node-drag-stop="handleNodeDragStop"
-            @nodes-change="handleNodesChange"
-            @edges-change="handleEdgesChange"
-            @selection-change="handleSelectionChange"
-            @pane-click="handlePaneClick"
-            @pane-context-menu="handlePaneContextMenu"
-            @node-context-menu="handleNodeContextMenu"
-            @edge-context-menu="handleEdgeContextMenu"
-            @connect="handleConnect"
-            @keydown="handleKeyDown"
-          >
-            <CanvasSelectionBox :selection-box="selectionBox" />
-            <Background
-              pattern-color="#e5e7eb"
-              pattern="dots"
-              :gap="16"
-              :size="1"
-            />
-
-            <!-- Section Node Template -->
-            <template #node-sectionNode="nodeProps">
-              <GroupNodeSimple
-                v-memo="[nodeProps.id, nodeProps.data, nodeProps.selected, nodeProps.dragging]"
-                :id="nodeProps.id"
-                :data="nodeProps.data"
-                :selected="nodeProps.selected"
-                :dragging="nodeProps.dragging"
-                @update="(data) => handleSectionUpdate(nodeProps.id, data)"
-                @collect="collectTasksForSection"
-                @context-menu="handleSectionContextMenu"
-                @open-settings="handleOpenSectionSettings"
-                @resize-start="handleSectionResizeStart"
-                @resize="handleSectionResize"
-                @resize-end="handleSectionResizeEnd"
-              />
-            </template>
-
-
-
-              <!-- Custom Task Node Template -->
-              <!-- TASK-262: Removed v-memo temporarily to debug click handler issue -->
-              <template #node-taskNode="nodeProps">
-                <TaskNode
-                  :task="nodeProps.data.task"
-                  :is-selected="nodeProps.selected"
-                  :is-dragging="nodeProps.dragging"
-                  :multi-select-mode="canvasStore.multiSelectMode"
-                  :show-priority="canvasStore.showPriorityIndicator"
-                  :show-status="canvasStore.showStatusBadge"
-                  :show-duration="canvasStore.showDurationBadge"
-                  :show-schedule="canvasStore.showScheduleBadge"
-                  @edit="handleEditTask"
-                  @select="handleTaskSelect"
-                  @context-menu="handleTaskContextMenu"
-                />
-              </template>
-
-              <!-- SVG markers for connection arrows -->
-              <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
-                <defs>
-                  <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                    <polygon points="0 0, 10 3, 0 6" fill="var(--border-secondary)" />
-                  </marker>
-                  <marker id="arrowhead-hover" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                    <polygon points="0 0, 10 3, 0 6" fill="var(--color-navigation)" />
-                  </marker>
-                </defs>
-              </svg>
-            </VueFlow>
-
-
-          <CanvasLoadingOverlay
-            v-if="!isCanvasReady"
-            message="Initializing Canvas..."
+        <VueFlow
+          ref="vueFlowRef"
+          :nodes="nodes"
+          :edges="edges"
+          :class="{ 'canvas-ready': isCanvasReady }"
+          class="vue-flow-container"
+          :node-types="nodeTypes"
+          edges-focusable
+          :elevate-nodes-on-select="false"
+          elevate-edges-on-select
+          zoom-on-scroll
+          :pan-on-scroll="false"
+          zoom-on-pinch
+          :pan-on-drag="!shift && !control && !meta"
+          :nodes-draggable="!shift && !control && !meta"
+          :multi-selection-key-code="['Control', 'Meta']"
+          snap-to-grid
+          :snap-grid="[16, 16]"
+          :node-extent="dynamicNodeExtent"
+          :min-zoom="0.05"
+          :max-zoom="4.0"
+          :fit-view-on-init="false"
+          :connect-on-drag-nodes="true"
+          :zoom-scroll-sensitivity="1.0"
+          :zoom-activation-key-code="null"
+          prevent-scrolling
+          :default-viewport="initialViewport"
+          dir="ltr"
+          @pane-ready="onPaneReady"
+          @node-click="handleNodeClick"
+          @node-double-click="handleNodeDoubleClick"
+          @node-drag-start="handleNodeDragStart"
+          @node-drag="handleNodeDrag"
+          @node-drag-stop="handleNodeDragStop"
+          @nodes-change="handleNodesChange"
+          @edges-change="handleEdgesChange"
+          @selection-change="handleSelectionChange"
+          @pane-click="handlePaneClick"
+          @pane-context-menu="handlePaneContextMenu"
+          @node-context-menu="handleNodeContextMenu"
+          @edge-context-menu="handleEdgeContextMenu"
+          @connect="handleConnect"
+          @connect-start="handleConnectStart"
+          @connect-end="handleConnectEnd"
+          @keydown="handleKeyDown"
+        >
+          <CanvasSelectionBox :selection-box="selectionBox" />
+          <Background
+            pattern-color="#e5e7eb"
+            pattern="dots"
+            :gap="16"
+            :size="1"
           />
+
+          <!-- Section Node Template -->
+          <template #node-sectionNode="nodeProps">
+            <GroupNodeSimple
+              :id="nodeProps.id"
+              v-memo="[nodeProps.id, nodeProps.data, nodeProps.selected, nodeProps.dragging]"
+              :data="nodeProps.data"
+              :selected="nodeProps.selected"
+              :dragging="nodeProps.dragging"
+              @update="(data) => handleSectionUpdate(nodeProps.id, data)"
+              @collect="collectTasksForSection"
+              @context-menu="handleSectionContextMenu"
+              @open-settings="handleOpenSectionSettings"
+              @resize-start="handleSectionResizeStart"
+              @resize="handleSectionResize"
+              @resize-end="handleSectionResizeEnd"
+            />
+          </template>
+
+
+
+          <!-- Custom Task Node Template -->
+          <!-- TASK-262: Using onSelect callback prop instead of @select emit -->
+          <!-- Vue's emit system doesn't work reliably in Vue Flow custom nodes -->
+          <template #node-taskNode="nodeProps">
+            <TaskNode
+              :task="nodeProps.data.task"
+              :is-selected="nodeProps.selected"
+              :is-dragging="nodeProps.dragging"
+              :multi-select-mode="canvasStore.multiSelectMode"
+              :show-priority="canvasStore.showPriorityIndicator"
+              :show-status="canvasStore.showStatusBadge"
+              :show-duration="canvasStore.showDurationBadge"
+              :show-schedule="canvasStore.showScheduleBadge"
+              :select-callback="handleTaskSelect"
+              @edit="handleEditTask"
+              @select="handleTaskSelect"
+              @context-menu="handleTaskContextMenu"
+            />
+          </template>
+
+          <!-- SVG markers for connection arrows -->
+          <svg style="position: absolute; width: 0; height: 0; pointer-events: none;">
+            <defs>
+              <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="10"
+                refX="9"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <polygon points="0 0, 10 3, 0 6" fill="var(--border-secondary)" />
+              </marker>
+              <marker
+                id="arrowhead-hover"
+                markerWidth="10"
+                markerHeight="10"
+                refX="9"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <polygon points="0 0, 10 3, 0 6" fill="var(--color-navigation)" />
+              </marker>
+            </defs>
+          </svg>
+        </VueFlow>
+
+
+        <CanvasLoadingOverlay
+          v-if="!isCanvasReady"
+          message="Initializing Canvas..."
+        />
       </div>
     </div>
 
@@ -232,7 +252,7 @@
 
 <script setup lang="ts">
 import { markRaw } from 'vue'
-import { VueFlow } from '@vue-flow/core'
+import { VueFlow, type NodeMouseEvent, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -293,7 +313,7 @@ const {
   closeEditModal, closeQuickTaskCreate, handleQuickTaskCreate, closeBatchEditModal,
   handleBatchEditApplied, closeSectionSettingsModal, handleSectionSettingsSave,
   closeGroupModal, handleGroupCreated, handleGroupUpdated, closeGroupEditModal,
-  handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect,
+  handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect, handleConnectStart, handleConnectEnd,
   handleEdgesChange, handleNodesChange,
   handleNodeContextMenu, handleEdgeContextMenu,
   
@@ -324,13 +344,6 @@ const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: any }) =
   // Type guard for mouse event
   const mouseEvent = event.event as MouseEvent
 
-  console.log('%c[TASK-262] NODE CLICK', 'background: green; color: white; font-size: 14px;', {
-    nodeId: nodeId?.slice(0, 30),
-    currentSelection: currentSelection.length,
-    ctrlKey: mouseEvent.ctrlKey,
-    metaKey: mouseEvent.metaKey
-  })
-
   let newSelection: string[]
 
   // If Ctrl/Cmd is held, toggle selection
@@ -343,14 +356,8 @@ const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: any }) =
       newSelection = [...currentSelection, nodeId]
     }
   } else {
-    // Regular click - ADD to selection (don't replace)
-    // This is the key change for TASK-262
-    if (!currentSelection.includes(nodeId)) {
-      newSelection = [...currentSelection, nodeId]
-    } else {
-      // Already selected - keep current selection
-      newSelection = currentSelection
-    }
+    // Standard behavior: Single click replaces selection
+    newSelection = [nodeId]
   }
 
   // Update store
@@ -361,29 +368,13 @@ const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: any }) =
   nodes.value.forEach((n: any) => {
     n.selected = newSelection.includes(n.id)
   })
-
-  console.log('%c[TASK-262] Selection updated', 'background: teal; color: white;', {
-    newSelection: newSelection.length,
-    nodesUpdated: nodes.value.length
-  })
 }
 
 const handleSelectionChange = (params: any) => {
-  // TASK-262: We manage selection ourselves in handleNodeClick
-  // Only process this event when explicitly allowed (pane click to clear all)
-  if (!canvasStore.allowBulkDeselect) {
-    // Ignore Vue Flow's selection changes - we handle them ourselves
-    return
-  }
-
+  // TASK-262 FIX: Accept all selection changes from Vue Flow
+  // This allows clicking on empty space to clear selection
   const newSelection = params?.nodes?.map((n: any) => n.id) ?? []
-
-  console.log('%c[TASK-262] @selection-change (bulk deselect)', 'background: orange; color: black;', {
-    new: newSelection.length
-  })
-
   canvasStore.selectedNodeIds = newSelection
-  canvasStore.allowBulkDeselect = false
 }
 
 // UI Wrappers
@@ -399,6 +390,13 @@ const handleToggleFocusMode = () => uiStore.toggleFocusMode()
 const handleSectionUpdate = (id: string, data: any) => canvasStore.updateSection(id, data)
 const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
 const handleEditTask = (task: any) => { selectedTask.value = task; isEditModalOpen.value = true; closeCanvasContextMenu() }
+// Handle double-click on nodes to open edit modal for tasks
+const handleNodeDoubleClick = ({ event, node }: NodeMouseEvent) => {
+    // Only handle task nodes, not group nodes
+    if (node.type === 'taskNode' && node.data?.task) {
+        handleEditTask(node.data.task)
+    }
+}
 const handleTaskContextMenu = (event: MouseEvent, task: any) => {
     if (event) event.preventDefault()
     // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
@@ -434,4 +432,5 @@ if (process.env.NODE_ENV === 'development' || (window as any).PLAYWRIGHT_TEST) {
 </script>
 
 <style scoped src="@/assets/canvas-view-layout.css"></style>
+
 <style src="@/assets/canvas-view-overrides.css"></style>

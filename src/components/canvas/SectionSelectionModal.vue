@@ -1,6 +1,11 @@
 <template>
   <Teleport to="body">
-    <div v-if="isOpen" class="modal-overlay" @click="$emit('cancel')">
+    <div
+      v-if="isOpen"
+      class="modal-overlay"
+      @click="$emit('cancel')"
+      @keydown="handleKeydown"
+    >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2 class="modal-title">
@@ -48,6 +53,7 @@ import { ref, watch } from 'vue'
 import { X, Layout } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 import SectionSelector from './SectionSelector.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
 
 interface Props {
   isOpen: boolean
@@ -73,6 +79,30 @@ watch(() => props.isOpen, (val) => {
 const confirmMove = () => {
   if (tempSectionId.value) {
     emit('confirm', tempSectionId.value)
+  }
+}
+
+// Keyboard handler for Enter/Escape
+const handleKeydown = (event: KeyboardEvent) => {
+  // Escape - close modal
+  if (event.key === 'Escape') {
+    emit('cancel')
+    return
+  }
+
+  // Enter - confirm (if valid)
+  if (event.key === 'Enter') {
+    // Don't submit if in textarea or contenteditable
+    if (isTextAreaOrContentEditable(event.target)) return
+
+    // Don't submit with Shift+Enter
+    if (event.shiftKey) return
+
+    // Submit if selection is valid
+    if (tempSectionId.value) {
+      event.preventDefault()
+      confirmMove()
+    }
   }
 }
 </script>

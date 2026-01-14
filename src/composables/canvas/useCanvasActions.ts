@@ -4,6 +4,7 @@ import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { CANVAS } from '@/constants/canvas'
 
 // Imported Composables
 import { useCanvasGroupActions } from './useCanvasGroupActions'
@@ -99,7 +100,7 @@ export function useCanvasActions(
                 id: sectionId,
                 name: (event.node.data?.name as string) || 'Unknown Group (Ghost)',
                 color: (event.node.data?.color as string) || '#6366f1',
-                position: { x: 0, y: 0, width: 300, height: 200 },
+                position: { x: 0, y: 0, width: CANVAS.DEFAULT_GROUP_WIDTH, height: CANVAS.DEFAULT_GROUP_HEIGHT },
                 isCollapsed: false,
                 type: 'custom',
                 layout: 'freeform',

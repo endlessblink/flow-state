@@ -29,7 +29,7 @@ export const getInnerRect = (rect: Rect): Rect => {
 /**
  * Calculates the center point of a task node.
  */
-export const getTaskCenter = (x: number, y: number, width: number = 220, height: number = 100): Position => {
+export const getTaskCenter = (x: number, y: number, width: number = CANVAS.DEFAULT_TASK_WIDTH, height: number = CANVAS.DEFAULT_TASK_HEIGHT): Position => {
     return {
         x: x + (width / 2),
         y: y + (height / 2)

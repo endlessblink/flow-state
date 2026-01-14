@@ -94,7 +94,7 @@
           zoom-on-pinch
           :pan-on-drag="!shift && !control && !meta"
           :nodes-draggable="!shift && !control && !meta"
-          :multi-selection-key-code="['Control', 'Meta']"
+          :multi-selection-key-code="['Control', 'Meta', 'Shift']"
           snap-to-grid
           :snap-grid="[16, 16]"
           :node-extent="dynamicNodeExtent"
@@ -120,6 +120,7 @@
           @pane-context-menu="handlePaneContextMenu"
           @node-context-menu="handleNodeContextMenu"
           @edge-context-menu="handleEdgeContextMenu"
+          @edge-double-click="handleEdgeDoubleClick"
           @connect="handleConnect"
           @connect-start="handleConnectStart"
           @connect-end="handleConnectEnd"
@@ -315,7 +316,7 @@ const {
   closeGroupModal, handleGroupCreated, handleGroupUpdated, closeGroupEditModal,
   handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect, handleConnectStart, handleConnectEnd,
   handleEdgesChange, handleNodesChange,
-  handleNodeContextMenu, handleEdgeContextMenu,
+  handleNodeContextMenu, handleEdgeContextMenu, handleEdgeDoubleClick,
   
   // From consolidated features
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
@@ -343,11 +344,19 @@ const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: any }) =
 
   // Type guard for mouse event
   const mouseEvent = event.event as MouseEvent
+  
+  console.log('[DEBUG] CanvasView handleNodeClick', {
+    nodeId,
+    ctrl: mouseEvent.ctrlKey,
+    meta: mouseEvent.metaKey,
+    shift: mouseEvent.shiftKey,
+    currentSelection
+  })
 
   let newSelection: string[]
 
-  // If Ctrl/Cmd is held, toggle selection
-  if (mouseEvent.ctrlKey || mouseEvent.metaKey) {
+  // If Ctrl/Cmd OR Shift is held, toggle selection
+  if (mouseEvent.ctrlKey || mouseEvent.metaKey || mouseEvent.shiftKey) {
     if (currentSelection.includes(nodeId)) {
       // Deselect this node
       newSelection = currentSelection.filter(id => id !== nodeId)

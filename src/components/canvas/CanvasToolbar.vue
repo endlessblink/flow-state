@@ -61,7 +61,6 @@
 </template>
 
 <script setup lang="ts">
-import { Teleport } from 'vue'
 import { Plus, FolderPlus, Calendar, CalendarX, Eye, EyeOff } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 

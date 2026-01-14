@@ -28,14 +28,13 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
 
 defineProps<{
   title: string
   isCompleted: boolean
   isHovered: boolean
   isSelected: boolean
-  titleAlignmentClasses: Object | String
+  titleAlignmentClasses: object | string
   hasSubtasks: boolean
   completedSubtaskCount: number
   totalSubtasks: number

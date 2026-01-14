@@ -8,6 +8,8 @@ export function useTaskNodeActions(
         isSelected?: boolean;
         isConnecting?: boolean;
         isDragging?: boolean;
+        // TASK-262: Callback prop for selection - bypasses Vue's broken emit in Vue Flow
+        selectCallback?: (task: Task, multiSelect: boolean) => void;
     },
     emit: {
         (e: 'edit', task: Task): void;
@@ -51,17 +53,35 @@ export function useTaskNodeActions(
         }
     }
 
+    // TASK-262: Helper to call selection - uses callback prop if available, falls back to emit
+    const triggerSelect = (task: Task, multiSelect: boolean) => {
+        if (props.selectCallback) {
+            // Use callback prop (works in Vue Flow custom nodes)
+            props.selectCallback(task, multiSelect)
+        } else {
+            // Fallback to emit (works outside Vue Flow)
+            emit('select', task, multiSelect)
+        }
+    }
+
     // Interaction Handlers
     const handleClick = (event: MouseEvent) => {
         if (!props.task) return
 
-        // BUG-007: Only Ctrl/Cmd triggers multi-select toggle
-        const isMultiSelectClick = event.ctrlKey || event.metaKey
+        // BUG-007 + BUG-FIX: Ctrl/Cmd OR Shift triggers multi-select toggle
+        const isMultiSelectClick = event.ctrlKey || event.metaKey || event.shiftKey
+
+        console.log('[DEBUG] TaskNode Click', {
+            id: props.task.id,
+            ctrl: event.ctrlKey,
+            meta: event.metaKey,
+            shift: event.shiftKey,
+            isMultiSelect: isMultiSelectClick
+        })
 
         // Prevent edit modal when connecting to avoid conflicts
         if (props.isConnecting) {
-            // Don't emit edit event when connecting, just handle selection
-            emit('select', props.task, isMultiSelectClick)
+            triggerSelect(props.task, isMultiSelectClick)
             return
         }
 
@@ -69,8 +89,9 @@ export function useTaskNodeActions(
         // CRITICAL: stopPropagation prevents Vue Flow from processing this click
         // and overriding our custom multi-select behavior
         if (isMultiSelectClick) {
+            console.log('[DEBUG] Stopping propagation for multi-select click')
             event.stopPropagation()
-            emit('select', props.task, true)
+            triggerSelect(props.task, true)
             return
         }
 
@@ -78,12 +99,8 @@ export function useTaskNodeActions(
         if (props.isSelected) {
             emit('edit', props.task)
         } else {
-            // Single click on unselected task - select it (replacing other selections)
-            console.log('%c[TASK-262] TaskNode EMITTING select', 'background: cyan; color: black; font-size: 14px;', {
-                taskId: props.task?.id?.slice(0, 20),
-                multiSelect: false
-            })
-            emit('select', props.task, false)
+            // Single click on unselected task - trigger selection
+            triggerSelect(props.task, false)
         }
     }
 

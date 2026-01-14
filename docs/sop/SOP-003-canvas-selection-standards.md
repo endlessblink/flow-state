@@ -12,7 +12,7 @@ To ensure a predictable user experience, the canvas selection logic must strictl
     *   **MUST** select the target node.
     *   **MUST** deselect all other nodes (Replace Selection).
     *   **EXCEPTION**: If the node is *already selected*, do NOT deselect others immediately (this enables dragging multiple pre-selected items).
-2.  **Ctrl/Meta + Click**:
+2.  **Ctrl/Meta/Shift + Click**:
     *   **MUST** toggle the selection state of the target node.
     *   **MUST NOT** affect other selected nodes.
 3.  **Empty Space Click**:

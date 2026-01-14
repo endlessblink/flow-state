@@ -5,6 +5,7 @@ import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
 import { storeToRefs } from 'pinia'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { CANVAS } from '@/constants/canvas'
 
 
 
@@ -83,12 +84,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         if (!group) return
 
         // Position is relative to the group since we set parentId
-        const groupWidth = group.position?.width || 300
-        const groupHeight = group.position?.height || 200
+        const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
+        const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
 
         const groupCenter = {
-            x: (groupWidth / 2) - 110, // Center - half task width approx
-            y: (groupHeight / 2) - 50, // Center - half task height approx
+            x: (groupWidth / 2) - (CANVAS.DEFAULT_TASK_WIDTH / 2), // Center - half task width
+            y: (groupHeight / 2) - (CANVAS.DEFAULT_TASK_HEIGHT / 2), // Center - half task height
             parentId: group.id
         }
 

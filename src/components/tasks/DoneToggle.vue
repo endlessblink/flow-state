@@ -4,20 +4,20 @@
       :is-completed="completed"
       :disabled="disabled"
       :ripples="ripples"
+      v-model:is-hovered="isHovered"
       :show-celebration="showCelebration"
-      :show-touch-feedback="showTouchFeedback"
       
+      v-model:is-focused="isFocused"
+      :show-touch-feedback="showTouchFeedback"
       :size="size"
       :variant="variant"
       :title="title"
       :ariaLabel="ariaLabel"
       :show-hints="showHints"
       :show-progress="showProgress"
+      
       :progress-percentage="progressPercentage"
       :celebration-particles="celebrationParticles"
-      
-      v-model:is-hovered="isHovered"
-      v-model:is-focused="isFocused"
       
       @click="handleClick"
       @keydown="handleKeyDown"
@@ -28,7 +28,6 @@
 </template>
 
 <script setup lang="ts">
-import { withDefaults } from 'vue'
 import DoneToggleVisuals from './done-toggle/DoneToggleVisuals.vue'
 import { useDoneToggleInteraction } from '@/composables/ui/done-toggle/useDoneToggleInteraction'
 

@@ -84,7 +84,7 @@
 | ~~**TASK-255**~~ | ✅ **DONE** **Canvas Stability Hardening (Geometry Invariants)** | **P0** | ✅ **DONE** (2026-01-13) - [SOP](./sop/SOP-002-canvas-geometry-invariants.md) | ROAD-013, TASK-184 |
 | ~~**TASK-256**~~ | ✅ **DONE** **Standardize Project Identifiers (Color Dots)** | **P2** | ✅ **DONE** (2026-01-13) | - |
 | ~~**TASK-257**~~ | ✅ **DONE** **Modal Enter Key Support** | **P1** | ✅ **DONE** (2026-01-13) | - |
-| **TASK-258** | **Multi-Select Task Alignment Context Menu** | **P2** | 🔄 **IN PROGRESS** | [See Details](#task-258-multi-select-alignment-planned) |
+| ~~**TASK-258**~~ | ✅ **DONE** **Multi-Select Task Alignment Context Menu** | **P2** | ✅ **DONE** (2026-01-14) | [See Details](#task-258-multi-select-alignment-planned) |
 | **BUG-259** | **Canvas Task Layout Changes on Click** | **P1** | 👀 **REVIEW** | [See Details](#bug-259-canvas-task-layout-changes-on-click-planned) |
 | ~~**TASK-275**~~ | ✅ **DONE** **Dev-Manager Complexity Pill** | **P2** | ✅ **DONE** (2026-01-13) | Add complexity badge to kanban cards |
 | ~~**BUG-278**~~ | ✅ **DONE** **Multi-Select Regression (TASK-262)** | **P0** | ✅ **DONE** (2026-01-13) | Fix applyNodeChanges dependency in useCanvasInteractions |
@@ -146,11 +146,13 @@
 3. Fix conflict resolution UI. 🔄 IN PROGRESS
 4. Test multi-device scenarios E2E. 📋 PLANNED
 
-### ROAD-010: Gamification - "Cyberflow"
+### ROAD-010: Gamification - "Cyberflow" (⏸️ PAUSED)
+**Status**: Paused
 - **XP Sources**: Task completion, Pomodoro sessions, Streaks.
 - **Features**: Leveling, Badges, Character Avatar in Sidebar.
 
-### ROAD-011: AI Assistant
+### ROAD-011: AI Assistant (⏸️ PAUSED)
+**Status**: Paused
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
@@ -595,11 +597,19 @@ This repeats every few seconds causing visual flickering and unnecessary re-rend
 
 ---
 
-### TASK-258: Multi-Select Task Alignment Context Menu (🔄 IN PROGRESS)
+### ~~TASK-258~~: Multi-Select Task Alignment Context Menu (✅ DONE)
 **Priority**: P2
+**Status**: DONE
 **Created**: January 13, 2026
+**Completed**: January 14, 2026
 
 **Feature**: When right-clicking multiple selected tasks on the canvas, display a context menu with alignment options.
+
+**Resolution**:
+- Implemented `useCanvasAlignment.ts` with geometry invariant protection.
+- Fixed visual sync issue by injecting manual `requestSync` trigger, bypassing orchestrator optimization (BUG-278 follow-up).
+
+**Progress (2026-01-14)**:
 
 **Progress (2026-01-13)**:
 - [x] UI already implemented in `CanvasContextMenu.vue` with Layout submenu
@@ -1149,8 +1159,16 @@ Ensure unique IDs are always generated and never reused for tasks, bugs, or issu
 **Cause**: Probable fallback logic in `useCanvasContextMenus.ts` using `selectedNodes` when no target is found, or event propagation issue.
 **Fix**: Ensure Pane Context Menu ignores selected nodes and only shows global actions (Create Group, Paste, etc.).
 
-### BUG-218: [RE-OPENED] Fix Persistent Canvas Drift (Root Cause Validated: DOM Dependency)
-### BUG-220: [RE-OPENED] Fix Group Counter and Task Movement Counter Issues
+### ~~BUG-218~~: [RE-OPENED] Fix Persistent Canvas Drift (✅ DONE - Rolled into TASK-232)
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE
+**Completed**: January 13, 2026 (via TASK-232)
+
+### ~~BUG-220~~: [RE-OPENED] Fix Group Counter and Task Movement Counter Issues (✅ DONE - Rolled into TASK-232)
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE
+**Completed**: January 13, 2026 (via TASK-232)
+
 ### ~~TASK-232~~: Canvas System Stability Solution (✅ DONE)
 **Priority**: P0-CRITICAL
 **Status**: ✅ DONE
@@ -1439,6 +1457,7 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 
 ### TASK-017: KDE Plasma Widget (Plasmoid) (READY)
 **Priority**: P3-LOW
+**Status**: 📋 PLANNED
 - Create a KDE Plasma 6 taskbar widget.
 
 ### ~~TASK-039~~: Duplicate Systems Consolidation (✅ DONE)
@@ -1451,6 +1470,7 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 
 ### TASK-041: Implement Custom Recurrence Patterns (📋 PLANNED)
 **Priority**: P2-MEDIUM
+**Status**: 📋 PLANNED
 - Define custom recurrence syntax and parsing logic.
 
 ### ~~TASK-046~~: Establish Canvas Performance Baselines (✅ DONE)
@@ -1522,7 +1542,8 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - `src/composables/useSupabaseDatabaseV2.ts` - `saveProjects` function
 
 ### TASK-145: CanvasView Decomposition (🚀 NEXT)
-**Priority**: P2-MEDIUM
+**Priority**: P3-LOW
+**Status**: 📋 PLANNED
 **Goal**: Reduce `CanvasView.vue` size (3400+ lines) by extracting UI components.
 - [ ] Extract `CanvasControls` (Zoom/Pan UI)
 - [ ] Extract `CanvasToolbar` (Primary Actions)
@@ -1543,7 +1564,7 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [x] Phase 7: Documentation - Created `docs/architecture/system-guide.md`
 
 ### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
-**Priority**: P2-MEDIUM
+**Priority**: P3-LOW
 **Goal**: Clean up the store layer and begin UI decomposition.
 ### TASK-137: Refactor CanvasView.vue Phase 1 (✅ DONE)
 **Priority**: P1-HIGH
@@ -1579,6 +1600,7 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 
 ### TASK-149: Canvas Group Stability Fixes (👀 REVIEW)
 **Priority**: P0-CRITICAL
+**Status**: 👀 REVIEW
 **Created**: January 9, 2026
 **Related**: TASK-141 (Canvas Group System Refactor)
 
@@ -2290,8 +2312,9 @@ Guest Mode:
 2. **Integrity Validation**: Console errors if positions have invalid values
 3. **CLAUDE.md Documentation**: Architecture rules to prevent future regressions
 
-### TASK-065: GitHub Release (📋 TODO)
+### TASK-065: GitHub Release (⏸️ PAUSED)
 **Priority**: P3-LOW
+**Status**: Paused
 - Remove hardcoded CouchDB credentials.
 - Add Docker self-host guide to README.
 - Create MIT LICENSE.
@@ -2366,8 +2389,9 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 - [x] Automatic text direction detection in `useBrainDump.ts`.
 - [x] Bidirectional rendering support in Inbox components.
 
-### TASK-110: New Branding: "Cyber Tomato" (📋 PLANNED)
+### TASK-110: New Branding: "Cyber Tomato" (⏸️ PAUSED)
 **Priority**: P2-MEDIUM
+**Status**: Paused
 - Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
 - Includes: Main logo, Tauri app icon, and favicon.
 
@@ -2390,8 +2414,9 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 **Status**: Paused
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
 
-### TASK-165: AI Text Generation in Markdown Editor (📋 PLANNED)
-**Priority**: P2-MEDIUM
+### TASK-165: AI Text Generation in Markdown Editor (⏸️ PAUSED)
+**Priority**: P3-LOW
+**Status**: Paused
 **Related**: ROAD-011 (AI Assistant)
 
 Add AI-powered text generation to the Tiptap markdown editor. Custom implementation (not using Tiptap Cloud Pro).
@@ -2884,14 +2909,16 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - [x] Verified application stability with clean production build.
 - [x] Zero critical lint errors remaining (warnings reviewed).
 
-### TASK-114: Virtual Scrolling Smoothness (📋 PLANNED)
+### TASK-114: Virtual Scrolling Smoothness (🔄 IN PROGRESS)
 **Priority**: P2-MEDIUM
+**Status**: In Progress
 - Profile and eliminate layout thrashing in list components.
 - Implement optimized rendering strategy for large lists.
 - Reduce computed property complexity in task items.
 
-### TASK-115: Memory Efficiency & Leak Fixes (📋 PLANNED)
+### TASK-115: Memory Efficiency & Leak Fixes (🔄 IN PROGRESS)
 **Priority**: P2-MEDIUM
+**Status**: In Progress
 - Profile heap snapshots to identify node pooling leaks.
 - Implement specialized cleanup for detached Vue Flow elements.
 - Optimize task store internal representation for reduced memory footprint.
@@ -3039,20 +3066,21 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - [x] Added early return in default case
 - [x] Build verification passed
 
-### TASK-124: Remove Dead Milkdown Code (📋 PLANNED)
+### ~~TASK-124~~: Remove Dead Milkdown Code (✅ DONE)
 **Priority**: P2-MEDIUM
 **Discovered**: January 7, 2026
+**Completed**: January 2026 (during codebase cleanup)
 
 **Problem**: `MilkdownEditorSurface.vue` is no longer imported (MarkdownEditor uses TiptapEditor), but received 120+ lines of changes and Milkdown packages remain in package.json.
 
 **Impact**: Bundle bloat, maintenance confusion.
 
 **Subtasks**:
-- [ ] Confirm MilkdownEditorSurface.vue is not imported anywhere
-- [ ] Delete MilkdownEditorSurface.vue
-- [ ] Remove Milkdown packages from package.json
-- [ ] Verify build passes
-- [ ] Measure bundle size reduction
+- [x] Confirm MilkdownEditorSurface.vue is not imported anywhere
+- [x] Delete MilkdownEditorSurface.vue
+- [x] Remove Milkdown packages from package.json
+- [x] Verify build passes
+- [x] Measure bundle size reduction
 
 ### TASK-125: Remove Debug Console.log Statements (📋 PLANNED)
 **Priority**: P3-LOW

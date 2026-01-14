@@ -6,7 +6,6 @@
       'is-right-side': context === 'canvas'
     }"
   >
-    
     <!-- 1. Header -->
     <UnifiedInboxHeader
       :is-collapsed="isCollapsed"
@@ -26,16 +25,16 @@
       :root-projects="taskStore.rootProjects"
       :context="context"
       
-      @toggle-collapse="isCollapsed = !isCollapsed"
-      @toggle-today="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
-      @toggle-advanced-filters="showAdvancedFilters = !showAdvancedFilters"
+      @toggleCollapse="isCollapsed = !isCollapsed"
+      @toggleToday="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
+      @toggleAdvancedFilters="showAdvancedFilters = !showAdvancedFilters"
       @update:selected-canvas-groups="selectedCanvasGroups = $event"
       @update:unscheduled-only="unscheduledOnly = $event"
       @update:selected-priority="selectedPriority = $event"
       @update:selected-project="selectedProject = $event"
       @update:selected-duration="selectedDuration = $event"
       @update:hide-done-tasks="toggleHideDoneTasks"
-      @clear-all="clearAllFilters"
+      @clearAll="clearAllFilters"
     />
 
     <!-- Collapsed State Badges -->
@@ -49,10 +48,20 @@
         {{ baseInboxTasks.length }}
       </BaseBadge>
       <div v-else class="dual-badges">
-        <BaseBadge variant="count" size="sm" rounded class="total-count">
+        <BaseBadge
+          variant="count"
+          size="sm"
+          rounded
+          class="total-count"
+        >
           {{ baseInboxTasks.length }}
         </BaseBadge>
-        <BaseBadge variant="info" size="sm" rounded class="filtered-count">
+        <BaseBadge
+          variant="info"
+          size="sm"
+          rounded
+          class="filtered-count"
+        >
           {{ inboxTasks.length }}
         </BaseBadge>
       </div>
@@ -62,7 +71,7 @@
     <UnifiedInboxInput
       v-if="!isCollapsed"
       :show-brain-dump="showBrainDump"
-      @add-task="addTask"
+      @addTask="addTask"
     />
 
     <!-- 3. Task List -->
@@ -73,21 +82,20 @@
       :multi-select-mode="multiSelectMode"
       :has-selected-groups="selectedCanvasGroups.size > 0"
       :are-globals-filtered="taskStore.filteredTasks.length > 0"
-      @drag-start="onDragStart"
-      @drag-end="onDragEnd"
-      @task-click="handleTaskClick"
-      @task-dblclick="handleTaskDoubleClick"
-      @task-contextmenu="handleTaskContextMenu"
-      @task-keydown="handleTaskKeydown"
-      @start-timer="handleStartTimer"
-      @delete-selected="deleteSelectedTasks"
-      @clear-selection="clearSelection"
+      @dragStart="onDragStart"
+      @dragEnd="onDragEnd"
+      @taskClick="handleTaskClick"
+      @taskDblclick="handleTaskDoubleClick"
+      @taskContextmenu="handleTaskContextMenu"
+      @taskKeydown="handleTaskKeydown"
+      @startTimer="handleStartTimer"
+      @deleteSelected="deleteSelectedTasks"
+      @clearSelection="clearSelection"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { withDefaults } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import BaseBadge from '@/components/base/BaseBadge.vue'

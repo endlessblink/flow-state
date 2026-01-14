@@ -72,7 +72,7 @@
       <button
         class="action-btn"
         :title="`Start timer for ${task.title}`"
-        @click.stop="$emit('start-timer')"
+        @click.stop="$emit('startTimer')"
       >
         <Play :size="12" />
       </button>
@@ -107,7 +107,7 @@ defineEmits<{
   (e: 'dblclick'): void
   (e: 'contextmenu', event: MouseEvent): void
   (e: 'keydown', event: KeyboardEvent): void
-  (e: 'start-timer'): void
+  (e: 'startTimer'): void
   (e: 'edit'): void
 }>()
 

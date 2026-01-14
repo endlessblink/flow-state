@@ -7,6 +7,7 @@ import {
     toAbsolutePosition,
     sanitizePosition
 } from '@/utils/canvas/coordinates'
+import { CANVAS } from '@/constants/canvas'
 
 /**
  * Composable for managing node sync with optimistic locking
@@ -157,8 +158,8 @@ export function useNodeSync(
                 updatePayload.position_json = {
                     x: positionToSave.x,
                     y: positionToSave.y,
-                    width: vueFlowNode.data?.width || (vueFlowNode as any).width || 300,
-                    height: vueFlowNode.data?.height || (vueFlowNode as any).height || 200
+                    width: vueFlowNode.data?.width || (vueFlowNode as any).width || CANVAS.DEFAULT_GROUP_WIDTH,
+                    height: vueFlowNode.data?.height || (vueFlowNode as any).height || CANVAS.DEFAULT_GROUP_HEIGHT
                 }
                 // Also update parent_group_id column for groups
                 updatePayload.parent_group_id = currentParentId === 'NONE' ? null : currentParentId

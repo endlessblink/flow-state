@@ -82,8 +82,6 @@ import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
-const modals = useCanvasModalsStore()
-
 defineEmits<{
   (e: 'handleQuickTaskCreate', title: string, description: string): void
   (e: 'handleBatchEditApplied'): void
@@ -94,4 +92,7 @@ defineEmits<{
   (e: 'confirmDeleteGroup'): void
   (e: 'confirmBulkDelete'): void
 }>()
+
+const modals = useCanvasModalsStore()
+
 </script>

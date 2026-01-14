@@ -4,7 +4,7 @@
       class="collapse-btn" 
       :class="{ 'is-collapsed': isCollapsed }" 
       :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" 
-      @click="$emit('toggle-collapse')"
+      @click="$emit('toggleCollapse')"
     >
       <template v-if="context === 'canvas'">
         <ChevronRight v-if="!isCollapsed" :size="16" />
@@ -28,7 +28,7 @@
       class="today-quick-filter"
       :class="{ active: activeTimeFilter === 'today' }"
       :title="`Filter inbox: Show only today's tasks (${todayCount})`"
-      @click="$emit('toggle-today')"
+      @click="$emit('toggleToday')"
     >
       <CalendarDays :size="14" />
       <span>Today</span>
@@ -58,7 +58,7 @@
     <button
       class="toggle-filters-btn"
       :class="{ active: showAdvancedFilters }"
-      @click="$emit('toggle-advanced-filters')"
+      @click="$emit('toggleAdvancedFilters')"
     >
       <Filter :size="14" />
       <span>{{ showAdvancedFilters ? 'Hide filters' : 'More filters' }}</span>
@@ -80,7 +80,7 @@
         @update:selected-project="$emit('update:selected-project', $event)"
         @update:selected-duration="$emit('update:selected-duration', $event)"
         @update:hide-done-tasks="$emit('update:hide-done-tasks', $event)"
-        @clear-all="$emit('clear-all')"
+        @clear-all="$emit('clearAll')"
       />
     </Transition>
   </div>
@@ -120,16 +120,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'toggle-collapse'): void
-  (e: 'toggle-today'): void
-  (e: 'toggle-advanced-filters'): void
+  (e: 'toggleCollapse'): void
+  (e: 'toggleToday'): void
+  (e: 'toggleAdvancedFilters'): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void
   (e: 'update:selected-priority', value: 'high' | 'medium' | 'low' | null): void
   (e: 'update:selected-project', value: string | null): void
   (e: 'update:selected-duration', value: DurationCategory | null): void
   (e: 'update:hide-done-tasks', value: boolean): void
-  (e: 'clear-all'): void
+  (e: 'clearAll'): void
 }>()
 
 // Chip Logic

@@ -1,6 +1,7 @@
 <template>
   <div
     class="task-node"
+    :data-task-id="task?.id"
     :class="{
       'priority-high': task?.priority === 'high',
       'priority-medium': task?.priority === 'medium',
@@ -17,8 +18,8 @@
       'lod-2': isLOD2,
       'lod-3': isLOD3
     }"
-    @dblclick="$emit('edit', task)"
     @click="handleClick"
+    @dblclick="$emit('edit', task)"
     @contextmenu.prevent="handleContextMenu"
   >
     <!-- Content wrapper -->
@@ -69,14 +70,18 @@
     <!-- Connection Handles (Vue Flow) -->
     <Handle
       v-if="isInVueFlowContext"
+      id="target"
       type="target"
       :position="Position.Top"
+      :connectable="true"
       class="handle-target"
     />
     <Handle
       v-if="isInVueFlowContext"
+      id="source"
       type="source"
       :position="Position.Bottom"
+      :connectable="true"
       class="handle-source"
     />
   </div>
@@ -96,6 +101,22 @@ import TaskNodeMeta from './node/TaskNodeMeta.vue'
 import TaskNodePriority from './node/TaskNodePriority.vue'
 import TaskNodeSelection from './node/TaskNodeSelection.vue'
 
+const props = withDefaults(defineProps<Props>(), {
+  isSelected: false,
+  multiSelectMode: false,
+  showPriority: true,
+  showStatus: true,
+  showDuration: true,
+  showSchedule: true,
+  isConnecting: false
+})
+
+const emit = defineEmits<{
+  edit: [task: Task]
+  select: [task: Task, multiSelect: boolean]
+  contextMenu: [event: MouseEvent, task: Task]
+}>()
+
 // Logic extracted directly from original component to preserve context check
 const isInVueFlowContext = computed(() => {
   if (typeof window === 'undefined') return false
@@ -113,22 +134,6 @@ const Handle = defineAsyncComponent(() =>
   import('@vue-flow/core').then(mod => mod.Handle)
 )
 
-const props = withDefaults(defineProps<Props>(), {
-  isSelected: false,
-  multiSelectMode: false,
-  showPriority: true,
-  showStatus: true,
-  showDuration: true,
-  showSchedule: true,
-  isConnecting: false
-})
-
-const emit = defineEmits<{
-  edit: [task: Task]
-  select: [task: Task, multiSelect: boolean]
-  contextMenu: [event: MouseEvent, task: Task]
-}>()
-
 interface Props {
   task: Task
   isSelected?: boolean
@@ -136,6 +141,9 @@ interface Props {
   showPriority?: boolean
   showStatus?: boolean
   showDuration?: boolean
+  // TASK-262: Callback prop for selection - bypasses Vue's broken emit in Vue Flow
+  // Named 'selectCallback' instead of 'onSelect' to avoid Vue's special 'on*' prop handling
+  selectCallback?: (task: Task, multiSelect: boolean) => void
   showSchedule?: boolean
   isConnecting?: boolean
   isDragging?: boolean
@@ -167,6 +175,11 @@ const {
   handleClick,
   handleContextMenu
 } = useTaskNodeActions(props, emit)
+
+// TASK-262: Selection is handled via:
+// 1. @click="handleClick" on the template (for clicks that reach the component)
+// 2. @node-click on the VueFlow component in CanvasView (for Vue Flow's internal events)
+// 3. selectCallback prop for direct callback when emits don't work
 </script>
 
 <style scoped>

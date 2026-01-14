@@ -63,9 +63,9 @@
   <div v-if="!isCollapsed && canvasGroupOptions.length > 1" class="canvas-group-filter">
     <CustomSelect
       :model-value="Array.from(selectedCanvasGroups)[0] || ''"
-      @update:model-value="$emit('update:selectedCanvasGroups', new Set($event ? [String($event)] : []))"
       :options="canvasGroupOptions"
       placeholder="Show from: All Tasks"
+      @update:model-value="$emit('update:selectedCanvasGroups', new Set($event ? [String($event)] : []))"
     />
   </div>
 
@@ -85,16 +85,16 @@
       <InboxFilters
         v-if="showAdvancedFilters"
         :unscheduled-only="unscheduledOnly"
-        @update:unscheduled-only="$emit('update:unscheduledOnly', $event)"
         :selected-priority="selectedPriority"
-        @update:selected-priority="$emit('update:selectedPriority', $event)"
         :selected-project="selectedProject"
-        @update:selected-project="$emit('update:selectedProject', $event)"
         :selected-duration="selectedDuration"
-        @update:selected-duration="$emit('update:selectedDuration', $event)"
         :hide-done-tasks="hideDoneTasks"
         :tasks="baseTasks"
         :projects="rootProjects"
+        @update:unscheduled-only="$emit('update:unscheduledOnly', $event)"
+        @update:selected-priority="$emit('update:selectedPriority', $event)"
+        @update:selected-project="$emit('update:selectedProject', $event)"
+        @update:selected-duration="$emit('update:selectedDuration', $event)"
         @update:hide-done-tasks="$emit('toggleHideDoneTasks')"
         @clear-all="$emit('clearAllFilters')"
       />

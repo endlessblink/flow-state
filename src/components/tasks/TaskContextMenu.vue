@@ -26,10 +26,18 @@
         <span class="section-title">Date</span>
       </div>
       <div class="pill-row">
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('today')">Today</button>
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('tomorrow')">Tmrw</button>
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('weekend')">Wknd</button>
-        <button class="pill-btn pill-btn--sm" @click="setDueDate('nextweek')">+1wk</button>
+        <button class="pill-btn pill-btn--sm" @click="setDueDate('today')">
+          Today
+        </button>
+        <button class="pill-btn pill-btn--sm" @click="setDueDate('tomorrow')">
+          Tmrw
+        </button>
+        <button class="pill-btn pill-btn--sm" @click="setDueDate('weekend')">
+          Wknd
+        </button>
+        <button class="pill-btn pill-btn--sm" @click="setDueDate('nextweek')">
+          +1wk
+        </button>
         <button class="pill-btn pill-btn--sm pill-btn--icon" title="Pick date" @click="setDueDate('custom')">
           <CalendarPlus :size="12" />
         </button>

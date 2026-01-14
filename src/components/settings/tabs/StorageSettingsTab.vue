@@ -163,7 +163,12 @@ onMounted(async () => {
             <span class="action-title">Import File</span>
             <span class="action-desc">Restore from a previously saved file</span>
           </div>
-          <input type="file" hidden accept=".json" @change="handleFileUpload">
+          <input
+            type="file"
+            hidden
+            accept=".json"
+            @change="handleFileUpload"
+          >
         </label>
       </div>
     </SettingsSection>
@@ -180,7 +185,7 @@ onMounted(async () => {
             <span v-else class="shadow-idle">Connecting to local daemon...</span>
           </div>
           <button class="refresh-btn" :disabled="isScanningShadow" @click="checkShadowHub">
-             <RefreshCw :size="14" :class="{ 'spinning': isScanningShadow }" />
+            <RefreshCw :size="14" :class="{ 'spinning': isScanningShadow }" />
           </button>
         </div>
 
@@ -196,11 +201,13 @@ onMounted(async () => {
         </div>
 
         <div v-if="shadowSnapshot" class="shadow-actions">
-           <button class="shadow-restore-btn" :disabled="isRestoring" @click="handleShadowRestore">
-             <RotateCcw :size="16" />
-             <span>{{ isRestoring ? 'Restoring...' : 'Restore Latest Cloud Snapshot' }}</span>
-           </button>
-           <p class="shadow-help">Best for: Recovering from sync errors or data loss on other devices.</p>
+          <button class="shadow-restore-btn" :disabled="isRestoring" @click="handleShadowRestore">
+            <RotateCcw :size="16" />
+            <span>{{ isRestoring ? 'Restoring...' : 'Restore Latest Cloud Snapshot' }}</span>
+          </button>
+          <p class="shadow-help">
+            Best for: Recovering from sync errors or data loss on other devices.
+          </p>
         </div>
       </div>
     </SettingsSection>
@@ -239,9 +246,13 @@ onMounted(async () => {
         </div>
 
         <div v-if="validationInfo.warnings.length > 0" class="detailed-warnings">
-          <p class="warning-title">Smart Filtering Summary:</p>
+          <p class="warning-title">
+            Smart Filtering Summary:
+          </p>
           <ul>
-            <li v-for="(warn, i) in validationInfo.warnings" :key="i">{{ warn }}</li>
+            <li v-for="(warn, i) in validationInfo.warnings" :key="i">
+              {{ warn }}
+            </li>
           </ul>
         </div>
 
@@ -271,7 +282,9 @@ onMounted(async () => {
             <span class="item-time">{{ new Date(item.timestamp).toLocaleString() }}</span>
             <span class="item-meta">{{ item.metadata?.taskCount }} tasks • {{ item.type }}</span>
           </div>
-          <button class="item-restore" @click="restoreBackup(item)">Restore</button>
+          <button class="item-restore" @click="restoreBackup(item)">
+            Restore
+          </button>
         </div>
       </div>
     </SettingsSection>

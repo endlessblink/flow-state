@@ -46,7 +46,7 @@
               type="checkbox"
               class="subtask-checkbox"
               @change="$emit('update', subtask)"
-            />
+            >
           </div>
           
           <div class="subtask-content">
@@ -58,7 +58,7 @@
                 :style="applyInputAlignment(subtask.title)"
                 placeholder="Subtask title"
                 @keydown.enter.prevent="$emit('add')"
-              />
+              >
               <button class="delete-subtask-btn" @click="$emit('delete', subtask.id)">
                 <X :size="14" />
               </button>

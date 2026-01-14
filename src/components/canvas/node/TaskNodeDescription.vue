@@ -3,14 +3,14 @@
     <MarkdownRenderer
       :content="description || ''"
       :class="{ 'expanded': isExpanded || !isLong }"
-      @checkbox-click="$emit('checkbox-click', $event)"
+      @checkbox-click="$emit('checkboxClick', $event)"
     />
     <button
       v-if="isLong"
       class="description-toggle"
       :aria-expanded="isExpanded"
       aria-label="Show more description"
-      @click.stop="$emit('toggle-expand')"
+      @click.stop="$emit('toggleExpand')"
     >
       {{ isExpanded ? 'Show less' : 'Show more' }}
     </button>
@@ -24,12 +24,12 @@ defineProps<{
   description?: string
   isExpanded: boolean
   isLong: boolean
-  alignmentClasses: Object | String
+  alignmentClasses: object | string
 }>()
 
 defineEmits<{
-  (e: 'checkbox-click', index: number): void
-  (e: 'toggle-expand'): void
+  (e: 'checkboxClick', index: number): void
+  (e: 'toggleExpand'): void
 }>()
 </script>
 

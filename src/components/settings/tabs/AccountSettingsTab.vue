@@ -3,9 +3,8 @@ import { useAuthStore } from '@/stores/auth'
 import { LogOut } from 'lucide-vue-next'
 import SettingsSection from '../SettingsSection.vue'
 
-const authStore = useAuthStore()
 const emit = defineEmits<{ 'close-modal': [] }>()
-
+const authStore = useAuthStore()
 const handleSignOut = async () => {
   await authStore.signOut()
   emit('close-modal')

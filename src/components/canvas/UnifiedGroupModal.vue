@@ -1,204 +1,209 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')" @keydown="handleKeydown">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">
-            <Group :size="18" />
-            {{ isEditing ? 'Edit Group' : 'Create Group' }}
-          </h2>
-          <button class="close-btn" aria-label="Close modal" @click="$emit('close')">
-            <X :size="16" :stroke-width="1.5" />
-          </button>
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    @click="$emit('close')"
+    @keydown="handleKeydown"
+  >
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <Group :size="18" />
+          {{ isEditing ? 'Edit Group' : 'Create Group' }}
+        </h2>
+        <button class="close-btn" aria-label="Close modal" @click="$emit('close')">
+          <X :size="16" :stroke-width="1.5" />
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Required: Name -->
+        <div class="form-group">
+          <label class="form-label">Group Name *</label>
+          <BaseInput
+            ref="nameInput"
+            v-model="groupData.name"
+            placeholder="Enter group name..."
+            @input="handleNameInput"
+          />
+          <p v-if="detectedKeyword" class="keyword-hint">
+            <Zap :size="12" />
+            Detected: {{ detectedKeyword.displayName }}
+          </p>
         </div>
 
-        <div class="modal-body">
-          <!-- Required: Name -->
-          <div class="form-group">
-            <label class="form-label">Group Name *</label>
-            <BaseInput
-              ref="nameInput"
-              v-model="groupData.name"
-              placeholder="Enter group name..."
-              @input="handleNameInput"
-            />
-            <p v-if="detectedKeyword" class="keyword-hint">
-              <Zap :size="12" />
-              Detected: {{ detectedKeyword.displayName }}
-            </p>
-          </div>
+        <!-- Required: Color -->
+        <div class="form-group">
+          <label class="form-label">Group Color</label>
 
-          <!-- Required: Color -->
-          <div class="form-group">
-            <label class="form-label">Group Color</label>
-
-            <!-- Color Presets -->
-            <div class="color-presets">
-              <button
-                v-for="color in colorPresets"
-                :key="color"
-                class="color-preset"
-                :class="[{ active: groupData.color === color }]"
-                :style="{ backgroundColor: color }"
-                type="button"
-                :title="`Select ${color}`"
-                @click="selectColor(color)"
-              />
-            </div>
-
-            <!-- Custom Color Input -->
-            <div class="custom-color-section">
-              <div class="custom-color-input">
-                <label class="color-label">Custom Color</label>
-                <div class="color-input-wrapper">
-                  <input
-                    v-model="customColor"
-                    type="text"
-                    placeholder="#3b82f6"
-                    class="color-text-input"
-                    @input="handleCustomColorInput"
-                  >
-                  <input
-                    v-model="customColor"
-                    type="color"
-                    class="color-picker-input"
-                    @input="handleColorPickerChange"
-                  >
-                </div>
-              </div>
-
-              <!-- Color Preview -->
-              <div class="color-preview">
-                <div
-                  class="preview-box"
-                  :style="{ backgroundColor: groupData.color }"
-                />
-                <span class="color-value">{{ groupData.color }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Collapsible: Smart Settings -->
-          <section class="smart-settings-section">
+          <!-- Color Presets -->
+          <div class="color-presets">
             <button
+              v-for="color in colorPresets"
+              :key="color"
+              class="color-preset"
+              :class="[{ active: groupData.color === color }]"
+              :style="{ backgroundColor: color }"
               type="button"
-              class="section-toggle"
-              @click="showSmartSettings = !showSmartSettings"
-            >
-              <ChevronDown
-                :size="14"
-                class="chevron-icon"
-                :class="[{ rotated: showSmartSettings }]"
-              />
-              <span class="section-title">
-                <Zap :size="14" />
-                Smart Settings
-              </span>
-              <span v-if="hasSmartSettings" class="settings-badge">Configured</span>
-            </button>
+              :title="`Select ${color}`"
+              @click="selectColor(color)"
+            />
+          </div>
 
-            <div v-show="showSmartSettings" class="section-content">
-              <p class="settings-hint">
-                Tasks dropped into this group will have these properties set automatically
-              </p>
-
-              <!-- Priority -->
-              <div class="form-group compact">
-                <label class="form-label">Priority</label>
-                <CustomSelect
-                  :model-value="smartSettings.priority || ''"
-                  :options="priorityOptions"
-                  placeholder="Select priority..."
-                  @update:model-value="(val) => smartSettings.priority = val === '' ? null : (val as 'high' | 'medium' | 'low')"
-                />
-              </div>
-
-              <!-- Status -->
-              <div class="form-group compact">
-                <label class="form-label">Status</label>
-                <CustomSelect
-                  :model-value="smartSettings.status || ''"
-                  :options="statusOptions"
-                  placeholder="Select status..."
-                  @update:model-value="(val) => smartSettings.status = val === '' ? null : (val as 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold')"
-                />
-              </div>
-
-              <!-- Due Date -->
-              <div class="form-group compact">
-                <label class="form-label">Due Date</label>
-                <CustomSelect
-                  :model-value="smartSettings.dueDate || ''"
-                  :options="dueDateOptions"
-                  placeholder="Select due date..."
-                  @update:model-value="(val) => smartSettings.dueDate = val === '' ? null : (val as 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later')"
-                />
-              </div>
-              <!-- Project -->
-              <div class="form-group compact">
-                <label class="form-label">Project</label>
-                <CustomSelect
-                  :model-value="smartSettings.projectId || ''"
-                  :options="projectOptions"
-                  placeholder="Select project..."
-                  @update:model-value="(val) => smartSettings.projectId = val === '' ? null : String(val)"
-                />
-              </div>
-
-              <!-- Duration -->
-              <div class="form-group compact">
-                <label class="form-label">Duration</label>
-                <CustomSelect
-                  :model-value="smartSettings.estimatedDuration === null ? '' : String(smartSettings.estimatedDuration)"
-                  :options="durationOptions"
-                  placeholder="Select duration..."
-                  @update:model-value="(val) => smartSettings.estimatedDuration = val === '' ? null : Number(val)"
-                />
-              </div>
-
-              <!-- Settings Preview -->
-              <div v-if="settingsPreview" class="settings-preview">
-                <span class="preview-label">Preview:</span>
-                <span class="preview-text">{{ settingsPreview }}</span>
-              </div>
-
-              <!-- Reset button -->
-              <div class="reset-section">
-                <button
-                  v-if="detectedKeyword"
-                  type="button"
-                  class="btn btn-ghost"
-                  @click="resetToAutoFill"
+          <!-- Custom Color Input -->
+          <div class="custom-color-section">
+            <div class="custom-color-input">
+              <label class="color-label">Custom Color</label>
+              <div class="color-input-wrapper">
+                <input
+                  v-model="customColor"
+                  type="text"
+                  placeholder="#3b82f6"
+                  class="color-text-input"
+                  @input="handleCustomColorInput"
                 >
-                  <RefreshCw :size="14" />
-                  Reset to auto-detected
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-ghost"
-                  @click="clearSmartSettings"
+                <input
+                  v-model="customColor"
+                  type="color"
+                  class="color-picker-input"
+                  @input="handleColorPickerChange"
                 >
-                  <Trash2 :size="14" />
-                  Clear all
-                </button>
               </div>
             </div>
-          </section>
+
+            <!-- Color Preview -->
+            <div class="color-preview">
+              <div
+                class="preview-box"
+                :style="{ backgroundColor: groupData.color }"
+              />
+              <span class="color-value">{{ groupData.color }}</span>
+            </div>
+          </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="$emit('close')">
-            Cancel
-          </button>
+        <!-- Collapsible: Smart Settings -->
+        <section class="smart-settings-section">
           <button
-            class="btn btn-primary"
-            :disabled="!groupData.name.trim()"
-            @click="saveGroup"
+            type="button"
+            class="section-toggle"
+            @click="showSmartSettings = !showSmartSettings"
           >
-            {{ isEditing ? 'Save Changes' : 'Create Group' }}
+            <ChevronDown
+              :size="14"
+              class="chevron-icon"
+              :class="[{ rotated: showSmartSettings }]"
+            />
+            <span class="section-title">
+              <Zap :size="14" />
+              Smart Settings
+            </span>
+            <span v-if="hasSmartSettings" class="settings-badge">Configured</span>
           </button>
-        </div>
+
+          <div v-show="showSmartSettings" class="section-content">
+            <p class="settings-hint">
+              Tasks dropped into this group will have these properties set automatically
+            </p>
+
+            <!-- Priority -->
+            <div class="form-group compact">
+              <label class="form-label">Priority</label>
+              <CustomSelect
+                :model-value="smartSettings.priority || ''"
+                :options="priorityOptions"
+                placeholder="Select priority..."
+                @update:model-value="(val) => smartSettings.priority = val === '' ? null : (val as 'high' | 'medium' | 'low')"
+              />
+            </div>
+
+            <!-- Status -->
+            <div class="form-group compact">
+              <label class="form-label">Status</label>
+              <CustomSelect
+                :model-value="smartSettings.status || ''"
+                :options="statusOptions"
+                placeholder="Select status..."
+                @update:model-value="(val) => smartSettings.status = val === '' ? null : (val as 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold')"
+              />
+            </div>
+
+            <!-- Due Date -->
+            <div class="form-group compact">
+              <label class="form-label">Due Date</label>
+              <CustomSelect
+                :model-value="smartSettings.dueDate || ''"
+                :options="dueDateOptions"
+                placeholder="Select due date..."
+                @update:model-value="(val) => smartSettings.dueDate = val === '' ? null : (val as 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later')"
+              />
+            </div>
+            <!-- Project -->
+            <div class="form-group compact">
+              <label class="form-label">Project</label>
+              <CustomSelect
+                :model-value="smartSettings.projectId || ''"
+                :options="projectOptions"
+                placeholder="Select project..."
+                @update:model-value="(val) => smartSettings.projectId = val === '' ? null : String(val)"
+              />
+            </div>
+
+            <!-- Duration -->
+            <div class="form-group compact">
+              <label class="form-label">Duration</label>
+              <CustomSelect
+                :model-value="smartSettings.estimatedDuration === null ? '' : String(smartSettings.estimatedDuration)"
+                :options="durationOptions"
+                placeholder="Select duration..."
+                @update:model-value="(val) => smartSettings.estimatedDuration = val === '' ? null : Number(val)"
+              />
+            </div>
+
+            <!-- Settings Preview -->
+            <div v-if="settingsPreview" class="settings-preview">
+              <span class="preview-label">Preview:</span>
+              <span class="preview-text">{{ settingsPreview }}</span>
+            </div>
+
+            <!-- Reset button -->
+            <div class="reset-section">
+              <button
+                v-if="detectedKeyword"
+                type="button"
+                class="btn btn-ghost"
+                @click="resetToAutoFill"
+              >
+                <RefreshCw :size="14" />
+                Reset to auto-detected
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost"
+                @click="clearSmartSettings"
+              >
+                <Trash2 :size="14" />
+                Clear all
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" @click="$emit('close')">
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="!groupData.name.trim()"
+          @click="saveGroup"
+        >
+          {{ isEditing ? 'Save Changes' : 'Create Group' }}
+        </button>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -211,6 +216,7 @@ import { detectPowerKeyword, type PowerKeywordResult } from '@/composables/useTa
 import { getSettingsDescription } from '@/composables/useGroupSettings'
 import BaseInput from '@/components/base/BaseInput.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { isTextAreaOrContentEditable } from '@/utils/dom'
 
 const props = withDefaults(defineProps<Props>(), {
   group: null,
@@ -332,6 +338,9 @@ const handleKeydown = (event: KeyboardEvent) => {
 
   // Enter - save (if valid)
   if (event.key === 'Enter') {
+    // Don't submit if in textarea or contenteditable
+    if (isTextAreaOrContentEditable(event.target)) return
+
     // Don't submit if in dropdown or other interactive element
     const target = event.target as HTMLElement
     if (target.tagName === 'SELECT' || target.closest('.n-dropdown')) return

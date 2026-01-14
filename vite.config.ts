@@ -85,7 +85,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       devOptions: {
-        enabled: true, // Enable PWA in dev for testing
+        enabled: false, // TASK-272: Disabled in dev to reduce HMR noise/flickering
         type: 'module',
       },
     }),

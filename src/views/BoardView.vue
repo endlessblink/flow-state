@@ -3,7 +3,9 @@
     <!-- KANBAN BOARD HEADER CONTROLS - TASK-157: Simplified Todoist-style -->
     <div class="kanban-header kanban-header--minimal">
       <div class="header-left">
-        <h2 class="board-title">Board</h2>
+        <h2 class="board-title">
+          Board
+        </h2>
         <span class="task-count--subtle">{{ totalDisplayedTasks }}</span>
       </div>
       <div class="header-controls header-controls--minimal">

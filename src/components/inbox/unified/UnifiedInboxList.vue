@@ -16,11 +16,11 @@
     <!-- Selection Bar -->
     <div v-if="multiSelectMode" class="selection-bar">
       <span class="selection-count">{{ selectedCount }} selected</span>
-      <button class="selection-action delete-action" title="Delete selected tasks" @click="$emit('delete-selected')">
+      <button class="selection-action delete-action" title="Delete selected tasks" @click="$emit('deleteSelected')">
         <Trash2 :size="14" />
         Delete
       </button>
-      <button class="selection-action clear-action" title="Clear selection (Esc)" @click="$emit('clear-selection')">
+      <button class="selection-action clear-action" title="Clear selection (Esc)" @click="$emit('clearSelection')">
         <X :size="14" />
         Clear
       </button>
@@ -32,13 +32,13 @@
       :key="task.id"
       :task="task"
       :is-selected="selectedTaskIds.has(task.id)"
-      @drag-start="$emit('drag-start', $event, task)"
-      @drag-end="$emit('drag-end')"
-      @task-click="$emit('task-click', $event, task)"
-      @task-dblclick="$emit('task-dblclick', task)"
-      @task-contextmenu="$emit('task-contextmenu', $event, task)"
-      @task-keydown="$emit('task-keydown', $event, task)"
-      @start-timer="$emit('start-timer', task)"
+      @drag-start="$emit('dragStart', $event, task)"
+      @drag-end="$emit('dragEnd')"
+      @task-click="$emit('taskClick', $event, task)"
+      @task-dblclick="$emit('taskDblclick', task)"
+      @task-contextmenu="$emit('taskContextmenu', $event, task)"
+      @task-keydown="$emit('taskKeydown', $event, task)"
+      @start-timer="$emit('startTimer', task)"
     />
   </div>
 </template>
@@ -58,15 +58,15 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'drag-start', event: DragEvent, task: Task): void
-  (e: 'drag-end'): void
-  (e: 'task-click', event: MouseEvent, task: Task): void
-  (e: 'task-dblclick', task: Task): void
-  (e: 'task-contextmenu', event: MouseEvent, task: Task): void
-  (e: 'task-keydown', event: KeyboardEvent, task: Task): void
-  (e: 'start-timer', task: Task): void
-  (e: 'delete-selected'): void
-  (e: 'clear-selection'): void
+  (e: 'dragStart', event: DragEvent, task: Task): void
+  (e: 'dragEnd'): void
+  (e: 'taskClick', event: MouseEvent, task: Task): void
+  (e: 'taskDblclick', task: Task): void
+  (e: 'taskContextmenu', event: MouseEvent, task: Task): void
+  (e: 'taskKeydown', event: KeyboardEvent, task: Task): void
+  (e: 'startTimer', task: Task): void
+  (e: 'deleteSelected'): void
+  (e: 'clearSelection'): void
 }>()
 
 const selectedCount = computed(() => props.selectedTaskIds.size)

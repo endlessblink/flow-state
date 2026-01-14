@@ -47,7 +47,10 @@ export function useTabVisibility() {
     const wasVisible = isVisible.value
     isVisible.value = getVisibilityState()
 
-    console.log(`Tab visibility changed: ${wasVisible ? 'visible' : 'hidden'} → ${isVisible.value ? 'visible' : 'hidden'}`)
+    // TASK-272: Only log in dev mode to reduce console noise
+    if (import.meta.env.DEV && wasVisible !== isVisible.value) {
+      console.log(`Tab visibility changed: ${wasVisible ? 'visible' : 'hidden'} → ${isVisible.value ? 'visible' : 'hidden'}`)
+    }
   }
 
   // Get the correct visibility change event name for current browser
@@ -78,7 +81,10 @@ export function useTabVisibility() {
       }
     })
 
-    console.log(`Added tab visibility listeners for: ${eventName}`)
+    // TASK-272: Reduced logging - only log once on init
+    if (import.meta.env.DEV) {
+      console.log(`Added tab visibility listeners for: ${eventName}`)
+    }
   }
 
   // Remove event listeners
@@ -104,14 +110,20 @@ export function useTabVisibility() {
   // Initialize on mount
   const initialize = () => {
     if (!checkVisibilitySupport()) {
-      console.log('Page Visibility API not supported - tab will always be considered visible')
+      // TASK-272: Reduced logging
+      if (import.meta.env.DEV) {
+        console.log('Page Visibility API not supported - tab will always be considered visible')
+      }
       isVisible.value = true
       return
     }
 
     // Set initial state
     isVisible.value = getVisibilityState()
-    console.log(`Initial tab visibility: ${isVisible.value ? 'visible' : 'hidden'}`)
+    // TASK-272: Initial state logged only in dev
+    if (import.meta.env.DEV) {
+      console.log(`Initial tab visibility: ${isVisible.value ? 'visible' : 'hidden'}`)
+    }
 
     // Add listeners
     addVisibilityListeners()

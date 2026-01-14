@@ -10,7 +10,7 @@
       :style="titleAlignmentStyles"
       placeholder="Task title"
       @keydown.enter.prevent
-    />
+    >
   </div>
 
   <div class="form-group">

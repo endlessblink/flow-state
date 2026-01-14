@@ -23,7 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  'checkbox-click': [index: number, isChecked: boolean]
+  checkboxClick: [index: number, isChecked: boolean]
 }>()
 
 const renderedHtml = computed(() => parseMarkdown(props.content))
@@ -47,7 +47,7 @@ const handleClick = (event: MouseEvent) => {
     const index = Array.from(allCheckboxes).indexOf(target)
     
     if (index !== -1) {
-      emit('checkbox-click', index, (target as HTMLInputElement).checked)
+      emit('checkboxClick', index, (target as HTMLInputElement).checked)
     }
   }
 }

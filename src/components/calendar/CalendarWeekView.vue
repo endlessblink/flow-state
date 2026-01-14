@@ -3,6 +3,24 @@ import { inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { WeekEvent } from '@/types/tasks'
 
+defineProps<{
+  weekDays: any[]
+  workingHours: number[]
+  weekEvents: WeekEvent[]
+  currentTaskId?: string | null
+}>()
+defineEmits<{
+  (e: 'weekDragOver', event: DragEvent): void
+  (e: 'weekDrop', event: DragEvent, dateString: string, hour: number): void
+  (e: 'eventDragStart', event: DragEvent, weekEvent: WeekEvent): void
+  (e: 'eventDragEnd', event: DragEvent, weekEvent: WeekEvent): void
+  (e: 'eventClick', event: MouseEvent, weekEvent: WeekEvent): void
+  (e: 'eventDblClick', weekEvent: WeekEvent): void
+  (e: 'eventContextMenu', event: MouseEvent, weekEvent: WeekEvent): void
+  (e: 'cycleStatus', event: MouseEvent, weekEvent: WeekEvent): void
+  (e: 'removeFromCalendar', weekEvent: WeekEvent): void
+  (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
+}>()
 // Inject helpers from parent CalendarView
 const helpers = inject('calendar-helpers') as any
 const {
@@ -18,25 +36,6 @@ const {
   getStatusIcon
 } = helpers
 
-defineProps<{
-  weekDays: any[]
-  workingHours: number[]
-  weekEvents: WeekEvent[]
-  currentTaskId?: string | null
-}>()
-
-defineEmits<{
-  (e: 'weekDragOver', event: DragEvent): void
-  (e: 'weekDrop', event: DragEvent, dateString: string, hour: number): void
-  (e: 'eventDragStart', event: DragEvent, weekEvent: WeekEvent): void
-  (e: 'eventDragEnd', event: DragEvent, weekEvent: WeekEvent): void
-  (e: 'eventClick', event: MouseEvent, weekEvent: WeekEvent): void
-  (e: 'eventDblClick', weekEvent: WeekEvent): void
-  (e: 'eventContextMenu', event: MouseEvent, weekEvent: WeekEvent): void
-  (e: 'cycleStatus', event: MouseEvent, weekEvent: WeekEvent): void
-  (e: 'removeFromCalendar', weekEvent: WeekEvent): void
-  (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
-}>()
 </script>
 
 <template>

@@ -75,7 +75,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, withDefaults } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskCardState } from '@/composables/tasks/card/useTaskCardState'
 import { useTaskCardActions } from '@/composables/tasks/card/useTaskCardActions'

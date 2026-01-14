@@ -1,4 +1,4 @@
-import { useTaskStore } from '@/stores/tasks'
+import type { useTaskStore } from '@/stores/tasks'
 import type { useTimerStore } from '@/stores/timer'
 
 interface BoardActionsDependencies {

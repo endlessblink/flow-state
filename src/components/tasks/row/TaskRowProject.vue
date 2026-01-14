@@ -25,7 +25,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 defineProps<{

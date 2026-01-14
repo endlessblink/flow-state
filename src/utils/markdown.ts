@@ -140,10 +140,18 @@ export function htmlToMarkdown(html: string): string {
   // Sanitize first to prevent any XSS in the processing
   markdown = DOMPurify.sanitize(markdown)
 
-  // Task list items: <input type="checkbox" checked> -> [x], unchecked -> [ ]
-  markdown = markdown.replace(/<input[^>]*type=["']?checkbox["']?[^>]*checked[^>]*>/gi, '[x] ')
-  markdown = markdown.replace(/<input[^>]*checked[^>]*type=["']?checkbox["']?[^>]*>/gi, '[x] ')
-  markdown = markdown.replace(/<input[^>]*type=["']?checkbox["']?[^>]*>/gi, '[ ] ')
+  // BUG-276 FIX: Process TipTap TaskItem elements FIRST
+  // TipTap structure: <li data-type="taskItem" data-checked="true/false"><label><input...></label><div>content</div></li>
+  // Extract text from the <div> inside and convert based on data-checked attribute
+  // Handle both attribute orders (data-type before data-checked and vice versa)
+  markdown = markdown.replace(/<li[^>]*data-type=["']taskItem["'][^>]*data-checked=["']true["'][^>]*>[\s\S]*?<div[^>]*>([\s\S]*?)<\/div>[\s\S]*?<\/li>/gi, '- [x] $1\n')
+  markdown = markdown.replace(/<li[^>]*data-type=["']taskItem["'][^>]*data-checked=["']false["'][^>]*>[\s\S]*?<div[^>]*>([\s\S]*?)<\/div>[\s\S]*?<\/li>/gi, '- [ ] $1\n')
+  markdown = markdown.replace(/<li[^>]*data-checked=["']true["'][^>]*data-type=["']taskItem["'][^>]*>[\s\S]*?<div[^>]*>([\s\S]*?)<\/div>[\s\S]*?<\/li>/gi, '- [x] $1\n')
+  markdown = markdown.replace(/<li[^>]*data-checked=["']false["'][^>]*data-type=["']taskItem["'][^>]*>[\s\S]*?<div[^>]*>([\s\S]*?)<\/div>[\s\S]*?<\/li>/gi, '- [ ] $1\n')
+
+  // Remove any remaining checkbox inputs and labels (they've been processed above)
+  markdown = markdown.replace(/<label[^>]*>[\s\S]*?<\/label>/gi, '')
+  markdown = markdown.replace(/<input[^>]*type=["']?checkbox["']?[^>]*>/gi, '')
 
   // Bold: <strong> or <b> -> **text**
   markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
@@ -226,10 +234,8 @@ export function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n')
   markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n')
 
-  // List items: <li> -> - (for task lists, the checkbox is already handled above)
-  // Handle task list items specially (they have data-type or are in task lists)
-  markdown = markdown.replace(/<li[^>]*data-checked=["']true["'][^>]*>(.*?)<\/li>/gi, '- [x] $1\n')
-  markdown = markdown.replace(/<li[^>]*data-checked=["']false["'][^>]*>(.*?)<\/li>/gi, '- [ ] $1\n')
+  // List items: <li> -> - (task items with data-type="taskItem" already handled at top of function)
+  // BUG-276 FIX: Only handle regular list items here, task items are processed earlier
   markdown = markdown.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
 
   // Remove list wrappers

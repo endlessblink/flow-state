@@ -879,8 +879,9 @@ app.post('/api/beads/claim/:id', (req, res) => {
             encoding: 'utf8'
         });
 
-        // Get task details
-        const taskDetails = runBd(`show ${taskId}`);
+        // Get task details (bd show returns an array)
+        const taskResult = runBd(`show ${taskId}`);
+        const taskDetails = Array.isArray(taskResult) ? taskResult[0] : taskResult;
         if (!taskDetails) {
             return res.status(404).json({ error: 'Task not found' });
         }
@@ -972,16 +973,102 @@ Start working now. Be thorough and complete the task.`;
 
             runningAgents.set(taskId, agentData);
 
-            // Handle stdout
+            // Handle stdout - parse stream-json events into conversational format
+            let jsonBuffer = '';
+
+            // Helper to format tool calls conversationally
+            function formatToolCall(name, input) {
+                switch (name) {
+                    case 'Read':
+                        return `📖 Reading file: ${input?.file_path || 'unknown'}`;
+                    case 'Write':
+                        return `📝 Writing file: ${input?.file_path || 'unknown'}`;
+                    case 'Edit':
+                        return `✏️ Editing file: ${input?.file_path || 'unknown'}`;
+                    case 'Bash':
+                        const cmd = input?.command || '';
+                        return `💻 Running: ${cmd.length > 80 ? cmd.slice(0, 80) + '...' : cmd}`;
+                    case 'Grep':
+                        return `🔍 Searching for: "${input?.pattern || ''}" in ${input?.path || 'codebase'}`;
+                    case 'Glob':
+                        return `📁 Finding files: ${input?.pattern || ''}`;
+                    case 'Task':
+                        return `🤖 Spawning sub-agent: ${input?.description || 'task'}`;
+                    case 'TodoWrite':
+                        return `📋 Updating task list`;
+                    case 'WebSearch':
+                        return `🌐 Searching web: ${input?.query || ''}`;
+                    case 'WebFetch':
+                        return `🌐 Fetching: ${input?.url || ''}`;
+                    default:
+                        return `🔧 Using ${name}`;
+                }
+            }
+
             agentProcess.stdout.on('data', (data) => {
-                const output = data.toString();
-                agentData.outputBuffer.push({ type: 'stdout', text: output, time: Date.now() });
+                jsonBuffer += data.toString();
 
-                // Broadcast to SSE clients watching this agent
-                broadcastAgentOutput(taskId, { type: 'stdout', text: output });
+                // Process complete JSON lines
+                const lines = jsonBuffer.split('\n');
+                jsonBuffer = lines.pop(); // Keep incomplete line in buffer
 
-                // Also broadcast to main SSE for activity indicator
-                broadcastLog(`[Agent ${taskId}] ${output.slice(0, 100)}...`);
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+
+                    try {
+                        const event = JSON.parse(line);
+
+                        // Parse different event types from stream-json format
+                        if (event.type === 'assistant' && event.message?.content) {
+                            // Process each content block
+                            for (const block of event.message.content) {
+                                if (block.type === 'text' && block.text?.trim()) {
+                                    // Claude's thinking/response text
+                                    const text = block.text.trim();
+                                    agentData.outputBuffer.push({ type: 'assistant', text, time: Date.now() });
+                                    broadcastAgentOutput(taskId, { type: 'assistant', text });
+                                } else if (block.type === 'tool_use') {
+                                    // Tool being called
+                                    const toolText = formatToolCall(block.name, block.input);
+                                    agentData.outputBuffer.push({ type: 'tool', text: toolText, tool: block.name, time: Date.now() });
+                                    broadcastAgentOutput(taskId, { type: 'tool', text: toolText, tool: block.name });
+                                    broadcastLog(`[Agent ${taskId}] ${toolText}`);
+                                }
+                            }
+                        } else if (event.type === 'content_block_delta' && event.delta?.text) {
+                            // Streaming text delta (append to current)
+                            const text = event.delta.text;
+                            if (text.trim()) {
+                                agentData.outputBuffer.push({ type: 'assistant', text, time: Date.now() });
+                                broadcastAgentOutput(taskId, { type: 'assistant', text });
+                            }
+                        } else if (event.type === 'result') {
+                            // Final result
+                            const text = event.subtype === 'success'
+                                ? '✅ Task completed successfully!'
+                                : `⚠️ Task ended: ${event.subtype}`;
+                            agentData.outputBuffer.push({ type: 'result', text, time: Date.now() });
+                            broadcastAgentOutput(taskId, { type: 'result', text });
+                        } else if (event.type === 'system') {
+                            // Skip noisy system messages (init, hooks, internal stuff)
+                            const skipSubtypes = ['init', 'hook_response', 'config'];
+                            if (skipSubtypes.includes(event.subtype)) continue;
+                            // Only show meaningful system messages
+                            if (event.message && typeof event.message === 'string') {
+                                agentData.outputBuffer.push({ type: 'system', text: `ℹ️ ${event.message}`, time: Date.now() });
+                                broadcastAgentOutput(taskId, { type: 'system', text: `ℹ️ ${event.message}` });
+                            }
+                        }
+                        // Skip other event types (like raw init data)
+                    } catch (e) {
+                        // Not JSON - only show if it looks meaningful
+                        const trimmed = line.trim();
+                        if (trimmed && !trimmed.startsWith('{') && trimmed.length < 500) {
+                            agentData.outputBuffer.push({ type: 'stdout', text: trimmed, time: Date.now() });
+                            broadcastAgentOutput(taskId, { type: 'stdout', text: trimmed });
+                        }
+                    }
+                }
             });
 
             // Handle stderr

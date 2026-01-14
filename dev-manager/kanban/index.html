@@ -1287,42 +1287,260 @@
       border: 1px solid var(--brand-subtle);
     }
 
-    /* ============== BEADS VIEW ============== */
-    .beads-container {
+    /* ============== BEADS VIEW - Clean Agent Orchestration ============== */
+    .beads-layout {
       display: grid;
-      grid-template-columns: 1fr 350px 450px;
-      gap: 20px;
+      grid-template-columns: 320px 1fr;
+      gap: 0;
       height: 100%;
-      padding: 20px;
+      background: var(--surface-primary);
     }
 
-    .beads-graph-panel,
-    .beads-queue-panel,
-    .beads-output-panel {
+    /* SIDEBAR */
+    .beads-sidebar {
       background: var(--surface-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      padding: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .section-count {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--surface-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .section-count.active {
+      background: var(--brand-primary);
+      color: #000;
+    }
+
+    .section-count.warning {
+      background: var(--color-warning);
+      color: #000;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 0 16px;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .empty-state-small {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 16px;
+    }
+
+    /* MAIN AREA */
+    .beads-main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Agent Tabs */
+    .agent-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      background: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+    }
+
+    .agent-tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .agent-tab:hover {
+      background: var(--surface-tertiary);
+    }
+
+    .agent-tab.active {
+      background: var(--brand-primary);
+      color: #000;
+      border-color: var(--brand-primary);
+    }
+
+    .agent-tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-success);
+    }
+
+    .agent-tab-dot.stopped {
+      background: var(--text-muted);
+    }
+
+    .agent-tab-empty {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 8px;
+    }
+
+    /* Status Bar */
+    .agent-status-bar {
+      display: flex;
+      gap: 24px;
+      padding: 12px 20px;
+      background: var(--surface-tertiary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .status-value {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .status-tools {
+      display: flex;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .tool-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(126, 231, 135, 0.15);
+      color: #7ee787;
+      font-family: 'SF Mono', monospace;
+      font-size: 10px;
+    }
+
+    /* Output Area */
+    .agent-output-area {
+      flex: 1;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
 
-    .beads-graph-panel .panel-header,
-    .beads-queue-panel .panel-header {
+    .output-placeholder {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border-subtle);
-      background: var(--surface-tertiary);
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
     }
 
-    .beads-graph-panel .panel-header h3,
-    .beads-queue-panel .panel-header h3 {
+    .placeholder-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .placeholder-text {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .placeholder-hint {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    /* Command Bar */
+    .agent-command-bar {
+      display: flex;
+      gap: 8px;
+      padding: 16px 20px;
+      background: var(--surface-secondary);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .command-input {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 13px;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
       color: var(--text-primary);
-      margin: 0;
+      outline: none;
+    }
+
+    .command-input:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .command-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .command-send-btn {
+      padding: 12px 16px;
+      background: var(--brand-primary);
+      border: none;
+      border-radius: 8px;
+      color: #000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .command-send-btn:hover {
+      opacity: 0.9;
     }
 
     .refresh-btn {
@@ -1585,17 +1803,17 @@
     .agent-output {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
-      font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-      font-size: 12px;
-      line-height: 1.5;
+      padding: 16px;
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 13px;
+      line-height: 1.6;
       background: #0d1117;
     }
 
     .agent-output-line {
-      padding: 2px 0;
+      padding: 4px 0;
       white-space: pre-wrap;
-      word-break: break-all;
+      word-break: break-word;
     }
 
     .agent-output-line.stdout {
@@ -1623,54 +1841,90 @@
       color: #f85149;
     }
 
+    .agent-output-line.text {
+      color: #e6edf3;
+      line-height: 1.5;
+    }
+
+    .agent-output-line.assistant {
+      color: #e6edf3;
+      line-height: 1.6;
+      padding: 12px 16px;
+      margin: 8px 0;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .agent-output-line.result {
+      color: #3fb950;
+      font-weight: 600;
+      padding: 8px 0;
+      border-top: 1px solid #30363d;
+      margin-top: 8px;
+    }
+
     .agent-list {
-      padding: 12px;
+      padding: 16px;
       border-bottom: 1px solid var(--border-subtle);
+      max-height: 200px;
+      overflow-y: auto;
     }
 
     .agent-item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
+      gap: 12px;
+      padding: 12px 16px;
       background: var(--surface-tertiary);
       border: 1px solid var(--border-subtle);
-      border-radius: 6px;
+      border-radius: 8px;
       margin-bottom: 8px;
       cursor: pointer;
-      transition: all var(--transition-fast);
+      transition: all 0.15s ease;
+    }
+
+    .agent-item:last-child {
+      margin-bottom: 0;
     }
 
     .agent-item:hover {
       border-color: var(--brand-primary);
+      background: rgba(14, 239, 126, 0.05);
     }
 
     .agent-item.active {
       border-color: var(--brand-primary);
       background: rgba(14, 239, 126, 0.1);
+      box-shadow: 0 0 0 1px var(--brand-primary);
     }
 
     .agent-item-info {
       flex: 1;
+      min-width: 0;
     }
 
     .agent-item-title {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--text-primary);
-      font-weight: 500;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .agent-item-status {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-muted);
-      margin-top: 2px;
+      margin-top: 4px;
+      font-family: 'SF Mono', monospace;
     }
 
     .agent-status-dot {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      margin-right: 8px;
+      flex-shrink: 0;
     }
 
     .agent-status-dot.running {
@@ -1841,28 +2095,35 @@
       border-left: 3px solid var(--brand-primary);
     }
 
-    /* Tool call styling */
+    /* Tool call styling - compact activity indicators */
     .agent-output-line.tool-call {
-      color: #58a6ff;
-      background: rgba(88, 166, 255, 0.1);
-      padding: 4px 8px;
-      margin: 2px 0;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-
-    .agent-output-line.tool-call::before {
-      content: '⚡ ';
+      color: #7ee787;
+      background: rgba(126, 231, 135, 0.08);
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      border-left: 3px solid #7ee787;
     }
 
     /* Status line styling */
     .agent-output-line.status {
       color: #a371f7;
       font-style: italic;
-      padding: 4px 8px;
-      background: rgba(163, 113, 247, 0.1);
-      border-radius: 4px;
+      padding: 6px 12px;
+      background: rgba(163, 113, 247, 0.08);
+      border-radius: 6px;
       margin: 4px 0;
+      font-size: 12px;
+    }
+
+    /* System messages - subtle */
+    .agent-output-line.system {
+      color: #8b949e;
+      font-size: 11px;
+      padding: 4px 12px;
+      opacity: 0.8;
     }
 
     /* Task Modal */
@@ -2518,67 +2779,88 @@
         </div>
       </div>
 
-      <!-- BEADS VIEW -->
+      <!-- BEADS VIEW - Agent Orchestration -->
       <div class="view-container" id="beads-view">
-        <div class="beads-container">
-          <div class="beads-graph-panel">
-            <div class="panel-header">
-              <h3>Dependency Graph</h3>
-              <button class="refresh-btn" onclick="loadBeadsData()">
-                <span class="icon"><svg viewBox="0 0 24 24">
-                  <polyline points="23 4 23 10 17 10"></polyline>
-                  <polyline points="1 20 1 14 7 14"></polyline>
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                </svg></span>
-              </button>
+        <div class="beads-layout">
+          <!-- LEFT SIDEBAR: Tasks & Agents -->
+          <aside class="beads-sidebar">
+            <div class="sidebar-section">
+              <div class="section-header">
+                <span class="section-title">Ready Tasks</span>
+                <span class="section-count" id="ready-count">0</span>
+              </div>
+              <div id="ready-queue" class="task-list"></div>
             </div>
-            <div id="beads-graph" class="beads-graph"></div>
-          </div>
-          <div class="beads-queue-panel">
-            <div class="panel-header">
-              <h3>Ready Queue</h3>
-              <span class="badge" id="ready-count">0</span>
-            </div>
-            <div id="ready-queue" class="ready-queue"></div>
 
-            <div class="panel-header" style="margin-top: 20px;">
-              <h3>In Progress</h3>
-              <span class="badge warning" id="progress-count">0</span>
-            </div>
-            <div id="in-progress-queue" class="ready-queue"></div>
-          </div>
+            <div class="sidebar-divider"></div>
 
-          <!-- Agent Command Center -->
-          <div class="beads-output-panel">
-            <div class="panel-header">
-              <h3>Command Center</h3>
-              <div class="agent-header-controls">
-                <span class="badge" id="agent-count">0</span>
-                <span class="agent-status-label" id="agent-status-label">No agents</span>
+            <div class="sidebar-section">
+              <div class="section-header">
+                <span class="section-title">Running Agents</span>
+                <span class="section-count active" id="agent-count">0</span>
+              </div>
+              <div id="agent-list" class="agent-list">
+                <div class="empty-state-small">No agents running</div>
               </div>
             </div>
-            <div class="agent-list" id="agent-list">
-              <div class="no-agents">No agents running. Click "Claim" on a task to start an agent.</div>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-section">
+              <div class="section-header">
+                <span class="section-title">In Progress</span>
+                <span class="section-count warning" id="progress-count">0</span>
+              </div>
+              <div id="in-progress-queue" class="task-list"></div>
             </div>
-            <div class="agent-output-wrapper">
+          </aside>
+
+          <!-- MAIN AREA: Agent Viewer -->
+          <main class="beads-main">
+            <!-- Agent Tabs -->
+            <div class="agent-tabs" id="agent-tabs">
+              <div class="agent-tab-empty">Select or start an agent to view output</div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="agent-status-bar" id="agent-status-bar">
+              <div class="status-item">
+                <span class="status-label">Status</span>
+                <span class="status-value" id="status-state">Idle</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">Runtime</span>
+                <span class="status-value" id="status-runtime">--</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">Active Tools</span>
+                <div class="status-tools" id="status-tools">None</div>
+              </div>
+            </div>
+
+            <!-- Output Area -->
+            <div class="agent-output-area">
               <div id="agent-output" class="agent-output">
-                <div class="agent-output-line system">Select an agent to view its output...</div>
-              </div>
-              <div class="agent-tools-bar" id="agent-tools-bar">
-                <!-- Tool indicators will be shown here -->
+                <div class="output-placeholder">
+                  <div class="placeholder-icon">🤖</div>
+                  <div class="placeholder-text">Click "Claim" on a task to start an agent</div>
+                  <div class="placeholder-hint">Or select a running agent from the sidebar</div>
+                </div>
               </div>
             </div>
-            <div class="agent-command-bar" id="agent-command-bar">
-              <input type="text" id="agent-command-input" class="agent-command-input"
+
+            <!-- Command Input -->
+            <div class="agent-command-bar">
+              <input type="text" id="agent-command-input" class="command-input"
                      placeholder="Send a command to the agent..."
                      onkeydown="if(event.key==='Enter') sendAgentCommand()">
-              <button class="agent-send-btn" onclick="sendAgentCommand()">
-                <svg viewBox="0 0 24 24" width="18" height="18">
+              <button class="command-send-btn" onclick="sendAgentCommand()">
+                <svg viewBox="0 0 24 24" width="20" height="20">
                   <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                 </svg>
               </button>
             </div>
-          </div>
+          </main>
         </div>
       </div>
     </div>
@@ -5842,23 +6124,83 @@
       document.getElementById('agent-count').textContent = activeAgents.length;
 
       if (activeAgents.length === 0) {
-        container.innerHTML = '<div class="no-agents">No agents running. Click "Claim" on a task to start an agent.</div>';
+        container.innerHTML = '<div class="empty-state-small">No agents running</div>';
         return;
       }
 
-      container.innerHTML = activeAgents.map(agent => `
-        <div class="agent-item ${selectedAgent === agent.taskId ? 'active' : ''}" onclick="selectAgent('${agent.taskId}')">
-          <div class="agent-status-dot ${agent.status}"></div>
-          <div class="agent-item-info">
-            <div class="agent-item-title">${agent.title.substring(0, 30)}${agent.title.length > 30 ? '...' : ''}</div>
-            <div class="agent-item-status">${agent.taskId} - ${formatRuntime(agent.runningFor)}</div>
+      container.innerHTML = activeAgents.map(agent => {
+        const displayTitle = agent.title && agent.title !== 'Unknown'
+          ? agent.title
+          : `Task ${agent.taskId}`;
+        const shortTitle = displayTitle.length > 25 ? displayTitle.slice(0, 25) + '...' : displayTitle;
+
+        return `
+          <div class="agent-item ${selectedAgent === agent.taskId ? 'active' : ''}" onclick="selectAgent('${agent.taskId}')">
+            <div class="agent-status-dot ${agent.status}"></div>
+            <div class="agent-item-info">
+              <div class="agent-item-title" title="${displayTitle}">${shortTitle}</div>
+              <div class="agent-item-status">${formatRuntime(agent.runningFor)}</div>
+            </div>
           </div>
-          ${agent.status === 'running' ? `<button class="agent-stop-btn" onclick="event.stopPropagation(); stopAgent('${agent.taskId}')">Stop</button>` : ''}
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      // Also update tabs
+      renderAgentTabs();
+    }
+
+    function renderAgentTabs() {
+      const tabsContainer = document.getElementById('agent-tabs');
+
+      if (activeAgents.length === 0) {
+        tabsContainer.innerHTML = '<div class="agent-tab-empty">Select or start an agent to view output</div>';
+        return;
+      }
+
+      tabsContainer.innerHTML = activeAgents.map(agent => {
+        const displayTitle = agent.title && agent.title !== 'Unknown'
+          ? agent.title
+          : `Task ${agent.taskId}`;
+        const shortTitle = displayTitle.length > 20 ? displayTitle.slice(0, 20) + '...' : displayTitle;
+        const isActive = selectedAgent === agent.taskId;
+        const dotClass = agent.status === 'running' ? '' : 'stopped';
+
+        return `
+          <button class="agent-tab ${isActive ? 'active' : ''}" onclick="selectAgent('${agent.taskId}')">
+            <span class="agent-tab-dot ${dotClass}"></span>
+            ${shortTitle}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function updateStatusBar(agent) {
+      const stateEl = document.getElementById('status-state');
+      const runtimeEl = document.getElementById('status-runtime');
+      const toolsEl = document.getElementById('status-tools');
+
+      if (!agent) {
+        stateEl.textContent = 'Idle';
+        runtimeEl.textContent = '--';
+        toolsEl.innerHTML = 'None';
+        return;
+      }
+
+      // Update status
+      const statusText = agent.status === 'running' ? '● Working' :
+                        agent.status === 'completed' ? '✓ Done' : '✗ Failed';
+      stateEl.textContent = statusText;
+      stateEl.style.color = agent.status === 'running' ? '#7ee787' :
+                           agent.status === 'completed' ? '#3fb950' : '#f85149';
+
+      // Update runtime
+      runtimeEl.textContent = formatRuntime(agent.runningFor);
+
+      // Tools are updated separately via updateToolIndicator
     }
 
     function formatRuntime(ms) {
+      if (!ms || ms < 0) return '--';
       if (ms < 60000) return Math.floor(ms / 1000) + 's';
       if (ms < 3600000) return Math.floor(ms / 60000) + 'm ' + Math.floor((ms % 60000) / 1000) + 's';
       return Math.floor(ms / 3600000) + 'h ' + Math.floor((ms % 3600000) / 60000) + 'm';
@@ -5868,6 +6210,10 @@
       selectedAgent = taskId;
       renderAgentList();
 
+      // Update status bar with selected agent
+      const agent = activeAgents.find(a => a.taskId === taskId);
+      updateStatusBar(agent);
+
       // Close existing EventSource
       if (agentEventSource) {
         agentEventSource.close();
@@ -5876,7 +6222,7 @@
 
       // Clear output
       const outputContainer = document.getElementById('agent-output');
-      outputContainer.innerHTML = '<div class="agent-output-line system">Connecting to agent ' + taskId + '...</div>';
+      outputContainer.innerHTML = '<div class="agent-output-line system">Connecting to ' + taskId + '...</div>';
 
       // Connect to agent output stream
       agentEventSource = new EventSource(API_BASE + '/api/beads/agents/' + taskId + '/stream');
@@ -5895,8 +6241,29 @@
     // Tool tracking
     const activeTools = new Set();
 
+    // Helper: Check if text looks like raw JSON that should be filtered
+    function isRawJsonNoise(text) {
+      if (!text) return true;
+      const trimmed = text.trim();
+      // Filter out raw JSON objects/arrays
+      if (trimmed.startsWith('{') && trimmed.includes('"type"')) return true;
+      if (trimmed.startsWith('[') && trimmed.includes('"type"')) return true;
+      // Filter out hook responses
+      if (trimmed.includes('hook_response') || trimmed.includes('hook_event')) return true;
+      // Filter out session start hooks
+      if (trimmed.includes('session-start-hook') || trimmed.includes('AVAILABLE SKILLS')) return true;
+      // Filter out init data
+      if (trimmed.includes('"subtype":"init"')) return true;
+      return false;
+    }
+
     function appendAgentOutput(data) {
       const container = document.getElementById('agent-output');
+
+      // Skip raw JSON noise entirely
+      if (data.text && isRawJsonNoise(data.text)) {
+        return;
+      }
 
       // Remove "connecting" message on first real output
       const connectingMsg = container.querySelector('.system');
@@ -5907,44 +6274,51 @@
       // Update status label
       updateAgentStatusLabel(data);
 
-      // Parse and format the output
-      if (data.type === 'stdout' && data.text) {
-        // Parse for tool calls and format nicely
+      const line = document.createElement('div');
+      line.className = 'agent-output-line';
+
+      // Handle new parsed event types from server
+      if (data.type === 'assistant' && data.text) {
+        // Claude's thinking/response - the main conversation
+        line.className += ' assistant';
+        line.textContent = data.text;
+        container.appendChild(line);
+      } else if (data.type === 'text' && data.text) {
+        // Legacy text type
+        line.className += ' assistant';
+        line.textContent = data.text;
+        container.appendChild(line);
+      } else if (data.type === 'tool' && data.text) {
+        // Tool usage notification
+        line.className += ' tool-call';
+        line.textContent = data.text;
+        // Extract tool name from "🔧 Using tool: ToolName"
+        const toolMatch = data.text.match(/Using tool: (\w+)/);
+        if (toolMatch) {
+          updateToolIndicator(toolMatch[1], true);
+        }
+        container.appendChild(line);
+      } else if (data.type === 'result' && data.text) {
+        // Task result
+        line.className += ' result';
+        line.textContent = data.text;
+        container.appendChild(line);
+      } else if (data.type === 'system' && data.text) {
+        // System message
+        line.className += ' system';
+        line.textContent = data.text;
+        container.appendChild(line);
+      } else if (data.type === 'stdout' && data.text) {
+        // Fallback for unparsed stdout
         const lines = data.text.split('\n');
         lines.forEach(text => {
           if (!text.trim()) return;
-
-          const line = document.createElement('div');
-          line.className = 'agent-output-line';
-
-          // Detect tool calls
-          if (text.includes('Read tool') || text.includes('Reading file')) {
-            line.className += ' tool-call';
-            line.textContent = 'Reading: ' + extractPath(text);
-            updateToolIndicator('Read', true);
-          } else if (text.includes('Write tool') || text.includes('Writing file')) {
-            line.className += ' tool-call';
-            line.textContent = 'Writing: ' + extractPath(text);
-            updateToolIndicator('Write', true);
-          } else if (text.includes('Bash tool') || text.includes('Running command')) {
-            line.className += ' tool-call';
-            line.textContent = 'Running: ' + extractCommand(text);
-            updateToolIndicator('Bash', true);
-          } else if (text.includes('Edit tool') || text.includes('Editing file')) {
-            line.className += ' tool-call';
-            line.textContent = 'Editing: ' + extractPath(text);
-            updateToolIndicator('Edit', true);
-          } else if (text.includes('Grep tool') || text.includes('Searching')) {
-            line.className += ' tool-call';
-            line.textContent = 'Searching: ' + text.slice(0, 60);
-            updateToolIndicator('Grep', true);
-          } else {
-            line.className += ' stdout';
-            line.textContent = text;
-          }
-
-          container.appendChild(line);
+          const stdoutLine = document.createElement('div');
+          stdoutLine.className = 'agent-output-line stdout';
+          stdoutLine.textContent = text;
+          container.appendChild(stdoutLine);
         });
+        return; // Already appended
       } else if (data.type === 'stderr') {
         const line = document.createElement('div');
         line.className = 'agent-output-line stderr';
@@ -5997,35 +6371,25 @@
     }
 
     function updateToolIndicator(tool, active) {
-      const toolsBar = document.getElementById('agent-tools-bar');
-      let indicator = toolsBar.querySelector(`[data-tool="${tool}"]`);
+      if (active) {
+        activeTools.add(tool);
+      }
 
-      if (!indicator && active) {
-        indicator = document.createElement('div');
-        indicator.className = 'tool-indicator active';
-        indicator.dataset.tool = tool;
-        indicator.innerHTML = getToolIcon(tool) + ' ' + tool;
-        toolsBar.appendChild(indicator);
-      } else if (indicator) {
-        indicator.classList.toggle('active', active);
+      // Update status bar tools display
+      const toolsEl = document.getElementById('status-tools');
+      if (activeTools.size === 0) {
+        toolsEl.innerHTML = 'None';
+      } else {
+        toolsEl.innerHTML = Array.from(activeTools)
+          .map(t => `<span class="tool-badge">${t}</span>`)
+          .join('');
       }
     }
 
-    function getToolIcon(tool) {
-      const icons = {
-        'Read': '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/></svg>',
-        'Write': '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
-        'Edit': '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path fill="currentColor" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-        'Bash': '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 17l6-6-6-6 1.41-1.41L13.24 11l-7.83 7.83L4 17zm16 0v2H10v-2h10z"/></svg>',
-        'Grep': '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2"/></svg>',
-        'Glob': '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>'
-      };
-      return icons[tool] || '';
-    }
-
     function clearToolIndicators() {
-      const toolsBar = document.getElementById('agent-tools-bar');
-      toolsBar.innerHTML = '';
+      activeTools.clear();
+      const toolsEl = document.getElementById('status-tools');
+      toolsEl.innerHTML = 'None';
     }
 
     function updateAgentStatusLabel(data) {

@@ -56,121 +56,244 @@
       </template>
     </div>
 
-    <!-- Table Rows -->
-    <div
-      v-for="task in tasks"
-      :key="task.id"
-      class="table-row"
-      :class="{
-        'row-selected': selectedTasks.includes(task.id),
-        [`priority-${task.priority || 'none'}`]: true
-      }"
-      :data-status="task.status"
-      @click="$emit('select', task.id)"
-      @contextmenu.prevent="$emit('contextMenu', $event, task)"
-    >
-      <!-- Priority Indicator -->
-      <div v-if="task.priority" class="priority-indicator" />
-      <div class="table-cell checkbox-cell" @click.stop>
-        <input
-          type="checkbox"
-          :checked="selectedTasks.includes(task.id)"
-          @change="toggleTaskSelect(task.id)"
-        >
-      </div>
+    <!-- Virtual Scrolling for large lists (50+ items) -->
+    <template v-if="useVirtual">
+      <div class="table-body-virtual" ref="virtualContainerRef">
+        <div class="table-body-wrapper" :style="{ height: `${totalHeight}px` }">
+          <div
+            v-for="{ data: task, index } in virtualList"
+            :key="task.id"
+            class="table-row"
+            :class="{
+              'row-selected': selectedTasks.includes(task.id),
+              [`priority-${task.priority || 'none'}`]: true
+            }"
+            :data-status="task.status"
+            :style="{
+              position: 'absolute',
+              top: `${index * rowHeight}px`,
+              left: 0,
+              right: 0,
+              height: `${rowHeight}px`
+            }"
+            @click="$emit('select', task.id)"
+            @contextmenu.prevent="$emit('contextMenu', $event, task)"
+          >
+            <!-- Priority Indicator -->
+            <div v-if="task.priority" class="priority-indicator" />
+            <div class="table-cell checkbox-cell" @click.stop>
+              <input
+                type="checkbox"
+                :checked="selectedTasks.includes(task.id)"
+                @change="toggleTaskSelect(task.id)"
+              >
+            </div>
 
-      <div class="table-cell title-cell">
-        <input
-          v-if="editingTaskId === task.id && editingField === 'title'"
-          type="text"
-          :value="task.title"
-          class="inline-edit"
-          autofocus
-          @blur="saveEdit(task.id, 'title', $event)"
-          @keydown.enter="saveEdit(task.id, 'title', $event)"
-          @keydown.esc="cancelEdit"
-        >
-        <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
-          {{ task.title }}
-        </span>
-      </div>
+            <div class="table-cell title-cell">
+              <input
+                v-if="editingTaskId === task.id && editingField === 'title'"
+                type="text"
+                :value="task.title"
+                class="inline-edit"
+                autofocus
+                @blur="saveEdit(task.id, 'title', $event)"
+                @keydown.enter="saveEdit(task.id, 'title', $event)"
+                @keydown.esc="cancelEdit"
+              >
+              <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
+                {{ task.title }}
+              </span>
+            </div>
 
-      <div class="table-cell project-cell">
-        <span
-          class="project-emoji-badge"
-          :class="`project-visual--${getProjectVisual(task).type}`"
-          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-        >
-          <!-- Emoji visual indicator -->
-          <ProjectEmojiIcon
-            v-if="getProjectVisual(task).type === 'emoji'"
-            :emoji="getProjectVisual(task).content"
-            size="xs"
-            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-            class="project-emoji"
-          />
-          <!-- CSS circle visual indicator -->
-          <span
-            v-else-if="getProjectVisual(task).type === 'css-circle'"
-            class="project-emoji project-css-circle"
-            :style="{ '--project-color': getProjectVisual(task).color }"
-            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-          />
-          <!-- Default fallback (folder icon) -->
-          <ProjectEmojiIcon
-            v-else
-            emoji="📁"
-            size="xs"
-            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-            class="project-emoji"
-          />
-        </span>
-      </div>
+            <div class="table-cell project-cell">
+              <span
+                class="project-emoji-badge"
+                :class="`project-visual--${getProjectVisual(task).type}`"
+                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+              >
+                <ProjectEmojiIcon
+                  v-if="getProjectVisual(task).type === 'emoji'"
+                  :emoji="getProjectVisual(task).content"
+                  size="xs"
+                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                  class="project-emoji"
+                />
+                <span
+                  v-else-if="getProjectVisual(task).type === 'css-circle'"
+                  class="project-emoji project-css-circle"
+                  :style="{ '--project-color': getProjectVisual(task).color }"
+                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                />
+                <ProjectEmojiIcon
+                  v-else
+                  emoji="📁"
+                  size="xs"
+                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                  class="project-emoji"
+                />
+              </span>
+            </div>
 
-      <div class="table-cell status-cell" @click.stop>
-        <CustomSelect
-          :model-value="task.status || 'planned'"
-          :options="statusOptions"
-          placeholder="Select status..."
-          @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
-        />
-      </div>
+            <div class="table-cell status-cell" @click.stop>
+              <CustomSelect
+                :model-value="task.status || 'planned'"
+                :options="statusOptions"
+                placeholder="Select status..."
+                @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
+              />
+            </div>
 
-      <div class="table-cell due-date-cell">
-        <span v-if="task.dueDate" class="due-date">
-          <Calendar :size="14" />
-          {{ formatDueDate(task.dueDate) }}
-        </span>
-        <span v-else class="no-date">-</span>
-      </div>
+            <div class="table-cell due-date-cell">
+              <span v-if="task.dueDate" class="due-date">
+                <Calendar :size="14" />
+                {{ formatDueDate(task.dueDate) }}
+              </span>
+              <span v-else class="no-date">-</span>
+            </div>
 
-      <div class="table-cell progress-cell">
-        <!-- ADHD-friendly: Only show progress when > 0% to reduce visual noise -->
-        <div v-if="task.progress > 0" class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
-          <div class="progress-bg" />
-          <div class="progress-fill" />
-          <span class="progress-text">{{ task.progress }}%</span>
+            <div class="table-cell progress-cell">
+              <div v-if="task.progress > 0" class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
+                <div class="progress-bg" />
+                <div class="progress-fill" />
+                <span class="progress-text">{{ task.progress }}%</span>
+              </div>
+              <span v-else class="no-progress">-</span>
+            </div>
+
+            <div class="table-cell actions-cell">
+              <button
+                class="action-btn"
+                title="Start Timer"
+                @click.stop="$emit('startTimer', task.id)"
+              >
+                <Play :size="14" />
+              </button>
+              <button
+                class="action-btn"
+                title="Edit Task"
+                @click.stop="$emit('edit', task.id)"
+              >
+                <Edit :size="14" />
+              </button>
+            </div>
+          </div>
         </div>
-        <span v-else class="no-progress">-</span>
       </div>
+    </template>
 
-      <div class="table-cell actions-cell">
-        <button
-          class="action-btn"
-          title="Start Timer"
-          @click.stop="$emit('startTimer', task.id)"
-        >
-          <Play :size="14" />
-        </button>
-        <button
-          class="action-btn"
-          title="Edit Task"
-          @click.stop="$emit('edit', task.id)"
-        >
-          <Edit :size="14" />
-        </button>
+    <!-- Standard rendering for small lists (<50 items) -->
+    <template v-else>
+      <div
+        v-for="task in tasks"
+        :key="task.id"
+        class="table-row"
+        :class="{
+          'row-selected': selectedTasks.includes(task.id),
+          [`priority-${task.priority || 'none'}`]: true
+        }"
+        :data-status="task.status"
+        @click="$emit('select', task.id)"
+        @contextmenu.prevent="$emit('contextMenu', $event, task)"
+      >
+        <!-- Priority Indicator -->
+        <div v-if="task.priority" class="priority-indicator" />
+        <div class="table-cell checkbox-cell" @click.stop>
+          <input
+            type="checkbox"
+            :checked="selectedTasks.includes(task.id)"
+            @change="toggleTaskSelect(task.id)"
+          >
+        </div>
+
+        <div class="table-cell title-cell">
+          <input
+            v-if="editingTaskId === task.id && editingField === 'title'"
+            type="text"
+            :value="task.title"
+            class="inline-edit"
+            autofocus
+            @blur="saveEdit(task.id, 'title', $event)"
+            @keydown.enter="saveEdit(task.id, 'title', $event)"
+            @keydown.esc="cancelEdit"
+          >
+          <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
+            {{ task.title }}
+          </span>
+        </div>
+
+        <div class="table-cell project-cell">
+          <span
+            class="project-emoji-badge"
+            :class="`project-visual--${getProjectVisual(task).type}`"
+            :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+          >
+            <ProjectEmojiIcon
+              v-if="getProjectVisual(task).type === 'emoji'"
+              :emoji="getProjectVisual(task).content"
+              size="xs"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+              class="project-emoji"
+            />
+            <span
+              v-else-if="getProjectVisual(task).type === 'css-circle'"
+              class="project-emoji project-css-circle"
+              :style="{ '--project-color': getProjectVisual(task).color }"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+            />
+            <ProjectEmojiIcon
+              v-else
+              emoji="📁"
+              size="xs"
+              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+              class="project-emoji"
+            />
+          </span>
+        </div>
+
+        <div class="table-cell status-cell" @click.stop>
+          <CustomSelect
+            :model-value="task.status || 'planned'"
+            :options="statusOptions"
+            placeholder="Select status..."
+            @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
+          />
+        </div>
+
+        <div class="table-cell due-date-cell">
+          <span v-if="task.dueDate" class="due-date">
+            <Calendar :size="14" />
+            {{ formatDueDate(task.dueDate) }}
+          </span>
+          <span v-else class="no-date">-</span>
+        </div>
+
+        <div class="table-cell progress-cell">
+          <div v-if="task.progress > 0" class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
+            <div class="progress-bg" />
+            <div class="progress-fill" />
+            <span class="progress-text">{{ task.progress }}%</span>
+          </div>
+          <span v-else class="no-progress">-</span>
+        </div>
+
+        <div class="table-cell actions-cell">
+          <button
+            class="action-btn"
+            title="Start Timer"
+            @click.stop="$emit('startTimer', task.id)"
+          >
+            <Play :size="14" />
+          </button>
+          <button
+            class="action-btn"
+            title="Edit Task"
+            @click.stop="$emit('edit', task.id)"
+          >
+            <Edit :size="14" />
+          </button>
+        </div>
       </div>
-    </div>
+    </template>
 
     <!-- Empty State -->
     <div v-if="tasks.length === 0" class="empty-state">
@@ -184,6 +307,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useVirtualList } from '@vueuse/core'
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { Play, Edit, Calendar, Inbox, Trash2, X } from 'lucide-vue-next'
@@ -192,6 +316,22 @@ import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+
+// Virtual scrolling constants
+const VIRTUAL_THRESHOLD = 50 // Only virtualize if more than this many items
+const OVERSCAN = 5 // Extra items to render above/below viewport
+
+// Row heights by density
+const ROW_HEIGHTS: Record<DensityType, number> = {
+  compact: 40,
+  comfortable: 48,
+  spacious: 56
+}
+
+interface Props {
+  tasks: Task[]
+  density: DensityType
+}
 
 const props = defineProps<Props>()
 
@@ -212,11 +352,6 @@ const statusOptions = [
   { label: 'On Hold', value: 'on_hold' }
 ]
 
-interface Props {
-  tasks: Task[]
-  density: DensityType
-}
-
 const taskStore = useTaskStore()
 
 // Hebrew text alignment support
@@ -230,6 +365,27 @@ const getTextAlignmentClasses = (text: string) => {
 const selectedTasks = ref<string[]>([])
 const editingTaskId = ref<string | null>(null)
 const editingField = ref<string | null>(null)
+
+// Virtual scrolling setup
+const virtualContainerRef = ref<HTMLElement | null>(null)
+
+// Row height based on density
+const rowHeight = computed(() => ROW_HEIGHTS[props.density])
+
+// Determine if we should use virtual scrolling
+const useVirtual = computed(() => props.tasks.length >= VIRTUAL_THRESHOLD)
+
+// Use VueUse's useVirtualList for efficient rendering
+const { list: virtualList } = useVirtualList(
+  computed(() => props.tasks),
+  {
+    itemHeight: () => rowHeight.value,
+    overscan: OVERSCAN
+  }
+)
+
+// Total height for the virtual wrapper
+const totalHeight = computed(() => props.tasks.length * rowHeight.value)
 
 const allSelected = computed(() =>
   props.tasks.length > 0 && selectedTasks.value.length === props.tasks.length
@@ -368,6 +524,23 @@ onUnmounted(() => {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Virtual scroll body container */
+.table-body-virtual {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  min-height: 200px;
+  max-height: calc(100vh - 300px);
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+
+.table-body-wrapper {
+  position: relative;
+  width: 100%;
 }
 
 /* Bulk Actions Bar */
@@ -438,11 +611,12 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
-  position: relative; /* Needed for absolute positioned priority indicator */
+  position: relative;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--glass-border);
   transition: background-color var(--duration-fast) ease;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .table-row:hover {
@@ -519,23 +693,23 @@ onUnmounted(() => {
 }
 
 .project-emoji {
-  font-size: var(--project-indicator-size-md); /* 24px to match canvas */
+  font-size: var(--project-indicator-size-md);
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateZ(0); /* Hardware acceleration */
+  transform: translateZ(0);
   transition: all var(--spring-smooth) ease;
 }
 
 .project-emoji.project-css-circle {
-  width: var(--project-indicator-size-md); /* 24px to match canvas */
-  height: var(--project-indicator-size-md); /* 24px to match canvas */
+  width: var(--project-indicator-size-md);
+  height: var(--project-indicator-size-md);
   border-radius: 50%;
   background: var(--project-color);
   box-shadow: var(--project-indicator-shadow-inset);
   position: relative;
-  font-size: var(--project-indicator-font-size-md); /* Proper font scaling */
+  font-size: var(--project-indicator-font-size-md);
   color: white;
   font-weight: var(--font-bold);
   display: flex;
@@ -543,21 +717,19 @@ onUnmounted(() => {
   justify-content: center;
   transition: all var(--spring-smooth) ease;
   backdrop-filter: var(--project-indicator-backdrop);
-  /* Enhanced glow to match canvas */
   box-shadow:
     var(--project-indicator-shadow-inset),
     var(--project-indicator-glow-strong);
 }
 
 .project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.15); /* Match canvas scaling */
+  transform: translateZ(0) scale(1.15);
   box-shadow:
     var(--project-indicator-shadow-inset),
     0 0 16px var(--project-color),
     0 0 32px var(--project-color);
 }
 
-/* Add radial gradient glow effect like canvas */
 .project-emoji-badge:hover .project-emoji.project-css-circle::after {
   content: '';
   position: absolute;
@@ -670,7 +842,6 @@ onUnmounted(() => {
   --progress: 0%;
 }
 
-/* Gray background stroke - always visible */
 .progress-bg {
   position: absolute;
   inset: 0;
@@ -679,7 +850,6 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-/* Colored progress stroke - clips from left to right */
 .progress-fill {
   position: absolute;
   inset: 0;

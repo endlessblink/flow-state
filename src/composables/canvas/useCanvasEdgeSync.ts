@@ -12,7 +12,7 @@
  */
 
 import { type Ref, ref } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
+import { useTaskStore, type Task } from '@/stores/tasks'
 import { useVueFlow, type Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 
@@ -33,16 +33,18 @@ export function useCanvasEdgeSync(deps: EdgeSyncDeps) {
      * to the task. Only creates edges for tasks that are on the canvas
      * (have canvasPosition).
      */
-    const syncEdges = () => {
+    const syncEdges = (tasksToSync?: Task[]) => {
         if (isSyncing.value) return
         isSyncing.value = true
 
         try {
             const newEdges: Edge[] = []
-            const tasks = taskStore.tasks
+            const tasks = tasksToSync || taskStore.tasks
 
             // Build a map of task IDs to tasks for fast lookup
-            const taskMap = new Map(tasks.map(t => [t.id, t]))
+            // CRITICAL: Only include tasks that are actually being synced/displayed
+            // This prevents creating edges to nodes that are filtered out (e.g. done/overdue)
+            const taskMap = new Map(tasks.map((t: Task) => [t.id, t]))
 
             for (const task of tasks) {
                 // Skip tasks without canvas position (not on canvas)

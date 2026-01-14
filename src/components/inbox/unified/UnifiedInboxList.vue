@@ -26,35 +26,75 @@
       </button>
     </div>
 
-    <!-- Task Cards -->
-    <UnifiedInboxTaskCard
-      v-for="task in tasks"
-      :key="task.id"
-      :task="task"
-      :is-selected="selectedTaskIds.has(task.id)"
-      @drag-start="$emit('dragStart', $event, task)"
-      @drag-end="$emit('dragEnd')"
-      @task-click="$emit('taskClick', $event, task)"
-      @task-dblclick="$emit('taskDblclick', task)"
-      @task-contextmenu="$emit('taskContextmenu', $event, task)"
-      @task-keydown="$emit('taskKeydown', $event, task)"
-      @start-timer="$emit('startTimer', task)"
-    />
+    <!-- Virtual Scrolling for large lists (50+ items) -->
+    <template v-if="useVirtual">
+      <div
+        ref="virtualContainerRef"
+        class="virtual-container"
+        @scroll="onScroll"
+      >
+        <div class="virtual-wrapper" :style="{ height: `${totalHeight}px` }">
+          <UnifiedInboxTaskCard
+            v-for="{ data: task, index } in virtualList"
+            :key="task.id"
+            :task="task"
+            :is-selected="selectedTaskIds.has(task.id)"
+            :style="{
+              position: 'absolute',
+              top: `${index * ITEM_HEIGHT}px`,
+              left: 0,
+              right: 0,
+              height: `${ITEM_HEIGHT}px`
+            }"
+            @drag-start="$emit('dragStart', $event, task)"
+            @drag-end="$emit('dragEnd')"
+            @task-click="$emit('taskClick', $event, task)"
+            @task-dblclick="$emit('taskDblclick', task)"
+            @task-contextmenu="$emit('taskContextmenu', $event, task)"
+            @task-keydown="$emit('taskKeydown', $event, task)"
+            @start-timer="$emit('startTimer', task)"
+          />
+        </div>
+      </div>
+    </template>
+
+    <!-- Standard rendering for small lists (<50 items) -->
+    <template v-else>
+      <UnifiedInboxTaskCard
+        v-for="task in tasks"
+        :key="task.id"
+        :task="task"
+        :is-selected="selectedTaskIds.has(task.id)"
+        @drag-start="$emit('dragStart', $event, task)"
+        @drag-end="$emit('dragEnd')"
+        @task-click="$emit('taskClick', $event, task)"
+        @task-dblclick="$emit('taskDblclick', task)"
+        @task-contextmenu="$emit('taskContextmenu', $event, task)"
+        @task-keydown="$emit('taskKeydown', $event, task)"
+        @start-timer="$emit('startTimer', task)"
+      />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useVirtualList } from '@vueuse/core'
 import { Trash2, X } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 import UnifiedInboxTaskCard from './UnifiedInboxTaskCard.vue'
+
+// Virtual scrolling constants
+const ITEM_HEIGHT = 72 // Height of each task card in pixels
+const VIRTUAL_THRESHOLD = 50 // Only virtualize if more than this many items
+const OVERSCAN = 5 // Extra items to render above/below viewport
 
 const props = defineProps<{
   tasks: Task[]
   selectedTaskIds: Set<string>
   multiSelectMode: boolean
   hasSelectedGroups: boolean
-  areGlobalsFiltered: boolean // If global sidebar filters are active
+  areGlobalsFiltered: boolean
 }>()
 
 defineEmits<{
@@ -71,11 +111,39 @@ defineEmits<{
 
 const selectedCount = computed(() => props.selectedTaskIds.size)
 
+// Determine if we should use virtual scrolling
+const useVirtual = computed(() => props.tasks.length >= VIRTUAL_THRESHOLD)
+
+// Virtual scrolling setup
+const virtualContainerRef = ref<HTMLElement | null>(null)
+
+// Use VueUse's useVirtualList for efficient rendering
+const { list: virtualList, containerProps: _containerProps, scrollTo } = useVirtualList(
+  computed(() => props.tasks),
+  {
+    itemHeight: ITEM_HEIGHT,
+    overscan: OVERSCAN
+  }
+)
+
+// Total height for the virtual wrapper
+const totalHeight = computed(() => props.tasks.length * ITEM_HEIGHT)
+
+// Expose scrollTo for parent components if needed
+const onScroll = () => {
+  // Scroll handling is managed by useVirtualList internally
+}
+
+// Watch for task changes to potentially scroll to top
+watch(() => props.tasks.length, (newLength, oldLength) => {
+  if (newLength > oldLength && virtualContainerRef.value) {
+    // New tasks added - optionally scroll to show them
+  }
+})
+
 // Empty State Logic
 const emptyText = computed(() => {
   if (props.hasSelectedGroups) {
-    // We can't know the exact count in group here without passing prop, 
-    // but generalizing is fine for AI readability
     return 'No tasks in selected groups'
   }
   return 'No tasks found'
@@ -85,11 +153,14 @@ const emptySubtext = computed(() => {
   if (props.hasSelectedGroups) {
     return 'Drag tasks to these groups on the Canvas.'
   }
-  if (!props.areGlobalsFiltered) { // If filtering returns 0 but filteredTasks was 0
-    return 'All filtered tasks are already on the board/calendar' // Default assumption
+  if (!props.areGlobalsFiltered) {
+    return 'All filtered tasks are already on the board/calendar'
   }
   return 'No tasks match your current view filters'
 })
+
+// Expose scrollTo for parent usage
+defineExpose({ scrollTo })
 </script>
 
 <style scoped>
@@ -100,9 +171,22 @@ const emptySubtext = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  /* Firefox thin scrollbar (webkit styles in global styles.css - scoped doesn't work with pseudo-elements) */
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
+}
+
+/* Virtual scroll container */
+.virtual-container {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+
+.virtual-wrapper {
+  position: relative;
+  width: 100%;
 }
 
 .empty-inbox {
@@ -134,7 +218,7 @@ const emptySubtext = computed(() => {
 /* Selection Bar */
 .selection-bar {
   position: sticky;
-  top: -8px; /* Stick near top */
+  top: -8px;
   z-index: 10;
   display: flex;
   align-items: center;

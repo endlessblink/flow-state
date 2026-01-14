@@ -65,3 +65,9 @@ docs/.debug/
 src-tauri/*.zip
 stats.html
 dev-dist/
+
+# External tools and agent directories
+.agent-worktrees/
+Claude-Code-Beads-Orchestration/
+Claude-Subagent-Editor/
+eslint_current_report.txt

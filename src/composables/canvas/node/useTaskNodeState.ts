@@ -88,6 +88,20 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
         }
     })
 
+    // TASK-282: Overdue detection
+    const isOverdue = computed(() => {
+        if (!props.task?.dueDate) return false
+        if (props.task.status === 'done') return false // Completed tasks aren't overdue
+        try {
+            const dueDate = new Date(props.task.dueDate)
+            dueDate.setHours(23, 59, 59, 999) // End of due date day
+            const today = new Date()
+            return dueDate < today
+        } catch (_e) {
+            return false
+        }
+    })
+
     const isTimerActive = computed(() => {
         return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
     })
@@ -127,6 +141,7 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
         statusLabel,
         hasSchedule,
         formattedDueDate,
+        isOverdue,
         isTimerActive,
         durationBadgeClass,
         durationIcon,

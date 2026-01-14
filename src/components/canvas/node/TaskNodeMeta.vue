@@ -2,9 +2,15 @@
   <div class="task-metadata">
     <!-- Status -->
     <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
-    
-    <!-- Due Date -->
-    <span v-if="dueDate" class="due-date-badge" title="Due Date">
+
+    <!-- TASK-282: Overdue Badge (takes priority over regular due date display) -->
+    <OverdueBadge
+      v-if="isOverdue"
+      @reschedule="(dateType) => $emit('reschedule', dateType)"
+    />
+
+    <!-- Due Date (only show if not overdue) -->
+    <span v-else-if="dueDate" class="due-date-badge" title="Due Date">
       <Calendar :size="12" />
       {{ formattedDueDate }}
     </span>
@@ -35,6 +41,7 @@
 
 <script setup lang="ts">
 import { Calendar, Check } from 'lucide-vue-next'
+import OverdueBadge from './OverdueBadge.vue'
 
 defineProps<{
   showStatus: boolean
@@ -49,6 +56,11 @@ defineProps<{
   durationIcon: any // Component type
   formattedDuration: string
   isDone: boolean
+  isOverdue: boolean
+}>()
+
+defineEmits<{
+  reschedule: [dateType: string]
 }>()
 </script>
 

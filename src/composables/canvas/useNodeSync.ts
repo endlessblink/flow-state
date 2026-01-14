@@ -8,6 +8,7 @@ import {
     sanitizePosition
 } from '@/utils/canvas/coordinates'
 import { CANVAS } from '@/constants/canvas'
+import { useToast } from '@/composables/useToast'
 
 /**
  * Composable for managing node sync with optimistic locking
@@ -259,6 +260,8 @@ export function useNodeSync(
         } catch (err: any) {
             console.error('Optimistic Sync Failed:', err)
             syncError.value = err.message || 'Sync failed'
+            const { showToast } = useToast()
+            showToast(`Sync Failed: ${syncError.value}`, 'error')
             return false
         } finally {
             isSyncing.value = false

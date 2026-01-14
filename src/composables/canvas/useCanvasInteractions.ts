@@ -1,4 +1,4 @@
-import { ref, reactive, type Ref } from 'vue'
+import { ref, reactive, type Ref, onMounted, onUnmounted } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -347,6 +347,74 @@ export function useCanvasInteractions(deps?: {
     // Interaction sub-states
     const { resizeState, isResizeSettling, resizeLineStyle, edgeHandleStyle } = useCanvasResizeState()
     const { validateDimensions, calculateChildInverseDelta } = useCanvasResizeCalculation()
+
+    // --- GLOBAL INTERCEPTOR FOR SHIFT+CLICK (BUG-FIX) ---
+    // Vue Flow's box selection overlay (Shift key) blocks clicks on nodes.
+    // We use a capture-phase listener to detect if the click is visually over a task node.
+    const handleGlobalShiftClick = (e: MouseEvent) => {
+        if (!e.shiftKey) return
+
+        // Use elementsFromPoint to pierce through the overlay
+        const elements = document.elementsFromPoint(e.clientX, e.clientY)
+        // Look for the task node element (or its wrapper)
+        const taskElement = elements.find(el =>
+            el.classList.contains('task-node') ||
+            el.classList.contains('vue-flow__node-taskNode')
+        )
+
+        if (taskElement) {
+            // Found a task node under the cursor!
+            e.stopPropagation()
+            // preventDefault optional - we keep it to be safe against selection of text
+            // e.preventDefault() 
+
+            // Get ID
+            let taskId = taskElement.getAttribute('data-task-id')
+
+            // If we hit the wrapper, try to find the inner .task-node
+            if (!taskId && taskElement.classList.contains('vue-flow__node-taskNode')) {
+                const inner = taskElement.querySelector('.task-node')
+                if (inner) taskId = inner.getAttribute('data-task-id')
+                // Also try data-id on wrapper itself which Vue Flow usually sets
+                if (!taskId) taskId = taskElement.getAttribute('data-id')
+            } else if (!taskId && taskElement.classList.contains('task-node')) {
+                taskId = taskElement.getAttribute('data-task-id')
+            }
+
+            if (taskId) {
+                console.log('[DEBUG] Intercepted Shift+Click on Task:', taskId)
+                // Manual toggle logic
+                const currentSelection = [...canvasStore.selectedNodeIds]
+                let newSelection: string[]
+
+                if (currentSelection.includes(taskId)) {
+                    newSelection = currentSelection.filter(id => id !== taskId)
+                } else {
+                    newSelection = [...currentSelection, taskId]
+                }
+
+                canvasStore.setSelectedNodes(newSelection)
+
+                // Sync to Vue Flow
+                if (nodes.value) {
+                    const selectionChanges = nodes.value.map((n: any) => ({
+                        id: n.id,
+                        type: 'select' as const,
+                        selected: newSelection.includes(n.id)
+                    }))
+                    applyNodeChanges(selectionChanges)
+                }
+            }
+        }
+    }
+
+    onMounted(() => {
+        window.addEventListener('mousedown', handleGlobalShiftClick, true) // Capture!
+    })
+
+    onUnmounted(() => {
+        window.removeEventListener('mousedown', handleGlobalShiftClick, true)
+    })
 
     // Selection state
     const selectionBox = reactive<SelectionBox>({

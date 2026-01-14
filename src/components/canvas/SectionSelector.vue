@@ -303,4 +303,39 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translateY(-8px);
 }
+
+/* ============================================
+   INLINE VARIANT - for use inside metadata bars
+   ============================================ */
+.section-selector:global(.inline-custom-select) .select-trigger {
+  /* Remove glass morphism - parent provides container styling */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+
+  /* Compact sizing */
+  padding: 0;
+  min-height: unset;
+  height: auto;
+}
+
+.section-selector:global(.inline-custom-select) .select-trigger:hover {
+  background: transparent;
+  border: none;
+}
+
+.section-selector:global(.inline-custom-select) .select-value {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.section-selector:global(.inline-custom-select) .section-color-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.section-selector:global(.inline-custom-select) .select-icon {
+  color: var(--text-tertiary);
+}
 </style>

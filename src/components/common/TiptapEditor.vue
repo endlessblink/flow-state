@@ -676,14 +676,18 @@ const insertTable = () => {
   text-align: right;
 }
 
-/* Tables */
+/* Tables - target all tables in TipTap editor */
+:deep(.tiptap table),
 :deep(.tiptap table.editor-table) {
   border-collapse: collapse;
   width: 100%;
   margin: 1em 0;
   overflow: hidden;
+  border: 1px solid var(--glass-border);
 }
 
+:deep(.tiptap table th),
+:deep(.tiptap table td),
 :deep(.tiptap table.editor-table th),
 :deep(.tiptap table.editor-table td) {
   border: 1px solid var(--glass-border);
@@ -692,17 +696,26 @@ const insertTable = () => {
   vertical-align: top;
 }
 
+:deep(.tiptap table th),
 :deep(.tiptap table.editor-table th) {
   background: var(--glass-bg-medium);
   font-weight: 600;
 }
 
+:deep(.tiptap table td),
 :deep(.tiptap table.editor-table td) {
   background: var(--glass-bg-soft);
 }
 
+:deep(.tiptap table .selectedCell),
 :deep(.tiptap table.editor-table .selectedCell) {
   background: var(--primary-100);
+}
+
+/* Table wrapper from TipTap */
+:deep(.tiptap .tableWrapper) {
+  overflow-x: auto;
+  margin: 1em 0;
 }
 
 /* Dropdown containers */

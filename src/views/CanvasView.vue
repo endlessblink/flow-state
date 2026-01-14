@@ -93,7 +93,7 @@
           :pan-on-scroll="false"
           zoom-on-pinch
           :pan-on-drag="!shift && !control && !meta"
-          :nodes-draggable="!shift && !control && !meta"
+          :nodes-draggable="!control && !meta"
           :multi-selection-key-code="['Control', 'Meta', 'Shift']"
           snap-to-grid
           :snap-grid="[16, 16]"
@@ -157,6 +157,8 @@
           <!-- Custom Task Node Template -->
           <!-- TASK-262: Using onSelect callback prop instead of @select emit -->
           <!-- Vue's emit system doesn't work reliably in Vue Flow custom nodes -->
+          <!-- TASK-279: Using editCallback prop instead of @edit emit -->
+          <!-- Vue's emit system doesn't work reliably in Vue Flow custom nodes -->
           <template #node-taskNode="nodeProps">
             <TaskNode
               :task="nodeProps.data.task"
@@ -168,6 +170,7 @@
               :show-duration="canvasStore.showDurationBadge"
               :show-schedule="canvasStore.showScheduleBadge"
               :select-callback="handleTaskSelect"
+              :edit-callback="handleEditTask"
               @edit="handleEditTask"
               @select="handleTaskSelect"
               @context-menu="handleTaskContextMenu"
@@ -398,11 +401,13 @@ const handleOpenSectionSettingsFromContext = () => {
 const handleToggleFocusMode = () => uiStore.toggleFocusMode()
 const handleSectionUpdate = (id: string, data: any) => canvasStore.updateSection(id, data)
 const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
-const handleEditTask = (task: any) => { selectedTask.value = task; isEditModalOpen.value = true; closeCanvasContextMenu() }
+const handleEditTask = (task: any) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
 // Handle double-click on nodes to open edit modal for tasks
 const handleNodeDoubleClick = ({ event, node }: NodeMouseEvent) => {
+    console.log('[TASK-279] handleNodeDoubleClick called', { nodeType: node.type, hasTask: !!node.data?.task })
     // Only handle task nodes, not group nodes
     if (node.type === 'taskNode' && node.data?.task) {
+        console.log('[TASK-279] Opening edit modal for task', node.data.task.id)
         handleEditTask(node.data.task)
     }
 }

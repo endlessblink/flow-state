@@ -15,43 +15,34 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
     const { taskStore, getAllContainingSections } = deps
 
     // Helper: Get properties from a single section based on its name/settings
+    // TASK-283 FIX: Always detect from section name FIRST, then let assignOnDrop override
     const getSectionProperties = (section: CanvasSection): Partial<Task> => {
         const updates: Partial<Task> = {}
+        const today = new Date()
+        const lowerName = section.name.toLowerCase().trim()
 
-        // 0. DAY-OF-WEEK GROUPS (Monday-Sunday)
+        // ================================================================
+        // STEP 1: Auto-detect properties from section NAME (Power Keywords)
+        // This ensures "Today" group always sets dueDate, even if it has
+        // other assignOnDrop settings like priority or status.
+        // ================================================================
+
+        // 1a. DAY-OF-WEEK GROUPS (Monday-Sunday)
         const dayOfWeekMap: Record<string, number> = {
             'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
             'thursday': 4, 'friday': 5, 'saturday': 6
         }
-        const lowerName = section.name.toLowerCase().trim()
         if (dayOfWeekMap[lowerName] !== undefined) {
-            const today = new Date()
             const targetDay = dayOfWeekMap[lowerName]
-            // Calculate next occurrence: ((7 + target - current) % 7) || 7
             const daysUntilTarget = ((7 + targetDay - today.getDay()) % 7) || 7
             const resultDate = new Date(today)
             resultDate.setDate(today.getDate() + daysUntilTarget)
             updates.dueDate = formatDateKey(resultDate)
-            return updates
         }
 
-        // 1. Check explicit assignOnDrop settings first
-        if (section.assignOnDrop) {
-            const settings = section.assignOnDrop
-            if (settings.priority) updates.priority = settings.priority
-            if (settings.status) updates.status = settings.status
-            if (settings.projectId) updates.projectId = settings.projectId
-            if (settings.dueDate) {
-                const resolvedDate = resolveDueDate(settings.dueDate)
-                if (resolvedDate !== null) updates.dueDate = resolvedDate
-            }
-            return updates
-        }
-
-        // 2. Auto-detect from section name (Power Keywords)
+        // 1b. Power Keywords (Today, Tomorrow, High Priority, etc.)
         const keyword = detectPowerKeyword(section.name)
         if (keyword) {
-            const today = new Date()
             switch (keyword.category) {
                 case 'date':
                     switch (keyword.value) {
@@ -91,24 +82,39 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
                     updates.estimatedDuration = DURATION_DEFAULTS[keyword.value as DurationCategory] ?? 0
                     break
             }
-            return updates
         }
 
-        // 3. Legacy fallback - check section type
-        if (section.type === 'priority' && section.propertyValue) {
-            updates.priority = section.propertyValue as 'high' | 'medium' | 'low'
-        } else if (section.type === 'status' && section.propertyValue) {
-            updates.status = section.propertyValue as Task['status']
-        } else if (section.type === 'project' && section.propertyValue) {
-            updates.projectId = section.propertyValue
-        } else if (section.type === 'custom' || section.type === 'timeline') {
-            if (shouldUseSmartGroupLogic(section.name)) {
-                // For smart group logic, we'd ideally call moveTaskToSmartGroup
-                // but since this is a pure "get properties" function, we'll let
-                // the keyword detection above handle it, or return the propertyValue as dueDate.
-                if (section.propertyValue) updates.dueDate = section.propertyValue
-            } else if (section.propertyValue) {
-                updates.dueDate = section.propertyValue
+        // ================================================================
+        // STEP 2: Apply explicit assignOnDrop settings (OVERRIDES keywords)
+        // User-configured settings take priority over auto-detected ones.
+        // ================================================================
+        if (section.assignOnDrop) {
+            const settings = section.assignOnDrop
+            if (settings.priority) updates.priority = settings.priority
+            if (settings.status) updates.status = settings.status
+            if (settings.projectId) updates.projectId = settings.projectId
+            if (settings.dueDate) {
+                const resolvedDate = resolveDueDate(settings.dueDate)
+                if (resolvedDate !== null) updates.dueDate = resolvedDate
+            }
+        }
+
+        // ================================================================
+        // STEP 3: Legacy fallback - check section type (only if no updates yet)
+        // ================================================================
+        if (Object.keys(updates).length === 0) {
+            if (section.type === 'priority' && section.propertyValue) {
+                updates.priority = section.propertyValue as 'high' | 'medium' | 'low'
+            } else if (section.type === 'status' && section.propertyValue) {
+                updates.status = section.propertyValue as Task['status']
+            } else if (section.type === 'project' && section.propertyValue) {
+                updates.projectId = section.propertyValue
+            } else if (section.type === 'custom' || section.type === 'timeline') {
+                if (shouldUseSmartGroupLogic(section.name)) {
+                    if (section.propertyValue) updates.dueDate = section.propertyValue
+                } else if (section.propertyValue) {
+                    updates.dueDate = section.propertyValue
+                }
             }
         }
 

@@ -19,7 +19,7 @@
       'lod-3': isLOD3
     }"
     @click="handleClick"
-    @dblclick="$emit('edit', task)"
+    @mousedown="handleMouseDown"
     @contextmenu.prevent="handleContextMenu"
   >
     <!-- Content wrapper -->
@@ -61,6 +61,8 @@
         :duration-icon="durationIcon"
         :formatted-duration="formattedDuration"
         :is-done="task?.status === 'done'"
+        :is-overdue="isOverdue"
+        @reschedule="handleReschedule"
       />
     </div>
 
@@ -144,6 +146,8 @@ interface Props {
   // TASK-262: Callback prop for selection - bypasses Vue's broken emit in Vue Flow
   // Named 'selectCallback' instead of 'onSelect' to avoid Vue's special 'on*' prop handling
   selectCallback?: (task: Task, multiSelect: boolean) => void
+  // TASK-279: Callback prop for edit - bypasses Vue's broken emit in Vue Flow
+  editCallback?: (task: Task) => void
   showSchedule?: boolean
   isConnecting?: boolean
   isDragging?: boolean
@@ -160,6 +164,7 @@ const {
   statusLabel,
   hasSchedule,
   formattedDueDate,
+  isOverdue,
   isTimerActive,
   durationBadgeClass,
   durationIcon,
@@ -173,13 +178,18 @@ const {
   toggleDescriptionExpanded,
   handleCheckboxClick,
   handleClick,
-  handleContextMenu
+  handleMouseDown,
+  handleContextMenu,
+  handleReschedule
 } = useTaskNodeActions(props, emit)
 
 // TASK-262: Selection is handled via:
 // 1. @click="handleClick" on the template (for clicks that reach the component)
 // 2. @node-click on the VueFlow component in CanvasView (for Vue Flow's internal events)
 // 3. selectCallback prop for direct callback when emits don't work
+// TASK-279: Edit (double-click) is handled via:
+// 1. Manual double-click detection in handleClick (native @dblclick doesn't work due to DOM changes)
+// 2. editCallback prop for direct callback when emits don't work in Vue Flow
 </script>
 
 <style scoped>

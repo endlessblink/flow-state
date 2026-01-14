@@ -228,7 +228,14 @@ const statusIconClass = computed(() => {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   transition: all var(--duration-fast);
-  height: 28px;
+  min-height: 28px;
+  height: auto;
+}
+
+/* Dropdown fields need slightly more padding for click target */
+.metadata-field--dropdown {
+  padding: 6px 10px;
+  cursor: pointer;
 }
 
 .metadata-field:hover {

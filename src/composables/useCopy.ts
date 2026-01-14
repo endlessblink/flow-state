@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { useToast } from '@/composables/useToast'
 
 export interface CopyOptions {
   text: string
@@ -10,6 +11,7 @@ export interface CopyOptions {
 export function useCopy() {
   const isCopying = ref(false)
   const lastCopiedText = ref('')
+  const { showToast } = useToast()
 
   const copyToClipboard = async (options: CopyOptions): Promise<boolean> => {
     const {
@@ -80,97 +82,4 @@ export function useCopy() {
     copyToClipboard,
     copyError
   }
-}
-
-// Simple toast notification system
-let toastContainer: HTMLDivElement | null = null
-
-function showToast(message: string, type: 'success' | 'error' = 'success') {
-  // Create toast container if it doesn't exist
-  if (!toastContainer) {
-    toastContainer = document.createElement('div')
-    toastContainer.id = 'toast-container'
-    toastContainer.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    `
-    document.body.appendChild(toastContainer)
-  }
-
-  const toast = document.createElement('div')
-  const icon = type === 'success' ? '✓' : '✕'
-  const bgColor = type === 'success'
-    ? 'var(--success-bg-start, #10b981)'
-    : 'var(--color-danger, #ef4444)'
-
-  toast.style.cssText = `
-    background: ${bgColor};
-    color: white;
-    padding: 12px 16px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    animation: slideIn 0.2s ease-out;
-    min-width: 200px;
-  `
-
-  // Create safe DOM structure instead of innerHTML
-  const iconSpan = document.createElement('span')
-  iconSpan.style.fontWeight = 'bold'
-  iconSpan.textContent = icon
-
-  const messageText = document.createTextNode(` ${message}`)
-
-  toast.appendChild(iconSpan)
-  toast.appendChild(messageText)
-
-  // Add animation keyframes if not already present
-  if (!document.querySelector('#toast-animations')) {
-    const style = document.createElement('style')
-    style.id = 'toast-animations'
-    style.textContent = `
-      @keyframes slideIn {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-      @keyframes slideOut {
-        from {
-          transform: translateX(0);
-          opacity: 1;
-        }
-        to {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-      }
-    `
-    document.head.appendChild(style)
-  }
-
-  toastContainer.appendChild(toast)
-
-  // Remove toast after delay
-  setTimeout(() => {
-    toast.style.animation = 'slideOut 0.2s ease-out'
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast)
-      }
-    }, 200)
-  }, 3000)
 }

@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
+import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
 import { useUIStore } from '@/stores/ui'
 import { useMagicKeys, useWindowSize } from '@vueuse/core'
 
@@ -66,6 +67,7 @@ export function useCanvasOrchestrator() {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
     const canvasUiStore = useCanvasUiStore()
+    const contextMenuStore = useCanvasContextMenuStore()
     const uiStore = useUIStore()
 
     // --- 1. Core State & Vue Flow (Via useCanvasCore) ---
@@ -161,7 +163,7 @@ export function useCanvasOrchestrator() {
     // Edge sync: build edges from task.dependsOn arrays
     const recentlyRemovedEdges = ref(new Set<string>())
     const edgeSync = useCanvasEdgeSync({ recentlyRemovedEdges })
-    const syncEdges = () => edgeSync.syncEdges()
+    const syncEdges = () => edgeSync.syncEdges(tasksWithCanvasPosition.value)
 
     // Batched edge sync to coalesce multiple updates
     let isEdgeSyncScheduled = false
@@ -241,16 +243,31 @@ export function useCanvasOrchestrator() {
     const handleCanvasContainerClick = (e: MouseEvent) => {
         const target = e.target as HTMLElement
 
-        // Only clear selection when clicking on empty canvas (pane/viewport)
+        // BUG-FIX: Skip if shift/ctrl/meta is held (user is multi-selecting)
+        // This prevents clearing selection when Vue Flow's selection box is active
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            // Still close context menus
+            events.closeCanvasContextMenu()
+            events.closeEdgeContextMenu()
+            events.closeNodeContextMenu()
+            return
+        }
+
+        // Only clear selection when clicking on truly empty canvas (pane/viewport)
         // Don't clear when clicking on nodes, edges, or other interactive elements
-        const isEmptyCanvasClick = target.classList.contains('vue-flow__pane') ||
+        // BUG-FIX: Exclude "selection" class which is Vue Flow's selection box
+        const isVueFlowSelectionBox = target.classList.contains('selection')
+        const isEmptyCanvasClick = !isVueFlowSelectionBox && (
+            target.classList.contains('vue-flow__pane') ||
             target.classList.contains('vue-flow__viewport') ||
             target.classList.contains('vue-flow__container') ||
             target.classList.contains('vue-flow__background')
+        )
 
         console.log('%c[DEBUG] handleCanvasContainerClick FIRED', 'background: purple; color: white; font-size: 16px;', {
             target: target.className,
-            isEmptyCanvasClick
+            isEmptyCanvasClick,
+            isVueFlowSelectionBox
         })
 
         if (isEmptyCanvasClick) {
@@ -267,7 +284,10 @@ export function useCanvasOrchestrator() {
         smartGroups.autoCollectOverdueTasks()
     }
 
-    // Connections
+    // Connections - use context menu store refs for edge menu to sync with EdgeContextMenu component
+    const { showEdgeContextMenu, edgeContextMenuX, edgeContextMenuY } = storeToRefs(contextMenuStore)
+    const selectedEdge = ref<import('@vue-flow/core').Edge | null>(null)
+
     const connections = useCanvasConnections({
         syncEdges: syncEdges,
         closeCanvasContextMenu: events.closeCanvasContextMenu,
@@ -277,10 +297,10 @@ export function useCanvasOrchestrator() {
     }, {
         isConnecting: ref(false),
         recentlyRemovedEdges, // Shared with useCanvasEdgeSync for zombie edge prevention
-        showEdgeContextMenu: ref(false),
-        edgeContextMenuX: ref(0),
-        edgeContextMenuY: ref(0),
-        selectedEdge: ref(null)
+        showEdgeContextMenu,
+        edgeContextMenuX,
+        edgeContextMenuY,
+        selectedEdge
     })
 
     // --- 4. Initialization & Reactivity ---

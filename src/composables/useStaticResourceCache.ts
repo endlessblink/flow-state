@@ -93,6 +93,9 @@ export function useStaticResourceCache(config: Partial<CacheConfig> = {}) {
     errorRate: 0
   })
 
+  // Cleanup interval tracking (TASK-115: Memory leak fix)
+  let cleanupIntervalId: ReturnType<typeof setInterval> | null = null
+
   // Computed properties
   const cacheHitRate = computed(() => {
     const total = metrics.value.totalRequests
@@ -443,8 +446,20 @@ export function useStaticResourceCache(config: Partial<CacheConfig> = {}) {
     }
   }
 
-  // Auto-cleanup every 10 minutes
-  setInterval(forceCleanup, 10 * 60 * 1000)
+  // Auto-cleanup every 10 minutes (TASK-115: Track interval for cleanup)
+  cleanupIntervalId = setInterval(forceCleanup, 10 * 60 * 1000)
+
+  /**
+   * Destroy the cache and cleanup resources
+   * Call this on app shutdown for singleton usage
+   */
+  const destroy = (): void => {
+    if (cleanupIntervalId) {
+      clearInterval(cleanupIntervalId)
+      cleanupIntervalId = null
+    }
+    clearCache()
+  }
 
   return {
     // Core methods
@@ -464,7 +479,10 @@ export function useStaticResourceCache(config: Partial<CacheConfig> = {}) {
     error: computed(() => Array.from(error.value.values())),
     metrics: computed(() => metrics.value),
     cacheHitRate,
-    cacheUtilization
+    cacheUtilization,
+
+    // Cleanup (for singleton usage)
+    destroy
   }
 }
 

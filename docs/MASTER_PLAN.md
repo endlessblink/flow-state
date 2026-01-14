@@ -25,7 +25,7 @@
 | ID | Feature | Priority | Status | Dependencies |
 |----|---------|----------|--------|--------------|
 | ~~ROAD-001~~ | ✅ **DONE** | Power Groups | [Details](./archive/Done-Tasks-Master-Plan.md) | - |
-| **ROAD-013** | **Sync Hardening** | **P0** | 🔄 [See Detailed Plan](#roadmaps) | - |
+| ~~**ROAD-013**~~ | ✅ **DONE** **Sync Hardening** | **P0** | ✅ **DONE** (2026-01-14) - Triple Shield Locks, Optimistic Sync, & Safety Toasts. | - |
 | ROAD-004 | Mobile support (PWA) | P2 | 🔄 **IN PROGRESS** [See Detailed Plan](#roadmaps) | ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All Done) |
 | ROAD-011 | AI Assistant | P1 | [See Detailed Plan](#roadmaps) | - |
 | ~~ROAD-022~~ | ✅ **DONE** | Auth (Supabase)| [Details](./archive/MASTER_PLAN_JAN_2026.md) | - |
@@ -88,6 +88,10 @@
 | **BUG-259** | **Canvas Task Layout Changes on Click** | **P1** | 👀 **REVIEW** | [See Details](#bug-259-canvas-task-layout-changes-on-click-planned) |
 | ~~**TASK-275**~~ | ✅ **DONE** **Dev-Manager Complexity Pill** | **P2** | ✅ **DONE** (2026-01-13) | Add complexity badge to kanban cards |
 | ~~**BUG-278**~~ | ✅ **DONE** **Multi-Select Regression (TASK-262)** | **P0** | ✅ **DONE** (2026-01-13) | Fix applyNodeChanges dependency in useCanvasInteractions |
+| ~~**BUG-281**~~ | ✅ **DONE** **Canvas Edge Missing Error** | **P0** | ✅ **DONE** (2026-01-14) | Fix syncEdges to respect task filters (Hide Done Tasks) |
+| **TASK-285** | **Multi-Device E2E Tests** | **P2** | 📋 PLANNED | [See Details](#roadmaps) (Descoped from ROAD-013) |
+| **TASK-282** | **Overdue Badge with Reschedule Popup** | **P2** | 🔄 **IN PROGRESS** | Show "Overdue" badge on tasks; click opens date picker (Today/Tomorrow/Weekend/Custom) |
+| **TASK-283** | **Fix Drag-to-Group Date Assignment** | **P1** | 🔄 **IN PROGRESS** | Dragging task to "Today" group should set dueDate even if group has other assignOnDrop settings |
 
 ---
 
@@ -140,29 +144,42 @@
 <details id="roadmaps">
 <summary><b>Detailed Feature Roadmaps</b></summary>
 
-### ROAD-013: Sync Hardening (🔄 Phase 2 Complete)
+### ~~ROAD-013: Sync Hardening~~ (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE
+**Completed**: January 14, 2026
 1. Audit current sync issues. ✅ DONE
 2. Implement "Triple Shield" Drag/Resize Locks. ✅ DONE
-3. Fix conflict resolution UI. 🔄 IN PROGRESS
-4. Test multi-device scenarios E2E. 📋 PLANNED
+3. Fix conflict resolution UI. (Descoped to "Silent Retry + Error Toast")
+4. Test multi-device scenarios E2E. (Moved to TASK-285)
+
+### TASK-285: Multi-Device E2E Tests (🔄 IN PROGRESS)
+**Priority**: P2-MEDIUM
+**Status**: In Progress
+- **Goal**: Verify race conditions across two simulated clients.
+- **Context**: Descoped from ROAD-013 to unblock release. Sync logic is manually verified.
 
 ### ROAD-010: Gamification - "Cyberflow" (⏸️ PAUSED)
-**Status**: Paused
+**Priority**: P3-LOW
+**Status**: ⏸️ PAUSED
 - **XP Sources**: Task completion, Pomodoro sessions, Streaks.
 - **Features**: Leveling, Badges, Character Avatar in Sidebar.
 
 ### ROAD-011: AI Assistant (⏸️ PAUSED)
-**Status**: Paused
+**Priority**: P3-LOW
+**Status**: ⏸️ PAUSED
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
 ### ROAD-004: Mobile PWA (⏸️ PAUSED)
-**Status**: Paused
+**Priority**: P2-MEDIUM
+**Status**: ⏸️ PAUSED
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
-- **Status**: Phase 1 - PWA Foundation in progress
 - **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
 
 ### ROAD-025: Backup Containerization (VPS Distribution)
+**Priority**: P3-LOW
+**Status**: 📋 PLANNED
 - **Goal**: Move `auto-backup-daemon.cjs` into a dedicated Docker container (`backup-service`) for production/VPS distribution.
 - **Plan**: Create `Dockerfile` and update `docker-compose.yml`.
 - **Why**: Ensures backups run reliably in production environments without manual CLI intervention.
@@ -190,6 +207,17 @@
 
 <details id="active-task-details">
 <summary><b>Active Task Details</b></summary>
+
+### TASK-283: Fix Drag-to-Group Date Assignment (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Status**: 🔄 IN PROGRESS
+
+Dragging task to "Today" group should set dueDate even if group has other assignOnDrop settings.
+
+**Requirements**:
+- [ ] When task dropped on day-of-week group (Today, Monday, etc.), set task's dueDate
+- [ ] Should work regardless of group's other assignOnDrop settings
+- [ ] Preserve existing assignOnDrop behavior for non-date properties
 
 ### ~~TASK-209~~: TypeScript & Test Suite Cleanup (✅ DONE)
 **Priority**: P0-CRITICAL
@@ -491,6 +519,23 @@ Questions:
 
 ---
 
+### ~~TASK-279~~: Double-Click Task on Canvas Opens Edit Modal (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE
+**Created**: January 13, 2026
+
+**Feature**: Double-clicking a task on the canvas should open the task edit modal.
+
+**Implementation**:
+- Added `@node-double-click="handleNodeDoubleClick"` to VueFlow component in CanvasView.vue
+- `handleNodeDoubleClick` checks if the node is a taskNode and opens the edit modal via `handleEditTask()`
+- Uses Vue Flow's native `NodeMouseEvent` type for proper typing
+
+**Files Modified**:
+- `src/views/CanvasView.vue` - Added `@node-double-click` handler and `handleNodeDoubleClick` function
+
+---
+
 ### ~~TASK-275~~: Dev-Manager Complexity Pill (✅ DONE)
 **Priority**: P2-MEDIUM
 **Complexity**: Simple
@@ -538,6 +583,18 @@ Questions:
 - ✅ Strikethrough - Creates proper `<s>` elements
 - ✅ Formatting persists after save/reopen
 - ✅ Formatting persists after save/reopen
+
+---
+
+### ~~BUG-281~~: Canvas Edge Missing Error (✅ DONE)
+**Priority**: P0-CRITICAL
+**Status**: DONE
+**Created**: January 14, 2026
+**Completed**: January 14, 2026
+
+**Problem**: Vue Flow threw "Edge source or target is missing" errors.
+**Cause**: `syncEdges` was generating edges for all tasks in the store, including those hidden by filters (e.g., "Hide Done Tasks"). `syncNodes` was correctly filtering them out. This mismatch caused edges to point to non-existent nodes.
+**Fix**: Updated `useCanvasEdgeSync.ts` to accept a filtered list of tasks and validated that both source and target exist in that list before creating an edge. Updated `useCanvasOrchestrator.ts` to pass `tasksWithCanvasPosition` to `syncEdges`.
 
 ---
 
@@ -2909,19 +2966,44 @@ The `isTodayTask()` and `isWeekTask()` functions in `useSmartViews.ts` assumed `
 - [x] Verified application stability with clean production build.
 - [x] Zero critical lint errors remaining (warnings reviewed).
 
-### TASK-114: Virtual Scrolling Smoothness (🔄 IN PROGRESS)
+### ~~TASK-114~~: Virtual Scrolling Smoothness (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: In Progress
-- Profile and eliminate layout thrashing in list components.
-- Implement optimized rendering strategy for large lists.
-- Reduce computed property complexity in task items.
+**Status**: DONE
+**Started**: January 14, 2026
+**Completed**: January 14, 2026
 
-### TASK-115: Memory Efficiency & Leak Fixes (🔄 IN PROGRESS)
+**Goal**: Implement virtual scrolling for large lists to improve performance with 50+ items.
+
+**Implemented**:
+- [x] UnifiedInboxList - Virtual scrolling with VueUse (threshold: 50 items)
+- [x] TaskTable - Virtual scrolling with fixed header, density-aware row heights
+
+**Technical Details**:
+- Uses VueUse's `useVirtualList` for efficient DOM recycling
+- Auto-disables for lists <50 items (no behavior change for small lists)
+- TaskTable adapts row height based on density setting (40/48/56px)
+
+**Out of scope** (deferred - too complex):
+- TaskList (recursive structure needs complex height calculation)
+- KanbanColumn (drag-drop conflicts with vuedraggable)
+
+### ~~TASK-115~~: Memory Efficiency & Leak Fixes (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: In Progress
-- Profile heap snapshots to identify node pooling leaks.
-- Implement specialized cleanup for detached Vue Flow elements.
-- Optimize task store internal representation for reduced memory footprint.
+**Status**: ✅ DONE
+**Completed**: January 14, 2026
+
+**Investigation Findings**:
+- Identified 2 uncleaned `setInterval` calls causing memory leaks
+- Both were in module-level singletons that ran intervals without cleanup
+
+**Fixes Applied**:
+- [x] `usePerformanceManager.ts`: Added `cleanupCacheInterval` tracking + `destroy()` method
+- [x] `useStaticResourceCache.ts`: Added `cleanupIntervalId` tracking + `destroy()` method
+- [x] Both now properly clear intervals and expose cleanup for app shutdown
+
+**Files Modified**:
+- `src/composables/usePerformanceManager.ts`
+- `src/composables/useStaticResourceCache.ts`
 
 ---
 

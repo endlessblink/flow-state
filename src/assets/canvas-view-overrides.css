@@ -141,6 +141,7 @@
     stroke: var(--border-secondary);
     stroke-width: 2px;
     transition: all 0.2s ease;
+    filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.4));
 }
 
 .vue-flow__edge {
@@ -870,4 +871,13 @@ body.dragging-active .vue-flow__background {
 */
 .shift-selecting .vue-flow__node-sectionNode {
     pointer-events: none !important;
+}
+
+/* FIX: Explicitly allow interaction with task nodes during shift-select */
+.shift-selecting .vue-flow__node-taskNode {
+    pointer-events: auto !important;
+    z-index: 2000 !important;
+    /* Ensure on top of selection pane */
+    cursor: context-menu !important;
+    /* Hint that it's clickable */
 }

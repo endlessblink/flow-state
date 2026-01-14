@@ -361,4 +361,41 @@ watch(isOpen, (newVal) => {
   opacity: 0;
   transform: translateY(-4px);
 }
+
+/* ============================================
+   INLINE VARIANT - for use inside metadata bars
+   ============================================ */
+.custom-select:global(.inline-custom-select) .select-trigger {
+  /* Remove glass morphism - parent provides container styling */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+
+  /* Compact sizing */
+  padding: 0;
+  min-height: unset;
+  height: auto;
+
+  /* Remove hover effects that conflict with parent */
+  box-shadow: none;
+}
+
+.custom-select:global(.inline-custom-select) .select-trigger:hover,
+.custom-select:global(.inline-custom-select) .select-trigger:focus,
+.custom-select:global(.inline-custom-select) .select-trigger.is-open {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.custom-select:global(.inline-custom-select) .select-value {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.custom-select:global(.inline-custom-select) .select-icon {
+  color: var(--text-tertiary);
+}
 </style>

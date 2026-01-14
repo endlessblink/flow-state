@@ -66,6 +66,7 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
   // Memory monitoring
   const memoryUsage = ref(0)
   const memoryMonitorInterval = ref<NodeJS.Timeout>()
+  const cleanupCacheInterval = ref<NodeJS.Timeout>()
 
   // Debounce function factory
   const createDebounced = <T extends (...args: any[]) => any>(
@@ -318,14 +319,30 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
     startMemoryMonitoring()
 
     if (enableCleanup) {
-      setInterval(cleanupCache, cleanupInterval)
+      cleanupCacheInterval.value = setInterval(cleanupCache, cleanupInterval)
     }
   })
 
+  // Stop cleanup cache interval
+  const stopCleanupCacheInterval = () => {
+    if (cleanupCacheInterval.value) {
+      clearInterval(cleanupCacheInterval.value)
+      cleanupCacheInterval.value = undefined
+    }
+  }
+
   onUnmounted(() => {
     stopMemoryMonitoring()
+    stopCleanupCacheInterval()
     clearCache()
   })
+
+  // Explicit destroy for singleton usage (call on app shutdown)
+  const destroy = () => {
+    stopMemoryMonitoring()
+    stopCleanupCacheInterval()
+    clearCache()
+  }
 
   return {
     // Core utilities
@@ -355,7 +372,10 @@ export function usePerformanceManager(config: PerformanceConfig = {}) {
 
     // Utilities
     updateMetrics,
-    calculateSize
+    calculateSize,
+
+    // Cleanup (for singleton usage)
+    destroy
   }
 }
 

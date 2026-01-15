@@ -474,4 +474,27 @@ body.dragging-active .task-node .vue-flow__handle {
 .multi-select-mode:hover {
   transform: translateY(-2px) scale(1.02);
 }
+
+/* Connection Handle Glow Effects */
+.vue-flow__handle {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.vue-flow__handle:hover {
+  box-shadow: 0 0 8px 2px var(--brand-primary),
+              0 0 16px 4px rgba(59, 130, 246, 0.3);
+  transform: scale(1.2);
+}
+
+/* Source handle (bottom) - blue glow */
+.handle-source:hover {
+  box-shadow: 0 0 8px 2px var(--color-navigation),
+              0 0 16px 4px rgba(59, 130, 246, 0.4);
+}
+
+/* Target handle (top) - green glow for "drop here" */
+.handle-target:hover {
+  box-shadow: 0 0 8px 2px var(--color-success),
+              0 0 16px 4px rgba(34, 197, 94, 0.3);
+}
 </style>

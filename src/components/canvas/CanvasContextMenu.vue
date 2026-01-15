@@ -473,16 +473,13 @@ const handleArrangeInGrid = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  /* Glass morphism - transparent with purple tint and blur */
-  background: rgba(20, 20, 40, 0.85);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  /* Stroke border - more visible */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2);
   min-width: 200px;
   max-width: 320px;
@@ -519,7 +516,7 @@ const handleArrangeInGrid = () => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .menu-item:hover {
@@ -532,7 +529,7 @@ const handleArrangeInGrid = () => {
 }
 
 .menu-item.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
 }
 
 /* TASK-068: Active state for toggleable menu items like power mode */
@@ -592,18 +589,18 @@ const handleArrangeInGrid = () => {
 .menu-icon-grid {
   display: grid;
   grid-template-columns: repeat(3, 36px);
-  gap: 0.5rem;
+  gap: var(--space-2);
   padding: var(--space-2);
   justify-content: center;
 }
 
 .menu-icon-button {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--glass-border);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
   width: 2.25rem;
   height: 2.25rem;
   display: flex;
@@ -613,8 +610,8 @@ const handleArrangeInGrid = () => {
 }
 
 .menu-icon-button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-hover);
 }
 
 .menu-icon-button:active {
@@ -640,16 +637,13 @@ const handleArrangeInGrid = () => {
   position: absolute;
   left: calc(100% + var(--space-1));
   top: 0;
-  /* Glass morphism - transparent with purple tint and blur */
-  background: rgba(20, 20, 40, 0.85);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  /* Stroke border - more visible */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-md);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2) 0;
   min-width: 180px;
   max-width: 280px;
@@ -695,16 +689,13 @@ const handleArrangeInGrid = () => {
 <!-- Global styles for teleported submenu (escapes scoped styles) -->
 <style>
 .submenu-teleported {
-  /* Glass morphism - transparent with purple tint and blur */
-  background: rgba(20, 20, 40, 0.95);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  /* Stroke border - more visible */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-md, 8px);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2, 8px) 0;
   min-width: 200px;
   max-width: 280px;
@@ -729,11 +720,11 @@ const handleArrangeInGrid = () => {
   display: flex;
   align-items: center;
   gap: var(--space-3, 12px);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .submenu-teleported .menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
 }
 
 .submenu-teleported .menu-icon {
@@ -747,7 +738,7 @@ const handleArrangeInGrid = () => {
 
 .submenu-teleported .menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
   margin: var(--space-2, 8px) 0;
 }
 

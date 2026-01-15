@@ -49,11 +49,11 @@ const formattedPriority = computed(() => {
 .task-row__priority-badge {
   font-size: var(--text-xs);
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: var(--radius-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   color: var(--text-secondary);
   border: 1px solid transparent;
 }

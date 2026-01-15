@@ -19,7 +19,7 @@ import { useSmartSuggestionsSingleton } from './useSmartSuggestions'
 import { detectPowerKeyword, SMART_GROUPS } from '@/composables/usePowerKeywords'
 import { useDateTransition } from '@/composables/useDateTransition'
 import type { DayGroupTransitionSuggestion, DayGroupTransitionMetadata } from '@/types/suggestions'
-import type { CanvasGroup } from '@/stores/canvas/types'
+import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
 
 /**

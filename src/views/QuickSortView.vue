@@ -643,11 +643,11 @@ function formatTime(milliseconds: number): string {
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .quick-sort-view {
-    padding: 20px;
+    padding: var(--space-5);
   }
 
   .view-title {
-    font-size: 28px;
+    font-size: var(--space-7);
   }
 
   .session-stats {

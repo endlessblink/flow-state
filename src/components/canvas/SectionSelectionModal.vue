@@ -111,8 +111,9 @@ const handleKeydown = (event: KeyboardEvent) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background: var(--overlay-backdrop-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -120,10 +121,13 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .modal-content {
-  background: var(--surface-primary);
-  border: 1px solid var(--glass-border);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-2xl);
+  box-shadow: var(--overlay-component-shadow);
   width: 90%;
   max-width: 400px;
   overflow: hidden;
@@ -160,7 +164,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   cursor: pointer;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .close-btn:hover {
@@ -206,12 +210,12 @@ const handleKeydown = (event: KeyboardEvent) => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   border: 1px solid;
 }
 

@@ -416,7 +416,7 @@ watch(() => props.isOpen, (isOpen) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-backdrop-bg);
   backdrop-filter: blur(12px) saturate(100%);
   -webkit-backdrop-filter: blur(12px) saturate(100%);
   display: flex;
@@ -433,14 +433,13 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .modal-content {
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-2xl);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   width: 90%;
   max-width: 650px;
   max-height: 90vh;
@@ -477,7 +476,7 @@ watch(() => props.isOpen, (isOpen) => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .header-left {
@@ -510,7 +509,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .close-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);
@@ -523,15 +522,15 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-tint);
+  border-color: var(--border-interactive);
   color: var(--text-primary);
   transform: scale(1.05);
 }
 
 .close-btn:focus-visible {
   outline: none;
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
@@ -555,8 +554,8 @@ watch(() => props.isOpen, (isOpen) => {
 
 /* Quick Actions */
 .quick-actions-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: var(--space-5);
 }
@@ -573,8 +572,8 @@ watch(() => props.isOpen, (isOpen) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-4);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-bounce);
@@ -584,8 +583,8 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-action-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-heavy);
+  border-color: var(--glass-border-hover);
   transform: translateY(-2px);
 }
 
@@ -608,11 +607,11 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-action-btn.danger {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .quick-action-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
@@ -628,14 +627,14 @@ watch(() => props.isOpen, (isOpen) => {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .field-selector:has(input[type="checkbox"]:checked) {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--glass-bg-medium);
   border-color: var(--brand-primary);
 }
 
@@ -682,8 +681,8 @@ watch(() => props.isOpen, (isOpen) => {
 .field-input,
 .field-select {
   flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   color: var(--text-primary);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
@@ -695,7 +694,7 @@ watch(() => props.isOpen, (isOpen) => {
 .field-select:focus {
   outline: none;
   border-color: var(--brand-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-heavy);
 }
 
 .input-unit {
@@ -706,8 +705,8 @@ watch(() => props.isOpen, (isOpen) => {
 
 /* Preview Section */
 .preview-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: var(--space-5);
 }
@@ -749,8 +748,8 @@ watch(() => props.isOpen, (isOpen) => {
 
 .preview-item {
   padding: var(--space-4);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
 }
 
@@ -801,12 +800,12 @@ watch(() => props.isOpen, (isOpen) => {
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-6);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .cancel-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-secondary);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-lg);
@@ -817,8 +816,8 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-soft);
+  border-color: var(--border-interactive);
   color: var(--text-primary);
 }
 

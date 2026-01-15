@@ -529,7 +529,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-darker);
   backdrop-filter: blur(12px) saturate(100%);
   -webkit-backdrop-filter: blur(12px) saturate(100%);
   display: flex;
@@ -545,10 +545,10 @@ onMounted(() => {
 }
 
 .emoji-picker {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
   box-shadow:
     0 32px 64px rgba(0, 0, 0, 0.5),
@@ -578,7 +578,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -591,8 +591,8 @@ onMounted(() => {
 
 .close-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: 24px;
+  border: 1px solid var(--glass-border-hover);
+  font-size: var(--text-2xl);
   cursor: pointer;
   color: var(--text-muted);
   padding: 0;
@@ -606,15 +606,15 @@ onMounted(() => {
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-tint);
+  border-color: var(--border-interactive);
   color: var(--text-primary);
   transform: scale(1.05);
 }
 
 .emoji-picker-tabs {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -638,20 +638,20 @@ onMounted(() => {
 }
 
 .tab-btn:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg-tint);
   color: var(--text-secondary);
 }
 
 .emoji-picker-search {
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .search-input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -661,8 +661,8 @@ onMounted(() => {
 
 .search-input:focus {
   outline: none;
-  border-color: rgba(78, 205, 196, 0.5);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--brand-primary-alpha-50);
+  background: var(--glass-bg-tint);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
@@ -685,7 +685,7 @@ onMounted(() => {
 .emoji-btn {
   background: transparent;
   border: 1px solid transparent;
-  font-size: 24px;
+  font-size: var(--text-2xl);
   cursor: pointer;
   padding: var(--space-2);
   border-radius: var(--radius-md);
@@ -697,14 +697,14 @@ onMounted(() => {
 }
 
 .emoji-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border);
   transform: scale(1.15);
 }
 
 .emoji-btn.selected {
-  background: rgba(78, 205, 196, 0.2);
-  border-color: rgba(78, 205, 196, 0.5);
+  background: var(--brand-primary-bg-heavy);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 16px rgba(78, 205, 196, 0.2);
   transform: scale(1.08);
 }
@@ -755,7 +755,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
   gap: var(--space-3);
   background: transparent;
 }
@@ -772,20 +772,20 @@ onMounted(() => {
 
 .clear-btn {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--glass-border-hover);
   color: var(--text-secondary);
 }
 
 .clear-btn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-tint);
+  border-color: var(--border-interactive);
   color: var(--text-primary);
   transform: translateY(-1px);
 }
 
 .apply-btn {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.5);
+  background: var(--brand-primary-bg-medium);
+  border-color: var(--brand-primary-alpha-50);
   color: rgba(78, 205, 196, 1);
   flex: 1;
 }
@@ -799,7 +799,7 @@ onMounted(() => {
 
 .apply-btn:disabled {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--glass-border);
   color: var(--text-muted);
   cursor: not-allowed;
   transform: none;

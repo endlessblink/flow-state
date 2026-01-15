@@ -195,9 +195,9 @@ const formatDueDateLabel = (dueDate: string) => {
 .metadata-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  padding: 2px 6px;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-full);
   background: var(--glass-bg-medium);
   color: var(--text-secondary);
@@ -237,7 +237,7 @@ const formatDueDateLabel = (dueDate: string) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
 }

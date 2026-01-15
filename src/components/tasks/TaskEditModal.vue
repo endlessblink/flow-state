@@ -32,13 +32,13 @@
               @section-change="handleSectionChange"
               @schedule-change="handleScheduledDateChange"
             />
-          </section>
 
-          <!-- Dependencies -->
-          <TaskEditDependencies
-            v-if="showDependencies"
-            :dependencies="dependencies"
-          />
+            <RecurrenceSelector
+              v-model="editedTask.recurrence"
+              :start-date="editedTask.scheduledDate || editedTask.dueDate"
+              :task-id="editedTask.id"
+            />
+          </section>
 
           <!-- Subtasks -->
           <TaskEditSubtasks
@@ -46,6 +46,11 @@
             @add="addSubtask"
             @delete="deleteSubtask"
             @update="updateSubtaskCompletion"
+          />
+
+          <!-- Child Tasks (from canvas connections) -->
+          <TaskEditChildTasks
+            :child-tasks="childTasks"
           />
 
           <!-- Action Buttons -->
@@ -92,8 +97,9 @@ import { useTaskEditActions } from '@/composables/tasks/useTaskEditActions'
 // Components
 import TaskEditHeader from './edit/TaskEditHeader.vue'
 import TaskEditMetadata from './edit/TaskEditMetadata.vue'
-import TaskEditDependencies from './edit/TaskEditDependencies.vue'
 import TaskEditSubtasks from './edit/TaskEditSubtasks.vue'
+import TaskEditChildTasks from './edit/TaskEditChildTasks.vue'
+import RecurrenceSelector from './edit/RecurrenceSelector.vue'
 
 // Props & Emitters
 const props = defineProps<{
@@ -116,7 +122,6 @@ const titleInputRef = computed(() => headerRef.value?.titleInput || undefined)
 const {
   editedTask,
   isSaving,
-  showDependencies,
   showPomodoros,
   priorityOptions,
   statusOptions
@@ -135,13 +140,10 @@ const {
 
 // --- Computed Props ---
 
-const dependencies = computed(() => {
-  if (!editedTask.value.dependsOn || editedTask.value.dependsOn.length === 0) {
-    return []
-  }
-  return editedTask.value.dependsOn
-    .map(taskId => taskStore.tasks.find(t => t.id === taskId))
-    .filter(t => t !== undefined) as Task[]
+// Child tasks (tasks where parentTaskId = this task's id)
+const childTasks = computed(() => {
+  if (!editedTask.value.id) return []
+  return taskStore.tasks.filter(t => t.parentTaskId === editedTask.value.id)
 })
 
 const currentSectionId = computed(() => {
@@ -193,7 +195,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--overlay-bg);
+  background: var(--overlay-backdrop-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,12 +211,13 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 }
 
 .modal-content {
-  background: linear-gradient(135deg, var(--border-medium) 0%, var(--glass-bg-heavy) 100%);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid var(--border-hover);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-2xl), var(--shadow-2xl), inset 0 2px 0 var(--glass-border-hover);
+  box-shadow: var(--overlay-component-shadow);
   width: 90%;
   max-width: 650px;
   max-height: 85vh;
@@ -232,8 +235,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   justify-content: space-between;
   align-items: center;
   padding: var(--space-5);
-  border-bottom: 1px solid var(--glass-bg-heavy);
-  background: linear-gradient(180deg, var(--glass-bg-tint) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
 }
 
 .modal-title {
@@ -315,16 +318,15 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 }
 
 .btn-primary {
-  background: var(--brand-primary);
-  color: white;
-  border: none;
-  box-shadow: var(--shadow-md);
+  background: transparent;
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
 }
 
 .btn-primary:hover {
-  background: var(--brand-primary-hover);
+  background: var(--brand-primary-bg-subtle);
+  border-color: var(--brand-primary-hover);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
 }
 
 .btn:disabled {

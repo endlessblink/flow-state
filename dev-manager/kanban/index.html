@@ -2409,6 +2409,867 @@
     ::-webkit-scrollbar-thumb:hover {
       background: var(--text-subtle);
     }
+
+    /* ============== ORCHESTRATOR VIEW ============== */
+    .orchestrator-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      background: var(--surface-primary);
+    }
+
+    .orchestrator-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .orchestrator-phase-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .phase-step {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 16px;
+      background: var(--surface-tertiary);
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .phase-step.active {
+      background: var(--brand-primary);
+      color: #000;
+    }
+
+    .phase-step.completed {
+      background: var(--color-success);
+      color: #000;
+    }
+
+    .phase-arrow {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .orchestrator-status {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .orchestrator-main {
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .orchestrator-panel {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .orchestrator-panel.hidden {
+      display: none;
+    }
+
+    .panel-header {
+      margin-bottom: 24px;
+    }
+
+    .panel-header h2 {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 8px 0;
+    }
+
+    .panel-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    /* Loading Panel */
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border-subtle);
+      border-top-color: var(--brand-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 8px 0;
+    }
+
+    .loading-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0 0 32px 0;
+      max-width: 400px;
+    }
+
+    .loading-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: color 0.3s;
+    }
+
+    .loading-step.active {
+      color: var(--brand-primary);
+    }
+
+    .loading-step.done {
+      color: var(--color-success);
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .loading-step.active .step-dot {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Goal Input */
+    .goal-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .goal-textarea {
+      width: 100%;
+      padding: 16px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      color: var(--text-primary);
+      resize: vertical;
+      outline: none;
+    }
+
+    .goal-textarea:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .goal-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .goal-submit-btn {
+      align-self: flex-end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--brand-primary);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .goal-submit-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* Questions */
+    .questions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .question-item {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .question-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .question-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .question-option {
+      padding: 8px 16px;
+      font-size: 13px;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .question-option:hover {
+      border-color: var(--brand-primary);
+    }
+
+    .question-option.selected {
+      background: var(--brand-primary);
+      border-color: var(--brand-primary);
+      color: #000;
+    }
+
+    .question-input {
+      width: 100%;
+      padding: 12px;
+      font-size: 13px;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .question-input:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .submit-answers-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--brand-primary);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .submit-answers-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* Plan */
+    .plan-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .plan-task {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+
+    .plan-task-number {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--surface-tertiary);
+      border-radius: 50%;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .plan-task-content {
+      flex: 1;
+    }
+
+    .plan-task-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .plan-task-description {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .plan-task-meta {
+      display: flex;
+      gap: 12px;
+    }
+
+    .plan-task-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .plan-task-badge.backend { background: #2563eb20; color: #60a5fa; }
+    .plan-task-badge.frontend { background: #7c3aed20; color: #a78bfa; }
+    .plan-task-badge.devops { background: #ea580c20; color: #fb923c; }
+    .plan-task-badge.qa { background: #16a34a20; color: #4ade80; }
+    .plan-task-badge.docs { background: #ca8a0420; color: #fbbf24; }
+
+    .plan-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .plan-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .plan-action-btn.secondary {
+      background: transparent;
+      border: 1px solid var(--border-medium);
+      color: var(--text-secondary);
+    }
+
+    .plan-action-btn.secondary:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .plan-action-btn.primary {
+      background: var(--brand-primary);
+      border: none;
+      color: #000;
+    }
+
+    .plan-action-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    /* Execution */
+    .execution-stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .stat-item {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .progress-feed {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--surface-secondary);
+      border-radius: 8px;
+    }
+
+    .progress-item {
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .progress-item:last-child {
+      border-bottom: none;
+    }
+
+    .progress-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
+    .progress-message {
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .agent-card {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .agent-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .agent-card-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .agent-card-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .agent-card-status.running {
+      background: #16a34a20;
+      color: #4ade80;
+    }
+
+    .agent-card-status.completed {
+      background: #3b82f620;
+      color: #60a5fa;
+    }
+
+    .agent-card-status.failed {
+      background: #dc262620;
+      color: #f87171;
+    }
+
+    .agent-card-type {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Review */
+    .review-summary {
+      padding: 20px;
+      background: var(--surface-secondary);
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .review-summary h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 12px 0;
+    }
+
+    .review-summary ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .review-summary li {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 4px 0;
+    }
+
+    .review-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .feedback-textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 13px;
+      font-family: inherit;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: var(--text-primary);
+      resize: vertical;
+      outline: none;
+    }
+
+    .feedback-textarea:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .review-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .review-btn {
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .review-btn.secondary {
+      background: transparent;
+      border: 1px solid var(--border-medium);
+      color: var(--text-secondary);
+    }
+
+    .review-btn.primary {
+      background: var(--color-success);
+      border: none;
+      color: #000;
+    }
+
+    /* Sidebar */
+    .orchestrator-sidebar {
+      background: var(--surface-secondary);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .new-orch-btn {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 12px;
+      background: transparent;
+      border: 1px solid var(--border-medium);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .new-orch-btn:hover {
+      border-color: var(--brand-primary);
+      color: var(--brand-primary);
+    }
+
+    .orch-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .orch-history-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .orch-history-item:hover {
+      border-color: var(--brand-primary);
+    }
+
+    .orch-history-item.active {
+      border-color: var(--brand-primary);
+      background: var(--brand-primary-10);
+    }
+
+    .orch-history-content {
+      flex: 1;
+      cursor: pointer;
+      min-width: 0;
+    }
+
+    .orch-history-goal {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .orch-history-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .orch-delete-btn {
+      flex-shrink: 0;
+      padding: 6px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .orch-history-item:hover .orch-delete-btn {
+      opacity: 1;
+    }
+
+    .orch-delete-btn:hover {
+      color: var(--color-danger);
+      background: rgba(248, 81, 73, 0.15);
+    }
+
+    /* ============== ORCHESTRATOR CHAT PANEL ============== */
+    .chat-toggle-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      background: var(--brand-primary);
+      color: #000;
+      border: none;
+      border-radius: 24px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .chat-toggle-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+
+    .chat-toggle-btn.visible {
+      display: flex;
+    }
+
+    .orch-chat-panel {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      width: 420px;
+      max-height: 520px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-medium);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .orch-chat-panel.hidden {
+      display: none;
+    }
+
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      border-radius: 12px 12px 0 0;
+    }
+
+    .chat-header h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .chat-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .chat-actions button {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chat-actions button:hover {
+      border-color: var(--brand-primary);
+      color: var(--brand-primary);
+    }
+
+    .chat-actions .close-btn {
+      padding: 4px 8px;
+      font-size: 16px;
+      background: transparent;
+      border: none;
+    }
+
+    .chat-actions .close-btn:hover {
+      color: var(--color-danger);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      max-height: 320px;
+      min-height: 150px;
+    }
+
+    .chat-message {
+      padding: 10px 14px;
+      margin: 8px 0;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 85%;
+    }
+
+    .chat-message.user {
+      background: var(--brand-primary);
+      color: #000;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-message.assistant {
+      background: var(--surface-tertiary);
+      color: var(--text-primary);
+      margin-right: auto;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-message.typing {
+      opacity: 0.7;
+      font-style: italic;
+    }
+
+    .chat-input-area {
+      display: flex;
+      gap: 8px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      border-radius: 0 0 12px 12px;
+    }
+
+    .chat-input-area textarea {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: var(--text-primary);
+      resize: none;
+      outline: none;
+    }
+
+    .chat-input-area textarea:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .chat-input-area textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .chat-send-btn {
+      padding: 10px 16px;
+      background: var(--brand-primary);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .chat-send-btn:hover {
+      opacity: 0.9;
+    }
   </style>
   <!-- D3.js for Beads dependency graph -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -2481,6 +3342,16 @@
               <line x1="12" y1="18" x2="12" y2="15" />
             </svg></span>
           Beads
+        </button>
+        <button class="nav-tab" data-view="orchestrator">
+          <span class="icon"><svg viewBox="0 0 24 24">
+              <circle cx="12" cy="5" r="3" />
+              <circle cx="5" cy="19" r="3" />
+              <circle cx="19" cy="19" r="3" />
+              <line x1="12" y1="8" x2="5" y2="16" />
+              <line x1="12" y1="8" x2="19" y2="16" />
+            </svg></span>
+          Orchestrator
         </button>
       </div>
     </div>
@@ -2861,6 +3732,188 @@
               </button>
             </div>
           </main>
+        </div>
+      </div>
+
+      <!-- ORCHESTRATOR VIEW - Full Project Orchestration -->
+      <div class="view-container" id="orchestrator-view">
+        <div class="orchestrator-layout">
+          <!-- HEADER: Goal & Phase -->
+          <header class="orchestrator-header">
+            <div class="orchestrator-phase-indicator" id="orch-phase">
+              <span class="phase-step" data-phase="requirements">1. Requirements</span>
+              <span class="phase-arrow">→</span>
+              <span class="phase-step" data-phase="planning">2. Planning</span>
+              <span class="phase-arrow">→</span>
+              <span class="phase-step" data-phase="execution">3. Execution</span>
+              <span class="phase-arrow">→</span>
+              <span class="phase-step" data-phase="review">4. Review</span>
+            </div>
+            <div class="orchestrator-status" id="orch-status">Ready to start</div>
+          </header>
+
+          <!-- MAIN CONTENT: Changes based on phase -->
+          <main class="orchestrator-main">
+            <!-- PHASE: Goal Input (Initial State) -->
+            <div class="orchestrator-panel" id="orch-goal-panel">
+              <div class="panel-header">
+                <h2>What would you like to build?</h2>
+                <p class="panel-subtitle">Describe your project in natural language. I'll ask clarifying questions, create a plan, and orchestrate specialized agents to build it.</p>
+              </div>
+              <div class="goal-input-area">
+                <textarea id="orch-goal-input" class="goal-textarea"
+                          placeholder="Example: Build a PWA task management app with Vue 3, Supabase for backend, and a clean modern UI..."
+                          rows="5"></textarea>
+                <button class="goal-submit-btn" onclick="startOrchestration()">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Start Orchestration
+                </button>
+              </div>
+            </div>
+
+            <!-- PHASE: Loading (Analyzing Goal) -->
+            <div class="orchestrator-panel hidden" id="orch-loading-panel">
+              <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3 class="loading-title">Analyzing your goal...</h3>
+                <p class="loading-subtitle">Claude is understanding your requirements and preparing clarifying questions.</p>
+                <div class="loading-steps">
+                  <div class="loading-step active" id="load-step-1">
+                    <span class="step-dot"></span>
+                    <span>Parsing project requirements</span>
+                  </div>
+                  <div class="loading-step" id="load-step-2">
+                    <span class="step-dot"></span>
+                    <span>Identifying technical decisions</span>
+                  </div>
+                  <div class="loading-step" id="load-step-3">
+                    <span class="step-dot"></span>
+                    <span>Generating clarifying questions</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PHASE: Questions -->
+            <div class="orchestrator-panel hidden" id="orch-questions-panel">
+              <div class="panel-header">
+                <h2>A few questions to clarify requirements</h2>
+              </div>
+              <div id="orch-questions-list" class="questions-list">
+                <!-- Questions will be populated here -->
+              </div>
+              <button class="submit-answers-btn" onclick="submitAnswers()">
+                Submit Answers & Continue
+              </button>
+            </div>
+
+            <!-- PHASE: Plan Review -->
+            <div class="orchestrator-panel hidden" id="orch-plan-panel">
+              <div class="panel-header">
+                <h2>Implementation Plan</h2>
+                <p class="panel-subtitle">Review the tasks before execution. You can modify or approve.</p>
+              </div>
+              <div id="orch-plan-list" class="plan-list">
+                <!-- Plan tasks will be populated here -->
+              </div>
+              <div class="plan-actions">
+                <button class="plan-action-btn secondary" onclick="modifyPlan()">Modify Plan</button>
+                <button class="plan-action-btn primary" onclick="executePlan()">
+                  <svg viewBox="0 0 24 24" width="18" height="18">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Execute Plan
+                </button>
+              </div>
+            </div>
+
+            <!-- PHASE: Execution Progress -->
+            <div class="orchestrator-panel hidden" id="orch-execution-panel">
+              <div class="panel-header">
+                <h2>Execution in Progress</h2>
+                <div class="execution-stats">
+                  <span class="stat-item" id="orch-completed-count">0 completed</span>
+                  <span class="stat-item" id="orch-running-count">0 running</span>
+                  <span class="stat-item" id="orch-pending-count">0 pending</span>
+                </div>
+              </div>
+              <div id="orch-progress-feed" class="progress-feed">
+                <!-- Summary updates will appear here -->
+              </div>
+              <div id="orch-agents-grid" class="agents-grid">
+                <!-- Agent cards will appear here -->
+              </div>
+            </div>
+
+            <!-- PHASE: Review -->
+            <div class="orchestrator-panel hidden" id="orch-review-panel">
+              <div class="panel-header">
+                <h2>Review & Refinement</h2>
+                <p class="panel-subtitle">All tasks completed. Review the results and provide feedback.</p>
+              </div>
+              <div class="review-summary" id="orch-review-summary">
+                <!-- Summary of completed work -->
+              </div>
+              <div class="review-actions">
+                <textarea id="orch-feedback-input" class="feedback-textarea"
+                          placeholder="Provide feedback for refinements (optional)..."
+                          rows="3"></textarea>
+                <div class="review-buttons">
+                  <button class="review-btn secondary" onclick="requestRefinement()">
+                    Request Changes
+                  </button>
+                  <button class="review-btn primary" onclick="approveProject()">
+                    Approve Project
+                  </button>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          <!-- SIDEBAR: Orchestrations List -->
+          <aside class="orchestrator-sidebar">
+            <div class="sidebar-header">
+              <span>Orchestrations</span>
+              <button class="new-orch-btn" onclick="resetOrchestrator()">+ New</button>
+            </div>
+            <div id="orch-history-list" class="orch-history">
+              <div class="empty-state-small">No orchestrations yet</div>
+            </div>
+          </aside>
+
+          <!-- Floating Chat Toggle Button -->
+          <button class="chat-toggle-btn" onclick="toggleOrchestratorChat()" id="orch-chat-toggle">
+            💬 Chat with Orchestrator
+          </button>
+
+          <!-- Floating Chat Panel -->
+          <div class="orch-chat-panel hidden" id="orch-chat">
+            <div class="chat-header">
+              <h3>💬 Chat</h3>
+              <div class="chat-actions">
+                <button onclick="requestDeeperQuestions()" title="Ask more clarifying questions">
+                  🔍 Ask More
+                </button>
+                <button onclick="requestExplanation()" title="Explain reasoning">
+                  💡 Explain
+                </button>
+                <button onclick="toggleOrchestratorChat()" class="close-btn">×</button>
+              </div>
+            </div>
+
+            <div class="chat-messages" id="orch-chat-messages">
+              <div class="chat-message assistant">
+                Hi! I'm here to help with your orchestration. Ask me anything about the current phase, request changes, or click "Ask More" for deeper clarifying questions.
+              </div>
+            </div>
+
+            <div class="chat-input-area">
+              <textarea id="orch-chat-input" placeholder="Ask a question or request changes..." rows="2"></textarea>
+              <button class="chat-send-btn" onclick="sendOrchestratorChatMessage()">Send</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -6241,19 +7294,26 @@
     // Tool tracking
     const activeTools = new Set();
 
-    // Helper: Check if text looks like raw JSON that should be filtered
+    // Helper: Check if text looks like raw JSON or internal noise that should be filtered
     function isRawJsonNoise(text) {
       if (!text) return true;
       const trimmed = text.trim();
-      // Filter out raw JSON objects/arrays
-      if (trimmed.startsWith('{') && trimmed.includes('"type"')) return true;
+      // Filter out raw JSON objects/arrays with event types
+      if (trimmed.startsWith('{') && (trimmed.includes('"type"') || trimmed.includes('"content"'))) return true;
       if (trimmed.startsWith('[') && trimmed.includes('"type"')) return true;
-      // Filter out hook responses
-      if (trimmed.includes('hook_response') || trimmed.includes('hook_event')) return true;
-      // Filter out session start hooks
+      // Filter out hook responses and events
+      if (trimmed.includes('hook_response') || trimmed.includes('hook_event') || trimmed.includes('HookResponse')) return true;
+      // Filter out session/system hooks
       if (trimmed.includes('session-start-hook') || trimmed.includes('AVAILABLE SKILLS')) return true;
-      // Filter out init data
-      if (trimmed.includes('"subtype":"init"')) return true;
+      if (trimmed.includes('user-prompt-submit-hook') || trimmed.includes('pre-tool-use-hook')) return true;
+      // Filter out init/system data
+      if (trimmed.includes('"subtype":"init"') || trimmed.includes('"subtype":"system"')) return true;
+      // Filter out tool_result raw JSON
+      if (trimmed.includes('"tool_result"') || trimmed.includes('"tool_use"')) return true;
+      // Filter out content blocks
+      if (trimmed.includes('"content_block"') || trimmed.includes('"delta"')) return true;
+      // Filter out API metadata
+      if (trimmed.includes('"message_start"') || trimmed.includes('"message_stop"')) return true;
       return false;
     }
 
@@ -6309,10 +7369,12 @@
         line.textContent = data.text;
         container.appendChild(line);
       } else if (data.type === 'stdout' && data.text) {
-        // Fallback for unparsed stdout
+        // Fallback for unparsed stdout - filter out noise per line
         const lines = data.text.split('\n');
         lines.forEach(text => {
           if (!text.trim()) return;
+          // Apply noise filter to each stdout line
+          if (isRawJsonNoise(text)) return;
           const stdoutLine = document.createElement('div');
           stdoutLine.className = 'agent-output-line stdout';
           stdoutLine.textContent = text;
@@ -6466,6 +7528,704 @@
     }, 5000);
 
     // ===== END BEADS AGENT TRACKER =====
+
+    // ===== ORCHESTRATOR =====
+    let currentOrchestration = null;
+    let orchestratorEventSource = null;
+    let orchestrationAnswers = {};
+
+    // Start a new orchestration
+    async function startOrchestration() {
+      const goalInput = document.getElementById('orch-goal-input');
+      const goal = goalInput.value.trim();
+
+      if (!goal) {
+        showToast('Please enter a project description', 'warning');
+        return;
+      }
+
+      // Show loading panel immediately
+      showOrchestratorPanel('loading');
+      startLoadingAnimation();
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          currentOrchestration = { id: data.orchestrationId, goal };
+          updateOrchestratorStatus('Generating questions...');
+          connectOrchestratorStream(data.orchestrationId);
+          loadOrchestrationHistory();
+        } else {
+          showOrchestratorPanel('goal');
+          showToast(data.error || 'Failed to start orchestration', 'error');
+        }
+      } catch (err) {
+        console.error('[Orchestrator] Error:', err);
+        showOrchestratorPanel('goal');
+        showToast('Failed to start orchestration', 'error');
+      }
+    }
+
+    // Animate loading steps
+    let loadingAnimationTimer = null;
+    function startLoadingAnimation() {
+      // Reset steps
+      document.querySelectorAll('.loading-step').forEach((el, i) => {
+        el.classList.remove('active', 'done');
+        if (i === 0) el.classList.add('active');
+      });
+
+      let step = 0;
+      loadingAnimationTimer = setInterval(() => {
+        step++;
+        if (step < 3) {
+          document.getElementById(`load-step-${step}`).classList.remove('active');
+          document.getElementById(`load-step-${step}`).classList.add('done');
+          document.getElementById(`load-step-${step + 1}`).classList.add('active');
+        }
+      }, 2000);
+    }
+
+    function stopLoadingAnimation() {
+      if (loadingAnimationTimer) {
+        clearInterval(loadingAnimationTimer);
+        loadingAnimationTimer = null;
+      }
+    }
+
+    // ===== ORCHESTRATOR CHAT =====
+    let orchestratorChatVisible = false;
+
+    function toggleOrchestratorChat() {
+      orchestratorChatVisible = !orchestratorChatVisible;
+      const chatPanel = document.getElementById('orch-chat');
+      const toggleBtn = document.getElementById('orch-chat-toggle');
+
+      if (orchestratorChatVisible) {
+        chatPanel.classList.remove('hidden');
+        toggleBtn.classList.add('active');
+        document.getElementById('orch-chat-input').focus();
+      } else {
+        chatPanel.classList.add('hidden');
+        toggleBtn.classList.remove('active');
+      }
+    }
+
+    async function sendOrchestratorChatMessage() {
+      if (!currentOrchestration) {
+        showToast('No active orchestration', 'warning');
+        return;
+      }
+
+      const input = document.getElementById('orch-chat-input');
+      const message = input.value.trim();
+      if (!message) return;
+
+      // Add user message to UI immediately
+      addOrchestratorChatMessage(message, 'user');
+      input.value = '';
+
+      // Show typing indicator
+      const typingId = addOrchestratorChatMessage('Thinking...', 'assistant typing');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            phase: currentOrchestration.phase
+          })
+        });
+
+        const data = await res.json();
+
+        // Remove typing indicator
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        if (data.success) {
+          addOrchestratorChatMessage(data.response, 'assistant');
+        } else if (res.status === 404 || data.error === 'Orchestration not found') {
+          addOrchestratorChatMessage('This orchestration no longer exists (server may have restarted). Please start a new orchestration.', 'assistant error');
+          currentOrchestration = null;
+        } else {
+          addOrchestratorChatMessage('Sorry, I encountered an error. Please try again.', 'assistant error');
+        }
+      } catch (err) {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        addOrchestratorChatMessage('Connection error. Please try again.', 'assistant error');
+      }
+    }
+
+    function addOrchestratorChatMessage(text, className) {
+      const container = document.getElementById('orch-chat-messages');
+      const msgId = 'orch-msg-' + Date.now();
+
+      const msg = document.createElement('div');
+      msg.id = msgId;
+      msg.className = `chat-message ${className}`;
+      msg.textContent = text;
+
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+
+      return msgId;
+    }
+
+    async function requestDeeperQuestions() {
+      if (!currentOrchestration) {
+        showToast('No active orchestration', 'warning');
+        return;
+      }
+
+      addOrchestratorChatMessage('Generating additional clarifying questions...', 'assistant');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/deepen`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'questions' })
+        });
+
+        const data = await res.json();
+        if (data.success && data.newQuestions) {
+          addOrchestratorChatMessage(`Added ${data.newQuestions.length} new questions. Check the Questions panel.`, 'assistant');
+          // Update the questions panel if we're on that phase
+          if (currentOrchestration && currentOrchestration.phase === 'questions') {
+            currentOrchestration.questions = data.questions || currentOrchestration.questions;
+            showOrchestratorPanel('questions');
+          }
+        } else if (res.status === 404 || data.error === 'Orchestration not found') {
+          addOrchestratorChatMessage('This orchestration no longer exists. Please start a new orchestration.', 'assistant error');
+          currentOrchestration = null;
+        } else {
+          addOrchestratorChatMessage('Could not generate additional questions.', 'assistant error');
+        }
+      } catch (err) {
+        addOrchestratorChatMessage('Failed to generate questions. Please try again.', 'assistant error');
+      }
+    }
+
+    async function requestExplanation() {
+      if (!currentOrchestration) {
+        showToast('No active orchestration', 'warning');
+        return;
+      }
+
+      const typingId = addOrchestratorChatMessage('Let me explain my reasoning...', 'assistant typing');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/deepen`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'explain' })
+        });
+
+        const data = await res.json();
+
+        // Remove typing indicator
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        if (data.success && data.explanation) {
+          addOrchestratorChatMessage(data.explanation, 'assistant');
+        } else if (res.status === 404 || data.error === 'Orchestration not found') {
+          addOrchestratorChatMessage('This orchestration no longer exists. Please start a new orchestration.', 'assistant error');
+          currentOrchestration = null;
+        } else {
+          addOrchestratorChatMessage('Could not generate explanation.', 'assistant error');
+        }
+      } catch (err) {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        addOrchestratorChatMessage('Failed to generate explanation. Please try again.', 'assistant error');
+      }
+    }
+
+    // Handle Enter key in orchestrator chat input
+    document.addEventListener('DOMContentLoaded', () => {
+      const chatInput = document.getElementById('orch-chat-input');
+      if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendOrchestratorChatMessage();
+          }
+        });
+      }
+    });
+
+    // Connect to orchestrator SSE stream
+    function connectOrchestratorStream(orchId) {
+      if (orchestratorEventSource) {
+        orchestratorEventSource.close();
+      }
+
+      orchestratorEventSource = new EventSource(`${API_BASE}/api/orchestrator/${orchId}/stream`);
+
+      orchestratorEventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleOrchestratorEvent(data);
+      };
+
+      orchestratorEventSource.onerror = () => {
+        console.log('[Orchestrator] SSE connection error');
+      };
+    }
+
+    // Handle orchestrator events
+    function handleOrchestratorEvent(data) {
+      console.log('[Orchestrator] Event:', data.type, data);
+
+      switch (data.type) {
+        case 'phase':
+          updatePhaseIndicator(data.phase);
+          updateOrchestratorStatus(data.message);
+          break;
+
+        case 'questions':
+          renderQuestions(data.questions);
+          showOrchestratorPanel('questions');
+          break;
+
+        case 'plan':
+          renderPlan(data.plan);
+          showOrchestratorPanel('plan');
+          break;
+
+        case 'summary':
+        case 'progress':
+          addProgressItem(data.message);
+          break;
+
+        case 'escalation':
+          addProgressItem(data.message, 'error');
+          showToast(data.message, 'warning');
+          break;
+
+        case 'complete':
+          showOrchestratorPanel('review');
+          updateOrchestratorStatus(data.message);
+          showToast(data.message, 'success');
+          break;
+
+        case 'error':
+          showToast(data.message, 'error');
+          break;
+      }
+    }
+
+    // Update phase indicator
+    function updatePhaseIndicator(activePhase) {
+      const phases = ['requirements', 'planning', 'execution', 'review'];
+      const activeIndex = phases.indexOf(activePhase);
+
+      document.querySelectorAll('.phase-step').forEach((el, idx) => {
+        const phase = el.dataset.phase;
+        el.classList.remove('active', 'completed');
+
+        if (phase === activePhase) {
+          el.classList.add('active');
+        } else if (phases.indexOf(phase) < activeIndex) {
+          el.classList.add('completed');
+        }
+      });
+    }
+
+    // Update status text
+    function updateOrchestratorStatus(message) {
+      document.getElementById('orch-status').textContent = message;
+    }
+
+    // Show specific panel
+    function showOrchestratorPanel(panelName) {
+      const panels = ['goal', 'loading', 'questions', 'plan', 'execution', 'review'];
+      panels.forEach(name => {
+        const panel = document.getElementById(`orch-${name}-panel`);
+        if (panel) {
+          panel.classList.toggle('hidden', name !== panelName);
+        }
+      });
+
+      // Stop loading animation when leaving loading panel
+      if (panelName !== 'loading') {
+        stopLoadingAnimation();
+      }
+    }
+
+    // Render clarifying questions
+    function renderQuestions(questions) {
+      stopLoadingAnimation();
+      const container = document.getElementById('orch-questions-list');
+      orchestrationAnswers = {};
+
+      container.innerHTML = questions.map(q => {
+        const optionsHtml = q.options
+          ? `<div class="question-options">
+               ${q.options.map(opt =>
+                 `<button class="question-option" data-qid="${q.id}" data-value="${opt}" onclick="selectOption(this)">${opt}</button>`
+               ).join('')}
+             </div>`
+          : '';
+
+        return `
+          <div class="question-item" data-qid="${q.id}">
+            <div class="question-text">${q.question}</div>
+            ${optionsHtml}
+            <input type="text" class="question-input" data-qid="${q.id}"
+                   placeholder="${q.type === 'choice' ? 'Or type custom answer...' : 'Type your answer...'}"
+                   onchange="updateAnswer(this)">
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Select an option for a question
+    function selectOption(btn) {
+      const qid = btn.dataset.qid;
+      const value = btn.dataset.value;
+      const wasSelected = btn.classList.contains('selected');
+
+      // Deselect all options in same question
+      document.querySelectorAll(`.question-option[data-qid="${qid}"]`).forEach(b => {
+        b.classList.remove('selected');
+      });
+
+      if (wasSelected) {
+        // Toggle off - remove answer
+        delete orchestrationAnswers[qid];
+      } else {
+        // Select this one
+        btn.classList.add('selected');
+        orchestrationAnswers[qid] = value;
+        // Clear text input
+        const input = document.querySelector(`.question-input[data-qid="${qid}"]`);
+        if (input) input.value = '';
+      }
+    }
+
+    // Update answer from text input
+    function updateAnswer(input) {
+      const qid = input.dataset.qid;
+      if (input.value.trim()) {
+        orchestrationAnswers[qid] = input.value.trim();
+        // Deselect option buttons
+        document.querySelectorAll(`.question-option[data-qid="${qid}"]`).forEach(b => {
+          b.classList.remove('selected');
+        });
+      }
+    }
+
+    // Submit answers
+    async function submitAnswers() {
+      if (!currentOrchestration) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers: orchestrationAnswers })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          updateOrchestratorStatus('Creating implementation plan...');
+        } else {
+          showToast(data.error || 'Failed to submit answers', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to submit answers', 'error');
+      }
+    }
+
+    // Render plan tasks
+    function renderPlan(plan) {
+      const container = document.getElementById('orch-plan-list');
+
+      container.innerHTML = plan.map((task, idx) => `
+        <div class="plan-task">
+          <div class="plan-task-number">${idx + 1}</div>
+          <div class="plan-task-content">
+            <div class="plan-task-title">${task.title}</div>
+            <div class="plan-task-description">${task.description || ''}</div>
+            <div class="plan-task-meta">
+              <span class="plan-task-badge ${task.agentType}">${task.agentType}</span>
+              ${task.priority ? `<span class="plan-task-badge">${task.priority}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      if (currentOrchestration) {
+        currentOrchestration.plan = plan;
+      }
+    }
+
+    // Modify plan (go back to questions for now)
+    function modifyPlan() {
+      showOrchestratorPanel('questions');
+      updatePhaseIndicator('requirements');
+    }
+
+    // Execute the plan
+    async function executePlan() {
+      if (!currentOrchestration) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showOrchestratorPanel('execution');
+          updatePhaseIndicator('execution');
+          updateOrchestratorStatus('Spawning agents...');
+        } else {
+          showToast(data.error || 'Failed to execute plan', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to execute plan', 'error');
+      }
+    }
+
+    // Add progress item to feed
+    function addProgressItem(message, type = 'info') {
+      const feed = document.getElementById('orch-progress-feed');
+
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+      const item = document.createElement('div');
+      item.className = `progress-item ${type}`;
+      item.innerHTML = `
+        <span class="progress-time">${time}</span>
+        <span class="progress-message">${message}</span>
+      `;
+
+      feed.appendChild(item);
+      feed.scrollTop = feed.scrollHeight;
+
+      // Also show execution panel if not visible
+      showOrchestratorPanel('execution');
+    }
+
+    // Request refinement
+    async function requestRefinement() {
+      if (!currentOrchestration) return;
+
+      const feedback = document.getElementById('orch-feedback-input').value.trim();
+
+      if (!feedback) {
+        showToast('Please provide feedback for refinements', 'warning');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/refine`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'refine', feedback })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showOrchestratorPanel('execution');
+          updateOrchestratorStatus('Processing refinements...');
+          document.getElementById('orch-feedback-input').value = '';
+        } else {
+          showToast(data.error || 'Failed to process refinement', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to process refinement', 'error');
+      }
+    }
+
+    // Approve project
+    async function approveProject() {
+      if (!currentOrchestration) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/refine`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve' })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showToast('Project approved and completed!', 'success');
+          resetOrchestrator();
+        } else {
+          showToast(data.error || 'Failed to approve project', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to approve project', 'error');
+      }
+    }
+
+    // Reset orchestrator to initial state
+    function resetOrchestrator() {
+      currentOrchestration = null;
+      orchestrationAnswers = {};
+
+      if (orchestratorEventSource) {
+        orchestratorEventSource.close();
+        orchestratorEventSource = null;
+      }
+
+      // Reset UI
+      document.getElementById('orch-goal-input').value = '';
+      document.getElementById('orch-questions-list').innerHTML = '';
+      document.getElementById('orch-plan-list').innerHTML = '';
+      document.getElementById('orch-progress-feed').innerHTML = '';
+      document.getElementById('orch-feedback-input').value = '';
+
+      showOrchestratorPanel('goal');
+      updatePhaseIndicator('');
+      updateOrchestratorStatus('Ready to start');
+    }
+
+    // Load orchestration history
+    async function loadOrchestrationHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/list`);
+        const data = await res.json();
+
+        const container = document.getElementById('orch-history-list');
+
+        if (!data.orchestrations || data.orchestrations.length === 0) {
+          container.innerHTML = '<div class="empty-state-small">No orchestrations yet</div>';
+          return;
+        }
+
+        container.innerHTML = data.orchestrations.map(orch => {
+          const isActive = currentOrchestration && currentOrchestration.id === orch.id;
+          const runtime = formatRuntime(orch.runtime);
+
+          return `
+            <div class="orch-history-item ${isActive ? 'active' : ''}">
+              <div class="orch-history-content" onclick="loadOrchestration('${orch.id}')">
+                <div class="orch-history-goal">${orch.goal}</div>
+                <div class="orch-history-meta">${orch.phase} - ${runtime}</div>
+              </div>
+              <button class="orch-delete-btn" onclick="event.stopPropagation(); deleteOrchestration('${orch.id}')" title="Delete">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('[Orchestrator] Error loading history:', err);
+      }
+    }
+
+    // Load a specific orchestration
+    async function loadOrchestration(orchId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${orchId}`);
+        const data = await res.json();
+
+        if (data.id) {
+          currentOrchestration = data;
+          updatePhaseIndicator(data.phase);
+          updateOrchestratorStatus(`Phase: ${data.phase}`);
+
+          // Show appropriate panel
+          switch (data.phase) {
+            case 'requirements':
+              if (data.questions && data.questions.length > 0) {
+                renderQuestions(data.questions);
+                showOrchestratorPanel('questions');
+              } else {
+                showOrchestratorPanel('goal');
+              }
+              break;
+            case 'planning':
+              if (data.plan && data.plan.length > 0) {
+                renderPlan(data.plan);
+                showOrchestratorPanel('plan');
+              }
+              break;
+            case 'execution':
+              if (data.plan) renderPlan(data.plan);
+              data.summary.forEach(s => addProgressItem(s.message));
+              showOrchestratorPanel('execution');
+              break;
+            case 'review':
+              showOrchestratorPanel('review');
+              break;
+          }
+
+          // Reconnect SSE
+          connectOrchestratorStream(orchId);
+          loadOrchestrationHistory();
+        }
+      } catch (err) {
+        showToast('Failed to load orchestration', 'error');
+      }
+    }
+
+    // Format runtime
+    // Delete an orchestration
+    async function deleteOrchestration(orchId) {
+      if (!confirm('Delete this orchestration?')) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${orchId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast('Orchestration deleted', 'success');
+          // Clear current if it was the deleted one
+          if (currentOrchestration && currentOrchestration.id === orchId) {
+            resetOrchestrator();
+          }
+          loadOrchestrationHistory();
+        } else {
+          showToast('Failed to delete: ' + (data.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        console.error('[Orchestrator] Error deleting:', err);
+        showToast('Failed to delete orchestration', 'error');
+      }
+    }
+
+    function formatRuntime(ms) {
+      if (!ms || ms < 0) return '--';
+      const secs = Math.floor(ms / 1000);
+      const mins = Math.floor(secs / 60);
+      const hours = Math.floor(mins / 60);
+
+      if (hours > 0) return `${hours}h ${mins % 60}m`;
+      if (mins > 0) return `${mins}m ${secs % 60}s`;
+      return `${secs}s`;
+    }
+
+    // Initialize orchestrator view when shown
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load history when orchestrator tab is shown
+      document.querySelector('[data-view="orchestrator"]')?.addEventListener('click', () => {
+        loadOrchestrationHistory();
+      });
+    });
+
+    // ===== END ORCHESTRATOR =====
   </script>
 </body>
 

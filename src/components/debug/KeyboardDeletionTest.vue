@@ -621,7 +621,7 @@ onMounted(() => {
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .test-button:disabled {
@@ -694,7 +694,7 @@ onMounted(() => {
 
 .result-item.failed {
   border-color: var(--color-error);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
 }
 
 .result-item.running {
@@ -715,7 +715,7 @@ onMounted(() => {
 }
 
 .result-time {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
@@ -726,7 +726,7 @@ onMounted(() => {
 .result-metrics {
   display: flex;
   gap: var(--spacing-md);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
 
@@ -735,7 +735,7 @@ onMounted(() => {
   padding: var(--spacing-xs);
   background: rgba(239, 68, 68, 0.2);
   border-radius: var(--border-radius-xs);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-error);
 }
 

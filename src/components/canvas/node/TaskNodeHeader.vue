@@ -44,8 +44,8 @@ defineProps<{
 
 .timer-indicator {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-2);
+  right: var(--space-2);
   width: 24px;
   height: 24px;
   background: var(--brand-primary);

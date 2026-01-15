@@ -221,7 +221,7 @@ defineExpose({
 .project-task-count {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
   min-width: 24px;

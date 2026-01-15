@@ -340,7 +340,7 @@ watch(() => props.isOpen, async (isOpen) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-darker);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -350,9 +350,9 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .modal-content {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
   width: 90%;
@@ -381,7 +381,7 @@ watch(() => props.isOpen, async (isOpen) => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .modal-title {
@@ -393,7 +393,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .close-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);
@@ -405,8 +405,8 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg-soft);
+  border-color: var(--border-hover);
   color: var(--text-primary);
 }
 
@@ -432,9 +432,9 @@ watch(() => props.isOpen, async (isOpen) => {
   gap: var(--space-2);
   margin-bottom: var(--space-4);
   padding: var(--space-3);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--glass-bg-light);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .color-preset {
@@ -465,7 +465,7 @@ watch(() => props.isOpen, async (isOpen) => {
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
@@ -475,9 +475,9 @@ watch(() => props.isOpen, async (isOpen) => {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--glass-bg-light);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .custom-color-input {
@@ -501,8 +501,8 @@ watch(() => props.isOpen, async (isOpen) => {
 .color-text-input {
   flex: 1;
   padding: var(--space-2) var(--space-3);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--overlay-medium);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -530,16 +530,16 @@ watch(() => props.isOpen, async (isOpen) => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--overlay-medium);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .preview-box {
   width: 24px;
   height: 24px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
 }
 
 .color-value {
@@ -554,12 +554,12 @@ watch(() => props.isOpen, async (isOpen) => {
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-6) var(--space-6);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .btn-primary {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--glass-border);
+  border: 1px solid var(--border-hover);
   color: white;
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-lg);
@@ -570,7 +570,7 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-border-hover);
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -581,7 +581,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .btn-secondary {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-secondary);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-lg);
@@ -592,8 +592,8 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg-soft);
+  border-color: var(--border-hover);
   color: var(--text-primary);
 }
 
@@ -601,8 +601,8 @@ watch(() => props.isOpen, async (isOpen) => {
 .parent-select {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--overlay-medium);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -616,8 +616,8 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .parent-select:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background-color: rgba(0, 0, 0, 0.5);
+  border-color: var(--border-hover);
+  background-color: var(--overlay-heavy);
 }
 
 .parent-select:focus {

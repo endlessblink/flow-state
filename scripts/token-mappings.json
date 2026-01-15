@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Canonical design token mappings for CSS migration. Based on AppSidebar reference component.",
+
+  "backgrounds": {
+    "$comment": "Glass/transparent backgrounds - use for background properties",
+    "rgba(255, 255, 255, 0.005)": "var(--glass-bg-subtle)",
+    "rgba(255, 255, 255, 0.015)": "var(--glass-bg-weak)",
+    "rgba(255, 255, 255, 0.02)": "var(--glass-bg-light)",
+    "rgba(255, 255, 255, 0.03)": "var(--glass-bg-tint)",
+    "rgba(255, 255, 255, 0.04)": "var(--glass-bg-medium)",
+    "rgba(255, 255, 255, 0.05)": "var(--glass-bg-soft)",
+    "rgba(255, 255, 255, 0.06)": "var(--glass-bg-heavy)",
+    "rgba(255, 255, 255, 0.08)": "var(--glass-bg-heavy)",
+    "rgba(255, 255, 255, 0.1)": "var(--glass-border)",
+    "rgba(255, 255, 255, 0.15)": "var(--glass-border-hover)",
+    "rgba(255, 255, 255, 0.2)": "var(--border-hover)",
+    "rgba(255, 255, 255, 0.25)": "var(--border-interactive)",
+    "rgba(0, 0, 0, 0.3)": "var(--overlay-light)",
+    "rgba(0, 0, 0, 0.4)": "var(--overlay-medium)",
+    "rgba(0, 0, 0, 0.5)": "var(--overlay-heavy)",
+    "rgba(0, 0, 0, 0.7)": "var(--overlay-darker)",
+    "rgba(0, 0, 0, 0.85)": "var(--glass-bg-solid)",
+    "rgba(0, 0, 0, 0.95)": "var(--glass-bg-solid)"
+  },
+
+  "borders": {
+    "$comment": "Border colors - use for border properties",
+    "rgba(255, 255, 255, 0.03)": "var(--glass-border-faint)",
+    "rgba(255, 255, 255, 0.05)": "var(--glass-border-faint)",
+    "rgba(255, 255, 255, 0.06)": "var(--glass-border-light)",
+    "rgba(255, 255, 255, 0.08)": "var(--border-subtle)",
+    "rgba(255, 255, 255, 0.1)": "var(--glass-border)",
+    "rgba(255, 255, 255, 0.12)": "var(--border-medium)",
+    "rgba(255, 255, 255, 0.14)": "var(--border-secondary)",
+    "rgba(255, 255, 255, 0.15)": "var(--glass-border-hover)",
+    "rgba(255, 255, 255, 0.16)": "var(--glass-border-medium)",
+    "rgba(255, 255, 255, 0.18)": "var(--border-strong)",
+    "rgba(255, 255, 255, 0.2)": "var(--border-hover)",
+    "rgba(255, 255, 255, 0.24)": "var(--border-interactive)",
+    "rgba(255, 255, 255, 0.25)": "var(--border-interactive)",
+    "rgba(255, 255, 255, 0.28)": "var(--glass-border-strong)"
+  },
+
+  "spacing": {
+    "$comment": "Spacing values - use for padding, margin, gap",
+    "2px": "var(--space-0_5)",
+    "4px": "var(--space-1)",
+    "6px": "var(--space-1_5)",
+    "8px": "var(--space-2)",
+    "10px": "var(--space-2_5)",
+    "12px": "var(--space-3)",
+    "14px": "var(--space-3_5)",
+    "16px": "var(--space-4)",
+    "20px": "var(--space-5)",
+    "24px": "var(--space-6)",
+    "28px": "var(--space-7)",
+    "32px": "var(--space-8)",
+    "0.25rem": "var(--space-1)",
+    "0.5rem": "var(--space-2)",
+    "0.75rem": "var(--space-3)",
+    "1rem": "var(--space-4)",
+    "1.25rem": "var(--space-5)",
+    "1.5rem": "var(--space-6)"
+  },
+
+  "radius": {
+    "$comment": "Border radius values",
+    "2px": "var(--radius-xs)",
+    "4px": "var(--radius-sm)",
+    "6px": "var(--radius-sm)",
+    "8px": "var(--radius-md)",
+    "10px": "var(--radius-md)",
+    "12px": "var(--radius-lg)",
+    "16px": "var(--radius-lg)",
+    "20px": "var(--radius-xl)",
+    "24px": "var(--radius-2xl)",
+    "9999px": "var(--radius-full)",
+    "50%": "var(--radius-full)"
+  },
+
+  "typography": {
+    "$comment": "Font sizes",
+    "10px": "var(--text-xs)",
+    "11px": "var(--text-xs)",
+    "12px": "var(--text-xs)",
+    "13px": "var(--text-sm)",
+    "14px": "var(--text-sm)",
+    "15px": "var(--text-base)",
+    "16px": "var(--text-base)",
+    "18px": "var(--text-lg)",
+    "20px": "var(--text-xl)",
+    "24px": "var(--text-2xl)",
+    "0.75rem": "var(--text-xs)",
+    "0.875rem": "var(--text-sm)",
+    "1rem": "var(--text-base)"
+  },
+
+  "transitions": {
+    "$comment": "Transition timing values",
+    "0.1s": "var(--duration-instant)",
+    "100ms": "var(--duration-instant)",
+    "0.15s": "var(--duration-fast)",
+    "150ms": "var(--duration-fast)",
+    "0.2s": "var(--duration-normal)",
+    "200ms": "var(--duration-normal)",
+    "0.25s": "var(--duration-normal)",
+    "250ms": "var(--duration-normal)",
+    "0.3s": "var(--duration-slow)",
+    "300ms": "var(--duration-slow)",
+    "0.4s": "var(--duration-slower)",
+    "400ms": "var(--duration-slower)",
+    "0.5s": "var(--duration-slower)",
+    "500ms": "var(--duration-slower)",
+    "ease": "var(--ease-out)",
+    "ease-out": "var(--ease-out)",
+    "ease-in": "var(--ease-in)",
+    "ease-in-out": "var(--ease-in-out)"
+  },
+
+  "colors": {
+    "$comment": "Brand and accent colors",
+    "rgba(78, 205, 196, 0.1)": "var(--brand-primary-bg-subtle)",
+    "rgba(78, 205, 196, 0.15)": "var(--brand-primary-bg-medium)",
+    "rgba(78, 205, 196, 0.2)": "var(--brand-primary-bg-heavy)",
+    "rgba(78, 205, 196, 0.5)": "var(--brand-primary-alpha-50)",
+    "rgba(99, 102, 241, 0.1)": "var(--color-indigo-bg-subtle)",
+    "rgba(99, 102, 241, 0.15)": "var(--color-indigo-bg-medium)",
+    "rgba(99, 102, 241, 0.2)": "var(--color-indigo-bg-heavy)",
+    "rgba(99, 102, 241, 0.4)": "var(--color-indigo-alpha-40)",
+    "rgba(239, 68, 68, 0.02)": "var(--color-danger-bg-subtle)",
+    "rgba(239, 68, 68, 0.1)": "var(--color-danger-bg-light)",
+    "rgba(255, 107, 107, 0.1)": "var(--color-danger-bg-light)",
+    "#ef4444": "var(--color-danger)",
+    "#4ade80": "var(--color-success)",
+    "#6366f1": "var(--color-indigo)",
+    "#3b82f6": "var(--color-blue)",
+    "#fbbf24": "var(--color-warning)"
+  },
+
+  "shadows": {
+    "$comment": "Box shadow values - these are complex and context-dependent",
+    "0 1px 2px rgba(0, 0, 0, 0.05)": "var(--shadow-xs)",
+    "0 1px 3px rgba(0, 0, 0, 0.1)": "var(--shadow-sm)",
+    "0 4px 6px rgba(0, 0, 0, 0.1)": "var(--shadow-md)",
+    "0 10px 15px rgba(0, 0, 0, 0.1)": "var(--shadow-lg)",
+    "0 20px 25px rgba(0, 0, 0, 0.1)": "var(--shadow-xl)",
+    "0 25px 50px rgba(0, 0, 0, 0.25)": "var(--shadow-2xl)"
+  },
+
+  "contextRules": {
+    "$comment": "Context-aware replacements based on CSS property",
+    "background": {
+      "preferTokens": ["glass-bg", "surface"],
+      "avoidTokens": ["border"]
+    },
+    "border": {
+      "preferTokens": ["border", "glass-border"],
+      "avoidTokens": ["glass-bg", "surface"]
+    },
+    "border-color": {
+      "preferTokens": ["border", "glass-border"],
+      "avoidTokens": ["glass-bg"]
+    },
+    "padding": {
+      "preferTokens": ["space", "padding"],
+      "avoidTokens": ["radius", "text"]
+    },
+    "margin": {
+      "preferTokens": ["space", "margin"],
+      "avoidTokens": ["radius", "text"]
+    },
+    "gap": {
+      "preferTokens": ["space", "gap"],
+      "avoidTokens": ["radius", "text"]
+    },
+    "border-radius": {
+      "preferTokens": ["radius"],
+      "avoidTokens": ["space", "text"]
+    },
+    "font-size": {
+      "preferTokens": ["text"],
+      "avoidTokens": ["space", "radius"]
+    },
+    "transition": {
+      "preferTokens": ["duration", "ease", "spring"],
+      "avoidTokens": ["space", "text"]
+    }
+  }
+}

@@ -215,7 +215,7 @@ onUnmounted(() => {
 .modal-overlay {
   position: fixed;
   inset: 0; /* RTL: full screen overlay */
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-heavy);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;

@@ -146,12 +146,12 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
 .chevron-icon.rotated { transform: rotate(-90deg); }
 
 .count-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   background: var(--glass-bg-weak);
-  padding: 1px 6px;
-  border-radius: 10px;
+  padding: 1px var(--space-1_5);
+  border-radius: var(--radius-md);
   color: var(--text-tertiary);
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 
 .inline-add-btn {
@@ -239,7 +239,7 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .subtask-header {
@@ -280,8 +280,8 @@ const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
   border: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
+  padding: var(--space-0_5);
+  border-radius: var(--radius-sm);
 }
 
 .subtask-item:hover .delete-subtask-btn { opacity: 1; }

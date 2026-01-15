@@ -236,7 +236,7 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(20px);
 
   /* Stroke border */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-xl);
 
   /* Layered shadow */
@@ -276,8 +276,8 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--overlay-light);
 }
 
 .search-input-wrapper {
@@ -285,19 +285,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--overlay-medium);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .search-input-wrapper:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
 }
 
 .search-input-wrapper:focus-within {
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
@@ -321,8 +321,8 @@ onMounted(() => {
 }
 
 .shortcut-esc {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
@@ -395,7 +395,7 @@ onMounted(() => {
   background: color-mix(in srgb, var(--brand-primary) 20%, transparent);
   color: var(--text-primary);
   border-radius: var(--radius-sm);
-  padding: 0 2px;
+  padding: 0 var(--space-0_5);
 }
 
 .result-meta {

@@ -444,9 +444,9 @@ defineExpose({
   --shadow-glow-strong: 0 0 32px rgba(var(--primary-rgb), 0.4);
 
   /* Transitions */
-  --transition-fast: 0.15s;
-  --transition-normal: 0.25s;
-  --transition-slow: 0.4s;
+  --transition-fast: var(--duration-fast);
+  --transition-normal: var(--duration-normal);
+  --transition-slow: var(--duration-slower);
 
   /* Border Radius */
   --radius-xs: 4px;
@@ -467,15 +467,15 @@ defineExpose({
 
 /* Touch target sizing for accessibility */
 .multi-select-container--sm {
-  padding: 12px;
+  padding: var(--space-3);
 }
 
 .multi-select-container--md {
-  padding: 10px;
+  padding: var(--space-2_5);
 }
 
 .multi-select-container--lg {
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 /* ==========================================================================
@@ -703,7 +703,7 @@ defineExpose({
   border: 2px solid rgba(255, 255, 255, 0.6);
   border-radius: 3px;
   transition: all var(--transition-normal) var(--spring-smooth);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -724,7 +724,7 @@ defineExpose({
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 8px;
+  margin-top: var(--space-2);
   min-width: 200px;
   background:
     linear-gradient(135deg, var(--glass-bg-strong) 0%, var(--glass-bg-medium) 100%),
@@ -747,8 +747,8 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  gap: 12px;
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-3);
 }
 
 .toolbar-counter {
@@ -759,23 +759,23 @@ defineExpose({
 }
 
 .counter-number {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1;
 }
 
 .counter-label {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-top: 2px;
+  margin-top: var(--space-0_5);
 }
 
 .toolbar-actions {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .toolbar-btn {
@@ -817,14 +817,14 @@ defineExpose({
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border-medium);
   border-radius: var(--radius-md);
-  padding: 8px;
+  padding: var(--space-2);
   backdrop-filter: var(--blur-medium);
   z-index: 1001;
 }
@@ -832,8 +832,8 @@ defineExpose({
 .hint-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -842,9 +842,9 @@ defineExpose({
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border-subtle);
   border-radius: var(--radius-xs);
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   font-family: monospace;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-primary);
 }
 

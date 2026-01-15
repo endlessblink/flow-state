@@ -128,7 +128,7 @@ const copyErrorDetails = () => {
   background: rgba(20, 20, 20, 0.6);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
 }
 
 .error-container {

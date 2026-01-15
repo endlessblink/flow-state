@@ -71,3 +71,15 @@ dev-dist/
 Claude-Code-Beads-Orchestration/
 Claude-Subagent-Editor/
 eslint_current_report.txt
+
+# Backup files from migrations
+**/*.backup
+
+# Test output files
+test_output*.txt
+test_debug_body_*.html
+group_fail_*.html
+token-migration-report.json
+
+# External widget
+kde-widget/

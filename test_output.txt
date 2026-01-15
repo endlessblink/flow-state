@@ -1,197 +1,96 @@
 
 Running 2 tests using 2 workers
 
-🚀 Navigating to /#/canvas...
-🚀 Navigating to /#/canvas...
-BROWSER [debug]: [vite] connecting...
-BROWSER [debug]: [vite] connecting...
-BROWSER [debug]: [vite] connected.
-BROWSER [debug]: [vite] connected.
-BROWSER [log]: 📥 [STATIC_CACHE] Loading: /src/assets/styles.css
-BROWSER [log]: 🚀 [MAIN] Starting app initialization...
-BROWSER [log]: 🌐 [MAIN] Browser environment detected
-BROWSER [log]: 📊 [MAIN] Monitoring systems active
-BROWSER [log]: 🔍 [DEBUG] No refHistoryInstance exists, calling initializeRefHistory()
-BROWSER [log]: 📥 [STATIC_CACHE] Loading: /src/assets/styles.css
-BROWSER [log]: 🚀 [MAIN] Starting app initialization...
-BROWSER [log]: 🌐 [MAIN] Browser environment detected
-BROWSER [log]: 📊 [MAIN] Monitoring systems active
-BROWSER [log]: 🔍 [DEBUG] No refHistoryInstance exists, calling initializeRefHistory()
-BROWSER [log]: Initial tab visibility: visible
-BROWSER [log]: Added tab visibility listeners for: visibilitychange
-BROWSER [log]: 🚀 [APP] Starting strictly ordered initialization (Supabase Mode)...
-BROWSER [log]: Initial tab visibility: visible
-BROWSER [log]: Added tab visibility listeners for: visibilitychange
-BROWSER [log]: 🚀 [APP] Starting strictly ordered initialization (Supabase Mode)...
-BROWSER [log]: [GROUPS] breakGroupCycles called with 0 groups
-BROWSER [log]: [GROUPS] Parent relationships: []
-BROWSER [log]: [GROUPS] No cycles detected in group parents
-BROWSER [log]: 🧙‍♂️ Running task migrations...
-BROWSER [log]: 👤 [APP] Guest mode: starting with fresh empty app
-BROWSER [log]: ⚡ [APP] Loading stores from Supabase...
-BROWSER [log]: [GROUPS] breakGroupCycles called with 0 groups
-BROWSER [log]: [GROUPS] Parent relationships: []
-BROWSER [log]: [GROUPS] No cycles detected in group parents
-BROWSER [info]: ℹ️ [DATABASE] User not authenticated, skipping notification load | Context: {"operation":"loadScheduledNotifications"}
-BROWSER [log]: [SafariITP] User interaction recorded - ITP counter reset
-BROWSER [log]: [SafariITP] User interaction recorded - ITP counter reset
-BROWSER [log]: 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
-BROWSER [log]: 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
-BROWSER [log]: 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
-BROWSER [log]: [GROUPS] breakGroupCycles called with 0 groups
-BROWSER [log]: [GROUPS] Parent relationships: []
-BROWSER [log]: [GROUPS] No cycles detected in group parents
-BROWSER [log]: 🧙‍♂️ Running task migrations...
-BROWSER [log]: 👤 [APP] Guest mode: starting with fresh empty app
-BROWSER [log]: ⚡ [APP] Loading stores from Supabase...
-BROWSER [log]: [GROUPS] breakGroupCycles called with 0 groups
-BROWSER [log]: [GROUPS] Parent relationships: []
-BROWSER [log]: [GROUPS] No cycles detected in group parents
-BROWSER [info]: ℹ️ [DATABASE] User not authenticated, skipping notification load | Context: {"operation":"loadScheduledNotifications"}
-BROWSER [log]: [SafariITP] User interaction recorded - ITP counter reset
-BROWSER [log]: [SafariITP] User interaction recorded - ITP counter reset
-BROWSER [log]: 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
-BROWSER [log]: 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
-BROWSER [log]: 👤 [AUTH] Auth state changed: INITIAL_SESSION undefined
-BROWSER [log]: 🚀 [ORCHESTRATOR] onMounted starting...
-BROWSER [log]: ✓ [RECONCILE] All 0 canvas tasks have correct parentId
-BROWSER [startGroup]: [HIERARCHY] Group Hierarchy Summary
-BROWSER [log]: Total: 0 groups (0 root, 0 nested)
-BROWSER [endGroup]: console.groupEnd
-BROWSER [log]: 🚀 [ORCHESTRATOR] Initial syncNodes...
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 0}
-BROWSER [log]: 🚀 [ORCHESTRATOR] onMounted starting...
-BROWSER [log]: ✓ [RECONCILE] All 0 canvas tasks have correct parentId
-BROWSER [startGroup]: [HIERARCHY] Group Hierarchy Summary
-BROWSER [log]: Total: 0 groups (0 root, 0 nested)
-BROWSER [endGroup]: console.groupEnd
-BROWSER [log]: 🚀 [ORCHESTRATOR] Initial syncNodes...
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 0}
-⏳ Waiting for .canvas-layout...
-⏳ Waiting for .vue-flow__pane...
-✅ Canvas ready
-🛠 Opening Create Group modal...
-⏳ Waiting for .canvas-layout...
-BROWSER [log]: 🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase): {key: Shift, shiftKey: true, ctrlKey: false, metaKey: false, altKey: false}
-BROWSER [log]: 🚫 [GLOBAL HANDLER] shouldIgnoreElement result: false {targetElement: body, ignoreInputs: true, ignoreModals: true}
-BROWSER [log]: 🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase): {key: G, shiftKey: true, ctrlKey: false, metaKey: false, altKey: false}
-BROWSER [log]: 🚫 [GLOBAL HANDLER] shouldIgnoreElement result: false {targetElement: body, ignoreInputs: true, ignoreModals: true}
-⏳ Waiting for .vue-flow__pane...
-🛠 Filling group details...
-✅ Canvas ready
-🛠 Opening Create Group modal...
-BROWSER [log]: 🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase): {key: Shift, shiftKey: true, ctrlKey: false, metaKey: false, altKey: false}
-BROWSER [log]: 🚫 [GLOBAL HANDLER] shouldIgnoreElement result: false {targetElement: body, ignoreInputs: true, ignoreModals: true}
-BROWSER [log]: 🌐 [GLOBAL HANDLER] handleKeydown called (bubble phase): {key: G, shiftKey: true, ctrlKey: false, metaKey: false, altKey: false}
-BROWSER [log]: 🚫 [GLOBAL HANDLER] shouldIgnoreElement result: false {targetElement: body, ignoreInputs: true, ignoreModals: true}
-BROWSER [log]: ➕ createGroupWithUndo called with: Tomorrow
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveGroup - not authenticated
-BROWSER [log]: 👀 [ORCHESTRATOR] canvasStore.groups changed {count: 1}
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 0}
-BROWSER [startGroup]: [INVARIANT] 1 violation(s) detected in syncStoreToCanvas
-BROWSER [warning]: 1 WARNING(s):
-BROWSER [warning]:   [B] group group-1768241658943-fs3vafn: Vue Flow position doesn't match expected (absolute) {storeAbsolute: Object, parentGroupId: null, expectedVueFlowPos: Object, actualVueFlowPos: Object, delta: Object}
-BROWSER [endGroup]: console.groupEnd
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 0}
-🛠 Filling group details...
-⏳ Waiting for group node...
-BROWSER [log]: ➕ createGroupWithUndo called with: Today
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveGroup - not authenticated
-BROWSER [log]: 👀 [ORCHESTRATOR] canvasStore.groups changed {count: 1}
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 0}
-BROWSER [startGroup]: [INVARIANT] 1 violation(s) detected in syncStoreToCanvas
-BROWSER [warning]: 1 WARNING(s):
-BROWSER [warning]:   [B] group group-1768241658985-cu5rg1e: Vue Flow position doesn't match expected (absolute) {storeAbsolute: Object, parentGroupId: null, expectedVueFlowPos: Object, actualVueFlowPos: Object, delta: Object}
-BROWSER [endGroup]: console.groupEnd
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 0}
-⏳ Waiting for group node...
-🛠 Opening Quick Task Create modal...
-🛠 Opening Quick Task Create modal...
-🛠 Filling task details...
-BROWSER [log]: ➕ createTaskWithUndo called with: {title: Smart Task Today, description: , canvasPosition: Object, parentId: undefined, status: planned}
-🛠 Filling task details...
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveTasks - not authenticated
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-BROWSER [log]: 👀 [ORCHESTRATOR] taskCountByGroupId changed - syncing nodes
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-BROWSER [log]: ➕ createTaskWithUndo called with: {title: Smart Task Tomorrow, description: , canvasPosition: Object, parentId: undefined, status: planned}
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveTasks - not authenticated
-BROWSER [startGroup]: [INVARIANT] 1 violation(s) detected in syncStoreToCanvas
-BROWSER [warning]: 1 WARNING(s):
-BROWSER [warning]:   [B] group group-1768241658985-cu5rg1e: Vue Flow position doesn't match expected (absolute) {storeAbsolute: Object, parentGroupId: null, expectedVueFlowPos: Object, actualVueFlowPos: Object, delta: Object}
-BROWSER [endGroup]: console.groupEnd
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-BROWSER [log]: 👀 [ORCHESTRATOR] taskCountByGroupId changed - syncing nodes
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-⏳ Waiting for task node...
-🖱 Dragging Task into Group...
-BROWSER [startGroup]: [INVARIANT] 1 violation(s) detected in syncStoreToCanvas
-BROWSER [warning]: 1 WARNING(s):
-BROWSER [warning]:   [B] group group-1768241658943-fs3vafn: Vue Flow position doesn't match expected (absolute) {storeAbsolute: Object, parentGroupId: null, expectedVueFlowPos: Object, actualVueFlowPos: Object, delta: Object}
-BROWSER [endGroup]: console.groupEnd
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-⏳ Waiting for task node...
-🖱 Dragging Task into Group...
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveTasks - not authenticated
-BROWSER [log]: ✨ [SMART-GROUP] Applying properties from "Today" to task "Smart Task Today": {dueDate: 2026-01-12}
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveTasks - not authenticated
-BROWSER [log]: 👀 [ORCHESTRATOR] taskCountByGroupId changed - syncing nodes
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-BROWSER [log]: [DEBUG HEADER REACT] group-1768241658985-cu5rg1e {direct: 1, aggregated: 1, oldDirect: 0, oldAggregated: 0}
-BROWSER [startGroup]: [INVARIANT] 2 violation(s) detected in syncStoreToCanvas
-BROWSER [warning]: 2 WARNING(s):
-BROWSER [warning]:   [B] group group-1768241658985-cu5rg1e: Vue Flow position doesn't match expected (absolute) {storeAbsolute: Object, parentGroupId: null, expectedVueFlowPos: Object, actualVueFlowPos: Object, delta: Object}
-BROWSER [warning]:   [B] task fb28a43d-d2f9-4254-b254-655d1eef7b60: Vue Flow position doesn't match expected (relative) {storeAbsolute: Object, parentId: group-1768241658985-cu5rg1e, expectedVueFlowPos: Object, actualVueFlowPos: Object}
-BROWSER [endGroup]: console.groupEnd
-🔍 Verifying date badge...
-📊 Expected date text: 12/01/2026
-✅ Date verified via badge!
-BROWSER [error]: Failed to load resource: the server responded with a status of 406 (Not Acceptable)
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveTasks - not authenticated
-BROWSER [log]: ✨ [SMART-GROUP] Applying properties from "Tomorrow" to task "Smart Task Tomorrow": {dueDate: 2026-01-13}
-BROWSER [debug]: ⏭️ [GUEST] Skipping saveTasks - not authenticated
-BROWSER [log]: 👀 [ORCHESTRATOR] taskCountByGroupId changed - syncing nodes
-BROWSER [log]: 👉 [ORCHESTRATOR] Calling syncNodes {hasTasks: false}
-BROWSER [log]: 👉 [ORCHESTRATOR] Resolving tasks...
-BROWSER [log]: 👉 [ORCHESTRATOR] Tasks resolved: {count: 1}
-BROWSER [log]: [DEBUG HEADER REACT] group-1768241658943-fs3vafn {direct: 1, aggregated: 1, oldDirect: 0, oldAggregated: 0}
-BROWSER [startGroup]: [INVARIANT] 2 violation(s) detected in syncStoreToCanvas
-BROWSER [warning]: 2 WARNING(s):
-BROWSER [warning]:   [B] group group-1768241658943-fs3vafn: Vue Flow position doesn't match expected (absolute) {storeAbsolute: Object, parentGroupId: null, expectedVueFlowPos: Object, actualVueFlowPos: Object, delta: Object}
-BROWSER [warning]:   [B] task 1c60966f-f914-4eec-98a7-126ebafa9982: Vue Flow position doesn't match expected (relative) {storeAbsolute: Object, parentId: group-1768241658943-fs3vafn, expectedVueFlowPos: Object, actualVueFlowPos: Object}
-BROWSER [endGroup]: console.groupEnd
-🔍 Verifying date badge...
-📊 Expected date text: 13/01/2026
-✅ Date verified via badge!
-BROWSER [error]: Failed to load resource: the server responded with a status of 406 (Not Acceptable)
-  ✓  1 [chromium] › tests/smart-group-dates.spec.ts:22:5 › Smart Group Dates › should update task dueDate when dropped into "Today" group (2.9s)
-  ✓  2 [chromium] › tests/smart-group-dates.spec.ts:78:5 › Smart Group Dates › should update task dueDate when dropped into "Tomorrow" group (3.0s)
+[1A[2K[1/2] [chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
+[1A[2K[2/2] [chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
+[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
+Starting Scenario 1
 
-  2 passed (3.9s)
+[1A[2K[ClientA] Attempting to create task: Sync-Test-1768415725407
+
+[1A[2K[ClientA] Page Info: URL=http://localhost:5546/#/, Title=Pomo Flow
+
+[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
+Starting Scenario 2
+
+[1A[2K[ClientA] Attempting to create task: Drag-Test-1768415725449
+
+[1A[2K[ClientA] Page Info: URL=http://localhost:5546/#/, Title=Pomo Flow
+
+[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
+[ClientA] Clicked Add Task button
+
+[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
+[ClientA] Clicked Add Task button
+
+[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
+[ClientA] ERROR: Input field timeout.
+
+[1A[2K[ClientA] Body HTML (truncated 2000 chars): 
+    <div id="app" data-v-app=""><div class="n-config-provider"><!----><div data-v-22686b16="" class="app-layout" dir="ltr"><!-- LEFT SIDEBAR NAVIGATION --><!-- LEFT SIDEBAR NAVIGATION - Extracted from App.vue --><aside data-v-2414c5c4="" data-v-22686b16="" class="sidebar" aria-label="Main navigation" aria-hidden="false"><!-- App Header --><div data-v-2414c5c4="" class="sidebar-header"><div data-v-2414c5c4="" class="app-brand"><span data-v-2414c5c4="" class="brand-icon">🍅</span><span data-v-2414c5c4="" class="brand-text">Pomo-Flow</span></div><button data-v-33235260="" data-v-2414c5c4="" class="base-button variant-secondary size-md" type="button" aria-pressed="false" aria-busy="false" aria-disabled="false"><!-- Loading spinner --><!--v-if--><!-- Button content --><span data-v-33235260="" class="button-content"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Create project </span><!-- Keyboard focus indicator --><div data-v-33235260="" class="focus-indicator" aria-hidden="true"></div></button><div data-v-2414c5c4="" class="icon-button-group"><button data-v-2414c5c4="" class="icon-btn" title="Hide Sidebar" aria-label="Hide sidebar"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-left-close-icon lucide-panel-left-close"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg></button><button data-v-2414c5c4="" class="icon-btn" title="Settings" aria-label="Open settings"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+
+[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
+[ClientA] ERROR: Input field timeout.
+
+[1A[2K[ClientA] Body HTML (truncated 2000 chars): 
+    <div id="app" data-v-app=""><div class="n-config-provider"><!----><div data-v-22686b16="" class="app-layout" dir="ltr"><!-- LEFT SIDEBAR NAVIGATION --><!-- LEFT SIDEBAR NAVIGATION - Extracted from App.vue --><aside data-v-2414c5c4="" data-v-22686b16="" class="sidebar" aria-label="Main navigation" aria-hidden="false"><!-- App Header --><div data-v-2414c5c4="" class="sidebar-header"><div data-v-2414c5c4="" class="app-brand"><span data-v-2414c5c4="" class="brand-icon">🍅</span><span data-v-2414c5c4="" class="brand-text">Pomo-Flow</span></div><button data-v-33235260="" data-v-2414c5c4="" class="base-button variant-secondary size-md" type="button" aria-pressed="false" aria-busy="false" aria-disabled="false"><!-- Loading spinner --><!--v-if--><!-- Button content --><span data-v-33235260="" class="button-content"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Create project </span><!-- Keyboard focus indicator --><div data-v-33235260="" class="focus-indicator" aria-hidden="true"></div></button><div data-v-2414c5c4="" class="icon-button-group"><button data-v-2414c5c4="" class="icon-btn" title="Hide Sidebar" aria-label="Hide sidebar"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-left-close-icon lucide-panel-left-close"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg></button><button data-v-2414c5c4="" class="icon-btn" title="Settings" aria-label="Open settings"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+
+[1A[2K  1) [chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('input[placeholder="Task name"]') to be visible[22m
+
+
+      59 |         const input = page.locator('input[placeholder="Task name"]');
+      60 |         try {
+    > 61 |             await input.waitFor({ state: 'visible', timeout: 5000 });
+         |                         ^
+      62 |             console.log(`[${clientName}] Input field visible`);
+      63 |         } catch (e) {
+      64 |             console.log(`[${clientName}] ERROR: Input field timeout.`);
+        at createTask (/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:61:25)
+        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:108:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sync-conflict-resolution-S-42039--Drag-Drop-Ghost-Prevention-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sync-conflict-resolution-S-42039--Drag-Drop-Ghost-Prevention-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sync-conflict-resolution-S-42039--Drag-Drop-Ghost-Prevention-chromium/error-context.md
+
+
+[1A[2K  2) [chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition 
+
+    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('input[placeholder="Task name"]') to be visible[22m
+
+
+      59 |         const input = page.locator('input[placeholder="Task name"]');
+      60 |         try {
+    > 61 |             await input.waitFor({ state: 'visible', timeout: 5000 });
+         |                         ^
+      62 |             console.log(`[${clientName}] Input field visible`);
+      63 |         } catch (e) {
+      64 |             console.log(`[${clientName}] ERROR: Input field timeout.`);
+        at createTask (/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:61:25)
+        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:82:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sync-conflict-resolution-S-a96d0-tatus-Toggle-Race-Condition-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sync-conflict-resolution-S-a96d0-tatus-Toggle-Race-Condition-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sync-conflict-resolution-S-a96d0-tatus-Toggle-Race-Condition-chromium/error-context.md
+
+
+[1A[2K  2 failed
+    [chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition 
+    [chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention 

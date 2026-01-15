@@ -153,10 +153,10 @@ const handleDrop = (event: DragEvent) => {
 <style scoped>
 .project-drop-zone {
   border: 2px dashed #ddd;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 8px 0;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin: var(--space-2) 0;
+  transition: all var(--duration-normal) var(--ease-out);
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
@@ -175,11 +175,11 @@ const handleDrop = (event: DragEvent) => {
 
 .project-drop-zone.is-invalid {
   border-color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.1);
+  background: var(--color-danger-bg-light);
 }
 
 .project-drop-zone.is-nested {
-  margin-left: 20px;
+  margin-left: var(--space-5);
   border-color: #96CEB4;
 }
 
@@ -191,7 +191,7 @@ const handleDrop = (event: DragEvent) => {
 .drop-zone-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   color: #666;
 }
 
@@ -218,8 +218,8 @@ const handleDrop = (event: DragEvent) => {
 
 .drop-zone-title {
   font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 4px;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-1);
 }
 
 .drop-zone-title.invalid {
@@ -227,7 +227,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .drop-zone-subtitle {
-  font-size: 12px;
+  font-size: var(--text-xs);
   opacity: 0.8;
 }
 
@@ -250,12 +250,12 @@ const handleDrop = (event: DragEvent) => {
 /* Mobile-friendly styling */
 @media (max-width: 768px) {
   .project-drop-zone {
-    padding: 12px;
-    margin: 6px 0;
+    padding: var(--space-3);
+    margin: var(--space-1_5) 0;
   }
 
   .drop-zone-content {
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .drop-zone-icon {
@@ -264,15 +264,15 @@ const handleDrop = (event: DragEvent) => {
   }
 
   .drop-zone-title {
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
 
   .drop-zone-subtitle {
-    font-size: 11px;
+    font-size: var(--text-xs);
   }
 
   .project-drop-zone.is-nested {
-    margin-left: 16px;
+    margin-left: var(--space-4);
   }
 }
 </style>

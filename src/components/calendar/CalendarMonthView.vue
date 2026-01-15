@@ -176,25 +176,25 @@ const {
 .day-events {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
   flex: 1;
   overflow-y: auto;
 }
 
 .month-event {
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: 10px;
+  padding: var(--space-0_5) var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   color: white;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   cursor: grab;
   position: relative;
-  padding-left: 10px;
+  padding-left: var(--space-2_5);
 }
 
 .month-event.timer-active-event {
@@ -209,10 +209,10 @@ const {
 .project-indicator {
   width: 4px;
   height: calc(100% - 4px);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   position: absolute;
-  left: 2px;
-  top: 2px;
+  left: var(--space-0_5);
+  top: var(--space-0_5);
 }
 
 .project-emoji-indicator {

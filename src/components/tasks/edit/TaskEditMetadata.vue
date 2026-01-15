@@ -52,32 +52,32 @@
       
       <!-- Priority -->
       <div class="metadata-field metadata-field--dropdown">
-        <component 
-          :is="priorityIcon" 
-          :size="14" 
-          :class="priorityIconClass" 
+        <component
+          :is="priorityIcon"
+          :size="14"
+          :class="priorityIconClass"
         />
         <span class="field-label">Priority</span>
         <CustomSelect
           :model-value="modelValue.priority"
           :options="priorityOptions"
-          class="inline-custom-select"
+          compact
           @update:model-value="updatePriority"
         />
       </div>
 
       <!-- Status -->
       <div class="metadata-field metadata-field--dropdown">
-        <component 
-          :is="statusIcon" 
-          :size="14" 
-          :class="statusIconClass" 
+        <component
+          :is="statusIcon"
+          :size="14"
+          :class="statusIconClass"
         />
         <span class="field-label">Status</span>
         <CustomSelect
           :model-value="modelValue.status"
           :options="statusOptions"
-          class="inline-custom-select"
+          compact
           @update:model-value="updateStatus"
         />
       </div>
@@ -88,7 +88,7 @@
         <span class="field-label">Section</span>
         <SectionSelector
           :model-value="currentSectionId"
-          class="inline-custom-select"
+          compact
           @update:model-value="$emit('section-change', $event)"
         />
       </div>
@@ -209,7 +209,7 @@ const statusIconClass = computed(() => {
 }
 
 .metadata-label {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: var(--font-bold);
   color: var(--text-muted);
   width: 100%;
@@ -223,7 +223,7 @@ const statusIconClass = computed(() => {
   gap: var(--space-2);
   background: var(--glass-bg-base);
   border: 1px solid var(--glass-border);
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2_5);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   color: var(--text-secondary);
@@ -234,7 +234,7 @@ const statusIconClass = computed(() => {
 
 /* Dropdown fields need slightly more padding for click target */
 .metadata-field--dropdown {
-  padding: 6px 10px;
+  padding: var(--space-1_5) var(--space-2_5);
   cursor: pointer;
 }
 
@@ -247,7 +247,7 @@ const statusIconClass = computed(() => {
 .field-label {
   font-weight: var(--font-medium);
   color: var(--text-muted);
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 .inline-input {

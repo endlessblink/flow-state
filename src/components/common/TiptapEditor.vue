@@ -488,7 +488,7 @@ const insertTable = () => {
   color: var(--text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .toolbar-btn:hover:not(:disabled) {
@@ -536,10 +536,20 @@ const insertTable = () => {
   margin: 0 0 0.5em 0;
 }
 
-:deep(.tiptap ul),
+:deep(.tiptap ul) {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+  list-style-type: disc;
+}
+
 :deep(.tiptap ol) {
   padding-left: 1.5em;
   margin: 0.5em 0;
+  list-style-type: decimal;
+}
+
+:deep(.tiptap li) {
+  display: list-item;
 }
 
 :deep(.tiptap ul[data-type="taskList"]) {
@@ -594,8 +604,8 @@ const insertTable = () => {
 
 :deep(.tiptap mark) {
   background-color: #fef08a;
-  border-radius: 2px;
-  padding: 0 2px;
+  border-radius: var(--radius-xs);
+  padding: 0 var(--space-0_5);
 }
 
 :deep(.tiptap blockquote) {
@@ -724,7 +734,7 @@ const insertTable = () => {
 }
 
 .dropdown-arrow {
-  margin-left: 2px;
+  margin-left: var(--space-0_5);
   opacity: 0.7;
 }
 
@@ -736,8 +746,8 @@ const insertTable = () => {
   z-index: 100;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 8px;
+  gap: var(--space-1);
+  padding: var(--space-2);
   background: var(--glass-bg-heavy);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -748,9 +758,9 @@ const insertTable = () => {
   width: 24px;
   height: 24px;
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .color-swatch:hover {
@@ -763,7 +773,7 @@ const insertTable = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
@@ -774,24 +784,27 @@ const insertTable = () => {
   left: 0;
   z-index: 100;
   min-width: 180px;
-  background: var(--glass-bg-heavy);
+  max-width: 220px;
+  /* Solid opaque background to prevent content showing through */
+  background: rgb(30, 30, 35);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  padding: 4px 0;
+  padding: var(--space-1) 0;
+  overflow: hidden;
 }
 
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   border: none;
   background: transparent;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-sm);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 .dropdown-item:hover:not(:disabled) {
@@ -804,13 +817,13 @@ const insertTable = () => {
 }
 
 .dropdown-item.danger {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .dropdown-divider {
   height: 1px;
   background: var(--glass-border);
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 
 /* Toolbar row wrapping for smaller screens */

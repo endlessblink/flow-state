@@ -308,7 +308,7 @@ onUnmounted(() => {
 .selection-rectangle {
   position: absolute;
   border: 2px solid var(--brand-primary);
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
   pointer-events: none;
   animation: selectionPulse 1.5s ease-in-out infinite;
 }
@@ -530,22 +530,22 @@ onUnmounted(() => {
 }
 
 .handle-corner.top-left {
-  top: -4px;
-  left: -4px;
+  top: -var(--space-1);
+  left: -var(--space-1);
 }
 
 .handle-corner.top-right {
-  top: -4px;
-  right: -4px;
+  top: -var(--space-1);
+  right: -var(--space-1);
 }
 
 .handle-corner.bottom-left {
-  bottom: -4px;
-  left: -4px;
+  bottom: -var(--space-1);
+  left: -var(--space-1);
 }
 
 .handle-corner.bottom-right {
-  bottom: -4px;
-  right: -4px;
+  bottom: -var(--space-1);
+  right: -var(--space-1);
 }
 </style>

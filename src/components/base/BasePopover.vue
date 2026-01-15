@@ -194,19 +194,13 @@ onUnmounted(() => {
 .base-popover {
   position: fixed;
 
-  /* Glass morphism - transparent with blur */
-  background: rgba(20, 20, 40, 0.85);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  backdrop-filter: blur(20px) saturate(150%);
-
-  /* Stroke border - more visible */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-
-  /* Layered shadow */
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
 
   z-index: 3001;
   animation: popoverSlideIn var(--duration-fast) var(--spring-bounce);
@@ -302,16 +296,16 @@ onUnmounted(() => {
 }
 
 .variant-dropdown::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg-tint);
   border-radius: var(--radius-full);
 }
 
 .variant-dropdown::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-border-hover);
   border-radius: var(--radius-full);
 }
 
 .variant-dropdown::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--border-interactive);
 }
 </style>

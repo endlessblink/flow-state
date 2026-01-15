@@ -616,7 +616,7 @@ watch(() => props.isOpen, async (isOpen) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--overlay-backdrop-bg);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
   display: flex;
@@ -626,10 +626,13 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .modal-content {
-  background: var(--surface-primary);
-  border: 1px solid var(--glass-border);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--overlay-component-shadow);
   max-width: 520px;
   width: 90%;
   max-height: 90vh;
@@ -987,7 +990,7 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
   border-color: var(--brand-primary);
 }
 </style>

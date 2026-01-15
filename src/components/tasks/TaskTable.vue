@@ -596,7 +596,7 @@ onUnmounted(() => {
 }
 
 .bulk-action-btn.clear-btn {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   color: var(--text-secondary);
   border-color: var(--glass-border);
 }
@@ -764,7 +764,7 @@ onUnmounted(() => {
 .inline-edit {
   width: 100%;
   padding: var(--space-1) var(--space-2);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -774,7 +774,7 @@ onUnmounted(() => {
 
 .status-select {
   padding: var(--space-1) var(--space-2);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -845,7 +845,7 @@ onUnmounted(() => {
 .progress-bg {
   position: absolute;
   inset: 0;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid var(--glass-border-hover);
   border-radius: inherit;
   box-sizing: border-box;
 }
@@ -887,7 +887,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: var(--space-1);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
@@ -960,7 +960,7 @@ onUnmounted(() => {
 
 /* ADHD-friendly: Subtle row striping for scanability */
 .table-row:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--glass-bg-light);
 }
 
 .table-row:nth-child(even):hover {

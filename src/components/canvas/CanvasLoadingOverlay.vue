@@ -26,14 +26,14 @@ defineProps<{
 }
 
 .dark .canvas-loading-overlay {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--overlay-light);
 }
 
 .loading-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .loading-spinner {
@@ -46,7 +46,7 @@ defineProps<{
 }
 
 .loading-text {
-  font-size: 1rem;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   font-weight: 500;
 }

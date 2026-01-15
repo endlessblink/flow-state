@@ -723,20 +723,20 @@ defineExpose({
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 16px;
+  padding: var(--space-4);
   border-top: 1px solid var(--glass-border);
   background: var(--glass-bg-soft);
 }
 
 .sidebar-login-btn {
   width: 100%;
-  padding: 10px;
+  padding: var(--space-2_5);
   background: var(--glass-bg-soft);
   color: var(--brand-primary);
   border: 1px solid var(--brand-primary-alpha-40);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -751,8 +751,8 @@ defineExpose({
 .user-profile-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px;
+  gap: var(--space-2_5);
+  padding: var(--space-1);
 }
 
 .user-avatar-circle {
@@ -765,7 +765,7 @@ defineExpose({
   justify-content: center;
   color: white;
   font-weight: bold;
-  font-size: 14px;
+  font-size: var(--text-sm);
   flex-shrink: 0;
 }
 
@@ -777,7 +777,7 @@ defineExpose({
 }
 
 .user-email {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -786,7 +786,7 @@ defineExpose({
 }
 
 .user-status {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--success);
 }
 
@@ -795,8 +795,8 @@ defineExpose({
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
 }
 
 .settings-mini-btn:hover {
@@ -807,7 +807,7 @@ defineExpose({
 /* Sidebar toggle transitions */
 .sidebar-slide-enter-active,
 .sidebar-slide-leave-active {
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+  transition: transform var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1),
               opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, opacity;
 }
@@ -886,7 +886,7 @@ defineExpose({
 
 /* Quick Task Section */
 .quick-task-section {
-  padding: 8px;
+  padding: var(--space-2);
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
@@ -895,12 +895,12 @@ defineExpose({
 
 .quick-task-input {
   width: 100%;
-  padding: 10px;
+  padding: var(--space-2_5);
   background: var(--glass-bg-tint);
   border: 1px solid var(--glass-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .quick-task-input:focus {
@@ -919,13 +919,13 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   color: var(--text-muted);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
@@ -946,7 +946,7 @@ defineExpose({
   cursor: pointer;
   display: flex;
   align-items: center;
-  transition: all 150ms ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .add-project-btn:hover {
@@ -1104,7 +1104,7 @@ defineExpose({
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) var(--ease-out);
 }
 
 .fade-enter-from,
@@ -1160,7 +1160,7 @@ defineExpose({
 .selection-action.delete-action:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .selection-action.clear-action {
@@ -1182,7 +1182,7 @@ defineExpose({
 
 .delete-confirm-modal {
   background: rgba(20, 20, 25, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   max-width: 400px;
@@ -1231,7 +1231,7 @@ defineExpose({
 }
 
 .delete-btn {
-  background: #ef4444;
+  background: var(--color-danger);
   border: none;
   color: white;
 }

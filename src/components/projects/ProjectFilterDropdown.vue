@@ -255,7 +255,7 @@ onUnmounted(() => {
 }
 
 .project-emoji {
-  font-size: 16px;
+  font-size: var(--text-base);
   opacity: 0.9;
 }
 

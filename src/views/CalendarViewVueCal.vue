@@ -240,9 +240,9 @@ const handleEventDblClick = (event: VueCalEvent, _e: MouseEvent) => {
 .custom-vuecal :deep(.vuecal__event.recurring-task::before) {
   content: '🔁';
   position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 12px;
+  top: var(--space-0_5);
+  right: var(--space-1);
+  font-size: var(--text-xs);
   opacity: 0.7;
 }
 

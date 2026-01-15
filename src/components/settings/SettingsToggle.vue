@@ -66,7 +66,7 @@ const emit = defineEmits<{
 .toggle-interaction {
   position: relative;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: var(--space-0_5);
 }
 
 .toggle-interaction input {
@@ -86,8 +86,8 @@ const emit = defineEmits<{
 .toggle-slider::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: var(--space-0_5);
+  left: var(--space-0_5);
   width: 1rem;
   height: 1rem;
   background: var(--text-primary);

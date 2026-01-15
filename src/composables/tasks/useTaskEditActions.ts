@@ -1,6 +1,7 @@
 import { type Ref } from 'vue'
-import { type Task, type Subtask, useTaskStore } from '@/stores/tasks'
+import { useTaskStore, type Task, type Subtask } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { generateRecurringInstances } from '@/utils/recurrenceUtils'
 
 
 // Helper for cleaning task instances (from existing code)
@@ -161,7 +162,8 @@ export function useTaskEditActions(
                 dueDate: editedTask.value.dueDate,
                 scheduledDate: editedTask.value.scheduledDate,
                 scheduledTime: editedTask.value.scheduledTime,
-                estimatedDuration: editedTask.value.estimatedDuration
+                estimatedDuration: editedTask.value.estimatedDuration,
+                recurrence: editedTask.value.recurrence
             }
 
             if (originalCanvasPosition !== undefined) {
@@ -180,6 +182,25 @@ export function useTaskEditActions(
             // Lock position before update
             if (originalCanvasPosition) {
                 // Optimistic sync removed
+            }
+
+            // Generate recurring instances if enabled
+            if (editedTask.value.recurrence?.isEnabled && editedTask.value.recurrence.rule) {
+                const startDate = editedTask.value.scheduledDate || editedTask.value.dueDate || new Date().toISOString().split('T')[0]
+                const instances = generateRecurringInstances(
+                    editedTask.value.id,
+                    editedTask.value.recurrence.rule,
+                    editedTask.value.recurrence.endCondition,
+                    (editedTask.value.recurrence.exceptions || []) as any,
+                    new Date(startDate),
+                    editedTask.value.scheduledTime,
+                    editedTask.value.estimatedDuration
+                )
+                updates.recurringInstances = instances
+                if (updates.recurrence) {
+                    (updates.recurrence as any).generatedInstances = instances
+                        ; (updates.recurrence as any).lastGenerated = new Date().toISOString()
+                }
             }
 
             // Update main task

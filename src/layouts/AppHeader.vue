@@ -315,7 +315,7 @@ const startLongBreak = () => {
   justify-content: flex-start;
   align-items: center;
   gap: var(--space-4);
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
   pointer-events: none;
   position: relative;
   z-index: 5;
@@ -364,7 +364,7 @@ const startLongBreak = () => {
 }
 
 .project-emoji-header {
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 /* INTEGRATED CONTROL PANEL */
@@ -475,12 +475,12 @@ const startLongBreak = () => {
 
 .timer-controls {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .timer-start-options {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .timer-btn {
@@ -494,7 +494,7 @@ const startLongBreak = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 150ms ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .timer-btn:hover {
@@ -599,11 +599,11 @@ const startLongBreak = () => {
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 6px;
-  margin-left: 6px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  border-radius: 10px;
-  font-size: 11px;
+  padding: 0 var(--space-1_5);
+  margin-left: var(--space-1_5);
+  background: linear-gradient(135deg, var(--color-blue), #8b5cf6);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-weight: 700;
   color: #ffffff;
   line-height: 1;

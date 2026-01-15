@@ -139,10 +139,7 @@ const durationIcon = computed(() => {
   gap: var(--space-2);
   align-items: center;
   justify-content: flex-start;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-subtle) transparent;
-  min-height: 20px;
+  min-height: 24px;
   margin-top: var(--space-2);
 }
 
@@ -162,13 +159,13 @@ const durationIcon = computed(() => {
   gap: var(--task-card-padding-xs, 4px);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-full);
   white-space: nowrap;
 }
 
 .meta-badge--icon-only {
-  padding: 2px;
+  padding: var(--space-0_5);
   min-width: 16px;
   min-height: 16px;
   justify-content: center;
@@ -220,7 +217,7 @@ const durationIcon = computed(() => {
 
 /* Project Visuals */
 .project-visual-container {
-  padding: 2px;
+  padding: var(--space-0_5);
   background: transparent;
   border: none;
 }

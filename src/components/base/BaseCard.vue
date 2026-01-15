@@ -98,7 +98,7 @@ defineEmits<{
 }
 
 .base-card.is-glass:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--glass-border-hover);
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.5),
     0 6px 20px rgba(0, 0, 0, 0.3),
@@ -117,7 +117,7 @@ defineEmits<{
 }
 
 .base-card.is-elevated:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--glass-border-hover);
   box-shadow:
     0 20px 56px rgba(0, 0, 0, 0.6),
     0 10px 30px rgba(0, 0, 0, 0.4);
@@ -128,13 +128,13 @@ defineEmits<{
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   box-shadow: none;
 }
 
 .base-card.outlined:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-tint);
+  border-color: var(--border-interactive);
 }
 
 /* Variant: Filled - subtle glass fill (not solid) */
@@ -146,7 +146,7 @@ defineEmits<{
 /* Card sections */
 .card-header {
   padding: var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -157,7 +157,7 @@ defineEmits<{
 
 .card-footer {
   padding: var(--space-6);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
   /* Subtle gradient instead of solid fill */
   background: linear-gradient(
     180deg,

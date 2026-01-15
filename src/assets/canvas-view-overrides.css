@@ -116,10 +116,10 @@
 .vue-flow__node-sectionNode::before {
     content: '';
     position: absolute;
-    top: -12px;
-    left: -12px;
-    right: -12px;
-    bottom: -12px;
+    top: -var(--space-3);
+    left: -var(--space-3);
+    right: -var(--space-3);
+    bottom: -var(--space-3);
     pointer-events: none !important;
     z-index: 99 !important;
 }
@@ -134,13 +134,13 @@
 .vue-flow__node:not([data-id^="section-"]):hover {
     z-index: 1001 !important;
     transform: scale(1.02);
-    transition: transform 0.2s ease;
+    transition: transform var(--duration-normal) var(--ease-out);
 }
 
 .vue-flow__edge-path {
     stroke: var(--border-secondary);
     stroke-width: 2px;
-    transition: all 0.2s ease;
+    transition: all var(--duration-normal) var(--ease-out);
     filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.4));
 }
 
@@ -179,8 +179,8 @@
     border-radius: var(--radius-md) !important;
     backdrop-filter: blur(8px) !important;
     z-index: 1000 !important;
-    bottom: 16px !important;
-    right: 16px !important;
+    bottom: var(--space-4) !important;
+    right: var(--space-4) !important;
 }
 
 .vue-flow__minimap-mask {
@@ -197,8 +197,8 @@
 /* Canvas filters container */
 .canvas-filters-container {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: var(--space-5);
+    left: var(--space-5);
     z-index: 1000;
     pointer-events: auto;
 }
@@ -271,11 +271,11 @@
 .vue-flow__handle {
     width: 12px !important;
     height: 12px !important;
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: var(--glass-border-hover) !important;
     border: 2px solid rgba(255, 255, 255, 0.4) !important;
     border-radius: 50% !important;
     cursor: crosshair !important;
-    transition: all 0.2s ease !important;
+    transition: all var(--duration-normal) var(--ease-out) !important;
     z-index: 10 !important;
 }
 
@@ -341,14 +341,14 @@
     width: 20px !important;
     /* Match canvas design - smaller, not oversized */
     height: 20px !important;
-    border-radius: 4px !important;
+    border-radius: var(--radius-sm) !important;
     /* Subtle square for canvas design consistency */
     background-color: var(--brand-primary) !important;
     border: 2px solid white !important;
     /* Thinner border matches canvas aesthetic */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
     opacity: 1 !important;
-    transition: all 0.2s ease !important;
+    transition: all var(--duration-normal) var(--ease-out) !important;
     pointer-events: auto !important;
     /* CRITICAL: Always allow interaction on handles */
     cursor: nwse-resize !important;
@@ -358,10 +358,10 @@
 .vue-flow__resize-control.handle::before {
     content: '';
     position: absolute;
-    top: -12px;
-    left: -12px;
-    right: -12px;
-    bottom: -12px;
+    top: -var(--space-3);
+    left: -var(--space-3);
+    right: -var(--space-3);
+    bottom: -var(--space-3);
     cursor: nwse-resize !important;
 }
 
@@ -382,7 +382,7 @@
     background-color: transparent !important;
     /* Invisible by default */
     opacity: 1 !important;
-    transition: background-color 0.2s ease !important;
+    transition: background-color var(--duration-normal) var(--ease-out) !important;
     pointer-events: auto !important;
     /* Make lines clickable for resize */
 }
@@ -461,19 +461,19 @@
 
 /* Position lines at edges but keep hit area extending inward */
 .vue-flow__resize-control.line.top {
-    top: -6px !important;
+    top: -var(--space-1_5) !important;
 }
 
 .vue-flow__resize-control.line.bottom {
-    bottom: -6px !important;
+    bottom: -var(--space-1_5) !important;
 }
 
 .vue-flow__resize-control.line.left {
-    left: -6px !important;
+    left: -var(--space-1_5) !important;
 }
 
 .vue-flow__resize-control.line.right {
-    right: -6px !important;
+    right: -var(--space-1_5) !important;
 }
 
 /* Active resize state with enhanced feedback */
@@ -508,12 +508,12 @@
     width: 32px !important;
     /* LARGE for easy clicking */
     height: 32px !important;
-    border-radius: 6px !important;
+    border-radius: var(--radius-sm) !important;
     /* SQUARE with slight rounding */
     background-color: var(--brand-primary) !important;
     border: 4px solid white !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all var(--duration-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: nwse-resize !important;
 }
 
@@ -521,10 +521,10 @@
 .custom-resize-handle::before {
     content: '';
     position: absolute;
-    top: -12px;
-    left: -12px;
-    right: -12px;
-    bottom: -12px;
+    top: -var(--space-3);
+    left: -var(--space-3);
+    right: -var(--space-3);
+    bottom: -var(--space-3);
     cursor: nwse-resize !important;
 }
 
@@ -555,7 +555,7 @@
     background-color: var(--brand-primary) !important;
     opacity: 0 !important;
     /* Hidden by default - only show when selected */
-    transition: opacity 0.2s ease, visibility 0.2s ease !important;
+    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), visibility var(--duration-normal) ease !important;
 }
 
 /* ====================================================================
@@ -578,7 +578,7 @@
     visibility: hidden !important;
     pointer-events: none !important;
     /* Can't interact when hidden */
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), visibility var(--duration-normal) ease;
 }
 
 /* SELECTED: Show resize handles ONLY when section is selected */
@@ -618,7 +618,7 @@
     visibility: visible !important;
     pointer-events: auto !important;
     /* Allow interaction on hover */
-    transition: opacity 0.2s ease, transform 0.2s ease !important;
+    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), transform var(--duration-normal) ease !important;
 }
 
 .vue-flow__node[id^="section-"]:not(.selected):not(.vue-flow__node--selected):hover .vue-flow__resize-control.line,
@@ -650,7 +650,7 @@
     /* Enhanced glass blur */
     -webkit-backdrop-filter: blur(12px) !important;
     /* Safari support */
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all var(--duration-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
     z-index: 103 !important;
     /* Above everything during hover */
 }
@@ -685,13 +685,13 @@
 .vue-flow__node.is-dragging~.vue-flow__edge,
 .vue-flow__node.is-dragging .vue-flow__edge {
     opacity: 0.3 !important;
-    transition: opacity 0.2s ease !important;
+    transition: opacity var(--duration-normal) var(--ease-out) !important;
 }
 
 /* Clean up drag state on all edges during any drag operation */
 body.dragging-active .vue-flow__edge {
     opacity: 0.5 !important;
-    transition: opacity 0.2s ease !important;
+    transition: opacity var(--duration-normal) var(--ease-out) !important;
 }
 
 /* Ensure clean connection handles during drag (but not during connections) */
@@ -703,7 +703,7 @@ body.dragging-active:not(.connecting-active) .vue-flow__handle {
 /* Keep handles fully visible during connection creation */
 body.connecting-active .vue-flow__handle {
     opacity: 1 !important;
-    transition: all 0.15s ease !important;
+    transition: all var(--duration-fast) var(--ease-out) !important;
 }
 
 /* Connection line while dragging - make it visible and styled */
@@ -759,7 +759,7 @@ body.dragging-active .vue-flow__background {
 .vue-flow__node-sectionNode:not(.selected):not(.vue-flow__node--selected):not(:hover) .vue-flow__resize-control.handle:not(:hover) {
     opacity: 0 !important;
     pointer-events: none !important;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), visibility var(--duration-normal) ease;
 }
 
 /* Show handles when section IS selected */
@@ -785,7 +785,7 @@ body.dragging-active .vue-flow__background {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
+    gap: var(--space-6);
     padding: 2rem;
     background: var(--color-background);
     backdrop-filter: blur(12px);
@@ -815,7 +815,7 @@ body.dragging-active .vue-flow__background {
 }
 
 .empty-description {
-    font-size: 1rem;
+    font-size: var(--text-base);
     color: var(--color-text-secondary);
     margin: 0;
     text-align: center;
@@ -826,22 +826,22 @@ body.dragging-active .vue-flow__background {
 .add-task-button {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-indigo-bg-subtle);
+    border: 1px solid var(--color-indigo-bg-heavy);
     color: var(--color-primary);
     border-radius: 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--duration-normal) var(--ease-out);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
 
 .add-task-button:hover {
-    background: rgba(99, 102, 241, 0.2);
+    background: var(--color-indigo-bg-heavy);
     border-color: rgba(99, 102, 241, 0.3);
     color: var(--color-primary);
     transform: translateY(-1px);
@@ -856,7 +856,7 @@ body.dragging-active .vue-flow__background {
 /* Vue Flow fade-in transition - fixes initialization deadlock */
 .vue-flow {
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity var(--duration-slow) var(--ease-out);
 }
 
 .vue-flow.canvas-ready {

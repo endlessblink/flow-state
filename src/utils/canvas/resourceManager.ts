@@ -142,17 +142,14 @@ class CanvasResourceManager {
         try {
             // Clear Vue Flow instance
             if (this.vueFlowInstance) {
-                // @ts-ignore - destroy method might exist on internal instance
-                if (typeof this.vueFlowInstance.destroy === 'function') {
-                    // @ts-ignore
-                    this.vueFlowInstance.destroy()
+                const instance = this.vueFlowInstance as any
+                if (typeof instance.destroy === 'function') {
+                    instance.destroy()
                 }
 
                 // Clear internal maps if exposed methods exist
-                // @ts-ignore
-                if (typeof this.vueFlowInstance.clearNodes === 'function') this.vueFlowInstance.clearNodes()
-                // @ts-ignore
-                if (typeof this.vueFlowInstance.clearEdges === 'function') this.vueFlowInstance.clearEdges()
+                if (typeof instance.clearNodes === 'function') instance.clearNodes()
+                if (typeof instance.clearEdges === 'function') instance.clearEdges()
 
                 this.vueFlowInstance = null
             }

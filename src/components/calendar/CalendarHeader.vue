@@ -274,13 +274,13 @@ const showFilters = ref(false)
 
 .today-btn--minimal {
   padding: var(--space-1) var(--space-3);
-  font-size: 13px;
+  font-size: var(--text-sm);
   background: transparent;
   border: none;
 }
 
 .today-btn--minimal:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-heavy);
 }
 
 .filter-toggle {
@@ -294,17 +294,17 @@ const showFilters = ref(false)
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .filter-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-heavy);
   color: var(--text-primary);
 }
 
 .filter-toggle.active {
-  background: rgba(99, 102, 241, 0.15);
-  color: #6366f1;
+  background: var(--color-indigo-bg-medium);
+  color: var(--color-indigo);
 }
 
 .view-selector--minimal {
@@ -318,11 +318,11 @@ const showFilters = ref(false)
 
 .view-selector--minimal .view-btn {
   padding: var(--space-1) var(--space-3);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .view-selector--minimal .view-btn.active {
-  background: rgba(99, 102, 241, 0.15);
+  background: var(--color-indigo-bg-medium);
   border: none;
   box-shadow: none;
 }
@@ -339,7 +339,7 @@ const showFilters = ref(false)
 /* Slide-down transition */
 .slide-down-enter-active,
 .slide-down-leave-active {
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   overflow: hidden;
 }
 

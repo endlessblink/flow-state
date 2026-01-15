@@ -214,7 +214,7 @@ const getProjectTaskCount = (projectId: string): number => {
 /* Vue Transition for nested projects expand/collapse */
 .nested-projects-enter-active,
 .nested-projects-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 

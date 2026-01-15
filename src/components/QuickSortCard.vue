@@ -524,7 +524,7 @@ function handleSwipeEnd() {
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--spring-smooth) ease;
-  padding: 2px 8px;
+  padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   display: inline-flex;
@@ -814,8 +814,8 @@ function handleSwipeEnd() {
   bottom: var(--space-1);
   right: var(--space-1);
   padding: var(--space-0_5) var(--space-1);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--overlay-light);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-sm);
   font-size: 9px;
   font-weight: var(--font-medium);

@@ -75,14 +75,13 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .context-menu {
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(32px) saturate(150%);
-  -webkit-backdrop-filter: blur(32px) saturate(150%);
-  border: 1px solid var(--glass-border);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-  box-shadow:
-    0 24px 48px rgba(0, 0, 0, 0.5),
-    0 12px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2);
   min-width: 180px;
   animation: menuSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -122,7 +121,7 @@ onBeforeUnmount(() => {
     var(--danger-bg-subtle) 0%,
     var(--danger-bg-light) 100%
   );
-  color: #ef4444;
+  color: var(--color-danger);
   transform: translateX(2px);
 }
 
@@ -132,7 +131,7 @@ onBeforeUnmount(() => {
 }
 
 .menu-item:hover .menu-icon {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .menu-text {

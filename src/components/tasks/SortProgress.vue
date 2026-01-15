@@ -62,7 +62,7 @@ const percentage = computed(() => {
   max-width: 600px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   background: transparent !important; /* Override global tauri styles */
 }
 
@@ -70,44 +70,44 @@ const percentage = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .progress-info {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .progress-count {
-  font-size: 24px;
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--color-text-primary, #ffffff);
   line-height: 1;
 }
 
 .progress-label {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
 }
 
 .streak-info {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: var(--space-1_5);
+  padding: var(--space-1_5) var(--space-3);
   background: rgba(251, 146, 60, 0.15);
   border: 1px solid rgba(251, 146, 60, 0.3);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
 }
 
 .streak-icon {
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1;
 }
 
 .streak-count {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-warning, #fb923c);
 }
@@ -119,8 +119,8 @@ const percentage = computed(() => {
 .progress-bar-track {
   position: relative;
   height: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  background: var(--glass-border);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   backdrop-filter: blur(10px);
 }
@@ -128,19 +128,19 @@ const percentage = computed(() => {
 .progress-bar-fill {
   position: relative;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
-  border-radius: 6px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, var(--color-blue) 0%, #8b5cf6 50%, #ec4899 100%);
+  border-radius: var(--radius-sm);
+  transition: width var(--duration-slower) cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0;
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 
 .progress-percentage {
   position: absolute;
-  right: 8px;
+  right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -148,13 +148,13 @@ const percentage = computed(() => {
 
 .motivational-message {
   text-align: center;
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-text-primary, #ffffff);
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
   border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   backdrop-filter: blur(10px);
 }
 
@@ -184,11 +184,11 @@ const percentage = computed(() => {
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .progress-count {
-    font-size: 20px;
+    font-size: var(--text-xl);
   }
 
   .motivational-message {
-    font-size: 16px;
+    font-size: var(--text-base);
   }
 }
 </style>

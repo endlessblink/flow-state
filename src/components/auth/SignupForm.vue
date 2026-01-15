@@ -287,9 +287,9 @@ async function handleSubmit() {
 }
 
 .form-title {
-  font-size: 28px;
+  font-size: var(--space-7);
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   letter-spacing: -0.02em;
 }
 
@@ -469,7 +469,7 @@ async function handleSubmit() {
   padding: 0 var(--space-4);
   background: #141428; /* Matches modal bg */
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -500,11 +500,11 @@ async function handleSubmit() {
   cursor: pointer;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .switch-mode-link:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
   color: var(--brand-hover);
 }
 

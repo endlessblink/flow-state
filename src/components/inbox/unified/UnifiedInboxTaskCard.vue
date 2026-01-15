@@ -179,7 +179,7 @@ const dueStatus = computed(() => {
   padding: var(--space-3);
   cursor: grab;
   user-select: none;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
   width: 100%;
   box-sizing: border-box;
   /* Allow content to determine height */
@@ -223,8 +223,8 @@ const dueStatus = computed(() => {
 
 .timer-indicator {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-2);
+  right: var(--space-2);
   color: var(--brand-primary);
   animation: pulse 2s infinite;
 }
@@ -255,21 +255,21 @@ const dueStatus = computed(() => {
 .metadata-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
 .project-badge {
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   background: var(--surface-1);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* ADHD-friendly: Progressive disclosure - duration hidden by default */
 .duration-badge {
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .task-card:hover .duration-badge {
@@ -284,16 +284,16 @@ const dueStatus = computed(() => {
 /* Quick Actions */
 .task-actions {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: var(--space-2);
+  bottom: var(--space-2);
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   opacity: 0;
   pointer-events: none; /* Ignore clicks unless visible */
-  transition: opacity 0.15s ease;
+  transition: opacity var(--duration-fast) var(--ease-out);
   background: var(--surface-0);
-  padding: 2px;
-  border-radius: 4px;
+  padding: var(--space-0_5);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
 }
 
@@ -311,9 +311,9 @@ const dueStatus = computed(() => {
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .action-btn:hover {

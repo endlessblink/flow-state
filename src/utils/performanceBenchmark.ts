@@ -157,9 +157,8 @@ export class PerformanceBenchmark {
           updatedAt: new Date()
         }))
 
-        // Measure batch addition
-        // @ts-ignore
-        taskStore._rawTasks.push(...testTasks)
+          // Measure batch addition
+          ; (taskStore as any)._rawTasks.push(...testTasks)
 
         // Wait for next tick to ensure computed properties update
         const { nextTick } = await import('vue')
@@ -167,8 +166,9 @@ export class PerformanceBenchmark {
 
         // 2. Measure Canvas Sync
         const syncStart = performance.now()
-        // @ts-ignore
-        canvasStore.syncTasksToCanvas(taskStore.tasks || [])
+        if (typeof (canvasStore as any).syncTasksToCanvas === 'function') {
+          ; (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])
+        }
         const syncEnd = performance.now()
 
         // 3. Measure Render (wait for multiple frames to ensure layout)
@@ -179,11 +179,9 @@ export class PerformanceBenchmark {
         // Ensure duration is at least very small but non-zero for stats if work was done
         times.push(Math.max(duration, 0.001))
 
-        // Cleanup
-        // @ts-ignore
-        taskStore._rawTasks = taskStore._rawTasks.filter(t => !t.id.startsWith('bench-task-'))
-        // @ts-ignore
-        canvasStore.nodes = canvasStore.nodes.filter(n => !n.id.startsWith('bench-task-'))
+          // Cleanup
+          ; (taskStore as any)._rawTasks = (taskStore as any)._rawTasks.filter((t: any) => !t.id.startsWith('bench-task-'))
+          ; (canvasStore as any).nodes = (canvasStore as any).nodes.filter((n: any) => !n.id.startsWith('bench-task-'))
         await nextTick()
 
         console.log(`   - ${nodeCount} nodes: ${duration.toFixed(2)}ms (Sync: ${(syncEnd - syncStart).toFixed(2)}ms)`)

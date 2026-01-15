@@ -83,7 +83,7 @@ const isTimerActive = computed(() => (taskId: string) => {
 }
 
 .empty-icon {
-  font-size: 32px;
+  font-size: var(--space-8);
   margin-bottom: var(--space-2);
   opacity: 0.5;
 }

@@ -405,13 +405,13 @@ console.log('🎯 AppSidebar: Script setup completed successfully!')
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   color: var(--text-muted);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
@@ -432,7 +432,7 @@ console.log('🎯 AppSidebar: Script setup completed successfully!')
   cursor: pointer;
   display: flex;
   align-items: center;
-  transition: all 150ms ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .add-project-btn:hover {
@@ -500,7 +500,7 @@ console.log('🎯 AppSidebar: Script setup completed successfully!')
 }
 
 .project-emoji {
-  font-size: 16px;
+  font-size: var(--text-base);
   flex-shrink: 0;
   opacity: 0.9;
 }

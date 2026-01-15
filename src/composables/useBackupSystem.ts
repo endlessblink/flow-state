@@ -17,7 +17,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { filterMockTasks } from '@/utils/mockTaskDetector'
 import type { Task, Project } from '@/types/tasks'
-import type { CanvasGroup } from '@/stores/canvas'
+import type { CanvasGroup } from '@/types/canvas'
 
 // ============================================================================
 // Types & Interfaces

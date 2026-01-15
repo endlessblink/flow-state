@@ -106,12 +106,12 @@ watch(internalValue, updateTextDirection, { immediate: true })
 /* Lists */
 :deep(.tiptap ul),
 :deep(.tiptap ol) {
-  padding-inline-start: 1.5rem;
+  padding-inline-start: var(--space-6);
   margin-bottom: var(--space-2);
 }
 
 :deep(.tiptap li) {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 /* Task List */
@@ -137,11 +137,11 @@ watch(internalValue, updateTextDirection, { immediate: true })
   width: 16px;
   height: 16px;
   border: 1.5px solid var(--glass-border-heavy);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--glass-bg-soft);
   cursor: pointer;
   position: relative;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 :deep(.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:hover) {
@@ -157,7 +157,7 @@ watch(internalValue, updateTextDirection, { immediate: true })
   content: '';
   position: absolute;
   top: 1px;
-  left: 4px;
+  left: var(--space-1);
   width: 5px;
   height: 9px;
   border: solid white;
@@ -186,7 +186,7 @@ watch(internalValue, updateTextDirection, { immediate: true })
 :deep(.tiptap code) {
   background: var(--glass-bg-medium);
   padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono, monospace);
   font-size: 0.9em;
 }
@@ -241,7 +241,7 @@ watch(internalValue, updateTextDirection, { immediate: true })
 .markdown-editor[dir="rtl"] :deep(.tiptap ul),
 .markdown-editor[dir="rtl"] :deep(.tiptap ol) {
   padding-inline-start: 0;
-  padding-inline-end: 1.5rem;
+  padding-inline-end: var(--space-6);
 }
 
 /* Placeholder styling when empty */

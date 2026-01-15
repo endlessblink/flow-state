@@ -252,13 +252,11 @@ watch(isOpen, (newVal) => {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
 
-  /* Glass morphism base - more transparent for glass effect */
-  background: rgba(30, 30, 50, 0.35);
+  /* Standardized input styling */
+  background: var(--input-bg, var(--glass-bg-medium));
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
-
-  /* Stroke border - more visible */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-lg);
 
   color: var(--text-primary);
@@ -270,18 +268,18 @@ watch(isOpen, (newVal) => {
 }
 
 .dropdown-trigger:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
   box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .dropdown-trigger:focus {
   outline: none;
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
 .dropdown-trigger.is-open {
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
 }
 
@@ -350,7 +348,7 @@ watch(isOpen, (newVal) => {
 }
 
 .dropdown-option.is-selected:hover {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
 }
 
 .dropdown-option.is-disabled {

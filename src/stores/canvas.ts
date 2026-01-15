@@ -20,12 +20,20 @@ import type {
   CollectFilterSettings,
   CanvasGroup,
   CanvasSection
-} from './canvas/types'
+} from '@/types/canvas'
+
+import {
+  logGroupIdHistogram,
+  breakGroupCycles,
+  applySmartGroupNormalizations,
+  getTaskCountInGroupRecursive,
+  getAllDescendantGroupIds
+} from '@/utils/canvas/storeHelpers'
 
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
-// Re-export types for consumers
+// Re-export types for consumers (for backward compatibility during migration)
 export type {
   GroupFilter,
   TaskPosition,
@@ -35,101 +43,18 @@ export type {
   CanvasSection
 }
 
-/**
- * DIAGNOSTIC HELPER: Log group ID histogram to detect duplicates (AUTHORITATIVE)
- * Called from selectors/computeds to trace where duplicates enter the pipeline
- * Uses assertNoDuplicateIds for consistent detection across layers
- */
-const logGroupIdHistogram = (label: string, groups: CanvasGroup[]) => {
-  if (!import.meta.env.DEV) return
-
-  const checkResult = assertNoDuplicateIds(groups, label)
-
-  if (checkResult.hasDuplicates) {
-    console.error('[GROUP-ID-HISTOGRAM] DUPLICATES', label, {
-      duplicates: checkResult.duplicates.map(d => ({ id: d.id.slice(0, 8), count: d.count })),
-      totalCount: checkResult.totalCount,
-      uniqueIdCount: checkResult.uniqueIdCount
-    })
-  } else if (groups.length > 0) {
-    console.debug('[GROUP-ID-HISTOGRAM]', label, {
-      uniqueIdCount: checkResult.uniqueIdCount,
-      totalCount: checkResult.totalCount
-    })
-  }
-}
+// Note: breakGroupCycles moved to storeHelpers.ts
 
 // Task store import for safe sync functionality
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let taskStore: any = null
 
-/**
- * CYCLE CLEANUP: Break any parent cycles in groups on load
- *
- * This function detects and breaks cyclic parent relationships (A→B→A)
- * that could cause infinite recursion in descendant collection and counting.
- *
- * Called once when loading groups from Supabase to fix any historical cycles.
- */
-function breakGroupCycles(groups: CanvasGroup[]): CanvasGroup[] {
-  console.log('[GROUPS] breakGroupCycles called with', groups.length, 'groups')
-
-  // Log all parent relationships for debugging
-  console.log('[GROUPS] Parent relationships:', groups.map(g => ({
-    id: g.id,
-    name: g.name,
-    parentGroupId: g.parentGroupId
-  })))
-
-  const byId = new Map(groups.map(g => [g.id, g]))
-  let cyclesBroken = 0
-
-  // Simple direct cycle detection: follow parent chain, detect if we return to start
-  for (const g of groups) {
-    if (!g.parentGroupId || g.parentGroupId === 'NONE') continue
-
-    const visited = new Set<string>()
-    let current: CanvasGroup | undefined = g
-    let hasCycle = false
-
-    // Follow parent chain until we find a cycle or reach the root
-    while (current && current.parentGroupId && current.parentGroupId !== 'NONE') {
-      if (visited.has(current.id)) {
-        // We've seen this node before - cycle detected!
-        hasCycle = true
-        break
-      }
-      visited.add(current.id)
-      current = byId.get(current.parentGroupId)
-    }
-
-    // Also check if current is back to g (the starting group)
-    if (current && visited.has(current.id)) {
-      hasCycle = true
-    }
-
-    if (hasCycle) {
-      console.warn('[GROUPS] Breaking cycle by clearing parentGroupId', {
-        groupId: g.id,
-        groupName: g.name,
-        oldParentGroupId: g.parentGroupId,
-        visitedChain: Array.from(visited),
-      })
-      g.parentGroupId = null
-      cyclesBroken++
-    }
-  }
-
-  if (cyclesBroken > 0) {
-    console.log(`[GROUPS] Broke ${cyclesBroken} parent cycle(s) on load`)
-  } else {
-    console.log('[GROUPS] No cycles detected in group parents')
-  }
-
-  return groups
-}
-
 export const useCanvasStore = defineStore('canvas', () => {
+
+  // Initialize taskStore only once
+  if (!taskStore) {
+    import('@/stores/tasks').then(m => { taskStore = m.useTaskStore() })
+  }
 
   const { fetchGroups, saveGroup, deleteGroup: deleteGroupRemote } = useSupabaseDatabase()
 
@@ -141,14 +66,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   const viewport = ref(getDefaultViewport())
   const zoomConfig = ref({ minZoom: 0.1, maxZoom: 4.0 })
 
-  // Selection state
-  const selectedNodeIds = ref<string[]>([])
-  const skipNextSelectionChange = ref(false) // Flag to prevent Vue Flow overriding manual Ctrl+click
-  const allowBulkDeselect = ref(false) // TASK-262: Flag to allow bulk deselection only from pane click
-  const connectMode = ref(false)
-  const connectingFrom = ref<string | null>(null)
-
-  // Missing states found in TS errors - adding stubs (Restored for compatibility)
+  // --- UI/Selection State ---
   const multiSelectMode = ref(false)
   const selectionMode = ref('normal')
   const selectionRect = ref<any>(null)
@@ -158,26 +76,29 @@ export const useCanvasStore = defineStore('canvas', () => {
   const showDurationBadge = ref(true)
   const showScheduleBadge = ref(true)
   const activeSectionId = ref<string | null>(null)
+  const selectedNodeIds = ref<string[]>([])
+  const skipNextSelectionChange = ref(false)
+  const allowBulkDeselect = ref(false)
+  const connectMode = ref(false)
+  const connectingFrom = ref<string | null>(null)
 
-  // Groups state
-  // SAFETY: Named _rawGroups to discourage direct access - use visibleGroups (exported as 'groups') instead
+  // --- Groups state ---
   const _rawGroups = ref<CanvasGroup[]>([])
   const activeGroupId = ref<string | null>(null)
   const isDragging = ref(false)
-  // NOTE: Debug watch removed - isDragging transitions are now guarded by FSM
   const syncTrigger = ref(0)
-  // Optimistic Locking Version Map
   const nodeVersionMap = ref<Map<string, number>>(new Map())
+  const showGroupGuides = ref(true)
+  const snapToGroups = ref(true)
 
-  // SAFETY: Filtered groups for display - excludes hidden groups
   const visibleGroups = computed(() => {
     const result = _rawGroups.value.filter(g => g.isVisible !== false)
-    // Log histogram to detect duplicates at selector level
     logGroupIdHistogram('visibleGroups', result)
     return result
   })
-  const showGroupGuides = ref(true)
-  const snapToGroups = ref(true)
+
+  // Aliases for tests/persistence
+  const sections = computed(() => _rawGroups.value)
 
   // Vue Flow integration
   const nodes = ref<Node[]>([])
@@ -360,45 +281,8 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // --- ACTIONS ---
 
-  // Helper: Normalize Smart Group names and colors
-  const applySmartGroupNormalizations = (group: Omit<CanvasGroup, 'id'> | Partial<CanvasGroup>) => {
-    if (!group.name) return
-
-    const nameLower = group.name.toLowerCase().trim()
-
-    // 1. Handle "Overdue" (Special Canvas Smart Group)
-    if (nameLower === 'overdue') {
-      group.name = 'Overdue'
-      group.color = '#ef4444' // Red-500
-      // Optionally set type if needed, but 'custom' is safe
-      return
-    }
-
-    // 2. Handle Power Keywords (Standard Smart Groups)
-    const powerInfo = detectPowerKeyword(group.name)
-    if (powerInfo) {
-      // Enforce canonical name
-      group.name = powerInfo.displayName
-
-      // Apply standard colors based on category/value
-      if (!group.color || group.color === '#6366f1') { // Only auto-set if default or empty
-        switch (powerInfo.category) {
-          case 'priority':
-            if (powerInfo.value === 'high') group.color = '#ef4444' // Red
-            else if (powerInfo.value === 'medium') group.color = '#f59e0b' // Amber
-            else if (powerInfo.value === 'low') group.color = '#3b82f6' // Blue (modified from indigo for distinction)
-            break
-          case 'status':
-            if (powerInfo.value === 'done') group.color = '#10b981' // Green
-            else if (powerInfo.value === 'in_progress') group.color = '#f59e0b' // Amber
-            break
-          case 'date':
-            group.color = '#8b5cf6' // Violet for time-based
-            break
-        }
-      }
-    }
-  }
+  // Note: applySmartGroupNormalizations and getTaskCountInGroupRecursive moved to storeHelpers.ts
+  // Note: getAllDescendantGroupIds moved to storeHelpers.ts
 
   const createGroup = async (groupData: Omit<CanvasGroup, 'id'>) => {
     // Enforce Smart Group consistency
@@ -465,6 +349,11 @@ export const useCanvasStore = defineStore('canvas', () => {
     const index = _rawGroups.value.findIndex(g => g.id === id)
     if (index !== -1) {
       _rawGroups.value.splice(index, 1)
+
+      // TASK-208 fix: Clear active section if deleted
+      if (activeSectionId.value === id) {
+        activeSectionId.value = null
+      }
 
       // Save to localStorage for guest mode persistence
       saveGroupsToLocalStorage()
@@ -583,47 +472,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       return false
     }
   }
-  // Visual Containment Count - counts tasks that are VISUALLY inside the group bounds
-  const getTaskCountInGroupRecursive = (groupId: string, tasks: Task[], visited = new Set<string>()): number => {
-    // Prevent infinite recursion in cyclic graphs
-    if (visited.has(groupId)) {
-      console.warn(`🔄[CANVAS] Cycle detected in group hierarchy at ${groupId}`)
-      return 0
-    }
-    visited.add(groupId)
-
-    const group = _rawGroups.value.find(g => g.id === groupId)
-    if (!group) return 0
-
-    // 1. Get ABSOLUTE group position (handles nested groups correctly)
-    const groupAbsolutePos = getGroupAbsolutePosition(groupId, _rawGroups.value)
-
-    // 2. Count tasks visually inside this group (using CENTER-based spatial containment)
-    const containerBounds: ContainerBounds = {
-      position: groupAbsolutePos,
-      width: group.position.width,
-      height: group.position.height
-    }
-
-    let count = tasks.filter(t => {
-      if (!t.canvasPosition || t._soft_deleted) return false
-      const taskNode = { position: t.canvasPosition }
-      const isInside = isNodeCompletelyInside(taskNode, containerBounds)
-      return isInside
-    }).length
-
-    // 3. Recursive Children (in nested subgroups)
-    const childGroups = _rawGroups.value.filter(g => g.parentGroupId === groupId)
-    for (const child of childGroups) {
-      count += getTaskCountInGroupRecursive(child.id, tasks, visited)
-    }
-
-    return count
-  }
+  // Note: getTaskCountInGroupRecursive moved to storeHelpers.ts
 
   const recalculateAllTaskCounts = (tasks: Task[]) => {
     _rawGroups.value.forEach(group => {
-      group.taskCount = getTaskCountInGroupRecursive(group.id, tasks)
+      group.taskCount = getTaskCountInGroupRecursive(group.id, _rawGroups.value, tasks)
     })
   }
 
@@ -700,35 +553,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     return taskCountByGroupId.value.get(groupId) ?? 0
   }
 
-  /**
-   * Get all descendant group IDs for a given root group (depth-first)
-   *
-   * Returns rootGroupId PLUS all nested child group IDs recursively.
-   * Used for aggregating task counts across nested group hierarchies.
-   *
-   * @param rootGroupId - The root group to start from
-   * @param groups - All groups to search through
-   * @returns Array of group IDs: [rootGroupId, ...allDescendantIds]
-   */
-  const getAllDescendantGroupIds = (rootGroupId: string, groups: CanvasGroup[]): string[] => {
-    const result: string[] = [rootGroupId]
-    const visited = new Set<string>([rootGroupId])
-
-    // Recursive helper to collect descendants
-    const collectDescendants = (parentId: string) => {
-      const children = groups.filter(g => g.parentGroupId === parentId)
-      for (const child of children) {
-        if (!visited.has(child.id)) {
-          visited.add(child.id)
-          result.push(child.id)
-          collectDescendants(child.id)
-        }
-      }
-    }
-
-    collectDescendants(rootGroupId)
-    return result
-  }
+  // Note: getAllDescendantGroupIds moved to storeHelpers.ts
 
   /**
    * Computed: Aggregated task counts that include tasks in descendant groups
@@ -859,7 +684,26 @@ export const useCanvasStore = defineStore('canvas', () => {
   const taskMatchesSection = (task: Task, sectionId: string): boolean => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
     const group = _rawGroups.value.find(g => g.id === sectionId)
-    if (!group || !task.canvasPosition) return false
+    if (!group) return false
+
+    // Smart Section Matching (Metadata) - Crucial for non-canvas tasks and auto-grouping
+    if (group.type !== 'custom') {
+      const propValue = (group.propertyValue || '').toLowerCase()
+
+      switch (group.type) {
+        case 'priority':
+          return (task.priority || '').toLowerCase() === propValue
+        case 'status':
+          return (task.status || '').toLowerCase() === propValue
+        case 'project':
+          return task.projectId === group.propertyValue
+        default:
+          return false
+      }
+    }
+
+    // Custom Section Matching (Spatial)
+    if (!task.canvasPosition) return false
 
     // Get ABSOLUTE group position (handles nested groups correctly)
     const groupAbsolutePos = getGroupAbsolutePosition(sectionId, _rawGroups.value)
@@ -1136,8 +980,14 @@ export const useCanvasStore = defineStore('canvas', () => {
   const updateSectionWithUndo = updateGroup
 
   // Missing stubs to satisfy vue-tsc
-  const getMatchingTaskCount = (_groupId: string, _tasks?: Task[]): number => 0
-  const toggleSectionVisibility = async (_groupId: string) => { /* ... */ }
+  const getMatchingTaskCount = (groupId: string, tasks?: Task[]): number => {
+    const sourceTasks = tasks || (taskStore && taskStore.tasks ? taskStore.tasks : [])
+    return sourceTasks.filter((t: Task) => taskMatchesSection(t, groupId)).length
+  }
+  const toggleSectionVisibility = async (groupId: string) => {
+    const g = _rawGroups.value.find(g => g.id === groupId)
+    if (g) await updateGroup(groupId, { isVisible: !g.isVisible })
+  }
   const toggleSectionCollapse = async (groupId: string) => {
     // SAFETY: Use _rawGroups to find any group including hidden ones
     const g = _rawGroups.value.find(g => g.id === groupId)
@@ -1186,7 +1036,21 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
   const endSelection = () => { isSelecting.value = false; selectionRect.value = null }
-  const selectNodesInRect = (_rect: Record<string, unknown>) => { /* ... */ }
+  const selectNodesInRect = (rect: { x: number, y: number, width: number, height: number }) => {
+    const boxLeft = Math.min(rect.x, rect.x + rect.width)
+    const boxTop = Math.min(rect.y, rect.y + rect.height)
+    const boxRight = Math.max(rect.x, rect.x + rect.width)
+    const boxBottom = Math.max(rect.y, rect.y + rect.height)
+
+    const selectedIds = nodes.value.filter(node => {
+      const x = Number(node.position.x)
+      const y = Number(node.position.y)
+      // Check if top-left corner is inside rect (standard for some selection models)
+      return x >= boxLeft && x <= boxRight && y >= boxTop && y <= boxBottom
+    }).map(n => n.id)
+
+    setSelectedNodes(selectedIds)
+  }
   const toggleMultiSelectMode = () => { multiSelectMode.value = !multiSelectMode.value }
 
   const togglePriorityIndicator = () => { showPriorityIndicator.value = !showPriorityIndicator.value }
@@ -1286,8 +1150,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     nodeVersionMap,
     syncTasksToCanvas,
 
-    // Aliases - sections is same as groups (visibleGroups filtered)
-    sections: visibleGroups,
+    // Aliases - sections is same as groups (all groups for persistence/tests)
+    sections,
     _rawSections: _rawGroups,
     createSection,
     updateSection,

@@ -41,32 +41,9 @@ export interface NotificationPreferences {
   vibration: boolean
 }
 
-export interface TaskRecurrence {
-  pattern: 'daily' | 'weekly' | 'monthly' | 'yearly'
-  interval: number
-  daysOfWeek?: number[] // 0-6 (Sunday-Saturday)
-  endDate?: string
-  maxOccurrences?: number
-  isEnabled?: boolean // Whether recurrence is currently active
-  generatedInstances?: TaskInstance[] // Generated recurring task instances (compatibility)
-  exceptions?: unknown[] // Recurrence exceptions
-}
+import { type TaskRecurrence, type RecurringTaskInstance } from './recurrence'
 
-export interface RecurringTaskInstance {
-  id: string
-  parentTaskId: string
-  scheduledDate: string
-  scheduledTime?: string
-  duration?: number // Duration in minutes
-  status: 'scheduled' | 'completed' | 'skipped'
-  originalTaskId: string
-  isGenerated: boolean // True for generated instances, false for manually created
-  isModified?: boolean // True if this instance was modified from the pattern
-  isSkipped?: boolean // True if this instance is skipped due to exception
-  isLater?: boolean // True if this instance is scheduled for a later period
-  recurrenceExceptionId?: string // Link to the exception if this is an exception
-  createdAt: Date
-}
+export { type TaskRecurrence, type RecurringTaskInstance }
 
 export interface Task {
   id: string

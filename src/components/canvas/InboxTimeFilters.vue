@@ -235,7 +235,7 @@ const timeFilters = computed((): TimeFilter[] => [
 
 .filter-buttons {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .filter-btn {
@@ -281,7 +281,7 @@ const timeFilters = computed((): TimeFilter[] => [
   border-radius: var(--radius-full);
   font-size: 9px;
   font-weight: var(--font-semibold);
-  padding: 0 2px;
+  padding: 0 var(--space-0_5);
   min-width: 12px;
   height: 12px;
   display: flex;

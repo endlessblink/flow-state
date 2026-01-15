@@ -1,4 +1,4 @@
-import type { Task } from '../tasks'
+import type { Task } from '@/types/tasks'
 import type { PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 
 export interface GroupFilter {
@@ -13,6 +13,12 @@ export interface TaskPosition {
     id: string
     position: { x: number; y: number }
     relativePosition: { x: number; y: number }
+}
+
+export interface ContainerBounds {
+    position: { x: number; y: number }
+    width: number
+    height: number
 }
 
 /**

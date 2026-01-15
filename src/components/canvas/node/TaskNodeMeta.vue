@@ -75,12 +75,12 @@ defineEmits<{
 .status-badge, .due-date-badge, .schedule-badge, .duration-badge, .done-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
 }
 

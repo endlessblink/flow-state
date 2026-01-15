@@ -96,7 +96,7 @@ const handleAddTask = () => {
   background: var(--glass-bg-soft);
   color: var(--text-primary);
   font-size: var(--text-sm);
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .quick-add-input:focus {

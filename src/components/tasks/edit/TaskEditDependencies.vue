@@ -106,12 +106,12 @@ const getStatusLabel = (status: string) => {
 .chevron-icon.rotated { transform: rotate(-90deg); }
 
 .count-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   background: var(--glass-bg-weak);
-  padding: 1px 6px;
-  border-radius: 10px;
+  padding: 1px var(--space-1_5);
+  border-radius: var(--radius-md);
   color: var(--text-tertiary);
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 
 .section-content {
@@ -149,7 +149,7 @@ const getStatusLabel = (status: string) => {
 
 .dependency-status {
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: var(--text-xs);
   text-transform: uppercase;
 }
 

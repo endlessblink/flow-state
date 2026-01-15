@@ -543,11 +543,11 @@ onUnmounted(() => {
 }
 
 .collect-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: var(--font-bold);
   background: white;
   color: var(--brand-primary);
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-full);
   min-width: 14px;
   height: 14px;
@@ -733,8 +733,8 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 0 4px;
+  gap: var(--space-0_5);
+  padding: 0 var(--space-1);
   border-radius: var(--radius-xs);
 }
 
@@ -771,10 +771,10 @@ onUnmounted(() => {
 
 .section-guides {
   position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
+  top: -var(--space-0_5);
+  left: -var(--space-0_5);
+  right: -var(--space-0_5);
+  bottom: -var(--space-0_5);
   pointer-events: none;
   z-index: 10;
 }

@@ -66,7 +66,7 @@ defineExpose({
   position: relative;
   overflow-x: hidden;
   overflow-y: visible;
-  transition: grid-template-columns 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: grid-template-columns var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-layout.sidebar-hidden {
@@ -126,7 +126,7 @@ defineExpose({
   max-height: 100vh;
   overflow-x: hidden;
   overflow-y: hidden;
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .main-content.sidebar-hidden {

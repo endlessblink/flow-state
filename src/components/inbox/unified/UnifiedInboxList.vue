@@ -200,7 +200,7 @@ defineExpose({ scrollTo })
 }
 
 .empty-icon {
-  font-size: 32px;
+  font-size: var(--space-8);
   margin-bottom: var(--space-3);
   opacity: 0.5;
 }
@@ -218,7 +218,7 @@ defineExpose({ scrollTo })
 /* Selection Bar */
 .selection-bar {
   position: sticky;
-  top: -8px;
+  top: -var(--space-2);
   z-index: 10;
   display: flex;
   align-items: center;
@@ -243,17 +243,17 @@ defineExpose({ scrollTo })
 }
 
 .selection-action {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-hover);
   border: none;
   color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--duration-normal);
 }
 
 .selection-action:hover {

@@ -37,7 +37,7 @@ defineEmits<{
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: var(--space-6);
   z-index: 10;
   pointer-events: none; /* Allow clicking through to canvas if needed, but button needs pointer-events auto */
 }
@@ -53,7 +53,7 @@ defineEmits<{
 }
 
 .empty-title {
-  font-size: 1.5rem;
+  font-size: var(--space-6);
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
@@ -61,7 +61,7 @@ defineEmits<{
 }
 
 .empty-description {
-  font-size: 1rem;
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
   margin: 0;
   text-align: center;
@@ -71,31 +71,31 @@ defineEmits<{
 
 .empty-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .empty-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
   border-radius: 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
 .empty-btn.primary {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: var(--color-indigo-bg-subtle);
+  border: 1px solid var(--color-indigo-bg-heavy);
   color: var(--color-primary);
 }
 
 .empty-btn.primary:hover {
-  background: rgba(99, 102, 241, 0.2);
+  background: var(--color-indigo-bg-heavy);
   border-color: rgba(99, 102, 241, 0.3);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);

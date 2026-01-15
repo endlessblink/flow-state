@@ -277,7 +277,7 @@ watch(() => props.isVisible, (visible) => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-heavy);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -510,7 +510,7 @@ watch(() => props.isVisible, (visible) => {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
   border-color: var(--brand-primary);
 }
 </style>

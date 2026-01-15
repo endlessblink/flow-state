@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
   white-space: nowrap;
@@ -356,7 +356,7 @@ onBeforeUnmount(() => {
   color: white;
   font-size: 0.625rem;
   font-weight: 600;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-full);
   min-width: 14px;
   height: 14px;
@@ -444,13 +444,13 @@ onBeforeUnmount(() => {
 }
 
 .project-icon, .duration-icon {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .item-count {
   margin-left: auto;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }
 
 .clear-filters-btn {

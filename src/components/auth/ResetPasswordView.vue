@@ -241,12 +241,12 @@ async function handleSubmit() {
   cursor: pointer;
   padding: var(--space-2);
   border-radius: var(--radius-md);
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .back-link:hover:not(:disabled) {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
 }
 
 .back-link:disabled {

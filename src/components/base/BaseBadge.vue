@@ -89,14 +89,14 @@ withDefaults(defineProps<Props>(), {
 /* Variant: Success (green stroke) */
 .base-badge.variant-success {
   background: rgba(16, 185, 129, 0.05);
-  color: #4ade80;
+  color: var(--color-success);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 /* Variant: Warning (orange stroke) */
 .base-badge.variant-warning {
   background: rgba(245, 158, 11, 0.05);
-  color: #fbbf24;
+  color: var(--color-warning);
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 

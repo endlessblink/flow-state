@@ -348,7 +348,7 @@ watch(() => props.isOpen, (isOpen) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-heavy);
   backdrop-filter: blur(8px) saturate(120%);
   -webkit-backdrop-filter: blur(8px) saturate(120%);
   display: flex;
@@ -367,7 +367,7 @@ watch(() => props.isOpen, (isOpen) => {
   background: rgba(20, 20, 40, 0.85);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-xl);
   box-shadow:
     0 32px 64px rgba(0, 0, 0, 0.5),
@@ -425,7 +425,7 @@ watch(() => props.isOpen, (isOpen) => {
 /* Section Labels */
 .section-label {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -440,8 +440,8 @@ watch(() => props.isOpen, (isOpen) => {
   gap: var(--space-4);
   margin-bottom: var(--space-4);
   padding: var(--space-4);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
 }
 
@@ -454,8 +454,8 @@ watch(() => props.isOpen, (isOpen) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-sm);
@@ -466,8 +466,8 @@ watch(() => props.isOpen, (isOpen) => {
 
 .date-display:hover,
 .date-display:focus-within {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-hover);
 }
 
 .date-display:focus-within {
@@ -503,7 +503,7 @@ watch(() => props.isOpen, (isOpen) => {
 .quick-date-btn {
   padding: var(--space-1) var(--space-2);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: var(--text-xs);
@@ -512,14 +512,14 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-date-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-hover);
   color: var(--text-secondary);
 }
 
 .quick-date-btn.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--glass-border);
+  border-color: var(--border-hover);
   color: var(--text-primary);
 }
 
@@ -564,8 +564,8 @@ watch(() => props.isOpen, (isOpen) => {
 
 .time-input {
   padding: var(--space-1) var(--space-2);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -574,7 +574,7 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .time-input:focus {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
 }
 
 .time-separator {
@@ -593,8 +593,8 @@ watch(() => props.isOpen, (isOpen) => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
@@ -603,8 +603,8 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .property-chip:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-hover);
 }
 
 /* Property select wrapper with icon */
@@ -633,19 +633,19 @@ watch(() => props.isOpen, (isOpen) => {
   padding: var(--space-2) var(--space-3);
   padding-left: calc(var(--space-3) + 14px + var(--space-2));
   min-height: auto;
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-tint);
+  border-color: var(--glass-border);
 }
 
 .compact-select :deep(.select-trigger:hover) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-hover);
   box-shadow: none;
 }
 
 .compact-select :deep(.select-trigger:focus),
 .compact-select :deep(.select-trigger.is-open) {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
   box-shadow: none;
 }
 
@@ -678,12 +678,12 @@ watch(() => props.isOpen, (isOpen) => {
   gap: var(--space-3);
   justify-content: flex-end;
   padding-top: var(--space-4);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .cancel-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-secondary);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
@@ -694,13 +694,13 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg-soft);
+  border-color: var(--border-hover);
 }
 
 .create-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--glass-border);
+  border: 1px solid var(--border-hover);
   color: white;
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
@@ -711,7 +711,7 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .create-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-border-hover);
   border-color: rgba(255, 255, 255, 0.3);
 }
 

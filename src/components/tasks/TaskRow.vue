@@ -212,20 +212,20 @@ const formatStatus = (status: string): string => {
   
   /* Glass Morphism Base - More visible */
   background: transparent; /* Remove gray background to let gradient show */
-  border: 1px solid rgba(255, 255, 255, 0.08); /* All-around border like cards */
-  border-bottom-color: rgba(255, 255, 255, 0.1); /* Slightly stronger bottom */
-  border-radius: 6px; /* Rounded corners like cards */
-  margin-bottom: 4px; /* Separation */
+  border: 1px solid var(--border-subtle); /* All-around border like cards */
+  border-bottom-color: var(--glass-border); /* Slightly stronger bottom */
+  border-radius: var(--radius-sm); /* Rounded corners like cards */
+  margin-bottom: var(--space-1); /* Separation */
   backdrop-filter: blur(8px);
   
   cursor: pointer;
-  transition: all 0.2s ease-out;
+  transition: all var(--duration-normal) var(--ease-out);
   contain: layout style size;
 }
 
 .task-row:hover {
   background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -233,7 +233,7 @@ const formatStatus = (status: string): string => {
 .task-row--selected {
   background: rgba(78, 205, 196, 0.08) !important; /* Brand tint */
   border-left: 3px solid var(--brand-primary);
-  border-bottom-color: rgba(78, 205, 196, 0.2);
+  border-bottom-color: var(--brand-primary-bg-heavy);
 }
 
 /* ADHD Visual Anchor - Every 5th row */
@@ -242,23 +242,23 @@ const formatStatus = (status: string): string => {
 }
 
 .task-row--anchor:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-bg-heavy);
 }
 
 /* Density Variants */
 .task-row--compact {
   height: 28px;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .task-row--comfortable {
   height: 36px;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .task-row--spacious {
   height: 44px;
-  font-size: 14px;
+  font-size: var(--text-sm);
   padding: 0 var(--space-4);
 }
 
@@ -269,7 +269,7 @@ const formatStatus = (status: string): string => {
   align-items: center;
   justify-content: center;
   opacity: 0.7;
-  transition: opacity 0.2s;
+  transition: opacity var(--duration-normal);
 }
 
 .task-row:hover .task-row__checkbox {
@@ -289,7 +289,7 @@ const formatStatus = (status: string): string => {
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
-  transition: color 0.2s;
+  transition: color var(--duration-normal);
   letter-spacing: 0.01em;
 }
 
@@ -317,13 +317,13 @@ const formatStatus = (status: string): string => {
   -webkit-backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 2px 6px;
-  border-radius: 6px; /* Softer radius */
+  transition: all var(--duration-normal) var(--ease-out);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-sm); /* Softer radius */
 }
 
 .project-emoji-badge:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   transform: translateY(-1px);
@@ -334,8 +334,8 @@ const formatStatus = (status: string): string => {
   grid-area: due;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--space-1_5);
+  font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -366,17 +366,17 @@ const formatStatus = (status: string): string => {
 }
 
 .task-row__badge {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-xs);
   font-weight: 500;
   border: 1px solid transparent;
   backdrop-filter: blur(4px);
 }
 
 .task-row__badge--planned {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border);
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -408,10 +408,10 @@ const formatStatus = (status: string): string => {
 .task-row__tags {
   grid-area: tags;
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   overflow: hidden;
   opacity: 0.6;
-  transition: opacity 0.2s;
+  transition: opacity var(--duration-normal);
 }
 
 .task-row:hover .task-row__tags {
@@ -419,17 +419,17 @@ const formatStatus = (status: string): string => {
 }
 
 .task-row__tag {
-  padding: 1px 6px;
+  padding: 1px var(--space-1_5);
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  font-size: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.6);
   white-space: nowrap;
 }
 
 .task-row__tag-more {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.4);
 }
 
@@ -437,11 +437,11 @@ const formatStatus = (status: string): string => {
 .task-row__actions {
   grid-area: actions;
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   justify-content: flex-end;
   opacity: 0;
   transform: translateX(10px);
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all var(--duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .task-row:hover .task-row__actions {
@@ -455,16 +455,16 @@ const formatStatus = (status: string): string => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .task-row__action-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-border-hover);
   border-color: rgba(255, 255, 255, 0.4);
   color: #fff;
   transform: scale(1.1);
@@ -474,25 +474,25 @@ const formatStatus = (status: string): string => {
 /* Priority Indicator */
 .priority-indicator {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: var(--space-1);
+  bottom: var(--space-1);
   left: 3px;
   width: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   opacity: 0.8;
 }
 
 /* Empty state */
 .task-row__empty {
-  color: rgba(255, 255, 255, 0.1);
-  font-size: 12px;
+  color: var(--glass-border);
+  font-size: var(--text-xs);
 }
 
 /* Focus */
 .task-row:focus-visible {
   outline: none;
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(78, 205, 196, 0.5);
+  background: var(--glass-bg-soft);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
 }
 </style>

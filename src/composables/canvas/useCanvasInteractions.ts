@@ -3,7 +3,7 @@ import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
-import type { CanvasGroup } from '@/stores/canvas/types'
+import type { CanvasGroup } from '@/types/canvas'
 import { useCanvasGroups } from './useCanvasGroups'
 import { useCanvasCore } from './useCanvasCore'
 import { useCanvasOperationState } from './useCanvasOperationState'
@@ -348,88 +348,6 @@ export function useCanvasInteractions(deps?: {
     const { resizeState, isResizeSettling, resizeLineStyle, edgeHandleStyle } = useCanvasResizeState()
     const { validateDimensions, calculateChildInverseDelta } = useCanvasResizeCalculation()
 
-    // --- GLOBAL INTERCEPTOR FOR SHIFT+CLICK (BUG-FIX) ---
-    // Vue Flow's box selection overlay (Shift key) blocks clicks on nodes.
-    // We use a capture-phase listener to detect if the click is visually over a task node.
-    const handleGlobalShiftClick = (e: MouseEvent) => {
-        if (!e.shiftKey) return
-
-        // Use elementsFromPoint to pierce through the overlay
-        const elements = document.elementsFromPoint(e.clientX, e.clientY)
-        // Look for the task node element (or its wrapper)
-        const taskElement = elements.find(el =>
-            el.classList.contains('task-node') ||
-            el.classList.contains('vue-flow__node-taskNode')
-        )
-
-        if (taskElement) {
-            // Found a task node under the cursor!
-            e.stopPropagation()
-            // preventDefault optional - we keep it to be safe against selection of text
-            // e.preventDefault() 
-
-            // Get ID
-            let taskId = taskElement.getAttribute('data-task-id')
-
-            // If we hit the wrapper, try to find the inner .task-node
-            if (!taskId && taskElement.classList.contains('vue-flow__node-taskNode')) {
-                const inner = taskElement.querySelector('.task-node')
-                if (inner) taskId = inner.getAttribute('data-task-id')
-                // Also try data-id on wrapper itself which Vue Flow usually sets
-                if (!taskId) taskId = taskElement.getAttribute('data-id')
-            } else if (!taskId && taskElement.classList.contains('task-node')) {
-                taskId = taskElement.getAttribute('data-task-id')
-            }
-
-            if (taskId) {
-                console.log('[DEBUG] Intercepted Shift+Click on Task:', taskId)
-                // Manual toggle logic
-                const currentSelection = [...canvasStore.selectedNodeIds]
-                let newSelection: string[]
-
-                if (currentSelection.includes(taskId)) {
-                    newSelection = currentSelection.filter(id => id !== taskId)
-                } else {
-                    newSelection = [...currentSelection, taskId]
-                }
-
-                canvasStore.setSelectedNodes(newSelection)
-
-                // Sync to Vue Flow
-                if (nodes.value) {
-                    const selectionChanges = nodes.value.map((n: any) => ({
-                        id: n.id,
-                        type: 'select' as const,
-                        selected: newSelection.includes(n.id)
-                    }))
-                    applyNodeChanges(selectionChanges)
-                }
-            }
-        }
-    }
-
-    onMounted(() => {
-        window.addEventListener('mousedown', handleGlobalShiftClick, true) // Capture!
-    })
-
-    onUnmounted(() => {
-        window.removeEventListener('mousedown', handleGlobalShiftClick, true)
-    })
-
-    // Selection state
-    const selectionBox = reactive<SelectionBox>({
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        startX: 0,
-        startY: 0,
-        isVisible: false
-    })
-
-    const selectedTask = ref<Task | null>(null)
-    const isEditModalOpen = ref(false)
-
     // --- DRAG HANDLERS ---
 
     /**
@@ -637,7 +555,9 @@ export function useCanvasInteractions(deps?: {
                 // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
                 // TASK-272 FIX: Only apply if values actually differ to prevent reactive loops
                 if (targetGroup) {
+                    console.log(`🔍 [SMART-GROUP-DEBUG] Group name: "${targetGroup.name}", Task: "${task.title}"`)
                     const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
+                    console.log(`🔍 [SMART-GROUP-DEBUG] Smart updates:`, smartUpdates)
                     // Filter out updates where the task already has the same value
                     const actualChanges: any = {}
                     for (const [key, value] of Object.entries(smartUpdates)) {
@@ -646,10 +566,13 @@ export function useCanvasInteractions(deps?: {
                             actualChanges[key] = value
                         }
                     }
+                    console.log(`🔍 [SMART-GROUP-DEBUG] Actual changes after filter:`, actualChanges)
                     if (Object.keys(actualChanges).length > 0) {
                         console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, actualChanges)
                         taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP')
                     }
+                } else {
+                    console.log(`🔍 [SMART-GROUP-DEBUG] No targetGroup found for task "${task.title}"`)
                 }
 
                 // 7. Sync task to DB with optimistic locking
@@ -700,7 +623,7 @@ export function useCanvasInteractions(deps?: {
         })
     }
 
-    const onSectionResize = ({ sectionId: rawSectionId, event }: { sectionId: string; event: any }) => {
+    const onSectionResize = ({ sectionId: _rawSectionId, event }: { sectionId: string; event: any }) => {
         // const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
         const typedEvent = event as { params?: { width?: number; height?: number; x?: number; y?: number } }
         const width = typedEvent?.params?.width
@@ -822,180 +745,9 @@ export function useCanvasInteractions(deps?: {
         setTimeout(() => isResizeSettling.value = false, 1000)
     }
 
-    // --- SELECTION HANDLERS ---
-
-
-    const handleTaskSelect = (task: Task, multiSelect: boolean) => {
-        console.log('%c[TASK-262] handleTaskSelect CALLED', 'background: purple; color: white; font-size: 14px;', {
-            taskId: task?.id?.slice(0, 20),
-            multiSelect,
-            hasNodes: nodes.value?.length
-        })
-
-        if (!task.id) return
-
-        let newSelection: string[]
-        const currentSelection = [...canvasStore.selectedNodeIds]
-
-        if (multiSelect) {
-            // Ctrl+click: Toggle this task in selection
-            if (currentSelection.includes(task.id)) {
-                newSelection = currentSelection.filter(id => id !== task.id)
-            } else {
-                newSelection = [...currentSelection, task.id]
-            }
-        } else {
-            // Standard behavior: Single click replaces selection
-            // This fixes "multi selects without ctrl+ click" issue
-            newSelection = [task.id]
-        }
-
-        // Update store
-        canvasStore.setSelectedNodes(newSelection)
-
-        // TASK-262 FIX: Use applyNodeChanges to update Vue Flow's internal selection state
-        // This is more reliable than manual object mutation and ensures the visual .selected 
-        // CSS class is applied immediately.
-        const selectionChanges = nodes.value.map(node => ({
-            id: node.id,
-            type: 'select' as const,
-            selected: newSelection.includes(node.id)
-        }))
-
-        applyNodeChanges(selectionChanges)
-    }
-
-    const clearSelection = () => {
-        console.log('%c[DEBUG] clearSelection() CALLED', 'background: orange; color: black; font-size: 16px;')
-
-        canvasStore.setSelectedNodes([])
-        selectedTask.value = null
-
-        // TASK-262 FIX: Directly mutate node.selected property
-        // applyNodeChanges doesn't work for programmatic selection changes
-        const selectedBefore = nodes.value.filter(n => n.selected).map(n => n.id.slice(0, 15))
-        console.log('%c[DEBUG] BEFORE - selected nodes:', 'background: orange; color: black;', selectedBefore)
-
-        nodes.value.forEach(node => {
-            if (node.selected) {
-                node.selected = false
-            }
-        })
-
-        const selectedAfter = nodes.value.filter(n => n.selected).map(n => n.id.slice(0, 15))
-        console.log('%c[DEBUG] AFTER direct mutation - selected nodes:', 'background: green; color: white;', selectedAfter)
-    }
-
-    const updateSelection = (event: MouseEvent) => {
-        if (!selectionBox.isVisible) return
-        const currentX = event.clientX
-        const currentY = event.clientY
-        selectionBox.width = Math.abs(currentX - selectionBox.startX)
-        selectionBox.height = Math.abs(currentY - selectionBox.startY)
-        selectionBox.x = Math.min(currentX, selectionBox.startX)
-        selectionBox.y = Math.min(currentY, selectionBox.startY)
-    }
-
-    const startSelection = (event: MouseEvent) => {
-        if (!event.shiftKey) return
-        const { clientX, clientY } = event
-        selectionBox.startX = clientX
-        selectionBox.startY = clientY
-        selectionBox.x = clientX
-        selectionBox.y = clientY
-        selectionBox.width = 0
-        selectionBox.height = 0
-        selectionBox.isVisible = true
-        window.addEventListener('mousemove', updateSelection)
-        window.addEventListener('mouseup', endSelection)
-        event.preventDefault()
-        event.stopPropagation()
-    }
-
-    const endSelection = (_event: MouseEvent) => {
-        window.removeEventListener('mousemove', updateSelection)
-        window.removeEventListener('mouseup', endSelection)
-        if (!selectionBox.isVisible) return
-
-        const viewport = getViewportFromDOM()
-        const flowContainer = document.querySelector('.vue-flow__container') || document.querySelector('.canvas-container')
-        if (!flowContainer) return
-        const rect = flowContainer.getBoundingClientRect()
-
-        const involvedNodes = getNodes.value
-        const selectedIds: string[] = []
-        const boxLeft = selectionBox.x
-        const boxTop = selectionBox.y
-        const boxRight = selectionBox.x + selectionBox.width
-        const boxBottom = selectionBox.y + selectionBox.height
-
-        involvedNodes.forEach(node => {
-            const { x: graphX, y: graphY } = getAbsolutePositionRecursive(node, involvedNodes)
-            const graphW = Number(node.dimensions?.width ?? node.width ?? 200)
-            const graphH = Number(node.dimensions?.height ?? node.height ?? 100)
-            const screenX = (graphX * viewport.zoom) + viewport.x + rect.left
-            const screenY = (graphY * viewport.zoom) + viewport.y + rect.top
-            const screenW = graphW * viewport.zoom
-            const screenH = graphH * viewport.zoom
-
-            if (node.type === 'sectionNode') {
-                const isFullyContained = (
-                    screenX >= boxLeft && (screenX + screenW) <= boxRight &&
-                    screenY >= boxTop && (screenY + screenH) <= boxBottom
-                )
-                if (isFullyContained) selectedIds.push(node.id)
-                return
-            }
-
-            const intersects = (
-                screenX < boxRight && (screenX + screenW) > boxLeft &&
-                screenY < boxBottom && (screenY + screenH) > boxTop
-            )
-            if (intersects) selectedIds.push(node.id)
-        })
-
-        if (selectedIds.length > 0) {
-            canvasStore.setSelectedNodes(selectedIds)
-            // TASK-262 FIX: Use applyNodeChanges to update Vue Flow's internal selection state
-            const selectionChanges = nodes.value.map(node => ({
-                id: node.id,
-                type: 'select' as const,
-                selected: selectedIds.includes(node.id)
-            }))
-            applyNodeChanges(selectionChanges)
-        }
-        selectionBox.isVisible = false
-    }
-
-    // --- RECURSIVE HELPERS ---
-
-    const getAbsolutePositionRecursive = (node: Node, allNodes: Node[]): { x: number, y: number } => {
-        let x = node.position.x
-        let y = node.position.y
-        let parentId = node.parentNode
-        while (parentId) {
-            const parent = allNodes.find(n => n.id === parentId)
-            if (parent) {
-                x += parent.position.x
-                y += parent.position.y
-                parentId = parent.parentNode
-            } else break
-        }
-        return { x, y }
-    }
-
-    const getViewportFromDOM = (): { x: number, y: number, zoom: number } => {
-        const transformPane = document.querySelector('.vue-flow__transformationpane') as HTMLElement
-        if (!transformPane) return { x: 0, y: 0, zoom: 1 }
-        const transform = transformPane.style.transform
-        const match = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/)
-        return match ? { x: parseFloat(match[1]), y: parseFloat(match[2]), zoom: parseFloat(match[3]) } : { x: 0, y: 0, zoom: 1 }
-    }
-
     return {
         onNodeDragStart, onNodeDrag, onNodeDragStop,
         onSectionResizeStart, onSectionResize, onSectionResizeEnd,
-        selectionBox, selectedTask, isEditModalOpen, handleTaskSelect, clearSelection, startSelection, updateSelection, endSelection,
         resizeState, isResizeSettling, resizeLineStyle, edgeHandleStyle
     }
 }

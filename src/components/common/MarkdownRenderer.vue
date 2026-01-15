@@ -90,12 +90,12 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(ul), :deep(ol) {
-  padding-inline-start: 1.5rem;
+  padding-inline-start: var(--space-6);
   margin-bottom: var(--space-3);
 }
 
 :deep(li) {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
   position: relative;
 }
 
@@ -105,13 +105,13 @@ const handleClick = (event: MouseEvent) => {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  margin-inline-start: -1.5rem; /* Counteract parent padding for task items */
-  padding-inline-start: 0.5rem;
+  margin-inline-start: -var(--space-6); /* Counteract parent padding for task items */
+  padding-inline-start: var(--space-2);
 }
 
 :deep(ul.task-list) {
   list-style-type: none;
-  padding-inline-start: 1.5rem;
+  padding-inline-start: var(--space-6);
 }
 
 /* Custom Checkbox Styling */
@@ -121,13 +121,13 @@ const handleClick = (event: MouseEvent) => {
   width: 16px;
   height: 16px;
   border: 1.5px solid var(--glass-border-heavy);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--glass-bg-soft);
   cursor: pointer;
   position: relative;
-  margin-top: 2px; /* Center with text line height */
+  margin-top: var(--space-0_5); /* Center with text line height */
   flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--duration-normal) cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-block;
   vertical-align: middle;
 }
@@ -141,7 +141,7 @@ const handleClick = (event: MouseEvent) => {
   content: '';
   position: absolute;
   top: 1px;
-  left: 4px;
+  left: var(--space-1);
   width: 5px;
   height: 9px;
   border: solid white;
@@ -157,7 +157,7 @@ const handleClick = (event: MouseEvent) => {
 :deep(code) {
   background: var(--glass-bg-medium);
   padding: 0.1rem 0.3rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono, monospace);
   font-size: 0.9em;
 }
@@ -207,7 +207,7 @@ const handleClick = (event: MouseEvent) => {
 
 /* Checkbox lists */
 :deep(ul li input[type="checkbox"]) {
-  margin-inline-end: 0.5rem;
+  margin-inline-end: var(--space-2);
   vertical-align: middle;
 }
 </style>

@@ -190,7 +190,7 @@ const currentTab = computed(() => {
   flex: 1;
   padding: var(--space-6);
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--glass-bg-light);
   position: relative;
 }
 

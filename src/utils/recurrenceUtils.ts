@@ -131,13 +131,105 @@ export function getNextOccurrence(currentDate: Date, rule: RecurrenceRule): Date
       return next
 
     case RecurrencePattern.CUSTOM:
-      // TODO: Implement custom recurrence patterns
-      console.warn('Custom recurrence patterns not yet implemented')
-      return next
+      return getNextCustomOccurrence(next, rule.customRule)
 
     default:
       return next
   }
+}
+
+/**
+ * Partial custom recurrence engine
+ * Supports: 
+ * - EVERY N DAYS
+ * - EVERY N WEEKS ON [MON,TUE,WED,THU,FRI,SAT,SUN]
+ * - EVERY N MONTHS ON LAST DAY
+ * - EVERY N MONTHS ON [1ST,2ND,3RD,4TH] [WEEKDAY]
+ */
+function getNextCustomOccurrence(currentDate: Date, customRule: string): Date {
+  const rule = customRule.toUpperCase().trim()
+  const next = new Date(currentDate)
+
+  // 1. EVERY N DAYS
+  const dailyMatch = rule.match(/^EVERY (\d+) DAYS$/)
+  if (dailyMatch) {
+    const interval = parseInt(dailyMatch[1], 10)
+    next.setDate(next.getDate() + Math.max(1, interval))
+    return next
+  }
+
+  // 2. EVERY N WEEKS ON [DAYS]
+  const weeklyMatch = rule.match(/^EVERY (\d+) WEEKS ON ([\w,]+)$/)
+  if (weeklyMatch) {
+    const interval = parseInt(weeklyMatch[1], 10)
+    const daysStr = weeklyMatch[2]
+    const dayMap: Record<string, number> = {
+      'SUN': 0, 'SUNDAY': 0,
+      'MON': 1, 'MONDAY': 1,
+      'TUE': 2, 'TUESDAY': 2,
+      'WED': 3, 'WEDNESDAY': 3,
+      'THU': 4, 'THURSDAY': 4,
+      'FRI': 5, 'FRIDAY': 5,
+      'SAT': 6, 'SATURDAY': 6
+    }
+    const targetDays = daysStr.split(',').map(d => dayMap[d.trim()]).filter(d => d !== undefined).sort((a, b) => a - b)
+
+    if (targetDays.length === 0) return addDay(next)
+
+    const currentDay = next.getDay()
+    let nextDay = targetDays.find(d => d > currentDay)
+
+    if (nextDay !== undefined) {
+      next.setDate(next.getDate() + (nextDay - currentDay))
+    } else {
+      // Wrap to next interval week
+      nextDay = targetDays[0]
+      next.setDate(next.getDate() + (7 * interval - currentDay + nextDay))
+    }
+    return next
+  }
+
+  // 3. EVERY N MONTHS ON LAST DAY
+  const lastDayMatch = rule.match(/^EVERY (\d+) MONTHS ON LAST DAY$/)
+  if (lastDayMatch) {
+    const interval = parseInt(lastDayMatch[1], 10)
+    next.setDate(1) // Set to 1st to avoid month overflow (e.g., Jan 31 -> Feb 31 = Mar 3)
+    next.setMonth(next.getMonth() + Math.max(1, interval))
+    next.setDate(getDaysInMonth(next.getFullYear(), next.getMonth())) // Jump to last day
+    return next
+  }
+
+  // 4. EVERY N MONTHS ON [1ST,2ND,3RD,4TH] [WEEKDAY]
+  const nthWeekdayMatch = rule.match(/^EVERY (\d+) MONTHS ON (1ST|2ND|3RD|4TH|LAST) (\w+)$/)
+  if (nthWeekdayMatch) {
+    const interval = parseInt(nthWeekdayMatch[1], 10)
+    const posStr = nthWeekdayMatch[2]
+    const dayStr = nthWeekdayMatch[3]
+
+    const dayMap: Record<string, number> = {
+      'SUN': 0, 'SUNDAY': 0,
+      'MON': 1, 'MONDAY': 1,
+      'TUE': 2, 'TUESDAY': 2,
+      'WED': 3, 'WEDNESDAY': 3,
+      'THU': 4, 'THURSDAY': 4,
+      'FRI': 5, 'FRIDAY': 5,
+      'SAT': 6, 'SATURDAY': 6
+    }
+    const posMap: Record<string, number> = { '1ST': 1, '2ND': 2, '3RD': 3, '4TH': 4, 'LAST': -1 }
+
+    if (dayMap[dayStr] === undefined) return addDay(next)
+    return getNextNthWeekdayOfMonth(next, interval, dayMap[dayStr], posMap[posStr])
+  }
+
+  // Fallback if rule doesn't match grammar - safety guard to prevent infinite loops
+  console.warn(`[RECURRENCE] Unrecognized custom rule: ${customRule}. Falling back to +1 day.`)
+  return addDay(next)
+}
+
+function addDay(date: Date): Date {
+  const next = new Date(date)
+  next.setDate(next.getDate() + 1)
+  return next
 }
 
 /**
@@ -292,7 +384,20 @@ export function validateRecurrenceRule(rule: RecurrenceRule): RecurrenceValidati
       break
 
     case RecurrencePattern.CUSTOM:
-      warnings.push('Custom recurrence patterns are not yet implemented')
+      const customRule = (rule as { pattern: RecurrencePattern.CUSTOM; customRule: string }).customRule
+      if (!customRule || customRule.trim() === '') {
+        errors.push('Custom recurrence rule must not be empty')
+      } else {
+        const normalized = customRule.toUpperCase().trim()
+        const isValid = /^EVERY \d+ DAYS$/.test(normalized) ||
+          /^EVERY \d+ WEEKS ON [\w,]+$/.test(normalized) ||
+          /^EVERY \d+ MONTHS ON LAST DAY$/.test(normalized) ||
+          /^EVERY \d+ MONTHS ON (1ST|2ND|3RD|4TH|LAST) \w+$/.test(normalized)
+
+        if (!isValid) {
+          errors.push(`Invalid custom recurrence rule syntax: "${customRule}"`)
+        }
+      }
       break
   }
 

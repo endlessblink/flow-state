@@ -68,13 +68,13 @@ const handleReschedule = (dateType: string) => {
 .overdue-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-sm);
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  color: var(--color-danger);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
   font-weight: 500;
@@ -88,7 +88,7 @@ const handleReschedule = (dateType: string) => {
 
 .reschedule-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-1));
   left: 0;
   z-index: 1000;
   min-width: 160px;
@@ -99,7 +99,7 @@ const handleReschedule = (dateType: string) => {
   padding: var(--space-1);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .reschedule-option {

@@ -28,13 +28,26 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         // ================================================================
 
         // 1a. DAY-OF-WEEK GROUPS (Monday-Sunday)
+        // Use flexible matching - check if name starts with or equals a day name
         const dayOfWeekMap: Record<string, number> = {
             'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
             'thursday': 4, 'friday': 5, 'saturday': 6
         }
+        // Check for exact match first, then startsWith for names like "Friday Tasks"
+        let matchedDay: number | undefined
         if (dayOfWeekMap[lowerName] !== undefined) {
-            const targetDay = dayOfWeekMap[lowerName]
-            const daysUntilTarget = ((7 + targetDay - today.getDay()) % 7) || 7
+            matchedDay = dayOfWeekMap[lowerName]
+        } else {
+            // Check if name starts with a day name
+            for (const [day, index] of Object.entries(dayOfWeekMap)) {
+                if (lowerName.startsWith(day)) {
+                    matchedDay = index
+                    break
+                }
+            }
+        }
+        if (matchedDay !== undefined) {
+            const daysUntilTarget = ((7 + matchedDay - today.getDay()) % 7) || 7
             const resultDate = new Date(today)
             resultDate.setDate(today.getDate() + daysUntilTarget)
             updates.dueDate = formatDateKey(resultDate)

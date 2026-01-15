@@ -445,7 +445,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 
 .permission-status {
   padding: var(--space-3);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg-tint);
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
 }
@@ -467,7 +467,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
 }
 
 .status-badge.granted {
-  color: #4ade80;
+  color: var(--color-success);
 }
 
 .status-badge.denied {
@@ -479,7 +479,7 @@ watch(() => props.initialPreferences, (newPreferences) => {
   border-radius: var(--radius-md);
   font-weight: var(--font-medium);
   font-size: var(--font-size-sm);
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
   cursor: pointer;
   border: none;
 }
@@ -494,13 +494,13 @@ watch(() => props.initialPreferences, (newPreferences) => {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
   color: var(--text-primary);
 }
 

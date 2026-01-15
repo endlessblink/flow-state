@@ -158,7 +158,7 @@ h3 {
 }
 
 .feature svg {
-  color: #4ade80;
+  color: var(--color-success);
   flex-shrink: 0;
 }
 
@@ -185,7 +185,7 @@ h3 {
   font-weight: var(--font-medium);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .primary-btn:hover {
@@ -194,17 +194,17 @@ h3 {
 }
 
 .secondary-btn {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   font-weight: var(--font-medium);
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
   color: var(--text-primary);
 }
 </style>

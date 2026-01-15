@@ -186,7 +186,7 @@ defineExpose({ open, close })
 .command-palette-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-darker);
   backdrop-filter: blur(12px) saturate(100%);
   -webkit-backdrop-filter: blur(12px) saturate(100%);
   display: flex;
@@ -199,10 +199,10 @@ defineExpose({ open, close })
 
 /* Modal */
 .command-palette-modal {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-solid);
   backdrop-filter: blur(20px) saturate(100%);
   -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
   width: 600px;
   max-width: 90vw;
@@ -219,7 +219,7 @@ defineExpose({ open, close })
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -253,7 +253,7 @@ defineExpose({ open, close })
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -262,7 +262,7 @@ defineExpose({ open, close })
   flex: 1;
   padding: var(--space-3) var(--space-4);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -283,26 +283,26 @@ defineExpose({ open, close })
 
 .field-select:hover,
 .field-input:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-interactive);
+  background: var(--glass-bg-tint);
 }
 
 .field-select:focus,
 .field-input:focus {
-  border-color: rgba(78, 205, 196, 0.5);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--brand-primary-alpha-50);
+  background: var(--glass-bg-tint);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
 .field-select option {
-  background: rgba(0, 0, 0, 0.95);
+  background: var(--glass-bg-solid);
   color: var(--text-primary);
   padding: var(--space-2);
 }
 
 .field-select option:hover,
 .field-select option:checked {
-  background: rgba(78, 205, 196, 0.2);
+  background: var(--brand-primary-bg-heavy);
 }
 
 .field-input[type="date"]::-webkit-calendar-picker-indicator {
@@ -317,12 +317,12 @@ defineExpose({ open, close })
   align-items: center;
   padding: var(--space-4) var(--space-6);
   background: transparent;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .toggle-options-btn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-secondary);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
@@ -334,15 +334,15 @@ defineExpose({ open, close })
 }
 
 .toggle-options-btn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-tint);
+  border-color: var(--border-interactive);
   color: var(--text-primary);
   transform: scale(1.02);
 }
 
 .toggle-options-btn:focus-visible {
   outline: none;
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
@@ -356,14 +356,14 @@ defineExpose({ open, close })
   color: var(--text-muted);
   padding: var(--space-1) var(--space-2);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
 }
 
 /* Transitions */
 .modal-enter-active,
 .modal-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-normal) var(--ease-out);
 }
 
 .modal-enter-from,
@@ -373,7 +373,7 @@ defineExpose({ open, close })
 
 .modal-enter-active .command-palette-modal,
 .modal-leave-active .command-palette-modal {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform var(--duration-normal) var(--var(--ease-out)-out), opacity var(--duration-normal) ease;
 }
 
 .modal-enter-from .command-palette-modal {
@@ -388,7 +388,7 @@ defineExpose({ open, close })
 
 .slide-down-enter-active,
 .slide-down-leave-active {
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .slide-down-enter-from,
@@ -425,7 +425,7 @@ defineExpose({ open, close })
   .command-palette-overlay,
   .command-palette-modal {
     animation: none;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--duration-normal) var(--ease-out);
   }
 }
 </style>

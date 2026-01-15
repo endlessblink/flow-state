@@ -1,7 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
 import { supabase } from '@/services/auth/supabase'
 import type { Node } from '@vue-flow/core'
-import type { CanvasGroup } from '@/stores/canvas/types'
+import type { CanvasGroup } from '@/types/canvas'
 import {
     getGroupAbsolutePosition,
     toAbsolutePosition,

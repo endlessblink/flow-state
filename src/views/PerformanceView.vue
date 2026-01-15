@@ -309,17 +309,17 @@ const saveAsBaseline = () => {
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg-tint);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: var(--space-6) 2rem;
   margin-bottom: 2rem;
 }
 
@@ -332,7 +332,7 @@ const saveAsBaseline = () => {
 }
 
 .header-content--performance p {
-  margin: 0.25rem 0 0;
+  margin: var(--space-1) 0 0;
   opacity: 0.6;
 }
 
@@ -345,16 +345,16 @@ const saveAsBaseline = () => {
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  gap: var(--space-6);
   grid-column: 1 / -1;
 }
 
 .card {
-  padding: 1.5rem;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  transition: transform 0.2s;
+  transition: transform var(--duration-normal);
 }
 
 .card:hover {
@@ -363,7 +363,7 @@ const saveAsBaseline = () => {
 
 .card h3 {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   opacity: 0.5;
@@ -372,14 +372,14 @@ const saveAsBaseline = () => {
 .stat-value {
   font-size: 2rem;
   font-weight: 700;
-  margin: 0.5rem 0;
-  color: #6366f1;
+  margin: var(--space-2) 0;
+  color: var(--color-indigo);
 }
 
 .grade-display {
   font-size: 5rem;
   font-weight: 800;
-  margin: 1rem 0;
+  margin: var(--space-4) 0;
   line-height: 1;
   text-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
   color: #ff6b6b; /* Brighter red for accessibility */
@@ -391,11 +391,11 @@ const saveAsBaseline = () => {
 .grade-d { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); } /* Added for consistency */
 
 .results-container {
-  padding: 1.5rem;
+  padding: var(--space-6);
 }
 
 .table-wrapper {
-  margin-top: 1.5rem;
+  margin-top: var(--space-6);
   overflow-x: auto;
 }
 
@@ -406,15 +406,15 @@ table {
 
 th {
   text-align: left;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--glass-border);
   opacity: 0.6;
   font-weight: 500;
 }
 
 td {
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--glass-border-faint);
 }
 
 .test-name {
@@ -422,41 +422,41 @@ td {
 }
 
 .sidebar {
-  padding: 1.5rem;
+  padding: var(--space-6);
   height: fit-content;
 }
 
 .sidebar h2 {
-  font-size: 1.25rem;
+  font-size: var(--space-5);
   margin-top: 0;
 }
 
 .sidebar ul {
-  padding-left: 1.25rem;
-  margin: 1rem 0;
+  padding-left: var(--space-5);
+  margin: var(--space-4) 0;
 }
 
 .sidebar li {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
   font-size: 0.9rem;
   line-height: 1.4;
 }
 
 .baseline-tools {
   margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--glass-border);
 }
 
 .footer-note {
-  margin-top: 1rem;
-  font-size: 0.75rem;
+  margin-top: var(--space-4);
+  font-size: var(--text-xs);
   opacity: 0.5;
 }
 
 .status-badge {
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
+  padding: var(--space-1) 0.6rem;
+  border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 700;
 }
@@ -471,11 +471,11 @@ td {
 
 .btn {
   padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: none;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .btn-primary { background: #6366f1; color: white; }
@@ -487,16 +487,16 @@ td {
 .progress-bar {
   width: 60px;
   height: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
   border-radius: 3px;
   display: inline-block;
-  margin-right: 0.5rem;
+  margin-right: var(--space-2);
   vertical-align: middle;
 }
 
 .progress {
   height: 100%;
-  background: #6366f1;
+  background: var(--color-indigo);
   border-radius: 3px;
 }
 </style>

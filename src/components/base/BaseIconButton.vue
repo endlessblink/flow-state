@@ -109,7 +109,7 @@ defineEmits<{
 
 .base-icon-button.is-active:hover:not(:disabled) {
   border-color: var(--brand-hover);
-  background: rgba(78, 205, 196, 0.15);
+  background: var(--brand-primary-bg-medium);
 }
 
 /* Variant: Primary (teal) */
@@ -121,14 +121,14 @@ defineEmits<{
 
 .base-icon-button.variant-primary:hover:not(:disabled) {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
 }
 
 /* Variant: Success (green) - stroke only */
 .base-icon-button.variant-success {
   background: rgba(16, 185, 129, 0.05);
   border-color: rgba(16, 185, 129, 0.3);
-  color: #4ade80;
+  color: var(--color-success);
 }
 
 .base-icon-button.variant-success:hover:not(:disabled) {
@@ -140,7 +140,7 @@ defineEmits<{
 .base-icon-button.variant-warning {
   background: rgba(245, 158, 11, 0.05);
   border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .base-icon-button.variant-warning:hover:not(:disabled) {
@@ -157,6 +157,6 @@ defineEmits<{
 
 .base-icon-button.variant-danger:hover:not(:disabled) {
   border-color: rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
 }
 </style>

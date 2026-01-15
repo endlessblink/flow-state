@@ -7,7 +7,7 @@ import type { Ref, ComputedRef } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
 import type { Task } from '../stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
-import type { CanvasGroup } from '@/stores/canvas/types'
+import type { CanvasGroup } from '@/types/canvas'
 import { guardTaskCreation } from '../utils/demoContentGuard'
 
 declare global {

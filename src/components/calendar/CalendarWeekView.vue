@@ -235,7 +235,7 @@ const {
   font-weight: var(--font-bold);
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 2px;
+  margin-bottom: var(--space-0_5);
 }
 
 .week-day-date {
@@ -302,8 +302,8 @@ const {
 
 .week-event {
   position: absolute;
-  left: 4px;
-  right: 4px;
+  left: var(--space-1);
+  right: var(--space-1);
   background: var(--surface-tertiary);
   border-left: 3px solid var(--accent-primary);
   border-radius: var(--radius-md);
@@ -327,7 +327,7 @@ const {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .event-header {
@@ -345,7 +345,7 @@ const {
 
 .event-actions {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0_5);
   opacity: 0;
   transition: opacity var(--duration-fast);
 }
@@ -355,7 +355,7 @@ const {
 }
 
 .event-duration {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
@@ -385,11 +385,11 @@ const {
 
 .project-stripe {
   width: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   height: calc(100% - 4px);
   position: absolute;
-  left: 2px;
-  top: 2px;
+  left: var(--space-0_5);
+  top: var(--space-0_5);
 }
 
 .project-emoji-stripe {
@@ -397,7 +397,7 @@ const {
   display: flex;
   align-items: center;
   justify-content: center;
-  left: 4px;
+  left: var(--space-1);
 }
 
 .priority-stripe {
@@ -406,7 +406,7 @@ const {
   height: calc(100% - 8px);
   position: absolute;
   left: 0;
-  top: 4px;
+  top: var(--space-1);
 }
 
 .resize-handle {
@@ -428,7 +428,7 @@ const {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
 }
 

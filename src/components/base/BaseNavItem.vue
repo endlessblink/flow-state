@@ -474,7 +474,7 @@ const handleDrop = (event: DragEvent) => {
 
 /* Red highlight when mouse enters an invalid target */
 .base-nav-item.is-drag-target.is-drag-invalid {
-  background: rgba(255, 107, 107, 0.1) !important;
+  background: var(--color-danger-bg-light) !important;
   border-color: rgba(255, 107, 107, 0.3) !important;
   opacity: 0.6;
   cursor: not-allowed;

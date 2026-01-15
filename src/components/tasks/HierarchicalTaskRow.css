@@ -39,7 +39,7 @@
 .task-row--selected {
     background-color: rgba(78, 205, 196, 0.05);
     border-left: 3px solid var(--brand-primary);
-    border-bottom-color: rgba(78, 205, 196, 0.2);
+    border-bottom-color: var(--brand-primary-bg-heavy);
 }
 
 .task-row--completed {
@@ -78,7 +78,7 @@
 
 .task-row__status-select {
     padding: var(--space-1) var(--space-2);
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--glass-bg-soft);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
@@ -150,13 +150,13 @@
     width: var(--progress);
     background: var(--brand-gradient-primary);
     border-radius: var(--radius-full);
-    transition: width 0.3s ease;
+    transition: width var(--duration-slow) var(--ease-out);
 }
 
 .task-row__progress-text {
-    margin-left: calc(100% + 8px);
+    margin-left: calc(100% + var(--space-2));
     /* Push text outside bar */
-    font-size: 11px;
+    font-size: var(--text-xs);
     color: var(--text-tertiary);
     font-weight: 500;
     min-width: 32px;
@@ -242,7 +242,7 @@
 
 /* ADHD-friendly: Subtle row striping for scanability */
 .hierarchical-task-row:nth-child(even) .task-row {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--glass-bg-light);
 }
 
 .hierarchical-task-row:nth-child(even) .task-row:hover {

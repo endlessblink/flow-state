@@ -64,19 +64,19 @@ export function useCanvasConnections(
         const targetTask = taskStore.tasks.find(t => t.id === target)
 
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
-            const dependsOn = targetTask.dependsOn || []
-            if (!dependsOn.includes(source)) {
-                // Await the async update before syncing edges
-                await taskStore.updateTaskWithUndo(target, { dependsOn: [...dependsOn, source] })
+            // SUBTASK MODEL: Connection makes target a direct child of source (nested hierarchy)
+            // Only set if target doesn't already have a parent
+            if (!targetTask.parentTaskId) {
+                await taskStore.updateTaskWithUndo(target, { parentTaskId: source })
                 deps.syncEdges()
             }
         }
     })
 
-    const disconnectEdge = () => {
+    const disconnectEdge = async () => {
         if (!state.selectedEdge.value) return
 
-        const { source, target, id: edgeId } = state.selectedEdge.value
+        const { target, id: edgeId } = state.selectedEdge.value
         const targetTask = taskStore.tasks.find(t => t.id === target)
 
         state.recentlyRemovedEdges.value.add(edgeId)
@@ -85,10 +85,9 @@ export function useCanvasConnections(
             state.recentlyRemovedEdges.value.delete(edgeId)
         }, 2000)
 
-        // Update task dependencies
-        if (targetTask && targetTask.dependsOn) {
-            const updatedDependsOn = targetTask.dependsOn.filter(id => id !== source)
-            taskStore.updateTaskWithUndo(targetTask.id, { dependsOn: updatedDependsOn })
+        // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
+        if (targetTask && targetTask.parentTaskId) {
+            await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
             deps.syncEdges()
         }
 
@@ -124,7 +123,7 @@ export function useCanvasConnections(
         const edge = event.edge
         if (!edge) return
 
-        const { source, target, id: edgeId } = edge
+        const { target, id: edgeId } = edge
         const targetTask = taskStore.tasks.find(t => t.id === target)
 
         // Add to recently removed to prevent zombie edge reappearing
@@ -133,10 +132,9 @@ export function useCanvasConnections(
             state.recentlyRemovedEdges.value.delete(edgeId)
         }, 2000)
 
-        // Update task dependencies
-        if (targetTask && targetTask.dependsOn) {
-            const updatedDependsOn = targetTask.dependsOn.filter(id => id !== source)
-            await taskStore.updateTaskWithUndo(targetTask.id, { dependsOn: updatedDependsOn })
+        // SUBTASK MODEL: Clear parentTaskId to remove subtask relationship
+        if (targetTask && targetTask.parentTaskId) {
+            await taskStore.updateTaskWithUndo(targetTask.id, { parentTaskId: null })
             deps.syncEdges()
         }
     }

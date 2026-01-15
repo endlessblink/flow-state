@@ -1,5 +1,5 @@
 <template>
-  <div ref="selectRef" class="custom-select">
+  <div ref="selectRef" class="custom-select" :class="{ 'is-compact': compact }">
     <button
       ref="triggerElement"
       type="button"
@@ -13,7 +13,7 @@
       @keydown.esc="closeDropdown"
     >
       <span class="select-value">{{ displayValue }}</span>
-      <ChevronDown :size="14" class="select-icon" :class="{ 'is-open': isOpen }" />
+      <ChevronDown :size="compact ? 12 : 14" class="select-icon" :class="{ 'is-open': isOpen }" />
     </button>
 
     <Teleport to="body">
@@ -63,10 +63,12 @@ interface Props {
   modelValue: string | number | null
   options: SelectOption[]
   placeholder?: string
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Select...'
+  placeholder: 'Select...',
+  compact: false
 })
 
 const emit = defineEmits<{
@@ -78,6 +80,9 @@ const triggerElement = ref<HTMLButtonElement>()
 const dropdownRef = ref<HTMLElement>()
 const isOpen = ref(false)
 const focusedIndex = ref(0)
+
+// Unique ID for this dropdown instance (for global close coordination)
+const dropdownId = Math.random().toString(36).substring(2, 9)
 
 // Dropdown positioning
 const dropdownStyle = ref<Record<string, string>>({
@@ -104,7 +109,7 @@ const calculateDropdownPosition = () => {
     position: 'fixed',
     top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
     left: `${rect.left}px`,
-    minWidth: `${rect.width}px`,
+    minWidth: `max(${rect.width}px, 150px)`,
     maxWidth: `max(${rect.width}px, calc(100vw - ${rect.left}px - 16px))`
   }
 }
@@ -117,6 +122,8 @@ const displayValue = computed(() => {
 const toggleDropdown = async () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
+    // Close any other open dropdowns
+    window.dispatchEvent(new CustomEvent('close-all-dropdowns', { detail: { except: dropdownId } }))
     // Focus current selection
     const selectedIndex = props.options.findIndex(opt => opt.value === props.modelValue)
     focusedIndex.value = selectedIndex >= 0 ? selectedIndex : 0
@@ -197,16 +204,26 @@ const handleScroll = (event: Event) => {
   }
 }
 
+// Handle global close event (when another dropdown opens)
+const handleGlobalClose = (event: Event) => {
+  const customEvent = event as CustomEvent<{ except: string }>
+  if (customEvent.detail?.except !== dropdownId && isOpen.value) {
+    closeDropdown()
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   window.addEventListener('resize', handleResize)
   window.addEventListener('scroll', handleScroll, true)
+  window.addEventListener('close-all-dropdowns', handleGlobalClose)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('scroll', handleScroll, true)
+  window.removeEventListener('close-all-dropdowns', handleGlobalClose)
 })
 
 // Reset focused index when dropdown closes
@@ -232,13 +249,11 @@ watch(isOpen, (newVal) => {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
 
-  /* Glass morphism base - more transparent for glass effect */
-  background: rgba(30, 30, 50, 0.35);
+  /* Standardized input styling */
+  background: var(--input-bg, var(--glass-bg-medium));
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
-
-  /* Stroke border - more visible */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-lg);
 
   color: var(--text-primary);
@@ -252,17 +267,17 @@ watch(isOpen, (newVal) => {
 }
 
 .select-trigger:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
   box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
 }
 
 .select-trigger:focus {
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
 .select-trigger.is-open {
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
 }
 
@@ -286,21 +301,15 @@ watch(isOpen, (newVal) => {
 
 .select-dropdown {
   /* Position is set via inline style from Teleport */
-  z-index: 9999;
+  z-index: 99999;
 
-  /* Glass morphism - transparent with blur (matches BasePopover) */
-  background: rgba(20, 20, 20, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-
-  /* Stroke border */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Use design tokens for consistent overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
+  box-shadow: var(--overlay-component-shadow);
   border-radius: var(--radius-xl);
-
-  /* Layered shadow */
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
 
   max-height: 240px;
   overflow-y: auto;
@@ -317,37 +326,34 @@ watch(isOpen, (newVal) => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2_5) var(--space-3);
 
-  /* Transparent base with stroke on interaction */
+  /* Clean styling matching SectionSelector */
   background: transparent;
-  border: 1px solid transparent;
   border-radius: var(--radius-md);
 
   color: var(--text-primary);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
+  transition: all var(--duration-normal) var(--ease-out);
   user-select: none;
+  white-space: nowrap;
 }
 
 .select-option:hover,
 .select-option.is-focused {
-  background: var(--glass-bg-light);
-  border-color: var(--glass-border);
+  background: var(--glass-bg-heavy);
 }
 
 .select-option.is-selected {
-  /* Matches BaseDropdown styling */
-  background: var(--glass-bg-medium);
-  border-color: var(--brand-primary);
+  background: var(--brand-primary-bg-medium);
   color: var(--brand-primary);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-medium);
 }
 
 .select-option.is-selected:hover,
 .select-option.is-selected.is-focused {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-heavy);
 }
 
 /* Dropdown transition */
@@ -363,9 +369,13 @@ watch(isOpen, (newVal) => {
 }
 
 /* ============================================
-   INLINE VARIANT - for use inside metadata bars
+   COMPACT VARIANT - for use inside metadata bars
    ============================================ */
-.custom-select:global(.inline-custom-select) .select-trigger {
+.custom-select.is-compact {
+  width: auto;
+}
+
+.custom-select.is-compact .select-trigger {
   /* Remove glass morphism - parent provides container styling */
   background: transparent;
   backdrop-filter: none;
@@ -376,26 +386,27 @@ watch(isOpen, (newVal) => {
   padding: 0;
   min-height: unset;
   height: auto;
+  width: auto;
 
   /* Remove hover effects that conflict with parent */
   box-shadow: none;
 }
 
-.custom-select:global(.inline-custom-select) .select-trigger:hover,
-.custom-select:global(.inline-custom-select) .select-trigger:focus,
-.custom-select:global(.inline-custom-select) .select-trigger.is-open {
+.custom-select.is-compact .select-trigger:hover,
+.custom-select.is-compact .select-trigger:focus,
+.custom-select.is-compact .select-trigger.is-open {
   background: transparent;
   border: none;
   box-shadow: none;
 }
 
-.custom-select:global(.inline-custom-select) .select-value {
+.custom-select.is-compact .select-value {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-primary);
 }
 
-.custom-select:global(.inline-custom-select) .select-icon {
+.custom-select.is-compact .select-icon {
   color: var(--text-tertiary);
 }
 </style>

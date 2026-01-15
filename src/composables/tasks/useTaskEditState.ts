@@ -20,6 +20,13 @@ export function useTaskEditState(
         scheduledTime: '09:00',
         estimatedDuration: 60,
         projectId: '' as string,
+        recurrence: {
+            isEnabled: false,
+            rule: { pattern: 'none' },
+            endCondition: { type: 'never' },
+            exceptions: [],
+            generatedInstances: []
+        } as any,
         createdAt: new Date(),
         updatedAt: new Date()
     })

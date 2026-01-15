@@ -491,7 +491,7 @@ const handleResizeEnd = (event: unknown) => {
 
 .section-date-suffix.clickable {
   cursor: pointer;
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
   transition: all var(--duration-fast);
 }
@@ -507,7 +507,7 @@ const handleResizeEnd = (event: unknown) => {
   /* Position badge absolutely to prevent overflow */
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: var(--space-3);
   transform: translateY(-50%);
 
   /* Badge styling */
@@ -535,7 +535,7 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 .hidden-indicator {
-  font-size: 10px;
+  font-size: var(--text-xs);
   opacity: 0.7;
   animation: hidden-pulse 2s ease-in-out infinite;
 }
@@ -566,7 +566,7 @@ const handleResizeEnd = (event: unknown) => {
   cursor: pointer;
   /* TASK-073: Subtle dashed outline for collapsed state distinction */
   border-style: dashed !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: var(--border-interactive) !important;
   outline: 1px dashed rgba(255, 255, 255, 0.08);
   outline-offset: 2px;
 }
@@ -601,8 +601,8 @@ const handleResizeEnd = (event: unknown) => {
 .section-node.collapsed::after {
   content: '';
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: var(--space-2);
+  right: var(--space-2);
   width: 0;
   height: 0;
   border-left: 4px solid transparent;
@@ -621,11 +621,11 @@ const handleResizeEnd = (event: unknown) => {
 .collect-btn {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0_5);
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  padding: 2px 4px;
+  padding: var(--space-0_5) var(--space-1);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -648,7 +648,7 @@ const handleResizeEnd = (event: unknown) => {
   color: var(--blue-text, #3b82f6);
   font-size: 9px;
   font-weight: var(--font-bold);
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-full);
   min-width: 14px;
   text-align: center;
@@ -658,7 +658,7 @@ const handleResizeEnd = (event: unknown) => {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   background: var(--glass-bg-solid);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -695,7 +695,7 @@ const handleResizeEnd = (event: unknown) => {
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
-  padding: 2px;
+  padding: var(--space-0_5);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -721,7 +721,7 @@ const handleResizeEnd = (event: unknown) => {
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
-  padding: 2px;
+  padding: var(--space-0_5);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);

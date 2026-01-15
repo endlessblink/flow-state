@@ -71,9 +71,9 @@ defineProps<{
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-tertiary);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--glass-bg-soft);
   border-radius: var(--radius-full);
-  padding: 1px 6px;
+  padding: 1px var(--space-1_5);
   min-width: 20px;
   text-align: center;
   transition: all var(--duration-fast);
@@ -81,7 +81,7 @@ defineProps<{
 
 .subtask-count--progress {
   color: var(--brand-primary);
-  background-color: rgba(78, 205, 196, 0.1);
+  background-color: var(--brand-primary-bg-subtle);
 }
 
 .subtask-count--completed {

@@ -320,6 +320,7 @@ const {
   handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect, handleConnectStart, handleConnectEnd,
   handleEdgesChange, handleNodesChange,
   handleNodeContextMenu, handleEdgeContextMenu, handleEdgeDoubleClick,
+  handleNodeClick, handleSelectionChange,
   
   // From consolidated features
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
@@ -339,56 +340,6 @@ const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }
-// TASK-262: Handle node click - add to selection without deselecting others
-const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: any }) => {
-  const { node } = event
-  const nodeId = node.id
-  const currentSelection = [...canvasStore.selectedNodeIds]
-
-  // Type guard for mouse event
-  const mouseEvent = event.event as MouseEvent
-  
-  console.log('[DEBUG] CanvasView handleNodeClick', {
-    nodeId,
-    ctrl: mouseEvent.ctrlKey,
-    meta: mouseEvent.metaKey,
-    shift: mouseEvent.shiftKey,
-    currentSelection
-  })
-
-  let newSelection: string[]
-
-  // If Ctrl/Cmd OR Shift is held, toggle selection
-  if (mouseEvent.ctrlKey || mouseEvent.metaKey || mouseEvent.shiftKey) {
-    if (currentSelection.includes(nodeId)) {
-      // Deselect this node
-      newSelection = currentSelection.filter(id => id !== nodeId)
-    } else {
-      // Add to selection
-      newSelection = [...currentSelection, nodeId]
-    }
-  } else {
-    // Standard behavior: Single click replaces selection
-    newSelection = [nodeId]
-  }
-
-  // Update store
-  canvasStore.selectedNodeIds = newSelection
-
-  // Update Vue Flow's visual selection state
-  // Set selected:true for all nodes in newSelection, false for others
-  nodes.value.forEach((n: any) => {
-    n.selected = newSelection.includes(n.id)
-  })
-}
-
-const handleSelectionChange = (params: any) => {
-  // TASK-262 FIX: Accept all selection changes from Vue Flow
-  // This allows clicking on empty space to clear selection
-  const newSelection = params?.nodes?.map((n: any) => n.id) ?? []
-  canvasStore.selectedNodeIds = newSelection
-}
-
 // UI Wrappers
 const handleOpenSectionSettings = (id: string) => {
     const section = canvasStore.groups.find(g => g.id === id)

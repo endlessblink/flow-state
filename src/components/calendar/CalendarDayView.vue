@@ -309,12 +309,12 @@ const {
 }
 
 .time-slot.current-time {
-  background: rgba(239, 68, 68, 0.02);
+  background: var(--color-danger-bg-subtle);
 }
 
 .slot-task {
   position: relative;
-  margin: 2px 4px;
+  margin: var(--space-0_5) var(--space-1);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
@@ -388,11 +388,11 @@ const {
 
 .project-stripe {
   width: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   height: calc(100% - 8px);
   position: absolute;
-  left: 4px;
-  top: 4px;
+  left: var(--space-1);
+  top: var(--space-1);
 }
 
 .project-emoji-stripe {
@@ -400,7 +400,7 @@ const {
   display: flex;
   align-items: center;
   justify-content: center;
-  left: 6px;
+  left: var(--space-1_5);
 }
 
 .project-color-stripe {
@@ -413,7 +413,7 @@ const {
   height: calc(100% - 12px);
   position: absolute;
   left: 0;
-  top: 6px;
+  top: var(--space-1_5);
 }
 
 .resize-handle {
@@ -443,7 +443,7 @@ const {
 .slot-task.is-primary.is-hovered .resize-handle {
   opacity: 1 !important;
   pointer-events: auto !important;
-  background: rgba(99, 102, 241, 0.4) !important;
+  background: var(--color-indigo-alpha-40) !important;
   transition: none !important;
 }
 
@@ -451,7 +451,7 @@ const {
   position: absolute;
   left: 0;
   right: 0;
-  background: rgba(99, 102, 241, 0.15);
+  background: var(--color-indigo-bg-medium);
   border: 2px dashed rgba(99, 102, 241, 0.6);
   border-radius: var(--radius-md);
   pointer-events: none;
@@ -459,15 +459,15 @@ const {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 4px;
+  padding-bottom: var(--space-1);
 }
 
 .resize-preview-overlay .preview-duration {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: rgba(99, 102, 241, 0.9);
   background: rgba(255, 255, 255, 0.9);
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
 }
 
@@ -488,7 +488,7 @@ const {
   background: var(--color-danger);
   box-shadow: 0 0 8px var(--color-danger), 0 0 16px rgba(239, 68, 68, 0.4);
   flex-shrink: 0;
-  margin-left: -6px;
+  margin-left: -var(--space-1_5);
 }
 
 .time-indicator-line {
@@ -513,22 +513,22 @@ const {
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .ghost-title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-sm);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .ghost-duration {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 500;
   opacity: 0.9;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 12px;
+  background: var(--border-hover);
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: var(--radius-lg);
 }
 
 .status-indicator {
@@ -537,28 +537,28 @@ const {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
 }
 
 .status-indicator:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-border);
 }
 
 .remove-from-calendar-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 4px;
+  padding: var(--space-1);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all var(--duration-fast);
   line-height: 1;
 }
 
 .remove-from-calendar-btn:hover {
   color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
 }
 </style>

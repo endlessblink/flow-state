@@ -105,11 +105,11 @@ const clearAllFilters = () => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
   background: transparent;
   border: none;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   height: auto;
   min-height: 44px;
   width: auto;
@@ -132,8 +132,8 @@ const clearAllFilters = () => {
   border: 1px solid var(--danger-border-medium);
   color: var(--color-danger);
   border-radius: var(--radius-md);
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: var(--space-1_5) var(--space-3);
+  font-size: var(--text-sm);
   outline: none;
   cursor: pointer;
   height: 32px;

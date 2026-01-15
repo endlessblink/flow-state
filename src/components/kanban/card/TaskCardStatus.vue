@@ -69,12 +69,12 @@ const statusTooltip = computed(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-inline-start: 2px;
+  margin-inline-start: var(--space-0_5);
   margin-inline-end: var(--space-2);
   transition: all var(--duration-fast) ease;
   cursor: pointer;
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
 }
 
 .status-icon-button:hover {

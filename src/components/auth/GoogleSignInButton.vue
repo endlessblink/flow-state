@@ -121,7 +121,7 @@ async function handleGoogleSignIn() {
 
   /* Interaction */
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 
   /* Remove default button styles */
   outline: none;

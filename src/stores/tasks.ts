@@ -27,7 +27,6 @@ export const getTaskInstances = (task: Task) => task.recurringInstances || []
  * Optimized for Supabase PostgreSQL
  */
 export const clearHardcodedTestTasks = async () => {
-  console.log('🗑️ Clearing hardcoded test tasks only (preserving real tasks)...')
   const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
   const { useDemoGuard } = await import('@/composables/useDemoGuard')
 
@@ -49,13 +48,9 @@ export const clearHardcodedTestTasks = async () => {
     const tasksToDelete = savedTasks.filter(task => testTaskPatterns.some(pattern => pattern.test(task.title)))
 
     if (tasksToDelete.length > 0) {
-      console.log(`🗑️ Deleting ${tasksToDelete.length} test tasks from Supabase...`)
       for (const task of tasksToDelete) {
         await deleteTask(task.id)
       }
-      console.log(`✅ Test tasks cleared.`)
-    } else {
-      console.log('ℹ️ No test tasks found in Supabase.')
     }
   } catch (error) {
     console.error('❌ Failed to clear test tasks:', error)
@@ -141,13 +136,6 @@ export const useTaskStore = defineStore('tasks', () => {
     // A duplicate after this function means the push logic is racing with initial load
     if (import.meta.env.DEV) {
       const existsInStore = _rawTasks.value.some(t => t.id === taskId)
-      console.debug('[SYNC-INCOMING]', {
-        taskId: taskId.slice(0, 8),
-        isDeleted,
-        existsInStore,
-        storeCount: _rawTasks.value.length,
-        taskTitle: taskDoc?.title?.slice(0, 20) || '(deleted)'
-      })
     }
 
     try {
@@ -197,21 +185,16 @@ export const useTaskStore = defineStore('tasks', () => {
           // 1. If we are actively dragging/editing (manualOperationInProgress), ignore sync for now
           // 2. If local task is newer than incoming task (based on updatedAt), ignore sync (Last Write Wins)
           if (manualOperationInProgress.value) {
-            console.log(`🛡️[SYNC - PROTECT] Ignoring sync for ${taskId} during manual operation`)
             return
           }
 
           if (currentTask.updatedAt > normalizedTask.updatedAt) {
-            console.log(`🛡️[SYNC - PROTECT] Ignoring sync for ${taskId} - local version is newer(${currentTask.updatedAt.toISOString()} vs ${normalizedTask.updatedAt.toISOString()})`)
             return
           }
 
 
 
-          // BUG-FIX: Preserve local canvasPosition if remote doesn't have one
-          // This prevents sync from clearing positions when remote has no position data
           if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {
-            console.log(`🛡️[SYNC - PROTECT] Preserving local canvasPosition for ${taskId} - remote has no position`)
             normalizedTask.canvasPosition = currentTask.canvasPosition
             normalizedTask.isInInbox = currentTask.isInInbox
           }

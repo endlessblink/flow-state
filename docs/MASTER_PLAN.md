@@ -57,7 +57,7 @@
 | ~~**TASK-205**~~ | ✅ **DONE** **Restore Kanban Drag Animation** | **P2** | ✅ **DONE** (2026-01-11) | - |
 | ~~**BUG-206**~~ | ✅ **DONE** **Fix Kanban Card Date Formatting** | **P1** | ✅ **DONE** (2026-01-11) | - |
 | ~~**BUG-207**~~ | ✅ **DONE** **Fix Kanban Card Clipping on Hover** | **P1** | ✅ **DONE** (2026-01-11) | - |
-| **TASK-208** | **App-Wide Code Quality Refactoring** | **P1** | 📋 PLANNED | [See Details](#task-208-app-wide-code-quality-refactoring-planned) |
+| **TASK-208** | **App-Wide Code Quality Refactoring** | **P1** | 🔄 **IN PROGRESS** | [See Details](#task-208-app-wide-code-quality-refactoring-in-progress) |
 | ~~TASK-270~~ | ✅ **DONE** **Manual ESLint Remediation** | **P1** | ✅ **DONE** (2026-01-13) | [See Details](#task-270-manual-eslint-remediation-done) |
 | ~~TASK-209~~ | ✅ **DONE** | TypeScript & Test Suite Cleanup | P0 | ✅ **DONE** (2026-01-13) | [See Details](#task-209-typescript-test-suite-cleanup) |
 | ~~**TASK-215**~~ | ✅ **DONE** **Global Group Creation & Canvas Navigation** | **P2** | ✅ **DONE** (2026-01-13) | [See Details](#task-215-global-group-creation--canvas-navigation-done) |
@@ -89,9 +89,10 @@
 | ~~**TASK-275**~~ | ✅ **DONE** **Dev-Manager Complexity Pill** | **P2** | ✅ **DONE** (2026-01-13) | Add complexity badge to kanban cards |
 | ~~**BUG-278**~~ | ✅ **DONE** **Multi-Select Regression (TASK-262)** | **P0** | ✅ **DONE** (2026-01-13) | Fix applyNodeChanges dependency in useCanvasInteractions |
 | ~~**BUG-281**~~ | ✅ **DONE** **Canvas Edge Missing Error** | **P0** | ✅ **DONE** (2026-01-14) | Fix syncEdges to respect task filters (Hide Done Tasks) |
-| **TASK-285** | **Multi-Device E2E Tests** | **P2** | 📋 PLANNED | [See Details](#roadmaps) (Descoped from ROAD-013) |
-| **TASK-282** | **Overdue Badge with Reschedule Popup** | **P2** | 🔄 **IN PROGRESS** | Show "Overdue" badge on tasks; click opens date picker (Today/Tomorrow/Weekend/Custom) |
-| **TASK-283** | **Fix Drag-to-Group Date Assignment** | **P1** | 🔄 **IN PROGRESS** | Dragging task to "Today" group should set dueDate even if group has other assignOnDrop settings |
+| ~~**TASK-285**~~ | ✅ **DONE** **Multi-Device E2E Tests** | **P2** | ✅ **DONE** (2026-01-14) | [See Details](#roadmaps) (Descoped from ROAD-013) |
+| ~~**TASK-282**~~ | ✅ **DONE** **Overdue Badge with Reschedule Popup** | **P2** | ✅ **DONE** (2026-01-14) | Show "Overdue" badge on tasks; click opens date picker (Today/Tomorrow/Weekend/Custom) |
+| ~~**TASK-283**~~ | ✅ **DONE** **Fix Drag-to-Group Date Assignment** | **P1** | ✅ **DONE** (2026-01-14) | Dragging task to "Today" group should set dueDate even if group has other assignOnDrop settings |
+| ~~**BUG-286**~~ | ✅ **DONE** **Fix Kanban View Clipping** | **P1** | ✅ **DONE** (2026-01-14) | - |
 
 ---
 
@@ -99,6 +100,54 @@
 
 > [!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+### ~~TASK-283~~: Fix Drag-to-Group Date Assignment (✅ DONE)
+**Priority**: P1-HIGH
+**Status**: ✅ Done (2026-01-14)
+
+Dragging task to "Today" group should set dueDate even if group has other assignOnDrop settings.
+
+**Solution**: Fixed `getSectionProperties()` in `useCanvasSectionProperties.ts` to ALWAYS detect power keywords from section name first, then let explicit assignOnDrop settings override. Previously it returned early if assignOnDrop existed, skipping date detection.
+
+**Requirements**:
+- [x] When task dropped on day-of-week group (Today, Monday, etc.), set task's dueDate
+- [x] Should work regardless of group's other assignOnDrop settings
+- [x] Preserve existing assignOnDrop behavior for non-date properties
+
+### ~~BUG-286~~: Fix Kanban View Clipping (✅ DONE)
+**Priority**: P1-HIGH
+**Status**: ✅ Done (2026-01-14)
+
+Internal glows and outer shadows of task cards were being clipped by parent containers with `overflow-y: auto`.
+
+**Solution**:
+- Implemented "Negative Margin + Padding" trick in `global-overrides.css` on `.tasks-container`. This expands the internal horizontal boundary by 24px (`var(--space-6)`) for shadow bleed without shifting cards or increasing column widths.
+- Elevated hovered cards with `z-index: 10` in `TaskCard.css` to prevent clipping by neighboring cards.
+- Removed restrictive `overflow-x: auto` in `TaskCardBadges.vue` that clipped internal badge glows.
+
+**Requirements**:
+- [x] Prevent clipping of task card hover glows in Board View
+- [x] Prevent clipping of metadata badge glows (project dots, etc.)
+- [x] Ensure smooth visual transitions without layout shifts (Invisible fix)
+
+### ~~TASK-282~~: Overdue Badge with Reschedule Popup (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ Done (2026-01-14)
+
+Show "Overdue" badge on tasks; click opens date picker (Today/Tomorrow/Weekend/Custom).
+
+**Implementation**:
+- Created `OverdueBadge.vue` component with dropdown menu
+- Added `isOverdue` computed in `useTaskNodeState.ts`
+- Updated `TaskNodeMeta.vue` to show OverdueBadge when task is overdue
+- Added `handleReschedule()` in `useTaskNodeActions.ts` for date updates
+
+**Requirements**:
+- [x] Add visual "Overdue" badge to tasks past due date
+- [x] Click badge opens reschedule popup
+- [x] Quick options: Today, Tomorrow, This Weekend, Next Week, Pick a date...
+
+---
 
 ### Task Dependency Index (PWA Prerequisites) - ✅ ALL COMPLETE
 
@@ -153,11 +202,13 @@
 3. Fix conflict resolution UI. (Descoped to "Silent Retry + Error Toast")
 4. Test multi-device scenarios E2E. (Moved to TASK-285)
 
-### TASK-285: Multi-Device E2E Tests (🔄 IN PROGRESS)
+### ~~TASK-285~~: Multi-Device E2E Tests (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: In Progress
+**Status**: ✅ DONE
+**Completed**: January 14, 2026
 - **Goal**: Verify race conditions across two simulated clients.
-- **Context**: Descoped from ROAD-013 to unblock release. Sync logic is manually verified.
+- **Outcome**: Tests implemented for Status Toggle and Drag & Drop. Skipped in CI due to environment limits, but logic verified manually.
+- **Context**: Descoped from ROAD-013 to unblock release.
 
 ### ROAD-010: Gamification - "Cyberflow" (⏸️ PAUSED)
 **Priority**: P3-LOW
@@ -207,17 +258,6 @@
 
 <details id="active-task-details">
 <summary><b>Active Task Details</b></summary>
-
-### TASK-283: Fix Drag-to-Group Date Assignment (🔄 IN PROGRESS)
-**Priority**: P1-HIGH
-**Status**: 🔄 IN PROGRESS
-
-Dragging task to "Today" group should set dueDate even if group has other assignOnDrop settings.
-
-**Requirements**:
-- [ ] When task dropped on day-of-week group (Today, Monday, etc.), set task's dueDate
-- [ ] Should work regardless of group's other assignOnDrop settings
-- [ ] Preserve existing assignOnDrop behavior for non-date properties
 
 ### ~~TASK-209~~: TypeScript & Test Suite Cleanup (✅ DONE)
 **Priority**: P0-CRITICAL
@@ -706,7 +746,7 @@ This repeats every few seconds causing visual flickering and unnecessary re-rend
 
 ---
 
-### TASK-208: App-Wide Code Quality Refactoring (📋 PLANNED)
+### TASK-208: App-Wide Code Quality Refactoring (🔄 IN PROGRESS)
 **Priority**: P3-LOW
 **Estimated Effort**: 10-15 hours
 **Created**: January 11, 2026
@@ -745,9 +785,9 @@ All detailed prompts are in `docs/prompts/refactoring-code_11.126-10-21/`:
 - `canvas.ts` store - 814 LOC (needs modularization)
 
 **Execution Phases**:
-- [ ] **Phase 1** (1-2 hrs): Quick Wins - Archive cleanup, @ts-ignore fixes
-- [ ] **Phase 2** (3-5 hrs): Code Quality - Console cleanup, any type fixes
-- [ ] **Phase 3** (6-8 hrs): Architecture - Component splitting, store modularization
+- [x] **Phase 1: Quick Wins** (1-2 hrs) - Console cleanup, @ts-ignore fixes <!-- id: 7 -->
+- [ ] **Phase 2: Code Quality** (3-5 hrs) - Type refinement, replace `any` <!-- id: 8 -->
+- [ ] **Phase 3: Architecture** (6-8 hrs) - Component splitting, store modularization <!-- id: 9 -->
 
 **Related Work**:
 - TASK-189: System Tech Debt Audit (completed - identified these issues)
@@ -1512,10 +1552,32 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [x] Refactor `useAuthStore.ts` and `useDatabase.ts`.
 - [x] Migrated from PouchDB/CouchDB to Supabase.
 
-### TASK-017: KDE Plasma Widget (Plasmoid) (READY)
+### TASK-017: KDE Plasma Widget (Plasmoid) (🔄 IN PROGRESS)
 **Priority**: P3-LOW
-**Status**: 📋 PLANNED
-- Create a KDE Plasma 6 taskbar widget.
+**Status**: In Progress
+**Started**: January 15, 2026
+**Location**: `kde-widget/`
+
+**Goal**: Create a KDE Plasma 6 taskbar widget that displays Pomodoro timer status and task list, communicating directly with Supabase.
+
+**Technology**:
+- QML (Qt Meta Language) for UI
+- XMLHttpRequest for Supabase REST API calls
+- Plasma 6 PlasmoidItem as root element
+
+**Implementation Phases**:
+- [ ] Phase 1: Basic timer display widget (timer countdown, start/pause)
+- [ ] Phase 2: Supabase integration (fetch tasks, update status)
+- [ ] Phase 3: Config UI (API key entry, project URL)
+- [ ] Phase 4: Polish (icons, theming, error handling)
+
+**Security Approach**: User-entered API key stored in widget config (acceptable for personal use).
+
+**Testing**: `plasmoidviewer -a com.pomoflow.widget`
+
+**References**:
+- [KDE Plasma Widget Tutorial](https://develop.kde.org/docs/plasma/widget/)
+- [Plasma 6 Setup Guide](https://develop.kde.org/docs/plasma/widget/setup/)
 
 ### ~~TASK-039~~: Duplicate Systems Consolidation (✅ DONE)
 **Priority**: P1-HIGH
@@ -1525,10 +1587,12 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [x] Refactor `useBackupSystem` and `ForensicLogger` to use `integrity.ts`.
 - [x] Fixed all broken imports and MIME type errors following file deletions.
 
-### TASK-041: Implement Custom Recurrence Patterns (📋 PLANNED)
+### ~~TASK-041~~: Implement Custom Recurrence Patterns (✅ DONE)
 **Priority**: P2-MEDIUM
-**Status**: 📋 PLANNED
-- Define custom recurrence syntax and parsing logic.
+**Status**: ✅ DONE
+**Completed**: January 14, 2026
+- [x] Defined custom recurrence syntax and parsing logic.
+- [x] Implemented UI for custom recurrence rules with live preview.
 
 ### ~~TASK-046~~: Establish Canvas Performance Baselines (✅ DONE)
 **Priority**: P1-HIGH
@@ -1598,7 +1662,7 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 **Files Modified**:
 - `src/composables/useSupabaseDatabaseV2.ts` - `saveProjects` function
 
-### TASK-145: CanvasView Decomposition (🚀 NEXT)
+### ~~TASK-145~~: CanvasView Decomposition (✅ DONE)
 **Priority**: P3-LOW
 **Status**: 📋 PLANNED
 **Goal**: Reduce `CanvasView.vue` size (3400+ lines) by extracting UI components.
@@ -1620,7 +1684,7 @@ Reduced CSS container class redundancy (~25%) through shared utilities and BEM r
 - [x] Phase 6: Sanitization Cleanup - Deleted `inputSanitizer.ts` (12KB)
 - [x] Phase 7: Documentation - Created `docs/architecture/system-guide.md`
 
-### TASK-138: Refactor CanvasView Phase 2 (Store & UI)
+### ~~TASK-138~~: Refactor CanvasView Phase 2 (Store & UI) ✅ DONE
 **Priority**: P3-LOW
 **Goal**: Clean up the store layer and begin UI decomposition.
 ### TASK-137: Refactor CanvasView.vue Phase 1 (✅ DONE)
@@ -1968,14 +2032,15 @@ _rawGroups.value = loadedGroups // Respects deletions
 
 ---
 
-### TASK-164: Create Agent API Layer (📋 PLANNED)
+### ~~TASK-164~~: Create Agent API Layer (❌ WON'T DO)
 **Priority**: P3-LOW
+**Status**: ❌ WON'T DO
 **Created**: January 9, 2026
-**Todo File**: `todos/025-pending-p3-agent-native-api-layer.md`
+**Removed**: January 14, 2026
 
 **Problem**: No formal agent/tool API layer exists. Zoom controls require Vue context and aren't agent-accessible.
 
-**Proposed Fix**: Create `src/api/agentApi.ts` exposing store actions via `window.__pomoflowAgent`.
+**Resolution**: Removed - the proposed `window.__pomoflowAgent` pattern is too simple to be meaningful. Playwright already covers testing needs. If AI integration becomes a goal, MCP (Model Context Protocol) would be the proper foundation, not a thin CRUD wrapper.
 
 ---
 

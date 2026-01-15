@@ -313,7 +313,7 @@ onUnmounted(() => {
 }
 
 .project-emoji {
-  font-size: 24px;
+  font-size: var(--text-2xl);
   line-height: 1;
   flex-shrink: 0;
 }

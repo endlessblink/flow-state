@@ -176,7 +176,7 @@ defineExpose({
 
   /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
-    transition: opacity 0.2s ease;
+    transition: opacity var(--duration-normal) var(--ease-out);
   }
 }
 
@@ -195,7 +195,7 @@ defineExpose({
 /* Active state with improved feedback */
 .base-button:active:not(:disabled):not(.loading) {
   transform: translateY(-1px) scale(0.98);
-  transition: transform 0.1s ease;
+  transition: transform var(--duration-instant) var(--ease-out);
 }
 
 /* Focus state with visible indicator */
@@ -212,7 +212,7 @@ defineExpose({
   border: 2px solid transparent;
   border-radius: calc(var(--radius-lg) + 2px);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-normal) var(--ease-out);
   pointer-events: none;
 }
 
@@ -270,7 +270,7 @@ defineExpose({
 
 /* Button content transitions */
 .button-content {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-normal) var(--ease-out);
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -345,13 +345,13 @@ defineExpose({
 /* Variant: Secondary - Stroke only, transparent background */
 .base-button.variant-secondary {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--glass-border-hover);
   color: var(--text-secondary);
 }
 
 .base-button.variant-secondary:hover:not(:disabled):not(.loading) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-soft);
+  border-color: var(--border-interactive);
   color: var(--text-primary);
 }
 

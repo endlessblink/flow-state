@@ -67,7 +67,7 @@ const onLeave = () => {
   background-color: var(--brand-primary);
   border: 2px solid var(--surface-primary);
   box-shadow: var(--shadow-dark-md);
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   z-index: 100;
   pointer-events: auto;
 }
@@ -81,7 +81,7 @@ const onLeave = () => {
   height: 6px;
   border-radius: 50%;
   background-color: var(--surface-primary);
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .handle-hitzone {
@@ -97,52 +97,52 @@ const onLeave = () => {
 
 /* Position classes for each handle type */
 .handle-top-left {
-  top: -8px;
-  left: -8px;
+  top: -var(--space-2);
+  left: -var(--space-2);
 }
 
 .handle-top-right {
-  top: -8px;
-  right: -8px;
+  top: -var(--space-2);
+  right: -var(--space-2);
 }
 
 .handle-bottom-left {
-  bottom: -8px;
-  left: -8px;
+  bottom: -var(--space-2);
+  left: -var(--space-2);
 }
 
 .handle-bottom-right {
-  bottom: -8px;
-  right: -8px;
+  bottom: -var(--space-2);
+  right: -var(--space-2);
 }
 
 .handle-top {
-  top: -8px;
+  top: -var(--space-2);
   left: 50%;
   transform: translateX(-50%);
 }
 
 .handle-bottom {
-  bottom: -8px;
+  bottom: -var(--space-2);
   left: 50%;
   transform: translateX(-50%);
 }
 
 .handle-left {
-  left: -8px;
+  left: -var(--space-2);
   top: 50%;
   transform: translateY(-50%);
 }
 
 .handle-right {
-  right: -8px;
+  right: -var(--space-2);
   top: 50%;
   transform: translateY(-50%);
 }
 
 .handle-se {
-  bottom: -8px;
-  right: -8px;
+  bottom: -var(--space-2);
+  right: -var(--space-2);
 }
 
 /* Hover and active states */

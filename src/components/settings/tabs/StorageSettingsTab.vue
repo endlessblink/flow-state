@@ -327,7 +327,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  transition: all 0.3s ease;
+  transition: all var(--duration-slow) var(--ease-out);
 }
 
 .shadow-panel.is-loading {
@@ -414,7 +414,7 @@ onMounted(async () => {
   border-radius: var(--radius-xl);
   font-weight: var(--font-bold);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .shadow-restore-btn:hover:not(:disabled) {
@@ -423,7 +423,7 @@ onMounted(async () => {
 }
 
 .shadow-help {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   text-align: center;
 }
@@ -536,7 +536,7 @@ onMounted(async () => {
 }
 
 .stat-sub {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
@@ -616,7 +616,7 @@ onMounted(async () => {
 }
 
 .item-meta {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
@@ -624,9 +624,9 @@ onMounted(async () => {
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  padding: 4px 12px;
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-md);
-  font-size: 10px;
+  font-size: var(--text-xs);
   cursor: pointer;
   transition: all var(--duration-normal);
 }

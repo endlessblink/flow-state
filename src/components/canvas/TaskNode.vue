@@ -202,7 +202,7 @@ const {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   /* Subtle border for definition */
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--glass-border) !important;
   /* TASK-071: Fixed width to force vertical text wrapping instead of horizontal expansion */
   width: 280px;
   min-width: 200px;
@@ -377,19 +377,19 @@ const {
 /* Global drag cleanup - hide all connection handles during drag */
 body.dragging-active .task-node .vue-flow__handle {
   opacity: 0.3 !important;
-  transition: opacity 0.2s ease !important;
+  transition: opacity var(--duration-normal) var(--ease-out) !important;
 }
 
 /* Hide connection handles during node-specific movement drag (not during connections) */
 .task-node.is-dragging:not(.is-connecting) .vue-flow__handle {
   opacity: 0.1 !important;
-  transition: opacity 0.1s ease !important;
+  transition: opacity var(--duration-instant) var(--ease-out) !important;
 }
 
 /* Keep connection handles fully visible during connection operations */
 .task-node.is-connecting .vue-flow__handle {
   opacity: 1 !important;
-  transition: opacity 0.2s ease !important;
+  transition: opacity var(--duration-normal) var(--ease-out) !important;
 }
 
 /* Prevent text selection during drag, but allow events on root and children */

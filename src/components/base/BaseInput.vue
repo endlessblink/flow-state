@@ -144,7 +144,7 @@ defineExpose({
 
   /* Visual - Transparent with stroke border (matches design system) */
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border-hover);
   color: var(--text-primary);
   border-radius: var(--radius-lg);
 
@@ -167,13 +167,13 @@ defineExpose({
 }
 
 .base-input:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-interactive);
+  background: var(--glass-bg-tint);
 }
 
 .base-input:focus {
   border-color: var(--brand-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-soft);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1), 0 0 12px rgba(78, 205, 196, 0.05);
 }
 

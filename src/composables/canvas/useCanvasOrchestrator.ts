@@ -16,6 +16,7 @@ import { logHierarchySummary } from '@/utils/canvas/invariants'
 import { useCanvasCore } from './useCanvasCore'
 import { useCanvasSync } from './useCanvasSync'
 import { useCanvasInteractions } from './useCanvasInteractions'
+import { useCanvasSelection } from './useCanvasSelection'
 
 // ...
 // Persistence (Sync)
@@ -120,6 +121,12 @@ export function useCanvasOrchestrator() {
         nodes,
         findNode,
         updateNode,
+        applyNodeChanges
+    })
+
+    // Selection management
+    const selection = useCanvasSelection({
+        nodes,
         applyNodeChanges
     })
 
@@ -271,7 +278,7 @@ export function useCanvasOrchestrator() {
         })
 
         if (isEmptyCanvasClick) {
-            interactions.clearSelection()
+            selection.clearSelection()
         }
 
         // Always close context menus
@@ -502,12 +509,13 @@ export function useCanvasOrchestrator() {
         ...events,
 
         // Selection Handlers
-        handleMouseDown: interactions.startSelection,
-        handleMouseMove: interactions.updateSelection,
-        handleMouseUp: interactions.endSelection,
+        handleMouseDown: selection.startSelection,
+        handleMouseMove: selection.updateSelection,
+        handleMouseUp: selection.endSelection,
         handleCanvasContainerClick,
 
         // New feature re-exports
+        ...selection,
         ...interactions,
         ...alignment,
         ...smartGroups,

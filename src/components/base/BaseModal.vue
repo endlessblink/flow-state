@@ -360,7 +360,7 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--glass-bg-solid);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -377,14 +377,13 @@ defineExpose({
 
 /* Modal Container */
 .modal-container {
-  background: rgba(20, 20, 40, 0.85);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-2xl);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -460,7 +459,7 @@ defineExpose({
   align-items: flex-start;
   gap: var(--space-4);
   padding: var(--space-6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -509,7 +508,7 @@ defineExpose({
 
 .modal-close-btn:focus-visible {
   outline: none;
-  border-color: rgba(78, 205, 196, 0.5);
+  border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
 }
 
@@ -524,7 +523,7 @@ defineExpose({
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-6);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
   background: transparent;
 }
 
@@ -627,7 +626,7 @@ defineExpose({
   .modal-overlay,
   .modal-container {
     animation: none;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--duration-normal) var(--ease-out);
   }
 }
 

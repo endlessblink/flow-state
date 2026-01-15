@@ -50,7 +50,7 @@
 /* Density Selector - Todoist Inspired */
 .density-selector {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0_5);
   background: linear-gradient(
     135deg,
     var(--glass-bg-soft) 0%,
@@ -59,7 +59,7 @@
   backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  padding: 2px;
+  padding: var(--space-0_5);
   box-shadow: inset var(--shadow-sm);
 }
 
@@ -250,7 +250,7 @@
 /* Status Filters - Board View */
 .status-filters {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0_5);
   background: linear-gradient(
     135deg,
     var(--glass-bg-soft) 0%,
@@ -259,7 +259,7 @@
   backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  padding: 2px;
+  padding: var(--space-0_5);
   box-shadow: inset var(--shadow-sm);
 }
 

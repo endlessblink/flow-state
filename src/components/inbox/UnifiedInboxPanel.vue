@@ -226,6 +226,6 @@ const handleStartTimer = (task: Task) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 </style>

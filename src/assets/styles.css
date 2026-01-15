@@ -108,7 +108,7 @@ body {
 .canvas-contour {
   /* Brighter canvas background for better element visibility */
   background: rgba(45, 50, 60, 0.5) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid var(--border-medium) !important;
 }
 
 /* =========================================================================
@@ -121,8 +121,8 @@ body {
 select {
   background-color: #1e1e28 !important;
   color: #e0e0e0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-radius: 8px;
+  border: 1px solid var(--border-hover) !important;
+  border-radius: var(--radius-md);
 }
 
 select:focus {
@@ -133,7 +133,7 @@ select:focus {
 select option {
   background-color: #1e1e28 !important;
   color: #e0e0e0 !important;
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 /* Specific class for filter selects with higher specificity */
@@ -143,7 +143,7 @@ select option {
 .filter-select {
   background-color: #1e1e28 !important;
   color: #e0e0e0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid var(--border-hover) !important;
 }
 
 /* =========================================================================
@@ -162,7 +162,7 @@ select option {
     backdrop-filter: none !important;
     background-color: rgba(30, 30, 35, 0.95) !important;
     /* Solid fallback */
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid var(--glass-border) !important;
   }
 
   /* Disable smooth scrolling for canvas to prevent jank */
@@ -191,7 +191,7 @@ select option {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background-color: rgba(25, 25, 30, 0.98) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid var(--border-medium) !important;
 }
 
 /* Fix glass panel backgrounds for Tauri */
@@ -237,7 +237,7 @@ select option {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background-color: rgba(25, 25, 30, 0.98) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid var(--border-medium) !important;
 }
 
 /* Canvas-specific fallbacks */
@@ -270,7 +270,7 @@ select option {
 .tauri-app .filter-select {
   background-color: #1a1a24 !important;
   color: #e0e0e0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid var(--glass-border-hover) !important;
   -webkit-appearance: menulist !important;
   appearance: menulist !important;
 }
@@ -290,7 +290,7 @@ select option {
 .tauri-app textarea {
   background-color: #1a1a24 !important;
   color: #e0e0e0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid var(--glass-border-hover) !important;
 }
 
 /* Native checkbox styling */
@@ -313,7 +313,7 @@ select option {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background-color: rgba(22, 24, 30, 0.98) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid var(--border-medium) !important;
 }
 
 /* =========================================================================
@@ -437,7 +437,7 @@ select option {
   -webkit-backdrop-filter: none !important;
   background: rgba(30, 32, 40, 0.98) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--glass-border-light) !important;
   overflow: hidden !important;
 }
 
@@ -445,13 +445,13 @@ select option {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background: rgba(40, 42, 52, 0.9) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--glass-border-light) !important;
   box-shadow: none !important;
 }
 
 .tauri-app .select-trigger:hover {
   background: rgba(45, 47, 58, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--border-subtle) !important;
   box-shadow: none !important;
 }
 
@@ -473,17 +473,17 @@ select option {
 
 .tauri-app .select-option:hover,
 .tauri-app .select-option.is-focused {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: var(--glass-bg-soft) !important;
   border-color: transparent !important;
 }
 
 .tauri-app .select-option.is-selected {
-  background: rgba(78, 205, 196, 0.1) !important;
+  background: var(--brand-primary-bg-subtle) !important;
   border-color: rgba(78, 205, 196, 0.3) !important;
 }
 
 .tauri-app .select-option.is-selected:hover {
-  background: rgba(78, 205, 196, 0.15) !important;
+  background: var(--brand-primary-bg-medium) !important;
 }
 
 /* Button and Interactive Element fallbacks */
@@ -554,7 +554,7 @@ select option {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background-color: rgba(25, 25, 30, 0.98) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid var(--border-medium) !important;
   }
 
   /* Native form elements for WebKitGTK (no backdrop-filter support) */
@@ -562,7 +562,7 @@ select option {
   .filter-select {
     background-color: #1a1a24 !important;
     color: #e0e0e0 !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid var(--glass-border-hover) !important;
   }
 
   select option,
@@ -579,7 +579,7 @@ select option {
   textarea {
     background-color: #1a1a24 !important;
     color: #e0e0e0 !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid var(--glass-border-hover) !important;
   }
 }
 

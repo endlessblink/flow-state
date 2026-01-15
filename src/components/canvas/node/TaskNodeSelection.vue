@@ -10,10 +10,10 @@
 <style scoped>
 .selection-indicator {
   position: absolute;
-  top: -8px;
-  left: -8px;
-  right: -8px;
-  bottom: -8px;
+  top: -var(--space-2);
+  left: -var(--space-2);
+  right: -var(--space-2);
+  bottom: -var(--space-2);
   pointer-events: none;
   z-index: 10;
 }

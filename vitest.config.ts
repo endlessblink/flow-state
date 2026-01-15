@@ -26,7 +26,12 @@ export default defineConfig({
         name: 'unit',
         test: {
           include: ['tests/**/*.test.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
-          environment: 'jsdom', // Use jsdom for Vue component/composable testing
+          environment: 'jsdom',
+        },
+        resolve: {
+          alias: {
+            '@': fileURLToPath(new URL('./src', import.meta.url))
+          }
         }
       },
       {

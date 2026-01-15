@@ -110,8 +110,8 @@ defineEmits<{
   z-index: 10000;
   background: linear-gradient(135deg, #ff6b6b, #ffa726);
   color: white;
-  padding: 12px 16px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid var(--border-hover);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   animation: slideDown 0.3s ease-out;
 }
@@ -125,25 +125,25 @@ defineEmits<{
 }
 
 .health-icon {
-  font-size: 16px;
-  margin-right: 8px;
+  font-size: var(--text-base);
+  margin-right: var(--space-2);
 }
 
 .health-message {
   flex: 1;
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .health-retry-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-hover);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .health-retry-btn:hover {
@@ -171,8 +171,8 @@ defineEmits<{
   z-index: 10001;
   background: linear-gradient(135deg, #ff4757, #ff6b7a);
   color: white;
-  padding: 16px 20px;
-  border-radius: 8px;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
   max-width: 600px;
   width: 90%;
@@ -187,37 +187,37 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .error-icon {
-  font-size: 20px;
+  font-size: var(--text-xl);
   flex-shrink: 0;
 }
 
 .error-message {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.4;
 }
 
 .error-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
 .retry-btn,
 .dismiss-btn,
 .refresh-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-hover);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: var(--space-1_5) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   white-space: nowrap;
 }
 
@@ -244,7 +244,7 @@ defineEmits<{
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-darker);
   backdrop-filter: blur(4px);
   z-index: 10002;
   display: flex;
@@ -255,13 +255,13 @@ defineEmits<{
 
 .loading-content {
   background: var(--surface-secondary);
-  padding: 24px 32px;
-  border-radius: 12px;
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   min-width: 200px;
 }
 
@@ -276,7 +276,7 @@ defineEmits<{
 
 .loading-text {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 

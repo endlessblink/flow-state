@@ -205,7 +205,7 @@ const handleDisableFeature = () => {
   color: var(--text-secondary, rgba(255, 255, 255, 0.6));
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .close-btn:hover {
@@ -227,7 +227,7 @@ const handleDisableFeature = () => {
   align-items: center;
   gap: var(--space-1, 4px);
   padding: var(--space-1, 4px) var(--space-2, 8px);
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, var(--color-indigo-bg-heavy) 100%);
   border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: var(--radius-full, 9999px);
   font-size: var(--text-xs, 0.75rem);
@@ -265,7 +265,7 @@ const handleDisableFeature = () => {
   color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
   margin-left: auto;
 }
 
@@ -278,7 +278,7 @@ const handleDisableFeature = () => {
 /* Transitions */
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--duration-slow) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-up-enter-from,
@@ -307,7 +307,7 @@ const handleDisableFeature = () => {
 @media (prefers-reduced-motion: reduce) {
   .slide-up-enter-active,
   .slide-up-leave-active {
-    transition: opacity 0.15s ease;
+    transition: opacity var(--duration-fast) var(--ease-out);
   }
 
   .slide-up-enter-from,

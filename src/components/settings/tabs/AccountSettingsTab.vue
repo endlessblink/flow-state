@@ -75,9 +75,9 @@ const handleSignOut = async () => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  color: var(--color-danger);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
   cursor: pointer;

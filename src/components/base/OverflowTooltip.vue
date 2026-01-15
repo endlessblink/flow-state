@@ -86,7 +86,7 @@ watch(() => props.text, (newText) => {
   left: 50%;
   transform: translateX(-50%);
   /* Default position - can be overridden by tooltipPosition class */
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + var(--space-2));
   background: var(--surface-primary);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
@@ -116,13 +116,13 @@ watch(() => props.text, (newText) => {
   transform: rotate(45deg);
   bottom: -5px;
   left: 50%;
-  margin-left: -4px;
+  margin-left: -var(--space-1);
 }
 
 /* Position variants */
 .overflow-tooltip.tooltip-position-bottom {
   bottom: auto;
-  top: calc(100% + 8px);
+  top: calc(100% + var(--space-2));
 }
 
 .overflow-tooltip.tooltip-position-bottom .tooltip-arrow {
@@ -136,7 +136,7 @@ watch(() => props.text, (newText) => {
 
 .overflow-tooltip.tooltip-position-left {
   left: auto;
-  right: calc(100% + 8px);
+  right: calc(100% + var(--space-2));
   top: 50%;
   bottom: auto;
   transform: translateY(-50%);
@@ -151,7 +151,7 @@ watch(() => props.text, (newText) => {
 }
 
 .overflow-tooltip.tooltip-position-right {
-  left: calc(100% + 8px);
+  left: calc(100% + var(--space-2));
   top: 50%;
   bottom: auto;
   transform: translateY(-50%);
@@ -167,7 +167,7 @@ watch(() => props.text, (newText) => {
 /* Transitions */
 .tooltip-fade-enter-active,
 .tooltip-fade-leave-active {
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transition: opacity var(--duration-normal) var(--var(--ease-out)), transform var(--duration-normal) ease-out;
 }
 
 .tooltip-fade-enter-from,

@@ -31,6 +31,6 @@ defineProps<{
   z-index: 9999;
   pointer-events: none;
   border: 1px solid var(--accent-primary);
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: var(--color-indigo-bg-subtle);
 }
 </style>

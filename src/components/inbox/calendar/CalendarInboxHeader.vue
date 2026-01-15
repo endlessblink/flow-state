@@ -213,8 +213,8 @@ defineEmits<{
 .today-quick-filter .count-badge {
   background: var(--brand-primary);
   color: white;
-  font-size: 10px;
-  padding: 0 4px;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-1);
   border-radius: var(--radius-full);
   min-width: 16px;
   text-align: center;
@@ -224,7 +224,7 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   margin-top: var(--space-2);
 }
 
@@ -232,7 +232,7 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .toggle-filters-btn {

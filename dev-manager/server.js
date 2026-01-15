@@ -10,6 +10,9 @@ const healthScanner = require('./scripts/health-scanner');
 const app = express();
 const PORT = process.env.PORT || 6010;
 
+// Orchestrations persistence file
+const ORCHESTRATIONS_FILE = path.join(__dirname, 'data', 'orchestrations.json');
+
 // Cache for health scan results
 let healthCache = null;
 let healthScanInProgress = false;
@@ -1391,6 +1394,945 @@ app.post('/api/beads/close/:id', (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// ============== ORCHESTRATOR API ==============
+// Full agentic orchestration system that:
+// 1. Understands requirements through natural language + clarifying questions
+// 2. Creates specialized sub-agents for different parts
+// 3. Monitors and auto-retries failed agents
+// 4. Provides summary progress updates
+// 5. Conducts review sessions with user
+
+// Track orchestrations
+const orchestrations = new Map(); // orchestrationId -> OrchestratorState
+
+// Load orchestrations from disk on startup
+function loadOrchestrations() {
+    try {
+        if (fs.existsSync(ORCHESTRATIONS_FILE)) {
+            const data = JSON.parse(fs.readFileSync(ORCHESTRATIONS_FILE, 'utf8'));
+            for (const [id, orch] of Object.entries(data)) {
+                // Don't restore process references - they're not serializable
+                orch.subAgents = orch.subAgents?.map(a => ({ ...a, process: null })) || [];
+                orchestrations.set(id, orch);
+            }
+            console.log(`[Orchestrator] Loaded ${orchestrations.size} orchestrations from disk`);
+        }
+    } catch (err) {
+        console.error('[Orchestrator] Failed to load orchestrations:', err.message);
+    }
+}
+
+// Save orchestrations to disk
+function saveOrchestrations() {
+    try {
+        // Ensure data directory exists
+        const dataDir = path.dirname(ORCHESTRATIONS_FILE);
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+
+        // Convert Map to object, excluding non-serializable properties
+        const data = {};
+        for (const [id, orch] of orchestrations) {
+            data[id] = {
+                ...orch,
+                subAgents: orch.subAgents?.map(a => ({
+                    ...a,
+                    process: undefined  // Can't serialize process
+                })) || []
+            };
+        }
+
+        fs.writeFileSync(ORCHESTRATIONS_FILE, JSON.stringify(data, null, 2));
+    } catch (err) {
+        console.error('[Orchestrator] Failed to save orchestrations:', err.message);
+    }
+}
+
+// Debounced save to avoid excessive disk writes
+let saveTimeout = null;
+function debouncedSave() {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveOrchestrations, 1000);
+}
+
+// Load on startup
+loadOrchestrations();
+
+// Orchestrator state machine
+class OrchestratorState {
+    constructor(id, goal) {
+        this.id = id;
+        this.goal = goal;
+        this.phase = 'requirements'; // requirements | planning | execution | review
+        this.questions = [];        // Clarifying questions to ask
+        this.answers = {};          // User's answers
+        this.plan = [];             // Breakdown of tasks
+        this.subAgents = [];        // Spawned agents { taskId, status, retries, output }
+        this.summary = [];          // Progress summaries
+        this.startTime = Date.now();
+        this.status = 'active';
+        this.maxRetries = 3;
+    }
+}
+
+// SSE clients for orchestrator updates
+const orchestratorClients = new Map(); // orchestrationId -> [res, res, ...]
+
+// Helper to broadcast orchestrator updates
+function broadcastOrchestration(orchId, data) {
+    const clients = orchestratorClients.get(orchId) || [];
+    const payload = JSON.stringify({ orchestrationId: orchId, ...data, timestamp: Date.now() });
+
+    clients.forEach(client => {
+        try {
+            client.write(`data: ${payload}\n\n`);
+        } catch (e) {
+            // Client disconnected
+        }
+    });
+
+    // Also store in orchestration state for history
+    const orch = orchestrations.get(orchId);
+    if (orch && data.type === 'summary') {
+        orch.summary.push({ ...data, timestamp: Date.now() });
+    }
+}
+
+// POST /api/orchestrator/start - Start a new orchestration with a goal
+app.post('/api/orchestrator/start', (req, res) => {
+    const { goal } = req.body;
+
+    if (!goal) {
+        return res.status(400).json({ error: 'Goal is required' });
+    }
+
+    const orchId = `orch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const orch = new OrchestratorState(orchId, goal);
+    orchestrations.set(orchId, orch);
+    debouncedSave();
+
+    console.log(`[Orchestrator] Started ${orchId}: "${goal.slice(0, 50)}..."`);
+
+    // Phase 1: Generate clarifying questions using Claude
+    generateClarifyingQuestions(orch);
+
+    res.json({
+        success: true,
+        orchestrationId: orchId,
+        phase: 'requirements',
+        message: 'Orchestration started. Generating clarifying questions...'
+    });
+});
+
+// GET /api/orchestrator/list - List all orchestrations (MUST be before /:id routes!)
+app.get('/api/orchestrator/list', (req, res) => {
+    const list = [];
+
+    for (const [id, orch] of orchestrations.entries()) {
+        list.push({
+            id,
+            goal: orch.goal.slice(0, 100),
+            phase: orch.phase,
+            status: orch.status,
+            taskCount: orch.plan.length,
+            completedTasks: orch.subAgents.filter(a => a.status === 'completed').length,
+            startTime: orch.startTime,
+            runtime: Date.now() - orch.startTime
+        });
+    }
+
+    res.json({ orchestrations: list });
+});
+
+// Helper: Generate clarifying questions based on goal
+async function generateClarifyingQuestions(orch) {
+    const prompt = `You are an expert requirements analyst. The user wants to build:
+
+"${orch.goal}"
+
+Generate 3-5 clarifying questions to understand their requirements better.
+Focus on:
+1. Technical preferences (frameworks, languages, architecture)
+2. Scope clarification (what features are essential vs nice-to-have)
+3. Constraints (timeline expectations, existing code to integrate with)
+4. Quality requirements (testing, accessibility, security needs)
+
+Output ONLY a JSON array of questions, each with:
+- "id": unique string
+- "question": the question text
+- "options": optional array of common answers (2-4 options)
+- "type": "choice" or "text"
+
+Example:
+[
+  {"id": "q1", "question": "What framework should we use?", "options": ["Vue 3", "React", "Svelte"], "type": "choice"},
+  {"id": "q2", "question": "What specific features are must-haves?", "type": "text"}
+]`;
+
+    broadcastOrchestration(orch.id, {
+        type: 'phase',
+        phase: 'requirements',
+        message: 'Analyzing your goal and generating clarifying questions...'
+    });
+
+    try {
+        // Spawn Claude to generate questions
+        // CRITICAL: stdin must be 'inherit' to prevent Claude from hanging
+        const questionProcess = spawn('claude', [
+            '--print',
+            '-p', prompt
+        ], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+        });
+
+        let output = '';
+        let stderr = '';
+
+        questionProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        questionProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            console.log(`[Orchestrator] Claude stderr: ${data.toString()}`);
+        });
+
+        questionProcess.on('close', (code) => {
+            if (code === 0) {
+                try {
+                    // Extract JSON from output (may have extra text)
+                    const jsonMatch = output.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        const questions = JSON.parse(jsonMatch[0]);
+                        orch.questions = questions;
+
+                        broadcastOrchestration(orch.id, {
+                            type: 'questions',
+                            questions: questions,
+                            message: 'Please answer these questions to help me understand your requirements:'
+                        });
+                        debouncedSave();
+                    } else {
+                        throw new Error('No JSON array found in output');
+                    }
+                } catch (e) {
+                    console.error(`[Orchestrator] Error parsing questions: ${e.message}`);
+                    // Fallback to default questions
+                    orch.questions = [
+                        { id: 'q1', question: 'What is the primary technology stack you want to use?', type: 'text' },
+                        { id: 'q2', question: 'What are the essential features (must-have)?', type: 'text' },
+                        { id: 'q3', question: 'Any specific constraints or requirements?', type: 'text' }
+                    ];
+
+                    broadcastOrchestration(orch.id, {
+                        type: 'questions',
+                        questions: orch.questions,
+                        message: 'Please answer these questions:'
+                    });
+                    debouncedSave();
+                }
+            } else {
+                console.error(`[Orchestrator] Claude exited with code ${code}`);
+                // Use fallback questions
+                orch.questions = [
+                    { id: 'q1', question: 'What technologies do you want to use?', type: 'text' },
+                    { id: 'q2', question: 'What features are essential?', type: 'text' }
+                ];
+
+                broadcastOrchestration(orch.id, {
+                    type: 'questions',
+                    questions: orch.questions,
+                    message: 'Please answer these questions:'
+                });
+                debouncedSave();
+            }
+        });
+
+        questionProcess.on('error', (err) => {
+            console.error(`[Orchestrator] Error spawning Claude: ${err.message}`);
+        });
+
+    } catch (err) {
+        console.error(`[Orchestrator] Error generating questions: ${err.message}`);
+    }
+}
+
+// POST /api/orchestrator/:id/answer - Submit answers to clarifying questions
+app.post('/api/orchestrator/:id/answer', (req, res) => {
+    const orchId = req.params.id;
+    const { answers } = req.body;
+
+    const orch = orchestrations.get(orchId);
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    // Store answers
+    orch.answers = { ...orch.answers, ...answers };
+
+    // Move to planning phase
+    orch.phase = 'planning';
+    debouncedSave();
+
+    broadcastOrchestration(orch.id, {
+        type: 'phase',
+        phase: 'planning',
+        message: 'Answers received. Creating implementation plan...'
+    });
+
+    // Generate plan based on goal + answers
+    generatePlan(orch);
+
+    res.json({
+        success: true,
+        phase: 'planning',
+        message: 'Moving to planning phase...'
+    });
+});
+
+// Helper: Generate implementation plan
+async function generatePlan(orch) {
+    const answersText = Object.entries(orch.answers)
+        .map(([key, val]) => {
+            const question = orch.questions.find(q => q.id === key);
+            return `Q: ${question?.question || key}\nA: ${val}`;
+        })
+        .join('\n\n');
+
+    const prompt = `You are an expert software architect. Create an implementation plan for:
+
+GOAL: "${orch.goal}"
+
+USER REQUIREMENTS:
+${answersText}
+
+Create a detailed plan broken into tasks. Each task should be:
+- Specific and actionable
+- Assignable to a specialized agent type (backend, frontend, devops, qa, docs)
+- Small enough to complete in one session
+
+Output ONLY a JSON array of tasks:
+[
+  {
+    "id": "task-1",
+    "title": "Set up project structure",
+    "description": "Initialize the project with Vite + Vue 3 + TypeScript",
+    "agentType": "frontend",
+    "dependencies": [],
+    "priority": "P1"
+  },
+  {
+    "id": "task-2",
+    "title": "Create database schema",
+    "description": "Design and implement the PostgreSQL schema for user data",
+    "agentType": "backend",
+    "dependencies": ["task-1"],
+    "priority": "P1"
+  }
+]
+
+Create 5-10 tasks that cover the full implementation.`;
+
+    broadcastOrchestration(orch.id, {
+        type: 'summary',
+        message: 'Analyzing requirements and creating task breakdown...'
+    });
+
+    try {
+        const planProcess = spawn('claude', [
+            '--print',
+            '-p', prompt
+        ], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+        });
+
+        let output = '';
+
+        planProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        planProcess.stderr.on('data', (data) => {
+            console.log(`[Orchestrator] Plan stderr: ${data.toString()}`);
+        });
+
+        planProcess.on('close', (code) => {
+            if (code === 0) {
+                try {
+                    const jsonMatch = output.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        const plan = JSON.parse(jsonMatch[0]);
+                        orch.plan = plan;
+                        debouncedSave();
+
+                        broadcastOrchestration(orch.id, {
+                            type: 'plan',
+                            plan: plan,
+                            message: `Created ${plan.length} tasks. Ready to start execution.`
+                        });
+
+                        // Auto-move to execution if plan looks good
+                        // User can review and modify first
+                    } else {
+                        throw new Error('No JSON array found');
+                    }
+                } catch (e) {
+                    console.error(`[Orchestrator] Error parsing plan: ${e.message}`);
+                    broadcastOrchestration(orch.id, {
+                        type: 'error',
+                        message: 'Failed to generate plan. Please try again.'
+                    });
+                }
+            }
+        });
+
+    } catch (err) {
+        console.error(`[Orchestrator] Error generating plan: ${err.message}`);
+    }
+}
+
+// POST /api/orchestrator/:id/execute - Start executing the plan
+app.post('/api/orchestrator/:id/execute', (req, res) => {
+    const orchId = req.params.id;
+    const orch = orchestrations.get(orchId);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    if (!orch.plan || orch.plan.length === 0) {
+        return res.status(400).json({ error: 'No plan to execute' });
+    }
+
+    orch.phase = 'execution';
+    debouncedSave();
+
+    broadcastOrchestration(orch.id, {
+        type: 'phase',
+        phase: 'execution',
+        message: 'Starting execution. Spawning agents for tasks...'
+    });
+
+    // Start executing tasks (respecting dependencies)
+    executeNextTasks(orch);
+
+    res.json({
+        success: true,
+        phase: 'execution',
+        message: 'Execution started'
+    });
+});
+
+// Helper: Execute next available tasks
+function executeNextTasks(orch) {
+    // Find tasks that are ready (dependencies completed)
+    const completedIds = orch.subAgents
+        .filter(a => a.status === 'completed')
+        .map(a => a.taskId);
+
+    const runningIds = orch.subAgents
+        .filter(a => a.status === 'running')
+        .map(a => a.taskId);
+
+    const readyTasks = orch.plan.filter(task => {
+        // Not already started
+        if (orch.subAgents.some(a => a.taskId === task.id)) return false;
+        // Dependencies met
+        const deps = task.dependencies || [];
+        return deps.every(dep => completedIds.includes(dep));
+    });
+
+    // Limit concurrent agents to 3
+    const availableSlots = 3 - runningIds.length;
+    const tasksToStart = readyTasks.slice(0, availableSlots);
+
+    for (const task of tasksToStart) {
+        spawnSubAgent(orch, task);
+    }
+
+    // Check if all done
+    if (runningIds.length === 0 && readyTasks.length === 0) {
+        const allCompleted = orch.plan.every(t =>
+            orch.subAgents.some(a => a.taskId === t.id && a.status === 'completed')
+        );
+
+        if (allCompleted) {
+            orch.phase = 'review';
+            debouncedSave();
+            broadcastOrchestration(orch.id, {
+                type: 'phase',
+                phase: 'review',
+                message: 'All tasks completed! Ready for review.'
+            });
+        }
+    }
+}
+
+// Helper: Spawn a sub-agent for a task
+function spawnSubAgent(orch, task) {
+    const subAgentData = {
+        taskId: task.id,
+        task: task,
+        status: 'running',
+        retries: 0,
+        output: [],
+        startTime: Date.now()
+    };
+
+    orch.subAgents.push(subAgentData);
+
+    broadcastOrchestration(orch.id, {
+        type: 'summary',
+        message: `🚀 Starting: ${task.title} (${task.agentType})`
+    });
+
+    // Build prompt for this specific task
+    const prompt = `You are a ${task.agentType} specialist working on a larger project.
+
+PROJECT GOAL: ${orch.goal}
+
+YOUR TASK: ${task.title}
+${task.description}
+
+REQUIREMENTS FROM USER:
+${Object.entries(orch.answers).map(([k, v]) => `- ${v}`).join('\n')}
+
+Instructions:
+1. Complete this specific task thoroughly
+2. Test your work
+3. Report what you accomplished
+
+Focus only on this task. Other tasks are being handled by other specialists.`;
+
+    const agentProcess = spawn('claude', [
+        '--print',
+        '--max-turns', '30',
+        '-p', prompt
+    ], {
+        cwd: path.join(__dirname, '..'),
+        stdio: ['inherit', 'pipe', 'pipe'],
+        env: { ...process.env, ANTHROPIC_API_KEY: '' }
+    });
+
+    subAgentData.process = agentProcess;
+
+    agentProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        subAgentData.output.push(output);
+
+        // Send periodic summaries instead of raw output
+        if (subAgentData.output.length % 10 === 0) {
+            broadcastOrchestration(orch.id, {
+                type: 'progress',
+                taskId: task.id,
+                message: `Working on ${task.title}... (${subAgentData.output.length} updates)`
+            });
+        }
+    });
+
+    agentProcess.stderr.on('data', (data) => {
+        const error = data.toString();
+        subAgentData.output.push(`[ERROR] ${error}`);
+    });
+
+    agentProcess.on('close', (code) => {
+        subAgentData.endTime = Date.now();
+
+        if (code === 0) {
+            subAgentData.status = 'completed';
+            broadcastOrchestration(orch.id, {
+                type: 'summary',
+                message: `✅ Completed: ${task.title}`
+            });
+        } else {
+            // Failed - check retries
+            if (subAgentData.retries < orch.maxRetries) {
+                subAgentData.retries++;
+                subAgentData.status = 'retrying';
+
+                broadcastOrchestration(orch.id, {
+                    type: 'summary',
+                    message: `⚠️ ${task.title} failed. Retrying (${subAgentData.retries}/${orch.maxRetries})...`
+                });
+
+                // Remove from subAgents to allow retry
+                const idx = orch.subAgents.findIndex(a => a.taskId === task.id);
+                if (idx >= 0) orch.subAgents.splice(idx, 1);
+
+                // Retry after delay
+                setTimeout(() => spawnSubAgent(orch, task), 2000);
+            } else {
+                subAgentData.status = 'failed';
+
+                broadcastOrchestration(orch.id, {
+                    type: 'escalation',
+                    taskId: task.id,
+                    message: `❌ ${task.title} failed after ${orch.maxRetries} retries. Please review.`,
+                    error: subAgentData.output.slice(-5).join('')
+                });
+            }
+        }
+
+        // Execute next tasks
+        executeNextTasks(orch);
+    });
+
+    agentProcess.on('error', (err) => {
+        subAgentData.status = 'error';
+        broadcastOrchestration(orch.id, {
+            type: 'error',
+            taskId: task.id,
+            message: `Error spawning agent: ${err.message}`
+        });
+    });
+}
+
+// GET /api/orchestrator/:id - Get orchestration status
+app.get('/api/orchestrator/:id', (req, res) => {
+    const orch = orchestrations.get(req.params.id);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    res.json({
+        id: orch.id,
+        goal: orch.goal,
+        phase: orch.phase,
+        status: orch.status,
+        questions: orch.questions,
+        answers: orch.answers,
+        plan: orch.plan,
+        subAgents: orch.subAgents.map(a => ({
+            taskId: a.taskId,
+            title: a.task?.title,
+            status: a.status,
+            retries: a.retries,
+            outputLines: a.output?.length || 0
+        })),
+        summary: orch.summary.slice(-20),
+        startTime: orch.startTime,
+        runtime: Date.now() - orch.startTime
+    });
+});
+
+// DELETE /api/orchestrator/:id - Delete an orchestration
+app.delete('/api/orchestrator/:id', (req, res) => {
+    const orchId = req.params.id;
+    const orch = orchestrations.get(orchId);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    // Kill any running sub-agents
+    for (const agent of orch.subAgents) {
+        if (agent.process && !agent.process.killed) {
+            agent.process.kill('SIGTERM');
+        }
+    }
+
+    // Remove from orchestrations map
+    orchestrations.delete(orchId);
+    debouncedSave();
+
+    // Remove SSE clients for this orchestration
+    if (orchestratorClients.has(orchId)) {
+        orchestratorClients.delete(orchId);
+    }
+
+    console.log(`[Orchestrator] Deleted ${orchId}`);
+    res.json({ success: true, message: 'Orchestration deleted' });
+});
+
+// POST /api/orchestrator/:id/chat - Chat with orchestrator at current phase
+app.post('/api/orchestrator/:id/chat', async (req, res) => {
+    const { message, phase } = req.body;
+    const orch = orchestrations.get(req.params.id);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    // Build context-aware prompt based on phase
+    let contextPrompt = `You are an orchestration assistant helping with: "${orch.goal}"
+
+Current phase: ${phase || orch.phase}
+`;
+
+    // Add phase-specific context
+    if (orch.answers && Object.keys(orch.answers).length > 0) {
+        contextPrompt += `\nUser's answers so far:\n${JSON.stringify(orch.answers, null, 2)}`;
+    }
+    if (orch.plan && orch.plan.length > 0) {
+        contextPrompt += `\nCurrent plan:\n${orch.plan.map((t, i) => `${i+1}. ${t.title}`).join('\n')}`;
+    }
+
+    contextPrompt += `\n\nUser message: "${message}"
+
+Respond helpfully. If they're asking for clarification, explain clearly.
+If they're requesting changes, acknowledge and suggest how to proceed.
+Keep responses concise (2-4 sentences).`;
+
+    try {
+        const chatProcess = spawn('claude', ['--print', '-p', contextPrompt], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+        });
+
+        let response = '';
+        chatProcess.stdout.on('data', (data) => {
+            response += data.toString();
+        });
+
+        chatProcess.stderr.on('data', (data) => {
+            console.log('[Chat] stderr:', data.toString());
+        });
+
+        chatProcess.on('close', (code) => {
+            if (code === 0 && response.trim()) {
+                // Store in conversation history
+                if (!orch.chatHistory) orch.chatHistory = [];
+                orch.chatHistory.push({ role: 'user', message });
+                orch.chatHistory.push({ role: 'assistant', message: response.trim() });
+
+                res.json({ success: true, response: response.trim() });
+            } else {
+                res.status(500).json({ error: 'Failed to generate response' });
+            }
+        });
+
+        chatProcess.on('error', (err) => {
+            console.error('[Chat] Process error:', err);
+            res.status(500).json({ error: err.message });
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/orchestrator/:id/deepen - Generate more questions or explanations
+app.post('/api/orchestrator/:id/deepen', async (req, res) => {
+    const { mode } = req.body; // 'questions' or 'explain'
+    const orch = orchestrations.get(req.params.id);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    let prompt;
+    if (mode === 'questions') {
+        prompt = `You are a requirements analyst. The user wants to build:
+"${orch.goal}"
+
+They already answered these questions:
+${JSON.stringify(orch.answers, null, 2)}
+
+Generate 2-3 MORE clarifying questions to deepen understanding.
+Focus on:
+- Edge cases they might not have considered
+- Technical trade-offs
+- User experience details
+- Performance/scalability concerns
+
+Output ONLY a JSON array of questions:
+[{"id": "deep-1", "question": "...", "type": "text"}]`;
+    } else {
+        // mode === 'explain'
+        prompt = `You are explaining your planning process. The user wants to build:
+"${orch.goal}"
+
+Current phase: ${orch.phase}
+${orch.plan && orch.plan.length > 0 ? `Current plan:\n${orch.plan.map(t => `- ${t.title}: ${t.description}`).join('\n')}` : ''}
+
+Explain your reasoning:
+1. Why you chose this approach
+2. Key technical decisions made
+3. Potential alternatives considered
+4. What you need more clarity on
+
+Keep it conversational and concise (3-5 sentences).`;
+    }
+
+    try {
+        const deepenProcess = spawn('claude', ['--print', '-p', prompt], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+        });
+
+        let output = '';
+        deepenProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        deepenProcess.stderr.on('data', (data) => {
+            console.log('[Deepen] stderr:', data.toString());
+        });
+
+        deepenProcess.on('close', (code) => {
+            if (code === 0 && output.trim()) {
+                if (mode === 'questions') {
+                    // Parse and add new questions
+                    try {
+                        const jsonMatch = output.match(/\[[\s\S]*\]/);
+                        if (jsonMatch) {
+                            const newQuestions = JSON.parse(jsonMatch[0]);
+                            if (!orch.questions) orch.questions = [];
+                            orch.questions.push(...newQuestions);
+
+                            res.json({
+                                success: true,
+                                newQuestions,
+                                questions: orch.questions
+                            });
+                        } else {
+                            res.status(500).json({ error: 'Could not parse questions' });
+                        }
+                    } catch (parseErr) {
+                        res.status(500).json({ error: 'Failed to parse questions JSON' });
+                    }
+                } else {
+                    // Return explanation
+                    res.json({ success: true, explanation: output.trim() });
+                }
+            } else {
+                res.status(500).json({ error: 'Failed to deepen understanding' });
+            }
+        });
+
+        deepenProcess.on('error', (err) => {
+            console.error('[Deepen] Process error:', err);
+            res.status(500).json({ error: err.message });
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/orchestrator/:id/stream - SSE stream for orchestration updates
+app.get('/api/orchestrator/:id/stream', (req, res) => {
+    const orchId = req.params.id;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Send existing summaries
+    const orch = orchestrations.get(orchId);
+    if (orch) {
+        for (const entry of orch.summary) {
+            res.write(`data: ${JSON.stringify({ orchestrationId: orchId, ...entry })}\n\n`);
+        }
+    }
+
+    // Add to clients
+    if (!orchestratorClients.has(orchId)) {
+        orchestratorClients.set(orchId, []);
+    }
+    orchestratorClients.get(orchId).push(res);
+
+    // Keep alive
+    const keepAlive = setInterval(() => {
+        res.write(`: keep-alive\n\n`);
+    }, 15000);
+
+    req.on('close', () => {
+        clearInterval(keepAlive);
+        const clients = orchestratorClients.get(orchId) || [];
+        orchestratorClients.set(orchId, clients.filter(c => c !== res));
+    });
+});
+
+// POST /api/orchestrator/:id/refine - Submit refinements after review
+app.post('/api/orchestrator/:id/refine', (req, res) => {
+    const orchId = req.params.id;
+    const { feedback, action } = req.body;
+
+    const orch = orchestrations.get(orchId);
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    if (action === 'approve') {
+        orch.status = 'completed';
+        broadcastOrchestration(orch.id, {
+            type: 'complete',
+            message: '🎉 Project approved and completed!'
+        });
+
+        return res.json({ success: true, message: 'Project completed!' });
+    }
+
+    if (action === 'refine' && feedback) {
+        // Add refinement tasks based on feedback
+        broadcastOrchestration(orch.id, {
+            type: 'summary',
+            message: `📝 Processing feedback: ${feedback.slice(0, 100)}...`
+        });
+
+        // Generate new tasks from feedback
+        generateRefinementTasks(orch, feedback);
+
+        return res.json({ success: true, message: 'Processing refinements...' });
+    }
+
+    res.status(400).json({ error: 'Invalid action' });
+});
+
+// Helper: Generate tasks from refinement feedback
+async function generateRefinementTasks(orch, feedback) {
+    const prompt = `Based on user feedback, create additional tasks:
+
+ORIGINAL GOAL: ${orch.goal}
+COMPLETED TASKS: ${orch.plan.map(t => t.title).join(', ')}
+
+USER FEEDBACK:
+${feedback}
+
+Create 1-5 new tasks to address this feedback. Output as JSON array:
+[{"id": "refine-1", "title": "...", "description": "...", "agentType": "...", "dependencies": [], "priority": "P1"}]`;
+
+    const refineProcess = spawn('claude', ['--print', '-p', prompt], {
+        cwd: path.join(__dirname, '..'),
+        stdio: ['inherit', 'pipe', 'pipe'],
+        env: { ...process.env, ANTHROPIC_API_KEY: '' }
+    });
+
+    let output = '';
+    refineProcess.stdout.on('data', (d) => output += d.toString());
+    refineProcess.stderr.on('data', (d) => console.log(`[Orchestrator] Refine stderr: ${d.toString()}`));
+
+    refineProcess.on('close', (code) => {
+        if (code === 0) {
+            try {
+                const jsonMatch = output.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    const newTasks = JSON.parse(jsonMatch[0]);
+                    orch.plan.push(...newTasks);
+                    orch.phase = 'execution';
+
+                    broadcastOrchestration(orch.id, {
+                        type: 'plan',
+                        plan: orch.plan,
+                        message: `Added ${newTasks.length} refinement tasks. Resuming execution...`
+                    });
+
+                    executeNextTasks(orch);
+                }
+            } catch (e) {
+                console.error(`[Orchestrator] Error parsing refinement: ${e.message}`);
+            }
+        }
+    });
+}
 
 // GET /api/locks - List active task locks
 app.get('/api/locks', (req, res) => {

@@ -209,8 +209,8 @@ const getDotStyle = (index: number) => ({
 
   /* Transitions */
   --transition-fast: 0.12s;
-  --transition-normal: 0.25s;
-  --transition-slow: 0.4s;
+  --transition-normal: var(--duration-normal);
+  --transition-slow: var(--duration-slower);
 
   /* Border Radius */
   --radius-xs: 3px;
@@ -323,10 +323,10 @@ const getDotStyle = (index: number) => ({
 /* Touch Area Overlay */
 .drag-handle__touch-area {
   position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
+  top: -var(--space-2_5);
+  left: -var(--space-2_5);
+  right: -var(--space-2_5);
+  bottom: -var(--space-2_5);
   z-index: -1;
   border-radius: inherit;
   transition: background-color var(--transition-fast) ease;
@@ -345,8 +345,8 @@ const getDotStyle = (index: number) => ({
   justify-content: center;
   width: 24px;
   height: 24px;
-  padding: 4px;
-  gap: 4px;
+  padding: var(--space-1);
+  gap: var(--space-1);
   transition: transform var(--transition-normal) var(--spring-bouncy);
 }
 
@@ -358,7 +358,7 @@ const getDotStyle = (index: number) => ({
 .drag-handle__dots {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
+  gap: var(--space-1);
   width: 100%;
   height: 100%;
   transition: transform var(--transition-normal) var(--spring-smooth);

@@ -44,10 +44,10 @@ const ghostStyle = computed(() => ({
   height: 48px;
   background: rgba(59, 130, 246, 0.2);
   border: 1px solid rgba(59, 130, 246, 0.5);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   backdrop-filter: blur(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.1s cubic-bezier(0.2, 0, 0.2, 1);
+  transition: transform var(--duration-instant) cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 .drag-handle__ghost-content {
@@ -59,7 +59,7 @@ const ghostStyle = computed(() => ({
 .drag-handle__ghost-dots {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .drag-handle__ghost-dot {

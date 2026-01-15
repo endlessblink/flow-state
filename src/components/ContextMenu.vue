@@ -146,15 +146,13 @@ onUnmounted(() => {
 .context-menu {
   position: fixed;
   min-width: 200px;
-  /* Dark glass morphism */
-  background: rgba(20, 20, 20, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2);
   animation: menuSlideIn var(--duration-fast) var(--spring-bounce);
   z-index: 3001;
@@ -189,8 +187,8 @@ onUnmounted(() => {
 }
 
 .context-menu-item:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border);
 }
 
 .context-menu-item:active:not(:disabled) {
@@ -202,7 +200,7 @@ onUnmounted(() => {
 }
 
 .context-menu-item.danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-bg-light);
   border-color: rgba(239, 68, 68, 0.2);
 }
 
@@ -225,8 +223,8 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   color: var(--text-muted);
   padding: var(--space-1) var(--space-2);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
 }
 

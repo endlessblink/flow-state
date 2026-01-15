@@ -213,7 +213,7 @@ onUnmounted(() => {
   z-index: 10000 !important;
 
   /* Make it very obvious this is clickable */
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .user-profile:hover {
@@ -260,22 +260,18 @@ onUnmounted(() => {
   pointer-events: none; /* Let clicks pass through to parent */
 }
 
-/* Dropdown Menu - Glass Morphism - Teleported to body */
+/* Dropdown Menu - Standardized overlay styling */
 .user-dropdown {
   position: fixed;  /* Fixed positioning since it's teleported to body */
   /* Position is set dynamically via :style binding */
   width: 240px;  /* Fixed width */
   max-width: 240px;  /* Prevent expansion */
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border-hover);
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl), 0 8px 32px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--overlay-component-shadow);
   z-index: 99999;  /* Extremely high to ensure it's above all UI elements */
   overflow: hidden;
   pointer-events: auto !important;
@@ -284,11 +280,7 @@ onUnmounted(() => {
 /* Dropdown Header */
 .dropdown-header {
   padding: var(--space-4);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-heavy) 0%,
-    var(--glass-bg-tint) 100%
-  );
+  background: var(--glass-bg-heavy);
   border-bottom: 1px solid var(--glass-border);
 }
 
@@ -318,12 +310,7 @@ onUnmounted(() => {
 /* Divider */
 .dropdown-divider {
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    var(--glass-border) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: var(--glass-border);
   margin: 0;
 }
 

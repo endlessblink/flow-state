@@ -276,7 +276,7 @@ const getCelebrationStyle = (index: number) => {
     );
   backdrop-filter: blur(16px) saturate(1.8);
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: all var(--duration-slower) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
   overflow: visible;
   box-shadow:
@@ -395,7 +395,7 @@ const getCelebrationStyle = (index: number) => {
   justify-content: center;
   position: relative;
   z-index: 2;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .done-toggle__content--celebrating {
@@ -418,7 +418,7 @@ const getCelebrationStyle = (index: number) => {
 .done-toggle__circle {
   color: rgba(255, 255, 255, 0.9);
   position: relative;
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: all var(--duration-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   transform: translateZ(0);
 }
 
@@ -432,10 +432,10 @@ const getCelebrationStyle = (index: number) => {
 .done-toggle__circle-inner {
   position: absolute;
   inset: -4px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-hover);
   border-radius: 50%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) var(--ease-out);
 }
 
 .done-toggle__button:hover .done-toggle__circle-inner {
@@ -449,7 +449,7 @@ const getCelebrationStyle = (index: number) => {
   background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%);
   border-radius: 50%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) var(--ease-out);
   z-index: -1;
 }
 
@@ -474,7 +474,7 @@ const getCelebrationStyle = (index: number) => {
   background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%);
   border-radius: 50%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) var(--ease-out);
   z-index: -1;
 }
 
@@ -484,7 +484,7 @@ const getCelebrationStyle = (index: number) => {
 
 .done-toggle__check-sparkle {
   position: absolute;
-  top: -4px;
+  top: -var(--space-1);
   inset-inline-end: -4px; /* RTL: check sparkle position */
   width: 4px;
   height: 4px;
@@ -525,7 +525,7 @@ const getCelebrationStyle = (index: number) => {
   );
   border-radius: var(--radius-md);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) var(--ease-out);
   z-index: 0;
 }
 
@@ -663,14 +663,14 @@ const getCelebrationStyle = (index: number) => {
   left: 50%;
   transform: translateX(-50%) translateY(10px);
   background: rgba(0, 0, 0, 0.9);
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   pointer-events: none;
   opacity: 0;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   z-index: 100;
   min-width: 120px;
 }
@@ -684,8 +684,8 @@ const getCelebrationStyle = (index: number) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -695,11 +695,11 @@ const getCelebrationStyle = (index: number) => {
 }
 
 kbd {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 1px 4px;
-  border-radius: 4px;
+  background: var(--border-hover);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
   font-family: monospace;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 /* Progress Border Styles */
@@ -714,7 +714,7 @@ kbd {
 .done-toggle__progress-bg {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: inherit;
 }
 
@@ -724,7 +724,7 @@ kbd {
   border: 2px solid rgba(34, 197, 94, 0.6);
   border-radius: inherit;
   clip-path: inset(0 calc(100% - var(--progress)) 0 0);
-  transition: clip-path 0.3s ease;
+  transition: clip-path var(--duration-slow) var(--ease-out);
 }
 
 /* Animations */
@@ -758,7 +758,7 @@ kbd {
 
 .celebration-fade-enter-active,
 .celebration-fade-leave-active {
-  transition: opacity 0.5s ease;
+  transition: opacity var(--duration-slower) var(--ease-out);
 }
 
 .celebration-fade-enter-from,
@@ -768,7 +768,7 @@ kbd {
 
 .hints-fade-enter-active,
 .hints-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--duration-normal) var(--var(--ease-out)-out), transform var(--duration-normal) ease;
 }
 
 .hints-fade-enter-from,
@@ -803,7 +803,7 @@ kbd {
   100% {
     transform: translate(-50%, -50%) rotate(var(--angle)) translateY(var(--distance)) scale(var(--scale));
     opacity: 0;
-    background: #3b82f6;
+    background: var(--color-blue);
   }
 }
 

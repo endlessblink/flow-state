@@ -133,16 +133,24 @@ export function useContextMenu(options: UseContextMenuOptions) {
   // Helper to get current visibility
   const getIsVisible = () => toValue(options.isVisible)
 
-  let clickHandler: (event: MouseEvent) => void
+  let mousedownHandler: (event: MouseEvent) => void
   let keyHandler: (event: KeyboardEvent) => void
   let contextMenuHandler: (event: MouseEvent) => void
 
+  // Use mousedown instead of click to catch events before Vue Flow can intercept them
+  // Vue Flow's pane-click is a synthetic event and may not propagate standard click events
   const handleClickOutside = (event: MouseEvent) => {
     if (!getIsVisible() || !menuRef.value) return
 
     const target = event.target as Node
     if (menuRef.value.contains(target)) {
       return // Click inside menu, don't close
+    }
+
+    // Also check for teleported submenus (they're outside the main menu ref)
+    const teleportedSubmenu = document.querySelector('.submenu-teleported')
+    if (teleportedSubmenu && teleportedSubmenu.contains(target)) {
+      return // Click inside teleported submenu, don't close
     }
 
     closeCallback()
@@ -164,8 +172,9 @@ export function useContextMenu(options: UseContextMenuOptions) {
 
   onMounted(() => {
     nextTick(() => {
-      clickHandler = handleClickOutside
-      document.addEventListener('click', clickHandler, true)
+      // Use mousedown in capture phase - fires before Vue Flow can intercept
+      mousedownHandler = handleClickOutside
+      document.addEventListener('mousedown', mousedownHandler, true)
 
       keyHandler = handleKeyEscape
       document.addEventListener('keydown', keyHandler, true)
@@ -176,8 +185,8 @@ export function useContextMenu(options: UseContextMenuOptions) {
   })
 
   onUnmounted(() => {
-    if (clickHandler) {
-      document.removeEventListener('click', clickHandler, true)
+    if (mousedownHandler) {
+      document.removeEventListener('mousedown', mousedownHandler, true)
     }
     if (keyHandler) {
       document.removeEventListener('keydown', keyHandler, true)

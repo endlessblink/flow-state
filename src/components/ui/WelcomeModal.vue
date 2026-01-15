@@ -157,22 +157,26 @@ const exportData = () => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: var(--overlay-backdrop-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: var(--space-4);
   z-index: 1000;
 }
 
 .modal-container {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  /* Standardized overlay styling */
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl, 16px);
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--overlay-component-shadow);
   overflow: hidden;
 }
 
@@ -181,14 +185,14 @@ const exportData = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
 }
 
 .header-content--welcome {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .logo {
@@ -219,7 +223,7 @@ const exportData = () => {
   color: var(--text-secondary, rgba(255, 255, 255, 0.6));
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .close-btn:hover {
@@ -229,22 +233,22 @@ const exportData = () => {
 
 /* Body */
 .modal-body {
-  padding: 1.5rem;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
 /* Status Banner */
 .status-banner {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
+  gap: var(--space-2);
+  padding: 0.625rem var(--text-sm);
   background: transparent;
   border: 1px solid var(--color-work, #3b82f6);
   border-radius: var(--radius-md, 8px);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--color-work, #3b82f6);
 }
 
@@ -256,7 +260,7 @@ const exportData = () => {
 .name-section {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .input-label {
@@ -267,17 +271,17 @@ const exportData = () => {
 
 .input-row {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .name-input {
   flex: 1;
-  padding: 0.625rem 0.875rem;
+  padding: 0.625rem var(--text-sm);
   background: transparent;
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md, 8px);
   color: var(--text-primary, #fff);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .name-input::placeholder {
@@ -291,15 +295,15 @@ const exportData = () => {
 }
 
 .save-btn {
-  padding: 0.625rem 1rem;
+  padding: 0.625rem var(--space-4);
   background: transparent;
   border: 1px solid var(--color-work, #3b82f6);
   border-radius: var(--radius-md, 8px);
   color: var(--color-work, #3b82f6);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .save-btn:hover:not(:disabled) {
@@ -315,14 +319,14 @@ const exportData = () => {
 .features {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .feature {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.875rem;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
   color: var(--text-secondary, rgba(255, 255, 255, 0.7));
 }
 
@@ -333,16 +337,16 @@ const exportData = () => {
 
 /* Footer */
 .modal-footer {
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-5) var(--space-6);
   border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .primary-btn {
   width: 100%;
-  padding: 0.75rem;
+  padding: var(--space-3);
   background: transparent;
   border: 1px solid var(--color-work, #3b82f6);
   border-radius: var(--radius-md, 8px);
@@ -350,7 +354,7 @@ const exportData = () => {
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .primary-btn:hover {
@@ -360,7 +364,7 @@ const exportData = () => {
 
 .secondary-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   justify-content: center;
 }
 
@@ -368,14 +372,14 @@ const exportData = () => {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.5rem 0.875rem;
+  padding: var(--space-2) var(--text-sm);
   background: transparent;
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md, 8px);
   color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   font-size: 0.8125rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .secondary-btn:hover {
@@ -387,12 +391,12 @@ const exportData = () => {
 /* Transitions */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-normal) var(--ease-out);
 }
 
 .modal-fade-enter-active .modal-container,
 .modal-fade-leave-active .modal-container {
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-normal) var(--ease-out);
 }
 
 .modal-fade-enter-from,

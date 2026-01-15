@@ -225,7 +225,7 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 .collapse-btn.is-collapsed {
   width: 24px;
   height: 24px;
-  padding: 2px;
+  padding: var(--space-0_5);
 }
 
 .collapse-btn:hover {
@@ -237,14 +237,14 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .today-quick-filter:hover {
@@ -262,9 +262,9 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 .count-badge {
   background: var(--brand-primary);
   color: white;
-  font-size: 10px;
+  font-size: var(--text-xs);
   padding: 0 5px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   height: 16px;
   display: inline-flex;
   align-items: center;
@@ -284,15 +284,15 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 .group-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 12px;
+  gap: var(--space-1_5);
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   background: var(--surface-1);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .group-chip:hover {
@@ -314,10 +314,10 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 
 .chip-count {
   opacity: 0.6;
-  font-size: 10px;
-  padding-left: 4px;
+  font-size: var(--text-xs);
+  padding-left: var(--space-1);
   border-left: 1px solid currentColor;
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 
 /* Advanced Filters Toggle */
@@ -338,7 +338,7 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   color: var(--text-muted);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .toggle-filters-btn:hover {
@@ -352,7 +352,7 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 }
 
 .toggle-icon {
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-normal) var(--ease-out);
 }
 
 .toggle-icon.rotated {

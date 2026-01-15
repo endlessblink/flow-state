@@ -168,11 +168,11 @@ const filterOptions = [
 
 .density-control {
   display: flex;
-  gap: 2px;
+  gap: var(--space-0_5);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  padding: 2px;
+  padding: var(--space-0_5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -279,20 +279,20 @@ const filterOptions = [
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .view-type-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-heavy);
   color: var(--text-primary);
 }
 
 .view-type-btn.active {
-  background: rgba(99, 102, 241, 0.15);
-  color: #6366f1;
+  background: var(--color-indigo-bg-medium);
+  color: var(--color-indigo);
 }
 
 .filter-toggle,
@@ -307,19 +307,19 @@ const filterOptions = [
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .filter-toggle:hover,
 .done-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-heavy);
   color: var(--text-primary);
 }
 
 .filter-toggle.active,
 .done-toggle.active {
-  background: rgba(99, 102, 241, 0.15);
-  color: #6366f1;
+  background: var(--color-indigo-bg-medium);
+  color: var(--color-indigo);
 }
 
 .filter-bar {
@@ -333,7 +333,7 @@ const filterOptions = [
 /* Slide-down transition */
 .slide-down-enter-active,
 .slide-down-leave-active {
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
   overflow: hidden;
 }
 

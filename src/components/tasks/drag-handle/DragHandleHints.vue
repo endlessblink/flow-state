@@ -42,12 +42,12 @@ const hintsClasses = computed(() => [
   left: 50%;
   transform: translateX(-50%) translateY(10px);
   background: rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 8px 12px;
-  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   z-index: 1000;
   pointer-events: none;
   min-width: 140px;
@@ -58,7 +58,7 @@ const hintsClasses = computed(() => [
 .drag-handle__hints::before {
   content: '';
   position: absolute;
-  top: -6px;
+  top: -var(--space-1_5);
   left: 50%;
   transform: translateX(-50%);
   border-width: 0 6px 6px 6px;
@@ -68,7 +68,7 @@ const hintsClasses = computed(() => [
 
 .drag-hints-fade-enter-active,
 .drag-hints-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--duration-normal) var(--var(--ease-out)-out), transform var(--duration-normal) ease;
 }
 
 .drag-hints-fade-enter-from,
@@ -81,16 +81,16 @@ const hintsClasses = computed(() => [
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.8);
 }
 
 kbd {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 1px 4px;
+  background: var(--glass-border-hover);
+  padding: 1px var(--space-1);
   border-radius: 3px;
   font-family: monospace;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: #fff;
 }
 </style>

@@ -1,6 +1,6 @@
 ---
 name: dev-debugging
-description: Use when tasks disappear, data is lost, things are broken, or bugs need fixing. Debug Vue.js reactivity issues, Pinia state problems, canvas position resets, tasks vanishing, drag-drop not working, cache problems, memory leaks, and performance issues. Invoke for any "not working", "broken", "fix bug", "debug issue", "tasks missing", or "state not updating" requests.
+description: UNIFIED DEBUGGER - Use when tasks disappear, data is lost, things are broken, or bugs need fixing. Debug Vue.js reactivity, Pinia state, task store CRUD, keyboard shortcuts, canvas positions, drag-drop, cache, memory leaks, and performance. Invoke for "not working", "broken", "fix bug", "debug", "tasks missing", "shortcuts not working", "state not updating".
 ---
 
 <!-- SKILL CHAINING: After completing debugging work, Claude MUST invoke related skills -->
@@ -11,8 +11,7 @@ description: Use when tasks disappear, data is lost, things are broken, or bugs 
 1. **After fixing a bug** → Use `Skill(qa-testing)` to verify the fix with proper tests
 2. **If canvas issues** → Use `Skill(vue-flow-debug)` for specialized Vue Flow debugging
 3. **If timer issues** → Use `Skill(dev-fix-timer)` for Pomodoro-specific debugging
-4. **If task store issues** → Use `Skill(dev-fix-task-store)` for task CRUD debugging
-5. **If keyboard shortcuts broken** → Use `Skill(dev-fix-keyboard)` for keyboard handler debugging
+4. **If Supabase issues** → Use `Skill(supabase-debugger)` for database/auth debugging
 
 **Example chaining**:
 ```
@@ -613,6 +612,90 @@ const debugViewport = (viewport) => {
   console.log('Pan:', viewport.x, viewport.y)
   console.log('Bounds:', viewport.getBounds())
   console.log('Transform matrix:', viewport.getTransform())
+}
+```
+
+### Task Store Debugging
+
+#### Task CRUD Issues
+```typescript
+// Debug task store operations
+const debugTaskStore = () => {
+  const taskStore = useTaskStore()
+
+  // Watch for mutations
+  taskStore.$subscribe((mutation, state) => {
+    console.group('🔄 Task store mutation')
+    console.log('Type:', mutation.type)
+    console.log('Tasks count:', state.tasks.length)
+    console.groupEnd()
+  })
+
+  // Check for duplicate IDs
+  const checkDuplicates = () => {
+    const ids = taskStore.tasks.map(t => t.id)
+    const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i)
+    if (duplicates.length) console.error('🚨 Duplicate IDs:', duplicates)
+  }
+
+  return { checkDuplicates }
+}
+```
+
+#### Pinia-Supabase Sync Issues
+```typescript
+// Diagnose sync problems
+const diagnosePiniaSync = async () => {
+  const taskStore = useTaskStore()
+  console.log('📊 Pinia tasks:', taskStore.tasks.length)
+
+  // Compare with Supabase
+  const { data } = await supabase.from('tasks').select('id')
+  console.log('💾 Supabase tasks:', data?.length || 0)
+
+  // Find discrepancies
+  const piniaIds = new Set(taskStore.tasks.map(t => t.id))
+  const dbIds = new Set(data?.map(t => t.id) || [])
+  console.log('Missing from Pinia:', [...dbIds].filter(id => !piniaIds.has(id)))
+}
+```
+
+### Keyboard Shortcut Debugging
+
+#### Event Handler Debug
+```typescript
+// Debug keyboard events
+const debugKeyboard = () => {
+  document.addEventListener('keydown', (e) => {
+    console.log('⌨️ Key:', {
+      key: e.key, code: e.code,
+      ctrl: e.ctrlKey, shift: e.shiftKey,
+      target: e.target.tagName
+    })
+
+    // Check if input has focus (shortcuts may be disabled)
+    const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)
+    if (isInput) console.log('📝 Input focused - shortcuts disabled')
+  }, true)
+}
+
+// Test VueUse magic keys
+import { useMagicKeys } from '@vueuse/core'
+const keys = useMagicKeys()
+watch(keys.ctrl_z, (v) => v && console.log('Ctrl+Z pressed'))
+```
+
+#### Event Conflict Detection
+```typescript
+// Find multiple handlers for same key
+const detectConflicts = () => {
+  const handlers = []
+  const originalAdd = EventTarget.prototype.addEventListener
+  EventTarget.prototype.addEventListener = function(type, handler, opts) {
+    if (type === 'keydown') handlers.push({ el: this, handler })
+    return originalAdd.call(this, type, handler, opts)
+  }
+  console.log('Active keydown handlers:', handlers.length)
 }
 ```
 

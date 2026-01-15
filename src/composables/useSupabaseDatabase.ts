@@ -3,6 +3,10 @@ import { supabase } from '@/services/auth/supabase'
 import { useAuthStore } from '@/stores/auth'
 import type { Task, Project } from '@/types/tasks'
 import type { ScheduledNotification } from '@/types/recurrence'
+import type { CanvasGroup } from '@/types/canvas'
+import type { AppSettings } from '@/stores/settings'
+import type { PomodoroSession } from '@/stores/timer'
+import type { SessionSummary } from '@/stores/quickSort'
 import {
     toSupabaseTask, fromSupabaseTask,
     toSupabaseProject, fromSupabaseProject,
@@ -28,7 +32,7 @@ export interface TimerSettings {
 }
 
 // Define DatabaseDependencies for the new function signature
-interface DatabaseDependencies { }
+type DatabaseDependencies = Record<string, unknown>
 
 export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
@@ -491,7 +495,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     // -- Groups --
 
-    const fetchGroups = async (): Promise<any[]> => {
+    const fetchGroups = async (): Promise<CanvasGroup[]> => {
         try {
             const { data, error } = await supabase
                 .from('groups')
@@ -516,7 +520,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
     }
 
-    const saveGroup = async (group: any): Promise<void> => {
+    const saveGroup = async (group: CanvasGroup): Promise<void> => {
         const userId = getUserIdSafe()
         if (!userId) {
             console.debug('⏭️ [GUEST] Skipping saveGroup - not authenticated')
@@ -652,7 +656,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     // -- Timer Sessions --
 
-    const fetchActiveTimerSession = async (): Promise<any | null> => {
+    const fetchActiveTimerSession = async (): Promise<PomodoroSession | null> => {
         try {
             const userId = getUserIdSafe()
             if (!userId) return null
@@ -676,7 +680,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
     }
 
-    const saveActiveTimerSession = async (session: any, deviceId: string): Promise<void> => {
+    const saveActiveTimerSession = async (session: PomodoroSession, deviceId: string): Promise<void> => {
         try {
             const userId = getUserIdSafe()
             if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
@@ -703,7 +707,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     // -- User Settings --
 
-    const fetchUserSettings = async (): Promise<any | null> => {
+    const fetchUserSettings = async (): Promise<AppSettings | null> => {
         try {
             const userId = getUserIdSafe()
             if (!userId) return null
@@ -724,7 +728,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
     }
 
-    const saveUserSettings = async (settings: any): Promise<void> => {
+    const saveUserSettings = async (settings: AppSettings): Promise<void> => {
         const userId = getUserIdSafe()
         if (!userId) {
             console.debug('⏭️ [GUEST] Skipping saveUserSettings - not authenticated')
@@ -745,7 +749,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     // -- Quick Sort Sessions --
 
-    const fetchQuickSortHistory = async (): Promise<any[]> => {
+    const fetchQuickSortHistory = async (): Promise<SessionSummary[]> => {
         try {
             const { data, error } = await supabase
                 .from('quick_sort_sessions')
@@ -762,7 +766,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
     }
 
-    const saveQuickSortSession = async (summary: any): Promise<void> => {
+    const saveQuickSortSession = async (summary: SessionSummary): Promise<void> => {
         const userId = getUserIdSafe()
         if (!userId) {
             console.debug('⏭️ [GUEST] Skipping saveQuickSortSession - not authenticated')

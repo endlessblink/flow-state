@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, onUnmounted, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { WeekEvent } from '@/types/tasks'
@@ -21,6 +21,24 @@ export type { WeekEvent } from '@/types/tasks'
 export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
+
+  // --- MEMORY LEAK FIX: Listener Registry ---
+  let currentMouseMoveHandler: ((e: MouseEvent) => void) | null = null
+  let currentMouseUpHandler: (() => void) | null = null
+
+  const cleanupListeners = () => {
+    if (currentMouseMoveHandler) {
+      document.removeEventListener('mousemove', currentMouseMoveHandler)
+      currentMouseMoveHandler = null
+    }
+    if (currentMouseUpHandler) {
+      document.removeEventListener('mouseup', currentMouseUpHandler)
+      currentMouseUpHandler = null
+    }
+  }
+
+  onUnmounted(cleanupListeners)
+  // ------------------------------------------
 
   const workingHours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
   const dragMode = ref<string | null>(null)
@@ -214,9 +232,13 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     }
 
     const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      cleanupListeners()
     }
+
+    // Use registry for cleanup
+    cleanupListeners()
+    currentMouseMoveHandler = handleMouseMove
+    currentMouseUpHandler = handleMouseUp
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
@@ -276,9 +298,13 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     }
 
     const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      cleanupListeners()
     }
+
+    // Use registry for cleanup
+    cleanupListeners()
+    currentMouseMoveHandler = handleMouseMove
+    currentMouseUpHandler = handleMouseUp
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)

@@ -405,9 +405,32 @@ const startLongBreak = () => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid transparent;
   transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+/* Work Timer - Stroke + Glow (NO fill) */
+.timer-display.timer-active {
+  background: transparent !important;
+  border: 1.5px solid var(--timer-work-stroke);
+  box-shadow: var(--timer-work-stroke-glow);
+}
+
+.timer-display.timer-active:hover {
+  box-shadow: var(--timer-work-stroke-glow-intense);
+}
+
+/* Break Timer - Stroke + Glow (NO fill) */
+.timer-display.timer-break {
+  background: transparent !important;
+  border: 1.5px solid var(--timer-break-stroke);
+  box-shadow: var(--timer-break-stroke-glow);
+}
+
+.timer-display.timer-break:hover {
+  box-shadow: var(--timer-break-stroke-glow-intense);
 }
 
 .timer-icon {

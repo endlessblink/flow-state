@@ -1,6 +1,7 @@
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
+import { calculateOverlappingPositions as _calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 
 // Re-export CalendarEvent for consumers that import from this file
 export type { CalendarEvent } from '@/types/tasks'
@@ -143,73 +144,7 @@ export function useCalendarCore() {
   // Unified overlap positioning algorithm (found in multiple files with variations)
 
   const calculateOverlappingPositions = (events: CalendarEvent[]): CalendarEvent[] => {
-    if (events.length === 0) return events
-
-    const sorted = [...events].sort((a, b) => a.startSlot - b.startSlot)
-
-    // Find groups of overlapping events
-    const groups: CalendarEvent[][] = []
-    let currentGroup: CalendarEvent[] = []
-
-    sorted.forEach((event, index) => {
-      if (index === 0) {
-        currentGroup.push(event)
-        return
-      }
-
-      // Check if this event overlaps with any event in current group
-      const overlapsWithGroup = currentGroup.some(existing =>
-        event.startSlot < existing.startSlot + existing.slotSpan &&
-        event.startSlot + event.slotSpan > existing.startSlot
-      )
-
-      if (overlapsWithGroup) {
-        currentGroup.push(event)
-      } else {
-        groups.push(currentGroup)
-        currentGroup = [event]
-      }
-    })
-
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup)
-    }
-
-    // Assign columns within each group
-    groups.forEach(group => {
-      const columns: CalendarEvent[][] = []
-
-      group.forEach(event => {
-        let placed = false
-
-        for (let i = 0; i < columns.length; i++) {
-          const column = columns[i]
-          const hasCollision = column.some(existing =>
-            event.startSlot < existing.startSlot + existing.slotSpan &&
-            event.startSlot + event.slotSpan > existing.startSlot
-          )
-
-          if (!hasCollision) {
-            column.push(event)
-            event.column = i
-            placed = true
-            break
-          }
-        }
-
-        if (!placed) {
-          columns.push([event])
-          event.column = columns.length - 1
-        }
-      })
-
-      const totalColumns = columns.length
-      group.forEach(event => {
-        event.totalColumns = totalColumns
-      })
-    })
-
-    return sorted
+    return _calculateOverlappingPositions(events) as CalendarEvent[]
   }
 
   // === TIME SNAPPING UTILITIES ===

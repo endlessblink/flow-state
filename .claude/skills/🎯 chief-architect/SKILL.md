@@ -1,29 +1,58 @@
 ---
 name: chief-architect
 emoji: "🎯"
-description: PERSONAL APP ARCHITECT - Strategic development orchestrator for personal productivity applications. Analyzes project context, makes architectural decisions for single-developer projects, delegates to specialized skills, and ensures alignment between user experience goals and technical implementation. Optimized for personal apps targeting 10-100 users.
+description: UNIFIED ARCHITECT - Strategic development orchestrator AND systematic project planner for personal productivity applications. Use for architecture decisions, feature planning, task breakdown, implementation strategy, roadmaps. Triggers on "plan", "break down", "how should I implement", "architecture", "strategy", "roadmap", "design pattern".
 ---
 
-# Personal App Architect - Strategic Development Orchestrator
+# Unified Architect - Strategic Orchestrator & Project Planner
 
-**Version:** 2.0.0
-**Category:** Meta-Skill / Personal App Architect
-**Related Skills:** dev-vue, ts-foundation-restorer, qa-testing, comprehensive-system-analyzer, master-plan-manager
+**Version:** 3.0.0
+**Category:** Meta-Skill / Unified Architect
+**Related Skills:** dev-debugging, dev-vue, qa-testing, codebase-health-auditor, master-plan-manager, smart-doc-manager
 
 ## Overview
 
-A strategic meta-skill designed for personal productivity application development. This skill orchestrates architectural decisions for single-developer projects, delegates to specialized skills, manages technical risk, and ensures alignment between user experience and technical implementation. Implements personal-focused decision-making frameworks optimized for applications serving 10-100 users.
+The unified architect skill for personal productivity application development. This skill combines:
+- **Strategic Orchestration**: Architectural decisions, skill delegation, risk management
+- **Systematic Planning**: Feature breakdown, task decomposition, implementation roadmaps
+
+Optimized for single-developer projects serving 10-100 users.
 
 ## Quick Context
-- **Complexity**: Medium-High (Personal app orchestration)
+- **Complexity**: Medium-High (Personal app orchestration + planning)
 - **Duration**: Variable (Project lifecycle)
 - **Dependencies**: Complete project analysis capabilities
 - **Scale**: 10-100 users maximum
 
 ## Activation Triggers
-- **Keywords**: architecture, orchestration, strategy, decision, personal app, migration, system design, productivity app, mobile prep, cross-platform, skill telemetry, master plan, consolidation
+- **Architecture Keywords**: architecture, orchestration, strategy, decision, personal app, migration, system design, productivity app, mobile prep, cross-platform
+- **Planning Keywords**: plan, break down, how should I implement, roadmap, task breakdown, implementation strategy, feature planning, WBS
 - **Files**: Entire codebase, project documentation, architectural decisions, docs/MASTER_PLAN.md
-- **Contexts**: Personal productivity app planning, local-first architecture, mobile preparation, cross-tab sync, technology evaluation, skill telemetry analysis, roadmap management
+- **Contexts**: Personal productivity app planning, feature implementation, task decomposition, technology evaluation
+
+---
+
+## Automatic Skill Chaining
+
+**IMPORTANT**: After completing planning/architecture work, automatically invoke these skills:
+
+1. **After plan is approved** → Use appropriate dev skill (`dev-debugging`, `dev-vue`, `dev-refactoring`)
+2. **After implementation complete** → Use `Skill(qa-testing)` to verify the implementation
+3. **If documentation needed** → Use `Skill(smart-doc-manager)` for doc updates
+4. **If MASTER_PLAN update needed** → Use `Skill(master-plan-manager)`
+
+**Example chaining workflow**:
+```
+User: "Plan how to add recurring tasks"
+1. Claude uses chief-architect skill (this skill)
+2. Creates detailed plan with phases and tasks
+3. User approves plan
+4. Claude invokes: Skill(dev-debugging) or appropriate dev skill
+5. After implementation → Claude invokes: Skill(qa-testing)
+6. After tests pass → Ask user to verify
+```
+
+---
 
 ## 🚨 CRITICAL ORCHESTRATION REQUIREMENTS
 
@@ -38,11 +67,11 @@ A strategic meta-skill designed for personal productivity application developmen
 5. **User Confirmation**: Explicit user confirmation BEFORE any success claims
 
 #### **FORBIDDEN SUCCESS CLAIMS (AUTOMATIC SKILL TERMINATION):**
-- ❌ "PRODUCTION READY" without complete manual testing
-- ❌ "MISSION ACCOMPLISHED" without ALL bugs fixed
-- ❌ "ISSUE RESOLVED" without user verification
-- ❌ "SYSTEM STABLE" without comprehensive testing
-- ❌ ANY success claim without evidence and user confirmation
+- "PRODUCTION READY" without complete manual testing
+- "MISSION ACCOMPLISHED" without ALL bugs fixed
+- "ISSUE RESOLVED" without user verification
+- "SYSTEM STABLE" without comprehensive testing
+- ANY success claim without evidence and user confirmation
 
 ### **Personal App Architect Protocol**
 **PERSONAL PRODUCTIVITY FOCUS**: Make technical decisions that optimize user experience, development efficiency, and personal app maintainability.
@@ -77,6 +106,171 @@ A strategic meta-skill designed for personal productivity application developmen
 - User confirmation > technical claims
 - User experience > technical elegance
 
+---
+
+## Systematic Planning Protocol
+
+### When to Use Planning Features
+Use systematic planning when the user:
+- Requests "plan this feature" or "break down this task"
+- Asks "how should I implement..." or "what's the approach for..."
+- Needs a roadmap, architecture plan, or implementation strategy
+- Mentions "complex feature", "large project", or "multi-step work"
+- Wants to understand dependencies and implementation order
+
+### Phase 1: Analysis & Discovery
+
+**Understand the current state:**
+
+1. **Codebase Context**
+   - Read relevant files to understand current architecture
+   - Identify existing patterns and conventions
+   - Check project guidelines (CLAUDE.md, README.md)
+   - Review related components and stores
+
+2. **Requirements Analysis**
+   - Extract explicit requirements from user request
+   - Identify implicit requirements (performance, UX, testing)
+   - Consider edge cases and error scenarios
+   - Note constraints (technical, time, compatibility)
+
+3. **Dependency Mapping**
+   - Identify affected files and components
+   - Map data flow and state management needs
+   - Note integration points with existing features
+   - Check for breaking changes or migrations needed
+
+### Phase 2: Strategic Breakdown (Work Breakdown Structure)
+
+**Create a Work Breakdown Structure (WBS):**
+
+1. **High-Level Phases**
+   Break the project into 3-5 major phases:
+   ```
+   Example:
+   Phase 1: Data Model & Store Setup
+   Phase 2: UI Components & Views
+   Phase 3: Integration & State Management
+   Phase 4: Testing & Polish
+   Phase 5: Documentation & Deployment
+   ```
+
+2. **Task Decomposition**
+   For each phase, create specific, actionable tasks:
+   - Each task should be completable in 30-90 minutes
+   - Include acceptance criteria
+   - Note any blockers or prerequisites
+   - Estimate complexity (Low/Medium/High/Critical)
+
+3. **Dependency Graph**
+   Document task relationships:
+   - Which tasks must be completed first?
+   - Which tasks can be done in parallel?
+   - Which tasks have circular dependencies (resolve these)?
+   - What are the critical path items?
+
+### Phase 3: Implementation Strategy
+
+1. **Priority & Sequencing**
+   Order tasks by:
+   - **Priority 1 (Critical Path)**: Must be done first, blocks other work
+   - **Priority 2 (Foundation)**: Core functionality, enables other features
+   - **Priority 3 (Enhancement)**: Improves UX but not blocking
+   - **Priority 4 (Polish)**: Nice-to-have, can be deferred
+
+2. **Risk Assessment**
+   For each high-complexity task:
+   - What could go wrong?
+   - What are the alternatives?
+   - What validation is needed?
+   - Are there performance concerns?
+
+3. **Testing Strategy**
+   Define testing approach:
+   - Unit tests for stores and utilities
+   - Component tests for UI elements
+   - Integration tests for workflows
+   - Playwright tests for critical user paths
+
+### Phase 4: Deliverable Format
+
+Present the plan in this structure:
+
+```markdown
+## Project Plan: [Feature Name]
+
+### Overview
+[Brief description of what we're building and why]
+
+### Success Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+### Architecture Changes
+[What architectural changes are needed? New stores, composables, components?]
+
+### Implementation Phases
+
+#### Phase 1: [Phase Name]
+**Goal**: [What this phase accomplishes]
+
+**Tasks:**
+1. **[Task Name]** (Complexity: Low/Medium/High)
+   - File: `src/path/to/file.ts`
+   - Description: [What to do]
+   - Acceptance: [How to verify it works]
+   - Dependencies: [Other tasks needed first]
+
+2. **[Next Task]** (Complexity: Medium)
+   - ...
+
+#### Phase 2: [Phase Name]
+...
+
+### Critical Path
+1. Task A → Task B → Task C
+2. Task D can run parallel to Task B
+
+### Risk Mitigation
+- **Risk**: [What could go wrong]
+  **Mitigation**: [How to prevent/handle it]
+
+### Testing Plan
+- [ ] Unit tests: [What to test]
+- [ ] Component tests: [What to test]
+- [ ] Integration tests: [What to test]
+- [ ] Playwright E2E: [Critical user flows]
+
+### Open Questions
+- Question 1?
+- Question 2?
+
+### Next Steps
+1. [First concrete action to take]
+2. [Second action]
+```
+
+### Planning Quality Standards
+
+**Every plan must include:**
+- Clear phases with specific goals
+- Actionable tasks with file paths
+- Complexity estimates for each task
+- Dependency relationships documented
+- Testing strategy defined
+- Risk assessment for complex tasks
+- Success criteria that can be validated
+
+**Avoid:**
+- Vague tasks like "improve performance"
+- Missing dependencies or assumptions
+- No testing strategy
+- No file/component references
+- Ignoring existing code patterns
+
+---
+
 ## Core Architectural Responsibilities
 
 ### 1. Personal App Architecture Planning
@@ -106,6 +300,8 @@ A strategic meta-skill designed for personal productivity application developmen
 - Learn from past decisions for personal development improvement
 - Recommend solutions based on similar personal app contexts
 - Track decision impact on user productivity and development workflow
+
+---
 
 ## Personal App Architecture Domains
 
@@ -151,247 +347,97 @@ A strategic meta-skill designed for personal productivity application developmen
 - **Error Handling**: Graceful degradation and user-friendly error messages
 - **Feedback Integration**: User feedback collection and implementation workflow
 
-## Personal App Orchestration Workflow
+---
 
-### Phase 1: Personal App Analysis & Strategy
+## Dynamic Skill Discovery
+
+**IMPORTANT**: Rather than hardcoding skill names, discover available skills dynamically.
+
+### Available Skill Categories
+
+To find current skills, check `.claude/skills/` directory. Current categories:
+
+| Category | Skills |
+|----------|--------|
+| **Debugging** | `dev-debugging`, `vue-flow-debug`, `supabase-debugger`, `frontend-layout-fixer` |
+| **Development** | `dev-vue`, `dev-vueuse`, `dev-refactoring`, `dev-implement-ui-ux`, `tiptap-vue3` |
+| **Fixes** | `dev-fix-keyboard`, `dev-fix-timer`, `dev-fix-task-store`, `dev-undo-redo`, `persistence-type-fixer` |
+| **Quality** | `qa-testing`, `codebase-health-auditor` |
+| **Documentation** | `smart-doc-manager`, `master-plan-manager`, `dev-storybook` |
+| **Infrastructure** | `ops-port-manager`, `tauri-e2e-testing` |
+| **Analysis** | `detect-competing-systems`, `ts-architectural-cleanup`, `vue-filter-manager` |
+| **Meta** | `meta-skill-router`, `skill-creator-doctor`, `calendar-interface-architect` |
+
+### Skill Routing Guidance
+
 ```typescript
-async analyzePersonalAppContext(): Promise<PersonalAppContext> {
-  // 1. Extract current state
-  const codeAnalysis = await this.delegateToSkill('comprehensive-system-analyzer', {
-    paths: ['src/', 'tests/'],
-    metrics: ['user-experience', 'maintainability', 'performance', 'mobile-readiness']
-  });
+// Route based on task type - use EXISTING skills only
+function routeTask(taskType: string): string {
+  const routing = {
+    // Debugging & Fixes
+    'bug': 'dev-debugging',
+    'vue-reactivity': 'dev-debugging',
+    'canvas-issue': 'vue-flow-debug',
+    'supabase-issue': 'supabase-debugger',
+    'layout-issue': 'frontend-layout-fixer',
+    'keyboard-shortcut': 'dev-fix-keyboard',
+    'timer-issue': 'dev-fix-timer',
+    'task-crud': 'dev-fix-task-store',
+    'undo-redo': 'dev-undo-redo',
 
-  const architectureState = await this.analyzePersonalAppArchitecture({
-    analyzeDependencies: true,
-    extractPersonalAppPatterns: true,
-    identifyUserExperienceIssues: true
-  });
+    // Development
+    'vue-component': 'dev-vue',
+    'composable': 'dev-vueuse',
+    'refactor': 'dev-refactoring',
+    'ui-ux': 'dev-implement-ui-ux',
+    'rich-text': 'tiptap-vue3',
 
-  // 2. Identify user experience gaps
-  const uxGaps = this.identifyUserExperienceGaps(codeAnalysis, architectureState);
+    // Quality
+    'testing': 'qa-testing',
+    'dead-code': 'codebase-health-auditor',
 
-  // 3. Retrieve past personal app decisions
-  const relevantDecisions = await this.queryPersonalAppKnowledgeBase({
-    context: uxGaps,
-    similarPersonalApps: true
-  });
+    // Documentation
+    'documentation': 'smart-doc-manager',
+    'master-plan': 'master-plan-manager',
+    'storybook': 'dev-storybook',
 
-  // 4. Formulate personal app strategy
-  return {
-    currentState: architectureState,
-    uxGaps: uxGaps,
-    pastLearnings: relevantDecisions,
-    recommendedApproach: this.formulatePersonalAppStrategy(uxGaps, relevantDecisions)
+    // Infrastructure
+    'port-conflict': 'ops-port-manager',
+    'e2e-test': 'tauri-e2e-testing'
   };
+
+  return routing[taskType] || 'dev-debugging';
 }
 ```
 
-### Phase 2: Personal App Decision Making
-```typescript
-async makePersonalAppDecision(
-  concern: PersonalAppConcern,
-  context: PersonalAppContext
-): Promise<PersonalAppDecision> {
+---
 
-  // 1. Analyze options for personal app impact
-  const options = await this.researchPersonalAppSolutions({
-    concern,
-    constraints: context.constraints,
-    qualityAttributes: ['user-experience', 'development-speed', 'maintainability', 'mobile-compatibility']
-  });
+## Pomo-Flow Specific Considerations
 
-  // 2. Evaluate personal app trade-offs
-  const evaluation = await this.evaluatePersonalAppTradeoffs({
-    options,
-    qualityAttributes: ['user-experience', 'development-speed', 'maintainability', 'mobile-readiness'],
-    context
-  });
+**When planning for this project, always:**
 
-  // 3. Select optimal solution for personal app
-  const decision = this.selectPersonalAppSolution(evaluation, context.userExperiencePriorities);
+1. **Check Existing Patterns**
+   - Review how similar features are implemented
+   - Use VueUse composables where possible
+   - Follow Pinia store patterns (tasks.ts as reference)
+   - Use design tokens from `src/assets/design-tokens.css`
 
-  // 4. Document decision for personal development
-  await this.createPersonalAppDecisionRecord({
-    decision,
-    alternatives: options,
-    rationale: evaluation,
-    userExperienceImpact: decision.uxImpact
-  });
+2. **State Management**
+   - Consider undo/redo implications
+   - Plan Supabase persistence strategy
+   - Think about cross-view synchronization
 
-  // 5. Add to personal development knowledge base
-  await this.updatePersonalAppKnowledgeBase(decision);
+3. **Performance**
+   - Large task lists require virtual scrolling
+   - Debounce expensive operations
+   - Use computed properties for filtering
 
-  return decision;
-}
-```
+4. **Testing Requirements**
+   - Playwright tests are MANDATORY for user-facing changes
+   - Visual confirmation required before claiming completion
+   - Test across all views (Board, Calendar, Canvas)
 
-### Phase 3: Personal Implementation Orchestration
-```typescript
-async orchestratePersonalImplementation(
-  decision: PersonalAppDecision,
-  context: PersonalAppContext
-): Promise<PersonalImplementationResult> {
-
-  // 1. Decompose into personal development tasks
-  const tasks = this.decomposePersonalAppDecision(decision);
-
-  // 2. Build task dependency graph
-  const taskGraph = this.buildPersonalTaskGraph(tasks, context);
-
-  // 3. Execute with user experience validation
-  for (const taskBatch of taskGraph.executionBatches) {
-    const results = await Promise.allSettled(
-      taskBatch.map(task => this.delegateToPersonalAppSkill(task, context))
-    );
-
-    // 4. Handle failures with practical recovery
-    const failures = results.filter(r => r.status === 'rejected');
-    if (failures.length > 0) {
-      const recovered = await this.recoverFromPersonalAppFailures(failures, context);
-      if (!recovered) {
-        await this.createPersonalAppCheckpoint(context);
-        throw new PersonalAppImplementationFailure(failures);
-      }
-    }
-
-    // 5. Validate user experience impact
-    await this.validateUserExperienceImpact(taskBatch, context);
-  }
-
-  return {
-    success: true,
-    tasksCompleted: tasks.length,
-    userExperienceImprovements: this.measureUserExperienceImpact(context),
-    personalDevelopmentNotes: this.collectDevelopmentNotes(context)
-  };
-}
-```
-
-## 📊 Skill Telemetry & Consolidation (Active)
-
-### Telemetry System
-The project uses a custom telemetry system to track skill usage and optimize agent interactions.
-
-**Key Components:**
-- **Reporting**: `scripts/skills-telemetry.cjs` (Report, Export, Reset)
-- **Monitoring**: `src/mcp-health-monitor.cjs` (MCP Health)
-- **Logging**: `.claude/skill-logger.js` (Skill execution logs)
-- **Visualization**: `.claude/skills-management/` (Dashboard)
-
-### Skill Consolidation Protocol
-Regularly analyze and consolidate skills to strictly necessary set:
-1. **Analyze**: `npm run skills:consolidation-analyze`
-2. **Execute**: `npm run skills:consolidation-execute`
-3. **Verify**: Check `docs/skill-telemetry/` for usage patterns
-
-### Automation Scripts
-- `npm run validate:comprehensive`: Full system check
-- `npm run checkpoint`: Git + Backup checkpoint
-- `npm run file:organize`: Auto-organize file structure
-
-
-## Personal App Skill Routing Logic
-
-### Local-First Data Architecture Routing
-```typescript
-async routePersonalAppDataTask(task: PersonalAppDataTask, context: PersonalAppContext): Promise<SkillResult> {
-  if (task.type === 'CROSS_TAB_SYNC') {
-    return await this.delegateToSkill('dev-fix-task-sync', {
-      task,
-      context,
-      syncStrategy: 'indexeddb-broadcast-channel',
-      validation: 'data-consistency-check'
-    });
-  } else if (task.type === 'LOCAL_BACKUP') {
-    return await this.delegateToSkill('indexeddb-backup-debugger', {
-      task,
-      context,
-      backupStrategy: 'incremental-local-backup'
-    });
-  } else if (task.type === 'DATA_MIGRATION') {
-    return await this.delegateToSkill('persistence-type-fixer', {
-      task,
-      context,
-      migrationPlan: 'personal-app-data-migration'
-    });
-  }
-}
-```
-
-### Personal Frontend Architecture Routing
-```typescript
-async routePersonalAppFrontendTask(task: PersonalAppFrontendTask, context: PersonalAppContext): Promise<SkillResult> {
-  if (task.framework === 'vue') {
-    if (task.concern === 'PERFORMANCE') {
-      return await this.delegateToSkill('dev-optimize-performance', {
-        task,
-        context,
-        optimizationTarget: 'personal-app-user-experience'
-      });
-    } else if (task.concern === 'REACTIVITY') {
-      return await this.delegateToSkill('dev-debugging', {
-        task,
-        context,
-        focus: 'vue-reactivity-debugging'
-      });
-    } else if (task.concern === 'COMPONENT_DESIGN') {
-      return await this.delegateToSkill('dev-vue', {
-        task,
-        context,
-        componentType: 'personal-app-component'
-      });
-    }
-  }
-}
-```
-
-### Personal App Testing & QA Routing
-```typescript
-async routePersonalAppTestingTask(task: PersonalAppTestingTask, context: PersonalAppContext): Promise<SkillResult> {
-  if (task.type === 'USER_EXPERIENCE_VALIDATION') {
-    return await this.delegateToSkill('qa-testing', {
-      task,
-      context,
-      testingScope: 'personal-app-user-workflow',
-      validationMethod: 'playwright-visual-testing'
-    });
-  } else if (task.type === 'UI_CONSISTENCY') {
-    return await this.delegateToSkill('qa-audit-ui-ux', {
-      task,
-      context,
-      auditScope: 'personal-app-design-system'
-    });
-  } else if (task.type === 'SYSTEM_HEALTH') {
-    return await this.delegateToSkill('comprehensive-system-analyzer', {
-      task,
-      context,
-      analysisScope: 'personal-app-health-check'
-    });
-  }
-}
-```
-
-## Personal App Knowledge Base & Learning
-
-### Personal Development Notes
-- Document architectural decisions with user experience rationale
-- Include alternatives considered and personal development trade-offs
-- Track decision outcomes and personal productivity impact
-- Maintain personal development journal for future reference
-
-### Personal App Pattern Recognition
-- Identify recurring patterns in personal productivity applications
-- Maintain library of proven personal app solutions
-- Adapt patterns to current user experience context
-- Build personal development knowledge for future projects
-
-### Continuous Personal Learning
-- Learn from every user experience implementation
-- Update personal app principles based on user feedback
-- Refine personal development decision frameworks
-- Improve personal app recommendations over time
-- Track mobile preparation and cross-platform learnings
+---
 
 ## Personal App Validation Gates
 
@@ -401,10 +447,9 @@ async routePersonalAppTestingTask(task: PersonalAppTestingTask, context: Persona
 - User workflow improvement verified
 - Documented in personal development notes
 
-### Local Data Validation
+### Data Validation
 - Zero data loss verified in cross-tab testing
-- Local backup procedures tested and working
-- IndexedDB performance acceptable (<100ms for typical operations)
+- Supabase sync procedures tested and working
 - Data recovery procedures validated
 
 ### Frontend User Experience Validation
@@ -419,107 +464,19 @@ async routePersonalAppTestingTask(task: PersonalAppTestingTask, context: Persona
 - Touch interactions working smoothly
 - Performance acceptable on mobile devices
 
+---
+
 ## Personal App Success Criteria
 
-- ✅ **User Experience Alignment**: All decisions enhance personal productivity
-- ✅ **Personal Knowledge Growth**: Personal development knowledge base improves with each decision
-- ✅ **Quality Metrics**: User experience, performance, and reliability improve over time
-- ✅ **Development Experience**: Clear guidance, reduced friction, faster personal development
-- ✅ **App Evolution**: Architecture adapts to user feedback and changing requirements
-- ✅ **Personal Risk Management**: Proactive identification and mitigation of technical debt that impacts personal development velocity
-- ✅ **User Productivity**: App tangibly improves personal productivity and task management
+- **User Experience Alignment**: All decisions enhance personal productivity
+- **Personal Knowledge Growth**: Personal development knowledge base improves with each decision
+- **Quality Metrics**: User experience, performance, and reliability improve over time
+- **Development Experience**: Clear guidance, reduced friction, faster personal development
+- **App Evolution**: Architecture adapts to user feedback and changing requirements
+- **Personal Risk Management**: Proactive identification and mitigation of technical debt
+- **User Productivity**: App tangibly improves personal productivity and task management
 
-## Personal App Usage Examples
-
-### Example 1: Supabase Synchronization Implementation
-```
-chief-architect implement-supabase-sync \
-  --current-stack "supabase-js" \
-  --sync-strategy "realtime-subscriptions" \
-  --requirements "optimistic-ui,conflict-resolution" \
-  --validation "playwright-multi-client"
-```
-
-### Example 2: Personal App Performance Optimization
-```
-chief-architect optimize-personal-app-performance \
-  --analyze "src/components src/stores" \
-  --focus "user-experience,mobile-readiness,bundle-size" \
-  --target-lighthouse-score ">90" \
-  --validation-method "user-workflow-testing"
-```
-
-### Example 3: Mobile Preparation Strategy
-```
-chief-architect prepare-mobile-version \
-  --current-platform "browser-only" \
-  --target-platform "browser + mobile (capacitor)" \
-  --quality-attributes "touch-interactions,battery-efficiency,responsive-design" \
-  --timeline "4-weeks"
-```
-
-### Example 4: User Experience Enhancement Planning
-```
-chief-architect enhance-user-experience \
-  --analyze-user-workflow "task-management,pomodoro-timer,cross-view-synchronization" \
-  --focus "productivity-improvement,interface-consistency,error-handling" \
-  --validation "user-testing,playwright-visual-validation"
-```
-
-### Example 5: Telemetry Health Check
-```
-chief-architect check-system-health \
-  --run "npm run telemetry:health" \
-  --validate "mcp-crash-monitor"
-```
-
-### Example 6: Manual Master Plan Update
-```
-chief-architect update-master-plan \
-  --task "TASK-123" \
-  --action "complete" \
-  --verify "automated-tests"
-```
-
-### Example 7: Skill Consolidation (Maintenance)
-```
-chief-architect run-skill-consolidation \
-  --analyze "true" \
-  --execute "false" \
-  --report "docs/consolidation-report.md"
-```
-
-## Personal App Implementation Protocol
-
-### 1. Personal App Context Gathering
-- Analyze current personal app state comprehensively
-- Extract user experience requirements and personal productivity goals
-- Identify technical risks that impact personal development velocity
-- Consider cross-platform and mobile preparation requirements
-
-### 2. Personal App Analysis Phase
-- Research multiple solutions optimized for single-developer projects
-- Evaluate personal app trade-offs (development speed vs. user experience)
-- Assess impact on user productivity and personal development workflow
-- Consider mobile readiness and cross-browser compatibility
-
-### 3. Personal App Decision Phase
-- Select optimal solution for personal app context
-- Document decision with user experience rationale
-- Create personal development notes and reasoning
-- Update personal app knowledge base
-
-### 4. Personal App Orchestration Phase
-- Decompose decision into manageable personal development tasks
-- Build execution plan optimized for single developer workflow
-- Delegate to appropriate personal app specialized skills
-- Monitor progress with user experience validation
-
-### 5. Personal App Validation Phase
-- Validate implementation enhances user productivity
-- Verify user experience quality metrics are maintained
-- Test cross-browser compatibility and mobile responsiveness
-- Document outcomes and personal development learnings
+---
 
 ## Personal App Architect Principles
 
@@ -534,105 +491,46 @@ chief-architect run-skill-consolidation \
 
 ---
 
-## Systematic Planning Integration (Integrated from arch-planning)
+## Usage Examples
 
-### Enhanced Project Planning Protocol
+### Example 1: Plan a New Feature
+```
+User: "I want to add recurring tasks to Pomo-Flow"
 
-#### When to Use Planning Features:
-The chief-architect now includes systematic project planning when:
-- User requests "plan this feature" or "break down this task"
-- Asks "how should I implement..." or "what's the approach for..."
-- Needs a roadmap, architecture plan, or implementation strategy
-- Mentions "complex feature", "large project", or "multi-step work"
-- Wants to understand dependencies and implementation order
-
-#### Integrated Planning Process
-
-**Phase 1: Analysis & Discovery**
-```typescript
-// Systematic project analysis
-const analyzeProjectRequirements = (userRequest) => {
-  return {
-    // Codebase Context
-    currentArchitecture: analyzeExistingStructure(),
-    patterns: identifyExistingPatterns(),
-    conventions: extractProjectGuidelines(),
-
-    // Requirements Analysis
-    explicitRequirements: extractRequirements(userRequest),
-    implicitRequirements: identifyImplicitNeeds(),
-    constraints: analyzeTechnicalConstraints(),
-
-    // Dependency Mapping
-    affectedFiles: mapImpactAreas(),
-    dataFlow: analyzeDataRequirements(),
-    integrationPoints: identifyConnections()
-  }
-}
+chief-architect response:
+1. Analyzes current task data model
+2. Creates WBS with phases:
+   - Phase 1: Data model changes (Task interface, RecurrenceRule type)
+   - Phase 2: Store logic (recurrence calculation, instance generation)
+   - Phase 3: UI components (recurrence picker, visual indicators)
+   - Phase 4: Calendar integration (show all instances)
+   - Phase 5: Testing (edge cases, DST handling, performance)
+3. Documents dependencies and critical path
+4. After approval, chains to implementation skills
 ```
 
-**Phase 2: Strategic Planning**
-```typescript
-// Create implementation roadmap
-const createImplementationPlan = (analysis) => {
-  return {
-    phases: breakIntoPhases(analysis),
-    tasks: defineSpecificTasks(),
-    dependencies: mapTaskDependencies(),
-    timeline: estimateDevelopmentTime(),
-    risks: identifyPotentialRisks(),
-    validation: defineSuccessCriteria()
-  }
-}
+### Example 2: Architecture Decision
+```
+User: "Should we use WebSockets or polling for real-time updates?"
+
+chief-architect response:
+1. Analyzes current Supabase setup
+2. Evaluates trade-offs for personal app scale
+3. Recommends Supabase Realtime (already integrated)
+4. Documents decision rationale
 ```
 
-#### Planning Templates
-
-**Feature Implementation Template:**
-```markdown
-## Implementation Plan: [Feature Name]
-
-### Phase 1: Foundation
-- [ ] Setup core data structures
-- [ ] Create basic UI components
-- [ ] Implement primary functionality
-
-### Phase 2: Integration
-- [ ] Connect to existing stores
-- [ ] Integrate with routing
-- [ ] Add error handling
-
-### Phase 3: Enhancement
-- [ ] Add advanced features
-- [ ] Implement accessibility
-- [ ] Performance optimization
-
-### Dependencies:
-- Requires: [existing features]
-- Impacts: [other components]
-- Timeline: [estimated duration]
-
-### Success Criteria:
-- [ ] Feature works as specified
-- [ ] No regressions in existing functionality
-- [ ] Performance within acceptable limits
-- [ ] User testing validates requirements
+### Example 3: Task Breakdown
 ```
+User: "Break down adding dark mode support"
 
----
-
-## Personal App Meta-Architecture Pattern
-
-This skill implements the **Personal App Architect cognitive architecture**:
-
-- **Perception**: Continuously monitors personal app state, user experience metrics, and development context
-- **Reasoning**: Analyzes user experience trade-offs, evaluates personal development options, makes decisions using systematic planning
-- **Action**: Delegates to personal app specialized skills, validates user experience outcomes
-- **Learning**: Updates personal development knowledge base, improves user experience recommendations
-- **Memory**: Maintains personal app history, user experience patterns, and development decisions
-- **Attention**: Prioritizes based on user productivity impact and personal development velocity
-
-This creates a **self-improving personal app architectural intelligence** that becomes more effective over time by learning from every user experience decision, implementation, and personal development outcome.
+chief-architect response:
+1. Phase 1: Design token setup (CSS variables)
+2. Phase 2: Theme store (Pinia)
+3. Phase 3: Toggle component
+4. Phase 4: Component updates (use CSS variables)
+5. Phase 5: Persist preference (Supabase user_settings)
+```
 
 ---
 

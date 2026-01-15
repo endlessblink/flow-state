@@ -1,0 +1,197 @@
+import { ref, computed } from 'vue'
+import type { CanvasGroup } from '@/types/canvas'
+import {
+    applySmartGroupNormalizations,
+    logGroupIdHistogram,
+    getAllDescendantGroupIds
+} from '@/utils/canvas/storeHelpers'
+import type { Task } from '@/types/tasks'
+import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
+import { type ContainerBounds, isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
+
+export const useCanvasGroups = (
+    persistence: {
+        saveGroupToStorage: (group: CanvasGroup) => Promise<void>
+        saveGroupsToLocalStorage: (groups: CanvasGroup[]) => void
+        deleteGroupRemote: (id: string) => Promise<void>
+    },
+    taskStoreRef: { value: { tasks: Task[] } | null }
+) => {
+    const _rawGroups = ref<CanvasGroup[]>([])
+    const activeGroupId = ref<string | null>(null)
+    const taskParentVersion = ref(0)
+    const syncTrigger = ref(0)
+    const activeSectionId = ref<string | null>(null)
+
+    const visibleGroups = computed(() => {
+        const result = _rawGroups.value.filter(g => g.isVisible !== false)
+        logGroupIdHistogram('visibleGroups', result)
+        return result
+    })
+
+    const sections = computed(() => _rawGroups.value)
+
+    const bumpTaskParentVersion = () => {
+        taskParentVersion.value++
+    }
+
+    const setGroups = (newGroups: CanvasGroup[]) => {
+        if (newGroups.length === 0 && _rawGroups.value.length > 0) {
+            console.error('❌ [CANVAS] Refusing to overwrite existing groups with empty array')
+            return
+        }
+        _rawGroups.value = [...newGroups]
+    }
+
+    const createGroup = async (groupData: Omit<CanvasGroup, 'id'>) => {
+        applySmartGroupNormalizations(groupData)
+        const newGroup: CanvasGroup = {
+            ...groupData,
+            id: `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            isVisible: true,
+            isCollapsed: false,
+            parentGroupId: null,
+            positionVersion: 1,
+            positionFormat: 'absolute'
+        }
+        _rawGroups.value.push(newGroup)
+        await persistence.saveGroupToStorage(newGroup)
+        return newGroup
+    }
+
+    const updateGroup = async (id: string, updates: Partial<CanvasGroup>) => {
+        const index = _rawGroups.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            const group = _rawGroups.value[index]
+
+            if ('parentGroupId' in updates && updates.parentGroupId !== group.parentGroupId) {
+                console.log(`📍[GROUP-PARENT-WRITE] Group ${id.slice(0, 8)}... (${group.name}) parentGroupId: "${group.parentGroupId ?? 'none'}" → "${updates.parentGroupId ?? 'none'}"`)
+            }
+
+            if (updates.name) {
+                applySmartGroupNormalizations(updates)
+            }
+
+            const currentVersion = group.positionVersion || 0
+            const newVersion = updates.position ? currentVersion + 1 : currentVersion
+
+            _rawGroups.value[index] = {
+                ...group,
+                ...updates,
+                positionVersion: newVersion,
+                updatedAt: new Date().toISOString()
+            }
+            await persistence.saveGroupToStorage(_rawGroups.value[index])
+        }
+    }
+
+    const deleteGroup = async (id: string) => {
+        const index = _rawGroups.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            _rawGroups.value.splice(index, 1)
+            if (activeSectionId.value === id) {
+                activeSectionId.value = null
+            }
+            persistence.saveGroupsToLocalStorage(_rawGroups.value)
+            await persistence.deleteGroupRemote(id)
+        }
+    }
+
+    const patchGroups = (updates: Map<string, Partial<CanvasGroup>>) => {
+        const result = { patched: [] as string[], skippedLocked: [] as string[], notFound: [] as string[] }
+        for (const [groupId, changes] of updates) {
+            const group = _rawGroups.value.find(g => g.id === groupId)
+            if (!group) {
+                result.notFound.push(groupId)
+                continue
+            }
+            Object.assign(group, changes, { updatedAt: new Date().toISOString() })
+            result.patched.push(groupId)
+        }
+        if (result.patched.length > 0) {
+            persistence.saveGroupsToLocalStorage(_rawGroups.value)
+        }
+        return result
+    }
+
+    const isTaskDone = (task: Task): boolean => task.status === 'done'
+
+    const taskCountByGroupId = computed(() => {
+        const counts = new Map<string, number>()
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _version = taskParentVersion.value
+
+        if (!taskStoreRef.value || !taskStoreRef.value.tasks) return counts
+
+        const tasks = taskStoreRef.value.tasks
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _taskCountTotal = tasks.length
+
+        for (const task of tasks) {
+            if (task._soft_deleted || isTaskDone(task)) continue
+            if (task.parentId) {
+                counts.set(task.parentId, (counts.get(task.parentId) ?? 0) + 1)
+            }
+        }
+        return counts
+    })
+
+    const aggregatedTaskCountByGroupId = computed(() => {
+        const aggregatedCounts = new Map<string, number>()
+        const groups = _rawGroups.value
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const _version = taskParentVersion.value
+
+        if (!taskStoreRef.value || !taskStoreRef.value.tasks) return aggregatedCounts
+        const directCounts = taskCountByGroupId.value
+
+        for (const group of groups) {
+            const descendantIds = getAllDescendantGroupIds(group.id, groups)
+            let total = 0
+            for (const gid of descendantIds) {
+                total += directCounts.get(gid) ?? 0
+            }
+            aggregatedCounts.set(group.id, total)
+        }
+        return aggregatedCounts
+    })
+
+    const getTasksInSection = (groupId: string, tasks?: Task[]): Task[] => {
+        const sourceTasks = tasks || (taskStoreRef.value?.tasks || [])
+        const group = _rawGroups.value.find(g => g.id === groupId)
+        if (!group) return []
+
+        const groupAbsolutePos = getGroupAbsolutePosition(groupId, _rawGroups.value)
+        const containerBounds: ContainerBounds = {
+            position: groupAbsolutePos,
+            width: group.position.width,
+            height: group.position.height
+        }
+
+        return sourceTasks.filter((t: Task) => {
+            if (t.canvasPosition) {
+                return isNodeCompletelyInside({ position: t.canvasPosition }, containerBounds)
+            }
+            return false
+        })
+    }
+
+    return {
+        _rawGroups,
+        activeGroupId,
+        taskParentVersion,
+        syncTrigger,
+        activeSectionId,
+        visibleGroups,
+        sections,
+        bumpTaskParentVersion,
+        setGroups,
+        createGroup,
+        updateGroup,
+        deleteGroup,
+        patchGroups,
+        taskCountByGroupId,
+        aggregatedTaskCountByGroupId,
+        getTasksInSection
+    }
+}

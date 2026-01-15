@@ -139,6 +139,28 @@
       stroke: var(--brand-primary);
     }
 
+    .sidebar-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-section-title .icon svg {
+      width: 14px;
+      height: 14px;
+      stroke: var(--text-muted);
+      fill: none;
+    }
+
     .nav-tabs {
       display: flex;
       flex-direction: column;
@@ -1307,6 +1329,19 @@
 
     .sidebar-section {
       padding: 16px;
+      overflow: hidden;
+      transition: max-height 0.25s ease, padding 0.25s ease;
+    }
+
+    .sidebar-section.collapsed {
+      max-height: 48px;
+      padding-bottom: 0;
+    }
+
+    .sidebar-section.collapsed .task-list,
+    .sidebar-section.collapsed .agent-list {
+      opacity: 0;
+      visibility: hidden;
     }
 
     .section-header {
@@ -1314,6 +1349,24 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-header:hover .section-title {
+      color: var(--text-secondary);
+    }
+
+    .section-toggle {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section.collapsed .section-toggle {
+      transform: rotate(-90deg);
     }
 
     .section-title {
@@ -1421,33 +1474,34 @@
       padding: 8px;
     }
 
-    /* Status Bar */
+    /* Status Bar - Minimal inline */
     .agent-status-bar {
-      display: flex;
-      gap: 24px;
-      padding: 12px 20px;
-      background: var(--surface-tertiary);
+      display: inline-flex;
+      gap: 16px;
+      padding: 8px 16px;
+      background: transparent;
       border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px;
     }
 
     .status-item {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .status-label {
       font-size: 10px;
-      font-weight: 600;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
+      letter-spacing: 0.3px;
+      color: var(--text-subtle);
     }
 
     .status-value {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 500;
-      color: var(--text-primary);
+      color: var(--text-secondary);
     }
 
     .status-tools {
@@ -1465,12 +1519,16 @@
       font-size: 10px;
     }
 
-    /* Output Area */
+    /* Output Area - Main focus area */
     .agent-output-area {
       flex: 1;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      background: var(--surface-primary);
+      border-radius: 8px;
+      margin: 12px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
     .output-placeholder {
@@ -1847,13 +1905,14 @@
     }
 
     .agent-output-line.assistant {
-      color: #e6edf3;
-      line-height: 1.6;
-      padding: 12px 16px;
-      margin: 8px 0;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 8px;
-      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 8px 12px;
+      margin: 4px 0;
+      background: transparent;
+      border-left: 2px solid var(--border-subtle);
+      border-radius: 0;
+      font-size: 14px;
     }
 
     .agent-output-line.result {
@@ -2095,16 +2154,21 @@
       border-left: 3px solid var(--brand-primary);
     }
 
-    /* Tool call styling - compact activity indicators */
+    /* Tool call styling - subtle, compact */
     .agent-output-line.tool-call {
-      color: #7ee787;
-      background: rgba(126, 231, 135, 0.08);
-      padding: 8px 12px;
-      margin: 4px 0;
-      border-radius: 6px;
+      color: var(--brand-primary);
+      background: transparent;
+      padding: 4px 12px;
+      margin: 2px 0;
+      border-radius: 0;
       font-size: 12px;
       font-family: 'SF Mono', 'Fira Code', monospace;
-      border-left: 3px solid #7ee787;
+      border-left: none;
+      opacity: 0.75;
+    }
+
+    .agent-output-line.tool-call:hover {
+      opacity: 1;
     }
 
     /* Status line styling */
@@ -2573,6 +2637,24 @@
     @keyframes pulse {
       0%, 100% { opacity: 0.4; transform: scale(1); }
       50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .cancel-btn {
+      margin-top: 24px;
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid var(--border-medium);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: var(--surface-tertiary);
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
     }
 
     /* Goal Input */
@@ -3343,16 +3425,6 @@
             </svg></span>
           Beads
         </button>
-        <button class="nav-tab" data-view="orchestrator">
-          <span class="icon"><svg viewBox="0 0 24 24">
-              <circle cx="12" cy="5" r="3" />
-              <circle cx="5" cy="19" r="3" />
-              <circle cx="19" cy="19" r="3" />
-              <line x1="12" y1="8" x2="5" y2="16" />
-              <line x1="12" y1="8" x2="19" y2="16" />
-            </svg></span>
-          Orchestrator
-        </button>
       </div>
     </div>
 
@@ -3655,20 +3727,30 @@
         <div class="beads-layout">
           <!-- LEFT SIDEBAR: Tasks & Agents -->
           <aside class="beads-sidebar">
-            <div class="sidebar-section">
-              <div class="section-header">
+            <div class="sidebar-section collapsed" id="section-ready">
+              <div class="section-header" onclick="toggleSection('section-ready')">
                 <span class="section-title">Ready Tasks</span>
-                <span class="section-count" id="ready-count">0</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="section-count" id="ready-count">0</span>
+                  <svg class="section-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
               </div>
               <div id="ready-queue" class="task-list"></div>
             </div>
 
             <div class="sidebar-divider"></div>
 
-            <div class="sidebar-section">
-              <div class="section-header">
+            <div class="sidebar-section" id="section-agents">
+              <div class="section-header" onclick="toggleSection('section-agents')">
                 <span class="section-title">Running Agents</span>
-                <span class="section-count active" id="agent-count">0</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="section-count active" id="agent-count">0</span>
+                  <svg class="section-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
               </div>
               <div id="agent-list" class="agent-list">
                 <div class="empty-state-small">No agents running</div>
@@ -3677,10 +3759,15 @@
 
             <div class="sidebar-divider"></div>
 
-            <div class="sidebar-section">
-              <div class="section-header">
+            <div class="sidebar-section collapsed" id="section-progress">
+              <div class="section-header" onclick="toggleSection('section-progress')">
                 <span class="section-title">In Progress</span>
-                <span class="section-count warning" id="progress-count">0</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="section-count warning" id="progress-count">0</span>
+                  <svg class="section-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
               </div>
               <div id="in-progress-queue" class="task-list"></div>
             </div>
@@ -3793,6 +3880,7 @@
                     <span>Generating clarifying questions</span>
                   </div>
                 </div>
+                <button class="cancel-btn" onclick="cancelOrchestration()">Cancel</button>
               </div>
             </div>
 
@@ -3810,6 +3898,30 @@
             </div>
 
             <!-- PHASE: Plan Review -->
+            <!-- PHASE: Planning Loading -->
+            <div class="orchestrator-panel hidden" id="orch-planning-panel">
+              <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3 class="loading-title">Creating Implementation Plan...</h3>
+                <p class="loading-subtitle">Analyzing your requirements and breaking down the project into tasks.</p>
+                <div class="loading-steps">
+                  <div class="loading-step active" id="plan-step-1">
+                    <span class="step-dot"></span>
+                    <span>Analyzing requirements</span>
+                  </div>
+                  <div class="loading-step" id="plan-step-2">
+                    <span class="step-dot"></span>
+                    <span>Identifying dependencies</span>
+                  </div>
+                  <div class="loading-step" id="plan-step-3">
+                    <span class="step-dot"></span>
+                    <span>Creating task breakdown</span>
+                  </div>
+                </div>
+                <button class="cancel-btn" onclick="cancelOrchestration()">Cancel</button>
+              </div>
+            </div>
+
             <div class="orchestrator-panel hidden" id="orch-plan-panel">
               <div class="panel-header">
                 <h2>Implementation Plan</h2>
@@ -6120,7 +6232,8 @@
           roadmap: 'Roadmap',
           archive: 'Archive',
           status: 'Priority Board',
-          beads: 'Beads Agent Tracker'
+          beads: 'Beads Agent Tracker',
+          orchestrator: 'AI Orchestrator'
         };
         document.getElementById('view-title').textContent = titles[view];
 
@@ -6808,6 +6921,23 @@
       const statusElements = document.querySelectorAll('[style*="position: fixed"]');
       statusElements.forEach(el => el.remove());
 
+      // Check for view parameter in URL (for orchestrator tab)
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewParam = urlParams.get('view');
+
+      if (viewParam === 'orchestrator') {
+        // Switch to orchestrator view
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        const orchTab = document.querySelector('.nav-tab[data-view="orchestrator"]');
+        if (orchTab) orchTab.classList.add('active');
+
+        document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+        const orchView = document.getElementById('orchestrator-view');
+        if (orchView) orchView.classList.add('active');
+
+        document.getElementById('view-title').textContent = 'AI Orchestrator';
+      }
+
       // Initial render
       renderKanban();
     });
@@ -7161,6 +7291,14 @@
       } catch (err) { showToast('Failed to close task', 'error'); }
     }
 
+    // Toggle sidebar section collapse
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.classList.toggle('collapsed');
+      }
+    }
+
     async function loadAgents() {
       try {
         const res = await fetch(API_BASE + '/api/beads/agents');
@@ -7298,22 +7436,49 @@
     function isRawJsonNoise(text) {
       if (!text) return true;
       const trimmed = text.trim();
+
       // Filter out raw JSON objects/arrays with event types
       if (trimmed.startsWith('{') && (trimmed.includes('"type"') || trimmed.includes('"content"'))) return true;
       if (trimmed.startsWith('[') && trimmed.includes('"type"')) return true;
+
       // Filter out hook responses and events
       if (trimmed.includes('hook_response') || trimmed.includes('hook_event') || trimmed.includes('HookResponse')) return true;
+
       // Filter out session/system hooks
       if (trimmed.includes('session-start-hook') || trimmed.includes('AVAILABLE SKILLS')) return true;
       if (trimmed.includes('user-prompt-submit-hook') || trimmed.includes('pre-tool-use-hook')) return true;
+
       // Filter out init/system data
       if (trimmed.includes('"subtype":"init"') || trimmed.includes('"subtype":"system"')) return true;
+
       // Filter out tool_result raw JSON
       if (trimmed.includes('"tool_result"') || trimmed.includes('"tool_use"')) return true;
+
       // Filter out content blocks
       if (trimmed.includes('"content_block"') || trimmed.includes('"delta"')) return true;
+
       // Filter out API metadata
       if (trimmed.includes('"message_start"') || trimmed.includes('"message_stop"')) return true;
+
+      // NEW: Filter partial JSON fragments with IDs
+      if (/^\{"id":"[^"]+","type"/.test(trimmed)) return true;
+
+      // NEW: Filter content_block_start/stop events
+      if (trimmed.includes('"content_block_start"') || trimmed.includes('"content_block_stop"')) return true;
+
+      // NEW: Filter tool result arrays
+      if (/^\[\{"type":"tool_/.test(trimmed)) return true;
+
+      // NEW: Filter streaming deltas
+      if (/^{"type":"content_block_delta"/.test(trimmed)) return true;
+
+      // NEW: Filter raw assistant/result events
+      if (trimmed.includes('"type":"assistant"') && trimmed.includes('"message"')) return true;
+      if (trimmed.includes('"type":"result"') && trimmed.includes('"subtype"')) return true;
+
+      // NEW: Filter input_json_delta events
+      if (trimmed.includes('"input_json_delta"')) return true;
+
       return false;
     }
 
@@ -7573,6 +7738,32 @@
       }
     }
 
+    // Cancel current orchestration
+    async function cancelOrchestration() {
+      stopLoadingAnimation();
+
+      if (currentOrchestration && currentOrchestration.id) {
+        try {
+          await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}`, {
+            method: 'DELETE'
+          });
+        } catch (err) {
+          console.log('[Orchestrator] Error deleting:', err);
+        }
+      }
+
+      // Close SSE connection
+      if (orchestratorEventSource) {
+        orchestratorEventSource.close();
+        orchestratorEventSource = null;
+      }
+
+      currentOrchestration = null;
+      showOrchestratorPanel('goal');
+      showToast('Orchestration cancelled', 'info');
+      loadOrchestrationHistory();
+    }
+
     // Animate loading steps
     let loadingAnimationTimer = null;
     function startLoadingAnimation() {
@@ -7790,6 +7981,14 @@
         case 'phase':
           updatePhaseIndicator(data.phase);
           updateOrchestratorStatus(data.message);
+          // Show appropriate panel based on phase
+          if (data.phase === 'planning') {
+            showOrchestratorPanel('planning');
+          } else if (data.phase === 'execution') {
+            showOrchestratorPanel('execution');
+          } else if (data.phase === 'review') {
+            showOrchestratorPanel('review');
+          }
           break;
 
         case 'questions':
@@ -7798,6 +7997,7 @@
           break;
 
         case 'plan':
+          stopPlanningAnimation();
           renderPlan(data.plan);
           showOrchestratorPanel('plan');
           break;
@@ -7848,17 +8048,57 @@
 
     // Show specific panel
     function showOrchestratorPanel(panelName) {
-      const panels = ['goal', 'loading', 'questions', 'plan', 'execution', 'review'];
+      console.log('[Orchestrator] showOrchestratorPanel:', panelName);
+      const panels = ['goal', 'loading', 'questions', 'planning', 'plan', 'execution', 'review'];
       panels.forEach(name => {
         const panel = document.getElementById(`orch-${name}-panel`);
         if (panel) {
-          panel.classList.toggle('hidden', name !== panelName);
+          const shouldHide = name !== panelName;
+          panel.classList.toggle('hidden', shouldHide);
+          console.log(`[Orchestrator] Panel ${name}: hidden=${shouldHide}`);
+        } else {
+          console.warn(`[Orchestrator] Panel not found: orch-${name}-panel`);
         }
       });
 
-      // Stop loading animation when leaving loading panel
+      // Stop loading animations when leaving loading panels
       if (panelName !== 'loading') {
         stopLoadingAnimation();
+      }
+      if (panelName !== 'planning') {
+        stopPlanningAnimation();
+      }
+
+      // Start planning animation when entering planning panel
+      if (panelName === 'planning') {
+        startPlanningAnimation();
+      }
+    }
+
+    // Planning animation
+    let planningAnimationTimer = null;
+    function startPlanningAnimation() {
+      // Reset steps
+      document.querySelectorAll('#orch-planning-panel .loading-step').forEach((el, i) => {
+        el.classList.remove('active', 'done');
+        if (i === 0) el.classList.add('active');
+      });
+
+      let step = 0;
+      planningAnimationTimer = setInterval(() => {
+        step++;
+        if (step < 3) {
+          document.getElementById(`plan-step-${step}`)?.classList.remove('active');
+          document.getElementById(`plan-step-${step}`)?.classList.add('done');
+          document.getElementById(`plan-step-${step + 1}`)?.classList.add('active');
+        }
+      }, 3000);
+    }
+
+    function stopPlanningAnimation() {
+      if (planningAnimationTimer) {
+        clearInterval(planningAnimationTimer);
+        planningAnimationTimer = null;
       }
     }
 

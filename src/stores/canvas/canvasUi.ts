@@ -226,11 +226,13 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
                 // Also save to Supabase User Settings for cloud persistence
                 const settings = await db.fetchUserSettings()
-                await db.saveUserSettings({
-                    ...settings,
-                    canvas_viewport: newViewport
-                })
-                console.log('🔭 [canvasUi] Viewport saved to cloud:', newViewport)
+                if (settings) {
+                    await db.saveUserSettings({
+                        ...settings,
+                        canvasViewport: newViewport
+                    })
+                    console.log('🔭 [canvasUi] Viewport saved to cloud:', newViewport)
+                }
             } catch (error) {
                 console.error('❌ Viewport save failed:', error)
             }
@@ -241,7 +243,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         try {
             // Try loading from Supabase user settings
             const settings = await db.fetchUserSettings()
-            const savedViewport = settings?.canvas_viewport as { x: number; y: number; zoom: number } | undefined
+            const savedViewport = settings?.canvasViewport as { x: number; y: number; zoom: number } | undefined
 
             if (savedViewport && typeof savedViewport.x === 'number') {
                 viewport.value = savedViewport

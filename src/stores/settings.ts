@@ -21,6 +21,11 @@ export interface AppSettings {
 
     // Suggestions
     enableDayGroupSuggestions: boolean
+
+    // Miscellaneous UI State (Persisted)
+    sidebarCollapsed?: boolean
+    kanbanSettings?: Record<string, unknown>
+    canvasViewport?: { x: number; y: number; zoom: number } | null
 }
 
 const STORAGE_KEY = 'pomo-flow-settings-v2'
@@ -46,7 +51,12 @@ export const useSettingsStore = defineStore('settings', {
         theme: 'system',
 
         // Suggestions defaults
-        enableDayGroupSuggestions: true
+        enableDayGroupSuggestions: true,
+
+        // Miscellaneous defaults
+        sidebarCollapsed: false,
+        kanbanSettings: {},
+        canvasViewport: null
     }),
 
     actions: {

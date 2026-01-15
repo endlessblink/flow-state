@@ -8,7 +8,7 @@
       <label class="toggle-switch">
         <input
           type="checkbox"
-          :checked="modelValue.isEnabled"
+          :checked="safeModelValue.isEnabled"
           @change="toggleEnabled"
         >
         <span class="slider"></span>
@@ -16,12 +16,12 @@
     </div>
 
     <Transition name="expand">
-      <div v-if="modelValue.isEnabled" class="selector-body">
+      <div v-if="safeModelValue.isEnabled" class="selector-body">
         <!-- Pattern Selection -->
         <div class="form-group">
           <label class="field-label">Frequency</label>
           <CustomSelect
-            :model-value="modelValue.rule.pattern"
+            :model-value="safeModelValue.rule.pattern"
             :options="patternOptions"
             @update:model-value="updatePattern"
           />
@@ -30,12 +30,12 @@
         <!-- Pattern Details -->
         <div class="pattern-details">
           <!-- Daily -->
-          <div v-if="modelValue.rule.pattern === RecurrencePattern.DAILY" class="detail-row">
+          <div v-if="safeModelValue.rule.pattern === RecurrencePattern.DAILY" class="detail-row">
             <span>Every</span>
             <input
               type="number"
               class="number-input"
-              :value="(modelValue.rule as DailyRecurrenceRule).interval"
+              :value="(safeModelValue.rule as DailyRecurrenceRule).interval"
               min="1"
               @input="updateInterval"
             >
@@ -43,13 +43,13 @@
           </div>
 
           <!-- Weekly -->
-          <div v-if="modelValue.rule.pattern === RecurrencePattern.WEEKLY" class="detail-column">
+          <div v-if="safeModelValue.rule.pattern === RecurrencePattern.WEEKLY" class="detail-column">
             <div class="detail-row">
               <span>Every</span>
               <input
                 type="number"
                 class="number-input"
-                :value="(modelValue.rule as WeeklyRecurrenceRule).interval"
+                :value="(safeModelValue.rule as WeeklyRecurrenceRule).interval"
                 min="1"
                 @input="updateInterval"
               >
@@ -69,13 +69,13 @@
           </div>
 
           <!-- Monthly -->
-          <div v-if="modelValue.rule.pattern === RecurrencePattern.MONTHLY" class="detail-column">
+          <div v-if="safeModelValue.rule.pattern === RecurrencePattern.MONTHLY" class="detail-column">
             <div class="detail-row">
               <span>Every</span>
               <input
                 type="number"
                 class="number-input"
-                :value="(modelValue.rule as MonthlyRecurrenceRule).interval"
+                :value="(safeModelValue.rule as MonthlyRecurrenceRule).interval"
                 min="1"
                 @input="updateInterval"
               >
@@ -86,7 +86,7 @@
               <input
                 type="number"
                 class="number-input"
-                :value="(modelValue.rule as MonthlyRecurrenceRule).dayOfMonth"
+                :value="(safeModelValue.rule as MonthlyRecurrenceRule).dayOfMonth"
                 min="1"
                 max="31"
                 @input="updateDayOfMonth"
@@ -96,7 +96,7 @@
           </div>
 
           <!-- Custom Rule Builder -->
-          <div v-if="modelValue.rule.pattern === RecurrencePattern.CUSTOM" class="custom-builder">
+          <div v-if="safeModelValue.rule.pattern === RecurrencePattern.CUSTOM" class="custom-builder">
             <div class="field-info">
               <span class="field-label">Custom Rule</span>
               <span class="syntax-hint">Format: EVERY N DAYS/WEEKS/MONTHS...</span>
@@ -104,7 +104,7 @@
             <input
               type="text"
               class="text-input"
-              :value="(modelValue.rule as any).customRule || ''"
+              :value="(safeModelValue.rule as any).customRule || ''"
               placeholder="e.g. EVERY 2 WEEKS ON MON,FRI"
               @input="updateCustomRule"
             >
@@ -135,7 +135,7 @@
                   type="radio"
                   name="endCondition"
                   id="end-never"
-                  :checked="modelValue.endCondition.type === EndCondition.NEVER"
+                  :checked="safeModelValue.endCondition.type === EndCondition.NEVER"
                   @change="updateEndType(EndCondition.NEVER)"
                 >
                 <label for="end-never">Never</label>
@@ -145,15 +145,15 @@
                   type="radio"
                   name="endCondition"
                   id="end-date"
-                  :checked="modelValue.endCondition.type === EndCondition.ON_DATE"
+                  :checked="safeModelValue.endCondition.type === EndCondition.ON_DATE"
                   @change="updateEndType(EndCondition.ON_DATE)"
                 >
                 <label for="end-date">On Date</label>
                 <input
-                  v-if="modelValue.endCondition.type === EndCondition.ON_DATE"
+                  v-if="safeModelValue.endCondition.type === EndCondition.ON_DATE"
                   type="date"
                   class="date-input"
-                  :value="modelValue.endCondition.date"
+                  :value="safeModelValue.endCondition.date"
                   @input="updateEndDate"
                 >
              </div>
@@ -162,19 +162,19 @@
                   type="radio"
                   name="endCondition"
                   id="end-after"
-                  :checked="modelValue.endCondition.type === EndCondition.AFTER_COUNT"
+                  :checked="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT"
                   @change="updateEndType(EndCondition.AFTER_COUNT)"
                 >
                 <label for="end-after">After</label>
                 <input
-                  v-if="modelValue.endCondition.type === EndCondition.AFTER_COUNT"
+                  v-if="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT"
                   type="number"
                   class="number-input"
                   min="1"
-                  :value="modelValue.endCondition.count"
+                  :value="safeModelValue.endCondition.count"
                   @input="updateEndCount"
                 >
-                <span v-if="modelValue.endCondition.type === EndCondition.AFTER_COUNT">occurrences</span>
+                <span v-if="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT">occurrences</span>
              </div>
           </div>
         </div>
@@ -209,11 +209,31 @@ import {
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { validateRecurrenceRule, generateRecurringInstances } from '@/utils/recurrenceUtils'
 
-const props = defineProps<{
-  modelValue: TaskRecurrence
+const props = withDefaults(defineProps<{
+  modelValue?: TaskRecurrence
   startDate?: string
   taskId?: string
-}>()
+}>(), {
+  modelValue: () => ({
+    isEnabled: false,
+    rule: { pattern: RecurrencePattern.NONE },
+    endCondition: { type: EndCondition.NEVER },
+    exceptions: [],
+    generatedInstances: []
+  })
+})
+
+// Default recurrence value for computed fallback
+const defaultRecurrence: TaskRecurrence = {
+  isEnabled: false,
+  rule: { pattern: RecurrencePattern.NONE },
+  endCondition: { type: EndCondition.NEVER },
+  exceptions: [],
+  generatedInstances: []
+}
+
+// Computed to safely access modelValue with fallback
+const safeModelValue = computed(() => props.modelValue ?? defaultRecurrence)
 
 const emit = defineEmits<{
   'update:modelValue': [value: TaskRecurrence]
@@ -248,9 +268,9 @@ const validationErrors = ref<string[]>([])
 const toggleEnabled = (e: Event) => {
   const isEnabled = (e.target as HTMLInputElement).checked
   emit('update:modelValue', {
-    ...props.modelValue,
+    ...safeModelValue.value,
     isEnabled,
-    rule: isEnabled ? (props.modelValue.rule.pattern === RecurrencePattern.NONE ? { pattern: RecurrencePattern.DAILY, interval: 1 } as DailyRecurrenceRule : props.modelValue.rule) : { pattern: RecurrencePattern.NONE }
+    rule: isEnabled ? (safeModelValue.value.rule.pattern === RecurrencePattern.NONE ? { pattern: RecurrencePattern.DAILY, interval: 1 } as DailyRecurrenceRule : safeModelValue.value.rule) : { pattern: RecurrencePattern.NONE }
   })
 }
 
@@ -272,29 +292,29 @@ const updatePattern = (pattern: string | number) => {
     default:
       newRule = { pattern: RecurrencePattern.NONE }
   }
-  emit('update:modelValue', { ...props.modelValue, rule: newRule })
+  emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
 }
 
 const updateInterval = (e: Event) => {
   const interval = parseInt((e.target as HTMLInputElement).value) || 1
-  const newRule = { ...props.modelValue.rule, interval } as any
-  emit('update:modelValue', { ...props.modelValue, rule: newRule })
+  const newRule = { ...safeModelValue.value.rule, interval } as any
+  emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
 }
 
 const updateDayOfMonth = (e: Event) => {
   const dayOfMonth = parseInt((e.target as HTMLInputElement).value) || 1
-  const newRule = { ...props.modelValue.rule, dayOfMonth } as any
-  emit('update:modelValue', { ...props.modelValue, rule: newRule })
+  const newRule = { ...safeModelValue.value.rule, dayOfMonth } as any
+  emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
 }
 
 const isWeekdaySelected = (day: Weekday) => {
-  if (props.modelValue.rule.pattern !== RecurrencePattern.WEEKLY) return false
-  return (props.modelValue.rule as WeeklyRecurrenceRule).weekdays.includes(day)
+  if (safeModelValue.value.rule.pattern !== RecurrencePattern.WEEKLY) return false
+  return (safeModelValue.value.rule as WeeklyRecurrenceRule).weekdays.includes(day)
 }
 
 const toggleWeekday = (day: Weekday) => {
-  if (props.modelValue.rule.pattern !== RecurrencePattern.WEEKLY) return
-  const rule = props.modelValue.rule as WeeklyRecurrenceRule
+  if (safeModelValue.value.rule.pattern !== RecurrencePattern.WEEKLY) return
+  const rule = safeModelValue.value.rule as WeeklyRecurrenceRule
   const weekdays = rule.weekdays.includes(day)
     ? rule.weekdays.filter(d => d !== day)
     : [...rule.weekdays, day]
@@ -302,7 +322,7 @@ const toggleWeekday = (day: Weekday) => {
   if (weekdays.length === 0) return // Must have at least one day
 
   emit('update:modelValue', {
-    ...props.modelValue,
+    ...safeModelValue.value,
     rule: { ...rule, weekdays }
   })
 }
@@ -315,40 +335,40 @@ const updateCustomRule = (e: Event) => {
 const setCustomRule = (customRule: string) => {
   const newRule = { pattern: RecurrencePattern.CUSTOM, customRule }
   validationErrors.value = validateRecurrenceRule(newRule as any).errors
-  emit('update:modelValue', { ...props.modelValue, rule: newRule })
+  emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
 }
 
 const updateEndType = (type: EndCondition) => {
-  const endCondition = { ...props.modelValue.endCondition, type }
+  const endCondition = { ...safeModelValue.value.endCondition, type }
   if (type === EndCondition.ON_DATE && !endCondition.date) {
     endCondition.date = new Date().toISOString().split('T')[0]
   }
   if (type === EndCondition.AFTER_COUNT && !endCondition.count) {
     endCondition.count = 5
   }
-  emit('update:modelValue', { ...props.modelValue, endCondition })
+  emit('update:modelValue', { ...safeModelValue.value, endCondition })
 }
 
 const updateEndDate = (e: Event) => {
   const date = (e.target as HTMLInputElement).value
   emit('update:modelValue', {
-    ...props.modelValue,
-    endCondition: { ...props.modelValue.endCondition, date }
+    ...safeModelValue.value,
+    endCondition: { ...safeModelValue.value.endCondition, date }
   })
 }
 
 const updateEndCount = (e: Event) => {
   const count = parseInt((e.target as HTMLInputElement).value) || 1
   emit('update:modelValue', {
-    ...props.modelValue,
-    endCondition: { ...props.modelValue.endCondition, count }
+    ...safeModelValue.value,
+    endCondition: { ...safeModelValue.value.endCondition, count }
   })
 }
 
 const previewDates = computed(() => {
-  if (!props.modelValue.isEnabled) return []
+  if (!safeModelValue.value.isEnabled) return []
 
-  const validation = validateRecurrenceRule(props.modelValue.rule)
+  const validation = validateRecurrenceRule(safeModelValue.value.rule)
   if (!validation.isValid) return []
 
   const startDate = props.startDate ? new Date(props.startDate) : new Date()
@@ -356,8 +376,8 @@ const previewDates = computed(() => {
   // Generate a few instances for preview
   const previewInstances = generateRecurringInstances(
     props.taskId || 'preview',
-    props.modelValue.rule,
-    props.modelValue.endCondition,
+    safeModelValue.value.rule,
+    safeModelValue.value.endCondition,
     [],
     startDate,
     undefined,
@@ -369,7 +389,7 @@ const previewDates = computed(() => {
 })
 
 // Watch for manual rule changes to refresh validation
-watch(() => props.modelValue.rule, (newRule) => {
+watch(() => safeModelValue.value.rule, (newRule) => {
   if (newRule.pattern === RecurrencePattern.CUSTOM) {
      validationErrors.value = validateRecurrenceRule(newRule as any).errors
   } else {

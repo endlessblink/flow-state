@@ -20,7 +20,7 @@ description: Intelligent skill selection system that automatically routes to app
 |-----------|-------------|
 | "fix", "bug", "broken", "not working" | `Skill(dev-debugging)` |
 | "test", "verify", "check" | `Skill(qa-testing)` |
-| "plan", "break down", "strategy" | `Skill(arch-planning)` |
+| "plan", "break down", "strategy", "roadmap" | `Skill(chief-architect)` |
 | "canvas", "drag", "position", "node" | `Skill(vue-flow-debug)` |
 | "timer", "pomodoro", "countdown" | `Skill(dev-fix-timer)` |
 | "keyboard", "shortcut", "hotkey" | `Skill(dev-fix-keyboard)` |
@@ -129,9 +129,10 @@ const ROUTING_PATTERNS = {
   'localhost.*': 'ops-port-manager',
 
   // Planning & Architecture
-  'plan.*': 'arch-planning',
-  'architecture.*': 'arch-planning',
-  'refactor.*': 'arch-planning'
+  'plan.*': 'chief-architect',
+  'architecture.*': 'chief-architect',
+  'refactor.*': 'chief-architect',
+  'roadmap.*': 'chief-architect'
 }
 ```
 

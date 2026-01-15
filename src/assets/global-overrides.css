@@ -47,7 +47,7 @@ button svg {
    KANBAN STYLES - TODOIST-INSPIRED CLEAN LAYOUT (TASK-157)
    ============================================================================= */
 
-/* Columns - Narrower & cleaner (MUST override scoped styles) */
+/* Columns - Ultra-subtle outline (TickTick style) */
 .kanban-column {
     background: transparent !important;
     backdrop-filter: none !important;
@@ -56,13 +56,18 @@ button svg {
     border-radius: 0 !important;
     padding: var(--space-2) !important;
     box-shadow: none !important;
-    min-width: 240px !important;
-    max-width: 280px !important;
+    min-width: 280px !important;
+    max-width: 320px !important;
+    /* Subtle left border as column separator */
+    border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.kanban-column:first-child {
+    border-left: none !important;
 }
 
 .kanban-column:hover {
     background: transparent !important;
-    border-color: transparent !important;
     box-shadow: none !important;
     transform: none !important;
 }
@@ -81,11 +86,11 @@ button svg {
 }
 
 .kanban-column .column-title {
-    color: var(--text-muted) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
     font-weight: 500 !important;
-    font-size: var(--text-xs) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
+    font-size: 13px !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
     text-shadow: none !important;
 }
 
@@ -112,10 +117,10 @@ button svg {
     box-shadow: none !important;
 }
 
-/* Tasks Container - tighter spacing */
+/* Tasks Container - clean spacing */
 .kanban-column .tasks-container {
     gap: var(--space-2) !important;
-    padding: 0 !important;
+    padding: var(--space-2) !important;
 }
 
 /* Empty column state - minimal */
@@ -136,6 +141,37 @@ button svg {
 .kanban-column.wip-warning .task-count,
 .kanban-column.wip-exceeded .task-count {
     color: var(--color-warning) !important;
+}
+
+/* Task Card Badges - Minimal text style like TickTick */
+.task-card-badges .meta-badge {
+    background: transparent !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+    font-size: 12px !important;
+    padding: 0 !important;
+}
+
+.task-card-badges .priority-badge {
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.task-card-badges .priority-badge.priority-high {
+    color: rgba(239, 68, 68, 0.7) !important;
+}
+
+.task-card-badges .priority-badge.priority-medium {
+    color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.task-card-badges .priority-badge.priority-low {
+    color: rgba(96, 165, 250, 0.6) !important;
+}
+
+.task-card-badges .priority-dot {
+    width: 5px !important;
+    height: 5px !important;
 }
 
 /* TASK-157: Minimal Board Header */
@@ -306,16 +342,39 @@ button svg {
     color: var(--text-primary);
 }
 
+/* Timer Active States - Stroke + Glow Design (no fill) */
 .timer-display.timer-active {
-    background: var(--orange-bg-subtle);
-    border-color: var(--color-break);
-    box-shadow: var(--orange-glow-subtle);
+    /* No solid fill - transparent background */
+    background: transparent;
+    /* Visible stroke border */
+    border: 1.5px solid var(--timer-work-stroke);
+    /* Multi-layered glow effect */
+    box-shadow: var(--timer-work-stroke-glow);
+    /* Subtle backdrop for contrast */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.timer-display.timer-active:hover {
+    /* Intensify glow on hover */
+    box-shadow: var(--timer-work-stroke-glow-intense);
 }
 
 .timer-display.timer-break {
-    background: var(--success-bg-start);
-    border-color: var(--color-work);
-    box-shadow: var(--blue-glow-subtle);
+    /* No solid fill - transparent background */
+    background: transparent;
+    /* Visible stroke border - orange for breaks */
+    border: 1.5px solid var(--timer-break-stroke);
+    /* Multi-layered glow effect */
+    box-shadow: var(--timer-break-stroke-glow);
+    /* Subtle backdrop for contrast */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.timer-display.timer-break:hover {
+    /* Intensify glow on hover */
+    box-shadow: var(--timer-break-stroke-glow-intense);
 }
 
 /* VIEW TRANSITIONS */

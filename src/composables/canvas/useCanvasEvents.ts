@@ -228,6 +228,13 @@ export function useCanvasEvents(syncNodes?: () => void) {
             const { id: sectionId } = CanvasIds.parseNodeId(node.id)
             const section = canvasStore.groups.find(s => s.id === sectionId)
 
+            console.log('[TASK-288-DEBUG] handleNodeContextMenu - storing position for sectionNode', {
+                clientX,
+                clientY,
+                sectionId,
+                sectionName: section?.name
+            })
+
             canvasContextMenuX.value = clientX
             canvasContextMenuY.value = clientY
             canvasContextSection.value = section || null

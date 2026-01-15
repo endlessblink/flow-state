@@ -36,9 +36,13 @@
       <slot name="icon" />
     </div>
 
-    <!-- Color dot for projects (standardized - always show color, never emoji) -->
+    <!-- Project icon: emoji or color dot -->
+    <span
+      v-if="colorType === 'emoji' && emoji"
+      class="nav-emoji"
+    >{{ emoji }}</span>
     <div
-      v-if="colorDot"
+      v-else-if="colorDot"
       class="color-dot"
       :style="{ backgroundColor: colorDot }"
     />
@@ -406,7 +410,7 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
-/* Color dot (for projects) */
+/* Color dot (for projects without emoji) */
 .color-dot {
   width: 8px;
   height: 8px;
@@ -419,6 +423,18 @@ const handleDrop = (event: DragEvent) => {
 .base-nav-item:hover .color-dot {
   opacity: 1;
   transform: scale(1.1);
+}
+
+/* Emoji icon for projects */
+.nav-emoji {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform var(--duration-fast);
+}
+
+.base-nav-item:hover .nav-emoji {
+  transform: scale(1.15);
 }
 
 /* Label */

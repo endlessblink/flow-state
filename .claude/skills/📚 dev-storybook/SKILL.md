@@ -16,6 +16,128 @@ BUILD, AUDIT, and AUTOMATE Storybook stories for Vue 3 components with TypeScrip
 5. **Story Auditing**: Detect and fix cutoff modals, store dependencies, design token violations
 6. **Component Discovery**: Scan codebase for components and generate inventory reports
 7. **Automated Testing**: Visual regression testing and accessibility compliance
+8. **Story Streamlining**: Ensure stories match the actual app appearance exactly
+
+---
+
+## Story Streamlining (CRITICAL)
+
+**Trigger Keywords**: "streamline", "streamlined", "match app", "looks different", "visual fidelity"
+
+When user asks to **"streamline"** a Storybook story, they mean: **Make the story look EXACTLY like the component appears in the actual app.**
+
+### Streamlining Checklist
+
+When streamlining a story, verify ALL of the following:
+
+| Check | Requirement | How to Fix |
+|-------|-------------|------------|
+| **1. Use Actual Components** | Story imports and renders the REAL Vue component, not a mockup | Import from `@/components/...` |
+| **2. App Background** | Story background matches app's purple/indigo gradient | Use `background: var(--app-background-gradient)` |
+| **3. Design Tokens** | All styling uses CSS variables, no hardcoded values | Replace `#hex` and `rgba()` with `var(--token)` |
+| **4. Correct Props** | Story passes the same props the component expects | Check `defineProps` in component |
+| **5. Event Handlers** | All emitted events have handlers | Add `@event="handler"` |
+| **6. Mock Data** | Data looks realistic, matches production patterns | Use actual Task/Project types |
+
+### Streamlining Workflow
+
+```
+1. IDENTIFY the component being streamlined
+   └── Find the actual .vue component file
+   └── Read its props, emits, and slots
+
+2. COMPARE story vs app
+   └── What does the story currently show?
+   └── What does the actual app show?
+   └── List the differences
+
+3. FIX each difference:
+   a. Background: Use var(--app-background-gradient)
+   b. Components: Import actual components, not mockups
+   c. Tokens: Replace hardcoded colors with CSS variables
+   d. Props: Match component's defineProps interface
+   e. Data: Use realistic mock data
+
+4. VERIFY with user
+   └── Ask user to check Storybook matches app
+```
+
+### Background Color Reference
+
+**CRITICAL**: The app uses a purple/indigo gradient, NOT neutral gray.
+
+```typescript
+// ❌ WRONG - neutral gray (doesn't match app)
+background: var(--surface-primary);
+background: hsl(0, 0%, 12%);
+
+// ✅ CORRECT - app's purple/indigo gradient
+background: var(--app-background-gradient);
+```
+
+The `--app-background-gradient` is defined in `design-tokens.css`:
+```css
+--app-background-gradient: linear-gradient(135deg,
+    hsl(220, 13%, 9%) 0%,
+    hsl(240, 21%, 15%) 25%,
+    hsl(250, 24%, 12%) 50%,
+    hsl(260, 20%, 14%) 75%,
+    hsl(220, 13%, 11%) 100%);
+```
+
+### Example: Before/After Streamlining
+
+**Before (mockup, wrong background):**
+```typescript
+export const Default: Story = {
+  render: () => ({
+    template: `
+      <div style="background: #1a1a1a; padding: 20px;">
+        <!-- Hardcoded mockup HTML -->
+        <div class="fake-card">
+          <h2>Task Title</h2>
+          <button>Action</button>
+        </div>
+      </div>
+    `
+  })
+}
+```
+
+**After (streamlined, matches app):**
+```typescript
+import QuickSortCard from '@/components/QuickSortCard.vue'
+import { useTaskStore } from '@/stores/tasks'
+
+export const Default: Story = {
+  render: () => ({
+    components: { QuickSortCard },
+    setup() {
+      const mockTask = { id: '1', title: 'Real Task', priority: 'high', ... }
+      return { mockTask }
+    },
+    template: `
+      <div style="
+        min-height: 100vh;
+        background: var(--app-background-gradient);
+        padding: var(--space-8);
+      ">
+        <QuickSortCard :task="mockTask" @update-task="..." />
+      </div>
+    `
+  })
+}
+```
+
+### Common Streamlining Issues
+
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| **Mockup instead of component** | Story shows different UI than app | Import actual component |
+| **Wrong background color** | Black/gray instead of purple gradient | Use `var(--app-background-gradient)` |
+| **Hardcoded colors** | Colors don't match design system | Use CSS variables |
+| **Missing components** | Card missing buttons/badges | Import child components |
+| **Wrong spacing** | Elements too cramped/spread | Use `var(--space-X)` tokens |
 
 ## Critical Rules
 

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Task } from '@/stores/tasks'
-import type { CanvasSection } from '@/stores/canvas/types'
+import type { CanvasSection } from './types'
 
 export const useCanvasModalsStore = defineStore('canvasModals', () => {
     // Task Edit Modal
@@ -106,7 +106,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
         groupPendingDelete.value = null
     }
 
-    const openBulkDeleteModal = (title: string, message: string, items: any[], isPermanent: boolean) => {
+    const openBulkDeleteModal = (title: string, message: string, items: { id: string; name: string; type: 'task' | 'section' }[], isPermanent: boolean) => {
         bulkDeleteTitle.value = title
         bulkDeleteMessage.value = message
         bulkDeleteItems.value = items

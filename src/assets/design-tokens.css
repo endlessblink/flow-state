@@ -551,6 +551,35 @@
   --timer-active-month-bg-end: rgba(217, 119, 6, 0.25);
   --timer-active-month-glow: 0 0 12px rgba(251, 191, 36, 0.5);
 
+  /* Timer Stroke-Glow Design Tokens */
+  /* Work Timer - Teal brand color (#4ECDC4) */
+  --timer-work-stroke: hsl(174, 62%, 58%);
+  --timer-work-stroke-glow:
+    0 0 6px rgba(78, 205, 196, 0.5),
+    0 0 12px rgba(78, 205, 196, 0.35),
+    0 0 24px rgba(78, 205, 196, 0.2),
+    0 0 40px rgba(78, 205, 196, 0.1);
+  --timer-work-stroke-glow-intense:
+    0 0 4px rgba(78, 205, 196, 0.6),
+    0 0 8px rgba(78, 205, 196, 0.5),
+    0 0 16px rgba(78, 205, 196, 0.4),
+    0 0 32px rgba(78, 205, 196, 0.25),
+    0 0 48px rgba(78, 205, 196, 0.15);
+
+  /* Break Timer - Orange/Amber color (#F59E0B) */
+  --timer-break-stroke: hsl(38, 92%, 50%);
+  --timer-break-stroke-glow:
+    0 0 6px rgba(245, 158, 11, 0.5),
+    0 0 12px rgba(245, 158, 11, 0.35),
+    0 0 24px rgba(245, 158, 11, 0.2),
+    0 0 40px rgba(245, 158, 11, 0.1);
+  --timer-break-stroke-glow-intense:
+    0 0 4px rgba(245, 158, 11, 0.6),
+    0 0 8px rgba(245, 158, 11, 0.5),
+    0 0 16px rgba(245, 158, 11, 0.4),
+    0 0 32px rgba(245, 158, 11, 0.25),
+    0 0 48px rgba(245, 158, 11, 0.15);
+
   /* Green success states */
   --success-bg-start: rgba(16, 185, 129, 0.15);
   --success-bg-end: rgba(5, 150, 105, 0.10);

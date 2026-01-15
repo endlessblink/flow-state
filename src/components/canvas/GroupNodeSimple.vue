@@ -64,6 +64,7 @@
     </div>
 
     <!-- RESIZE HANDLES - BUG-043: Enable all corners AND edges for resizing -->
+    <!-- TASK-290: Always render NodeResizer, use CSS to show/hide on hover -->
     <NodeResizer
       is-visible
       :min-width="200"
@@ -738,4 +739,6 @@ const handleResizeEnd = (event: unknown) => {
   background: var(--glass-bg-heavy);
   transform: scale(0.95);
 }
+
+/* TASK-290: Resize handle styles moved to canvas-view-overrides.css for global control */
 </style>

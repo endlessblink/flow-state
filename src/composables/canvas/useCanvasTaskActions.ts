@@ -77,23 +77,84 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         }
     }
 
-    const createTaskInGroup = (groupOrId: string | any) => {
+    const createTaskInGroup = (groupOrId: string | any, screenPos?: { x: number; y: number }) => {
         const groupId = typeof groupOrId === 'string' ? groupOrId : groupOrId.id
         const group = canvasStore._rawGroups.find(g => g.id === groupId)
 
+        console.log('[TASK-288-DEBUG] createTaskInGroup action called', {
+            groupId,
+            screenPos,
+            groupFound: !!group
+        })
+
         if (!group) return
 
-        // Position is relative to the group since we set parentId
+        // Group's canvas position (for clamping only)
+        const groupX = group.position?.x || 0
+        const groupY = group.position?.y || 0
         const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
         const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
 
-        const groupCenter = {
-            x: (groupWidth / 2) - (CANVAS.DEFAULT_TASK_WIDTH / 2), // Center - half task width
-            y: (groupHeight / 2) - (CANVAS.DEFAULT_TASK_HEIGHT / 2), // Center - half task height
+        console.log('[TASK-288-DEBUG] Group position:', {
+            groupX,
+            groupY,
+            groupWidth,
+            groupHeight,
+            rawPosition: group.position
+        })
+
+        let absolutePos: { x: number; y: number }
+
+        if (screenPos) {
+            // Convert screen position to flow coordinates
+            // CRITICAL: canvasPosition stores ABSOLUTE coordinates, not relative!
+            // The node builder handles conversion to relative for Vue Flow
+            const flowCoords = deps.screenToFlowCoordinate(screenPos)
+
+            console.log('[TASK-288-DEBUG] Coordinate conversion:', {
+                screenPos,
+                flowCoords,
+                CANVAS_DEFAULT_TASK_WIDTH: CANVAS.DEFAULT_TASK_WIDTH,
+                CANVAS_DEFAULT_TASK_HEIGHT: CANVAS.DEFAULT_TASK_HEIGHT
+            })
+
+            // Store ABSOLUTE position (centered on click point)
+            // Node builder will convert to relative when building Vue Flow nodes
+            absolutePos = {
+                x: flowCoords.x - (CANVAS.DEFAULT_TASK_WIDTH / 2),
+                y: flowCoords.y - (CANVAS.DEFAULT_TASK_HEIGHT / 2)
+            }
+
+            console.log('[TASK-288-DEBUG] Absolute position (before clamp):', absolutePos)
+
+            // Clamp to group bounds (absolute coordinates)
+            const padding = 10
+            const minX = groupX + padding
+            const maxX = groupX + groupWidth - CANVAS.DEFAULT_TASK_WIDTH - padding
+            const minY = groupY + padding + 40 // +40 for header
+            const maxY = groupY + groupHeight - CANVAS.DEFAULT_TASK_HEIGHT - padding
+
+            absolutePos.x = Math.max(minX, Math.min(absolutePos.x, maxX))
+            absolutePos.y = Math.max(minY, Math.min(absolutePos.y, maxY))
+
+            console.log('[TASK-288-DEBUG] Absolute position (after clamp):', absolutePos)
+        } else {
+            // Fallback: center of group (absolute coordinates)
+            absolutePos = {
+                x: groupX + (groupWidth / 2) - (CANVAS.DEFAULT_TASK_WIDTH / 2),
+                y: groupY + (groupHeight / 2) - (CANVAS.DEFAULT_TASK_HEIGHT / 2)
+            }
+            console.log('[TASK-288-DEBUG] Using fallback center position (absolute):', absolutePos)
+        }
+
+        const finalPosition = {
+            ...absolutePos,
             parentId: group.id
         }
 
-        quickTaskPosition.value = groupCenter
+        console.log('[TASK-288-DEBUG] Final quickTaskPosition:', finalPosition)
+
+        quickTaskPosition.value = finalPosition
         deps.closeCanvasContextMenu()
         isQuickTaskCreateOpen.value = true
     }
@@ -110,6 +171,14 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             const shouldCreateInInbox = isDefaultPosition
 
             const { x, y, parentId } = quickTaskPosition.value
+
+            console.log('[TASK-288-DEBUG] handleQuickTaskCreate - Creating task with position:', {
+                quickTaskPosition: { ...quickTaskPosition.value },
+                isDefaultPosition,
+                shouldCreateInInbox,
+                finalPosition: shouldCreateInInbox ? 'INBOX' : { x, y },
+                finalParentId: shouldCreateInInbox ? 'NONE' : parentId
+            })
 
             await taskStore.createTaskWithUndo({
                 title,

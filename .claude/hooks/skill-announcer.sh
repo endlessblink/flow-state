@@ -17,7 +17,7 @@ DEBUGGING & FIXES:
 - Skill(ops-port-manager) - Port/server issues
 
 DEVELOPMENT:
-- Skill(arch-planning) - Plan features/projects
+- Skill(chief-architect) - Plan features/projects, architecture decisions
 - Skill(dev-vueuse) - VueUse composables
 - Skill(dev-refactoring) - Code refactoring
 - Skill(dev-implement-ui-ux) - UI/UX implementation

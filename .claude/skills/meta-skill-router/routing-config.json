@@ -40,7 +40,7 @@
         "fast.*",
         "lag.*"
       ],
-      "skill": "dev-optimize-performance",
+      "skill": "dev-refactoring",
       "priority": 8,
       "description": "Performance optimization requests"
     },
@@ -66,7 +66,7 @@
         "persist.*",
         "database.*"
       ],
-      "skill": "dev-pinia-state",
+      "skill": "dev-debugging",
       "priority": 7,
       "description": "State management and persistence"
     },
@@ -79,7 +79,7 @@
         "flow.*",
         "connection.*"
       ],
-      "skill": "dev-debug-canvas",
+      "skill": "vue-flow-debug",
       "priority": 7,
       "description": "Canvas and drag-drop functionality"
     },
@@ -92,7 +92,7 @@
         "theme.*",
         "visual.*"
       ],
-      "skill": "qa-audit-ui-ux",
+      "skill": "dev-implement-ui-ux",
       "priority": 6,
       "description": "UI/UX consistency and design system"
     },
@@ -168,9 +168,12 @@
         "architecture.*",
         "refactor.*",
         "structure.*",
-        "design.*pattern"
+        "design.*pattern",
+        "break.*down",
+        "how.*implement",
+        "roadmap.*"
       ],
-      "skill": "arch-planning",
+      "skill": "chief-architect",
       "priority": 5,
       "description": "Planning and architectural decisions"
     },
@@ -183,7 +186,7 @@
         "computed.*",
         "state.*update"
       ],
-      "skill": "dev-debug-reactivity",
+      "skill": "dev-debugging",
       "priority": 6,
       "description": "Vue reactivity system debugging"
     }
@@ -201,8 +204,7 @@
         "complete.*"
       ],
       "requiredSkills": [
-        "qa-testing",
-        "qa-verify"
+        "qa-testing"
       ],
       "description": "Mandatory testing and verification before claiming success"
     },
@@ -216,8 +218,7 @@
         "publish.*"
       ],
       "requiredSkills": [
-        "qa-testing",
-        "qa-verify"
+        "qa-testing"
       ],
       "description": "Mandatory testing and verification before deployment"
     },
@@ -244,8 +245,7 @@
         "patch.*"
       ],
       "requiredSkills": [
-        "qa-testing",
-        "qa-verify"
+        "qa-testing"
       ],
       "description": "Mandatory testing and verification after bug fixes"
     }
@@ -258,7 +258,7 @@
         "additionalContext": ["component", "template", "script"]
       },
       "*/stores/*.ts": {
-        "defaultSkill": "dev-pinia-state",
+        "defaultSkill": "dev-debugging",
         "additionalContext": ["state", "store", "pinia"]
       },
       "*/composables/*.ts": {
@@ -266,7 +266,7 @@
         "additionalContext": ["composable", "reactive", "logic"]
       },
       "*/canvas/*": {
-        "defaultSkill": "dev-debug-canvas",
+        "defaultSkill": "vue-flow-debug",
         "additionalContext": ["canvas", "drag", "flow"]
       },
       "*/timer/*": {
@@ -281,11 +281,11 @@
         "context": ["kanban", "board", "task-management"]
       },
       "CalendarView": {
-        "defaultSkill": "dev-debug-canvas",
+        "defaultSkill": "calendar-interface-architect",
         "context": ["calendar", "scheduling", "time"]
       },
       "CanvasView": {
-        "defaultSkill": "dev-debug-canvas",
+        "defaultSkill": "vue-flow-debug",
         "context": ["canvas", "nodes", "flow"]
       }
     }
@@ -313,33 +313,28 @@
   "skillChains": {
     "featureDevelopment": [
       "dev-vue",
-      "qa-testing",
-      "qa-verify"
+      "qa-testing"
     ],
 
     "bugFix": [
       "dev-debugging",
-      "qa-testing",
-      "qa-verify"
+      "qa-testing"
     ],
 
     "performanceOptimization": [
-      "dev-optimize-performance",
-      "qa-testing",
-      "qa-verify"
+      "dev-refactoring",
+      "qa-testing"
     ],
 
     "uiImprovement": [
-      "qa-audit-ui-ux",
+      "dev-implement-ui-ux",
       "dev-vue",
-      "qa-testing",
-      "qa-verify"
+      "qa-testing"
     ],
 
     "canvasEnhancement": [
-      "dev-debug-canvas",
-      "qa-testing",
-      "qa-verify"
+      "vue-flow-debug",
+      "qa-testing"
     ]
   },
 

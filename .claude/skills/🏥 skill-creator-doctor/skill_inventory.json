@@ -41,38 +41,6 @@
   },
   "skills": [
     {
-      "name": "arch-planning",
-      "path": "skills/arch-planning",
-      "exists": true,
-      "has_skill_md": true,
-      "frontmatter": {
-        "name": "Systematic Project Planning",
-        "description": "PLAN complex features and projects systematically. Use when user requests task breakdown, project planning, feature implementation strategy, or needs multi-step development approach. Break down work into phases, tasks, and dependencies.",
-        "keywords": [
-          "plan complex features",
-          "projects systematically use when user requests task breakdown",
-          "tasks",
-          "feature implementation strategy",
-          "dependencies",
-          "project planning",
-          "needs multi-step development approach break down work into phases"
-        ]
-      },
-      "bundled_resources": {
-        "scripts": [],
-        "references": [],
-        "assets": [],
-        "other": [
-          "PLANNING_TEMPLATES.md"
-        ]
-      },
-      "file_count": 1,
-      "total_size_bytes": 11741,
-      "last_modified": "2025-10-28T09:24:41.842633",
-      "content_length": 6450,
-      "total_size_kb": 11.47
-    },
-    {
       "name": "arch-undo-redo-systems",
       "path": "skills/arch-undo-redo-systems",
       "exists": true,

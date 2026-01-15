@@ -10,9 +10,22 @@ import { useCanvasStore } from '@/stores/canvas'
 import type { CanvasGroup } from '@/types/canvas'
 import { guardTaskCreation } from '../utils/demoContentGuard'
 
+interface UndoSystemState {
+  canUndo: ComputedRef<boolean> | null
+  canRedo: ComputedRef<boolean> | null
+  undoCount: ComputedRef<number> | null
+  redoCount: ComputedRef<number> | null
+  history: ComputedRef<any[]> | null
+  undo: (() => void) | null
+  redo: (() => void) | null
+  commit: (() => void) | null
+  clear: (() => void) | null
+  collectFilter: Record<string, unknown>
+}
+
 declare global {
   interface Window {
-    __pomoFlowUndoSystem?: any
+    __pomoFlowUndoSystem?: UndoSystemState
   }
 }
 
@@ -29,7 +42,7 @@ let canUndo: ComputedRef<boolean> | null = null
 let canRedo: ComputedRef<boolean> | null = null
 let undoCount: ComputedRef<number> | null = null
 let redoCount: ComputedRef<number> | null = null
-let history: ComputedRef<unknown[]> | null = null
+let history: ComputedRef<import('@vueuse/core').UseRefHistoryRecord<UnifiedUndoState>[]> | null = null
 let undo: (() => void) | null = null
 let redo: (() => void) | null = null
 let commit: (() => void) | null = null
@@ -60,11 +73,11 @@ function initializeRefHistory() {
       const canvasStore = useCanvasStore()
 
       // Now safely populate the state - stores should be fully initialized
-      if (taskStore.tasks && Array.isArray(taskStore.tasks)) {
-        unifiedState!.value.tasks = [...taskStore.tasks]
+      if (unifiedState && taskStore.tasks && Array.isArray(taskStore.tasks)) {
+        unifiedState.value.tasks = [...taskStore.tasks]
       }
-      if (canvasStore.groups && Array.isArray(canvasStore.groups)) {
-        unifiedState!.value.groups = [...canvasStore.groups]
+      if (unifiedState && canvasStore.groups && Array.isArray(canvasStore.groups)) {
+        unifiedState.value.groups = [...canvasStore.groups]
       }
     } catch (error) {
       console.warn('⚠️ [UNDO] Could not populate initial state (stores may not be ready):', error)
@@ -152,7 +165,7 @@ const performUndo = async () => {
     // Restore tasks (async - may take time for DB operations)
     // Don't await - let it run in background to avoid blocking UI
     taskStore.restoreState(previousState.tasks).then(() => {
-    }).catch((err: any) => {
+    }).catch((err: Error) => {
       console.error('❌ [UNDO] Task store restore failed:', err)
     })
 
@@ -191,7 +204,7 @@ const performRedo = async () => {
     // Restore tasks (async - may take time for DB operations)
     // Don't await - let it run in background to avoid blocking UI
     taskStore.restoreState(nextState.tasks).then(() => {
-    }).catch((err: any) => {
+    }).catch((err: Error) => {
       console.error('❌ [REDO] Task store restore failed:', err)
     })
 
@@ -201,7 +214,7 @@ const performRedo = async () => {
 }
 
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
-const saveState = async (description?: string) => {
+const saveState = async (_description?: string) => {
   // BUG-008 DEBUG: Log when refHistoryInstance is null
   if (!refHistoryInstance) {
     console.error('❌ [UNDO-CRITICAL] saveState() called but refHistoryInstance is NULL! Calling initializeRefHistory()...')
@@ -227,9 +240,11 @@ const saveState = async (description?: string) => {
     const canvasStore = useCanvasStore()
 
     // Save combined state (tasks + groups)
-    unifiedState!.value = {
-      tasks: [...taskStore.tasks],
-      groups: [...canvasStore.groups]
+    if (unifiedState) {
+      unifiedState.value = {
+        tasks: [...taskStore.tasks],
+        groups: [...canvasStore.groups]
+      }
     }
 
     commit()

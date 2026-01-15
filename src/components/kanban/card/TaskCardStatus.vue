@@ -60,60 +60,48 @@ const statusTooltip = computed(() => {
 </script>
 
 <style scoped>
+/* Minimal checkbox style - TickTick inspired */
 .status-icon-button {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-inline-start: var(--space-0_5);
-  margin-inline-end: var(--space-2);
+  margin-inline-end: var(--space-3);
   transition: all var(--duration-fast) ease;
   cursor: pointer;
   position: relative;
-  background: var(--glass-bg-soft);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .status-icon-button:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .status-icon-button:active {
-  transform: scale(0.95);
+  transform: scale(0.9);
 }
 
-/* Status Colors */
-.status-planned-icon {
-  border-color: var(--status-planned-border);
-  background: var(--status-planned-bg);
-  color: var(--status-planned-text);
-}
-
-.status-in_progress-icon {
-  border-color: var(--status-in-progress-border);
-  background: var(--status-in-progress-bg);
-  color: var(--status-in-progress-text);
-}
-
-.status-done-icon {
-  border-color: var(--status-done-border);
-  background: var(--status-done-bg);
-  color: var(--status-done-text);
-}
-
-.status-backlog-icon {
-  border-color: var(--status-backlog-border);
-  background: var(--status-backlog-bg);
-  color: var(--status-backlog-text);
-}
-
+/* All statuses look the same - just circle */
+.status-planned-icon,
+.status-in_progress-icon,
+.status-done-icon,
+.status-backlog-icon,
 .status-on_hold-icon {
-  border-color: var(--status-on-hold-border);
-  background: var(--status-on-hold-bg);
-  color: var(--status-on-hold-text);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Only done status shows filled */
+.status-done-icon {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: rgba(34, 197, 94, 0.2);
+  color: rgba(34, 197, 94, 0.8);
 }
 </style>

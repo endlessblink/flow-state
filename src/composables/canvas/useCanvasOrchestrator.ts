@@ -211,6 +211,22 @@ export function useCanvasOrchestrator() {
         actions.createTaskHere(screenPos)
     }
 
+    // Wrapper for createTaskInGroup to use stored context menu position
+    // TASK-288 FIX: This ensures tasks are created at the click location within the group
+    const createTaskInGroup = (groupOrId: string | any) => {
+        const screenPos = {
+            x: events.canvasContextMenuX.value,
+            y: events.canvasContextMenuY.value
+        }
+        console.log('[TASK-288-DEBUG] orchestrator wrapper called', {
+            groupOrId: typeof groupOrId === 'string' ? groupOrId : groupOrId?.id,
+            storedContextMenuX: events.canvasContextMenuX.value,
+            storedContextMenuY: events.canvasContextMenuY.value,
+            screenPos
+        })
+        actions.createTaskInGroup(groupOrId, screenPos)
+    }
+
     // Hotkeys
     const { handleKeyDown } = useCanvasHotkeys({
         isBulkDeleteModalOpen: modals.isBulkDeleteModalOpen,
@@ -502,6 +518,7 @@ export function useCanvasOrchestrator() {
         // Actions & Handlers
         ...actions,
         createTaskHere, // Override to use stored context menu position
+        createTaskInGroup, // Override to use stored context menu position (TASK-288 fix)
         ...modals,
         closeSectionSettingsModal: actions.closeGroupEditModal,
         handleSectionSettingsSave: actions.handleGroupEditSave,

@@ -5,10 +5,12 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useVueFlow } from '@vue-flow/core'
 import {
     sanitizePosition,
+    toRelativePosition,
     groupPositionToVueFlow,
     taskPositionToVueFlow
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
 
@@ -166,6 +168,39 @@ export function useCanvasSync() {
             // but this caused stale positions to win over fresh store data on cross-tab sync.
             // Now we ALWAYS use the fresh position from the store (source of truth).
 
+            // TASK-213: POSITION MANAGER INTEGRATION
+            // 1. Feed Store data into PositionManager via batchUpdate('remote-sync').
+            //    This ensures that if legal (no lock), PositionManager is updated.
+            //    If locked (user dragging), the update is ignored, preserving the drag.
+            const updates = []
+
+            // Collect Group Updates
+            for (const g of groups) {
+                if (g.position) {
+                    updates.push({
+                        id: g.id,
+                        x: g.position.x,
+                        y: g.position.y,
+                        parentId: (!g.parentGroupId || g.parentGroupId === 'NONE') ? null : g.parentGroupId
+                    })
+                }
+            }
+
+            // Collect Task Updates
+            for (const t of tasksToSync) {
+                if (t.canvasPosition) {
+                    updates.push({
+                        id: t.id,
+                        x: t.canvasPosition.x,
+                        y: t.canvasPosition.y,
+                        parentId: (!t.parentId || t.parentId === 'NONE') ? null : t.parentId
+                    })
+                }
+            }
+
+            // Commit updates (locks will prevent overwrites of dragged items)
+            positionManager.batchUpdate(updates, 'remote-sync')
+
             const newNodes: any[] = []
 
             // ================================================================
@@ -196,17 +231,24 @@ export function useCanvasSync() {
             for (const group of sortedGroups) {
                 const nodeId = CanvasIds.groupNodeId(group.id)
 
-                // FULLY ABSOLUTE ARCHITECTURE:
-                // group.position in store is ABSOLUTE (world coordinates)
-                // Convert to Vue Flow position (relative for nested, absolute for root)
-                // BUG #3 FIX: Always use fresh vueFlowPos from store
-                const vueFlowPos = groupPositionToVueFlow(group, groups)
-                const displayPos = sanitizePosition(vueFlowPos, { x: 100, y: 100 })
+                // TASK-213: Read from PositionManager (Authoritative Source)
+                const pmNode = positionManager.getPosition(group.id)
+                // If missing from PM (rare), fallback to store, but PM should have it from batchUpdate
+                if (!pmNode) continue
 
-                // Determine parent node for Vue Flow
-                let parentId = group.parentGroupId && group.parentGroupId !== 'NONE'
-                    ? group.parentGroupId
-                    : null
+                const absolutePos = pmNode.position
+                let parentId = pmNode.parentId // Trust PM's parentId
+
+                // Calculate Relative Position for Vue Flow
+                let vueFlowPos = absolutePos
+                if (parentId && visibleGroupIds.has(parentId)) {
+                    const pmParent = positionManager.getPosition(parentId)
+                    if (pmParent) {
+                        vueFlowPos = toRelativePosition(absolutePos, pmParent.position)
+                    }
+                }
+
+                const displayPos = sanitizePosition(vueFlowPos, { x: 100, y: 100 })
 
                 // SAFETY: Cycle Detection
                 if (parentId && hasParentCycle(group.id, parentId, groups)) {
@@ -293,21 +335,27 @@ export function useCanvasSync() {
 
                 const nodeId = task.id
 
-                // FULLY ABSOLUTE ARCHITECTURE:
-                // task.canvasPosition in store is ABSOLUTE (world coordinates)
-                // Convert to Vue Flow position (relative for nested, absolute for root)
-                // BUG #3 FIX: Always use fresh vueFlowPos from store
-                const vueFlowPos = taskPositionToVueFlow(task, groups)
-                if (!vueFlowPos) continue
+                // TASK-213: Read from PositionManager (Authoritative Source)
+                const pmNode = positionManager.getPosition(task.id)
+                if (!pmNode) continue
+
+                const absolutePos = pmNode.position
+                let parentId = pmNode.parentId
+
+                // Calculate Relative Position for Vue Flow
+                let vueFlowPos = absolutePos
+                if (parentId && visibleGroupIds.has(parentId)) {
+                    const pmParent = positionManager.getPosition(parentId)
+                    if (pmParent) {
+                        vueFlowPos = toRelativePosition(absolutePos, pmParent.position)
+                    }
+                }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })
 
                 // Determine parent node for Vue Flow
                 // DRIFT LOGGING: Track original parentId before any modifications
                 const originalParentId = task.parentId
-                let parentId = task.parentId && task.parentId !== 'NONE'
-                    ? task.parentId
-                    : null
 
                 // SAFETY: Cycle Detection
                 if (parentId && hasParentCycle(task.id, parentId, groups)) {

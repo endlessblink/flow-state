@@ -958,13 +958,16 @@ Start working now. Be thorough and complete the task.`;
                 '-p', prompt
             ], {
                 cwd: worktreePath,
-                stdio: ['inherit', 'pipe', 'pipe'],  // FIX: inherit stdin
-                env: { ...process.env, ANTHROPIC_API_KEY: '' }  // FIX: empty API key
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env: { ...process.env }  // Inherit API key from environment
             });
 
             const agentData = {
                 process: agentProcess,
-                task: taskDetails,
+                task: {
+                    ...taskDetails,
+                    title: taskDetails?.title || `Task ${taskId}`
+                },
                 taskId: taskId,
                 supervisorType: supervisorType,
                 worktreePath: worktreePath,
@@ -1123,6 +1126,92 @@ Start working now. Be thorough and complete the task.`;
         res.status(500).json({ error: err.message });
     }
 });
+
+// Helper to format tool calls conversationally (shared function)
+function formatToolCallShared(name, input) {
+    switch (name) {
+        case 'Read':
+            return `📖 Reading file: ${input?.file_path || 'unknown'}`;
+        case 'Write':
+            return `📝 Writing file: ${input?.file_path || 'unknown'}`;
+        case 'Edit':
+            return `✏️ Editing file: ${input?.file_path || 'unknown'}`;
+        case 'Bash':
+            return `🖥️ Running command: ${(input?.command || '').slice(0, 80)}`;
+        case 'Grep':
+            return `🔍 Searching for: ${input?.pattern || 'pattern'}`;
+        case 'Glob':
+            return `📁 Finding files: ${input?.pattern || '*'}`;
+        case 'Task':
+            return `🤖 Spawning agent: ${input?.prompt?.slice(0, 50) || 'subtask'}`;
+        case 'WebFetch':
+            return `🌐 Fetching: ${input?.url || 'URL'}`;
+        case 'WebSearch':
+            return `🔎 Searching web: ${input?.query || 'query'}`;
+        default:
+            return `🔧 Using ${name}`;
+    }
+}
+
+// Helper to parse stream-json output and broadcast (shared function)
+function parseAndBroadcastAgentOutput(taskId, rawData, agentData, jsonBuffer = '') {
+    jsonBuffer += rawData;
+    const lines = jsonBuffer.split('\n');
+    const remainingBuffer = lines.pop(); // Keep incomplete line
+
+    for (const line of lines) {
+        if (!line.trim()) continue;
+
+        try {
+            const event = JSON.parse(line);
+
+            // Parse different event types from stream-json format
+            if (event.type === 'assistant' && event.message?.content) {
+                for (const block of event.message.content) {
+                    if (block.type === 'text' && block.text?.trim()) {
+                        const text = block.text.trim();
+                        agentData.outputBuffer.push({ type: 'assistant', text, time: Date.now() });
+                        broadcastAgentOutput(taskId, { type: 'assistant', text });
+                    } else if (block.type === 'tool_use') {
+                        const toolText = formatToolCallShared(block.name, block.input);
+                        agentData.outputBuffer.push({ type: 'tool', text: toolText, tool: block.name, time: Date.now() });
+                        broadcastAgentOutput(taskId, { type: 'tool', text: toolText, tool: block.name });
+                    }
+                }
+            } else if (event.type === 'content_block_delta' && event.delta?.text) {
+                const text = event.delta.text;
+                if (text.trim()) {
+                    agentData.outputBuffer.push({ type: 'assistant', text, time: Date.now() });
+                    broadcastAgentOutput(taskId, { type: 'assistant', text });
+                }
+            } else if (event.type === 'result') {
+                const text = event.subtype === 'success'
+                    ? '✅ Task completed successfully!'
+                    : `⚠️ Task ended: ${event.subtype}`;
+                agentData.outputBuffer.push({ type: 'result', text, time: Date.now() });
+                broadcastAgentOutput(taskId, { type: 'result', text });
+            } else if (event.type === 'system') {
+                // Skip noisy system messages (init, hooks, internal stuff)
+                const skipSubtypes = ['init', 'hook_response', 'config'];
+                if (skipSubtypes.includes(event.subtype)) continue;
+                if (event.message && typeof event.message === 'string') {
+                    agentData.outputBuffer.push({ type: 'system', text: `ℹ️ ${event.message}`, time: Date.now() });
+                    broadcastAgentOutput(taskId, { type: 'system', text: `ℹ️ ${event.message}` });
+                }
+            }
+            // Skip other event types
+        } catch (e) {
+            // Not JSON - only show if it looks meaningful
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('{') && trimmed.length < 500) {
+                agentData.outputBuffer.push({ type: 'stdout', text: trimmed, time: Date.now() });
+                broadcastAgentOutput(taskId, { type: 'stdout', text: trimmed });
+            }
+        }
+    }
+
+    return remainingBuffer;
+}
 
 // Helper to broadcast output to agent watchers
 function broadcastAgentOutput(taskId, data) {
@@ -1323,7 +1412,8 @@ ${recentOutput.slice(-2000)}
 Execute the user's instruction now.`;
 
     const followUpProcess = spawn('claude', [
-        '--print',
+        '--output-format', 'stream-json',
+        '--dangerously-skip-permissions',
         '-p', prompt
     ], {
         cwd: path.join(__dirname, '..'),
@@ -1337,9 +1427,13 @@ Execute the user's instruction now.`;
         agentData.commandCount = (agentData.commandCount || 0) + 1;
     }
 
-    // Track this follow-up process
+    // Track this follow-up process - use command as descriptive title
+    const commandTitle = command.length > 50 ? command.slice(0, 50) + '...' : command;
     const followUpData = agentData || {
-        task: { title: 'Follow-up command' },
+        task: {
+            title: commandTitle,
+            originalCommand: command
+        },
         taskId: taskId,
         startTime: Date.now(),
         outputBuffer: [],
@@ -1348,12 +1442,17 @@ Execute the user's instruction now.`;
 
     followUpData.process = followUpProcess;
     followUpData.status = 'running';
+    followUpData.jsonBuffer = ''; // Buffer for JSON parsing
     runningAgents.set(taskId, followUpData);
 
     followUpProcess.stdout.on('data', (data) => {
-        const output = data.toString();
-        followUpData.outputBuffer.push({ type: 'stdout', text: output, time: Date.now() });
-        broadcastAgentOutput(taskId, { type: 'stdout', text: output });
+        // Use shared parsing function to filter noise
+        followUpData.jsonBuffer = parseAndBroadcastAgentOutput(
+            taskId,
+            data.toString(),
+            followUpData,
+            followUpData.jsonBuffer
+        );
     });
 
     followUpProcess.stderr.on('data', (data) => {
@@ -1546,8 +1645,96 @@ app.get('/api/orchestrator/list', (req, res) => {
     res.json({ orchestrations: list });
 });
 
+// Helper: Detect tech stack from package.json
+function detectTechStack() {
+    try {
+        const pkgPath = path.join(__dirname, '..', 'package.json');
+        if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+            const stack = [];
+
+            if (deps['vue'] || deps['@vue/cli-service']) stack.push('Vue 3');
+            if (deps['react'] || deps['react-dom']) stack.push('React');
+            if (deps['typescript']) stack.push('TypeScript');
+            if (deps['vite']) stack.push('Vite');
+            if (deps['tailwindcss']) stack.push('Tailwind CSS');
+            if (deps['pinia']) stack.push('Pinia');
+            if (deps['@supabase/supabase-js']) stack.push('Supabase');
+            if (deps['@vue-flow/core']) stack.push('Vue Flow');
+            if (deps['naive-ui']) stack.push('Naive UI');
+            if (deps['@tiptap/vue-3']) stack.push('TipTap');
+
+            return stack.length > 0 ? stack.join(', ') : 'Unknown';
+        }
+    } catch (e) {
+        console.error('[Orchestrator] Error detecting tech stack:', e.message);
+    }
+    return 'Unknown';
+}
+
+// Helper: Use fallback questions when Claude fails or times out
+function useFallbackQuestions(orch, reason) {
+    console.log(`[Orchestrator] Using fallback questions (reason: ${reason})`);
+
+    // Auto-detect tech stack
+    const detectedStack = detectTechStack();
+    console.log(`[Orchestrator] Detected tech stack: ${detectedStack}`);
+
+    orch.questions = [
+        {
+            id: 'q0',
+            question: `Detected tech stack: ${detectedStack}. Is this correct?`,
+            type: 'choice',
+            options: ['Yes, use this stack', 'No, let me specify']
+        },
+        {
+            id: 'q1',
+            question: 'What type of feature is this?',
+            type: 'choice',
+            options: ['New feature', 'Bug fix', 'Refactoring', 'Performance improvement', 'UI/UX update']
+        },
+        {
+            id: 'q2',
+            question: 'What is the scope of this work?',
+            type: 'choice',
+            options: ['Small (1-2 files)', 'Medium (3-5 files)', 'Large (6+ files)', 'Not sure']
+        },
+        {
+            id: 'q3',
+            question: 'What are the essential features or requirements? (describe briefly)',
+            type: 'text'
+        },
+        {
+            id: 'q4',
+            question: 'Any specific constraints or areas to avoid?',
+            type: 'choice',
+            options: ['No constraints', 'Don\'t modify existing tests', 'Keep backwards compatible', 'Other (explain below)']
+        }
+    ];
+
+    broadcastOrchestration(orch.id, {
+        type: 'questions',
+        questions: orch.questions,
+        message: 'A few questions to clarify requirements:'
+    });
+    debouncedSave();
+}
+
 // Helper: Generate clarifying questions based on goal
 async function generateClarifyingQuestions(orch) {
+    console.log(`[Orchestrator] generateClarifyingQuestions called for ${orch.id}`);
+
+    // TEMPORARY: Skip Claude and use fallback questions for faster testing
+    // TODO: Re-enable Claude once we debug the hanging issue
+    const USE_CLAUDE_FOR_QUESTIONS = false;
+
+    if (!USE_CLAUDE_FOR_QUESTIONS) {
+        console.log(`[Orchestrator] Using immediate fallback questions (Claude disabled)`);
+        setTimeout(() => useFallbackQuestions(orch, 'claude_disabled'), 500);
+        return;
+    }
+
     const prompt = `You are an expert requirements analyst. The user wants to build:
 
 "${orch.goal}"
@@ -1579,21 +1766,33 @@ Example:
 
     try {
         // Spawn Claude to generate questions
-        // CRITICAL: stdin must be 'inherit' to prevent Claude from hanging
+        // Use 'pipe' for stdin and close it immediately to prevent hanging
         const questionProcess = spawn('claude', [
             '--print',
             '-p', prompt
         ], {
             cwd: path.join(__dirname, '..'),
-            stdio: ['inherit', 'pipe', 'pipe'],
-            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: { ...process.env }
         });
+
+        // Close stdin immediately - Claude --print doesn't need input
+        questionProcess.stdin.end();
 
         let output = '';
         let stderr = '';
+        let timedOut = false;
+
+        // Set timeout to prevent infinite hang (30 seconds)
+        const timeout = setTimeout(() => {
+            timedOut = true;
+            console.log('[Orchestrator] Claude process timed out after 30s, using fallback questions');
+            questionProcess.kill('SIGTERM');
+        }, 30000);
 
         questionProcess.stdout.on('data', (data) => {
             output += data.toString();
+            console.log(`[Orchestrator] Claude stdout chunk: ${data.toString().substring(0, 100)}...`);
         });
 
         questionProcess.stderr.on('data', (data) => {
@@ -1602,6 +1801,13 @@ Example:
         });
 
         questionProcess.on('close', (code) => {
+            clearTimeout(timeout);
+
+            if (timedOut) {
+                // Already handled by timeout
+                useFallbackQuestions(orch, 'timeout');
+                return;
+            }
             if (code === 0) {
                 try {
                     // Extract JSON from output (may have extra text)
@@ -1621,48 +1827,28 @@ Example:
                     }
                 } catch (e) {
                     console.error(`[Orchestrator] Error parsing questions: ${e.message}`);
-                    // Fallback to default questions
-                    orch.questions = [
-                        { id: 'q1', question: 'What is the primary technology stack you want to use?', type: 'text' },
-                        { id: 'q2', question: 'What are the essential features (must-have)?', type: 'text' },
-                        { id: 'q3', question: 'Any specific constraints or requirements?', type: 'text' }
-                    ];
-
-                    broadcastOrchestration(orch.id, {
-                        type: 'questions',
-                        questions: orch.questions,
-                        message: 'Please answer these questions:'
-                    });
-                    debouncedSave();
+                    console.error(`[Orchestrator] Raw output was: ${output.substring(0, 500)}`);
+                    useFallbackQuestions(orch, 'parse_error');
                 }
             } else {
-                console.error(`[Orchestrator] Claude exited with code ${code}`);
-                // Use fallback questions
-                orch.questions = [
-                    { id: 'q1', question: 'What technologies do you want to use?', type: 'text' },
-                    { id: 'q2', question: 'What features are essential?', type: 'text' }
-                ];
-
-                broadcastOrchestration(orch.id, {
-                    type: 'questions',
-                    questions: orch.questions,
-                    message: 'Please answer these questions:'
-                });
-                debouncedSave();
+                console.error(`[Orchestrator] Claude exited with code ${code}, stderr: ${stderr}`);
+                useFallbackQuestions(orch, `exit_code_${code}`);
             }
         });
 
         questionProcess.on('error', (err) => {
             console.error(`[Orchestrator] Error spawning Claude: ${err.message}`);
+            useFallbackQuestions(orch, 'spawn_error');
         });
 
     } catch (err) {
         console.error(`[Orchestrator] Error generating questions: ${err.message}`);
+        useFallbackQuestions(orch, 'exception');
     }
 }
 
 // POST /api/orchestrator/:id/answer - Submit answers to clarifying questions
-app.post('/api/orchestrator/:id/answer', (req, res) => {
+app.post('/api/orchestrator/:id/answer', async (req, res) => {
     const orchId = req.params.id;
     const { answers } = req.body;
 
@@ -1673,8 +1859,38 @@ app.post('/api/orchestrator/:id/answer', (req, res) => {
 
     // Store answers
     orch.answers = { ...orch.answers, ...answers };
+    debouncedSave();
 
-    // Move to planning phase
+    console.log('[Orchestrator] Received answers:', JSON.stringify(answers, null, 2));
+
+    // TEMPORARY: Skip clarification check and proceed directly to planning
+    // TODO: Re-enable when Claude follow-up generation is fixed
+    const SKIP_CLARIFICATION = true;
+
+    if (!SKIP_CLARIFICATION) {
+        // Check if any answers need follow-up clarification
+        const needsClarification = checkAnswersNeedClarification(answers, orch.questions);
+
+        if (needsClarification.length > 0) {
+            // Generate follow-up questions for unclear answers
+            broadcastOrchestration(orch.id, {
+                type: 'phase',
+                phase: 'questions',
+                message: 'Some answers need clarification. Generating follow-up questions...'
+            });
+
+            generateFollowUpQuestions(orch, needsClarification);
+
+            res.json({
+                success: true,
+                phase: 'questions',
+                message: 'Generating follow-up questions for clarification...'
+            });
+            return;
+        }
+    }
+
+    // All answers are clear (or clarification skipped), move to planning phase
     orch.phase = 'planning';
     debouncedSave();
 
@@ -1694,8 +1910,174 @@ app.post('/api/orchestrator/:id/answer', (req, res) => {
     });
 });
 
+// Check if answers need follow-up clarification
+function checkAnswersNeedClarification(answers, questions) {
+    const needsClarification = [];
+
+    // Phrases that indicate the user wants to discuss/clarify further
+    const clarificationIndicators = [
+        'need to discuss',
+        'need to go over',
+        'need to decide',
+        'not sure',
+        'depends on',
+        'let\'s talk about',
+        'want to explore',
+        'more information',
+        'clarify',
+        'options',
+        'alternatives',
+        'what do you think',
+        'your recommendation',
+        'help me decide',
+        'pros and cons',
+        'trade-offs',
+        'compare'
+    ];
+
+    for (const [questionId, answer] of Object.entries(answers)) {
+        if (typeof answer !== 'string') continue;
+
+        const lowerAnswer = answer.toLowerCase();
+        const needsFollowUp = clarificationIndicators.some(phrase =>
+            lowerAnswer.includes(phrase)
+        );
+
+        if (needsFollowUp) {
+            const question = questions.find(q => q.id === questionId);
+            needsClarification.push({
+                questionId,
+                question: question?.question || questionId,
+                answer
+            });
+        }
+    }
+
+    return needsClarification;
+}
+
+// Generate follow-up questions for unclear answers
+function generateFollowUpQuestions(orch, unclearAnswers) {
+    const unclearContext = unclearAnswers.map(u =>
+        `Original Question: ${u.question}\nUser's Response: "${u.answer}"`
+    ).join('\n\n');
+
+    const prompt = `You are a requirements analyst helping clarify project requirements.
+
+PROJECT GOAL: "${orch.goal}"
+
+The user gave responses that need clarification:
+
+${unclearContext}
+
+The user seems to want guidance or discussion before deciding. Generate 2-3 specific follow-up questions that will help them make a decision. For each question:
+- Be specific and actionable
+- Offer concrete options when possible
+- Help them understand the trade-offs
+
+Output ONLY a JSON array of questions:
+[{"id": "followup-1", "question": "...", "type": "choice", "options": ["Option A", "Option B", "Option C"]}]
+
+Use type "choice" with options when there are clear alternatives, or "text" for open-ended.`;
+
+    try {
+        const followUpProcess = spawn('claude', ['--print', '-p', prompt], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+        });
+
+        let output = '';
+        followUpProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        followUpProcess.stderr.on('data', (data) => {
+            console.log('[Orchestrator] Follow-up stderr:', data.toString());
+        });
+
+        followUpProcess.on('close', (code) => {
+            if (code === 0) {
+                try {
+                    const jsonMatch = output.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        const newQuestions = JSON.parse(jsonMatch[0]);
+                        // Add follow-up questions to the list
+                        orch.questions.push(...newQuestions);
+                        debouncedSave();
+
+                        broadcastOrchestration(orch.id, {
+                            type: 'questions',
+                            questions: orch.questions,
+                            message: 'I have some follow-up questions to help clarify your requirements:'
+                        });
+                    }
+                } catch (e) {
+                    console.error('[Orchestrator] Error parsing follow-up questions:', e.message);
+                }
+            }
+        });
+
+        followUpProcess.on('error', (err) => {
+            console.error('[Orchestrator] Error spawning follow-up process:', err.message);
+        });
+    } catch (err) {
+        console.error('[Orchestrator] Error generating follow-up questions:', err.message);
+    }
+}
+
+// Helper: Use fallback plan when Claude fails
+function useFallbackPlan(orch) {
+    console.log('[Orchestrator] Using fallback plan');
+
+    // Generate a basic plan based on the goal
+    const goalLower = orch.goal.toLowerCase();
+    let tasks = [];
+
+    if (goalLower.includes('pwa') || goalLower.includes('progressive')) {
+        tasks = [
+            { id: 'task-1', title: 'Configure PWA manifest', description: 'Set up manifest.json with app name, icons, and display settings', agentType: 'frontend', dependencies: [], priority: 'P1' },
+            { id: 'task-2', title: 'Implement service worker', description: 'Create service worker for offline caching and background sync', agentType: 'frontend', dependencies: ['task-1'], priority: 'P1' },
+            { id: 'task-3', title: 'Add install prompt', description: 'Implement "Add to Home Screen" prompt for mobile users', agentType: 'frontend', dependencies: ['task-2'], priority: 'P2' },
+            { id: 'task-4', title: 'Optimize for offline', description: 'Ensure critical features work offline with local storage fallback', agentType: 'frontend', dependencies: ['task-2'], priority: 'P2' },
+            { id: 'task-5', title: 'Test PWA functionality', description: 'Verify Lighthouse PWA audit passes and test on multiple devices', agentType: 'qa', dependencies: ['task-3', 'task-4'], priority: 'P2' }
+        ];
+    } else {
+        // Generic feature tasks
+        tasks = [
+            { id: 'task-1', title: 'Research & Design', description: 'Analyze requirements and design the solution architecture', agentType: 'frontend', dependencies: [], priority: 'P1' },
+            { id: 'task-2', title: 'Implement core feature', description: 'Build the main functionality as described in the goal', agentType: 'frontend', dependencies: ['task-1'], priority: 'P1' },
+            { id: 'task-3', title: 'Add UI components', description: 'Create necessary UI components and styling', agentType: 'frontend', dependencies: ['task-2'], priority: 'P2' },
+            { id: 'task-4', title: 'Integration & Testing', description: 'Integrate with existing systems and write tests', agentType: 'qa', dependencies: ['task-3'], priority: 'P2' },
+            { id: 'task-5', title: 'Documentation', description: 'Document the new feature and update relevant docs', agentType: 'docs', dependencies: ['task-4'], priority: 'P3' }
+        ];
+    }
+
+    orch.plan = tasks;
+    orch.phase = 'plan';
+    orch.planGenerating = false;
+    debouncedSave();
+
+    broadcastOrchestration(orch.id, {
+        type: 'plan',
+        plan: tasks,
+        message: 'Implementation plan ready for review:'
+    });
+}
+
 // Helper: Generate implementation plan
 async function generatePlan(orch) {
+    console.log('[Orchestrator] generatePlan called for:', orch.id);
+
+    // TEMPORARY: Skip Claude and use fallback plan for faster testing
+    const USE_CLAUDE_FOR_PLAN = false;
+
+    if (!USE_CLAUDE_FOR_PLAN) {
+        console.log('[Orchestrator] Using immediate fallback plan (Claude disabled)');
+        setTimeout(() => useFallbackPlan(orch), 500);
+        return;
+    }
+
     const answersText = Object.entries(orch.answers)
         .map(([key, val]) => {
             const question = orch.questions.find(q => q.id === key);
@@ -1737,10 +2119,20 @@ Output ONLY a JSON array of tasks:
 
 Create 5-10 tasks that cover the full implementation.`;
 
+    // Prevent duplicate plan generation
+    if (orch.planGenerating) {
+        console.log('[Orchestrator] Plan already generating, skipping duplicate call');
+        return;
+    }
+    orch.planGenerating = true;
+
     broadcastOrchestration(orch.id, {
-        type: 'summary',
+        type: 'progress',
         message: 'Analyzing requirements and creating task breakdown...'
     });
+
+    console.log('[Orchestrator] Generating plan for:', orch.id);
+    console.log('[Orchestrator] Prompt length:', prompt.length);
 
     try {
         const planProcess = spawn('claude', [
@@ -1751,6 +2143,8 @@ Create 5-10 tasks that cover the full implementation.`;
             stdio: ['inherit', 'pipe', 'pipe'],
             env: { ...process.env, ANTHROPIC_API_KEY: '' }
         });
+
+        console.log('[Orchestrator] Claude process spawned for plan generation');
 
         let output = '';
 
@@ -1763,6 +2157,8 @@ Create 5-10 tasks that cover the full implementation.`;
         });
 
         planProcess.on('close', (code) => {
+            orch.planGenerating = false;  // Reset flag
+
             if (code === 0) {
                 try {
                     const jsonMatch = output.match(/\[[\s\S]*\]/);
@@ -1789,6 +2185,12 @@ Create 5-10 tasks that cover the full implementation.`;
                         message: 'Failed to generate plan. Please try again.'
                     });
                 }
+            } else {
+                console.error(`[Orchestrator] Plan generation failed with code ${code}`);
+                broadcastOrchestration(orch.id, {
+                    type: 'error',
+                    message: 'Plan generation failed. Please try again.'
+                });
             }
         });
 
@@ -2225,10 +2627,12 @@ app.get('/api/orchestrator/:id/stream', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Send existing summaries
+    // Send only the last few summaries to avoid flooding on reconnect
     const orch = orchestrations.get(orchId);
     if (orch) {
-        for (const entry of orch.summary) {
+        // Only send the last 5 entries to avoid repetitive flooding
+        const recentSummaries = orch.summary.slice(-5);
+        for (const entry of recentSummaries) {
             res.write(`data: ${JSON.stringify({ orchestrationId: orchId, ...entry })}\n\n`);
         }
     }

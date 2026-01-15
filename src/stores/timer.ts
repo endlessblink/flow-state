@@ -20,6 +20,8 @@ export interface PomodoroSession {
   isPaused: boolean
   isBreak: boolean
   completedAt?: Date
+  deviceLeaderId?: string | null
+  deviceLeaderLastSeen?: number | null
 }
 
 export const useTimerStore = defineStore('timer', () => {
@@ -66,10 +68,15 @@ export const useTimerStore = defineStore('timer', () => {
 
   // Intervals
   const { pause: pauseTimerInterval, resume: resumeTimerInterval } = useIntervalFn(() => {
-    if (currentSession.value && currentSession.value.isActive && !currentSession.value.isPaused) {
-      currentSession.value.remainingTime -= 1
-      if (currentSession.value.remainingTime % 5 === 0 && isDeviceLeader.value) broadcastSession()
-      if (currentSession.value.remainingTime <= 0) completeSession()
+    const session = currentSession.value
+    if (session && session.isActive && !session.isPaused) {
+      session.remainingTime -= 1
+      // Log every 10 seconds
+      if (session.remainingTime % 10 === 0) {
+        console.log('🍅 [TIMER] Tick:', session.remainingTime, 'seconds remaining')
+      }
+      if (session.remainingTime % 5 === 0 && isDeviceLeader.value) broadcastSession()
+      if (session.remainingTime <= 0) completeSession()
     }
   }, 1000, { immediate: false })
 
@@ -142,7 +149,9 @@ export const useTimerStore = defineStore('timer', () => {
     }
   }
 
-  const handleRemoteTimerUpdate = (newDoc: any) => {
+  const handleRemoteTimerUpdate = (payload: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newDoc = payload as any // Use any for dynamic payload to avoid cascading casts
     if (!newDoc) {
       currentSession.value = null
       pauseTimerInterval()
@@ -206,9 +215,21 @@ export const useTimerStore = defineStore('timer', () => {
 
   // Timer Control Actions
   const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
-    if (await checkForActiveDeviceLeader()) return
+    console.log('🍅 [TIMER] startTimer called:', { taskId, duration, isBreak })
 
-    if (!crossTabSync.claimTimerLeadership()) return
+    const hasActiveLeader = await checkForActiveDeviceLeader()
+    console.log('🍅 [TIMER] checkForActiveDeviceLeader:', hasActiveLeader)
+    if (hasActiveLeader) {
+      console.warn('🍅 [TIMER] Blocked: Another device is leading')
+      return
+    }
+
+    const claimedLeadership = crossTabSync.claimTimerLeadership()
+    console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
+    if (!claimedLeadership) {
+      console.warn('🍅 [TIMER] Blocked: Could not claim leadership')
+      return
+    }
     isLeader.value = true
 
     const sessionDuration = duration || settings.workDuration
@@ -229,6 +250,7 @@ export const useTimerStore = defineStore('timer', () => {
     await saveTimerSessionWithLeadership()
     playStartSound()
     resumeTimerInterval()
+    console.log('🍅 [TIMER] Timer started successfully, interval resumed')
   }
 
   const pauseTimer = () => {
@@ -306,7 +328,9 @@ export const useTimerStore = defineStore('timer', () => {
   const playStartSound = () => {
     if (!settings.playNotificationSounds) return
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      const audioContext = new AudioContextClass()
       const osc = audioContext.createOscillator()
       const gain = audioContext.createGain()
       osc.connect(gain); gain.connect(audioContext.destination)
@@ -315,13 +339,17 @@ export const useTimerStore = defineStore('timer', () => {
       gain.gain.setValueAtTime(0.1, audioContext.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
       osc.start(); osc.stop(audioContext.currentTime + 0.3)
-    } catch (_e) { }
+    } catch (_e) {
+      // Silently ignore audio initialization errors
+    }
   }
 
   const playEndSound = () => {
     if (!settings.playNotificationSounds) return
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      const audioContext = new AudioContextClass()
       const osc = audioContext.createOscillator()
       const gain = audioContext.createGain()
       osc.connect(gain); gain.connect(audioContext.destination)
@@ -330,7 +358,9 @@ export const useTimerStore = defineStore('timer', () => {
       gain.gain.setValueAtTime(0.1, audioContext.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6)
       osc.start(); osc.stop(audioContext.currentTime + 0.6)
-    } catch (_e) { }
+    } catch (_e) {
+      // Silently ignore audio playback errors
+    }
   }
 
   const requestNotificationPermission = async () => {
@@ -357,7 +387,8 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Set cross-tab callbacks
     crossTabSync.setTimerCallbacks({
-      onSessionUpdate: (session: any) => {
+      onSessionUpdate: (payload: unknown) => {
+        const session = payload as PomodoroSession | null
         if (!isDeviceLeader.value) {
           currentSession.value = session
           if (session?.isActive && !session?.isPaused) {
@@ -399,6 +430,4 @@ export const useTimerStore = defineStore('timer', () => {
     startTimer, pauseTimer, resumeTimer, stopTimer, completeSession,
     requestNotificationPermission, playStartSound, playEndSound
   }
-}, {
-  share: { enable: false }
 })

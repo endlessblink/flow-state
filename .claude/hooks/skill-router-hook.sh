@@ -70,9 +70,6 @@ SKILL_MAPPINGS=(
   # UI/UX
   "dev-implement-ui-ux:ui fix|ux fix|design token|accessibility|visual consistency"
 
-  # Planning (broad)
-  "arch-planning:plan feature|breakdown task|implementation strategy|architecture plan"
-
   # VueUse
   "dev-vueuse:vueuse|usemagickey|useclipboard|uselocalstorage|useevent"
 
@@ -82,8 +79,8 @@ SKILL_MAPPINGS=(
   # Vue development (broad)
   "dev-vue:vue component|reactivity|composable|pinia store|props emit"
 
-  # Chief architect (broad)
-  "chief-architect:architecture decision|tech stack|app structure|design decision"
+  # Chief architect - unified (planning + architecture)
+  "chief-architect:plan feature|breakdown task|implementation strategy|architecture plan|architecture decision|tech stack|app structure|design decision|roadmap|how.*implement|break.*down"
 
   # General debugging (LAST - catches remaining)
   "dev-debugging:bug|broken|fix|debug|not working|disappear|crash|error|issue|missing|stuck|drift"

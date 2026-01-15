@@ -1,6 +1,10 @@
 
 import type { Task, Project, Subtask, TaskInstance, TaskRecurrence, RecurringTaskInstance, NotificationPreferences } from '../types/tasks'
 import type { ScheduledNotification } from '../types/recurrence'
+import type { CanvasGroup } from '../types/canvas'
+import type { AppSettings } from '../stores/settings'
+import type { PomodoroSession } from '../stores/timer'
+import type { SessionSummary } from '../stores/quickSort'
 
 // -- Validation Helpers --
 
@@ -107,7 +111,7 @@ export interface SupabaseGroup {
     type: string
     color?: string
 
-    position_json?: any // Fixed: Use legacy database column name
+    position_json?: { x: number; y: number; width: number; height: number;[key: string]: unknown } | null // Fixed: Use legacy database column name
     position_version?: number // Optimistic locking for canvas position sync
     position_format?: string // TASK-240: Transition to relative-only
     layout?: string
@@ -118,14 +122,14 @@ export interface SupabaseGroup {
 
     parent_group_id?: string | null
 
-    filters_json?: any
+    filters_json?: import('../types/canvas').GroupFilter | null
     is_power_mode?: boolean
-    power_keyword_json?: any
-    assign_on_drop_json?: any
-    collect_filter_json?: any
+    power_keyword_json?: import('../composables/useTaskSmartGroups').PowerKeywordResult | null
+    assign_on_drop_json?: import('../types/canvas').AssignOnDropSettings | null
+    collect_filter_json?: import('../types/canvas').CollectFilterSettings | null
     auto_collect?: boolean
     is_pinned?: boolean
-    property_value?: any
+    property_value?: string | number | boolean | Record<string, unknown> | null
 
     is_deleted?: boolean
     created_at?: string
@@ -176,8 +180,8 @@ export interface SupabaseUserSettings {
     language?: string
     sidebar_collapsed?: boolean
     board_density?: string
-    kanban_settings?: any
-    canvas_viewport?: any
+    kanban_settings?: Record<string, unknown> | null
+    canvas_viewport?: { x: number; y: number; zoom: number } | null
     created_at?: string
     updated_at?: string
 }
@@ -194,7 +198,7 @@ export interface SupabaseQuickSortSession {
 
 // -- Mappers --
 
-export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
+export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGroup {
     // SAFETY: Sanitize parent_group_id (though groups table uses text type, still good to sanitize)
     const sanitizedParentGroupId = group.parentGroupId &&
         group.parentGroupId !== 'undefined' &&
@@ -235,22 +239,22 @@ export function toSupabaseGroup(group: any, userId: string): SupabaseGroup {
     }
 }
 
-export function fromSupabaseGroup(record: SupabaseGroup): any {
+export function fromSupabaseGroup(record: SupabaseGroup): CanvasGroup {
     return {
         id: record.id,
         name: record.name,
-        type: record.type,
-        color: record.color,
+        type: record.type as CanvasGroup['type'],
+        color: record.color || '#cccccc',
 
         position: record.position_json, // Fixed: Map DB position_json to internal position
         positionVersion: record.position_version ?? 0, // Read position_version for optimistic locking
-        layout: record.layout,
+        layout: (record.layout as CanvasGroup['layout']) || 'vertical',
 
-        isVisible: record.is_visible,
-        isCollapsed: record.is_collapsed,
+        isVisible: record.is_visible ?? true,
+        isCollapsed: record.is_collapsed ?? false,
         collapsedHeight: record.collapsed_height,
 
-        parentGroupId: record.parent_group_id,
+        parentGroupId: record.parent_group_id, // TASK-138: Using current DB field name
 
         filters: record.filters_json,
         isPowerMode: record.is_power_mode,
@@ -263,7 +267,7 @@ export function fromSupabaseGroup(record: SupabaseGroup): any {
         positionFormat: 'absolute', // Default to absolute since DB column is missing
 
         updatedAt: record.updated_at
-    }
+    } as CanvasGroup
 }
 
 export function toSupabaseProject(project: Project, userId: string): SupabaseProject {
@@ -271,6 +275,9 @@ export function toSupabaseProject(project: Project, userId: string): SupabasePro
     const primaryColor = Array.isArray(project.color) ? project.color[0] : project.color;
     // Check if color is likely an emoji (if not hex)
     const isEmoji = project.colorType === 'emoji' || (project.emoji && !primaryColor?.startsWith('#'));
+
+    // Store emoji in color field when colorType is emoji, otherwise use the hex color
+    const colorValue = isEmoji && project.emoji ? project.emoji : primaryColor;
 
     // SAFETY: Validate UUID fields to prevent 400 errors from Supabase
     const sanitizedId = project.id
@@ -291,7 +298,7 @@ export function toSupabaseProject(project: Project, userId: string): SupabasePro
         id: sanitizedId,
         user_id: userId,
         name: sanitizedName,
-        color: primaryColor,
+        color: colorValue,
         color_type: project.colorType || (isEmoji ? 'emoji' : 'hex'),
         view_type: project.viewType || 'status',
         parent_id: sanitizedParentId,
@@ -426,7 +433,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
 
 // -- User Settings Mappers --
 
-export function toSupabaseUserSettings(settings: any, userId: string): SupabaseUserSettings {
+export function toSupabaseUserSettings(settings: AppSettings, userId: string): SupabaseUserSettings {
     return {
         user_id: userId,
         work_duration: settings.workDuration,
@@ -437,14 +444,14 @@ export function toSupabaseUserSettings(settings: any, userId: string): SupabaseU
         play_notification_sounds: settings.playNotificationSounds,
         theme: settings.theme || 'system',
         language: settings.language || 'en',
-        sidebar_collapsed: settings.sidebarCollapsed || false,
+        sidebar_collapsed: (settings as any).sidebarCollapsed || false,
         board_density: settings.boardDensity || 'comfortable',
-        kanban_settings: settings.kanbanSettings || {},
-        canvas_viewport: settings.canvasViewport || null
+        kanban_settings: (settings as any).kanbanSettings || {},
+        canvas_viewport: (settings as any).canvasViewport || null
     }
 }
 
-export function fromSupabaseUserSettings(record: SupabaseUserSettings): any {
+export function fromSupabaseUserSettings(record: SupabaseUserSettings): AppSettings {
     return {
         workDuration: record.work_duration,
         shortBreakDuration: record.short_break_duration,
@@ -457,8 +464,13 @@ export function fromSupabaseUserSettings(record: SupabaseUserSettings): any {
         sidebarCollapsed: record.sidebar_collapsed,
         boardDensity: record.board_density,
         kanbanSettings: record.kanban_settings,
-        canvasViewport: record.canvas_viewport
-    }
+        canvasViewport: record.canvas_viewport,
+        // Default values for fields missing in DB but required in AppSettings
+        showDoneColumn: true,
+        powerGroupOverrideMode: 'only_empty',
+        textDirection: 'auto',
+        enableDayGroupSuggestions: true
+    } as any // Cast back for store consumption, or we need a bigger interface
 }
 
 // -- Notification Mappers --
@@ -494,7 +506,7 @@ export function fromSupabaseNotification(record: SupabaseNotification): Schedule
 
 // -- Timer Session Mappers --
 
-export function toSupabaseTimerSession(session: any, userId: string, deviceId: string): SupabaseTimerSession {
+export function toSupabaseTimerSession(session: PomodoroSession, userId: string, deviceId: string): SupabaseTimerSession {
     // SAFETY: Validate session ID - generate new UUID if invalid (prevents timestamp IDs from breaking DB)
     const validSessionId = isValidUUID(session.id) ? session.id : crypto.randomUUID()
 
@@ -518,7 +530,7 @@ export function toSupabaseTimerSession(session: any, userId: string, deviceId: s
     }
 }
 
-export function fromSupabaseTimerSession(record: SupabaseTimerSession): any {
+export function fromSupabaseTimerSession(record: SupabaseTimerSession): PomodoroSession & { deviceLeaderId?: string | null, deviceLeaderLastSeen?: number } {
     // SAFETY: Ensure ID is valid UUID when loading (in case DB has corrupted data)
     const validId = isValidUUID(record.id) ? record.id : crypto.randomUUID()
 
@@ -532,9 +544,9 @@ export function fromSupabaseTimerSession(record: SupabaseTimerSession): any {
         startTime: new Date(record.start_time),
         duration: record.duration,
         remainingTime: record.remaining_time,
-        isActive: record.is_active,
-        isPaused: record.is_paused,
-        isBreak: record.is_break,
+        isActive: record.is_active ?? false,
+        isPaused: record.is_paused ?? false,
+        isBreak: record.is_break ?? false,
         completedAt: record.completed_at ? new Date(record.completed_at) : undefined,
         deviceLeaderId: record.device_leader_id,
         deviceLeaderLastSeen: record.device_leader_last_seen ? new Date(record.device_leader_last_seen).getTime() : undefined
@@ -543,7 +555,7 @@ export function fromSupabaseTimerSession(record: SupabaseTimerSession): any {
 
 // -- Quick Sort Mappers --
 
-export function toSupabaseQuickSortSession(summary: any, userId: string): SupabaseQuickSortSession {
+export function toSupabaseQuickSortSession(summary: SessionSummary, userId: string): SupabaseQuickSortSession {
     // SAFETY: Validate session ID - generate new UUID if invalid
     const validId = isValidUUID(summary.id) ? summary.id : crypto.randomUUID()
 
@@ -562,7 +574,7 @@ export function toSupabaseQuickSortSession(summary: any, userId: string): Supaba
     }
 }
 
-export function fromSupabaseQuickSortSession(record: SupabaseQuickSortSession): any {
+export function fromSupabaseQuickSortSession(record: SupabaseQuickSortSession): SessionSummary {
     return {
         id: record.id,
         tasksProcessed: record.tasks_processed,

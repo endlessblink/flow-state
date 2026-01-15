@@ -39,12 +39,10 @@
               backgroundColor: projectData.colorType === 'hex' ? projectData.color : 'transparent'
             }"
           >
-            <ProjectEmojiIcon
+            <span
               v-if="projectData.colorType === 'emoji' && projectData.emoji"
-              :emoji="projectData.emoji"
-              size="sm"
               class="preview-emoji"
-            />
+            >{{ projectData.emoji }}</span>
           </div>
           <button
             class="change-icon-btn"
@@ -95,7 +93,6 @@ import BaseModal from '@/components/base/BaseModal.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import EmojiPicker from '@/components/common/EmojiPicker.vue'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
 interface Props {
@@ -321,8 +318,9 @@ const saveProject = async () => {
 }
 
 .preview-emoji {
-  font-size: var(--space-8);
+  font-size: 32px;
   line-height: 1;
+  text-align: center;
 }
 
 .change-icon-btn {

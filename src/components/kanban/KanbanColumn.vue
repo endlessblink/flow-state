@@ -3,9 +3,7 @@
     <div class="column-header">
       <div class="header-left">
         <span class="column-title">{{ title }}</span>
-        <span class="task-count" :class="wipStatusClass">
-          {{ taskCount }}{{ wipLimit ? `/${wipLimit}` : '' }}
-        </span>
+        <span class="task-count">{{ taskCount }}</span>
       </div>
       <button class="add-task-btn" @click="$emit('addTask', status)">
         <Plus :size="12" />

@@ -103,59 +103,24 @@
       </div>
     </div>
 
-    <!-- Status Submenu -->
-    <Teleport to="body">
-      <div
-        v-if="showStatusSubmenu"
-        class="submenu"
-        :style="statusSubmenuStyle"
-        @mouseenter="_keepSubmenuOpen('status')"
-        @mouseleave="closeSubmenu('status')"
-      >
-        <button
-          v-for="status in statusOptions"
-          :key="status.value"
-          class="menu-item menu-item--sm"
-          :class="{ active: currentTask?.status === status.value }"
-          @click="setStatus(status.value)"
-        >
-          <component
-            :is="status.icon"
-            :size="14"
-            class="status-icon"
-            :class="[status.value]"
-          />
-          <span class="menu-text">{{ status.label }}</span>
-        </button>
-      </div>
-    </Teleport>
+    <!-- Decomposed Submenus -->
+    <StatusSubmenu
+      :is-visible="showStatusSubmenu"
+      :style="statusSubmenuStyle"
+      :current-status="currentTask?.status"
+      @mouseenter="_keepSubmenuOpen('status')"
+      @mouseleave="closeSubmenu('status')"
+      @select="setStatus"
+    />
 
-    <!-- Duration Submenu -->
-    <Teleport to="body">
-      <div
-        v-if="showDurationSubmenu"
-        class="submenu"
-        :style="durationSubmenuStyle"
-        @mouseenter="_keepSubmenuOpen('duration')"
-        @mouseleave="closeSubmenu('duration')"
-      >
-        <button
-          v-for="dur in durationOptions"
-          :key="dur.value ?? 'none'"
-          class="menu-item menu-item--sm"
-          :class="{ active: currentTask?.estimatedDuration === dur.value }"
-          @click="setDuration(dur.value)"
-        >
-          <component
-            :is="dur.icon"
-            :size="14"
-            class="duration-icon"
-            :class="[dur.class]"
-          />
-          <span class="menu-text">{{ dur.label }}</span>
-        </button>
-      </div>
-    </Teleport>
+    <DurationSubmenu
+      :is-visible="showDurationSubmenu"
+      :style="durationSubmenuStyle"
+      :current-duration="currentTask?.estimatedDuration"
+      @mouseenter="_keepSubmenuOpen('duration')"
+      @mouseleave="closeSubmenu('duration')"
+      @select="setDuration"
+    />
 
     <!-- Quick Actions Row -->
     <div class="action-bar">
@@ -193,33 +158,17 @@
       <ChevronRight :size="14" class="submenu-arrow" />
     </div>
 
-    <!-- More Submenu -->
-    <Teleport to="body">
-      <div
-        v-if="showMoreSubmenu"
-        class="submenu"
-        :style="moreSubmenuStyle"
-        @mouseenter="_keepSubmenuOpen('more')"
-        @mouseleave="closeSubmenu('more')"
-      >
-        <button class="menu-item menu-item--sm" @click="duplicateTask">
-          <Copy :size="14" class="menu-icon" />
-          <span class="menu-text">Duplicate</span>
-        </button>
-        <button
-          v-if="!isBatchOperation"
-          class="menu-item menu-item--sm"
-          @click="currentTask && $emit('moveToSection', currentTask.id); $emit('close')"
-        >
-          <Layout :size="14" class="menu-icon" />
-          <span class="menu-text">Move to Section</span>
-        </button>
-        <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click="clearSelection">
-          <X :size="14" class="menu-icon" />
-          <span class="menu-text">Clear Selection</span>
-        </button>
-      </div>
-    </Teleport>
+    <MoreSubmenu
+      :is-visible="showMoreSubmenu"
+      :style="moreSubmenuStyle"
+      :is-batch-operation="isBatchOperation"
+      :task-id="currentTask?.id"
+      @mouseenter="_keepSubmenuOpen('more')"
+      @mouseleave="closeSubmenu('more')"
+      @duplicate="duplicateTask"
+      @move-to-section="taskId => { $emit('moveToSection', taskId); $emit('close') }"
+      @clear-selection="clearSelection"
+    />
 
     <div class="menu-divider" />
 
@@ -232,38 +181,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch, inject, markRaw } from 'vue'
-import { useRouter } from 'vue-router'
-import { useTaskStore } from '@/stores/tasks'
-import { useTimerStore } from '@/stores/timer'
-import { useCanvasStore } from '@/stores/canvas'
-import type { Task } from '@/stores/tasks'
+import { ref, computed, onUnmounted, watch, inject } from 'vue'
 import {
   Calendar,
   CalendarPlus,
-  CalendarDays,
-  Loader,
   CheckCircle,
-  Inbox,
-  PauseCircle,
-  Zap,
   Timer,
   Clock,
-  HelpCircle,
-  Layout,
   Eye,
   Play,
-  Copy,
   Flag,
   ChevronRight,
   ChevronDown,
   Pencil,
-  X,
   Trash2,
   MoreHorizontal
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
+import type { Task } from '@/stores/tasks'
+
+// New Architecture Imports
+import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
+import { statusOptions } from './context-menu/constants'
+import StatusSubmenu from './context-menu/StatusSubmenu.vue'
+import DurationSubmenu from './context-menu/DurationSubmenu.vue'
+import MoreSubmenu from './context-menu/MoreSubmenu.vue'
 
 interface Props {
   isVisible: boolean
@@ -291,13 +234,25 @@ const emit = defineEmits<{
   moveToSection: [taskId: string]
 }>()
 
-const taskStore = useTaskStore()
-const timerStore = useTimerStore()
-const canvasStore = useCanvasStore()
-const router = useRouter()
+// Use the new composable for business logic
+const {
+  currentTask,
+  isBatchOperation,
+  handleEdit,
+  setDueDate,
+  setPriority,
+  setStatus,
+  setDuration,
+  toggleDone,
+  startTaskNow,
+  startTimer,
+  duplicateTask,
+  deleteTask,
+  clearSelection
+} = useTaskContextMenuActions(props, emit)
 
 const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
-const enterFocusMode = focusModeState?.enterFocusMode || null
+const enterFocusModeFn = focusModeState?.enterFocusMode || null
 
 const menuRef = ref<HTMLElement | null>(null)
 
@@ -310,28 +265,7 @@ const statusSubmenuPosition = ref({ x: 0, y: 0 })
 const durationSubmenuPosition = ref({ x: 0, y: 0 })
 const moreSubmenuPosition = ref({ x: 0, y: 0 })
 
-// Status options (Done first - most used)
-const statusOptions = [
-  { value: 'done', label: 'Done', icon: markRaw(CheckCircle) },
-  { value: 'in_progress', label: 'In Progress', icon: markRaw(Loader) },
-  { value: 'planned', label: 'Planned', icon: markRaw(CalendarDays) },
-  { value: 'backlog', label: 'Backlog', icon: markRaw(Inbox) },
-  { value: 'on_hold', label: 'On Hold', icon: markRaw(PauseCircle) }
-] as const
-
-// Duration options
-const durationOptions = [
-  { value: 15, label: '15 min', icon: markRaw(Zap), class: 'quick' },
-  { value: 30, label: '30 min', icon: markRaw(Timer), class: 'short' },
-  { value: 60, label: '1 hour', icon: markRaw(Timer), class: 'medium' },
-  { value: 120, label: '2 hours', icon: markRaw(Clock), class: 'long' },
-  { value: null, label: 'None', icon: markRaw(HelpCircle), class: 'none' }
-] as const
-
-// Computed properties
-const isBatchOperation = computed(() => (props.selectedCount || 0) > 1)
-const currentTask = computed(() => props.contextTask || props.task)
-
+// Computed properties for display
 const showInboxHeader = computed(() => {
   return (props.selectedCount && props.selectedCount > 0) || props.contextTask
 })
@@ -461,195 +395,11 @@ const closeSubmenu = (type: 'status' | 'duration' | 'more') => {
   }, 150)
 }
 
-// Actions
-const handleEdit = () => {
-  if (currentTask.value && !isBatchOperation.value) {
-    emit('edit', currentTask.value.id)
-  }
-  emit('close')
-}
-
-const setDueDate = async (dateType: string) => {
-  if (!currentTask.value) return
-
-  if (isBatchOperation.value) {
-    emit('setDueDate', dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek')
-    emit('close')
-    return
-  }
-
-  const today = new Date()
-  let dueDate: Date | null = null
-
-  switch (dateType) {
-    case 'today':
-      dueDate = today
-      break
-    case 'tomorrow':
-      dueDate = new Date(today)
-      dueDate.setDate(today.getDate() + 1)
-      break
-    case 'weekend': {
-      dueDate = new Date(today)
-      const daysUntilSaturday = (6 - today.getDay()) % 7 || 7
-      dueDate.setDate(today.getDate() + daysUntilSaturday)
-      break
-    }
-    case 'nextweek': {
-      dueDate = new Date(today)
-      const daysUntilNextMonday = (8 - today.getDay()) % 7 || 7
-      dueDate.setDate(today.getDate() + daysUntilNextMonday)
-      break
-    }
-    case 'custom': {
-      const currentDate = currentTask.value.dueDate
-      const newDate = prompt('Set due date (MM/DD/YYYY):', currentDate)
-      if (newDate && newDate !== currentDate) {
-        try {
-          await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: newDate })
-          canvasStore.requestSync('user:context-menu')
-        } catch (error) {
-          console.error('Error updating task due date:', error)
-        }
-      }
-      emit('close')
-      return
-    }
-    default:
-      return
-  }
-
-  if (dueDate) {
-    try {
-      const formattedDate = dueDate.toLocaleDateString()
-      await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
-      canvasStore.requestSync('user:context-menu')
-    } catch (error) {
-      console.error('Error setting due date:', error)
-    }
-  }
-  emit('close')
-}
-
-const setPriority = async (priority: 'high' | 'medium' | 'low') => {
-  if (isBatchOperation.value) {
-    emit('setPriority', priority)
-  } else if (currentTask.value) {
-    try {
-      await taskStore.updateTaskWithUndo(currentTask.value.id, { priority })
-      canvasStore.requestSync('user:context-menu')
-    } catch (error) {
-      console.error('Error setting priority:', error)
-    }
-  }
-  emit('close')
-}
-
-const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold') => {
-  if (isBatchOperation.value) {
-    emit('setStatus', status as 'planned' | 'in_progress' | 'done')
-  } else if (currentTask.value) {
-    try {
-      await taskStore.updateTaskWithUndo(currentTask.value.id, { status })
-      canvasStore.requestSync('user:context-menu')
-    } catch (error) {
-      console.error('Error setting status:', error)
-    }
-  }
-  showStatusSubmenu.value = false
-  emit('close')
-}
-
-const setDuration = async (duration: number | null) => {
-  if (isBatchOperation.value) {
-    emit('setDuration', duration)
-  } else if (currentTask.value) {
-    try {
-      await taskStore.updateTaskWithUndo(currentTask.value.id, { estimatedDuration: duration ?? undefined })
-      canvasStore.requestSync('user:context-menu')
-    } catch (error) {
-      console.error('Error setting estimated duration:', error)
-    }
-  }
-  showDurationSubmenu.value = false
-  emit('close')
-}
-
-const clearSelection = () => {
-  emit('clearSelection')
-  emit('close')
-}
-
 const enterFocus = () => {
-  if (currentTask.value && !isBatchOperation.value && enterFocusMode) {
-    enterFocusMode(currentTask.value.id)
+  if (currentTask.value && !isBatchOperation.value && enterFocusModeFn) {
+    enterFocusModeFn(currentTask.value.id)
   } else if (isBatchOperation.value) {
     emit('enterFocusMode')
-  }
-  emit('close')
-}
-
-const toggleDone = async () => {
-  if (isBatchOperation.value) {
-    emit('setStatus', 'done')
-  } else if (currentTask.value) {
-    const newStatus = currentTask.value.status === 'done' ? 'planned' : 'done'
-    try {
-      await taskStore.updateTaskWithUndo(currentTask.value.id, { status: newStatus })
-      canvasStore.requestSync('user:context-menu')
-    } catch (error) {
-      console.error('Error toggling done status:', error)
-    }
-  }
-  emit('close')
-}
-
-const startTaskNow = () => {
-  if (currentTask.value && !isBatchOperation.value) {
-    taskStore.startTaskNowWithUndo(currentTask.value.id)
-    timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
-
-    if (router.currentRoute.value.name !== 'calendar') {
-      router.push('/calendar')
-    }
-
-    window.dispatchEvent(new CustomEvent('start-task-now', {
-      detail: { taskId: currentTask.value.id }
-    }))
-  }
-  emit('close')
-}
-
-const startTimer = () => {
-  if (currentTask.value && !isBatchOperation.value) {
-    timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
-  }
-  emit('close')
-}
-
-const duplicateTask = async () => {
-  if (currentTask.value && !isBatchOperation.value) {
-    try {
-      await taskStore.createTaskWithUndo({
-        title: currentTask.value.title + ' (Copy)',
-        description: currentTask.value.description,
-        status: currentTask.value.status,
-        priority: currentTask.value.priority
-      })
-    } catch (error) {
-      console.error('Error duplicating task:', error)
-    }
-  }
-  showMoreSubmenu.value = false
-  emit('close')
-}
-
-const deleteTask = () => {
-  if (isBatchOperation.value) {
-    emit('deleteSelected')
-  } else if (currentTask.value) {
-    const taskData = currentTask.value as unknown as { instanceId?: string; isCalendarEvent?: boolean }
-    emit('confirmDelete', currentTask.value.id, taskData.instanceId, taskData.isCalendarEvent)
   }
   emit('close')
 }
@@ -736,11 +486,6 @@ onUnmounted(() => {
 .menu-item.active { color: var(--brand-primary); }
 .menu-item.danger { color: var(--danger-text); }
 .menu-item.danger:hover { background: var(--danger-bg-subtle); }
-
-.menu-item--sm {
-  padding: var(--space-1_5) var(--space-2_5);
-  font-size: var(--text-xs);
-}
 
 .menu-icon { flex-shrink: 0; opacity: 0.8; }
 .menu-text { flex: 1; }
@@ -931,33 +676,4 @@ onUnmounted(() => {
 /* Submenu */
 .has-submenu { position: relative; }
 .submenu-arrow { color: var(--text-muted); margin-left: auto; }
-
-.submenu {
-  position: fixed;
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--overlay-component-shadow);
-  padding: var(--space-1) 0;
-  min-width: 130px;
-  z-index: calc(var(--z-dropdown) + 1);
-  animation: menuSlideIn var(--duration-fast) var(--ease-out);
-}
-
-/* Status Icons */
-.status-icon { flex-shrink: 0; }
-.status-icon.planned { color: var(--color-info); }
-.status-icon.in_progress { color: var(--color-break); }
-.status-icon.done { color: var(--color-work); }
-.status-icon.backlog { color: var(--text-muted); }
-.status-icon.on_hold { color: var(--color-danger); }
-
-/* Duration Icons */
-.duration-icon { flex-shrink: 0; }
-.duration-icon.quick { color: var(--green-text); }
-.duration-icon.short { color: var(--color-work); }
-.duration-icon.medium { color: var(--orange-text); }
-.duration-icon.long { color: var(--danger-text); }
-.duration-icon.none { color: var(--text-muted); }
 </style>

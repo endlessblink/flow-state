@@ -30,6 +30,66 @@ Use this skill when you need to:
 
 ---
 
+## Parallel Subagent Architecture (MANDATORY)
+
+**This skill MUST use parallel subagents for efficient analysis.** Never run sequential searches when parallel execution is possible.
+
+### When to Spawn Subagents
+
+| Task Type | Subagent Strategy |
+|-----------|-------------------|
+| **Tech stack detection** | Spawn 3-4 Explore agents in parallel (dependencies, imports, configs) |
+| **Doc vs Code verification** | Spawn 1 agent per technology/feature being verified |
+| **Duplicate detection** | Spawn 1 agent per docs subdirectory |
+| **Link validation** | Spawn 1 agent for internal links, 1 for external links |
+| **Coverage gap analysis** | Spawn agents per codebase area (src/, api/, components/) |
+
+### Subagent Spawning Pattern
+
+**ALWAYS use this pattern for parallel analysis:**
+
+```
+// Example: Verifying documentation for 3 technologies
+Task(subagent_type="Explore", prompt="Search for Tauri usage: check src-tauri/, package.json for @tauri-apps, and any invoke() calls in src/")
+Task(subagent_type="Explore", prompt="Search for Supabase usage: check imports of @supabase/supabase-js, connection configs, and RLS policies")
+Task(subagent_type="Explore", prompt="Search for Vue Flow usage: check imports of @vue-flow/core, canvas components, and node/edge definitions")
+// All 3 run IN PARALLEL in a single message
+```
+
+### Subagent Types for SDM
+
+| Agent Type | Use For |
+|------------|---------|
+| `Explore` | Code searches, dependency checks, import analysis |
+| `general-purpose` | Complex multi-step verification requiring reasoning |
+| `Bash` | Git history checks, file operations |
+
+### Critical Rules
+
+1. **NEVER run searches sequentially** - Always batch into parallel Task calls
+2. **One specific task per agent** - Each agent gets ONE clear question to answer
+3. **Combine results after** - Wait for all agents, then synthesize findings
+4. **Max 5 agents per batch** - Don't overwhelm; batch in groups of 5
+
+### Example: Full Documentation Audit with Subagents
+
+```
+Step 1: Spawn 4 parallel Explore agents
+  - Agent 1: "List all technologies in package.json dependencies"
+  - Agent 2: "Find all .md files in docs/ and list their topics"
+  - Agent 3: "Search for database-related code (supabase, postgres, sql)"
+  - Agent 4: "Search for auth-related code (jwt, token, session, login)"
+
+Step 2: Wait for results, then spawn verification agents
+  - Agent 5: "Verify docs/database.md accuracy against actual Supabase code"
+  - Agent 6: "Verify docs/auth.md accuracy against actual auth implementation"
+  - Agent 7: "Check for undocumented features in src/composables/"
+
+Step 3: Synthesize all findings into single report
+```
+
+---
+
 ## Phase 1: System Reality Verification (MANDATORY FIRST STEP)
 
 ### 1.1 Technology Stack Detection
@@ -625,6 +685,61 @@ SDM Execution:
       Confidence: 100%
 
 4. No execution - report only mode
+```
+
+### Example 3: Parallel Subagent Verification (Tauri)
+
+```
+User: "Check what the documentation says about Tauri vs actual code"
+
+SDM Execution with Subagents:
+
+Step 1: Spawn 5 parallel Explore agents in ONE message:
+  Task(subagent_type="Explore", prompt="Find all Tauri mentions in docs/ folder")
+  Task(subagent_type="Explore", prompt="Check package.json for @tauri-apps dependencies")
+  Task(subagent_type="Explore", prompt="Find src-tauri/ directory and list its contents")
+  Task(subagent_type="Explore", prompt="Search for @tauri-apps/api imports in src/")
+  Task(subagent_type="Explore", prompt="Check CLAUDE.md for Tauri documentation")
+
+Step 2: Wait for ALL agents to complete (parallel execution)
+
+Step 3: Synthesize findings into comparison table:
+  | Aspect              | Docs Say           | Code Reality        | Status    |
+  |---------------------|-------------------|---------------------|-----------|
+  | Basic Tauri app     | "runs on Linux"   | ✅ Valid v2.9.5     | ACCURATE  |
+  | System Tray         | TODO (planned)    | ❌ No code          | ACCURATE  |
+  | Frontend API usage  | Not documented    | ❌ No imports       | GAP       |
+  | CLAUDE.md mention   | Expected          | ❌ Missing          | GAP       |
+
+Step 4: Generate recommendations:
+  - ACCURATE items: No action needed
+  - GAP items: Flag for user decision (add docs or implement feature?)
+```
+
+### Example 4: Full Codebase Documentation Audit with Subagents
+
+```
+User: "Audit all documentation for accuracy"
+
+SDM Parallel Execution Strategy:
+
+Batch 1 - Tech Stack Detection (4 agents):
+  Task(Explore, "Parse package.json dependencies and devDependencies")
+  Task(Explore, "Find all import statements in src/ and categorize by library")
+  Task(Explore, "List all config files (*.config.*, .env.*, docker-compose.*)")
+  Task(Explore, "Find all database/API connection code")
+
+Batch 2 - Documentation Inventory (3 agents):
+  Task(Explore, "List all .md files in docs/ with their H1/H2 headings")
+  Task(Explore, "Find all code examples in docs/*.md files")
+  Task(Explore, "Check for broken internal links between docs")
+
+Batch 3 - Cross-Verification (per technology found):
+  Task(Explore, "Verify Supabase docs match src/composables/useSupabase*.ts")
+  Task(Explore, "Verify Canvas docs match src/composables/canvas/*.ts")
+  Task(Explore, "Verify Timer docs match src/stores/timer.ts")
+
+Total: 10 agents across 3 batches = ~30 seconds vs ~5 minutes sequential
 ```
 
 ---

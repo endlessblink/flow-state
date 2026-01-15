@@ -1,7 +1,18 @@
 import { ref } from 'vue'
 import type { Task } from '@/types/tasks'
+import type { CanvasGroup } from '@/types/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+
+// TASK-289: Map reschedule options to Smart Group keywords
+const DATE_TYPE_TO_KEYWORDS: Record<string, string[]> = {
+    'today': ['today'],
+    'tomorrow': ['tomorrow'],
+    'this_weekend': ['this weekend', 'saturday', 'weekend'],
+    'next_week': ['next week', 'monday']
+}
 
 export function useTaskNodeActions(
     props: {
@@ -158,7 +169,43 @@ export function useTaskNodeActions(
         }
     }
 
-    // TASK-282: Reschedule overdue task
+    // TASK-289: Find a Smart Group by date type keyword
+    const findSmartGroupByDateType = (dateType: string): CanvasGroup | undefined => {
+        const canvasStore = useCanvasStore()
+        const keywords = DATE_TYPE_TO_KEYWORDS[dateType] || []
+
+        return canvasStore.groups.find(group => {
+            const powerInfo = detectPowerKeyword(group.name)
+            if (!powerInfo || powerInfo.category !== 'date') return false
+            return keywords.includes(powerInfo.value.toLowerCase())
+        })
+    }
+
+    // TASK-289: Move task to a Smart Group with position update
+    const moveTaskToSmartGroup = (taskId: string, group: CanvasGroup) => {
+        // Skip if already in this group
+        const task = taskStore.tasks.find(t => t.id === taskId)
+        if (!task || task.parentId === group.id) return
+
+        // Calculate position inside group (offset from group position)
+        const PADDING = 20
+        const HEADER_HEIGHT = 60
+        const newPosition = {
+            x: group.position.x + PADDING,
+            y: group.position.y + HEADER_HEIGHT
+        }
+
+        console.log(`📍 [TASK-289] Moving task "${task.title}" to group "${group.name}" at (${newPosition.x}, ${newPosition.y})`)
+
+        // Update task with geometry change (user-initiated = allowed per SOP-002)
+        // Fire without await - UI updates immediately via Pinia reactivity
+        taskStore.updateTask(taskId, {
+            parentId: group.id,
+            canvasPosition: newPosition
+        }, 'USER')
+    }
+
+    // TASK-282: Reschedule overdue task (sync - fires updates without waiting)
     const handleReschedule = (dateType: string) => {
         if (!props.task) return
 
@@ -201,7 +248,18 @@ export function useTaskNodeActions(
 
         if (newDueDate) {
             console.log(`📅 [TASK-282] Rescheduling task "${props.task.title}" to ${newDueDate}`)
+
+            // TASK-289: Find target group BEFORE updating (while task still has old parentId)
+            const targetGroup = findSmartGroupByDateType(dateType)
+
+            // Fire updates without awaiting - UI updates immediately via Pinia reactivity
+            // Persistence happens in background
             taskStore.updateTaskWithUndo(props.task.id, { dueDate: newDueDate })
+
+            // Move to matching Smart Group if exists
+            if (targetGroup) {
+                moveTaskToSmartGroup(props.task.id, targetGroup)
+            }
         }
     }
 

@@ -1,4 +1,4 @@
-import { ref, reactive, nextTick } from 'vue'
+import { ref, reactive, nextTick, onUnmounted } from 'vue'
 
 interface TimeSlot {
   slotIndex: number
@@ -63,7 +63,7 @@ export function useCalendarDragCreate() {
 
     // Prevent text selection during drag
     document.body.style.userSelect = 'none'
-    ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
+      ; (document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
   }
 
   const handleCreateDragMove = (event: MouseEvent) => {
@@ -145,7 +145,7 @@ export function useCalendarDragCreate() {
 
     // Restore text selection
     document.body.style.userSelect = ''
-    ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+      ; (document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
   }
 
   // Check if slot is in create range for visual feedback
@@ -158,7 +158,7 @@ export function useCalendarDragCreate() {
     const endIndex = Math.max(createDragState.startSlot.slotIndex, createDragState.currentSlot.slotIndex)
 
     return slot.slotIndex >= startIndex && slot.slotIndex <= endIndex &&
-           slot.date === createDragState.startSlot.date
+      slot.date === createDragState.startSlot.date
   }
 
   // Helper function to convert slot to time
@@ -168,6 +168,9 @@ export function useCalendarDragCreate() {
     const date = new Date(year, month - 1, day, slot.hour, slot.minute, 0, 0)
     return date
   }
+
+  // Ensure listeners are cleaned up on unmount
+  onUnmounted(resetCreateDrag)
 
   return {
     isCreatingTask,

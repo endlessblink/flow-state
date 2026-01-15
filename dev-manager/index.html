@@ -37,6 +37,8 @@
             /* Locks red */
             --color-health: #22c55e;
             /* Health green */
+            --color-orchestrator: #a855f7;
+            /* Orchestrator purple */
 
             /* Transitions */
             --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -225,6 +227,16 @@
             stroke: var(--color-health);
         }
 
+        .tab.active.orchestrator::after {
+            background: var(--color-orchestrator);
+            box-shadow: 0 0 8px var(--color-orchestrator);
+        }
+
+        .tab.orchestrator:hover .icon svg,
+        .tab.orchestrator.active .icon svg {
+            stroke: var(--color-orchestrator);
+        }
+
         .spacer {
             flex: 1;
         }
@@ -300,6 +312,18 @@
                 </span>
                 <span>Kanban</span>
             </button>
+            <button class="tab orchestrator" data-panel="orchestrator">
+                <span class="icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="3" />
+                        <circle cx="5" cy="19" r="3" />
+                        <circle cx="19" cy="19" r="3" />
+                        <line x1="12" y1="8" x2="5" y2="16" />
+                        <line x1="12" y1="8" x2="19" y2="16" />
+                    </svg>
+                </span>
+                <span>Orchestrator</span>
+            </button>
             <button class="tab skills" data-panel="skills">
                 <span class="icon">
                     <svg viewBox="0 0 24 24">
@@ -364,6 +388,9 @@
     <main class="content">
         <div id="kanban" class="panel active">
             <iframe src="kanban/index.html" title="Development Kanban"></iframe>
+        </div>
+        <div id="orchestrator" class="panel">
+            <iframe data-src="kanban/index.html?view=orchestrator" title="AI Orchestrator"></iframe>
         </div>
         <div id="skills" class="panel">
             <!-- Lazy load: src set on first tab activation to ensure container has dimensions -->

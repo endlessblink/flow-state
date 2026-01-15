@@ -101,7 +101,7 @@
           :min-zoom="0.05"
           :max-zoom="4.0"
           :fit-view-on-init="false"
-          :connect-on-drag-nodes="true"
+          connect-on-drag-nodes
           :zoom-scroll-sensitivity="1.0"
           :zoom-activation-key-code="null"
           prevent-scrolling
@@ -244,7 +244,7 @@
       @arrange-in-row="arrangeInRow"
       @arrange-in-column="arrangeInColumn"
       @arrange-in-grid="arrangeInGrid"
-      @create-task-in-group="createTaskInGroup"
+      @create-task-in-group="handleCreateTaskInGroupDebug"
       @open-group-settings="handleOpenSectionSettingsFromContext"
       @toggle-power-mode="handleToggleFocusMode"
       @collect-tasks="handleCollectTasksFromMenu"
@@ -256,7 +256,7 @@
 
 <script setup lang="ts">
 import { markRaw } from 'vue'
-import { VueFlow, type NodeMouseEvent, useVueFlow } from '@vue-flow/core'
+import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -292,7 +292,7 @@ const modalsStore = useCanvasModalsStore()
 const contextMenuStore = useCanvasContextMenuStore()
 
 // Register custom node types
-const nodeTypes: Record<string, any> = {
+const nodeTypes: Record<string, unknown> = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }
@@ -310,13 +310,10 @@ const {
   createTaskHere, createGroup, editGroup, deleteGroup,
   moveSelectedTasksToInbox, deleteSelectedTasks, createTaskInGroup,
   deleteNode,
-  isEditModalOpen, selectedTask, isQuickTaskCreateOpen, isBatchEditModalOpen,
-  isSectionSettingsOpen, editingSection, isGroupModalOpen,
-  selectedGroup, isGroupEditModalOpen, selectedSectionForEdit,
-  isDeleteGroupModalOpen, isBulkDeleteModalOpen,
-  closeEditModal, closeQuickTaskCreate, handleQuickTaskCreate, closeBatchEditModal,
-  handleBatchEditApplied, closeSectionSettingsModal, handleSectionSettingsSave,
-  closeGroupModal, handleGroupCreated, handleGroupUpdated, closeGroupEditModal,
+  isSectionSettingsOpen, editingSection,
+  handleQuickTaskCreate,
+  handleBatchEditApplied, handleSectionSettingsSave,
+  handleGroupCreated, handleGroupUpdated,
   handleGroupEditSave, confirmDeleteGroup, confirmBulkDelete, handleConnect, handleConnectStart, handleConnectEnd,
   handleEdgesChange, handleNodesChange,
   handleNodeContextMenu, handleEdgeContextMenu, handleEdgeDoubleClick,
@@ -350,11 +347,29 @@ const handleOpenSectionSettingsFromContext = () => {
     if (contextMenuStore.canvasContextSection) handleOpenSectionSettings(contextMenuStore.canvasContextSection.id)
 }
 const handleToggleFocusMode = () => uiStore.toggleFocusMode()
-const handleSectionUpdate = (id: string, data: any) => canvasStore.updateSection(id, data)
+
+// TASK-288 DEBUG: Wrapper to trace createTaskInGroup call
+const handleCreateTaskInGroupDebug = (section: any) => {
+  // Get context menu position from store directly
+  const menuX = contextMenuStore.canvasContextMenuX
+  const menuY = contextMenuStore.canvasContextMenuY
+
+  console.log('🔴 [CANVASVIEW] handleCreateTaskInGroupDebug called!', {
+    sectionId: section?.id,
+    sectionName: section?.name,
+    contextMenuX: menuX,
+    contextMenuY: menuY,
+    createTaskInGroupType: typeof createTaskInGroup,
+    createTaskInGroupFn: createTaskInGroup?.toString?.().slice(0, 100)
+  })
+  createTaskInGroup(section)
+}
+
+const handleSectionUpdate = (id: string, data: Record<string, unknown>) => canvasStore.updateSection(id, data)
 const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
-const handleEditTask = (task: any) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
+const handleEditTask = (task: Record<string, unknown>) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
 // Handle double-click on nodes to open edit modal for tasks
-const handleNodeDoubleClick = ({ event, node }: NodeMouseEvent) => {
+const handleNodeDoubleClick = ({ node }: NodeMouseEvent) => {
     console.log('[TASK-279] handleNodeDoubleClick called', { nodeType: node.type, hasTask: !!node.data?.task })
     // Only handle task nodes, not group nodes
     if (node.type === 'taskNode' && node.data?.task) {
@@ -362,7 +377,7 @@ const handleNodeDoubleClick = ({ event, node }: NodeMouseEvent) => {
         handleEditTask(node.data.task)
     }
 }
-const handleTaskContextMenu = (event: MouseEvent, task: any) => {
+const handleTaskContextMenu = (event: MouseEvent, task: Record<string, unknown>) => {
     if (event) event.preventDefault()
     // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
     window.dispatchEvent(new CustomEvent('task-context-menu', {
@@ -370,7 +385,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: any) => {
     }))
 }
 
-const handleSectionContextMenu = (event: MouseEvent, section: any) => {
+const handleSectionContextMenu = (event: MouseEvent, section: Record<string, unknown>) => {
     console.debug('[BUG-251] handleSectionContextMenu called', {
         sectionId: section?.id,
         sectionName: section?.name,
@@ -386,8 +401,8 @@ const handleSectionContextMenu = (event: MouseEvent, section: any) => {
 }
 
 // Expose for testing purposes (Fundamental Stability)
-if (process.env.NODE_ENV === 'development' || (window as any).PLAYWRIGHT_TEST) {
-  (window as any).__POMO_FLOW_DEBUG__ = {
+if (process.env.NODE_ENV === 'development' || (window as unknown as Record<string, unknown>).PLAYWRIGHT_TEST) {
+  (window as unknown as Record<string, unknown>).__POMO_FLOW_DEBUG__ = {
     orchestrator,
     canvasStore,
     taskStore,

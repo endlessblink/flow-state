@@ -506,7 +506,8 @@ const handleArrangeInGrid = () => {
 .menu-item {
   width: 100%;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   color: var(--text-primary);
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);
@@ -516,12 +517,12 @@ const handleArrangeInGrid = () => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  transition: background-color var(--duration-fast) var(--ease-out);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  min-height: 40px;
 }
 
 .menu-item:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border-hover);
+  background: var(--surface-hover);
 }
 
 .menu-item.danger {
@@ -710,7 +711,8 @@ const handleArrangeInGrid = () => {
 .submenu-teleported .menu-item {
   width: 100%;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   color: var(--text-primary, #e5e5e5);
   padding: var(--space-3, 12px) var(--space-4, 16px);
   font-size: var(--text-sm, 14px);
@@ -720,11 +722,12 @@ const handleArrangeInGrid = () => {
   display: flex;
   align-items: center;
   gap: var(--space-3, 12px);
-  transition: background-color var(--duration-fast) var(--ease-out);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  min-height: 40px;
 }
 
 .submenu-teleported .menu-item:hover {
-  background: var(--glass-border);
+  background: var(--surface-hover);
 }
 
 .submenu-teleported .menu-icon {

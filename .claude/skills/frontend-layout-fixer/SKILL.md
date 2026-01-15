@@ -274,45 +274,83 @@ localStorage.setItem('tasks', JSON.stringify(tasks)); // Cache is secondary
 
 **Symptoms:**
 - Box shadow invisible or cut off
+- Hover glow cut off on one or more sides
 - Shadow not showing on all sides
-- Shadow clipped by container
+- Shadow clipped by scrollable container
 
 **Root Causes:**
-- overflow: hidden on card (clips shadow)
+- `overflow: hidden` or `overflow: auto` on parent (clips shadow)
+- No padding to accommodate shadow blur radius
 - Negative margins pushing content
-- Container too small for shadow space
+
+**SOP Reference:** `docs/sop/SOP-004-css-shadow-overflow-clipping.md`
+
+**Critical Insight:** Shadows extend OUTSIDE element boundaries. When parent has `overflow: hidden/auto`, shadows get clipped. The solution is NOT just `overflow: visible` (which loses scrolling), but **adding padding ≥ shadow blur radius**.
+
+**Blur-to-Padding Mapping (Design Tokens):**
+
+| Shadow Blur | Minimum Padding | Design Token |
+|-------------|-----------------|--------------|
+| 10px blur   | 12px            | `var(--space-3)` |
+| 16px blur   | 16px            | `var(--space-4)` |
+| 20px blur   | 24px            | `var(--space-6)` |
+| 30px blur   | 32px            | `var(--space-8)` |
 
 **Detection Patterns:**
 
 ```css
-/* ❌ BAD: overflow clips shadow */
+/* ❌ BAD: overflow clips shadow, no padding */
+.container {
+  overflow-y: auto;
+  padding: 0;
+}
+.card:hover {
+  box-shadow: 0 0 20px rgba(78, 205, 196, 0.2); /* 20px blur */
+}
+
+/* ✅ GOOD: Keep scrolling + add padding for shadow space */
+.container {
+  overflow-y: auto;
+  overflow-x: visible;  /* Allow horizontal shadow overflow */
+  padding: var(--space-6);  /* 24px >= 20px blur radius */
+  padding-bottom: var(--space-10);  /* Extra for last card */
+}
+```
+
+```css
+/* ❌ BAD: overflow: visible loses scrolling */
+.container {
+  overflow: visible;  /* Shadow shows but no scrolling! */
+}
+
+/* ✅ GOOD: Split overflow + padding preserves both */
+.container {
+  overflow-y: auto;           /* Keep vertical scrolling */
+  overflow-x: visible;        /* Allow shadow overflow */
+  padding: var(--space-6);    /* Space for shadow */
+}
+```
+
+```css
+/* ❌ BAD: Card clips its own shadow */
 .card {
   overflow: hidden;
   box-shadow: 0 -4px 8px rgba(0,0,0,0.15);
 }
 
-/* ✅ GOOD: overflow allows shadow */
+/* ✅ GOOD: Card allows shadow overflow */
 .card {
   overflow: visible;
   box-shadow: 0 -4px 8px rgba(0,0,0,0.15);
 }
 ```
 
-```css
-/* ❌ BAD: Parent clips child shadow */
-.container {
-  overflow: hidden;
-}
-.card {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-/* ✅ GOOD: Add padding to container for shadow space */
-.container {
-  overflow: hidden;
-  padding: 16px; /* Space for shadow */
-}
-```
+**Testing Checklist for Shadow Fixes:**
+1. Hover over element - glow visible on all 4 sides
+2. With many items - container still scrolls
+3. First item - top shadow not clipped
+4. Last item - bottom shadow not clipped
+5. RTL layout - left/right shadows render correctly
 
 #### Content Cutoff
 
@@ -609,7 +647,12 @@ Detection:
 CATEGORY 3: CSS LAYOUT BUGS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Shadow Clipping:
+Shadow Clipping (scrollable container - PREFERRED):
+❌ .container { overflow-y: auto; padding: 0; }
+✅ .container { overflow-y: auto; overflow-x: visible; padding: var(--space-6); }
+   Blur-to-padding: 10px→space-3, 16px→space-4, 20px→space-6, 30px→space-8
+
+Shadow Clipping (non-scrollable):
 ❌ .card { overflow: hidden; box-shadow: 0 -4px 8px; }
 ✅ .card { overflow: visible; box-shadow: 0 -4px 8px; }
 
@@ -829,7 +872,63 @@ const input = {
 
 ---
 
-### Example 3: CSS Layout Bug (Shadow Clipping)
+### Example 3: CSS Layout Bug (Shadow Clipping in Scrollable Container)
+
+**Input:**
+```javascript
+const input = {
+  html: `
+    <div class="tasks-container">
+      <div class="task-card">Task 1</div>
+      <div class="task-card">Task 2</div>
+    </div>
+  `,
+  css: `
+    .tasks-container {
+      overflow-y: auto;
+      padding: 0;
+    }
+    .task-card:hover {
+      box-shadow: 0 0 20px rgba(78, 205, 196, 0.2);
+    }
+  `,
+  issue_description: "Hover glow cut off on sides, container needs to scroll",
+  context: { target_selectors: [".tasks-container", ".task-card"] }
+};
+```
+
+**Expected Output:**
+```json
+{
+  "bug_category": "css_layout",
+  "diagnosis": {
+    "severity": "medium",
+    "root_causes": [
+      "overflow-y: auto clips shadows that extend beyond boundary",
+      "No padding to accommodate 20px shadow blur radius"
+    ]
+  },
+  "fixes": {
+    "css_patches": [
+      {
+        "selector": ".tasks-container",
+        "old": "overflow-y: auto; padding: 0;",
+        "new": "overflow-y: auto; overflow-x: visible; padding: var(--space-6);",
+        "rationale": "Keep scrolling, allow horizontal shadow overflow, add 24px padding >= 20px blur"
+      }
+    ]
+  },
+  "testing_checklist": [
+    "Hover over task card - glow visible on all 4 sides",
+    "With many tasks - column still scrolls",
+    "First card - top shadow not clipped",
+    "Last card - bottom shadow not clipped"
+  ],
+  "prevention": "Before adding overflow: hidden/auto, check if children have shadows and add padding >= blur radius"
+}
+```
+
+### Example 3b: CSS Layout Bug (Shadow Clipping on Card)
 
 **Input:**
 ```javascript
@@ -859,7 +958,7 @@ const input = {
   "diagnosis": {
     "severity": "medium",
     "root_causes": [
-      "overflow: hidden clips the negative-offset box-shadow"
+      "overflow: hidden on card clips the negative-offset box-shadow"
     ]
   },
   "fixes": {
@@ -1096,8 +1195,15 @@ const data = await api.fetch(); // API is authoritative
 
 ### CSS Layout Fixes
 ```css
-/* Shadow clipping */
-overflow: visible;  /* Not hidden */
+/* Shadow clipping (scrollable container) */
+overflow-y: auto;           /* Keep scrolling */
+overflow-x: visible;        /* Allow shadow overflow */
+padding: var(--space-6);    /* >= shadow blur radius */
+
+/* Shadow clipping (non-scrollable) */
+overflow: visible;          /* Allow shadow */
+
+/* Blur-to-padding: 10px→space-3, 16px→space-4, 20px→space-6, 30px→space-8 */
 
 /* Content cutoff */
 min-height: 60px;   /* Not height */

@@ -49,7 +49,7 @@ import { getEmojiSvgData, getColorfulSvgData, hasSvgRepresentation, hasColorfulS
 
 interface Props {
   emoji: string
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   color?: string
   clickable?: boolean
   title?: string
@@ -82,7 +82,8 @@ const sizeMap = {
   xs: 16,
   sm: 20,
   md: 24,
-  lg: 32
+  lg: 32,
+  xl: 48
 }
 
 const containerSize = computed(() => sizeMap[props.size])

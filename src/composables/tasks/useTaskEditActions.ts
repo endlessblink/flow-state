@@ -134,7 +134,8 @@ export function useTaskEditActions(
 
     // --- Main Save Action ---
 
-    const saveTask = () => {
+    // BUG-291 FIX: Made async to properly await updateTaskWithUndo
+    const saveTask = async () => {
         // Guard: Prevent double-save
         if (isSaving.value || !props.task) return
         isSaving.value = true
@@ -203,8 +204,9 @@ export function useTaskEditActions(
                 }
             }
 
+            // BUG-291 FIX: Await the async update operation
             // Update main task
-            taskStore.updateTaskWithUndo(editedTask.value.id, updates)
+            await taskStore.updateTaskWithUndo(editedTask.value.id, updates)
 
             // Handle instances
             if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {

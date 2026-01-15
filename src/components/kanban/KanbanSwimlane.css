@@ -1,84 +1,72 @@
 .kanban-swimlane {
-    margin-bottom: var(--space-3);
-    transition: all var(--duration-normal) var(--spring-smooth);
+    margin-bottom: var(--space-8);
     width: 100%;
     max-width: 100%;
-    overflow: visible; /* TASK-243: Allow card shadows to render without clipping */
-    background: var(--kanban-swimlane-bg);
+    overflow: visible;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
 }
 
 .kanban-swimlane:last-child {
     margin-bottom: 0;
 }
 
+/* Clean swimlane header - TickTick style */
 .swimlane-header {
-    padding: var(--space-2) var(--space-8);
-    margin-bottom: var(--space-4);
-    /* Increased space to prevent collision */
+    padding: var(--space-2) 0;
+    margin-bottom: var(--space-3);
     cursor: pointer;
     user-select: none;
-    background: var(--glass-bg-medium);
-    backdrop-filter: blur(var(--blur-md));
-    -webkit-backdrop-filter: blur(var(--blur-md));
-    border-radius: var(--radius-md);
-    transition: all var(--duration-fast) var(--spring-smooth);
-    position: relative;
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     width: 100%;
     box-sizing: border-box;
-    border-bottom: 1px solid var(--border-subtle);
 }
 
 .swimlane-header:hover {
-    background: var(--kanban-header-bg);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .header-content--swimlane {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: var(--space-2);
 }
 
+/* Simple collapse button */
 .collapse-btn {
     background: transparent;
-    border: 1px solid var(--border-medium);
-    color: var(--text-muted);
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
     padding: var(--space-1);
-    border-radius: var(--radius-md);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--duration-fast) var(--spring-smooth);
+    transition: color var(--duration-fast) ease;
 }
 
 .collapse-btn:hover {
-    background: var(--state-hover-bg);
-    border-color: var(--state-hover-border);
-    color: var(--text-primary);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .project-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: var(--radius-full);
-    background: var(--glass-bg-heavy);
-    border: 1px solid var(--glass-bg-medium);
+    display: none;
 }
 
 .project-name {
-    color: var(--text-primary);
-    font-size: var(--text-base);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
     font-weight: var(--font-semibold);
     margin: 0;
 }
 
 .task-count {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    margin-inline-start: auto;
-    /* RTL: push to end */
-    margin-inline-end: var(--space-3);
-    /* RTL: task count spacing */
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    margin-left: var(--space-2);
 }
 
 .view-type-dropdown {
@@ -138,17 +126,11 @@
 .table-scroll-container {
     overflow-x: auto;
     overflow-y: visible;
-    /* BUG-207: allow bleed into header area */
     width: 100%;
     scrollbar-width: thin;
-    scrollbar-color: var(--border-subtle) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
     touch-action: pan-y;
-    /* Allow native vertical scroll, JS handles horizontal */
-    /* TASK-243: Padding for card shadow/glow bleed on all sides */
-    padding-top: var(--space-4);
-    padding-left: var(--space-4);
-    margin-top: calc(-1 * var(--space-4));
-    margin-left: calc(-1 * var(--space-4));
+    padding: var(--space-2);
 }
 
 .table-scroll-container::-webkit-scrollbar {
@@ -166,26 +148,19 @@
 
 .swimlane-body {
     display: flex;
-    justify-content: center; /* ADHD-friendly: Center columns in viewport */
+    justify-content: flex-start;
     gap: var(--space-4);
-    padding-bottom: var(--space-3);
-    padding-right: var(--space-3); /* TASK-243: More space for shadow bleed */
-    padding-top: var(--space-4); /* TASK-243: Space for top shadow/glow */
+    padding: var(--space-2) 0;
     align-items: flex-start;
-    /* Prevent columns from stretching to match tallest */
     width: max-content;
-    /* Ensure body expands to fit all columns */
     min-width: 100%;
 }
 
 .swimlane-column {
-    /* Using exact widths to prevent collapsing */
-    flex: 0 0 320px !important;
-    min-width: 320px !important;
-    width: 320px !important;
-    height: auto !important;
-    /* Force auto height to override component 100% */
-    transition: opacity 0.3s ease;
+    flex: 0 0 260px;
+    min-width: 260px;
+    width: 260px;
+    height: auto;
 }
 
 /* Collapsed State */

@@ -1,10 +1,25 @@
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, toRaw } from 'vue'
 
 interface BroadcastMessage {
     type: string
     senderId: string
     timestamp: number
     data: any
+}
+
+/**
+ * Deep clone data to strip Vue reactive Proxy objects before broadcasting.
+ * BroadcastChannel uses structured clone which cannot handle Proxy objects.
+ */
+const cloneForBroadcast = (data: any): any => {
+    if (data === null || data === undefined) return data
+    // Use toRaw to strip reactivity, then JSON clone to ensure deep copy
+    try {
+        return JSON.parse(JSON.stringify(toRaw(data)))
+    } catch {
+        // Fallback for non-JSON-serializable data
+        return toRaw(data)
+    }
 }
 
 export function useBroadcastChannelSync(channelName = 'pomo-flow-sync') {
@@ -45,7 +60,7 @@ export function useBroadcastChannelSync(channelName = 'pomo-flow-sync') {
             type,
             senderId: tabId.value,
             timestamp: Date.now(),
-            data
+            data: cloneForBroadcast(data) // Strip Vue Proxy before sending
         }
         channel.postMessage(message)
     }

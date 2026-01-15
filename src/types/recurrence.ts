@@ -99,6 +99,7 @@ export interface RecurringTaskInstance {
   isModified?: boolean // True if this instance was modified from the pattern
   isSkipped?: boolean // True if this instance is skipped due to exception
   recurrenceExceptionId?: string // Link to the exception if this is an exception
+  isLater?: boolean
 }
 
 export interface NotificationPreferences {

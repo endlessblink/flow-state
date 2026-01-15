@@ -330,27 +330,27 @@
     pointer-events: none !important;
 }
 
-/* Enhanced Resize Handle Styles */
+/* Enhanced Resize Handle Styles - BASE STYLES ONLY */
+/* TASK-290: Visibility controlled by section-specific rules below */
 .vue-flow__resize-control {
     position: absolute;
     z-index: 100 !important;
-    /* FIX: Don't block pointer events by default - let child selectors control it */
+}
+
+/* Hide resize handles on task nodes - only groups should be resizable */
+.vue-flow__node-taskNode .vue-flow__resize-control {
+    display: none !important;
 }
 
 .vue-flow__resize-control.handle {
     width: 20px !important;
-    /* Match canvas design - smaller, not oversized */
     height: 20px !important;
     border-radius: var(--radius-sm) !important;
-    /* Subtle square for canvas design consistency */
     background-color: var(--brand-primary) !important;
     border: 2px solid white !important;
-    /* Thinner border matches canvas aesthetic */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-    opacity: 1 !important;
+    /* TASK-290: Do NOT set opacity here - let section rules control it */
     transition: all var(--duration-normal) var(--ease-out) !important;
-    pointer-events: auto !important;
-    /* CRITICAL: Always allow interaction on handles */
     cursor: nwse-resize !important;
 }
 
@@ -358,51 +358,22 @@
 .vue-flow__resize-control.handle::before {
     content: '';
     position: absolute;
-    top: -var(--space-3);
-    left: -var(--space-3);
-    right: -var(--space-3);
-    bottom: -var(--space-3);
+    top: -12px;
+    left: -12px;
+    right: -12px;
+    bottom: -12px;
     cursor: nwse-resize !important;
 }
 
-/* Hover state - subtle growth matching canvas design */
-.vue-flow__resize-control.handle:hover {
-    width: 24px !important;
-    /* Slight growth from 20px */
-    height: 24px !important;
-    background-color: var(--accent-primary) !important;
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5) !important;
-    /* Softer glow */
-    transform: scale(1.05) !important;
-    /* Subtle scale for feedback */
-}
-
-/* BUG-043: Edge lines are now clickable resize handles */
+/* BUG-043: Edge lines for resize */
 .vue-flow__resize-control.line {
     background-color: transparent !important;
-    /* Invisible by default */
-    opacity: 1 !important;
+    /* TASK-290: Do NOT set opacity here - let section rules control it */
     transition: background-color var(--duration-normal) var(--ease-out) !important;
-    pointer-events: auto !important;
-    /* Make lines clickable for resize */
 }
 
 .vue-flow__resize-control.line:hover {
     background-color: var(--brand-primary) !important;
-}
-
-/* Ensure resize handles are always visible on sections */
-.vue-flow__node[data-id^="section-"] .vue-flow__resize-control.handle,
-.vue-flow__node[data-id^="section-"] .vue-flow__resize-control.line {
-    opacity: 1 !important;
-}
-
-/* Enhanced resize handle interactions */
-.vue-flow__resize-control.handle:hover {
-    transform: scale(1.2) !important;
-    background-color: var(--accent-primary) !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4) !important;
-    border-color: var(--surface-primary) !important;
 }
 
 /* Corner handles take priority over edge handles */
@@ -559,111 +530,17 @@
 }
 
 /* ====================================================================
-   FIX #1: SELECTION-BASED RESIZE HANDLE VISIBILITY
+   FIX #1: SELECTION-BASED RESIZE HANDLE VISIBILITY (TASK-290)
 
    Problem: Resize handles were always visible on all sections, cluttering UI
    Solution: Show handles only when section is selected or being hovered
+
+   NOTE: Main resize handle CSS moved to bottom of file for clean specificity
    ==================================================================== */
 
-/* DEFAULT: Hide resize handles when section NOT selected */
-.vue-flow__node[id^="section-"] .vue-flow__resize-control.handle,
-.vue-flow__node[id^="section-"] .vue-flow__resize-control.line,
-.vue-flow__node[id^="section-"] .custom-resize-handle,
-.vue-flow__node[id^="section-"] .custom-resize-line,
-.vue-flow__node-sectionNode .vue-flow__resize-control.handle,
-.vue-flow__node-sectionNode .vue-flow__resize-control.line,
-.vue-flow__node-sectionNode .custom-resize-handle,
-.vue-flow__node-sectionNode .custom-resize-line {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    /* Can't interact when hidden */
-    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), visibility var(--duration-normal) ease;
-}
-
-/* SELECTED: Show resize handles ONLY when section is selected */
-.vue-flow__node[id^="section-"].selected .vue-flow__resize-control.handle,
-.vue-flow__node[id^="section-"].selected .vue-flow__resize-control.line,
-.vue-flow__node[id^="section-"].selected .custom-resize-handle,
-.vue-flow__node[id^="section-"].selected .custom-resize-line,
-.vue-flow__node[id^="section-"].vue-flow__node--selected .vue-flow__resize-control.handle,
-.vue-flow__node[id^="section-"].vue-flow__node--selected .vue-flow__resize-control.line,
-.vue-flow__node[id^="section-"].vue-flow__node--selected .custom-resize-handle,
-.vue-flow__node[id^="section-"].vue-flow__node--selected .custom-resize-line,
-.vue-flow__node-sectionNode.selected .vue-flow__resize-control.handle,
-.vue-flow__node-sectionNode.selected .vue-flow__resize-control.line,
-.vue-flow__node-sectionNode.selected .custom-resize-handle,
-.vue-flow__node-sectionNode.selected .custom-resize-line,
-.vue-flow__node-sectionNode.vue-flow__node--selected .vue-flow__resize-control.handle,
-.vue-flow__node-sectionNode.vue-flow__node--selected .vue-flow__resize-control.line,
-.vue-flow__node-sectionNode.vue-flow__node--selected .custom-resize-handle,
-.vue-flow__node-sectionNode.vue-flow__node--selected .custom-resize-line {
-    opacity: 1 !important;
-    /* Fully visible when selected */
-    visibility: visible !important;
-    pointer-events: auto !important;
-    /* Interactive when visible */
-    z-index: 100 !important;
-    /* Above all other content */
-    display: block !important;
-}
-
-/* HOVER: Show handles faintly on hover for discoverability */
-.vue-flow__node[id^="section-"]:not(.selected):not(.vue-flow__node--selected):hover .vue-flow__resize-control.handle,
-.vue-flow__node[id^="section-"]:not(.selected):not(.vue-flow__node--selected):hover .custom-resize-handle,
-.vue-flow__node-sectionNode:not(.selected):not(.vue-flow__node--selected):hover .vue-flow__resize-control.handle,
-.vue-flow__node-sectionNode:not(.selected):not(.vue-flow__node--selected):hover .custom-resize-handle {
-    opacity: 0.6 !important;
-    /* Increased from 0.4 for better visibility */
-    visibility: visible !important;
-    pointer-events: auto !important;
-    /* Allow interaction on hover */
-    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), transform var(--duration-normal) ease !important;
-}
-
-.vue-flow__node[id^="section-"]:not(.selected):not(.vue-flow__node--selected):hover .vue-flow__resize-control.line,
-.vue-flow__node[id^="section-"]:not(.selected):not(.vue-flow__node--selected):hover .custom-resize-line,
-.vue-flow__node-sectionNode:not(.selected):not(.vue-flow__node--selected):hover .vue-flow__resize-control.line,
-.vue-flow__node-sectionNode:not(.selected):not(.vue-flow__node--selected):hover .custom-resize-line {
-    opacity: 0.3 !important;
-    /* Increased from 0.2 for better visibility */
-    visibility: visible !important;
-}
-
-/* GLASS MORPHISM: Direct hover on handle - Enhanced feedback with glass effect */
-.vue-flow__node[id^="section-"] .vue-flow__resize-control.handle:hover,
-.vue-flow__node[id^="section-"] .custom-resize-handle:hover,
-.vue-flow__node-sectionNode .vue-flow__resize-control.handle:hover,
-.vue-flow__node-sectionNode .custom-resize-handle:hover {
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-    transform: scale(1.3) !important;
-    /* Increased from 1.15 for clear feedback */
-    background: rgba(99, 102, 241, 0.5) !important;
-    /* Translucent purple */
-    border: 2px solid rgba(255, 255, 255, 0.8) !important;
-    /* Bright white border */
-    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.4) !important;
-    /* Purple glow */
-    backdrop-filter: blur(12px) !important;
-    /* Enhanced glass blur */
-    -webkit-backdrop-filter: blur(12px) !important;
-    /* Safari support */
-    transition: all var(--duration-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
-    z-index: 103 !important;
-    /* Above everything during hover */
-}
-
 /* RESIZING: Ensure full visibility during active resize operation */
-.vue-flow__node[id^="section-"].resizing .vue-flow__resize-control.handle,
-.vue-flow__node[id^="section-"].resizing .vue-flow__resize-control.line,
-.vue-flow__node[id^="section-"].resizing .custom-resize-handle,
-.vue-flow__node[id^="section-"].resizing .custom-resize-line,
 .vue-flow__node-sectionNode.resizing .vue-flow__resize-control.handle,
-.vue-flow__node-sectionNode.resizing .vue-flow__resize-control.line,
-.vue-flow__node-sectionNode.resizing .custom-resize-handle,
-.vue-flow__node-sectionNode.resizing .custom-resize-line {
+.vue-flow__node-sectionNode.resizing .vue-flow__resize-control.line {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
@@ -740,38 +617,59 @@ body.dragging-active .vue-flow__background {
    MINIMAL RESIZE HANDLE FIXES (work with library CSS, don't fight it)
    ==================================================================== */
 
-/* Make handles slightly larger and easier to click (20px compromise) */
+/* TASK-290: Resize handle visibility - show on hover OR selected */
+
+/* Base handle styles - visible and interactive when parent is hovered */
 .vue-flow__node-sectionNode .vue-flow__resize-control.handle {
     width: 20px !important;
     height: 20px !important;
-    opacity: 1 !important;
-}
-
-/* Fix hover - keep handles visible, just highlight them */
-.vue-flow__node-sectionNode .vue-flow__resize-control.handle:hover {
-    width: 24px !important;
-    height: 24px !important;
-    transform: scale(1.1);
-    opacity: 1 !important;
-}
-
-/* Hide handles when section NOT selected AND NOT hovering */
-.vue-flow__node-sectionNode:not(.selected):not(.vue-flow__node--selected):not(:hover) .vue-flow__resize-control.handle:not(:hover) {
+    background: var(--accent-primary, #6366f1) !important;
+    border: 2px solid white !important;
+    border-radius: 4px !important;
     opacity: 0 !important;
     pointer-events: none !important;
-    transition: opacity var(--duration-normal) var(--var(--ease-out)-out), visibility var(--duration-normal) ease;
+    transition: opacity 150ms ease, transform 150ms ease !important;
 }
 
-/* Show handles when section IS selected */
+/* Show handles on HOVER - the key fix */
+.vue-flow__node-sectionNode:hover .vue-flow__resize-control.handle {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* Show handles when SELECTED */
 .vue-flow__node-sectionNode.selected .vue-flow__resize-control.handle,
 .vue-flow__node-sectionNode.vue-flow__node--selected .vue-flow__resize-control.handle {
     opacity: 1 !important;
     pointer-events: auto !important;
 }
 
-/* Keep lines subtle */
+/* Handle hover effect - enlarge when directly hovering the handle */
+.vue-flow__node-sectionNode .vue-flow__resize-control.handle:hover {
+    width: 24px !important;
+    height: 24px !important;
+    transform: scale(1.1) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: nwse-resize !important;
+}
+
+/* Resize lines - show subtly on hover */
 .vue-flow__node-sectionNode .vue-flow__resize-control.line {
-    opacity: 0.2 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 150ms ease !important;
+}
+
+.vue-flow__node-sectionNode:hover .vue-flow__resize-control.line {
+    opacity: 0.4 !important;
+    pointer-events: auto !important;
+}
+
+.vue-flow__node-sectionNode.selected .vue-flow__resize-control.line,
+.vue-flow__node-sectionNode.vue-flow__node--selected .vue-flow__resize-control.line {
+    opacity: 0.6 !important;
+    pointer-events: auto !important;
 }
 
 /* Canvas empty state */

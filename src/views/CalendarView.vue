@@ -131,7 +131,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useTaskStore, type Task } from '@/stores/tasks'
+import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { useCalendarDragCreate } from '@/composables/useCalendarDragCreate'
@@ -153,7 +153,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 
-import type { CalendarEvent } from '@/types/tasks'
+
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 
 interface SortableEvent {
@@ -227,7 +227,7 @@ const statusFilter = computed(() => taskStore.activeStatusFilter)
 
 // Composables - Refactored logic into focused modules
 // Restore missing definitions
-let timeUpdateInterval: any = null
+let timeUpdateInterval: ReturnType<typeof setInterval> | null = null
 let dragAbortController: AbortController | null = null
 const DRAG_CAPTURE_OPTIONS = { capture: true, passive: false }
 
@@ -249,7 +249,7 @@ const currentTime = ref(new Date())
 // Destructure commonly used items from composables
 const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
-const { workingHours, weekDays, weekEvents, getWeekEventStyle, handleWeekDragOver, handleWeekDrop, startWeekResize, isCurrentWeekTimeCell } = weekView
+const { workingHours, weekDays, weekEvents, handleWeekDragOver, handleWeekDrop, startWeekResize } = weekView
 
 const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
 
@@ -344,7 +344,7 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
   timeGridDropList.value = []
 }
 
-const _handleVueDraggableChange = (evt: unknown) => {
+const _handleVueDraggableChange = (_evt: unknown) => {
   // Optional: handle change events for debugging
   
 }

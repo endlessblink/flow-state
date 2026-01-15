@@ -243,7 +243,7 @@ class OverrideHandler {
       'fix-task-store',
       'dev-fix-keyboard',
       'port-manager',
-      'arch-planning',
+      'chief-architect',
       'dev-debug-reactivity',
       'fix-pinia-state'
     ]

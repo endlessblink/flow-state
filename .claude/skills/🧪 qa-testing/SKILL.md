@@ -820,7 +820,7 @@ Tests       58 passed
 
 1. **If tests fail due to bugs** → Use `Skill(dev-debugging)` to investigate and fix
 2. **If canvas geometry issues** → Use `Skill(vue-flow-debug)` for specialized debugging
-3. **If planning needed for fixes** → Use `Skill(arch-planning)` to break down complex work
+3. **If planning needed for fixes** → Use `Skill(chief-architect)` to break down complex work
 4. **If UI/UX issues found** → Use `Skill(dev-implement-ui-ux)` for design fixes
 
 **Mandatory Pre-Success Chain**:
@@ -833,5 +833,5 @@ Before claiming ANY feature is "done", "fixed", or "complete":
 
 **This skill is automatically invoked by other skills after:**
 - Bug fixes (dev-debugging chains to qa-testing)
-- Feature implementation (arch-planning chains to qa-testing)
+- Feature implementation (chief-architect chains to qa-testing)
 - UI changes (dev-implement-ui-ux chains to qa-testing)

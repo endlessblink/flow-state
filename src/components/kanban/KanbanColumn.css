@@ -1,155 +1,82 @@
-/* Glass Morphism Column Container */
+/* Clean Column Container - TickTick/Todoist style */
 .kanban-column {
-    background: var(--glass-bg-light);
-    /* Subtle glass base */
-    backdrop-filter: blur(var(--blur-regular));
-    -webkit-backdrop-filter: blur(var(--blur-regular));
-    border: 1px solid var(--border-subtle);
-    /* Consistent border */
-    border-radius: var(--radius-lg);
-    /* Softer rounded corners */
-    padding: var(--space-3);
-    /* Consistent padding */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    /* Deep ambient shadow */
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background: transparent;
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-width: 320px;
+    min-width: 280px;
+    max-width: 320px;
+    padding: var(--space-2);
 }
 
+.kanban-column:first-child {
+    border-left: none;
+}
+
+/* Columns don't need hover effects */
 .kanban-column:hover {
-    background: var(--glass-bg-medium);
-    /* Slightly lighter on hover */
-    border-color: var(--glass-border-hover);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-    transform: translateY(-2px);
+    /* No visual change on column hover */
 }
 
-/* WIP Limit Warning States */
-.kanban-column.wip-warning {
-    border-left: 2px solid var(--color-break);
-    background: linear-gradient(to bottom, rgba(245, 158, 11, 0.05), rgba(255, 255, 255, 0.03));
-}
-
-.kanban-column.wip-exceeded {
-    border-left: 2px solid var(--color-danger);
-    background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.03));
-    box-shadow:
-        0 20px 40px rgba(0, 0, 0, 0.4),
-        inset 0 0 20px rgba(239, 68, 68, 0.1);
-}
-
-/* Header - Floating Glass - ADHD-friendly: More prominent for visual hierarchy */
+/* Clean Header - TickTick style */
 .column-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--space-4);
-    padding: var(--space-2) var(--space-3);
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: var(--radius-6);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(var(--blur-sm));
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) var(--space-1);
 }
 
 .header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .column-title {
-    /* ADHD-friendly: Larger, bolder headers for clear visual hierarchy */
-    color: rgba(255, 255, 255, 0.95);
-    font-weight: 700;
-    font-size: 15px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-/* Task Count Badge */
-.task-count {
-    font-size: 11px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.6);
-    padding: 2px 8px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    min-width: 24px;
-    text-align: center;
-}
-
-.task-count.wip-warning {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
-    border-color: rgba(245, 158, 11, 0.4);
-}
-
-.task-count.wip-exceeded {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border-color: rgba(239, 68, 68, 0.4);
-    animation: wipPulse 2s ease-in-out infinite;
-}
-
-@keyframes wipPulse {
-
-    0%,
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
-}
-
-/* Add Task Button */
-.add-task-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Clean, simple title - no uppercase, no shadows */
     color: rgba(255, 255, 255, 0.7);
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+/* Simple task count - just the number */
+.task-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Add Task Button - Simple like TickTick */
+.add-task-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: color var(--duration-fast) ease;
 }
 
 .add-task-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
-    transform: translateY(-1px) rotate(90deg);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.8);
 }
 
-/* Tasks Container */
+/* Tasks Container - Clean spacing */
 .tasks-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--gap-sm);
-    overflow-y: visible;
+    gap: var(--space-2);
+    overflow-y: auto;
     overflow-x: visible;
-    /* TASK-243: Allow card shadows to render */
-    padding: var(--space-4);
-    /* BUG-207: significant padding to prevent hover clipping */
-    padding-bottom: var(--space-10);
-    /* BLEED SPACE for last card glow */
-    /* TASK-243: Extra padding for shadow bleed on all sides */
-    padding-right: var(--space-4);
-    padding-left: var(--space-4);
-    padding-top: var(--space-4);
+    padding: var(--space-1);
     min-height: 100px;
 }
 

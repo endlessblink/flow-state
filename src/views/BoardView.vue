@@ -123,7 +123,7 @@ import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import { CheckCircle, Circle, SlidersHorizontal } from 'lucide-vue-next'
-import type { Task } from '@/stores/tasks'
+
 import FilterControls from '@/components/base/FilterControls.vue'
 
 // Stores
@@ -131,8 +131,7 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
 const settingsStore = useSettingsStore()
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-const supabaseDb = useSupabaseDatabase()
+
 
 // Provide progressive disclosure state for TaskCard components
 provideProgressiveDisclosure()

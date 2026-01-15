@@ -1,6 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
-import { Zap, X, CheckCircle, Undo2, SkipForward, LayoutGrid, Timer, Flag } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
+import { Zap, X, CheckCircle } from 'lucide-vue-next'
+
+// Import actual components
+import QuickSortCard from '@/components/QuickSortCard.vue'
+import CategorySelector from '@/components/layout/CategorySelector.vue'
+import SortProgress from '@/components/tasks/SortProgress.vue'
+
+// Import stores for mocking
+import { useTaskStore, type Task, type Project } from '@/stores/tasks'
 
 /**
  * QuickSortView - Rapid task categorization interface
@@ -12,6 +21,11 @@ import { Zap, X, CheckCircle, Undo2, SkipForward, LayoutGrid, Timer, Flag } from
  * - Process inbox overflow
  * - Weekly task review
  * - Rapid triage sessions
+ *
+ * **Components used:**
+ * - QuickSortCard: Displays task details with priority/date editing
+ * - CategorySelector: Project selection buttons
+ * - SortProgress: Progress indicator
  */
 const meta: Meta = {
   title: '✨ Features/QuickSortView',
@@ -23,11 +37,11 @@ const meta: Meta = {
         component: `Full-screen task triage interface with glass morphism styling.
 
 **Features:**
-- Card-based task display with swipe gestures
-- Keyboard shortcuts (D=Done, Space=Skip, Ctrl+Z=Undo)
+- Card-based task display with priority and due date quick-edit
+- Keyboard shortcuts (D=Done, E=Edit, Del=Done+Delete, Space=Skip)
 - Progress tracking with motivational messages
 - Session statistics on completion
-- Project category selector`
+- Project category selector with nested projects support`
       }
     }
   }
@@ -36,80 +50,173 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-// Mock data
-const mockTask = {
+// Mock task data matching the actual Task interface
+const createMockTask = (overrides: Partial<Task> = {}): Task => ({
   id: 't1',
   title: 'Review Q4 marketing proposal',
   description: 'Analyze the proposed budget allocation and timeline for approval.',
   priority: 'high',
-  dueDate: '2025-01-15',
+  status: 'planned',
+  dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
   completedPomodoros: 2,
+  estimatedPomodoros: 4,
   subtasks: [
     { id: 's1', title: 'Read proposal document', isCompleted: true },
     { id: 's2', title: 'Check budget numbers', isCompleted: false },
     { id: 's3', title: 'Discuss with team', isCompleted: false }
-  ]
-}
+  ],
+  projectId: 'p1',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides
+})
 
-const mockProjects = [
-  { id: 'p1', name: 'Work', color: '#3b82f6' },
-  { id: 'p2', name: 'Personal', color: '#22c55e' },
-  { id: 'p3', name: 'Side Project', color: '#f59e0b' }
+// Mock projects data
+const mockProjects: Project[] = [
+  { id: 'p1', name: 'Work', color: '#3b82f6', colorType: 'hex', userId: 'user1' },
+  { id: 'p2', name: 'My Projects', color: '#22c55e', colorType: 'hex', userId: 'user1' },
+  { id: 'p3', name: 'Home', color: '#f59e0b', colorType: 'hex', userId: 'user1' }
 ]
+
+// Setup fresh Pinia with mock data
+function setupMockStore() {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
+  const taskStore = useTaskStore()
+
+  // Initialize with mock projects
+  taskStore.$patch({
+    projects: mockProjects
+  })
+
+  return taskStore
+}
 
 /**
  * Default - Active Sorting State
  *
  * Shows the main interface with a task card ready for categorization.
+ * This renders the ACTUAL components used in the app:
+ * - QuickSortCard with priority buttons, due date shortcuts, and action icons
+ * - CategorySelector with project buttons
+ * - SortProgress indicator
  */
 export const Default: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Main sorting interface with task card, progress bar, and category selector.'
+        story: `Main sorting interface showing the actual QuickSortCard component with:
+- Task title and description
+- Project, date, and priority badges
+- **PRIORITY** section with Low/Medium/High buttons
+- **DUE DATE** section with Today/Tomorrow/Weekend/Next Week/Clear shortcuts
+- **ACTIONS** section with Done (✓), Edit (✏), Delete (🗑) icons
+
+Below the card is the CategorySelector with project buttons.`
       }
     }
   },
   render: () => ({
-    components: { Zap, X, CheckCircle, Undo2, SkipForward, LayoutGrid, Timer, Flag },
+    components: { Zap, X, QuickSortCard, CategorySelector, SortProgress },
     setup() {
+      // Setup mock store
+      setupMockStore()
+
+      const mockTask = ref(createMockTask())
       const currentIndex = ref(3)
       const totalTasks = ref(8)
+      const motivationalMessage = ref('Keep going!')
+      const currentStreak = ref(5)
 
-      return { mockTask, mockProjects, currentIndex, totalTasks }
+      const handleUpdateTask = (updates: Partial<Task>) => {
+        console.log('Task updated:', updates)
+        // Update the mock task to show the change
+        mockTask.value = { ...mockTask.value, ...updates }
+      }
+
+      const handleMarkDone = () => {
+        console.log('Task marked done')
+      }
+
+      const handleEditTask = () => {
+        console.log('Edit task clicked')
+      }
+
+      const handleMarkDoneAndDelete = () => {
+        console.log('Task marked done and deleted')
+      }
+
+      const handleCategorize = (projectId: string) => {
+        console.log('Categorized to project:', projectId)
+      }
+
+      const handleSkip = () => {
+        console.log('Task skipped')
+      }
+
+      const handleCreateNew = () => {
+        console.log('Create new project')
+      }
+
+      const handleExit = () => {
+        console.log('Exit Quick Sort')
+      }
+
+      return {
+        mockTask,
+        currentIndex,
+        totalTasks,
+        motivationalMessage,
+        currentStreak,
+        handleUpdateTask,
+        handleMarkDone,
+        handleEditTask,
+        handleMarkDoneAndDelete,
+        handleCategorize,
+        handleSkip,
+        handleCreateNew,
+        handleExit
+      }
     },
     template: `
       <div style="
         min-height: 100vh;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-        padding: 2rem;
+        background: var(--app-background-gradient);
+        padding: var(--space-8, 2rem);
         display: flex;
         flex-direction: column;
-        gap: 2rem;
+        gap: var(--space-8, 2rem);
       ">
         <!-- Header -->
         <header style="
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
+          gap: var(--space-6, 1.5rem);
         ">
-          <div>
+          <div style="flex: 1;">
             <h1 style="
               display: flex;
               align-items: center;
-              gap: 0.75rem;
-              font-size: 2rem;
-              font-weight: 700;
+              gap: var(--space-3, 0.75rem);
+              font-size: var(--text-4xl, 2rem);
+              font-weight: var(--font-bold, 700);
               color: var(--text-primary, #fff);
-              margin: 0 0 0.5rem 0;
+              margin: 0 0 var(--space-2, 0.5rem) 0;
             ">
-              <Zap :size="32" style="color: var(--color-work, #3b82f6);" />
+              <Zap :size="32" />
               Quick Sort
             </h1>
-            <p style="color: var(--text-secondary, rgba(255,255,255,0.6)); margin: 0;">
+            <p style="
+              font-size: var(--text-base, 1rem);
+              color: var(--text-secondary, rgba(255,255,255,0.6));
+              margin: 0;
+            ">
               Rapidly categorize your uncategorized tasks
             </p>
           </div>
+
           <button style="
             display: flex;
             align-items: center;
@@ -118,10 +225,10 @@ export const Default: Story = {
             height: 48px;
             background: var(--glass-bg-medium, rgba(255,255,255,0.05));
             border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-            border-radius: 12px;
+            border-radius: var(--radius-lg, 12px);
             color: var(--text-primary, #fff);
             cursor: pointer;
-          ">
+          " @click="handleExit">
             <X :size="24" />
           </button>
         </header>
@@ -132,203 +239,100 @@ export const Default: Story = {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 2rem;
+          gap: var(--space-8, 2rem);
           max-width: 800px;
           margin: 0 auto;
           width: 100%;
         ">
-          <!-- Progress -->
-          <div style="
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-          ">
-            <div style="
-              display: flex;
-              justify-content: space-between;
-              font-size: 0.875rem;
-              color: var(--text-secondary, rgba(255,255,255,0.6));
-            ">
-              <span>{{ currentIndex }} of {{ totalTasks }} tasks</span>
-              <span>Keep going! 🔥</span>
-            </div>
-            <div style="
-              height: 6px;
-              background: var(--glass-bg-heavy, rgba(255,255,255,0.1));
-              border-radius: 3px;
-              overflow: hidden;
-            ">
-              <div style="
-                height: 100%;
-                width: 37.5%;
-                background: var(--color-work, #3b82f6);
-                border-radius: 3px;
-                transition: width 0.3s ease;
-              "></div>
-            </div>
+          <!-- Progress Indicator -->
+          <SortProgress
+            :current="currentIndex"
+            :total="totalTasks"
+            :message="motivationalMessage"
+            :streak="currentStreak"
+          />
+
+          <!-- Task Card - ACTUAL COMPONENT -->
+          <div style="width: 100%; display: flex; justify-content: center;">
+            <QuickSortCard
+              :task="mockTask"
+              @update-task="handleUpdateTask"
+              @mark-done="handleMarkDone"
+              @edit-task="handleEditTask"
+              @mark-done-and-delete="handleMarkDoneAndDelete"
+            />
           </div>
 
-          <!-- Task Card -->
-          <div style="
-            width: 100%;
-            background: var(--glass-bg-solid, rgba(15,15,20,0.98));
-            border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-            border-radius: 16px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-          ">
-            <!-- Card Header -->
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-              <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.25rem 0.75rem;
-                background: rgba(239, 68, 68, 0.15);
-                border: 1px solid rgba(239, 68, 68, 0.3);
-                border-radius: 6px;
-                color: #ef4444;
-                font-size: 0.75rem;
-                font-weight: 600;
-              ">
-                <Flag :size="12" />
-                HIGH
-              </div>
-              <span style="
-                font-size: 0.8125rem;
-                color: var(--text-secondary, rgba(255,255,255,0.6));
-              ">Due: Jan 15</span>
-            </div>
-
-            <!-- Task Title -->
-            <h2 style="
-              font-size: 1.25rem;
-              font-weight: 600;
-              color: var(--text-primary, #fff);
-              margin: 0;
-            ">{{ mockTask.title }}</h2>
-
-            <!-- Description -->
-            <p style="
-              font-size: 0.875rem;
-              color: var(--text-secondary, rgba(255,255,255,0.7));
-              margin: 0;
-              line-height: 1.5;
-            ">{{ mockTask.description }}</p>
-
-            <!-- Metadata -->
-            <div style="
-              display: flex;
-              gap: 1rem;
-              font-size: 0.8125rem;
-              color: var(--text-muted, rgba(255,255,255,0.5));
-            ">
-              <span style="display: flex; align-items: center; gap: 0.375rem;">
-                <Timer :size="14" />
-                {{ mockTask.completedPomodoros }} pomodoros
-              </span>
-              <span style="display: flex; align-items: center; gap: 0.375rem;">
-                <CheckCircle :size="14" />
-                1/3 subtasks
-              </span>
-            </div>
-          </div>
-
-          <!-- Category Selector -->
-          <div style="
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-          ">
-            <span style="
-              font-size: 0.8125rem;
-              color: var(--text-secondary, rgba(255,255,255,0.6));
-              text-align: center;
-            ">Assign to project:</span>
-            <div style="
-              display: flex;
-              gap: 0.75rem;
-              justify-content: center;
-              flex-wrap: wrap;
-            ">
-              <button
-                v-for="project in mockProjects"
-                :key="project.id"
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 0.5rem;
-                  padding: 0.625rem 1rem;
-                  background: var(--glass-bg-medium, rgba(255,255,255,0.05));
-                  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-                  border-radius: 8px;
-                  color: var(--text-primary, #fff);
-                  font-size: 0.875rem;
-                  cursor: pointer;
-                "
-              >
-                <span :style="{ width: '10px', height: '10px', borderRadius: '50%', border: '2px solid ' + project.color, background: 'transparent' }"></span>
-                {{ project.name }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div style="
-            display: flex;
-            gap: 0.75rem;
-            justify-content: center;
-          ">
-            <button style="
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              padding: 0.75rem 1.25rem;
-              background: var(--glass-bg-medium, rgba(255,255,255,0.05));
-              border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-              border-radius: 10px;
-              color: var(--text-primary, #fff);
-              font-size: 0.875rem;
-              cursor: pointer;
-            ">
-              <Undo2 :size="18" />
-              Undo
-              <kbd style="
-                margin-left: 0.5rem;
-                padding: 0.125rem 0.375rem;
-                background: var(--glass-bg-heavy, rgba(255,255,255,0.1));
-                border-radius: 4px;
-                font-size: 0.75rem;
-              ">Ctrl+Z</kbd>
-            </button>
-            <button style="
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              padding: 0.75rem 1.25rem;
-              background: var(--glass-bg-medium, rgba(255,255,255,0.05));
-              border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-              border-radius: 10px;
-              color: var(--text-primary, #fff);
-              font-size: 0.875rem;
-              cursor: pointer;
-            ">
-              <SkipForward :size="18" />
-              Skip
-              <kbd style="
-                margin-left: 0.5rem;
-                padding: 0.125rem 0.375rem;
-                background: var(--glass-bg-heavy, rgba(255,255,255,0.1));
-                border-radius: 4px;
-                font-size: 0.75rem;
-              ">Space</kbd>
-            </button>
-          </div>
+          <!-- Category Selector - ACTUAL COMPONENT -->
+          <CategorySelector
+            @select="handleCategorize"
+            @skip="handleSkip"
+            @create-new="handleCreateNew"
+          />
         </div>
+      </div>
+    `
+  })
+}
+
+/**
+ * Card Only - QuickSortCard Component
+ *
+ * Shows just the QuickSortCard component isolated for testing.
+ */
+export const CardOnly: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: `The QuickSortCard component in isolation showing:
+- Task metadata (project badge, date, priority, subtasks, pomodoros)
+- Priority quick-edit buttons
+- Due date shortcuts with active state highlighting
+- Action buttons (Done, Edit, Delete) with keyboard shortcuts`
+      }
+    }
+  },
+  render: () => ({
+    components: { QuickSortCard },
+    setup() {
+      setupMockStore()
+
+      const mockTask = ref(createMockTask({
+        title: 'Prepare presentation slides',
+        description: 'Create slides for the quarterly review meeting with stakeholders.',
+        priority: 'medium',
+        dueDate: new Date().toISOString() // Today - will highlight "Today" button
+      }))
+
+      const handleUpdateTask = (updates: Partial<Task>) => {
+        console.log('Task updated:', updates)
+        mockTask.value = { ...mockTask.value, ...updates }
+      }
+
+      return {
+        mockTask,
+        handleUpdateTask,
+        handleMarkDone: () => console.log('Done'),
+        handleEditTask: () => console.log('Edit'),
+        handleMarkDoneAndDelete: () => console.log('Delete')
+      }
+    },
+    template: `
+      <div style="
+        min-height: 100vh;
+        background: var(--app-background-gradient);
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <QuickSortCard
+          :task="mockTask"
+          @update-task="handleUpdateTask"
+          @mark-done="handleMarkDone"
+          @edit-task="handleEditTask"
+          @mark-done-and-delete="handleMarkDoneAndDelete"
+        />
       </div>
     `
   })
@@ -349,14 +353,18 @@ export const EmptyState: Story = {
   },
   render: () => ({
     components: { Zap, X, CheckCircle },
+    setup() {
+      const handleExit = () => console.log('Exit')
+      return { handleExit }
+    },
     template: `
       <div style="
         min-height: 100vh;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-        padding: 2rem;
+        background: var(--app-background-gradient);
+        padding: var(--space-8, 2rem);
         display: flex;
         flex-direction: column;
-        gap: 2rem;
+        gap: var(--space-8, 2rem);
       ">
         <!-- Header -->
         <header style="
@@ -392,7 +400,7 @@ export const EmptyState: Story = {
             border-radius: 12px;
             color: var(--text-primary, #fff);
             cursor: pointer;
-          ">
+          " @click="handleExit">
             <X :size="24" />
           </button>
         </header>
@@ -429,7 +437,7 @@ export const EmptyState: Story = {
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-          ">Return to Tasks</button>
+          " @click="handleExit">Return to Tasks</button>
         </div>
       </div>
     `
@@ -458,12 +466,13 @@ export const CompletionState: Story = {
         efficiency: 3.2,
         streakDays: 5
       }
-      return { stats }
+      const handleExit = () => console.log('Exit')
+      return { stats, handleExit }
     },
     template: `
       <div style="
         min-height: 100vh;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+        background: var(--app-background-gradient);
         padding: 2rem;
         display: flex;
         flex-direction: column;
@@ -503,7 +512,7 @@ export const CompletionState: Story = {
             border-radius: 12px;
             color: var(--text-primary, #fff);
             cursor: pointer;
-          ">
+          " @click="handleExit">
             <X :size="24" />
           </button>
         </header>
@@ -622,7 +631,7 @@ export const CompletionState: Story = {
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-          ">
+          " @click="handleExit">
             <CheckCircle :size="20" />
             Done
           </button>

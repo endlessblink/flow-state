@@ -135,7 +135,7 @@ export const useTaskStore = defineStore('tasks', () => {
     // This tracks what's coming in from realtime and whether the task exists
     // A duplicate after this function means the push logic is racing with initial load
     if (import.meta.env.DEV) {
-      const existsInStore = _rawTasks.value.some(t => t.id === taskId)
+      _rawTasks.value.some(t => t.id === taskId)
     }
 
     try {

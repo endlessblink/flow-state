@@ -397,7 +397,7 @@ const handleSectionContextMenu = (event: MouseEvent, section: Record<string, unk
     }
     // BUG-208 FIX: Use Pinia store instead of local refs
     // CanvasContextMenus.vue reads from the store, so we must write to it
-    contextMenuStore.openCanvasContextMenu(event.clientX, event.clientY, section)
+    contextMenuStore.openCanvasContextMenu(event.clientX, event.clientY, section as unknown as CanvasGroup)
 }
 
 // Expose for testing purposes (Fundamental Stability)

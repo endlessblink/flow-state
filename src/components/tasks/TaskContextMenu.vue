@@ -108,7 +108,7 @@
       :is-visible="showStatusSubmenu"
       :style="statusSubmenuStyle"
       :current-status="currentTask?.status"
-      @mouseenter="_keepSubmenuOpen('status')"
+      @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('status')"
       @select="setStatus"
     />
@@ -117,7 +117,7 @@
       :is-visible="showDurationSubmenu"
       :style="durationSubmenuStyle"
       :current-duration="currentTask?.estimatedDuration"
-      @mouseenter="_keepSubmenuOpen('duration')"
+      @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('duration')"
       @select="setDuration"
     />
@@ -163,7 +163,7 @@
       :style="moreSubmenuStyle"
       :is-batch-operation="isBatchOperation"
       :task-id="currentTask?.id"
-      @mouseenter="_keepSubmenuOpen('more')"
+      @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('more')"
       @duplicate="duplicateTask"
       @move-to-section="taskId => { $emit('moveToSection', taskId); $emit('close') }"
@@ -380,7 +380,7 @@ const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) =>
   }
 }
 
-const _keepSubmenuOpen = (_type: 'status' | 'duration' | 'more') => {
+const keepSubmenuOpen = () => {
   if (submenuTimeout.value) {
     clearTimeout(submenuTimeout.value)
     submenuTimeout.value = null

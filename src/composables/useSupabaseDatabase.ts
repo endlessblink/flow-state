@@ -659,7 +659,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const fetchActiveTimerSession = async (): Promise<PomodoroSession | null> => {
         try {
             const userId = getUserIdSafe()
-            if (!userId) return null
+            console.log('🍅 [DB] fetchActiveTimerSession userId:', userId)
+            if (!userId) {
+                console.log('🍅 [DB] No userId - returning null')
+                return null
+            }
 
             const { data, error } = await supabase
                 .from('timer_sessions')
@@ -669,6 +673,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 .order('updated_at', { ascending: false })
                 .limit(1)
                 .maybeSingle()
+
+            console.log('🍅 [DB] fetchActiveTimerSession result:', { hasData: !!data, error: error?.message })
 
             if (error) throw error
             if (!data) return null
@@ -683,11 +689,19 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const saveActiveTimerSession = async (session: PomodoroSession, deviceId: string): Promise<void> => {
         try {
             const userId = getUserIdSafe()
-            if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
+            if (!userId) {
+                console.log('🍅 [DB] saveActiveTimerSession - no userId, skipping')
+                return
+            }
 
             const payload = toSupabaseTimerSession(session, userId, deviceId)
+            console.log('🍅 [DB] saveActiveTimerSession:', { sessionId: session.id, userId, deviceId, isActive: session.isActive })
             const { error } = await supabase.from('timer_sessions').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            if (error) {
+                console.error('🍅 [DB] saveActiveTimerSession error:', error)
+                throw error
+            }
+            console.log('🍅 [DB] saveActiveTimerSession success')
         } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')
         }

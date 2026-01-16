@@ -66,6 +66,7 @@
           "args": true
         }
       ]
-    }
+    },
+    "updater:default"
   ]
 }

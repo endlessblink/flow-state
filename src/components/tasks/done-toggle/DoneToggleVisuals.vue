@@ -1,5 +1,25 @@
 <template>
+  <!-- Simple variant - minimal rounded square checkbox -->
   <button
+    v-if="variant === 'simple'"
+    class="done-toggle--simple"
+    :class="{ 'done-toggle--simple-checked': isCompleted }"
+    :disabled="disabled"
+    :title="enhancedTitle"
+    :aria-label="enhancedAriaLabel"
+    type="button"
+    role="switch"
+    :aria-checked="isCompleted ? 'true' : 'false'"
+    @click="$emit('click', $event)"
+    @keydown.enter="$emit('keydown', $event)"
+    @keydown.space.prevent="$emit('keydown', $event)"
+  >
+    <Check v-if="isCompleted" :size="12" class="done-toggle--simple-icon" />
+  </button>
+
+  <!-- Original fancy button (for default, subtle, prominent, minimal variants) -->
+  <button
+    v-else
     :class="buttonClasses"
     :disabled="disabled"
     :title="enhancedTitle"
@@ -818,5 +838,51 @@ kbd {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ==========================================
+   SIMPLE VARIANT - Minimal rounded square
+   ========================================== */
+.done-toggle--simple {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--glass-border);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) var(--ease-out);
+  padding: 0;
+}
+
+.done-toggle--simple:hover {
+  border-color: var(--brand-primary);
+  background: var(--brand-bg-subtle);
+}
+
+.done-toggle--simple:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.done-toggle--simple:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.done-toggle--simple-checked {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.done-toggle--simple-checked:hover {
+  background: var(--brand-primary-dark, #3ab8a8);
+  border-color: var(--brand-primary-dark, #3ab8a8);
+}
+
+.done-toggle--simple-icon {
+  color: white;
 }
 </style>

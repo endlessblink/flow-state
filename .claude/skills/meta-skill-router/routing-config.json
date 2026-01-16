@@ -131,7 +131,7 @@
         "create.*task",
         "task.*crud"
       ],
-      "skill": "dev-fix-task-store",
+      "skill": "dev-debugging",
       "priority": 7,
       "description": "Task management and CRUD operations"
     },
@@ -144,7 +144,7 @@
         "hotkey.*",
         "key.*bind"
       ],
-      "skill": "dev-fix-keyboard",
+      "skill": "dev-debugging",
       "priority": 5,
       "description": "Keyboard shortcuts and accessibility"
     },

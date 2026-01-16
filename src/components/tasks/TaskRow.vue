@@ -16,7 +16,7 @@
       <DoneToggle
         :completed="task.status === 'done'"
         size="sm"
-        variant="minimal"
+        variant="simple"
         :title="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
         :aria-label="`Toggle completion for ${task.title}`"
         @toggle="$emit('toggleComplete', task.id)"
@@ -29,37 +29,12 @@
     </div>
 
     <!-- Project Visual -->
-    <div class="task-row__project">
-      <span
-        class="project-emoji-badge"
-        :class="`project-visual--${projectVisual.type}`"
-        :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-      >
-        <!-- Emoji visual indicator -->
-        <ProjectEmojiIcon
-          v-if="projectVisual.type === 'emoji'"
-          :emoji="projectVisual.content"
-          size="xs"
-          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-          class="project-emoji"
-        />
-        <!-- CSS circle visual indicator -->
-        <span
-          v-else-if="projectVisual.type === 'css-circle'"
-          class="project-emoji project-css-circle"
-          :style="{ '--project-color': projectVisual.color }"
-          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-        />
-        <!-- Default fallback (folder icon) -->
-        <ProjectEmojiIcon
-          v-else
-          emoji="📁"
-          size="xs"
-          :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-          class="project-emoji"
-        />
-      </span>
-    </div>
+    <TaskRowProject
+      :visual="projectVisual"
+      :project-display-name="taskStore.getProjectDisplayName(task.projectId)"
+      :current-project-id="task.projectId"
+      @update:project-id="(projectId) => $emit('updateProject', task.id, projectId)"
+    />
 
     <!-- Due Date -->
     <div class="task-row__due-date">
@@ -70,11 +45,14 @@
       <span v-else class="task-row__empty">-</span>
     </div>
 
-    <!-- Status Badge -->
-    <div class="task-row__status">
-      <span class="task-row__badge task-row__badge--status" :class="`task-row__badge--${task.status}`">
-        {{ formatStatus(task.status) }}
-      </span>
+    <!-- Status Dropdown -->
+    <div class="task-row__status" @click.stop>
+      <CustomSelect
+        :model-value="task.status || 'planned'"
+        :options="statusOptions"
+        placeholder="Select status..."
+        @update:model-value="(val) => $emit('updateStatus', task.id, String(val))"
+      />
     </div>
 
     <!-- Tags (progressive disclosure - visible on hover) -->
@@ -115,8 +93,9 @@
 import { computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { Calendar, Play, Edit } from 'lucide-vue-next'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
+import TaskRowProject from '@/components/tasks/row/TaskRowProject.vue'
 import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
@@ -134,7 +113,17 @@ defineEmits<{
   startTimer: [taskId: string]
   edit: [taskId: string]
   contextMenu: [event: MouseEvent, task: Task]
+  updateStatus: [taskId: string, status: string]
+  updateProject: [taskId: string, projectId: string | null]
 }>()
+
+const statusOptions = [
+  { label: 'To Do', value: 'planned' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Done', value: 'done' },
+  { label: 'Backlog', value: 'backlog' },
+  { label: 'On Hold', value: 'on_hold' }
+]
 
 const taskStore = useTaskStore()
 
@@ -185,16 +174,6 @@ const getDueDateClass = (): string => {
   return ''
 }
 
-const formatStatus = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    'planned': 'To Do',
-    'in_progress': 'In Progress',
-    'done': 'Done',
-    'backlog': 'Backlog',
-    'on_hold': 'On Hold'
-  }
-  return statusMap[status] || status
-}
 </script>
 
 <style scoped>
@@ -302,32 +281,7 @@ const formatStatus = (status: string): string => {
   text-shadow: 0 0 10px rgba(78, 205, 196, 0.3);
 }
 
-/* Project Emoji Cell */
-.task-row__project {
-  grid-area: project;
-  display: grid;
-  place-items: center;
-}
-
-/* Project Indicator Glass */
-.project-emoji-badge {
-  background: var(--glass-bg-subtle);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-out);
-  padding: var(--space-0_5) var(--space-1_5);
-  border-radius: var(--radius-sm); /* Softer radius */
-}
-
-.project-emoji-badge:hover {
-  background: var(--glass-border);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  transform: translateY(-1px);
-}
+/* Project Emoji Cell - handled by TaskRowProject component */
 
 /* Due Date Cell */
 .task-row__due-date {
@@ -358,50 +312,11 @@ const formatStatus = (status: string): string => {
   color: #54a0ff;
 }
 
-/* Status Badge - Glass Pills */
+/* Status Cell */
 .task-row__status {
   grid-area: status;
   display: flex;
   align-items: center;
-}
-
-.task-row__badge {
-  padding: var(--space-0_5) var(--space-2);
-  border-radius: var(--radius-lg);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  border: 1px solid transparent;
-  backdrop-filter: blur(4px);
-}
-
-.task-row__badge--planned {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.task-row__badge--in_progress {
-  background: rgba(52, 152, 219, 0.15);
-  border-color: rgba(52, 152, 219, 0.3);
-  color: #5dade2;
-}
-
-.task-row__badge--done {
-  background: rgba(46, 204, 113, 0.15);
-  border-color: rgba(46, 204, 113, 0.3);
-  color: #2ecc71;
-}
-
-.task-row__badge--backlog {
-  background: rgba(155, 89, 182, 0.15);
-  border-color: rgba(155, 89, 182, 0.3);
-  color: #d2b4de;
-}
-
-.task-row__badge--on_hold {
-  background: rgba(230, 126, 34, 0.15);
-  border-color: rgba(230, 126, 34, 0.3);
-  color: #f5b041;
 }
 
 /* Tags Cell - Glass Chips */

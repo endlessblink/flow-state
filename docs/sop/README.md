@@ -1,7 +1,7 @@
 # Pomo-Flow Standard Operating Procedures (SOPs)
 
-**Last Updated**: January 8, 2026
-**Total Documents**: 31 (added UNDO-system-architecture.md)
+**Last Updated**: January 16, 2026
+**Total Documents**: 32 (added TIMER-sync-architecture.md)
 
 ---
 
@@ -15,6 +15,7 @@
 | Sync | `SYNC-` | PouchDB/CouchDB sync, conflicts |
 | Styling | `STYLING-` | CSS, glassmorphism, design tokens |
 | Tasks | `TASKS-` | Task store, persistence, reactivity |
+| Timer | `TIMER-` | Pomodoro timer sync, cross-device |
 | UI | `UI-` | General UI components |
 | Undo | `UNDO-` | Undo/redo system architecture |
 
@@ -96,6 +97,12 @@ docs/sop/
 | File | Description |
 |------|-------------|
 | `UNDO-system-architecture.md` | Undo/redo system architecture & troubleshooting |
+
+### Timer (TIMER-*)
+
+| File | Description |
+|------|-------------|
+| `TIMER-sync-architecture.md` | Cross-device timer sync (Vue app + KDE widget) |
 
 ---
 

@@ -9476,6 +9476,36 @@
       }
     }
 
+    // Copy a single command to clipboard
+    function copyCommand(element) {
+      const command = element.textContent;
+      navigator.clipboard.writeText(command).then(() => {
+        showToast('📋 Command copied!', 'success');
+        element.classList.add('copied');
+        setTimeout(() => element.classList.remove('copied'), 1000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy command', 'error');
+      });
+    }
+
+    // Copy all git commands
+    function copyAllGitCommands() {
+      const commandsList = document.getElementById('review-commands-list');
+      if (!commandsList) return;
+
+      const commands = Array.from(commandsList.querySelectorAll('.command-code'))
+        .map(el => el.textContent)
+        .join('\n');
+
+      navigator.clipboard.writeText(commands).then(() => {
+        showToast('📋 All commands copied!', 'success');
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy commands', 'error');
+      });
+    }
+
     // Update phase indicator
     function updatePhaseIndicator(activePhase) {
       const phases = ['requirements', 'planning', 'execution', 'review'];

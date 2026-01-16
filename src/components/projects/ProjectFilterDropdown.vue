@@ -35,10 +35,6 @@
     <!-- Dropdown panel -->
     <Transition name="dropdown-slide">
       <div v-if="isOpen" class="dropdown-panel" @click.stop>
-        <div class="dropdown-header">
-          <h4>Filter by Project</h4>
-        </div>
-
         <div class="project-list">
           <!-- All Projects option -->
           <button
@@ -315,23 +311,6 @@ onUnmounted(() => {
   max-width: 300px;
   max-height: 400px;
   overflow: hidden;
-}
-
-.dropdown-header {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-}
-
-.dropdown-header h4 {
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
 }
 
 .project-list {

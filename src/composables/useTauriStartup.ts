@@ -9,8 +9,9 @@
  * 5. Get Supabase connection config
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 export type StartupStep =
   | 'checking_docker'
@@ -18,16 +19,28 @@ export type StartupStep =
   | 'waiting_docker'
   | 'checking_supabase'
   | 'starting_supabase'
+  | 'running_migrations'
   | 'ready'
   | 'error'
+
+export type ErrorType =
+  | 'docker_not_installed'
+  | 'docker_not_running'
+  | 'docker_start_failed'
+  | 'supabase_not_installed'
+  | 'supabase_port_conflict'
+  | 'supabase_start_failed'
+  | 'migration_failed'
+  | 'unknown'
 
 export interface StartupState {
   step: StartupStep
   dockerStatus: 'unknown' | 'not_installed' | 'not_running' | 'running'
   dockerVersion: string | null
-  supabaseStatus: 'unknown' | 'not_running' | 'running'
+  supabaseStatus: 'unknown' | 'not_installed' | 'not_running' | 'running'
   supabaseConfig: SupabaseConfig | null
   error: string | null
+  errorType: ErrorType | null
   progress: number // 0-100
 }
 
@@ -61,6 +74,7 @@ export function useTauriStartup() {
     supabaseStatus: 'unknown',
     supabaseConfig: null,
     error: null,
+    errorType: null,
     progress: 0
   })
 
@@ -80,6 +94,8 @@ export function useTauriStartup() {
         return 'Checking database status...'
       case 'starting_supabase':
         return 'Starting database services... (this may take a few minutes on first run)'
+      case 'running_migrations':
+        return 'Setting up database schema...'
       case 'ready':
         return 'Ready!'
       case 'error':
@@ -202,11 +218,81 @@ export function useTauriStartup() {
   }
 
   /**
+   * Run database migrations via Tauri command
+   */
+  async function runMigrations(): Promise<boolean> {
+    try {
+      const result = await invoke<string>('run_supabase_migrations')
+      return result === 'migrations_complete' || result === 'no_migrations_needed'
+    } catch (error) {
+      console.error('Failed to run migrations:', error)
+      state.value.error = String(error)
+      return false
+    }
+  }
+
+  /**
+   * Cleanup services on app exit
+   * @param stopSupabase - Whether to stop Supabase containers (default: false to keep running for quick restart)
+   */
+  async function cleanup(stopSupabase: boolean = false): Promise<void> {
+    try {
+      await invoke<string>('cleanup_services', { stopSupabaseFlag: stopSupabase })
+      console.log('Cleanup completed')
+    } catch (error) {
+      console.error('Cleanup failed:', error)
+    }
+  }
+
+  // Track cleanup listener for removal
+  let cleanupUnlisten: (() => void) | null = null
+
+  /**
+   * Register cleanup handler for when the window is about to close
+   * @param stopSupabase - Whether to stop Supabase on close (user preference)
+   */
+  async function registerCloseHandler(stopSupabase: boolean = false): Promise<void> {
+    if (!isTauri()) return
+
+    try {
+      const currentWindow = getCurrentWindow()
+      cleanupUnlisten = await currentWindow.onCloseRequested(async (event) => {
+        // Prevent default close
+        event.preventDefault()
+
+        // Run cleanup
+        await cleanup(stopSupabase)
+
+        // Actually close the window
+        await currentWindow.destroy()
+      })
+    } catch (error) {
+      console.error('Failed to register close handler:', error)
+    }
+  }
+
+  /**
+   * Unregister cleanup handler
+   */
+  function unregisterCloseHandler(): void {
+    if (cleanupUnlisten) {
+      cleanupUnlisten()
+      cleanupUnlisten = null
+    }
+  }
+
+  // Auto-cleanup on composable unmount
+  onUnmounted(() => {
+    unregisterCloseHandler()
+  })
+
+  /**
    * Run the full startup sequence
    */
   async function runStartupSequence(): Promise<boolean> {
     // Reset state
     state.value.error = null
+    state.value.errorType = null
     state.value.progress = 0
 
     // Step 1: Check Docker
@@ -219,7 +305,8 @@ export function useTauriStartup() {
     if (!dockerRunning) {
       if (state.value.dockerStatus === 'not_installed') {
         state.value.step = 'error'
-        state.value.error = 'Docker is not installed. Please install Docker Desktop from https://docker.com/products/docker-desktop'
+        state.value.errorType = 'docker_not_installed'
+        state.value.error = 'Docker is not installed. Please install Docker Desktop to use this app.'
         return false
       }
 
@@ -229,7 +316,8 @@ export function useTauriStartup() {
       const started = await startDocker()
       if (!started) {
         state.value.step = 'error'
-        state.value.error = 'Failed to start Docker Desktop. Please start it manually.'
+        state.value.errorType = 'docker_start_failed'
+        state.value.error = 'Failed to start Docker Desktop. Please start it manually from your applications menu.'
         return false
       }
 
@@ -240,7 +328,8 @@ export function useTauriStartup() {
       dockerRunning = await waitForDocker(60000)
       if (!dockerRunning) {
         state.value.step = 'error'
-        state.value.error = 'Docker failed to start within 60 seconds. Please try starting it manually.'
+        state.value.errorType = 'docker_not_running'
+        state.value.error = 'Docker is taking too long to start. Please ensure Docker Desktop is running and try again.'
         return false
       }
     }
@@ -261,7 +350,15 @@ export function useTauriStartup() {
       const started = await startSupabase()
       if (!started) {
         state.value.step = 'error'
-        state.value.error = 'Failed to start database services. Please check the logs.'
+        // Check if it's a port conflict based on error message
+        const errorMsg = state.value.error || ''
+        if (errorMsg.includes('port') || errorMsg.includes('already in use') || errorMsg.includes('address already')) {
+          state.value.errorType = 'supabase_port_conflict'
+          state.value.error = 'Port conflict detected. Another service may be using the required ports (54321-54329). Please stop conflicting services and try again.'
+        } else {
+          state.value.errorType = 'supabase_start_failed'
+          state.value.error = errorMsg || 'Failed to start database services. Please ensure Supabase CLI is installed.'
+        }
         return false
       }
 
@@ -273,7 +370,8 @@ export function useTauriStartup() {
       supabaseRunning = await checkSupabase()
       if (!supabaseRunning) {
         state.value.step = 'error'
-        state.value.error = 'Database services started but are not responding. Please check Docker logs.'
+        state.value.errorType = 'supabase_start_failed'
+        state.value.error = 'Database services started but are not responding. Please check Docker logs or try running "supabase start" manually.'
         return false
       }
     }
@@ -281,6 +379,18 @@ export function useTauriStartup() {
     // Step 6: Get config if we don't have it yet
     if (!state.value.supabaseConfig) {
       await getSupabaseConfig()
+    }
+
+    // Step 7: Run database migrations
+    state.value.step = 'running_migrations'
+    state.value.progress = 92
+
+    const migrationsOk = await runMigrations()
+    if (!migrationsOk) {
+      state.value.step = 'error'
+      state.value.errorType = 'migration_failed'
+      state.value.error = state.value.error || 'Failed to set up database schema. Please check Supabase logs.'
+      return false
     }
 
     state.value.progress = 100
@@ -302,6 +412,7 @@ export function useTauriStartup() {
   async function retry() {
     state.value.step = 'checking_docker'
     state.value.error = null
+    state.value.errorType = null
     state.value.progress = 0
     return runStartupSequence()
   }
@@ -324,6 +435,10 @@ export function useTauriStartup() {
     waitForDocker,
     checkSupabase,
     startSupabase,
-    getSupabaseConfig
+    getSupabaseConfig,
+    runMigrations,
+    cleanup,
+    registerCloseHandler,
+    unregisterCloseHandler
   }
 }

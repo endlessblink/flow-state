@@ -27,6 +27,8 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Calendar | ⚠️ Partial (resize issues) |
 | Supabase Sync | ✅ Working (RLS enabled) |
 | Backup System | ✅ Hardened (Smart Layers 1-3) |
+| Timer Sync | ✅ Working (cross-device, KDE widget) |
+| KDE Widget | ✅ Working (`kde-widget/`) |
 | Build/CI | ✅ Passing |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
@@ -161,6 +163,43 @@ src/services/auth/supabase.ts             # Supabase client init
 src/stores/auth.ts                        # Auth state management
 ```
 
+## Timer Cross-Device Sync
+
+**Architecture:** Device leadership model where one device "leads" the countdown and others follow.
+
+| Device | Role | Sync Method |
+|--------|------|-------------|
+| Vue App | Leader-capable | Supabase Realtime (WebSocket) |
+| KDE Widget | Follower | REST API polling (2s interval) |
+
+**Key Rules:**
+- Leader sends heartbeat every 10 seconds (`device_leader_last_seen`)
+- Followers apply drift correction based on time since last heartbeat
+- 30-second timeout before another device can claim leadership
+- User's explicit action (start/pause) takes precedence over stale leadership
+
+**Critical Pattern - Auth-Aware Initialization:**
+```typescript
+// Timer store MUST wait for auth before loading session
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated && !hasLoadedSession.value) {
+      initializeStore()  // Now userId is available
+    }
+  },
+  { immediate: true }
+)
+```
+
+**Full SOP:** [`docs/sop/active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md)
+
+**Key Files:**
+```
+src/stores/timer.ts                      # Timer state + leadership logic
+kde-widget/package/contents/ui/main.qml  # KDE Plasma widget
+```
+
 ## Supabase JWT Key Validation
 
 **Problem:** JWT keys in `.env.local` can drift from local Supabase's JWT secret, causing WebSocket 403 errors.
@@ -289,5 +328,5 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: January 10, 2026
+**Last Updated**: January 16, 2026
 **Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

@@ -380,9 +380,9 @@ function routeTask(taskType: string): string {
     'canvas-issue': 'vue-flow-debug',
     'supabase-issue': 'supabase-debugger',
     'layout-issue': 'frontend-layout-fixer',
-    'keyboard-shortcut': 'dev-fix-keyboard',
+    'keyboard-shortcut': 'dev-debugging',  // merged into dev-debugging
     'timer-issue': 'dev-fix-timer',
-    'task-crud': 'dev-fix-task-store',
+    'task-crud': 'dev-debugging',  // merged into dev-debugging
     'undo-redo': 'dev-undo-redo',
 
     // Development
@@ -403,7 +403,7 @@ function routeTask(taskType: string): string {
 
     // Infrastructure
     'port-conflict': 'ops-port-manager',
-    'e2e-test': 'tauri-e2e-testing'
+    'e2e-test': 'qa-testing'  // tauri-e2e-testing archived
   };
 
   return routing[taskType] || 'dev-debugging';

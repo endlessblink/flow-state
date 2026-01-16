@@ -7,6 +7,10 @@ triggers:
   - process ideas
   - check inbox
   - ideas inbox
+  - /task
+  - create task
+  - start task
+  - mark task done
 ---
 
 # 💡 Idea-Issue Creator - Simple Workflow
@@ -146,6 +150,42 @@ idea-creator approve-all
 - ✅ **Smart questions**: Relevant clarifying questions
 - ✅ **One-click approval**: Quick approval and integration
 - ✅ **Always usable**: Simple enough for daily use
+
+---
+
+## 🚀 Quick Task Command (`/task`)
+
+Fast task creation that adds directly to MASTER_PLAN.md and marks as in-progress.
+
+### Create & Start Task
+```
+/task "Fix the login bug"
+/task P0 "Critical: database down"
+```
+
+**What happens:**
+1. Runs `scripts/utils/get-next-task-id.cjs` → gets next ID (e.g., TASK-304)
+2. Adds row to MASTER_PLAN.md Roadmap table:
+   | **TASK-304** | **Fix the login bug** | **P1** | 🔄 **IN PROGRESS** | - |
+3. Outputs confirmation with task ID
+
+**Default Priority:** P1-HIGH (override with P0, P2, P3 prefix)
+
+### Mark Task Done
+```
+/task done TASK-304
+```
+
+**What happens:**
+1. Finds task row in Roadmap table
+2. Updates to: `~~TASK-304~~` | ... | ✅ **DONE** (YYYY-MM-DD)
+3. Adds strikethrough to ID
+
+### Implementation Notes
+- **Table insertion**: Find last `| TASK-` or `| BUG-` row, insert after
+- **ID regex**: `/(?:TASK|BUG|IDEA|ISSUE)-(\d+)/g`
+- **Date format**: `YYYY-MM-DD` (e.g., 2026-01-16)
+- **Priority values**: P0 (Critical), P1 (High), P2 (Medium), P3 (Low)
 
 ---
 

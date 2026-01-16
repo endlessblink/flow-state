@@ -247,17 +247,18 @@ watch(isOpen, (newVal) => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-1);
-  padding: var(--space-1_5) var(--space-2);
+  padding: 0 var(--space-1_5);
 
   /* Lean input styling */
   background: transparent;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
 
   color: var(--text-primary);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  min-height: 28px;
+  height: 22px;
+  line-height: 1;
   cursor: pointer;
   outline: none;
   transition: all var(--duration-fast) var(--spring-smooth);
@@ -307,7 +308,7 @@ watch(isOpen, (newVal) => {
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
 
   max-height: 200px;
   overflow-y: auto;

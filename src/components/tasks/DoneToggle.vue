@@ -36,7 +36,7 @@ interface Props {
   completed?: boolean
   disabled?: boolean
   size?: 'sm' | 'md' | 'lg'
-  variant?: 'default' | 'subtle' | 'prominent' | 'minimal'
+  variant?: 'default' | 'subtle' | 'prominent' | 'minimal' | 'simple'
   title?: string
   ariaLabel?: string
   showHints?: boolean

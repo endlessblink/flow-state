@@ -2515,63 +2515,9 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
     });
 }
 
-// GET /api/orchestrator/:id - Get orchestration status
-app.get('/api/orchestrator/:id', (req, res) => {
-    const orch = orchestrations.get(req.params.id);
-
-    if (!orch) {
-        return res.status(404).json({ error: 'Orchestration not found' });
-    }
-
-    res.json({
-        id: orch.id,
-        goal: orch.goal,
-        phase: orch.phase,
-        status: orch.status,
-        questions: orch.questions,
-        answers: orch.answers,
-        plan: orch.plan,
-        subAgents: orch.subAgents.map(a => ({
-            taskId: a.taskId,
-            title: a.task?.title,
-            status: a.status,
-            retries: a.retries,
-            outputLines: a.output?.length || 0
-        })),
-        summary: orch.summary.slice(-20),
-        startTime: orch.startTime,
-        runtime: Date.now() - orch.startTime
-    });
-});
-
-// DELETE /api/orchestrator/:id - Delete an orchestration
-app.delete('/api/orchestrator/:id', (req, res) => {
-    const orchId = req.params.id;
-    const orch = orchestrations.get(orchId);
-
-    if (!orch) {
-        return res.status(404).json({ error: 'Orchestration not found' });
-    }
-
-    // Kill any running sub-agents
-    for (const agent of orch.subAgents) {
-        if (agent.process && !agent.process.killed) {
-            agent.process.kill('SIGTERM');
-        }
-    }
-
-    // Remove from orchestrations map
-    orchestrations.delete(orchId);
-    debouncedSave();
-
-    // Remove SSE clients for this orchestration
-    if (orchestratorClients.has(orchId)) {
-        orchestratorClients.delete(orchId);
-    }
-
-    console.log(`[Orchestrator] Deleted ${orchId}`);
-    res.json({ success: true, message: 'Orchestration deleted' });
-});
+// ============================================================
+// TASK-SPECIFIC ROUTES - Must be defined BEFORE generic :id routes
+// ============================================================
 
 // GET /api/orchestrator/task/:taskId/diff - Get full diff for a task
 app.get('/api/orchestrator/task/:taskId/diff', (req, res) => {
@@ -2702,6 +2648,68 @@ app.post('/api/orchestrator/task/:taskId/discard', (req, res) => {
         console.error(`[Orchestrator] Error discarding ${taskId}:`, err.message);
         res.status(500).json({ error: `Discard failed: ${err.message}` });
     }
+});
+
+// ============================================================
+// GENERIC :id ROUTES - After task-specific routes
+// ============================================================
+
+// GET /api/orchestrator/:id - Get orchestration status
+app.get('/api/orchestrator/:id', (req, res) => {
+    const orch = orchestrations.get(req.params.id);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    res.json({
+        id: orch.id,
+        goal: orch.goal,
+        phase: orch.phase,
+        status: orch.status,
+        questions: orch.questions,
+        answers: orch.answers,
+        plan: orch.plan,
+        subAgents: orch.subAgents.map(a => ({
+            taskId: a.taskId,
+            title: a.task?.title,
+            status: a.status,
+            retries: a.retries,
+            outputLines: a.output?.length || 0
+        })),
+        summary: orch.summary.slice(-20),
+        startTime: orch.startTime,
+        runtime: Date.now() - orch.startTime
+    });
+});
+
+// DELETE /api/orchestrator/:id - Delete an orchestration
+app.delete('/api/orchestrator/:id', (req, res) => {
+    const orchId = req.params.id;
+    const orch = orchestrations.get(orchId);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    // Kill any running sub-agents
+    for (const agent of orch.subAgents) {
+        if (agent.process && !agent.process.killed) {
+            agent.process.kill('SIGTERM');
+        }
+    }
+
+    // Remove from orchestrations map
+    orchestrations.delete(orchId);
+    debouncedSave();
+
+    // Remove SSE clients for this orchestration
+    if (orchestratorClients.has(orchId)) {
+        orchestratorClients.delete(orchId);
+    }
+
+    console.log(`[Orchestrator] Deleted ${orchId}`);
+    res.json({ success: true, message: 'Orchestration deleted' });
 });
 
 // POST /api/orchestrator/:id/chat - Chat with orchestrator at current phase

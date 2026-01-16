@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed, reactive, onUnmounted } from 'vue'
+import { ref, computed, reactive, onUnmounted, watch } from 'vue'
 import { useTaskStore } from './tasks'
+import { useAuthStore } from './auth'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useSettingsStore } from './settings'
 import { formatTime } from '@/utils/timer/formatTime'
@@ -34,10 +35,14 @@ export const useTimerStore = defineStore('timer', () => {
 
   const settingsStore = useSettingsStore()
   const taskStore = useTaskStore()
+  const authStore = useAuthStore()
 
   // Constants for device synchronization
   const DEVICE_HEARTBEAT_INTERVAL_MS = 10000 // 10 seconds
   const DEVICE_LEADER_TIMEOUT_MS = 30000 // 30 seconds
+
+  // Track if we've loaded the timer session (to avoid re-loading on every auth change)
+  const hasLoadedSession = ref(false)
 
   // Bridge to settingsStore for backward compatibility
   const settings = reactive({
@@ -399,7 +404,20 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   const initializeStore = async () => {
-    console.log('🍅 [TIMER] initializeStore starting...')
+    // Skip if not authenticated - we'll retry when auth becomes ready
+    if (!authStore.isAuthenticated) {
+      console.log('🍅 [TIMER] initializeStore - waiting for auth...')
+      return
+    }
+
+    // Skip if we've already loaded in this session
+    if (hasLoadedSession.value) {
+      console.log('🍅 [TIMER] initializeStore - already loaded, skipping')
+      return
+    }
+
+    console.log('🍅 [TIMER] initializeStore starting (auth ready)...')
+    hasLoadedSession.value = true
     const saved = await fetchActiveTimerSession()
     console.log('🍅 [TIMER] fetchActiveTimerSession result:', saved ? {
       id: saved.id,
@@ -497,7 +515,17 @@ export const useTimerStore = defineStore('timer', () => {
     pauseHeartbeat()
   })
 
-  initializeStore()
+  // Watch for auth state changes - initialize when auth becomes ready
+  watch(
+    () => authStore.isAuthenticated,
+    (isAuthenticated) => {
+      if (isAuthenticated && !hasLoadedSession.value) {
+        console.log('🍅 [TIMER] Auth became ready, initializing timer store...')
+        initializeStore()
+      }
+    },
+    { immediate: true }
+  )
 
   return {
     currentSession, completedSessions, sessions, settings,

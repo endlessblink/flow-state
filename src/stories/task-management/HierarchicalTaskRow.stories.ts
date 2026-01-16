@@ -26,15 +26,24 @@ const meta = {
         (story: any) => ({
             components: { story },
             setup() {
-                // Use projectStore directly (not readonly passthrough via taskStore)
+                // Force desktop mode by setting window.innerWidth >= 768
+                // This prevents mobile CSS from hiding columns
+                Object.defineProperty(window, 'innerWidth', {
+                    value: 1200,
+                    configurable: true,
+                    writable: true
+                })
+                window.dispatchEvent(new Event('resize'))
+
+                // Use _rawProjects.value (the internal mutable ref's value) instead of readonly projects computed
                 const projectStore = useProjectStore()
-                projectStore.projects = [
+                projectStore._rawProjects.value = [
                     { id: 'p1', name: 'Work', color: '#4ECDC4', emoji: '💼', colorType: 'emoji', createdAt: new Date(), updatedAt: new Date() },
                     { id: 'p2', name: 'Personal', color: '#FF6B6B', emoji: '🏠', colorType: 'emoji', createdAt: new Date(), updatedAt: new Date() }
-                ]
+                ] as any
                 return {}
             },
-            template: '<div style="padding: 20px; background: var(--app-background-gradient); min-height: 300px;"><div style="max-width: 900px;"><story /></div></div>'
+            template: '<div style="padding: 20px; background: var(--app-background-gradient); min-height: 300px; width: 100%;"><div style="min-width: 900px;"><story /></div></div>'
         })
     ],
     argTypes: {

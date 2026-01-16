@@ -108,10 +108,26 @@
 | ~~**TASK-301**~~         | ✅ **DONE** **Canvas Connection UX Improvements**                       | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | [SOP-008](./sop/SOP-008-canvas-connection-ux.md)                                                                                                                                                               |                                                        |
 | ~~**TASK-302**~~         | ✅ **DONE** **Restore Automation Scripts**                              | **P1**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | Restore missing consolidation scripts                                                                                                                                                                          |                                                        |
 | **TASK-303**             | **Dev-Manager AI Orchestrator Enhancement**                            | **P1**                                              | 🔄 **IN PROGRESS** [See Details](#task-303-dev-manager-ai-orchestrator-in-progress)                                             | [SOP-010](./sop/SOP-010-dev-manager-orchestrator.md)                                                                                                                                                           |                                                        |
-| ~~**TASK-304**~~         | ✅ **DONE** **Claude Code Skill Consolidation Phase 2**                 | **P1**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | Merged: master-plan-manager→smart-doc-manager. Archived: tauri-e2e-testing, persistence-type-fixer, detect-competing-systems, parallel-decomposer. Final: 26 active, 6 archived                                |                                                        |
+| ~~**TASK-304**~~         | ✅ **DONE** **Claude Code Skill Consolidation Phase 2**                 | **P1**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | Merged: master-plan-manager→smart-doc-manager. Archived: tauri-e2e-testing, persistence-type-fixer, detect-competing-systems, parallel-decomposer. Final: 26 active, 6 archived                               |                                                        |
 | ~~**TASK-305**~~         | ✅ **DONE** **Automated Master Plan Archival**                          | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | [Implementation Plan](./plans/automated-archival-system.md). Automated archival of completed tasks via "Update Master Plan" workflow.                                                                          |                                                        |
 
 ---
+
+---
+
+### ~~TASK-305~~: Automated Master Plan Archival (✅ DONE)
+
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE (2026-01-16)
+
+Implemented automated system to archive completed tasks from `MASTER_PLAN.md` to `docs/archive/`.
+
+**Features**:
+- Automated detection of completed tasks
+- Atomic file operations with backups
+- Integration with Claude Code "Update Master Plan" workflow
+
+**Implementation Plan**: [docs/plans/automated-archival-system.md](./plans/automated-archival-system.md)
 
 ---
 
@@ -172,7 +188,6 @@ Target: Create 3 organized files from 12 scattered SOPs (Deferred to future sess
 Complete the Tauri desktop distribution setup for open-source release. Enable end users to install PomoFlow as a standalone desktop app with automated Docker + Supabase local stack setup.
 
 **Current State (✅ Implemented)**:
-
 - [x] Rust backend with Docker/Supabase commands
 - [x] Shell plugin + permissions configured
 - [x] Vue startup composable (`useTauriStartup.ts`)
@@ -182,37 +197,31 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 - [x] Build pipeline (creates .deb, .rpm, .AppImage)
 
 **Phase 1: Migration Auto-Run (🔄 IN PROGRESS)**:
-
 - [ ] Add `run_supabase_migrations` Rust command
 - [ ] Call migrations in `useTauriStartup.ts` after Supabase ready
 - [ ] Handle migration errors gracefully
 
 **Phase 2: Error Detection Improvements**:
-
 - [ ] Detect: Docker not installed, not running, port conflicts
 - [ ] Detect: Supabase CLI missing, port conflicts
 - [ ] Show targeted help text for each error type
 
 **Phase 3: Graceful Shutdown**:
-
 - [ ] Add `cleanup_services` Rust command
 - [ ] Stop Supabase on app close (configurable)
 
 **Phase 4: Auto-Updater**:
-
 - [ ] Add `tauri-plugin-updater`
 - [ ] Configure GitHub releases endpoint
 - [ ] Add "Check for updates" in settings
 
 **Files**:
-
 - `src-tauri/src/lib.rs` - Rust commands
 - `src-tauri/Cargo.toml` - Dependencies
 - `src/composables/useTauriStartup.ts` - Startup logic
 - `src/components/startup/TauriStartupScreen.vue` - UI
 
 **Success Criteria**:
-
 - Fresh install on Linux VM works end-to-end
 - Clear error messages guide users to fix issues
 - App cleans up services on exit
@@ -228,7 +237,6 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 Major enhancement to the dev-manager orchestrator to enable Claude agents to **actually implement code changes** (not just describe them), using git worktrees for safe isolation.
 
 **Problem Solved**:
-
 - Orchestrator spawned Claude with `--print` flag = only text output, no file changes
 - API key was being cleared: `env: { ...process.env, ANTHROPIC_API_KEY: '' }`
 - Review panel was empty and useless
@@ -255,7 +263,6 @@ Major enhancement to the dev-manager orchestrator to enable Claude agents to **a
    - [x] Added event handlers for all task lifecycle events
 
 **Architecture**:
-
 ```
 User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Discard
                                    ↓
@@ -265,13 +272,11 @@ User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Di
 ```
 
 **Key Files**:
-
 - `dev-manager/server.js` (lines 2316-2705) - Orchestrator backend
 - `dev-manager/kanban/index.html` - Full UI implementation
 - Plan file: `/home/endlessblink/.claude/plans/crispy-frolicking-honey.md`
 
 **Next Steps** (for next session):
-
 - [ ] Test full orchestration flow end-to-end
 - [ ] Verify worktree creation works correctly
 - [ ] Test merge/discard functionality with real branches
@@ -279,7 +284,6 @@ User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Di
 - [ ] Consider adding `--allowedTools` for safer execution
 
 **To Test**:
-
 ```bash
 # Start dev-manager
 node dev-manager/server.js
@@ -759,6 +763,72 @@ Redesign Board and Catalog views with Todoist-style compact design for ADHD-frie
 - [ ] Verify large dataset performance (Virtualization check)
 
 ---
+
+### ~~TASK-017~~: KDE Plasma Widget (Plasmoid) (✅ DONE)
+
+**Priority**: P3-LOW
+**Status**: ✅ DONE
+**Started**: January 15, 2026
+**Completed**: January 16, 2026
+**Location**: `kde-widget/`
+
+**Goal**: Create a KDE Plasma 6 taskbar widget that displays Pomodoro timer status and task list, communicating directly with Supabase.
+
+**Technology**:
+
+- QML (Qt Meta Language) for UI
+- XMLHttpRequest for Supabase REST API calls
+- Plasma 6 PlasmoidItem as root element
+- Kirigami.Icon for system icons (emoji doesn't render in Plasma)
+
+**Implementation Phases**:
+
+- [x] Phase 1: Basic timer display widget (timer countdown, start/pause)
+- [x] Phase 2: Supabase integration (auth, fetch tasks, sync sessions)
+- [x] Phase 3: Config UI (API key entry, project URL, login form in popup)
+- [x] Phase 4: Polish (colors match app, bidirectional sync, drift correction)
+
+**Progress (January 15-16, 2026)**:
+
+- Created full widget structure at `kde-widget/package/`
+- Implemented email/password authentication via Supabase Auth REST API
+- Added bidirectional timer sync with `timer_sessions` table
+- Fixed emoji rendering issue: **Must use `Kirigami.Icon` instead of emoji text**
+- Created login form directly in popup (user sees login on first open)
+- Created `kde-plasma-widget-dev` skill for future iteration
+- Compact view shows: icon + timer (e.g., "⏱ 25:00" or "🍅 24:35")
+- Full popup has: circular progress, skip/start/pause/stop buttons, task list
+
+**January 16, 2026 - Timer Sync Architecture**:
+
+- Fixed timer persistence after hard refresh (race condition: timer init before auth ready)
+- Implemented fluid device leadership (whoever interacts last becomes leader)
+- Added drift correction on page load (calculates elapsed time since last heartbeat)
+- Widget syncs within 2 seconds via REST API polling
+- App uses Supabase Realtime WebSocket for instant updates
+- Colors match main app: teal `#4ECDC4` (work), orange `#F59E0B` (break)
+- See: `docs/sop/active/TIMER-sync-architecture.md`
+
+**Key Discovery**: Emoji characters (🍅, ⏱️, etc.) do NOT render in KDE Plasma widgets. Must use system icons via `Kirigami.Icon` with names like `chronometer`, `appointment-soon`, `media-playback-start`.
+
+**Security Approach**:
+
+- Email/password auth via Supabase (not service role key)
+- Tokens stored in Plasma config, password never stored
+- Auto token refresh before expiry
+
+**Testing**:
+
+```bash
+cd kde-widget && plasmoidviewer -a package
+# Or install: cp -r package ~/.local/share/plasma/plasmoids/com.pomoflow.widget
+```
+
+**References**:
+
+- [KDE Plasma Widget Tutorial](https://develop.kde.org/docs/plasma/widget/)
+- [Plasma 6 Setup Guide](https://develop.kde.org/docs/plasma/widget/setup/)
+- [Plasma 6 Porting Guide](https://develop.kde.org/docs/plasma/widget/porting_kf6/)
 
 ### TASK-095: TypeScript & Lint Cleanup (✅ DONE)
 

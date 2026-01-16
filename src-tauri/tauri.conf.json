@@ -39,5 +39,13 @@
     "category": "Productivity",
     "shortDescription": "Pomodoro timer with task management",
     "longDescription": "PomoFlow combines a Pomodoro timer with powerful task management across Board, Calendar, and Canvas views."
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/YOUR_USERNAME/pomo-flow/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
   }
 }

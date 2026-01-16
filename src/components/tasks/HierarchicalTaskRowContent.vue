@@ -39,7 +39,7 @@
       <DoneToggle
         :completed="task.status === 'done'"
         size="sm"
-        variant="minimal"
+        variant="simple"
         :title="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
         :ariaLabel="`Toggle completion for ${task.title}`"
         @toggle="$emit('toggleComplete')"
@@ -63,6 +63,8 @@
     <TaskRowProject
       :visual="projectVisual"
       :project-display-name="projectDisplayName"
+      :current-project-id="task.projectId"
+      @update:project-id="(val) => $emit('updateProjectId', val)"
     />
 
     <!-- Status Cell -->
@@ -78,7 +80,7 @@
     <!-- Priority Badge -->
     <TaskRowPriority
       :priority="task.priority"
-      @cycle="$emit('cyclePriority')"
+      @update:priority="(val) => $emit('updatePriority', val)"
     />
 
     <!-- Due Date Cell -->
@@ -159,7 +161,8 @@ defineEmits<{
   touchend: [event: TouchEvent]
   toggleComplete: []
   updateStatus: [val: string]
-  cyclePriority: []
+  updateProjectId: [val: string | null]
+  updatePriority: [val: string]
   startTimer: []
   edit: []
   duplicate: []

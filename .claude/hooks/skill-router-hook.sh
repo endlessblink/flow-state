@@ -46,8 +46,8 @@ SKILL_MAPPINGS=(
   # Master plan (routed to smart-doc-manager)
   "smart-doc-manager:master plan|roadmap|task tracking|update plan"
 
-  # Ideas/Issues
-  "idea-issue-creator:process idea|new issue|ideas inbox|go over issues"
+  # Ideas/Issues & Quick Task Creation
+  "idea-issue-creator:/task|create task|start task|mark.*task.*done|process idea|new issue|ideas inbox|go over issues"
 
   # Skills management
   "skill-creator-doctor:create skill|fix skill|skill won't load|consolidate skill"

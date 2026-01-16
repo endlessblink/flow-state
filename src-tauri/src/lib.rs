@@ -177,12 +177,89 @@ async fn get_supabase_config(app: tauri::AppHandle) -> Result<String, String> {
     }
 }
 
+/// Run Supabase database migrations
+#[tauri::command]
+async fn run_supabase_migrations(app: tauri::AppHandle) -> Result<String, String> {
+    let output = app
+        .shell()
+        .command("supabase")
+        .args(["db", "push"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run migrations: {}", e))?;
+
+    if output.status.success() {
+        Ok("migrations_complete".to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        // Check if it's just "no migrations to apply"
+        if stderr.contains("No migrations") || stderr.contains("already applied") {
+            Ok("no_migrations_needed".to_string())
+        } else {
+            Err(format!("Migration failed: {}", stderr))
+        }
+    }
+}
+
+/// Check if Docker CLI is installed
+#[tauri::command]
+async fn check_docker_installed(app: tauri::AppHandle) -> Result<String, String> {
+    let output = app
+        .shell()
+        .command("docker")
+        .args(["--version"])
+        .output()
+        .await;
+
+    match output {
+        Ok(o) if o.status.success() => {
+            let version = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            Ok(format!("installed:{}", version))
+        }
+        _ => Ok("not_installed".to_string()),
+    }
+}
+
+/// Check if Supabase CLI is installed
+#[tauri::command]
+async fn check_supabase_installed(app: tauri::AppHandle) -> Result<String, String> {
+    let output = app
+        .shell()
+        .command("supabase")
+        .args(["--version"])
+        .output()
+        .await;
+
+    match output {
+        Ok(o) if o.status.success() => {
+            let version = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            Ok(format!("installed:{}", version))
+        }
+        _ => Ok("not_installed".to_string()),
+    }
+}
+
+/// Cleanup services on app exit
+#[tauri::command]
+async fn cleanup_services(app: tauri::AppHandle, stop_supabase_flag: bool) -> Result<String, String> {
+    if stop_supabase_flag {
+        let _ = app
+            .shell()
+            .command("supabase")
+            .args(["stop"])
+            .output()
+            .await;
+    }
+    Ok("cleanup_complete".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the main window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
@@ -191,11 +268,15 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![
             check_docker_status,
+            check_docker_installed,
             start_docker_desktop,
             check_supabase_status,
+            check_supabase_installed,
             start_supabase,
             stop_supabase,
             get_supabase_config,
+            run_supabase_migrations,
+            cleanup_services,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

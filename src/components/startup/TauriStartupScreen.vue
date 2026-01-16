@@ -21,12 +21,16 @@ const {
   statusMessage,
   runStartupSequence,
   skipStartup,
-  retry
+  retry,
+  registerCloseHandler
 } = useTauriStartup()
 
 // Watch for ready state and emit event
-watch(isReady, (ready) => {
+watch(isReady, async (ready) => {
   if (ready) {
+    // Register cleanup handler for graceful shutdown
+    // Set to false to keep Supabase running for quick restart
+    await registerCloseHandler(false)
     emit('ready')
   }
 })
@@ -43,6 +47,10 @@ onMounted(async () => {
 
 function openDockerDownload() {
   window.open('https://docker.com/products/docker-desktop', '_blank')
+}
+
+function openSupabaseInstall() {
+  window.open('https://supabase.com/docs/guides/cli/getting-started', '_blank')
 }
 </script>
 
@@ -77,13 +85,48 @@ function openDockerDownload() {
           <div class="error-icon">⚠️</div>
           <p class="error-message">{{ state.error }}</p>
 
+          <!-- Specific help based on error type -->
+          <div v-if="state.errorType === 'docker_not_installed'" class="error-help">
+            <p>Docker Desktop is required to run the local database.</p>
+            <ol>
+              <li>Download Docker Desktop from the link below</li>
+              <li>Install and start Docker Desktop</li>
+              <li>Click "Try Again" once Docker is running</li>
+            </ol>
+          </div>
+
+          <div v-else-if="state.errorType === 'supabase_not_installed'" class="error-help">
+            <p>Supabase CLI is required to manage the local database.</p>
+            <ol>
+              <li>Open a terminal</li>
+              <li>Run: <code>npm install -g supabase</code></li>
+              <li>Click "Try Again" once installed</li>
+            </ol>
+          </div>
+
+          <div v-else-if="state.errorType === 'supabase_port_conflict'" class="error-help">
+            <p>Required ports are in use by another service.</p>
+            <ol>
+              <li>Stop any other database services (PostgreSQL, etc.)</li>
+              <li>Or run: <code>supabase stop</code> to clean up</li>
+              <li>Click "Try Again"</li>
+            </ol>
+          </div>
+
           <div class="error-actions">
             <button
-              v-if="state.dockerStatus === 'not_installed'"
+              v-if="state.errorType === 'docker_not_installed'"
               class="btn btn-primary"
               @click="openDockerDownload"
             >
               Download Docker Desktop
+            </button>
+            <button
+              v-if="state.errorType === 'supabase_not_installed'"
+              class="btn btn-primary"
+              @click="openSupabaseInstall"
+            >
+              Supabase Installation Guide
             </button>
             <button class="btn btn-secondary" @click="retry">
               Try Again
@@ -291,6 +334,39 @@ function openDockerDownload() {
   color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   margin: 0;
   line-height: 1.5;
+}
+
+.error-help {
+  text-align: left;
+  width: 100%;
+  padding: var(--space-3, 12px);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md, 8px);
+}
+
+.error-help p {
+  margin: 0 0 var(--space-2, 8px);
+  font-size: var(--text-sm, 14px);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.error-help ol {
+  margin: 0;
+  padding-left: var(--space-5, 20px);
+  font-size: var(--text-sm, 14px);
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.error-help li {
+  margin-bottom: var(--space-1, 4px);
+}
+
+.error-help code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 6px);
+  font-family: monospace;
+  font-size: var(--text-xs, 12px);
 }
 
 .error-actions {

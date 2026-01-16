@@ -1,8 +1,9 @@
 # Automated Archival System for MASTER_PLAN.md
 
-**Status**: 📋 PLANNED - Awaiting Architectural Review
+**Status**: ✅ IMPLEMENTED (Phase 1)
 **Priority**: P2-MEDIUM
 **Created**: 2026-01-15
+**Implemented**: 2026-01-16
 **Author**: Claude Code (Session: claude/review-master-plan-roPjF)
 
 ---
@@ -627,6 +628,17 @@ Archival respects existing MASTER_PLAN.md workflow:
 3. ✅ Archive references work (`[See Details](#task-xxx)` → archive file)
 4. ✅ Completed task strikethrough (`~~TASK-XXX~~`) triggers archival
 
+### Claude Code Workflow Integration
+
+The archival system is fully integrated into the Claude Code workflow:
+
+- **Workflow File**: `.agent/workflows/update-master-plan-and-sop.md`
+- **Automation**: The `npm run archive:completed` command is automatically executed by the agent at the end of the "Update Master Plan" workflow.
+- **Trigger**: Running `/update-master-plan-and-sop` or asking to "update master plan" will:
+  1. Update the plan with your changes
+  2. Mark tasks as done
+  3. Automatically validatation and archive them to `docs/archive/`
+
 ---
 
 ## Testing Strategy
@@ -786,14 +798,14 @@ function sanitizeMarkdown(content) {
 
 **Goal**: Core functionality working in dry-run mode
 
-- [ ] Install dependencies (`remark`, `write-file-atomic`)
-- [ ] Create `scripts/archive-completed-tasks.cjs`
-- [ ] Implement AST parsing with remark
-- [ ] Implement completed task detection
-- [ ] Implement pre-flight validation
-- [ ] Implement backup creation
-- [ ] Implement dry-run mode
-- [ ] Manual testing: `npm run archive:dry-run`
+- [x] Install dependencies (`remark`, `write-file-atomic`)
+- [x] Create `scripts/archive-completed-tasks.js` (ESM)
+- [x] Implement AST parsing with remark
+- [x] Implement completed task detection
+- [x] Implement pre-flight validation
+- [x] Implement backup creation
+- [x] Implement dry-run mode
+- [x] Manual testing: `npm run archive:dry-run`
 
 **Deliverables**:
 - Working dry-run mode

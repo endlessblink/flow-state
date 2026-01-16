@@ -23,8 +23,8 @@ description: Intelligent skill selection system that automatically routes to app
 | "plan", "break down", "strategy", "roadmap" | `Skill(chief-architect)` |
 | "canvas", "drag", "position", "node" | `Skill(vue-flow-debug)` |
 | "timer", "pomodoro", "countdown" | `Skill(dev-fix-timer)` |
-| "keyboard", "shortcut", "hotkey" | `Skill(dev-fix-keyboard)` |
-| "task store", "tasks disappear" | `Skill(dev-fix-task-store)` |
+| "keyboard", "shortcut", "hotkey" | `Skill(dev-debugging)` |
+| "task store", "tasks disappear" | `Skill(dev-debugging)` |
 | "port", "server won't start" | `Skill(ops-port-manager)` |
 | "undo", "redo", "history" | `Skill(dev-undo-redo)` |
 | "dead code", "unused", "cleanup" | `Skill(codebase-health-auditor)` |
@@ -118,10 +118,10 @@ const ROUTING_PATTERNS = {
   'task.*creation': 'fix-task-store',
   'task.*management': 'fix-task-store',
 
-  // Keyboard & Accessibility
-  'keyboard.*': 'dev-fix-keyboard',
-  'shortcut.*': 'dev-fix-keyboard',
-  'accessibility.*': 'dev-fix-keyboard',
+  // Keyboard & Accessibility (routed to dev-debugging)
+  'keyboard.*': 'dev-debugging',
+  'shortcut.*': 'dev-debugging',
+  'accessibility.*': 'dev-debugging',
 
   // Port Management
   'port.*': 'ops-port-manager',

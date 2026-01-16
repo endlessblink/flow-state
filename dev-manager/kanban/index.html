@@ -3645,37 +3645,324 @@
       border-color: var(--brand-primary);
     }
 
-    /* Review */
-    .review-summary {
-      padding: 20px;
-      background: var(--surface-secondary);
-      border-radius: 8px;
+    /* Review Panel - Enhanced */
+    .review-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
       margin-bottom: 24px;
     }
 
-    .review-summary h3 {
+    .review-stat-card {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .review-stat-card:hover {
+      border-color: var(--border-medium);
+      transform: translateY(-2px);
+    }
+
+    .review-stat-card.highlight {
+      background: linear-gradient(135deg, var(--brand-primary)15, var(--surface-secondary));
+      border-color: var(--brand-primary)50;
+    }
+
+    .review-stat-value {
+      display: block;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .review-stat-card.highlight .review-stat-value {
+      color: var(--brand-primary);
+    }
+
+    .review-stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .review-branches-section,
+    .review-commands-section,
+    .review-feedback-section {
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .review-branches-section .review-section-header,
+    .review-commands-section .review-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .review-branches-section h3,
+    .review-commands-section h3,
+    .review-feedback-section h3 {
       font-size: 14px;
       font-weight: 600;
       color: var(--text-primary);
-      margin: 0 0 12px 0;
-    }
-
-    .review-summary ul {
-      list-style: none;
-      padding: 0;
       margin: 0;
     }
 
-    .review-summary li {
-      font-size: 13px;
-      color: var(--text-secondary);
-      padding: 4px 0;
+    .review-bulk-btns {
+      display: flex;
+      gap: 8px;
     }
 
-    .review-actions {
+    .review-bulk-btn.small {
+      padding: 6px 12px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .review-bulk-btn.small:hover {
+      background: var(--surface-primary);
+      border-color: var(--border-medium);
+    }
+
+    .review-bulk-btn.small.merge {
+      background: #16a34a20;
+      border-color: #16a34a50;
+      color: #4ade80;
+    }
+
+    .review-bulk-btn.small.merge:hover {
+      background: #16a34a40;
+    }
+
+    .review-bulk-btn.small.discard {
+      background: #dc262620;
+      border-color: #dc262650;
+      color: #f87171;
+    }
+
+    .review-bulk-btn.small.discard:hover {
+      background: #dc262640;
+    }
+
+    .review-branches-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .review-branch-card {
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+
+    .review-branch-card:hover {
+      border-color: var(--border-medium);
+    }
+
+    .review-branch-card.merged {
+      opacity: 0.6;
+      border-color: #16a34a50;
+    }
+
+    .review-branch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .review-branch-info {
+      flex: 1;
+    }
+
+    .review-branch-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .review-branch-name {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--accent-primary);
+      background: var(--accent-primary)15;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .review-branch-status {
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .review-branch-status.pending {
+      background: #fbbf2420;
+      color: #fbbf24;
+    }
+
+    .review-branch-status.merged {
+      background: #16a34a20;
+      color: #4ade80;
+    }
+
+    .review-branch-status.discarded {
+      background: #dc262620;
+      color: #f87171;
+    }
+
+    .review-branch-diff {
+      background: var(--surface-primary);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      max-height: 120px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+
+    .review-branch-diff .added {
+      color: #4ade80;
+    }
+
+    .review-branch-diff .removed {
+      color: #f87171;
+    }
+
+    .review-branch-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .review-branch-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .review-branch-btn.view {
+      background: var(--surface-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .review-branch-btn.view:hover {
+      background: var(--surface-primary);
+    }
+
+    .review-branch-btn.merge {
+      background: #16a34a;
+      color: white;
+    }
+
+    .review-branch-btn.merge:hover {
+      background: #15803d;
+    }
+
+    .review-branch-btn.discard {
+      background: transparent;
+      color: #f87171;
+      border: 1px solid #f8717150;
+    }
+
+    .review-branch-btn.discard:hover {
+      background: #dc262620;
+    }
+
+    .review-branch-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Git Commands Section */
+    .copy-commands-btn {
+      padding: 6px 12px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-tertiary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-commands-btn:hover {
+      background: var(--surface-primary);
+    }
+
+    .review-commands-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .review-command-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      background: var(--surface-tertiary);
+      border-radius: 6px;
+    }
+
+    .command-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .command-code {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--accent-primary);
+      background: var(--surface-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      flex: 1;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .command-code:hover {
+      background: var(--accent-primary)20;
+    }
+
+    /* Feedback Section */
+    .review-feedback-section h3 {
+      margin-bottom: 12px;
     }
 
     .feedback-textarea {
@@ -3689,6 +3976,7 @@
       color: var(--text-primary);
       resize: vertical;
       outline: none;
+      margin-bottom: 16px;
     }
 
     .feedback-textarea:focus {
@@ -3707,6 +3995,7 @@
       font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
+      transition: all 0.2s;
     }
 
     .review-btn.secondary {
@@ -3715,10 +4004,24 @@
       color: var(--text-secondary);
     }
 
+    .review-btn.secondary:hover {
+      background: var(--surface-tertiary);
+    }
+
     .review-btn.primary {
       background: var(--color-success);
       border: none;
       color: #000;
+    }
+
+    .review-btn.primary:hover {
+      opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+      .review-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     /* Sidebar */
@@ -4680,22 +4983,72 @@
             <!-- PHASE: Review -->
             <div class="orchestrator-panel hidden" id="orch-review-panel">
               <div class="panel-header">
-                <h2>Review & Refinement</h2>
-                <p class="panel-subtitle">All tasks completed. Review the results and provide feedback.</p>
+                <h2>Review & Merge Changes</h2>
+                <p class="panel-subtitle">All agents completed. Review the changes in each branch before merging.</p>
               </div>
-              <div class="review-summary" id="orch-review-summary">
-                <!-- Summary of completed work -->
+
+              <!-- Overall Statistics -->
+              <div class="review-stats-grid" id="review-stats-grid">
+                <div class="review-stat-card">
+                  <span class="review-stat-value" id="review-total-tasks">0</span>
+                  <span class="review-stat-label">Tasks Completed</span>
+                </div>
+                <div class="review-stat-card">
+                  <span class="review-stat-value" id="review-total-branches">0</span>
+                  <span class="review-stat-label">Branches Ready</span>
+                </div>
+                <div class="review-stat-card">
+                  <span class="review-stat-value" id="review-total-files">0</span>
+                  <span class="review-stat-label">Files Changed</span>
+                </div>
+                <div class="review-stat-card highlight">
+                  <span class="review-stat-value" id="review-pending-merge">0</span>
+                  <span class="review-stat-label">Pending Merge</span>
+                </div>
               </div>
-              <div class="review-actions">
+
+              <!-- Branches To Review -->
+              <div class="review-branches-section">
+                <div class="review-section-header">
+                  <h3>Branches Ready for Review</h3>
+                  <div class="review-bulk-btns">
+                    <button class="review-bulk-btn small" onclick="viewAllDiffs()">👁 View All Diffs</button>
+                    <button class="review-bulk-btn small merge" onclick="mergeAllReviewBranches()">✅ Merge All</button>
+                    <button class="review-bulk-btn small discard" onclick="discardAllReviewBranches()">🗑 Discard All</button>
+                  </div>
+                </div>
+                <div class="review-branches-list" id="review-branches-list">
+                  <!-- Branch cards will be populated dynamically -->
+                  <div class="empty-state-small">Loading completed tasks...</div>
+                </div>
+              </div>
+
+              <!-- Git Commands Reference -->
+              <div class="review-commands-section">
+                <div class="review-section-header">
+                  <h3>Terminal Commands</h3>
+                  <button class="copy-commands-btn" onclick="copyAllGitCommands()">📋 Copy All</button>
+                </div>
+                <div class="review-commands-list" id="review-commands-list">
+                  <div class="review-command-item">
+                    <span class="command-label">View all branches:</span>
+                    <code class="command-code" onclick="copyCommand(this)">git branch | grep bd-</code>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Request Changes Section -->
+              <div class="review-feedback-section">
+                <h3>Need Changes?</h3>
                 <textarea id="orch-feedback-input" class="feedback-textarea"
-                          placeholder="Provide feedback for refinements (optional)..."
+                          placeholder="Describe what needs to be changed or improved..."
                           rows="3"></textarea>
                 <div class="review-buttons">
                   <button class="review-btn secondary" onclick="requestRefinement()">
-                    Request Changes
+                    🔄 Request Changes & Re-run
                   </button>
-                  <button class="review-btn primary" onclick="approveProject()">
-                    Approve Project
+                  <button class="review-btn primary" onclick="finalizeProject()">
+                    ✅ Finalize Project
                   </button>
                 </div>
               </div>
@@ -8706,6 +9059,7 @@
             showOrchestratorPanel('execution');
           } else if (data.phase === 'review') {
             showOrchestratorPanel('review');
+            populateReviewPanel();
           }
           break;
 

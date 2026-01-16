@@ -398,7 +398,7 @@ function routeTask(taskType: string): string {
 
     // Documentation
     'documentation': 'smart-doc-manager',
-    'master-plan': 'master-plan-manager',
+    'master-plan': 'smart-doc-manager',  // merged into smart-doc-manager
     'storybook': 'dev-storybook',
 
     // Infrastructure

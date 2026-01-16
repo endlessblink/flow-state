@@ -335,7 +335,7 @@ const updateCustomRule = (e: Event) => {
 const setCustomRule = (customRule: string) => {
   const newRule = { pattern: RecurrencePattern.CUSTOM, customRule }
   validationErrors.value = validateRecurrenceRule(newRule as any).errors
-  emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
+  emit('update:modelValue', { ...safeModelValue.value, rule: newRule as RecurrenceRule })
 }
 
 const updateEndType = (type: EndCondition) => {

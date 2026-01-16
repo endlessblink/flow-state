@@ -138,10 +138,13 @@
 }
 
 .vue-flow__edge-path {
-    stroke: var(--border-secondary);
+    stroke: var(--color-navigation);
     stroke-width: 2px;
     transition: all var(--duration-normal) var(--ease-out);
-    filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.4));
+    /* Crisp rendering without anti-aliasing jaggedness */
+    shape-rendering: geometricPrecision;
+    /* Subtle glow on permanent edges */
+    filter: drop-shadow(0 0 4px var(--color-navigation)) drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
 }
 
 .vue-flow__edge {
@@ -149,15 +152,17 @@
 }
 
 .vue-flow__edge:hover .vue-flow__edge-path {
-    stroke: var(--brand-primary);
+    stroke: var(--color-navigation);
     stroke-width: 3px;
-    filter: drop-shadow(0 3px 8px rgba(99, 102, 241, 0.5));
+    /* Enhanced glow on hover */
+    filter: drop-shadow(0 0 8px var(--color-navigation)) drop-shadow(0 0 16px rgba(59, 130, 246, 0.5));
 }
 
 .vue-flow__edge.selected .vue-flow__edge-path {
-    stroke: var(--accent-primary);
+    stroke: var(--color-success);
     stroke-width: 3px;
-    filter: drop-shadow(0 2px 6px rgba(99, 102, 241, 0.4));
+    /* Green glow for selected */
+    filter: drop-shadow(0 0 8px var(--color-success)) drop-shadow(0 0 16px rgba(34, 197, 94, 0.5));
 }
 
 /* Edge interaction layer - makes edges easier to click */
@@ -284,7 +289,17 @@
     height: 16px !important;
     background: rgba(255, 255, 255, 0.3) !important;
     border-color: rgba(255, 255, 255, 0.7) !important;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 0 8px 2px var(--brand-primary), 0 0 16px 4px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Source handle (bottom) - blue glow */
+.vue-flow__handle.handle-source:hover {
+    box-shadow: 0 0 8px 2px var(--color-navigation), 0 0 16px 4px rgba(59, 130, 246, 0.4) !important;
+}
+
+/* Target handle (top) - green glow */
+.vue-flow__handle.handle-target:hover {
+    box-shadow: 0 0 8px 2px var(--color-success), 0 0 16px 4px rgba(34, 197, 94, 0.3) !important;
 }
 
 
@@ -341,6 +356,8 @@
 .vue-flow__node-taskNode .vue-flow__resize-control {
     display: none !important;
 }
+
+/* Connection handles ARE visible on task nodes for parent-child connections */
 
 .vue-flow__resize-control.handle {
     width: 20px !important;
@@ -583,27 +600,28 @@ body.connecting-active .vue-flow__handle {
     transition: all var(--duration-fast) var(--ease-out) !important;
 }
 
-/* Connection line while dragging - make it visible and styled */
-.vue-flow__connection-line {
-    stroke: var(--brand-primary) !important;
+/* Connection line while dragging - crisp glow effect */
+/* NOTE: Vue Flow uses .vue-flow__connection-path for the dragging line, NOT .vue-flow__connection-line */
+.vue-flow__connection-path {
+    stroke: var(--color-navigation) !important;
     stroke-width: 3px !important;
     stroke-linecap: round !important;
+    /* Crisp rendering without anti-aliasing jaggedness */
+    shape-rendering: geometricPrecision !important;
+    /* Glow effect using filter */
+    filter: drop-shadow(0 0 6px var(--color-navigation)) drop-shadow(0 0 12px rgba(59, 130, 246, 0.5)) !important;
+    animation: connection-glow 1.5s ease-in-out infinite !important;
 }
 
-.vue-flow__connection-line path {
-    stroke: var(--brand-primary) !important;
-    stroke-width: 3px !important;
-    animation: connection-pulse 1s infinite !important;
-}
-
-@keyframes connection-pulse {
-
+@keyframes connection-glow {
     0%,
     100% {
-        opacity: 0.8;
+        filter: drop-shadow(0 0 6px var(--color-navigation)) drop-shadow(0 0 12px rgba(59, 130, 246, 0.4));
+        opacity: 0.9;
     }
 
     50% {
+        filter: drop-shadow(0 0 10px var(--color-navigation)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
         opacity: 1;
     }
 }
@@ -763,19 +781,20 @@ body.dragging-active .vue-flow__background {
 
 /*
    SHIFT-DRAG SELECTION SUPPORT
-   When Shift is held, disable pointer events on Section/Group AND Task nodes
-   so the drag event falls through to the Pane to start the selection box.
-   This enables rubber-band selection starting from inside a group.
+   When Shift is held, disable pointer events on ALL nodes (groups AND tasks)
+   so the drag event falls through to the Vue Flow Pane to start the selection box.
+   This enables rubber-band selection starting from anywhere on the canvas.
+
+   Per Vue Flow docs and xyflow/xyflow#3041, pointer-events: none on nodes
+   is required for selectionOnDrag to work inside parent nodes.
 */
-.shift-selecting .vue-flow__node-sectionNode {
+.shift-selecting .vue-flow__node-sectionNode,
+.shift-selecting .vue-flow__node-taskNode {
     pointer-events: none !important;
 }
 
-/* FIX: Explicitly allow interaction with task nodes during shift-select */
-.shift-selecting .vue-flow__node-taskNode {
-    pointer-events: auto !important;
-    z-index: 2000 !important;
-    /* Ensure on top of selection pane */
-    cursor: context-menu !important;
-    /* Hint that it's clickable */
+/* Ensure all children inside nodes also have pointer-events disabled */
+.shift-selecting .vue-flow__node-sectionNode *,
+.shift-selecting .vue-flow__node-taskNode * {
+    pointer-events: none !important;
 }

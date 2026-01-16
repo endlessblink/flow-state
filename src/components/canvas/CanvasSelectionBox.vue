@@ -30,7 +30,8 @@ defineProps<{
   position: fixed;
   z-index: 9999;
   pointer-events: none;
-  border: 1px solid var(--accent-primary);
-  background-color: var(--color-indigo-bg-subtle);
+  border: 2px solid rgba(99, 102, 241, 0.8);
+  background-color: rgba(99, 102, 241, 0.15);
+  border-radius: 4px;
 }
 </style>

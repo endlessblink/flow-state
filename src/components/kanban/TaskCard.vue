@@ -18,6 +18,7 @@
     :aria-disabled="disabled"
     data-draggable="true"
     :data-status="task.status"
+    :data-priority="task.priority || 'none'"
     @click="handleCardClick"
     @keydown="handleKeydown"
     @contextmenu.prevent="handleRightClick"
@@ -26,8 +27,9 @@
   >
     <!-- Status icon and title row -->
     <div class="card-header">
-      <!-- Status Actions -->
+      <!-- Priority Dot -->
       <TaskCardStatus
+        :priority="task.priority"
         :status="task.status"
         @cycle="cycleStatus"
       />
@@ -38,6 +40,7 @@
           :id="`task-title-${task.id}`"
           class="task-title"
           :class="[titleAlignmentClasses, { 'completed-title': task.progress === 100 }]"
+          :dir="isRtl ? 'rtl' : 'ltr'"
         >
           {{ task.title }}
         </h3>
@@ -115,7 +118,7 @@ const {
   isExpanded, isFocused, isPressed, cardRef,
   isSelected, hasDependencies, completedSubtasks,
   formattedDueDate, formattedDuration, durationBadgeClass,
-  titleAlignmentClasses, projectVisual, taskAriaLabel,
+  titleAlignmentClasses, isRtl, projectVisual, taskAriaLabel,
   progressiveDisclosureEnabled
 } = state
 

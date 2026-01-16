@@ -2,6 +2,7 @@ import { type Ref } from 'vue'
 import { useTaskStore, type Task, type Subtask } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { generateRecurringInstances } from '@/utils/recurrenceUtils'
+import { getUndoSystem } from '@/composables/undoSingleton'
 
 
 // Helper for cleaning task instances (from existing code)
@@ -204,9 +205,26 @@ export function useTaskEditActions(
                 }
             }
 
-            // BUG-291 FIX: Await the async update operation
-            // Update main task
-            await taskStore.updateTaskWithUndo(editedTask.value.id, updates)
+            // BUG-291 FIX: Use direct updateTask for INSTANT feedback
+            // The old flow blocked UI for 2-3 seconds due to:
+            // - 3 dynamic imports in updateTaskWithUndo
+            // - 2 undo state saves
+            // - Instance/subtask operations with same pattern
+            // Now we: Update store → Close modal → Background ops
+            console.time('⚡ [BUG-291] Task update')
+            taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
+            console.timeEnd('⚡ [BUG-291] Task update')
+
+            // CRITICAL: Close modal IMMEDIATELY after Pinia update
+            // Instance/subtask ops happen in background below
+            emit('close')
+            isSaving.value = false
+
+            // === BACKGROUND OPERATIONS (fire-and-forget) ===
+            // These run after modal closes - user doesn't wait for them
+
+            // Fire-and-forget: Save undo state in background
+            getUndoSystem().saveState('After edit modal save').catch(() => {})
 
             // Handle instances
             if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
@@ -268,9 +286,9 @@ export function useTaskEditActions(
                 }
             })
 
-            emit('close')
+            // NOTE: emit('close') already called above for instant feedback
         } finally {
-            isSaving.value = false
+            // NOTE: isSaving already set to false above for instant feedback
         }
     }
 

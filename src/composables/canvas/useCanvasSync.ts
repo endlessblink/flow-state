@@ -4,10 +4,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useVueFlow } from '@vue-flow/core'
 import {
-    sanitizePosition,
-    toRelativePosition,
-    groupPositionToVueFlow,
-    taskPositionToVueFlow
+    sanitizePosition
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { positionManager } from '@/services/canvas/PositionManager'
@@ -241,11 +238,10 @@ export function useCanvasSync() {
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos
+                // Only convert to relative if we have a valid, visible parent
                 if (parentId && visibleGroupIds.has(parentId)) {
-                    const pmParent = positionManager.getPosition(parentId)
-                    if (pmParent) {
-                        vueFlowPos = toRelativePosition(absolutePos, pmParent.position)
-                    }
+                    const relative = positionManager.getRelativePosition(group.id)
+                    if (relative) vueFlowPos = relative
                 }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 100, y: 100 })
@@ -344,11 +340,10 @@ export function useCanvasSync() {
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos
+                // Only convert to relative if we have a valid, visible parent
                 if (parentId && visibleGroupIds.has(parentId)) {
-                    const pmParent = positionManager.getPosition(parentId)
-                    if (pmParent) {
-                        vueFlowPos = toRelativePosition(absolutePos, pmParent.position)
-                    }
+                    const relative = positionManager.getRelativePosition(task.id)
+                    if (relative) vueFlowPos = relative
                 }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })
@@ -386,7 +381,10 @@ export function useCanvasSync() {
                     // freely dragged, and onNodeDragStop handles re-parenting via spatial containment.
                     expandParent: false,
                     data: {
-                        task,
+                        // BUG-FIX: Shallow clone task to break reference equality.
+                        // Without this, idempotence check compares same object (old === new),
+                        // causing sync to skip setNodes() even when task properties changed.
+                        task: { ...task },
                         label: task.title
                     }
                 })

@@ -9,11 +9,9 @@ AVAILABLE SKILLS REMINDER:
 This project has 30+ specialized skills. Use the Skill tool to invoke them:
 
 DEBUGGING & FIXES:
-- Skill(dev-debugging) - General bug fixing, state issues
+- Skill(dev-debugging) - General bug fixing, state issues, task store CRUD, keyboard shortcuts
 - Skill(vue-flow-debug) - Canvas/Vue Flow issues
 - Skill(dev-fix-timer) - Pomodoro timer issues
-- Skill(dev-fix-keyboard) - Keyboard shortcuts
-- Skill(dev-fix-task-store) - Task CRUD issues
 - Skill(ops-port-manager) - Port/server issues
 
 DEVELOPMENT:
@@ -28,8 +26,7 @@ QUALITY:
 - Skill(codebase-health-auditor) - Dead code detection
 
 UTILITIES:
-- Skill(smart-doc-manager) - Documentation
-- Skill(master-plan-manager) - MASTER_PLAN.md updates
+- Skill(smart-doc-manager) - Documentation and MASTER_PLAN.md management
 - Skill(skill-creator-doctor) - Skill management
 
 When user requests match a skill's purpose, INVOKE IT using the Skill tool.

@@ -8,7 +8,7 @@ description: UNIFIED ARCHITECT - Strategic development orchestrator AND systemat
 
 **Version:** 3.0.0
 **Category:** Meta-Skill / Unified Architect
-**Related Skills:** dev-debugging, dev-vue, qa-testing, codebase-health-auditor, master-plan-manager, smart-doc-manager
+**Related Skills:** dev-debugging, dev-vue, qa-testing, codebase-health-auditor, smart-doc-manager
 
 ## Overview
 
@@ -39,7 +39,7 @@ Optimized for single-developer projects serving 10-100 users.
 1. **After plan is approved** → Use appropriate dev skill (`dev-debugging`, `dev-vue`, `dev-refactoring`)
 2. **After implementation complete** → Use `Skill(qa-testing)` to verify the implementation
 3. **If documentation needed** → Use `Skill(smart-doc-manager)` for doc updates
-4. **If MASTER_PLAN update needed** → Use `Skill(master-plan-manager)`
+4. **If MASTER_PLAN update needed** → Use `Skill(smart-doc-manager)` (includes master-plan management)
 
 **Example chaining workflow**:
 ```
@@ -361,11 +361,11 @@ To find current skills, check `.claude/skills/` directory. Current categories:
 |----------|--------|
 | **Debugging** | `dev-debugging`, `vue-flow-debug`, `supabase-debugger`, `frontend-layout-fixer` |
 | **Development** | `dev-vue`, `dev-vueuse`, `dev-refactoring`, `dev-implement-ui-ux`, `tiptap-vue3` |
-| **Fixes** | `dev-fix-keyboard`, `dev-fix-timer`, `dev-fix-task-store`, `dev-undo-redo`, `persistence-type-fixer` |
+| **Fixes** | `dev-fix-timer`, `dev-undo-redo` |
 | **Quality** | `qa-testing`, `codebase-health-auditor` |
-| **Documentation** | `smart-doc-manager`, `master-plan-manager`, `dev-storybook` |
-| **Infrastructure** | `ops-port-manager`, `tauri-e2e-testing` |
-| **Analysis** | `detect-competing-systems`, `ts-architectural-cleanup`, `vue-filter-manager` |
+| **Documentation** | `smart-doc-manager`, `dev-storybook` |
+| **Infrastructure** | `ops-port-manager` |
+| **Analysis** | `ts-architectural-cleanup`, `vue-filter-manager` |
 | **Meta** | `meta-skill-router`, `skill-creator-doctor`, `calendar-interface-architect` |
 
 ### Skill Routing Guidance

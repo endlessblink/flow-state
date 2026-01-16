@@ -16,7 +16,7 @@ export interface Position {
 
 export type CanvasOperationState =
     | { type: 'idle' }
-    | { type: 'dragging'; nodeIds: string[]; startPositions: Map<string, Position> }
+    | { type: 'dragging'; nodeIds: string[] }
     | { type: 'drag-settling'; nodeIds: string[]; settleTimeout: number }
     | { type: 'resizing'; groupId: string; handle: string }
     | { type: 'resize-settling'; groupId: string; settleTimeout: number }
@@ -34,9 +34,9 @@ export function useCanvasOperationState() {
 
     // --- Transitions ---
 
-    const startDrag = (nodeIds: string[], positions: Map<string, Position>) => {
+    const startDrag = (nodeIds: string[]) => {
         if (state.value.type !== 'idle') return false
-        state.value = { type: 'dragging', nodeIds, startPositions: positions }
+        state.value = { type: 'dragging', nodeIds }
         return true
     }
 

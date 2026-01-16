@@ -1686,30 +1686,35 @@ function useFallbackQuestions(orch, reason) {
             id: 'q0',
             question: `Detected tech stack: ${detectedStack}. Is this correct?`,
             type: 'choice',
+            multiSelect: false,
             options: ['Yes, use this stack', 'No, let me specify']
         },
         {
             id: 'q1',
             question: 'What type of feature is this?',
             type: 'choice',
+            multiSelect: false,
             options: ['New feature', 'Bug fix', 'Refactoring', 'Performance improvement', 'UI/UX update']
         },
         {
             id: 'q2',
             question: 'What is the scope of this work?',
             type: 'choice',
+            multiSelect: false,
             options: ['Small (1-2 files)', 'Medium (3-5 files)', 'Large (6+ files)', 'Not sure']
         },
         {
             id: 'q3',
             question: 'What are the essential features or requirements? (describe briefly)',
-            type: 'text'
+            type: 'text',
+            multiSelect: false
         },
         {
             id: 'q4',
-            question: 'Any specific constraints or areas to avoid?',
-            type: 'choice',
-            options: ['No constraints', 'Don\'t modify existing tests', 'Keep backwards compatible', 'Other (explain below)']
+            question: 'What quality and testing requirements apply?',
+            type: 'multiselect',
+            multiSelect: true,
+            options: ['Unit tests required', 'E2E tests required', 'Keep backwards compatible', 'Performance critical', 'Accessibility compliance']
         }
     ];
 
@@ -1727,7 +1732,7 @@ async function generateClarifyingQuestions(orch) {
 
     // TEMPORARY: Skip Claude and use fallback questions for faster testing
     // TODO: Re-enable Claude once we debug the hanging issue
-    const USE_CLAUDE_FOR_QUESTIONS = false;
+    const USE_CLAUDE_FOR_QUESTIONS = true;
 
     if (!USE_CLAUDE_FOR_QUESTIONS) {
         console.log(`[Orchestrator] Using immediate fallback questions (Claude disabled)`);
@@ -1747,15 +1752,30 @@ Focus on:
 4. Quality requirements (testing, accessibility, security needs)
 
 Output ONLY a JSON array of questions, each with:
-- "id": unique string
+- "id": unique string (e.g., "q1", "q2")
 - "question": the question text
-- "options": optional array of common answers (2-4 options)
-- "type": "choice" or "text"
+- "options": optional array of common answers (2-5 options)
+- "type": "choice", "multiselect", or "text"
+- "multiSelect": boolean (true for questions where multiple options can be selected)
+
+Use multiSelect: true for questions about:
+- Features to include (users often want multiple)
+- Technologies/libraries to use together
+- Quality requirements (testing, accessibility, security)
+- Integrations needed
+- Target platforms or browsers
+
+Use multiSelect: false (single choice) for:
+- Framework choice (usually pick one)
+- Primary architecture pattern
+- Priority decisions
 
 Example:
 [
-  {"id": "q1", "question": "What framework should we use?", "options": ["Vue 3", "React", "Svelte"], "type": "choice"},
-  {"id": "q2", "question": "What specific features are must-haves?", "type": "text"}
+  {"id": "q1", "question": "What framework should we use?", "options": ["Vue 3", "React", "Svelte", "Angular"], "type": "choice", "multiSelect": false},
+  {"id": "q2", "question": "Which features are must-haves?", "options": ["Authentication", "Dark mode", "Offline support", "Real-time sync", "Accessibility"], "type": "multiselect", "multiSelect": true},
+  {"id": "q3", "question": "What quality requirements matter most?", "options": ["Unit tests", "E2E tests", "WCAG compliance", "Performance optimization"], "type": "multiselect", "multiSelect": true},
+  {"id": "q4", "question": "Any specific integration requirements?", "type": "text"}
 ]`;
 
     broadcastOrchestration(orch.id, {
@@ -2070,7 +2090,7 @@ async function generatePlan(orch) {
     console.log('[Orchestrator] generatePlan called for:', orch.id);
 
     // TEMPORARY: Skip Claude and use fallback plan for faster testing
-    const USE_CLAUDE_FOR_PLAN = false;
+    const USE_CLAUDE_FOR_PLAN = true;
 
     if (!USE_CLAUDE_FOR_PLAN) {
         console.log('[Orchestrator] Using immediate fallback plan (Claude disabled)');
@@ -2140,16 +2160,30 @@ Create 5-10 tasks that cover the full implementation.`;
             '-p', prompt
         ], {
             cwd: path.join(__dirname, '..'),
-            stdio: ['inherit', 'pipe', 'pipe'],
-            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: { ...process.env }
         });
+
+        // Close stdin immediately - Claude --print doesn't need input
+        planProcess.stdin.end();
 
         console.log('[Orchestrator] Claude process spawned for plan generation');
 
         let output = '';
+        let timedOut = false;
+
+        // Set timeout to prevent infinite hang (60 seconds for plan generation)
+        const timeout = setTimeout(() => {
+            timedOut = true;
+            console.log('[Orchestrator] Plan generation timed out after 60s, using fallback');
+            planProcess.kill('SIGTERM');
+            orch.planGenerating = false;
+            useFallbackPlan(orch);
+        }, 60000);
 
         planProcess.stdout.on('data', (data) => {
             output += data.toString();
+            console.log(`[Orchestrator] Plan stdout chunk: ${data.toString().substring(0, 100)}...`);
         });
 
         planProcess.stderr.on('data', (data) => {
@@ -2157,6 +2191,9 @@ Create 5-10 tasks that cover the full implementation.`;
         });
 
         planProcess.on('close', (code) => {
+            clearTimeout(timeout);
+            if (timedOut) return;  // Already handled by timeout
+
             orch.planGenerating = false;  // Reset flag
 
             if (code === 0) {
@@ -2231,6 +2268,15 @@ app.post('/api/orchestrator/:id/execute', (req, res) => {
     });
 });
 
+// Helper: Get orchestration execution stats
+function getOrchestrationStats(orch) {
+    const completed = orch.subAgents.filter(a => a.status === 'completed').length;
+    const running = orch.subAgents.filter(a => a.status === 'running').length;
+    const failed = orch.subAgents.filter(a => a.status === 'failed').length;
+    const pending = orch.plan.length - orch.subAgents.length;
+    return { completed, running, failed, pending, total: orch.plan.length };
+}
+
 // Helper: Execute next available tasks
 function executeNextTasks(orch) {
     // Find tasks that are ready (dependencies completed)
@@ -2278,19 +2324,34 @@ function executeNextTasks(orch) {
 
 // Helper: Spawn a sub-agent for a task
 function spawnSubAgent(orch, task) {
+    // Create isolated worktree for this agent
+    const worktreeTaskId = `orch-${task.id}`;
+    const { worktreePath, branchName, created } = createAgentWorktree(worktreeTaskId);
+
+    console.log(`[Orchestrator] Agent worktree: ${worktreePath} (branch: ${branchName}, created: ${created})`);
+
     const subAgentData = {
         taskId: task.id,
         task: task,
         status: 'running',
         retries: 0,
         output: [],
-        startTime: Date.now()
+        startTime: Date.now(),
+        worktreePath: worktreePath,
+        branchName: branchName
     };
 
     orch.subAgents.push(subAgentData);
 
+    // Broadcast task_started event with stats
+    const stats = getOrchestrationStats(orch);
     broadcastOrchestration(orch.id, {
-        type: 'summary',
+        type: 'task_started',
+        taskId: task.id,
+        task: task,
+        worktree: worktreePath,
+        branch: branchName,
+        stats: stats,
         message: `🚀 Starting: ${task.title} (${task.agentType})`
     });
 
@@ -2307,20 +2368,26 @@ ${Object.entries(orch.answers).map(([k, v]) => `- ${v}`).join('\n')}
 
 Instructions:
 1. Complete this specific task thoroughly
-2. Test your work
-3. Report what you accomplished
+2. Test your work by running relevant tests or verifying manually
+3. Commit your changes with a clear message
+4. Report what you accomplished
 
-Focus only on this task. Other tasks are being handled by other specialists.`;
+Focus only on this task. Other tasks are being handled by other specialists.
+You are working in an isolated git worktree. Your changes will be reviewed before merging.`;
 
     const agentProcess = spawn('claude', [
-        '--print',
+        '--permission-mode', 'bypassPermissions',
+        '--output-format', 'stream-json',
         '--max-turns', '30',
         '-p', prompt
     ], {
-        cwd: path.join(__dirname, '..'),
-        stdio: ['inherit', 'pipe', 'pipe'],
-        env: { ...process.env, ANTHROPIC_API_KEY: '' }
+        cwd: worktreePath,  // Work in isolated worktree
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env }  // Preserve API key!
     });
+
+    // Close stdin immediately to prevent hanging
+    agentProcess.stdin.end();
 
     subAgentData.process = agentProcess;
 
@@ -2345,12 +2412,48 @@ Focus only on this task. Other tasks are being handled by other specialists.`;
 
     agentProcess.on('close', (code) => {
         subAgentData.endTime = Date.now();
+        const stats = getOrchestrationStats(orch);
 
         if (code === 0) {
             subAgentData.status = 'completed';
+
+            // Get diff summary from worktree (don't auto-merge!)
+            let diffSummary = '';
+            let filesChanged = 0;
+            try {
+                if (subAgentData.worktreePath && subAgentData.branchName) {
+                    // Get diff stat against the branch base
+                    diffSummary = execSync(`git diff --stat HEAD~1 2>/dev/null || git diff --stat HEAD`, {
+                        cwd: subAgentData.worktreePath,
+                        encoding: 'utf8',
+                        stdio: ['pipe', 'pipe', 'pipe']
+                    }).trim();
+
+                    // Count files changed
+                    const match = diffSummary.match(/(\d+) files? changed/);
+                    filesChanged = match ? parseInt(match[1]) : 0;
+                }
+            } catch (err) {
+                console.log(`[Orchestrator] Could not get diff summary: ${err.message}`);
+                diffSummary = 'Unable to retrieve diff';
+            }
+
+            // Broadcast task_completed with diff info for review
             broadcastOrchestration(orch.id, {
-                type: 'summary',
-                message: `✅ Completed: ${task.title}`
+                type: 'task_completed',
+                taskId: task.id,
+                task: task,
+                branch: subAgentData.branchName,
+                worktree: subAgentData.worktreePath,
+                diffSummary: diffSummary,
+                filesChanged: filesChanged,
+                stats: stats,
+                reviewCommands: {
+                    viewDiff: `git diff ${subAgentData.branchName}`,
+                    merge: `git merge ${subAgentData.branchName} --no-ff -m "Orchestrator: ${task.title}"`,
+                    discard: `git worktree remove ${subAgentData.worktreePath} --force && git branch -D ${subAgentData.branchName}`
+                },
+                message: `✅ Completed: ${task.title} (${filesChanged} files changed)`
             });
         } else {
             // Failed - check retries
@@ -2358,8 +2461,18 @@ Focus only on this task. Other tasks are being handled by other specialists.`;
                 subAgentData.retries++;
                 subAgentData.status = 'retrying';
 
+                // Cleanup failed worktree before retry
+                if (subAgentData.worktreePath) {
+                    cleanupWorktree(`orch-${task.id}`);
+                }
+
                 broadcastOrchestration(orch.id, {
-                    type: 'summary',
+                    type: 'task_retrying',
+                    taskId: task.id,
+                    task: task,
+                    retries: subAgentData.retries,
+                    maxRetries: orch.maxRetries,
+                    stats: stats,
                     message: `⚠️ ${task.title} failed. Retrying (${subAgentData.retries}/${orch.maxRetries})...`
                 });
 
@@ -2372,9 +2485,16 @@ Focus only on this task. Other tasks are being handled by other specialists.`;
             } else {
                 subAgentData.status = 'failed';
 
+                // Cleanup failed worktree
+                if (subAgentData.worktreePath) {
+                    cleanupWorktree(`orch-${task.id}`);
+                }
+
                 broadcastOrchestration(orch.id, {
-                    type: 'escalation',
+                    type: 'task_failed',
                     taskId: task.id,
+                    task: task,
+                    stats: stats,
                     message: `❌ ${task.title} failed after ${orch.maxRetries} retries. Please review.`,
                     error: subAgentData.output.slice(-5).join('')
                 });
@@ -2453,6 +2573,137 @@ app.delete('/api/orchestrator/:id', (req, res) => {
     res.json({ success: true, message: 'Orchestration deleted' });
 });
 
+// GET /api/orchestrator/task/:taskId/diff - Get full diff for a task
+app.get('/api/orchestrator/task/:taskId/diff', (req, res) => {
+    const taskId = req.params.taskId;
+    const branch = req.query.branch;
+
+    if (!branch) {
+        return res.status(400).json({ error: 'Branch parameter required' });
+    }
+
+    const projectRoot = path.join(__dirname, '..');
+
+    try {
+        // Get the diff between the branch and master
+        const diff = execSync(`git diff master...${branch}`, {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+            maxBuffer: 10 * 1024 * 1024  // 10MB buffer for large diffs
+        });
+
+        res.json({ success: true, diff: diff });
+    } catch (err) {
+        console.error(`[Orchestrator] Error getting diff for ${taskId}:`, err.message);
+        res.status(500).json({ error: `Failed to get diff: ${err.message}` });
+    }
+});
+
+// POST /api/orchestrator/task/:taskId/merge - Merge a task's branch
+app.post('/api/orchestrator/task/:taskId/merge', (req, res) => {
+    const taskId = req.params.taskId;
+    const { branch, worktree } = req.body;
+
+    if (!branch) {
+        return res.status(400).json({ error: 'Branch required' });
+    }
+
+    const projectRoot = path.join(__dirname, '..');
+
+    try {
+        // First, checkout master
+        execSync(`git checkout master`, {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        // Merge the branch with a descriptive commit message
+        execSync(`git merge ${branch} --no-ff -m "Orchestrator: Merge ${branch}"`, {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        console.log(`[Orchestrator] Merged branch ${branch}`);
+
+        // Clean up: remove worktree and branch
+        if (worktree) {
+            try {
+                execSync(`git worktree remove "${worktree}" --force`, {
+                    cwd: projectRoot,
+                    encoding: 'utf8',
+                    stdio: ['pipe', 'pipe', 'pipe']
+                });
+                console.log(`[Orchestrator] Removed worktree ${worktree}`);
+            } catch (e) {
+                console.warn(`[Orchestrator] Could not remove worktree: ${e.message}`);
+            }
+        }
+
+        // Delete the branch after merge
+        try {
+            execSync(`git branch -d ${branch}`, {
+                cwd: projectRoot,
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'pipe']
+            });
+            console.log(`[Orchestrator] Deleted branch ${branch}`);
+        } catch (e) {
+            console.warn(`[Orchestrator] Could not delete branch: ${e.message}`);
+        }
+
+        res.json({ success: true, message: `Merged ${branch}` });
+    } catch (err) {
+        console.error(`[Orchestrator] Error merging ${taskId}:`, err.message);
+        res.status(500).json({ error: `Merge failed: ${err.message}` });
+    }
+});
+
+// POST /api/orchestrator/task/:taskId/discard - Discard a task's worktree and branch
+app.post('/api/orchestrator/task/:taskId/discard', (req, res) => {
+    const taskId = req.params.taskId;
+    const { branch, worktree } = req.body;
+
+    const projectRoot = path.join(__dirname, '..');
+
+    try {
+        // Remove worktree first (if exists)
+        if (worktree) {
+            try {
+                execSync(`git worktree remove "${worktree}" --force`, {
+                    cwd: projectRoot,
+                    encoding: 'utf8',
+                    stdio: ['pipe', 'pipe', 'pipe']
+                });
+                console.log(`[Orchestrator] Removed worktree ${worktree}`);
+            } catch (e) {
+                console.warn(`[Orchestrator] Worktree removal: ${e.message}`);
+            }
+        }
+
+        // Delete the branch
+        if (branch) {
+            try {
+                execSync(`git branch -D ${branch}`, {
+                    cwd: projectRoot,
+                    encoding: 'utf8',
+                    stdio: ['pipe', 'pipe', 'pipe']
+                });
+                console.log(`[Orchestrator] Force deleted branch ${branch}`);
+            } catch (e) {
+                console.warn(`[Orchestrator] Branch deletion: ${e.message}`);
+            }
+        }
+
+        res.json({ success: true, message: `Discarded task ${taskId}` });
+    } catch (err) {
+        console.error(`[Orchestrator] Error discarding ${taskId}:`, err.message);
+        res.status(500).json({ error: `Discard failed: ${err.message}` });
+    }
+});
+
 // POST /api/orchestrator/:id/chat - Chat with orchestrator at current phase
 app.post('/api/orchestrator/:id/chat', async (req, res) => {
     const { message, phase } = req.body;
@@ -2476,18 +2727,29 @@ Current phase: ${phase || orch.phase}
         contextPrompt += `\nCurrent plan:\n${orch.plan.map((t, i) => `${i+1}. ${t.title}`).join('\n')}`;
     }
 
+    // Add execution-specific context
+    if (phase === 'execution' || orch.phase === 'execution') {
+        contextPrompt += `\nExecution is in progress. Running tasks may include agents working on the plan.`;
+        contextPrompt += `\nYou can help the user understand progress, pause/modify execution, or answer questions about the work being done.`;
+    }
+
     contextPrompt += `\n\nUser message: "${message}"
 
-Respond helpfully. If they're asking for clarification, explain clearly.
+Respond helpfully and in a structured way. Use bullet points or numbered lists when listing multiple items.
+If they're asking for clarification, explain clearly with specific details.
 If they're requesting changes, acknowledge and suggest how to proceed.
-Keep responses concise (2-4 sentences).`;
+Format your response for readability - use **bold** for emphasis, \`code\` for technical terms.
+Keep responses concise but complete (3-5 sentences).`;
 
     try {
         const chatProcess = spawn('claude', ['--print', '-p', contextPrompt], {
             cwd: path.join(__dirname, '..'),
-            stdio: ['inherit', 'pipe', 'pipe'],
-            env: { ...process.env, ANTHROPIC_API_KEY: '' }
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: { ...process.env }
         });
+
+        // Close stdin immediately
+        chatProcess.stdin.end();
 
         let response = '';
         chatProcess.stdout.on('data', (data) => {
@@ -2513,6 +2775,243 @@ Keep responses concise (2-4 sentences).`;
 
         chatProcess.on('error', (err) => {
             console.error('[Chat] Process error:', err);
+            res.status(500).json({ error: err.message });
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/orchestrator/:id/more-questions - Request more clarifying questions
+app.post('/api/orchestrator/:id/more-questions', async (req, res) => {
+    const orch = orchestrations.get(req.params.id);
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    console.log(`[Orchestrator] Generating more questions for ${req.params.id}`);
+
+    // Build a summary of questions already asked
+    const existingQuestions = (orch.questions || []).map(q => q.question).join('\n- ');
+
+    const prompt = `You are a senior requirements analyst. Think carefully before asking more questions.
+
+PROJECT GOAL:
+"${orch.goal}"
+
+QUESTIONS ALREADY ASKED:
+- ${existingQuestions}
+
+USER'S ANSWERS SO FAR:
+${JSON.stringify(orch.answers, null, 2)}
+
+${orch.plan && orch.plan.length > 0 ? `CURRENT PLAN:\n${orch.plan.map((t, i) => `${i+1}. ${t.title}: ${t.description || ''}`).join('\n')}` : ''}
+
+YOUR TASK:
+1. First, carefully analyze what the user has ALREADY told you through their answers
+2. Identify what you STILL DON'T KNOW that would be critical for implementation
+3. DO NOT repeat or rephrase questions that were already asked
+4. Only ask questions that reveal genuinely NEW information
+
+If the user's answers are comprehensive and you have enough information to proceed, respond with:
+{"sufficient": true, "reason": "Brief explanation of why no more questions are needed"}
+
+If you genuinely need more information, output 1-3 NEW questions (not rephrased versions of existing ones):
+[
+  {"id": "deep-1", "question": "...", "options": [...], "type": "choice|multiselect", "multiSelect": true|false}
+]
+
+Rules for new questions:
+- Each question must ask about something NOT covered by previous questions/answers
+- Include 2-5 options when possible (not open-ended unless necessary)
+- Use multiSelect: true when multiple options can apply together
+- Focus on: implementation details, edge cases, technical constraints, UX specifics
+
+Think step by step: What do I already know? What critical gaps remain?`;
+
+    try {
+        const questionsProcess = spawn('claude', ['--print', '-p', prompt], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env }
+        });
+
+        let output = '';
+        questionsProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        questionsProcess.stderr.on('data', (data) => {
+            console.log('[MoreQuestions] stderr:', data.toString());
+        });
+
+        questionsProcess.on('close', (code) => {
+            if (code === 0 && output.trim()) {
+                try {
+                    // Check if Claude said no more questions needed
+                    const sufficientMatch = output.match(/\{"sufficient"\s*:\s*true[^}]*\}/);
+                    if (sufficientMatch) {
+                        try {
+                            const sufficientResponse = JSON.parse(sufficientMatch[0]);
+                            console.log('[MoreQuestions] Claude says sufficient:', sufficientResponse.reason);
+                            return res.json({
+                                success: true,
+                                sufficient: true,
+                                reason: sufficientResponse.reason || 'Your answers are comprehensive enough to proceed.',
+                                newQuestions: [],
+                                allQuestions: orch.questions,
+                                message: sufficientResponse.reason || 'No additional questions needed - ready to generate plan!'
+                            });
+                        } catch (e) {
+                            // Fall through to try parsing as questions
+                        }
+                    }
+
+                    // Try to parse as questions array
+                    const jsonMatch = output.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) {
+                        const newQuestions = JSON.parse(jsonMatch[0]);
+
+                        // Ensure unique IDs
+                        const existingIds = new Set(orch.questions?.map(q => q.id) || []);
+                        newQuestions.forEach((q, i) => {
+                            if (existingIds.has(q.id)) {
+                                q.id = `deep-${Date.now()}-${i}`;
+                            }
+                        });
+
+                        // Add to questions list
+                        if (!orch.questions) orch.questions = [];
+                        orch.questions.push(...newQuestions);
+
+                        // Return to questions phase so user can answer
+                        orch.phase = 'questions';
+                        debouncedSave();
+
+                        // Broadcast the update
+                        broadcastOrchestration(orch.id, {
+                            type: 'questions',
+                            questions: orch.questions,
+                            message: `Added ${newQuestions.length} new clarifying questions`
+                        });
+
+                        res.json({
+                            success: true,
+                            newQuestions,
+                            allQuestions: orch.questions,
+                            message: `Added ${newQuestions.length} new questions`
+                        });
+                    } else {
+                        res.status(500).json({ error: 'Could not parse questions from response' });
+                    }
+                } catch (parseErr) {
+                    console.error('[MoreQuestions] Parse error:', parseErr);
+                    res.status(500).json({ error: 'Failed to parse questions JSON' });
+                }
+            } else {
+                res.status(500).json({ error: 'Failed to generate questions' });
+            }
+        });
+
+        questionsProcess.on('error', (err) => {
+            console.error('[MoreQuestions] Process error:', err);
+            res.status(500).json({ error: err.message });
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/orchestrator/:id/task/:taskId/chat - Chat about a specific plan task
+app.post('/api/orchestrator/:id/task/:taskId/chat', async (req, res) => {
+    const { message } = req.body;
+    const orch = orchestrations.get(req.params.id);
+    const taskId = req.params.taskId;
+
+    if (!orch) {
+        return res.status(404).json({ error: 'Orchestration not found' });
+    }
+
+    // Find the task in the plan
+    const task = orch.plan?.find(t => t.id === taskId);
+    if (!task) {
+        return res.status(404).json({ error: 'Task not found in plan' });
+    }
+
+    console.log(`[Orchestrator] Task chat for ${taskId}: ${message.slice(0, 50)}...`);
+
+    // Build context-aware prompt for this specific task
+    const contextPrompt = `You are an orchestration assistant helping refine a software implementation plan.
+
+OVERALL PROJECT GOAL: "${orch.goal}"
+
+USER REQUIREMENTS (from Q&A):
+${JSON.stringify(orch.answers, null, 2)}
+
+CURRENT PLAN:
+${orch.plan.map((t, i) => `${i+1}. [${t.id}] ${t.title}${t.id === taskId ? ' ← DISCUSSING THIS TASK' : ''}`).join('\n')}
+
+SPECIFIC TASK BEING DISCUSSED:
+- ID: ${task.id}
+- Title: ${task.title}
+- Description: ${task.description || 'No description yet'}
+- Agent Type: ${task.agentType || 'Not specified'}
+- Dependencies: ${task.dependencies?.join(', ') || 'None'}
+
+USER'S QUESTION/FEEDBACK ABOUT THIS TASK:
+"${message}"
+
+Respond helpfully about this specific task:
+- If they want changes, suggest how to modify the task
+- If they need clarification, explain the technical approach
+- If they have concerns, address them directly
+- Suggest improvements if relevant
+
+Keep response focused and concise (2-4 sentences). If the user wants to modify the task, explain what changes you recommend.`;
+
+    try {
+        const chatProcess = spawn('claude', ['--print', '-p', contextPrompt], {
+            cwd: path.join(__dirname, '..'),
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: { ...process.env }
+        });
+
+        let response = '';
+        chatProcess.stdout.on('data', (data) => {
+            response += data.toString();
+        });
+
+        chatProcess.stderr.on('data', (data) => {
+            console.log('[TaskChat] stderr:', data.toString());
+        });
+
+        chatProcess.on('close', (code) => {
+            if (code === 0 && response.trim()) {
+                // Store chat history per task
+                if (!orch.taskChatHistory) orch.taskChatHistory = {};
+                if (!orch.taskChatHistory[taskId]) orch.taskChatHistory[taskId] = [];
+
+                orch.taskChatHistory[taskId].push(
+                    { role: 'user', message, timestamp: Date.now() },
+                    { role: 'assistant', message: response.trim(), timestamp: Date.now() }
+                );
+
+                debouncedSave();
+
+                res.json({
+                    success: true,
+                    response: response.trim(),
+                    taskId,
+                    chatHistory: orch.taskChatHistory[taskId]
+                });
+            } else {
+                res.status(500).json({ error: 'Failed to generate response' });
+            }
+        });
+
+        chatProcess.on('error', (err) => {
+            console.error('[TaskChat] Process error:', err);
             res.status(500).json({ error: err.message });
         });
     } catch (err) {

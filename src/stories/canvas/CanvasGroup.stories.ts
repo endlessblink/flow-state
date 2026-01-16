@@ -30,7 +30,7 @@ export const Default = {
             name: 'Test Group',
             type: 'custom',
             position: { x: 0, y: 0, width: 400, height: 300 },
-            color: '#3b82f6',
+            color: '#4ecdc4',  // Brand teal color - matches design system
             layout: 'grid',
             isVisible: true,
             isCollapsed: false,

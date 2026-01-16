@@ -36,22 +36,16 @@ defineEmits<{
 .compact-actions {
   display: flex;
   gap: var(--space-1);
-  opacity: 0;
-  transition: opacity var(--duration-normal) ease;
-}
-
-/* Ensure actions are visible on hover of parent card */
-:deep(.task-card:hover) .compact-actions,
-.compact-actions:focus-within {
-  opacity: 1;
+  flex-shrink: 0;
+  /* Hidden by default - parent handles hover visibility */
 }
 
 .action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);

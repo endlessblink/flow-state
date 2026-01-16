@@ -246,20 +246,18 @@ watch(isOpen, (newVal) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-1);
+  padding: var(--space-1_5) var(--space-2);
 
-  /* Standardized input styling */
-  background: var(--input-bg, var(--glass-bg-medium));
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid var(--glass-border-hover);
-  border-radius: var(--radius-lg);
+  /* Lean input styling */
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 
   color: var(--text-primary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  min-height: 44px;
+  min-height: 28px;
   cursor: pointer;
   outline: none;
   transition: all var(--duration-fast) var(--spring-smooth);
@@ -267,18 +265,16 @@ watch(isOpen, (newVal) => {
 }
 
 .select-trigger:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.1);
+  border-color: var(--glass-border-hover);
+  background: var(--surface-hover);
 }
 
 .select-trigger:focus {
-  border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
 }
 
 .select-trigger.is-open {
-  border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
 }
 
 .select-value {
@@ -303,17 +299,19 @@ watch(isOpen, (newVal) => {
   /* Position is set via inline style from Teleport */
   z-index: 99999;
 
-  /* Use design tokens for consistent overlay styling */
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border);
-  box-shadow: var(--overlay-component-shadow);
-  border-radius: var(--radius-xl);
+  /* Glass morphism - semi-transparent with blur */
+  background: rgba(30, 30, 40, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  border-radius: var(--radius-lg);
 
-  max-height: 240px;
+  max-height: 200px;
   overflow-y: auto;
-  padding: var(--space-2);
+  padding: var(--space-1);
   margin: 0;
   list-style: none;
 
@@ -325,35 +323,36 @@ watch(isOpen, (newVal) => {
 .select-option {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2_5) var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-1_5) var(--space-2);
 
-  /* Clean styling matching SectionSelector */
+  /* Lean option styling */
   background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
 
   color: var(--text-primary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: all var(--duration-normal) var(--spring-smooth);
   user-select: none;
   white-space: nowrap;
+  min-height: 28px;
 }
 
 .select-option:hover,
 .select-option.is-focused {
-  background: var(--glass-bg-heavy);
+  background: var(--surface-hover);
 }
 
 .select-option.is-selected {
-  background: var(--brand-primary-bg-medium);
+  background: rgba(78, 205, 196, 0.15);
   color: var(--brand-primary);
-  font-weight: var(--font-medium);
 }
 
 .select-option.is-selected:hover,
 .select-option.is-selected.is-focused {
-  background: var(--brand-primary-bg-heavy);
+  background: rgba(78, 205, 196, 0.2);
 }
 
 /* Dropdown transition */

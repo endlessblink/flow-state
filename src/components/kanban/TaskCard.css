@@ -5,10 +5,10 @@
     -webkit-backdrop-filter: blur(var(--blur-sm));
     /* Subtle but visible border */
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-lg);
-    /* More generous padding for breathing room */
-    padding: var(--space-4);
-    margin-bottom: var(--space-3);
+    border-radius: var(--radius-md);
+    /* Compact padding */
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
     cursor: pointer;
     transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
     position: relative;
@@ -22,7 +22,17 @@
     border-color: rgba(255, 255, 255, 0.18);
 }
 
-/* Show action buttons only on hover */
+/* Hide action buttons by default, show on hover */
+.task-card .card-actions {
+    opacity: 0;
+    transition: opacity var(--duration-fast) ease;
+}
+
+.task-card:hover .card-actions {
+    opacity: 1;
+}
+
+/* Also handle compact-actions class */
 .task-card .compact-actions {
     opacity: 0;
     transition: opacity var(--duration-fast) ease;
@@ -57,33 +67,30 @@
 .card-header {
     display: flex;
     align-items: flex-start;
-    gap: var(--space-3);
+    gap: var(--space-2);
     width: 100%;
-    justify-content: space-between;
 }
 
 .title-section {
     flex: 1;
     min-width: 0;
+    /* Ensure text wraps properly */
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* TickTick-style title - clear, readable */
 .task-title {
     color: rgba(255, 255, 255, 0.95);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    margin: 0 0 var(--space-2) 0;
-    line-height: 1.4;
+    margin: 0 0 var(--space-1) 0;
+    line-height: 1.5;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    hyphens: auto;
     flex: 1;
     min-width: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    /* Allow full text - no truncation */
     letter-spacing: 0.01em;
 }
 
@@ -503,4 +510,18 @@
     background: var(--surface-tertiary);
     border-color: var(--border-medium);
     color: var(--text-muted);
+}
+
+/* RTL Text Support - only affects text alignment, not card structure */
+.task-title[dir="rtl"] {
+    text-align: right;
+}
+
+/* Hebrew alignment classes from useHebrewAlignment composable */
+.task-title.text-align-right {
+    text-align: right;
+}
+
+.task-title.direction-rtl {
+    direction: rtl;
 }

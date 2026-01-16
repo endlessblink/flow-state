@@ -133,7 +133,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             isSyncing.value = true
             const payload = toSupabaseProject(project, userId)
-            const { error } = await supabase.from('projects').upsert(payload)
+            const { error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' })
             if (error) throw error
             lastSyncError.value = null
         } catch (e: unknown) {
@@ -154,7 +154,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
             const payload = projects.map(p => toSupabaseProject(p, userId))
             // BUG-171 FIX: Add .select() and verify data.length to detect RLS partial write failures
-            const { data, error } = await supabase.from('projects').upsert(payload).select('id')
+            const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' }).select('id')
             if (error) throw error
             if (!data || data.length !== payload.length) {
                 const writtenCount = data?.length ?? 0
@@ -277,7 +277,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const payload = toSupabaseTask(task, userId)
 
             await withRetry(async () => {
-                const { error } = await supabase.from('tasks').upsert(payload)
+                const { error } = await supabase.from('tasks').upsert(payload, { onConflict: 'id' })
                 if (error) throw error
             }, 'saveTask')
 
@@ -312,7 +312,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             // Supabase RLS can block writes but return { error: null, data: [] }
             // Also detect PARTIAL failures where some rows are blocked
             await withRetry(async () => {
-                const { data, error } = await supabase.from('tasks').upsert(payload).select('id, position')
+                const { data, error } = await supabase.from('tasks').upsert(payload, { onConflict: 'id' }).select('id, position')
                 if (error) throw error
                 if (!data || data.length !== payload.length) {
                     const writtenCount = data?.length ?? 0
@@ -533,7 +533,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
             // BUG FIX: Use position_json (actual DB column name), not position
             await withRetry(async () => {
-                const { data, error } = await supabase.from('groups').upsert(payload).select('id, position_json')
+                const { data, error } = await supabase.from('groups').upsert(payload, { onConflict: 'id' }).select('id, position_json')
                 if (error) throw error
                 if (!data || data.length === 0) {
                     throw new Error('RLS blocked write - upsert returned no data for group')
@@ -622,7 +622,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = toSupabaseNotification(notification, userId)
-            const { error } = await supabase.from('notifications').upsert(payload)
+            const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveNotification')
@@ -638,7 +638,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = notifications.map(n => toSupabaseNotification(n, userId))
-            const { error } = await supabase.from('notifications').upsert(payload)
+            const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveNotifications')
@@ -686,7 +686,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
 
             const payload = toSupabaseTimerSession(session, userId, deviceId)
-            const { error } = await supabase.from('timer_sessions').upsert(payload)
+            const { error } = await supabase.from('timer_sessions').upsert(payload, { onConflict: 'id' })
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')
@@ -774,7 +774,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = toSupabaseQuickSortSession(summary, userId)
-            const { error } = await supabase.from('quick_sort_sessions').upsert(payload)
+            const { error } = await supabase.from('quick_sort_sessions').upsert(payload, { onConflict: 'id' })
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveQuickSortSession')

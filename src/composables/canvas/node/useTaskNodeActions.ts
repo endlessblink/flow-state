@@ -3,6 +3,7 @@ import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { formatDateKey } from '@/utils/dateUtils'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 
@@ -252,14 +253,19 @@ export function useTaskNodeActions(
             // TASK-289: Find target group BEFORE updating (while task still has old parentId)
             const targetGroup = findSmartGroupByDateType(dateType)
 
-            // Fire updates without awaiting - UI updates immediately via Pinia reactivity
-            // Persistence happens in background
-            taskStore.updateTaskWithUndo(props.task.id, { dueDate: newDueDate })
+            // Use updateTask directly (not updateTaskWithUndo) for INSTANT UI update
+            // updateTaskWithUndo has saveState/dynamic imports that cause delay
+            taskStore.updateTask(props.task.id, { dueDate: newDueDate }, 'USER')
 
             // Move to matching Smart Group if exists
             if (targetGroup) {
                 moveTaskToSmartGroup(props.task.id, targetGroup)
             }
+
+            // TASK-289: Force immediate canvas sync to update the node display
+            // updateTask doesn't trigger sync (by design to avoid loops), so we trigger manually
+            const canvasUiStore = useCanvasUiStore()
+            canvasUiStore.requestSync('user:context-menu')
         }
     }
 

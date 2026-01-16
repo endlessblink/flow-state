@@ -17,11 +17,14 @@ const CACHE_DURATIONS = {
   ONE_YEAR: 60 * 60 * 24 * 365,
 } as const
 
+// Check if building for Tauri (TAURI env var is set during tauri build)
+const isTauri = process.env.TAURI_ENV_PLATFORM !== undefined
+
 export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    // PWA Plugin - ROAD-004
-    VitePWA({
+    // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)
+    !isTauri && VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
@@ -107,7 +110,7 @@ export default defineConfig(({ mode }) => ({
       gzipSize: true,
       brotliSize: true,
     })
-  ],
+  ].filter(Boolean),
   esbuild: {
     target: 'esnext',
     // TASK-038: Strip console.* in production for cleaner builds

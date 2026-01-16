@@ -1,5 +1,5 @@
-**Last Updated**: January 15, 2026 (TASK-287 Kanban Shadow Fix)
-**Version**: 5.43 (Shadow Overflow Fix)
+**Last Updated**: January 16, 2026 (TASK-301 Canvas Connection UX Improvements - Done)
+**Version**: 5.44 (Canvas Connection UX)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -95,8 +95,18 @@
 | ~~**BUG-286**~~ | ✅ **DONE** **Fix Kanban View Clipping** | **P1** | ✅ **DONE** (2026-01-14) | - |
 | ~~**TASK-287**~~ | ✅ **DONE** **Kanban Shadow Overflow Fix (Padding Solution)** | **P1** | ✅ **DONE** (2026-01-15) | [SOP-004](./sop/SOP-004-css-shadow-overflow-clipping.md) |
 | ~~**TASK-289**~~ | ✅ **DONE** **Overdue Badge → Smart Group Movement** | **P2** | ✅ **DONE** (2026-01-15) | Canvas: Clicking reschedule option moves task to matching Smart Group if exists |
-| **TASK-290** | **Canvas Group Resize on Hover** | **P2** | 🔄 **IN PROGRESS** | Show resize handles when hovering over group (not just when selected) |
-| ~~**BUG-291**~~ | ✅ **DONE** **Edit Task Modal: Enter Key Doesn't Immediately Update Task** | **P1** | ✅ **DONE** (2026-01-15) | Fixed: saveTask() now awaits async updateTaskWithUndo before closing modal |
+| ~~**TASK-290**~~ | ✅ **DONE** **Canvas Group Resize on Hover** | **P2** | ✅ **DONE** (2026-01-15) | [SOP-005](./sop/SOP-005-canvas-resize-handle-visibility.md) |
+| ~~**BUG-294**~~ | ✅ **DONE** **Timer Start Button Not Working** | **P0** | ✅ **DONE** (2026-01-15) | Timer/Start buttons don't start timer or highlight active task on canvas |
+| ~~**TASK-213**~~ | ✅ **DONE** **Canvas Position System Refactor** | **P3** | ✅ **DONE** (2026-01-15) | Centralized PositionManager, Fixed Race Conditions, Standardized Coordinates |
+| ~~**TASK-295**~~ | ✅ **DONE** **Canvas Multi-Select with Shift+Drag** | **P2** | ✅ **DONE** (2026-01-16) | [SOP-006](./sop/SOP-006-canvas-shift-drag-selection.md) |
+| ~~**BUG-291**~~ | ✅ **DONE** **Edit Task Modal: 2-3s Delay on Enter Key** | **P1** | ✅ **DONE** (2026-01-15) | Root cause: 3 dynamic imports + 2 undo saves blocked UI. Fix: Direct `updateTask()` vs `updateTaskWithUndo()`. Result: 53ms |
+| ~~**BUG-295**~~ | ✅ **DONE** **Canvas Badge Not Updating After Reschedule** | **P1** | ✅ **DONE** (2026-01-16) | Fix: Shallow clone task in useCanvasSync.ts to break reference equality for idempotence check |
+| ~~**TASK-297**~~ | ✅ **DONE** **Tomorrow Group Stale Due Date** | **P2** | ✅ **DONE** (2026-01-16) | Resolved: Existing Overdue badge (TASK-282) is sufficient |
+| ~~**TASK-298**~~ | ✅ **DONE** **Documentation Phase 1 - Quick Fixes** | **P1** | ✅ **DONE** (2026-01-15) | Fixed CLAUDE.md, README.md, .env.example, SOP naming, deleted 6MB obsolete |
+| ~~**TASK-299**~~ | ✅ **DONE** **Canvas Auto-Center on Today Group** | **P2** | ✅ **DONE** (2026-01-16) | On canvas load, center viewport on Today group or last active area with tasks |
+| **TASK-300** | **Documentation Phase 2 - Content Consolidation** | **P1** | 🔄 **IN PROGRESS** | [See Details](#task-300-documentation-phase-2---content-consolidation-in-progress) |
+| ~~**TASK-301**~~ | ✅ **DONE** **Canvas Connection UX Improvements** | **P2** | ✅ **DONE** (2026-01-16) | [SOP-008](./sop/SOP-008-canvas-connection-ux.md) |
+| **TASK-302** | **Restore Automation Scripts** | **P1** | 🔄 **IN PROGRESS** | Restore missing consolidation scripts |
 
 ---
 
@@ -104,6 +114,198 @@
 
 > [!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+### ~~TASK-301~~: Canvas Connection UX Improvements (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE (2026-01-16)
+
+Enhanced canvas connection UX with visual feedback and drag-to-create workflow.
+
+**Features Implemented**:
+- [x] Connection handles visible on task nodes (top/bottom dots)
+- [x] Handle glow on hover (blue for source, green for target)
+- [x] Cable glow while dragging (pulsing blue animation)
+- [x] Permanent edge glow (subtle blue glow on established connections)
+- [x] Drag-to-create: drop connection on empty space → creates child task
+
+**SOP**: [SOP-008-canvas-connection-ux.md](./sop/SOP-008-canvas-connection-ux.md)
+
+---
+
+### ~~TASK-297~~: Tomorrow Group Stale Due Date (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE (2026-01-16)
+
+When a task is added to a "Tomorrow" smart group, the due date is set to tomorrow's date. If the task remains in the group for multiple days, the due date becomes stale.
+
+**Resolution**: After discussion, determined that the existing **Overdue badge** (TASK-282) already handles this case sufficiently:
+- When a task sits in Tomorrow group for 2+ days, it becomes overdue → red badge shows with reschedule options
+- A separate "Due Today" badge was implemented but deemed unnecessary and visually noisy
+- Tasks due TODAY are still on time - no special indicator needed
+
+**Outcome**: No additional badge needed. The existing Overdue badge (red) covers the real problem case.
+
+---
+
+### ~~TASK-298~~: Documentation Phase 1 - Quick Fixes (✅ DONE)
+**Priority**: P1-HIGH
+**Status**: ✅ DONE (2026-01-15)
+
+Quick fixes for documentation accuracy issues.
+
+**Completed**:
+- [x] Fixed CLAUDE.md (5 inaccuracies: composables, paths, line counts)
+- [x] Fixed README.md (8 views, Vite 7.3.1)
+- [x] Cleaned .env.example (removed Firebase config)
+- [x] Deleted 11 obsolete files (~6 MB freed)
+- [x] Fixed SOP-005 naming collision → SOP-006
+
+---
+
+### TASK-300: Documentation Phase 2 - Content Consolidation (🔄 IN PROGRESS)
+**Priority**: P1-HIGH
+**Status**: 🔄 In Progress (2026-01-15)
+
+Consolidate redundant documentation to improve maintainability. Preserves all critical content while reducing duplication.
+
+**Scope**:
+1. **CLAUDE.md Deduplication** - Replace 3 duplicated sections with links to authoritative docs
+2. **Canvas SOP Consolidation** - Merge 12 overlapping SOPs into 3 organized reference docs
+3. **Backup Doc Consolidation** - Merge 3 redundant backup docs into 1 authoritative source
+
+**Phase 2A: CLAUDE.md Deduplication (✅ COMPLETE)**
+- [x] Design Token section (72 → 13 lines) → Link to `docs/claude-md-extension/design-system.md`
+- [x] Backup System section (11 → 4 lines) → Link to `docs/claude-md-extension/backup-system.md`
+- [x] Canvas Geometry section (44 → 16 lines) → Link to `docs/sop/SOP-002-canvas-geometry-invariants.md`
+- **Result**: CLAUDE.md reduced by ~94 lines while preserving all content in authoritative docs
+
+**Phase 2B: Canvas SOP Consolidation (Deferred)**
+Target: Create 3 organized files from 12 scattered SOPs (Deferred to future session)
+
+| New File | Merges From | Content |
+|----------|-------------|---------|
+| `canvas/CANVAS-POSITION-SYSTEM.md` | SOP-001, SOP-002, SOP-005, canvas-architecture.md | Coordinate systems, geometry invariants, position debugging |
+| `canvas/CANVAS-DRAG-DROP.md` | CANVAS-nested-groups-fix, CANVAS-position-reset-fix, canvas-safety-guidelines | Drag mechanics, parent-child, multi-select |
+| `canvas/CANVAS-DEBUGGING.md` | BUG_ANALYSIS_*.md (4 files), canvas-position-debugging | Position jump analysis, debugging procedures |
+
+**Phase 2C: Backup Doc Consolidation (✅ COMPLETE)**
+- [x] Kept `docs/claude-md-extension/backup-system.md` as authoritative (updated with Engine A/B/C details)
+- [x] Archived `docs/sop/active/SOP-BACKUP-SYSTEM.md` → `docs/sop/archived/`
+- [x] Updated CLAUDE.md to link only
+
+**Success Criteria**:
+- No content loss (all critical info preserved)
+- Clear single source of truth for each topic
+- Reduced maintenance burden (fewer files to update)
+
+---
+
+### ~~TASK-299~~: Canvas Auto-Center on Today Group (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE (2026-01-16)
+
+On entering the canvas view, the viewport should automatically center on:
+1. The "Today" smart group (if it exists and contains tasks)
+2. Fallback: The last active area with tasks the user was working in
+
+**Implementation Complete**:
+- [x] Added `centerOnTodayGroup()` function to `useCanvasNavigation.ts`
+- [x] Function detects Today group via power keyword detection (`detectPowerKeyword`)
+- [x] Integrated into `useCanvasOrchestrator.ts` → `onMounted()` after sync completes
+- [x] Fallback logic: First visit → busiest group; Return visit → Today or saved viewport
+- [x] Build passes ✓
+
+**Behavior**:
+1. If user has a saved viewport (not first visit):
+   - If Today group exists → center on Today group
+   - Else → keep saved viewport position
+2. If no saved viewport (first visit):
+   - If Today group exists → center on Today group
+   - Else → center on busiest group with tasks
+   - Else → center on first task
+
+**Files Modified**:
+- `src/composables/canvas/useCanvasNavigation.ts` - Added `centerOnTodayGroup(forceFallback)` function
+- `src/composables/canvas/useCanvasOrchestrator.ts` - Call `centerOnTodayGroup()` after initialization
+
+---
+
+### BUG-294: Timer Start Button Not Working (🔄 IN PROGRESS)
+**Priority**: P0-CRITICAL
+**Status**: 🔄 Awaiting User Verification (2026-01-15)
+
+When pressing Start or Timer buttons from task context menu, the timer doesn't start and the task isn't highlighted as active on the canvas.
+
+**Root Cause Identified**:
+- Stale timer sessions in Supabase database blocking new timers
+- Device leadership timeout (30s) preventing timer start if previous session wasn't properly closed
+- Cross-tab leadership election (5s timeout) could also block if browser crashed
+
+**Fix Applied**:
+- [x] Added auto-cleanup of stale timer sessions in `timer.ts:checkForActiveDeviceLeader()`
+- [x] Added debug logging throughout the timer flow to diagnose issues
+- [x] Fixed: Sessions with expired device leaders are now marked inactive
+
+**Files Modified**:
+- `src/stores/timer.ts` - Auto-clear stale sessions
+- `src/composables/tasks/useTaskContextMenuActions.ts` - Debug logging
+- `src/composables/sync/useTimerLeaderElection.ts` - Debug logging
+
+**Verification Required**:
+1. Open browser console (F12)
+2. Click Timer button on any task
+3. Check console for `🎯 [CONTEXT-MENU] startTimer called` log
+4. Verify timer starts and task is highlighted
+
+---
+
+### ~~TASK-295~~: Canvas Multi-Select with Shift+Drag (✅ DONE)
+**Priority**: P2-MEDIUM
+**Status**: ✅ Done (2026-01-16)
+
+Enable Shift + left click and drag inside groups to multi-select tasks on the canvas.
+
+**SOP**: [SOP-006: Canvas Shift+Drag Selection Inside Groups](./sop/SOP-006-canvas-shift-drag-selection.md)
+
+**Root Cause** (per [xyflow/xyflow#3041](https://github.com/xyflow/xyflow/issues/3041)):
+- Vue Flow's `nodes-draggable` was `true` even when Shift held
+- Task nodes blocked events with `pointer-events: auto`
+- CanvasSelectionBox CSS used undefined variables
+
+**Solution**:
+- [x] `:nodes-draggable="!control && !meta && !shift"`
+- [x] `:selection-on-drag="shift"`
+- [x] CSS: ALL nodes have `pointer-events: none` when shift-selecting
+- [x] Fixed `CanvasSelectionBox.vue` with rgba colors
+- [x] Moved `CanvasSelectionBox` outside `<VueFlow>`
+
+---
+
+### ~~TASK-296~~: Remove Teal Selection Corner Indicators from Task Nodes (✅ DONE)
+**Priority**: P3-LOW
+**Status**: ✅ DONE (2026-01-16)
+**SOP**: [`SOP-007-task-node-selection-indicators.md`](docs/sop/SOP-007-task-node-selection-indicators.md)
+
+Teal corner squares were appearing on selected task nodes in the canvas. Users requested removal.
+
+**Root Cause**:
+- `TaskNodeSelection.vue` rendered 4 corner indicator divs with `--brand-primary` background
+- Initially misidentified as Vue Flow Handle components
+
+**Fix Applied**:
+- [x] Removed selection corner elements from `TaskNodeSelection.vue`
+- [x] Selection feedback now via `.selected` CSS class (border/glow) only
+- [x] Bonus: Removed unused Handle components from `TaskNode.vue`
+- [x] Bonus: Added defensive CSS rules to hide any Vue Flow handles on task nodes
+
+**Files Modified**:
+- `src/components/canvas/node/TaskNodeSelection.vue` - Removed corner indicators
+- `src/components/canvas/TaskNode.vue` - Removed Handle components
+- `src/assets/canvas-view-overrides.css` - Added handle hiding rules
+
+**User Verified**: ✅ Confirmed working (2026-01-16)
+
+---
 
 ### ~~TASK-287~~: Kanban Shadow Overflow Fix (✅ DONE)
 **Priority**: P1-HIGH
@@ -566,13 +768,19 @@ Questions:
 **Regression Fix (2026-01-15 - createTaskInGroup)**:
 - Original fix only addressed `createTaskHere`, not `createTaskInGroup`
 - `createTaskInGroup` was ignoring the click position and always centering tasks in the group
-- **Fix**: Updated `useCanvasTaskActions.ts` `createTaskInGroup` to accept optional `screenPos`
-- **Fix**: Added wrapper in `useCanvasOrchestrator.ts` that passes stored context menu position
-- Position is converted to group-relative coordinates with bounds clamping
+- **Initial attempt** stored RELATIVE coordinates (position - groupX/Y), but this caused double-conversion
+- **Root cause**: `canvasPosition` must store ABSOLUTE coordinates; node builder handles relative conversion for Vue Flow
+- **Final fix**: Store ABSOLUTE flow coordinates in `canvasPosition`, clamp using absolute bounds
+
+**Key Learning**: See `docs/sop/SOP-005-canvas-position-coordinates.md` for the coordinate system rules:
+- `task.canvasPosition` = ABSOLUTE (stored in DB)
+- Vue Flow node position with parent = RELATIVE (handled by node builder)
+- Never manually convert to relative when setting `canvasPosition`
 
 **Files Modified**:
 - `src/composables/canvas/useCanvasOrchestrator.ts` - Added wrappers for both `createTaskHere` and `createTaskInGroup`
-- `src/composables/canvas/useCanvasTaskActions.ts` - Updated `createTaskInGroup` to accept screen position
+- `src/composables/canvas/useCanvasTaskActions.ts` - Fixed `createTaskInGroup` to store ABSOLUTE coordinates
+- `src/utils/consoleFilter.ts` - Added `[TASK-288-DEBUG]` to whitelist for debugging
 
 ---
 
@@ -3959,11 +4167,13 @@ Multi-part fix for canvas group issues affecting day-of-week groups and z-index 
 
 ---
 
-### TASK-213: Canvas Position System Refactor (🏗️ IN PROGRESS)
+### ~~TASK-213~~: Canvas Position System Refactor (✅ DONE)
 **Priority**: P3-LOW
 **Created**: January 8, 2026
 **Started**: January 15, 2026
+**Completed**: January 15, 2026
 **Plan**: [plans/canvas-position-system-refactor.md](../plans/canvas-position-system-refactor.md)
+**SOP**: [docs/sop/active/canvas-position-debugging.md](./sop/active/canvas-position-debugging.md)
 **SOP**: [docs/sop/active/canvas-position-debugging.md](./sop/active/canvas-position-debugging.md)
 
 **Problem**: Constant position reset issues with tasks and groups on the canvas despite TASK-131 fixes. Root cause is fragmented architecture with 10+ position modification points, 5+ competing state flags, and duplicate implementations.
@@ -3976,9 +4186,9 @@ Multi-part fix for canvas group issues affecting day-of-week groups and z-index 
 
 **Phases**:
 - [x] **Phase 1**: Create PositionManager service with lock persistence
-- [ ] **Phase 2**: Consolidate all position modifications through PositionManager
-- [ ] **Phase 3**: Implement event-driven lock lifecycle
-- [ ] **Phase 4**: Standardize coordinate system (absolute vs. relative)
+- [x] **Phase 2**: Consolidate all position modifications through PositionManager (Interactions & Sync)
+- [x] **Phase 3**: Cleanup unused state and optimize batch updates
+- [x] **Phase 4**: Standardize coordinate system (absolute vs. relative)
 - [ ] **Phase 5**: Comprehensive Playwright tests and cleanup
 
 **Files to Create**:

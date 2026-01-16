@@ -1,28 +1,21 @@
 <template>
   <button
-    class="status-icon-button"
-    :class="statusColorClass"
-    :title="statusTooltip"
-    :aria-label="statusTooltip"
+    class="priority-dot"
+    :class="priorityClass"
+    :title="priorityTooltip"
+    :aria-label="priorityTooltip"
     type="button"
     tabindex="-1"
     @click.stop="$emit('cycle')"
-  >
-    <component
-      :is="statusIcon"
-      :size="12"
-      :stroke-width="1.5"
-      aria-hidden="true"
-    />
-  </button>
+  />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarDays, Loader, CheckCircle, Inbox, PauseCircle } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 
 const props = defineProps<{
+  priority?: Task['priority']
   status?: Task['status']
 }>()
 
@@ -30,78 +23,63 @@ defineEmits<{
   (e: 'cycle'): void
 }>()
 
-const statusIcon = computed(() => {
-  switch (props.status) {
-    case 'planned': return CalendarDays
-    case 'in_progress': return Loader
-    case 'done': return CheckCircle
-    case 'backlog': return Inbox
-    case 'on_hold': return PauseCircle
-    default: return Inbox
-  }
+const priorityClass = computed(() => {
+  const p = props.priority || 'none'
+  return `priority-${p}`
 })
 
-const statusColorClass = computed(() => {
-  const status = props.status || 'backlog'
-  return `status-${status}-icon`
-})
-
-const statusTooltip = computed(() => {
-  const status = props.status || 'backlog'
+const priorityTooltip = computed(() => {
   const labels: Record<string, string> = {
-    'planned': 'Mark as in-progress',
-    'in_progress': 'Mark as done',
-    'done': 'Mark as backlog',
-    'backlog': 'Mark as planned',
-    'on_hold': 'Mark as planned'
+    'high': 'High priority',
+    'medium': 'Medium priority',
+    'low': 'Low priority',
+    'none': 'No priority'
   }
-  return labels[status] || 'Change status'
+  return labels[props.priority || 'none'] || 'Click to change'
 })
 </script>
 
 <style scoped>
-/* Minimal checkbox style - TickTick inspired */
-.status-icon-button {
-  width: 16px;
-  height: 16px;
+/* Simple priority dot - clean, minimal */
+.priority-dot {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: none;
   flex-shrink: 0;
   margin-inline-end: var(--space-3);
   transition: all var(--duration-fast) ease;
   cursor: pointer;
-  position: relative;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
+  padding: 0;
 }
 
-.status-icon-button:hover {
-  border-color: rgba(255, 255, 255, 0.5);
-  color: rgba(255, 255, 255, 0.6);
+.priority-dot:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 8px currentColor;
 }
 
-.status-icon-button:active {
+.priority-dot:active {
   transform: scale(0.9);
 }
 
-/* All statuses look the same - just circle */
-.status-planned-icon,
-.status-in_progress-icon,
-.status-done-icon,
-.status-backlog-icon,
-.status-on_hold-icon {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
+/* Priority colors */
+.priority-high {
+  background: var(--color-priority-high, #ef4444);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
 }
 
-/* Only done status shows filled */
-.status-done-icon {
-  border-color: rgba(34, 197, 94, 0.6);
-  background: rgba(34, 197, 94, 0.2);
-  color: rgba(34, 197, 94, 0.8);
+.priority-medium {
+  background: var(--color-priority-medium, #f59e0b);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.3);
+}
+
+.priority-low {
+  background: var(--color-priority-low, #3b82f6);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.3);
+}
+
+.priority-none,
+.priority-null {
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>

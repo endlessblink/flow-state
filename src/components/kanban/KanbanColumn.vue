@@ -2,6 +2,11 @@
   <div class="kanban-column" :class="wipStatusClass">
     <div class="column-header">
       <div class="header-left">
+        <span
+          v-if="priorityColor"
+          class="column-priority-dot"
+          :style="{ background: priorityColor }"
+        />
         <span class="column-title">{{ title }}</span>
         <span class="task-count">{{ taskCount }}</span>
       </div>
@@ -94,6 +99,17 @@ const localTasks = ref([...props.tasks])
 watch(() => props.tasks, (newTasks) => { localTasks.value = [...newTasks] })
 
 const taskCount = computed(() => props.tasks.length)
+
+// Priority column color indicator
+const priorityColor = computed(() => {
+  const priorityColors: Record<string, string> = {
+    'high': 'var(--color-priority-high, #ef4444)',
+    'medium': 'var(--color-priority-medium, #f59e0b)',
+    'low': 'var(--color-priority-low, #3b82f6)',
+    'no_priority': 'rgba(255, 255, 255, 0.2)'
+  }
+  return priorityColors[props.status] || null
+})
 
 const wipStatusClass = computed(() => {
   if (!props.wipLimit) return ''

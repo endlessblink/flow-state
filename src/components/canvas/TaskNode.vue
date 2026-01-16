@@ -103,22 +103,6 @@ import TaskNodeMeta from './node/TaskNodeMeta.vue'
 import TaskNodePriority from './node/TaskNodePriority.vue'
 import TaskNodeSelection from './node/TaskNodeSelection.vue'
 
-const props = withDefaults(defineProps<Props>(), {
-  isSelected: false,
-  multiSelectMode: false,
-  showPriority: true,
-  showStatus: true,
-  showDuration: true,
-  showSchedule: true,
-  isConnecting: false
-})
-
-const emit = defineEmits<{
-  edit: [task: Task]
-  select: [task: Task, multiSelect: boolean]
-  contextMenu: [event: MouseEvent, task: Task]
-}>()
-
 // Logic extracted directly from original component to preserve context check
 const isInVueFlowContext = computed(() => {
   if (typeof window === 'undefined') return false
@@ -135,6 +119,22 @@ const isInVueFlowContext = computed(() => {
 const Handle = defineAsyncComponent(() =>
   import('@vue-flow/core').then(mod => mod.Handle)
 )
+
+const props = withDefaults(defineProps<Props>(), {
+  isSelected: false,
+  multiSelectMode: false,
+  showPriority: true,
+  showStatus: true,
+  showDuration: true,
+  showSchedule: true,
+  isConnecting: false
+})
+
+const emit = defineEmits<{
+  edit: [task: Task]
+  select: [task: Task, multiSelect: boolean]
+  contextMenu: [event: MouseEvent, task: Task]
+}>()
 
 interface Props {
   task: Task
@@ -153,8 +153,9 @@ interface Props {
   isDragging?: boolean
 }
 
-// State Logic
+// State Logic - BUG-291: 'task' is reactive from store for instant updates
 const {
+  task,
   isLOD1,
   isLOD2,
   isLOD3,
@@ -374,23 +375,7 @@ const {
   -webkit-backdrop-filter: none !important;
 }
 
-/* Global drag cleanup - hide all connection handles during drag */
-body.dragging-active .task-node .vue-flow__handle {
-  opacity: 0.3 !important;
-  transition: opacity var(--duration-normal) var(--ease-out) !important;
-}
-
-/* Hide connection handles during node-specific movement drag (not during connections) */
-.task-node.is-dragging:not(.is-connecting) .vue-flow__handle {
-  opacity: 0.1 !important;
-  transition: opacity var(--duration-instant) var(--ease-out) !important;
-}
-
-/* Keep connection handles fully visible during connection operations */
-.task-node.is-connecting .vue-flow__handle {
-  opacity: 1 !important;
-  transition: opacity var(--duration-normal) var(--ease-out) !important;
-}
+/* TASK-296: Connection handle CSS removed - tasks don't use handles */
 
 /* Prevent text selection during drag, but allow events on root and children */
 .task-node * {
@@ -473,28 +458,5 @@ body.dragging-active .task-node .vue-flow__handle {
 
 .multi-select-mode:hover {
   transform: translateY(-2px) scale(1.02);
-}
-
-/* Connection Handle Glow Effects */
-.vue-flow__handle {
-  transition: all var(--duration-normal) var(--ease-out);
-}
-
-.vue-flow__handle:hover {
-  box-shadow: 0 0 8px 2px var(--brand-primary),
-              0 0 16px 4px rgba(59, 130, 246, 0.3);
-  transform: scale(1.2);
-}
-
-/* Source handle (bottom) - blue glow */
-.handle-source:hover {
-  box-shadow: 0 0 8px 2px var(--color-navigation),
-              0 0 16px 4px rgba(59, 130, 246, 0.4);
-}
-
-/* Target handle (top) - green glow for "drop here" */
-.handle-target:hover {
-  box-shadow: 0 0 8px 2px var(--color-success),
-              0 0 16px 4px rgba(34, 197, 94, 0.3);
 }
 </style>

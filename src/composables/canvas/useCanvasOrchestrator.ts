@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -23,6 +23,7 @@ import { useCanvasSelection } from './useCanvasSelection'
 // Moved inside useCanvasOrchestrator to ensure correct Vue context
 
 import { useCanvasGroups } from './useCanvasGroups'
+import { positionManager } from '@/services/canvas/PositionManager'
 
 
 // Legacy/Auxiliary Composables (Still used)
@@ -81,7 +82,9 @@ export function useCanvasOrchestrator() {
         findNode,
         onMoveEnd,
         applyNodeChanges,
-        applyEdgeChanges
+        applyEdgeChanges,
+        screenToFlowCoordinate,
+        getIntersectingNodes
     } = useCanvasCore()
 
     const { hasInitialFit, operationLoading, operationError } = storeToRefs(canvasUiStore)
@@ -134,7 +137,7 @@ export function useCanvasOrchestrator() {
     useCanvasGroups()
 
     // Navigation & Zoom (Legacy cleanup support, transitioning to Core)
-    const { initialViewport, fitCanvas: legacyFitCanvas, zoomToSelection: legacyZoomToSelection } = useCanvasNavigation(canvasStore)
+    const { initialViewport, fitCanvas: legacyFitCanvas, zoomToSelection: legacyZoomToSelection, centerOnTodayGroup } = useCanvasNavigation(canvasStore)
     const fitCanvas = legacyFitCanvas
     const zoomToSelection = legacyZoomToSelection
     const { cleanupZoom } = useCanvasZoom(resourceManager)
@@ -310,20 +313,29 @@ export function useCanvasOrchestrator() {
     // Connections - use context menu store refs for edge menu to sync with EdgeContextMenu component
     const { showEdgeContextMenu, edgeContextMenuX, edgeContextMenuY } = storeToRefs(contextMenuStore)
     const selectedEdge = ref<import('@vue-flow/core').Edge | null>(null)
+    // State for drag-to-create feature
+    const pendingConnectionSource = ref<string | null>(null)
+    const connectionWasSuccessful = ref(false)
 
     const connections = useCanvasConnections({
         syncEdges: syncEdges,
         closeCanvasContextMenu: events.closeCanvasContextMenu,
         closeEdgeContextMenu: events.closeEdgeContextMenu,
         closeNodeContextMenu: events.closeNodeContextMenu,
-        withVueFlowErrorBoundary: mockErrorBoundary
+        withVueFlowErrorBoundary: mockErrorBoundary,
+        // Drag-to-create dependencies
+        screenToFlowCoordinate,
+        createConnectedTask: actions.createConnectedTask
     }, {
         isConnecting: ref(false),
         recentlyRemovedEdges, // Shared with useCanvasEdgeSync for zombie edge prevention
         showEdgeContextMenu,
         edgeContextMenuX,
         edgeContextMenuY,
-        selectedEdge
+        selectedEdge,
+        // Drag-to-create state
+        pendingConnectionSource,
+        connectionWasSuccessful
     })
 
     // --- 4. Initialization & Reactivity ---
@@ -354,7 +366,7 @@ export function useCanvasOrchestrator() {
                 async (taskId, updates) => {
                     // Update store (will auto-sync to Supabase via existing persistence)
                     // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
-                    console.log(`🔧 [RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
+                    console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
                     taskStore.updateTask(taskId, updates, 'RECONCILE')
                 },
                 { writeToDb: true, silent: false }
@@ -382,6 +394,54 @@ export function useCanvasOrchestrator() {
         // Mark initialization complete - watchers can now fire
         isInitialized.value = true
         console.log('✅ [ORCHESTRATOR] Initialization complete')
+
+        // TASK-299: Auto-center on Today group after nodes are rendered
+        // Use setTimeout to allow Vue Flow to calculate node dimensions
+        setTimeout(() => {
+            // Check if user has a custom saved viewport (not default 0,0,1)
+            const vp = canvasStore.viewport
+            const hasCustomViewport = vp && (vp.x !== 0 || vp.y !== 0 || vp.zoom !== 1)
+
+            // If no custom viewport (first visit), force fallback to busiest group
+            // If has custom viewport, only override if Today group exists
+            const forceFallback = !hasCustomViewport
+            const centered = centerOnTodayGroup(forceFallback)
+            console.log('🎯 [ORCHESTRATOR] Auto-center result:', centered ? 'SUCCESS' : 'USING_SAVED_VIEWPORT', { hasCustomViewport })
+        }, 100)
+
+        // TASK-213: Position Manager Subscription
+        // Listen for updates from other sources (e.g. Alignment tools, Auto-layout)
+        // that are NOT 'user-drag' (handled by Vue Flow) or 'remote-sync' (handled by sync loop)
+        const unsubscribe = positionManager.subscribe((event) => {
+            const { nodeId, payload } = event
+            if (payload.source !== 'user-drag' && payload.source !== 'remote-sync') {
+                console.log(`📡[ORCHESTRATOR] Applying external position update for ${nodeId} from ${payload.source}`)
+
+                const node = findNode(nodeId)
+                if (node) {
+                    // Convert Absolute (PM) -> Relative (Vue Flow)
+                    // If node has parent, we need parent's position to convert
+                    let relativePos = payload.position
+
+                    if (payload.parentId) {
+                        // Look up parent in PM (Truth) or Store
+                        const parentPm = positionManager.getPosition(payload.parentId)
+                        if (parentPm) {
+                            relativePos = {
+                                x: payload.position.x - parentPm.position.x,
+                                y: payload.position.y - parentPm.position.y
+                            }
+                        }
+                    }
+
+                    updateNode(nodeId, { position: relativePos })
+                }
+            }
+        })
+
+        onUnmounted(() => {
+            unsubscribe()
+        })
     })
 
     // Persist Viewport on Change

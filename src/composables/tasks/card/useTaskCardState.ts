@@ -60,6 +60,12 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
     // Hebrew alignment
     const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task.title))
 
+    // RTL detection for entire card
+    const isRtl = computed(() => {
+        const HEBREW_UNICODE_RANGE = /[\u0590-\u05FF]/
+        return HEBREW_UNICODE_RANGE.test(props.task.title || '')
+    })
+
     // Project visual
     const projectVisual = computed(() =>
         taskStore.getProjectVisual(props.task.projectId)
@@ -85,6 +91,7 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
         formattedDuration,
         durationBadgeClass,
         titleAlignmentClasses,
+        isRtl,
         projectVisual,
         taskAriaLabel,
         progressiveDisclosureEnabled

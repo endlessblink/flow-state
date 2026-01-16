@@ -77,7 +77,8 @@ export function useTaskContextMenuActions(
 
         if (dueDate) {
             try {
-                const formattedDate = dueDate.toLocaleDateString()
+                // Use ISO date format (YYYY-MM-DD) for Supabase compatibility
+                const formattedDate = dueDate.toISOString().split('T')[0]
                 await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
@@ -161,8 +162,19 @@ export function useTaskContextMenuActions(
     }
 
     const startTimer = () => {
+        console.log('🎯 [CONTEXT-MENU] startTimer called', {
+            currentTask: currentTask.value?.id,
+            currentTaskTitle: currentTask.value?.title,
+            isBatchOperation: isBatchOperation.value,
+            workDuration: timerStore.settings.workDuration
+        })
         if (currentTask.value && !isBatchOperation.value) {
             timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+        } else {
+            console.warn('🎯 [CONTEXT-MENU] Timer not started:', {
+                hasCurrentTask: !!currentTask.value,
+                isBatchOperation: isBatchOperation.value
+            })
         }
         emit('close')
     }

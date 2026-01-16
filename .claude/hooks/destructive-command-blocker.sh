@@ -121,6 +121,30 @@ require_backup() {
 # CATEGORY 1: ABSOLUTELY BLOCKED (no exceptions, even with backup)
 # ============================================================================
 
+# Block: supabase stop (causes data loss when followed by supabase start)
+if echo "$COMMAND_LOWER" | grep -qE "supabase\s+stop"; then
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "🚫 BLOCKED: 'supabase stop'"
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo ""
+    echo "WHY THIS IS BLOCKED:"
+    echo "  - 'supabase stop' followed by 'supabase start' RECREATES the database"
+    echo "  - This WIPES all users, data, and configurations"
+    echo "  - This caused data loss on January 9 AND January 15, 2026"
+    echo ""
+    echo "IF YOU NEED TO RESTART SUPABASE:"
+    echo "  1. Create a backup: supabase db dump > backup.sql"
+    echo "  2. User must run 'supabase stop' MANUALLY"
+    echo "  3. User must run 'supabase start' MANUALLY"
+    echo "  4. Restore backup if needed"
+    echo ""
+    echo "SAFER ALTERNATIVE:"
+    echo "  - Restart specific service: docker restart supabase_db_pomo-flow"
+    echo "  - This preserves your data"
+    echo "═══════════════════════════════════════════════════════════════════"
+    exit 1
+fi
+
 # Block: supabase db reset
 if echo "$COMMAND_LOWER" | grep -qE "supabase\s+(db\s+)?reset"; then
     echo "═══════════════════════════════════════════════════════════════════"

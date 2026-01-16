@@ -370,7 +370,7 @@ const handleCreateTaskInGroupDebug = (section: any) => {
 
 const handleSectionUpdate = (id: string, data: Record<string, unknown>) => canvasStore.updateSection(id, data)
 const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
-const handleEditTask = (task: Record<string, unknown>) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
+const handleEditTask = (task: any) => { modalsStore.openEditModal(task as Task); closeCanvasContextMenu() }
 // Handle double-click on nodes to open edit modal for tasks
 const handleNodeDoubleClick = ({ node }: NodeMouseEvent) => {
     console.log('[TASK-279] handleNodeDoubleClick called', { nodeType: node.type, hasTask: !!node.data?.task })

@@ -151,10 +151,18 @@ export const useTimerStore = defineStore('timer', () => {
 
   const handleRemoteTimerUpdate = (payload: unknown) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const newDoc = payload as any // Use any for dynamic payload to avoid cascading casts
-    if (!newDoc) {
-      currentSession.value = null
-      pauseTimerInterval()
+    const rawPayload = payload as any
+
+    // Supabase realtime wraps data in { new: {...}, old: {...}, eventType: '...' }
+    // Extract the actual record from the wrapper
+    const newDoc = rawPayload?.new || rawPayload?.record || rawPayload
+
+    if (!newDoc || !newDoc.id) {
+      // Handle DELETE events or empty payloads
+      if (rawPayload?.eventType === 'DELETE' || rawPayload?.type === 'DELETE') {
+        currentSession.value = null
+        pauseTimerInterval()
+      }
       return
     }
 
@@ -203,31 +211,51 @@ export const useTimerStore = defineStore('timer', () => {
     await saveActiveTimerSession(currentSession.value, deviceId)
   }
 
-  const checkForActiveDeviceLeader = async (): Promise<boolean> => {
+  /**
+   * Clears any existing active session so a new one can be started.
+   * User action (clicking Start Timer) takes precedence over any other device.
+   */
+  const clearExistingSession = async (): Promise<void> => {
     try {
       const existing = await fetchActiveTimerSession()
-      if (existing?.deviceLeaderId && existing.deviceLeaderId !== deviceId) {
-        if (Date.now() - (existing.deviceLeaderLastSeen || 0) < DEVICE_LEADER_TIMEOUT_MS) return true
+      if (existing) {
+        const lastSeen = existing.deviceLeaderLastSeen || 0
+        const timeSinceLastSeen = Date.now() - lastSeen
+
+        console.log('🍅 [TIMER] Clearing existing session for new timer', {
+          sessionId: existing.id,
+          previousLeader: existing.deviceLeaderId,
+          lastSeen: new Date(lastSeen).toISOString(),
+          staleFor: Math.round(timeSinceLastSeen / 1000) + 's'
+        })
+
+        // Mark the existing session as inactive - user's explicit action takes precedence
+        try {
+          const { supabase } = await import('@/services/auth/supabase')
+          await supabase
+            .from('timer_sessions')
+            .update({ is_active: false, completed_at: new Date().toISOString() })
+            .eq('id', existing.id)
+        } catch (clearError) {
+          console.warn('🍅 [TIMER] Failed to clear existing session:', clearError)
+        }
       }
-      return false
-    } catch (_e) { return false }
+    } catch (_e) {
+      console.error('🍅 [TIMER] Error clearing existing session:', _e)
+    }
   }
 
   // Timer Control Actions
   const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
     console.log('🍅 [TIMER] startTimer called:', { taskId, duration, isBreak })
 
-    const hasActiveLeader = await checkForActiveDeviceLeader()
-    console.log('🍅 [TIMER] checkForActiveDeviceLeader:', hasActiveLeader)
-    if (hasActiveLeader) {
-      console.warn('🍅 [TIMER] Blocked: Another device is leading')
-      return
-    }
+    // User's explicit action takes precedence - clear any existing session
+    await clearExistingSession()
 
     const claimedLeadership = crossTabSync.claimTimerLeadership()
     console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
     if (!claimedLeadership) {
-      console.warn('🍅 [TIMER] Blocked: Could not claim leadership')
+      console.warn('🍅 [TIMER] Blocked: Could not claim cross-tab leadership')
       return
     }
     isLeader.value = true
@@ -371,14 +399,64 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   const initializeStore = async () => {
+    console.log('🍅 [TIMER] initializeStore starting...')
     const saved = await fetchActiveTimerSession()
+    console.log('🍅 [TIMER] fetchActiveTimerSession result:', saved ? {
+      id: saved.id,
+      isActive: saved.isActive,
+      isPaused: saved.isPaused,
+      remainingTime: saved.remainingTime,
+      deviceLeaderId: saved.deviceLeaderId,
+      deviceLeaderLastSeen: saved.deviceLeaderLastSeen ? new Date(saved.deviceLeaderLastSeen).toISOString() : null
+    } : 'null')
+
     if (saved && saved.isActive) {
-      currentSession.value = { ...saved, startTime: new Date(saved.startTime) }
-      if (saved.deviceLeaderId === deviceId) {
+      // Apply drift correction for time elapsed since last update
+      let adjustedRemainingTime = saved.remainingTime
+      if (saved.deviceLeaderLastSeen && !saved.isPaused) {
+        const lastSeen = saved.deviceLeaderLastSeen
+        const driftSeconds = Math.floor((Date.now() - lastSeen) / 1000)
+        if (driftSeconds > 0) {
+          adjustedRemainingTime = Math.max(0, saved.remainingTime - driftSeconds)
+          console.log('🍅 [TIMER] Applied drift correction:', driftSeconds, 'seconds, new remaining:', adjustedRemainingTime)
+        }
+      }
+
+      currentSession.value = {
+        ...saved,
+        startTime: new Date(saved.startTime),
+        remainingTime: adjustedRemainingTime
+      }
+
+      // Check if we should take over leadership
+      const lastSeen = saved.deviceLeaderLastSeen || 0
+      const timeSinceLastSeen = Date.now() - lastSeen
+      const shouldTakeOverLeadership = saved.deviceLeaderId === deviceId ||
+                                        timeSinceLastSeen >= DEVICE_LEADER_TIMEOUT_MS ||
+                                        !saved.deviceLeaderId
+
+      if (shouldTakeOverLeadership) {
+        console.log('🍅 [TIMER] Taking over leadership', {
+          reason: saved.deviceLeaderId === deviceId ? 'same device' :
+                  !saved.deviceLeaderId ? 'no previous leader' :
+                  `previous leader timed out (${Math.round(timeSinceLastSeen / 1000)}s ago)`,
+          newLeaderId: deviceId
+        })
         isDeviceLeader.value = true
+        // Claim cross-tab leadership
+        crossTabSync.claimTimerLeadership()
+        isLeader.value = true
+        // Start heartbeat to update DB with our deviceId
         resumeHeartbeat()
+        // Save immediately to claim leadership in DB
+        await saveTimerSessionWithLeadership()
         resumeTimerInterval()
       } else {
+        console.log('🍅 [TIMER] Running as follower, leader is still active', {
+          leaderId: saved.deviceLeaderId,
+          lastSeen: new Date(lastSeen).toISOString(),
+          timeUntilTimeout: Math.round((DEVICE_LEADER_TIMEOUT_MS - timeSinceLastSeen) / 1000) + 's'
+        })
         isDeviceLeader.value = false
         // Followers should also update their local countdown
         resumeTimerInterval()

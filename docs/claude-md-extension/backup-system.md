@@ -4,7 +4,21 @@ Created: January 9, 2026 (TASK-168)
 
 ## Overview
 
-Automatic database backup system that works both locally and on VPS deployment.
+Automatic database backup system with 3 redundant engines that works both locally and on VPS deployment.
+
+## Dual-Engine Architecture (Shadow Mirror)
+
+| Engine | Type | Location | Purpose |
+|--------|------|----------|---------|
+| **Engine A** | Postgres Dump | `supabase/backups/*.sql` | 50-file rotation, infrastructure recovery |
+| **Engine B** | Shadow Mirror | `backups/shadow.db` | SQLite replica, disaster recovery |
+| **Engine C** | JSON Hub | `public/shadow-latest.json` | Frontend bridge, cross-device sync |
+
+**Auto-backup interval:** Every 5 minutes via `npm run dev`
+**Manual trigger:** `npm run backup:watch` or `node scripts/shadow-mirror.cjs`
+**Verification:** `node scripts/verify-shadow-layer.cjs`
+**Recovery UI:** Settings > Storage tab
+**Configuration:** Service Role Key in `.env.local` required for full Shadow access (bypasses RLS)
 
 ## Quick Reference
 

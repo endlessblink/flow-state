@@ -1,6 +1,7 @@
 import { reactive, readonly } from 'vue'
 import { lockManager } from './LockManager'
 import type { NodePosition, Position2D, LockSource } from './types'
+import { toRelativePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
 
 /**
  * PositionManager
@@ -11,7 +12,7 @@ import type { NodePosition, Position2D, LockSource } from './types'
  * 1. Maintain a reactive map of all node positions (tasks & groups).
  * 2. Enforce locking before allowing updates.
  * 3. Provide "optimistic" UI updates while syncing allows for rollback (Phase 2).
- * 4. Abstract away "relative" vs "absolute" logic eventually (Phase 4).
+ * 4. Abstract away "relative" vs "absolute" logic (Phase 4).
  */
 class PositionManager {
     // The master registry of positions
@@ -28,7 +29,8 @@ class PositionManager {
         nodeId: string,
         position: Position2D,
         source: LockSource,
-        parentId: string | null = null
+        parentId: string | null = null,
+        notify: boolean = true
     ): boolean {
         // 1. Concurrency Check
         if (!lockManager.acquire(nodeId, source)) {
@@ -56,11 +58,13 @@ class PositionManager {
         })
 
         // 3. Notify subscribers
-        this.notify({
-            type: 'position-changed',
-            nodeId,
-            payload: { position, parentId, source }
-        })
+        if (notify) {
+            this.notify({
+                type: 'position-changed',
+                nodeId,
+                payload: { position, parentId, source }
+            })
+        }
 
         return true
     }
@@ -79,17 +83,72 @@ class PositionManager {
             // BUT if the user is dragging, we should respect the user lock.
             // So we try to acquire with 'remote-sync'. If user has 'user-drag', it will fail (Good!)
 
+            // Pass notify=false to avoid spamming subscribers
             const success = this.updatePosition(
                 update.id,
                 { x: update.x, y: update.y },
                 source,
-                update.parentId ?? null
+                update.parentId ?? null,
+                false
             )
 
-            if (success) successCount++
+            if (success) {
+                successCount++
+                // TASK-213 FIX: Remote sync should NOT hold a lock. 
+                // It should update if free, but immediately release to allow user interaction.
+                // Otherwise, a sync blocks the UI for 5 seconds (default timeout).
+                if (source === 'remote-sync') {
+                    lockManager.release(update.id, source)
+                }
+            }
         })
 
+        // Optional: specific batch notification if needed (Orchestrator currently ignores 'remote-sync' anyway)
+        // this.notify({ type: 'batch-complete', source, count: successCount })
+
         return successCount
+    }
+
+    /**
+     * Phase 4: Get relative position for Vue Flow
+     * Calculates the relative position based on parent's current absolute position.
+     */
+    getRelativePosition(nodeId: string): Position2D | undefined {
+        const node = this.positions.get(nodeId)
+        if (!node) return undefined
+
+        if (!node.parentId || node.parentId === 'NONE') {
+            return { ...node.position }
+        }
+
+        const parentNode = this.positions.get(node.parentId)
+        // If parent is missing (race condition?), treat as absolute or 0?
+        // Treating as absolute is safer than crashing
+        const parentPos = parentNode ? parentNode.position : { x: 0, y: 0 }
+
+        return toRelativePosition(node.position, parentPos)
+    }
+
+    /**
+     * Phase 4: Update from relative position
+     * Converts relative position (from Vue Flow drag) to absolute and updates.
+     */
+    updateFromRelative(
+        nodeId: string,
+        relativePos: Position2D,
+        source: LockSource,
+        parentId: string | null = null
+    ): boolean {
+        let absolutePos = relativePos
+
+        if (parentId && parentId !== 'NONE') {
+            const parentNode = this.positions.get(parentId)
+            if (parentNode) {
+                absolutePos = toAbsolutePosition(relativePos, parentNode.position)
+            }
+        }
+
+        return this.updatePosition(nodeId, absolutePos, source, parentId)
     }
 
     /**

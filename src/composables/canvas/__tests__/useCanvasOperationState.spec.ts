@@ -21,8 +21,7 @@ describe('useCanvasOperationState', () => {
 
     describe('Drag Transitions', () => {
         it('should start dragging from idle', () => {
-            const positions = new Map([['1', { x: 0, y: 0 }]])
-            const result = operationState.startDrag(['1'], positions)
+            const result = operationState.startDrag(['1'])
 
             expect(result).toBe(true)
             expect(operationState.isDragging.value).toBe(true)
@@ -31,13 +30,13 @@ describe('useCanvasOperationState', () => {
 
         it('should fail to start dragging if not idle', () => {
             operationState.setEditing('1')
-            const result = operationState.startDrag(['1'], new Map())
+            const result = operationState.startDrag(['1'])
             expect(result).toBe(false)
             expect(operationState.isDragging.value).toBe(false)
         })
 
         it('should transition to drag-settling after drag ends', () => {
-            operationState.startDrag(['1'], new Map())
+            operationState.startDrag(['1'])
             operationState.endDrag(['1'])
 
             expect(operationState.currentType.value).toBe('drag-settling')
@@ -45,7 +44,7 @@ describe('useCanvasOperationState', () => {
         })
 
         it('should return to idle after settling timeout', () => {
-            operationState.startDrag(['1'], new Map())
+            operationState.startDrag(['1'])
             operationState.endDrag(['1'])
 
             vi.advanceTimersByTime(800)
@@ -69,7 +68,7 @@ describe('useCanvasOperationState', () => {
 
     describe('Guards', () => {
         it('should block remote updates when not idle or syncing', () => {
-            operationState.startDrag(['1'], new Map())
+            operationState.startDrag(['1'])
             expect(operationState.canAcceptRemoteUpdate.value).toBe(false)
             expect(operationState.isLocked.value).toBe(true)
         })

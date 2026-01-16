@@ -56,8 +56,9 @@ button svg {
     border-radius: 0 !important;
     padding: var(--space-2) !important;
     box-shadow: none !important;
-    min-width: 280px !important;
-    max-width: 320px !important;
+    min-width: 240px !important;
+    width: 280px !important;
+    flex-shrink: 0 !important;
     /* Subtle left border as column separator */
     border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
 }

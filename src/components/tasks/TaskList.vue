@@ -168,13 +168,10 @@ defineExpose({
   display: flex;
   flex-direction: column;
   background: var(--glass-bg-light);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   contain: layout style; /* Performance optimization */
-  box-shadow: var(--shadow-xl);
 }
 
 .project-group {
@@ -188,17 +185,16 @@ defineExpose({
 .project-header {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background-color: var(--glass-bg-soft);
-  border-bottom: 1px solid var(--glass-border);
+  gap: var(--space-1_5);
+  padding: var(--space-1) var(--space-2);
+  background-color: transparent;
+  border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
-  transition: all var(--duration-fast) ease;
+  transition: background-color var(--duration-fast) ease;
 }
 
 .project-header:hover {
-  background-color: var(--glass-bg-medium);
-  transform: translateX(4px);
+  background-color: var(--surface-hover);
 }
 
 .project-expand-icon {
@@ -212,20 +208,15 @@ defineExpose({
 }
 
 .project-name {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
   flex: 1;
 }
 
 .project-task-count {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  background-color: var(--glass-bg-soft);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  min-width: 24px;
-  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 .empty-state {

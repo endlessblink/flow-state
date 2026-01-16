@@ -4,7 +4,7 @@ A sophisticated Vue 3 productivity application combining Pomodoro timer function
 
 ## Features
 
-- **7 Task Views**: Board, Calendar, Canvas, Focus, QuickSort, AllTasks, CalendarVueCal
+- **8 Task Views**: Board, Calendar, Canvas, Focus, QuickSort, AllTasks, CalendarVueCal, Performance
 - **Pomodoro Timer**: Work/break sessions with browser notifications
 - **Task Management**: Projects, priorities, due dates, subtasks, recurring tasks
 - **Canvas Organization**: Free-form spatial task arrangement with Vue Flow
@@ -58,14 +58,14 @@ npm run lint:fix     # Fix linting issues
 - **Canvas**: Vue Flow (@vue-flow/core)
 - **Calendar**: vue-cal
 - **Storage**: Supabase (PostgreSQL) with RLS
-- **Build**: Vite 7.2.4
+- **Build**: Vite 7.3.1
 - **Testing**: Vitest + Playwright
 
 ## Project Structure
 
 ```
 src/
-├── views/           # 7 application views
+├── views/           # 8 application views
 ├── components/      # Reusable UI components (10 directories)
 ├── stores/          # 12 Pinia stores
 ├── composables/     # 56 Vue 3 composables

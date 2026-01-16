@@ -2639,6 +2639,67 @@
       50% { opacity: 1; transform: scale(1.2); }
     }
 
+    /* Planning Progress Bar */
+    .planning-progress-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 24px 0;
+    }
+
+    .planning-progress-bar {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      background: var(--surface-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .planning-progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary, #60a5fa));
+      border-radius: 4px;
+      transition: width 0.3s ease-out;
+    }
+
+    .planning-progress-shimmer {
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .planning-progress-status {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    .planning-elapsed {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      font-family: monospace;
+    }
+
     .cancel-btn {
       margin-top: 24px;
       padding: 10px 24px;
@@ -2721,6 +2782,26 @@
       padding: 20px;
     }
 
+    .new-questions-separator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .new-questions-separator::before,
+    .new-questions-separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-medium);
+    }
+
     .question-text {
       font-size: 14px;
       font-weight: 500;
@@ -2756,6 +2837,56 @@
       color: #000;
     }
 
+    /* Multi-select questions */
+    .question-options.multi-select {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .question-options.multi-select .question-option {
+      position: relative;
+      padding-left: 32px;
+    }
+
+    .question-options.multi-select .question-option::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border-medium);
+      border-radius: 3px;
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .question-options.multi-select .question-option.selected::before {
+      background: var(--brand-primary);
+      border-color: var(--brand-primary);
+    }
+
+    .question-options.multi-select .question-option.selected::after {
+      content: '✓';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: #000;
+      font-weight: bold;
+    }
+
+    .multi-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 8px;
+      display: block;
+      width: 100%;
+    }
+
     .question-input {
       width: 100%;
       padding: 12px;
@@ -2787,6 +2918,20 @@
       opacity: 0.9;
     }
 
+    .questions-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .questions-actions .ask-more-btn {
+      flex: 0 0 auto;
+    }
+
+    .questions-actions .submit-answers-btn {
+      flex: 1;
+    }
+
     /* Plan */
     .plan-list {
       display: flex;
@@ -2795,14 +2940,28 @@
       margin-bottom: 24px;
     }
 
+    /* Plan task - expandable card with chat */
     .plan-task {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
       padding: 16px;
       background: var(--surface-secondary);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    .plan-task:hover {
+      border-color: var(--brand-primary);
+    }
+
+    .plan-task.expanded {
+      border-color: var(--brand-primary);
+    }
+
+    .plan-task-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
     }
 
     .plan-task-number {
@@ -2854,6 +3013,256 @@
     .plan-task-badge.devops { background: #ea580c20; color: #fb923c; }
     .plan-task-badge.qa { background: #16a34a20; color: #4ade80; }
     .plan-task-badge.docs { background: #ca8a0420; color: #fbbf24; }
+
+    .plan-task-expand {
+      width: 20px;
+      height: 20px;
+      color: var(--text-tertiary);
+      transition: transform 0.2s ease, color 0.2s ease;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .plan-task.expanded .plan-task-expand {
+      transform: rotate(180deg);
+      color: var(--brand-primary);
+    }
+
+    /* Task chat section */
+    .plan-task-chat {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .plan-task.expanded .plan-task-chat {
+      display: block;
+    }
+
+    .task-chat-messages {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+      padding: 8px;
+      background: var(--surface-primary);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .task-chat-messages:empty {
+      display: none;
+    }
+
+    .task-chat-message {
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+
+    .task-chat-message.user {
+      background: var(--brand-subtle);
+      color: var(--brand-primary);
+      text-align: right;
+    }
+
+    .task-chat-message.assistant {
+      background: var(--surface-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .task-chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .task-chat-input {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .task-chat-input:focus {
+      border-color: var(--brand-primary);
+    }
+
+    .task-chat-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .task-chat-send {
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--brand-primary);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .task-chat-send:hover {
+      background: var(--brand-hover);
+    }
+
+    /* Thinking indicator */
+    .task-chat-message.thinking {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0.8;
+    }
+
+    .thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .thinking-dots .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--brand-primary);
+      border-radius: 50%;
+      animation: dotPulse 1.4s ease-in-out infinite;
+    }
+
+    .thinking-dots .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .thinking-dots .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes dotPulse {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .thinking-text {
+      font-style: italic;
+      color: var(--text-muted);
+    }
+
+    /* Formatted response styles */
+    .task-chat-message.assistant p {
+      margin: 0 0 8px 0;
+    }
+
+    .task-chat-message.assistant p:last-child {
+      margin-bottom: 0;
+    }
+
+    .task-chat-message.assistant strong {
+      color: var(--text-primary);
+    }
+
+    .task-chat-message.assistant em {
+      color: var(--text-secondary);
+    }
+
+    .task-chat-message.assistant ul,
+    .task-chat-message.assistant ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .task-chat-message.assistant li {
+      margin: 4px 0;
+    }
+
+    .task-chat-message.assistant .code-block {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Monaco', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .task-chat-message.assistant .inline-code {
+      background: var(--surface-primary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Monaco', monospace;
+      font-size: 12px;
+    }
+
+    .task-chat-message.error {
+      color: var(--color-error);
+      border-left-color: var(--color-error);
+    }
+
+    /* Auto-copy on selection (Zellij style) */
+    .selectable-text {
+      user-select: text;
+      cursor: text;
+    }
+
+    .selectable-text::selection {
+      background: var(--brand-primary);
+      color: #000;
+    }
+
+    /* Copy notification */
+    .copy-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-medium);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      z-index: 10000;
+      animation: fadeInOut 1.5s ease-in-out forwards;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    }
+
+    /* Ask More Questions button */
+    .ask-more-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      background: transparent;
+      border: 1px dashed var(--border-medium);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: all 0.15s ease;
+    }
+
+    .ask-more-btn:hover {
+      border-color: var(--brand-primary);
+      color: var(--brand-primary);
+      background: var(--brand-subtle);
+    }
+
+    .ask-more-btn svg {
+      width: 16px;
+      height: 16px;
+    }
 
     .plan-actions {
       display: flex;
@@ -2988,6 +3397,252 @@
     .agent-card-type {
       font-size: 11px;
       color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .agent-card-progress {
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--surface-tertiary);
+      border-radius: 4px;
+      min-height: 32px;
+    }
+
+    .agent-card.running {
+      border-color: #4ade8050;
+    }
+
+    .agent-card.completed {
+      border-color: #60a5fa50;
+      opacity: 0.8;
+    }
+
+    .agent-card.failed {
+      border-color: #f8717150;
+    }
+
+    .agent-card-status.pending {
+      background: #fbbf2420;
+      color: #fbbf24;
+    }
+
+    /* Task Review Section */
+    .task-review-section {
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+
+    .review-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .review-section-header h3 {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .review-count {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .task-review-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .task-review-card {
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .task-review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .task-review-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .task-review-branch {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--accent-primary);
+      background: var(--accent-primary)15;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .task-review-diff {
+      background: var(--surface-primary);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .task-review-diff .added {
+      color: #4ade80;
+    }
+
+    .task-review-diff .removed {
+      color: #f87171;
+    }
+
+    .task-review-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .task-review-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .task-review-btn.view-diff {
+      background: var(--surface-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .task-review-btn.view-diff:hover {
+      background: var(--surface-tertiary);
+    }
+
+    .task-review-btn.merge {
+      background: #16a34a;
+      color: white;
+    }
+
+    .task-review-btn.merge:hover {
+      background: #15803d;
+    }
+
+    .task-review-btn.discard {
+      background: #dc2626;
+      color: white;
+    }
+
+    .task-review-btn.discard:hover {
+      background: #b91c1c;
+    }
+
+    .review-bulk-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .review-bulk-btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .review-bulk-btn.merge-all {
+      background: #16a34a;
+      color: white;
+    }
+
+    .review-bulk-btn.merge-all:hover {
+      background: #15803d;
+    }
+
+    .review-bulk-btn.discard-all {
+      background: #dc2626;
+      color: white;
+    }
+
+    .review-bulk-btn.discard-all:hover {
+      background: #b91c1c;
+    }
+
+    .task-review-files {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    /* Execution chat */
+    .execution-chat {
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+
+    .execution-chat-header {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .execution-chat-messages {
+      max-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+
+    .execution-chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .execution-chat-input {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: var(--surface-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--text-primary);
+    }
+
+    .execution-chat-input:focus {
+      outline: none;
+      border-color: var(--brand-primary);
     }
 
     /* Review */
@@ -3888,13 +4543,24 @@
             <div class="orchestrator-panel hidden" id="orch-questions-panel">
               <div class="panel-header">
                 <h2>A few questions to clarify requirements</h2>
+                <p class="panel-subtitle">Answer these questions to help create a better plan. Need more detail? Ask for more questions.</p>
               </div>
               <div id="orch-questions-list" class="questions-list">
                 <!-- Questions will be populated here -->
               </div>
-              <button class="submit-answers-btn" onclick="submitAnswers()">
-                Submit Answers & Continue
-              </button>
+              <div class="questions-actions">
+                <button class="ask-more-btn" onclick="askMoreQuestionsFromRequirements()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  Ask More Clarifying Questions
+                </button>
+                <button class="submit-answers-btn" onclick="submitAnswers()">
+                  Submit Answers & Continue
+                </button>
+              </div>
             </div>
 
             <!-- PHASE: Plan Review -->
@@ -3904,6 +4570,16 @@
                 <div class="loading-spinner"></div>
                 <h3 class="loading-title">Creating Implementation Plan...</h3>
                 <p class="loading-subtitle">Analyzing your requirements and breaking down the project into tasks.</p>
+
+                <!-- Progress bar -->
+                <div class="planning-progress-container">
+                  <div class="planning-progress-bar">
+                    <div class="planning-progress-fill" id="planning-progress-fill"></div>
+                    <div class="planning-progress-shimmer"></div>
+                  </div>
+                  <div class="planning-progress-status" id="planning-progress-status">Starting Claude...</div>
+                </div>
+
                 <div class="loading-steps">
                   <div class="loading-step active" id="plan-step-1">
                     <span class="step-dot"></span>
@@ -3918,6 +4594,7 @@
                     <span>Creating task breakdown</span>
                   </div>
                 </div>
+                <div class="planning-elapsed" id="planning-elapsed">Elapsed: 0s</div>
                 <button class="cancel-btn" onclick="cancelOrchestration()">Cancel</button>
               </div>
             </div>
@@ -3925,8 +4602,16 @@
             <div class="orchestrator-panel hidden" id="orch-plan-panel">
               <div class="panel-header">
                 <h2>Implementation Plan</h2>
-                <p class="panel-subtitle">Review the tasks before execution. You can modify or approve.</p>
+                <p class="panel-subtitle">Review the tasks below. Click any task to expand and chat about it, or request more clarifying questions.</p>
               </div>
+              <button class="ask-more-btn" onclick="askMoreQuestions()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Ask More Clarifying Questions
+              </button>
               <div id="orch-plan-list" class="plan-list">
                 <!-- Plan tasks will be populated here -->
               </div>
@@ -3956,6 +4641,39 @@
               </div>
               <div id="orch-agents-grid" class="agents-grid">
                 <!-- Agent cards will appear here -->
+              </div>
+
+              <!-- Completed Tasks Review Section -->
+              <div class="task-review-section" id="orch-task-review">
+                <div class="review-section-header">
+                  <h3>Completed Tasks - Ready for Review</h3>
+                  <span class="review-count" id="review-count">0 tasks ready</span>
+                </div>
+                <div class="task-review-list" id="task-review-list">
+                  <!-- Completed task cards with merge/discard buttons will appear here -->
+                </div>
+                <div class="review-bulk-actions" id="review-bulk-actions" style="display: none;">
+                  <button class="review-bulk-btn merge-all" onclick="mergeAllCompletedTasks()">
+                    ✅ Merge All
+                  </button>
+                  <button class="review-bulk-btn discard-all" onclick="discardAllCompletedTasks()">
+                    🗑️ Discard All
+                  </button>
+                </div>
+              </div>
+
+              <!-- Chat with orchestrator during execution -->
+              <div class="execution-chat">
+                <div class="execution-chat-header">💬 Chat with Orchestrator</div>
+                <div class="execution-chat-messages" id="execution-chat-messages">
+                  <!-- Chat messages will appear here -->
+                </div>
+                <div class="execution-chat-input-row">
+                  <input type="text" class="execution-chat-input" id="execution-chat-input"
+                         placeholder="Ask questions, request changes, or pause execution..."
+                         onkeypress="if(event.key==='Enter') sendExecutionChat()">
+                  <button class="task-chat-send" onclick="sendExecutionChat()">Send</button>
+                </div>
               </div>
             </div>
 
@@ -7992,7 +8710,23 @@
           break;
 
         case 'questions':
-          renderQuestions(data.questions);
+          // Check if we already have questions - if so, preserve answers by appending only new ones
+          const existingQuestionIds = new Set(currentOrchestration?.questions?.map(q => q.id) || []);
+          const newQuestionsOnly = data.questions.filter(q => !existingQuestionIds.has(q.id));
+
+          if (existingQuestionIds.size > 0 && newQuestionsOnly.length > 0 && newQuestionsOnly.length < data.questions.length) {
+            // We have existing questions and some new ones - append only the new ones
+            currentOrchestration.questions = data.questions;
+            renderQuestions(newQuestionsOnly, true);
+          } else if (existingQuestionIds.size === 0 || Object.keys(orchestrationAnswers).length === 0) {
+            // No existing questions or no answers yet - render all fresh
+            if (currentOrchestration) currentOrchestration.questions = data.questions;
+            renderQuestions(data.questions, false);
+          } else {
+            // Re-render but preserve answers (e.g., reconnection)
+            if (currentOrchestration) currentOrchestration.questions = data.questions;
+            renderQuestions(data.questions, true);
+          }
           showOrchestratorPanel('questions');
           break;
 
@@ -8005,6 +8739,36 @@
         case 'summary':
         case 'progress':
           addProgressItem(data.message);
+          break;
+
+        case 'task_started':
+          addProgressItem(`🚀 Starting: ${data.task?.title || data.taskId}`, 'info');
+          updateExecutionStats(data.stats);
+          addOrUpdateAgentCard(data.taskId, data.task, 'running');
+          break;
+
+        case 'task_progress':
+          updateAgentCardProgress(data.taskId, data.message);
+          break;
+
+        case 'task_completed':
+          addProgressItem(`✅ Completed: ${data.task?.title || data.taskId} (${data.filesChanged || 0} files)`, 'success');
+          updateExecutionStats(data.stats);
+          updateAgentCardStatus(data.taskId, 'completed');
+          // Add review card with diff info
+          addTaskReviewCard(data);
+          break;
+
+        case 'task_retrying':
+          addProgressItem(`⚠️ Retrying: ${data.task?.title || data.taskId} (${data.retries}/${data.maxRetries})`, 'warning');
+          updateExecutionStats(data.stats);
+          updateAgentCardStatus(data.taskId, 'retrying');
+          break;
+
+        case 'task_failed':
+          addProgressItem(`❌ Failed: ${data.task?.title || data.taskId} - ${data.error}`, 'error');
+          updateExecutionStats(data.stats);
+          updateAgentCardStatus(data.taskId, 'failed');
           break;
 
         case 'escalation':
@@ -8021,6 +8785,340 @@
         case 'error':
           showToast(data.message, 'error');
           break;
+      }
+    }
+
+    // Track execution state
+    let executionState = {
+      completed: 0,
+      running: 0,
+      pending: 0,
+      agents: new Map()
+    };
+
+    // Update execution statistics
+    function updateExecutionStats(stats) {
+      if (stats) {
+        executionState = { ...executionState, ...stats };
+      }
+      document.getElementById('orch-completed-count').textContent = `${executionState.completed} completed`;
+      document.getElementById('orch-running-count').textContent = `${executionState.running} running`;
+      document.getElementById('orch-pending-count').textContent = `${executionState.pending} pending`;
+    }
+
+    // Add or update agent card during execution
+    function addOrUpdateAgentCard(taskId, task, status) {
+      const grid = document.getElementById('orch-agents-grid');
+      let card = document.getElementById(`agent-card-${taskId}`);
+
+      if (!card) {
+        card = document.createElement('div');
+        card.id = `agent-card-${taskId}`;
+        card.className = `agent-card ${status}`;
+        card.innerHTML = `
+          <div class="agent-card-header">
+            <span class="agent-card-title">${escapeHtml(task?.title || taskId)}</span>
+            <span class="agent-card-status ${status}">${status}</span>
+          </div>
+          <div class="agent-card-type">${task?.agentType || 'general'}</div>
+          <div class="agent-card-progress" id="agent-progress-${taskId}">
+            <span class="thinking-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+            Working...
+          </div>
+        `;
+        grid.appendChild(card);
+      } else {
+        card.className = `agent-card ${status}`;
+        card.querySelector('.agent-card-status').textContent = status;
+        card.querySelector('.agent-card-status').className = `agent-card-status ${status}`;
+      }
+
+      executionState.agents.set(taskId, { task, status });
+    }
+
+    // Update agent card progress message
+    function updateAgentCardProgress(taskId, message) {
+      const progressEl = document.getElementById(`agent-progress-${taskId}`);
+      if (progressEl && message) {
+        progressEl.innerHTML = escapeHtml(message);
+      }
+    }
+
+    // Update agent card status
+    function updateAgentCardStatus(taskId, status) {
+      const card = document.getElementById(`agent-card-${taskId}`);
+      if (card) {
+        card.className = `agent-card ${status}`;
+        const statusEl = card.querySelector('.agent-card-status');
+        if (statusEl) {
+          statusEl.textContent = status;
+          statusEl.className = `agent-card-status ${status}`;
+        }
+        const progressEl = card.querySelector('.agent-card-progress');
+        if (progressEl) {
+          if (status === 'completed') {
+            progressEl.innerHTML = '✅ Done';
+          } else if (status === 'failed') {
+            progressEl.innerHTML = '❌ Failed';
+          }
+        }
+      }
+      if (executionState.agents.has(taskId)) {
+        executionState.agents.get(taskId).status = status;
+      }
+    }
+
+    // Track completed tasks ready for review
+    let completedTasksForReview = new Map();
+
+    // Add a task review card with diff info and merge/discard buttons
+    function addTaskReviewCard(data) {
+      const list = document.getElementById('task-review-list');
+      if (!list) return;
+
+      const taskId = data.taskId;
+      const task = data.task || { title: taskId };
+      const branch = data.branch || 'unknown';
+      const diffSummary = data.diffSummary || 'No changes detected';
+      const filesChanged = data.filesChanged || 0;
+      const reviewCommands = data.reviewCommands || {};
+
+      // Store for bulk operations
+      completedTasksForReview.set(taskId, {
+        task,
+        branch,
+        worktree: data.worktree,
+        reviewCommands
+      });
+
+      // Update count
+      document.getElementById('review-count').textContent = `${completedTasksForReview.size} tasks ready`;
+
+      // Show bulk actions if multiple tasks
+      const bulkActions = document.getElementById('review-bulk-actions');
+      if (bulkActions && completedTasksForReview.size > 1) {
+        bulkActions.style.display = 'flex';
+      }
+
+      // Check if card already exists
+      let card = document.getElementById(`review-card-${taskId}`);
+      if (card) {
+        // Update existing card
+        card.querySelector('.task-review-diff').innerHTML = formatDiffSummary(diffSummary);
+        return;
+      }
+
+      // Create new card
+      card = document.createElement('div');
+      card.id = `review-card-${taskId}`;
+      card.className = 'task-review-card';
+      card.innerHTML = `
+        <div class="task-review-header">
+          <span class="task-review-title">${escapeHtml(task.title)}</span>
+          <span class="task-review-branch">${escapeHtml(branch)}</span>
+        </div>
+        <div class="task-review-files">${filesChanged} file${filesChanged !== 1 ? 's' : ''} changed</div>
+        <div class="task-review-diff">${formatDiffSummary(diffSummary)}</div>
+        <div class="task-review-actions">
+          <button class="task-review-btn view-diff" onclick="viewTaskDiff('${taskId}')" title="View full diff">
+            👁 View Diff
+          </button>
+          <button class="task-review-btn discard" onclick="discardTask('${taskId}')" title="Discard changes">
+            🗑️ Discard
+          </button>
+          <button class="task-review-btn merge" onclick="mergeTask('${taskId}')" title="Merge changes">
+            ✅ Merge
+          </button>
+        </div>
+      `;
+
+      list.appendChild(card);
+    }
+
+    // Format diff summary with syntax highlighting
+    function formatDiffSummary(diffSummary) {
+      if (!diffSummary) return '<span class="text-muted">No changes</span>';
+
+      // Escape HTML first
+      let formatted = escapeHtml(diffSummary);
+
+      // Highlight additions (green) and deletions (red)
+      formatted = formatted.replace(/(\d+) insertions?\(\+\)/g, '<span class="added">$1 insertion$2(+)</span>');
+      formatted = formatted.replace(/(\d+) deletions?\(-\)/g, '<span class="removed">$1 deletion$2(-)</span>');
+
+      // Highlight file names
+      formatted = formatted.replace(/^(\s*[\w\/.]+\s*\|)/gm, '<strong>$1</strong>');
+
+      return formatted;
+    }
+
+    // View full diff for a task
+    async function viewTaskDiff(taskId) {
+      const taskData = completedTasksForReview.get(taskId);
+      if (!taskData || !taskData.branch) {
+        showToast('No diff information available', 'warning');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/orchestrator/task/${taskId}/diff?branch=${encodeURIComponent(taskData.branch)}`);
+        const result = await response.json();
+
+        if (result.success && result.diff) {
+          // Show diff in a modal or new window
+          const diffWindow = window.open('', '_blank', 'width=800,height=600');
+          diffWindow.document.write(`
+            <html>
+              <head>
+                <title>Diff: ${escapeHtml(taskData.task?.title || taskId)}</title>
+                <style>
+                  body { font-family: monospace; background: #1a1a1a; color: #e0e0e0; padding: 20px; }
+                  .line { white-space: pre; }
+                  .add { color: #4ade80; background: #16a34a20; }
+                  .del { color: #f87171; background: #dc262620; }
+                  .hunk { color: #60a5fa; }
+                </style>
+              </head>
+              <body>
+                <h2>Diff: ${escapeHtml(taskData.task?.title || taskId)}</h2>
+                <p>Branch: ${escapeHtml(taskData.branch)}</p>
+                <hr>
+                <pre>${formatFullDiff(result.diff)}</pre>
+              </body>
+            </html>
+          `);
+        } else {
+          showToast(result.error || 'Failed to load diff', 'error');
+        }
+      } catch (err) {
+        console.error('Error viewing diff:', err);
+        showToast('Error loading diff: ' + err.message, 'error');
+      }
+    }
+
+    // Format full diff with syntax highlighting
+    function formatFullDiff(diff) {
+      if (!diff) return 'No changes';
+      return escapeHtml(diff)
+        .split('\\n')
+        .map(line => {
+          if (line.startsWith('+') && !line.startsWith('+++')) {
+            return `<span class="add">${line}</span>`;
+          } else if (line.startsWith('-') && !line.startsWith('---')) {
+            return `<span class="del">${line}</span>`;
+          } else if (line.startsWith('@@')) {
+            return `<span class="hunk">${line}</span>`;
+          }
+          return line;
+        })
+        .join('\\n');
+    }
+
+    // Merge a completed task's changes
+    async function mergeTask(taskId) {
+      const taskData = completedTasksForReview.get(taskId);
+      if (!taskData) {
+        showToast('Task not found', 'error');
+        return;
+      }
+
+      if (!confirm(`Merge changes from branch "${taskData.branch}" into master?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/orchestrator/task/${taskId}/merge`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ branch: taskData.branch, worktree: taskData.worktree })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showToast(`✅ Merged: ${taskData.task?.title || taskId}`, 'success');
+          removeTaskReviewCard(taskId);
+        } else {
+          showToast(result.error || 'Merge failed', 'error');
+        }
+      } catch (err) {
+        console.error('Error merging task:', err);
+        showToast('Error merging: ' + err.message, 'error');
+      }
+    }
+
+    // Discard a completed task's changes
+    async function discardTask(taskId) {
+      const taskData = completedTasksForReview.get(taskId);
+      if (!taskData) {
+        showToast('Task not found', 'error');
+        return;
+      }
+
+      if (!confirm(`Discard all changes from "${taskData.task?.title || taskId}"? This cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/orchestrator/task/${taskId}/discard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ branch: taskData.branch, worktree: taskData.worktree })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showToast(`🗑️ Discarded: ${taskData.task?.title || taskId}`, 'info');
+          removeTaskReviewCard(taskId);
+        } else {
+          showToast(result.error || 'Discard failed', 'error');
+        }
+      } catch (err) {
+        console.error('Error discarding task:', err);
+        showToast('Error discarding: ' + err.message, 'error');
+      }
+    }
+
+    // Remove a task review card from the UI
+    function removeTaskReviewCard(taskId) {
+      const card = document.getElementById(`review-card-${taskId}`);
+      if (card) {
+        card.remove();
+      }
+      completedTasksForReview.delete(taskId);
+
+      // Update count
+      document.getElementById('review-count').textContent = `${completedTasksForReview.size} tasks ready`;
+
+      // Hide bulk actions if only one task left
+      const bulkActions = document.getElementById('review-bulk-actions');
+      if (bulkActions && completedTasksForReview.size <= 1) {
+        bulkActions.style.display = 'none';
+      }
+    }
+
+    // Merge all completed tasks
+    async function mergeAllCompletedTasks() {
+      if (!confirm(`Merge all ${completedTasksForReview.size} completed tasks?`)) {
+        return;
+      }
+
+      const taskIds = [...completedTasksForReview.keys()];
+      for (const taskId of taskIds) {
+        await mergeTask(taskId);
+      }
+    }
+
+    // Discard all completed tasks
+    async function discardAllCompletedTasks() {
+      if (!confirm(`Discard all ${completedTasksForReview.size} completed tasks? This cannot be undone.`)) {
+        return;
+      }
+
+      const taskIds = [...completedTasksForReview.keys()];
+      for (const taskId of taskIds) {
+        await discardTask(taskId);
       }
     }
 
@@ -8077,84 +9175,261 @@
 
     // Planning animation
     let planningAnimationTimer = null;
+    let planningElapsedTimer = null;
+    let planningStartTime = null;
+
+    const planningStatusMessages = [
+      'Starting Claude...',
+      'Analyzing your requirements...',
+      'Understanding project scope...',
+      'Identifying key components...',
+      'Mapping dependencies...',
+      'Breaking down into tasks...',
+      'Estimating complexity...',
+      'Organizing task priorities...',
+      'Finalizing plan structure...',
+      'Almost there...'
+    ];
+
     function startPlanningAnimation() {
+      planningStartTime = Date.now();
+
+      // Reset progress bar
+      const progressFill = document.getElementById('planning-progress-fill');
+      const progressStatus = document.getElementById('planning-progress-status');
+      const elapsedEl = document.getElementById('planning-elapsed');
+
+      if (progressFill) progressFill.style.width = '0%';
+      if (progressStatus) progressStatus.textContent = planningStatusMessages[0];
+      if (elapsedEl) elapsedEl.textContent = 'Elapsed: 0s';
+
       // Reset steps
       document.querySelectorAll('#orch-planning-panel .loading-step').forEach((el, i) => {
         el.classList.remove('active', 'done');
         if (i === 0) el.classList.add('active');
       });
 
-      let step = 0;
+      let progress = 0;
+      let statusIndex = 0;
+
+      // Progress animation - smoothly increases but slows as it approaches 90%
       planningAnimationTimer = setInterval(() => {
-        step++;
-        if (step < 3) {
-          document.getElementById(`plan-step-${step}`)?.classList.remove('active');
-          document.getElementById(`plan-step-${step}`)?.classList.add('done');
-          document.getElementById(`plan-step-${step + 1}`)?.classList.add('active');
+        // Logarithmic slowdown as we approach 90%
+        const remaining = 90 - progress;
+        const increment = Math.max(0.5, remaining * 0.08);
+        progress = Math.min(90, progress + increment);
+
+        if (progressFill) progressFill.style.width = `${progress}%`;
+
+        // Update status message every ~10%
+        const newStatusIndex = Math.min(Math.floor(progress / 10), planningStatusMessages.length - 1);
+        if (newStatusIndex !== statusIndex) {
+          statusIndex = newStatusIndex;
+          if (progressStatus) progressStatus.textContent = planningStatusMessages[statusIndex];
         }
-      }, 3000);
+
+        // Update step indicators
+        if (progress > 30) {
+          document.getElementById('plan-step-1')?.classList.remove('active');
+          document.getElementById('plan-step-1')?.classList.add('done');
+          document.getElementById('plan-step-2')?.classList.add('active');
+        }
+        if (progress > 60) {
+          document.getElementById('plan-step-2')?.classList.remove('active');
+          document.getElementById('plan-step-2')?.classList.add('done');
+          document.getElementById('plan-step-3')?.classList.add('active');
+        }
+      }, 500);
+
+      // Elapsed timer
+      planningElapsedTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - planningStartTime) / 1000);
+        if (elapsedEl) elapsedEl.textContent = `Elapsed: ${elapsed}s`;
+      }, 1000);
     }
 
     function stopPlanningAnimation() {
+      // Complete the progress bar
+      const progressFill = document.getElementById('planning-progress-fill');
+      const progressStatus = document.getElementById('planning-progress-status');
+
+      if (progressFill) progressFill.style.width = '100%';
+      if (progressStatus) progressStatus.textContent = 'Plan ready!';
+
+      // Mark all steps as done
+      document.querySelectorAll('#orch-planning-panel .loading-step').forEach(el => {
+        el.classList.remove('active');
+        el.classList.add('done');
+      });
+
       if (planningAnimationTimer) {
         clearInterval(planningAnimationTimer);
         planningAnimationTimer = null;
       }
-    }
-
-    // Render clarifying questions
-    function renderQuestions(questions) {
-      stopLoadingAnimation();
-      const container = document.getElementById('orch-questions-list');
-      orchestrationAnswers = {};
-
-      container.innerHTML = questions.map(q => {
-        const optionsHtml = q.options
-          ? `<div class="question-options">
-               ${q.options.map(opt =>
-                 `<button class="question-option" data-qid="${q.id}" data-value="${opt}" onclick="selectOption(this)">${opt}</button>`
-               ).join('')}
-             </div>`
-          : '';
-
-        return `
-          <div class="question-item" data-qid="${q.id}">
-            <div class="question-text">${q.question}</div>
-            ${optionsHtml}
-            <input type="text" class="question-input" data-qid="${q.id}"
-                   placeholder="${q.type === 'choice' ? 'Or type custom answer...' : 'Type your answer...'}"
-                   onchange="updateAnswer(this)">
-          </div>
-        `;
-      }).join('');
-    }
-
-    // Select an option for a question
-    function selectOption(btn) {
-      const qid = btn.dataset.qid;
-      const value = btn.dataset.value;
-      const wasSelected = btn.classList.contains('selected');
-
-      // Deselect all options in same question
-      document.querySelectorAll(`.question-option[data-qid="${qid}"]`).forEach(b => {
-        b.classList.remove('selected');
-      });
-
-      if (wasSelected) {
-        // Toggle off - remove answer
-        delete orchestrationAnswers[qid];
-      } else {
-        // Select this one
-        btn.classList.add('selected');
-        orchestrationAnswers[qid] = value;
-        // Clear text input
-        const input = document.querySelector(`.question-input[data-qid="${qid}"]`);
-        if (input) input.value = '';
+      if (planningElapsedTimer) {
+        clearInterval(planningElapsedTimer);
+        planningElapsedTimer = null;
       }
     }
 
-    // Update answer from text input
+    // Render clarifying questions
+    function renderQuestions(questions, append = false) {
+      stopLoadingAnimation();
+      const container = document.getElementById('orch-questions-list');
+
+      // Only reset answers if not appending
+      if (!append) {
+        orchestrationAnswers = {};
+      }
+
+      const questionsHtml = questions.map(q => {
+        // Check if this question allows multiple selections
+        const isMultiSelect = q.multiSelect || q.type === 'multiselect';
+        const existingAnswer = orchestrationAnswers[q.id];
+
+        const optionsHtml = q.options
+          ? `<div class="question-options ${isMultiSelect ? 'multi-select' : ''}" data-multi="${isMultiSelect}">
+               ${isMultiSelect ? '<span class="multi-hint">Select all that apply</span>' : ''}
+               ${q.options.map(opt => {
+                 // Check if this option was previously selected
+                 const isSelected = existingAnswer && (
+                   Array.isArray(existingAnswer) ? existingAnswer.includes(opt) : existingAnswer === opt
+                 );
+                 return `<button class="question-option ${isSelected ? 'selected' : ''}"
+                         data-qid="${q.id}" data-value="${opt}" data-multi="${isMultiSelect}"
+                         onclick="selectOption(this)">${opt}</button>`;
+               }).join('')}
+             </div>`
+          : '';
+
+        // Get existing custom text answer
+        const existingText = typeof existingAnswer === 'string' && !q.options?.includes(existingAnswer)
+          ? existingAnswer
+          : (existingAnswer?.customText || '');
+
+        return `
+          <div class="question-item" data-qid="${q.id}" data-multi="${isMultiSelect}">
+            <div class="question-text">${q.question}</div>
+            ${optionsHtml}
+            <input type="text" class="question-input" data-qid="${q.id}" id="q-${q.id}"
+                   value="${escapeHtml(existingText)}"
+                   placeholder="${q.options ? 'Add custom details or additional context...' : 'Type your answer...'}"
+                   oninput="updateAnswer(this)">
+          </div>
+        `;
+      }).join('');
+
+      if (append) {
+        // Append new questions with a separator
+        container.innerHTML += `
+          <div class="new-questions-separator">Additional Questions</div>
+          ${questionsHtml}
+        `;
+        // Scroll to the new questions
+        const newItems = container.querySelectorAll('.question-item');
+        if (newItems.length > 0) {
+          newItems[newItems.length - questions.length]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else {
+        container.innerHTML = questionsHtml;
+      }
+    }
+
+    // Select an option for a question (supports multi-select)
+    function selectOption(btn) {
+      const qid = btn.dataset.qid;
+      const value = btn.dataset.value;
+      const isMulti = btn.dataset.multi === 'true';
+      const wasSelected = btn.classList.contains('selected');
+
+      if (isMulti) {
+        // Multi-select: toggle this option
+        btn.classList.toggle('selected');
+
+        // Gather all selected values
+        const selectedBtns = document.querySelectorAll(`.question-option[data-qid="${qid}"].selected`);
+        const selectedValues = Array.from(selectedBtns).map(b => b.dataset.value);
+
+        // Get custom text if any
+        const input = document.querySelector(`.question-input[data-qid="${qid}"]`);
+        const customText = input?.value?.trim() || '';
+
+        if (selectedValues.length > 0 || customText) {
+          orchestrationAnswers[qid] = {
+            selections: selectedValues,
+            customText: customText
+          };
+        } else {
+          delete orchestrationAnswers[qid];
+        }
+      } else {
+        // Single select: deselect others first
+        document.querySelectorAll(`.question-option[data-qid="${qid}"]`).forEach(b => {
+          b.classList.remove('selected');
+        });
+
+        if (wasSelected) {
+          // Toggle off - but keep custom text if present
+          const input = document.querySelector(`.question-input[data-qid="${qid}"]`);
+          const customText = input?.value?.trim() || '';
+          if (customText) {
+            orchestrationAnswers[qid] = customText;
+          } else {
+            delete orchestrationAnswers[qid];
+          }
+        } else {
+          // Select this one
+          btn.classList.add('selected');
+          const input = document.querySelector(`.question-input[data-qid="${qid}"]`);
+          const customText = input?.value?.trim() || '';
+
+          if (customText) {
+            // Combine selection with custom text
+            orchestrationAnswers[qid] = `${value} - ${customText}`;
+          } else {
+            orchestrationAnswers[qid] = value;
+          }
+        }
+      }
+    }
+
+    // Update answer from text input (combines with selection)
     function updateAnswer(input) {
+      const qid = input.dataset.qid;
+      const questionItem = input.closest('.question-item');
+      const isMulti = questionItem?.dataset.multi === 'true';
+      const customText = input.value.trim();
+
+      // Get selected options
+      const selectedBtns = document.querySelectorAll(`.question-option[data-qid="${qid}"].selected`);
+      const selectedValues = Array.from(selectedBtns).map(b => b.dataset.value);
+
+      if (isMulti) {
+        // Multi-select: store both selections and custom text
+        if (selectedValues.length > 0 || customText) {
+          orchestrationAnswers[qid] = {
+            selections: selectedValues,
+            customText: customText
+          };
+        } else {
+          delete orchestrationAnswers[qid];
+        }
+      } else {
+        // Single select: combine or use custom text alone
+        if (selectedValues.length > 0 && customText) {
+          orchestrationAnswers[qid] = `${selectedValues[0]} - ${customText}`;
+        } else if (selectedValues.length > 0) {
+          orchestrationAnswers[qid] = selectedValues[0];
+        } else if (customText) {
+          orchestrationAnswers[qid] = customText;
+        } else {
+          delete orchestrationAnswers[qid];
+        }
+      }
+    }
+
+    // Legacy compatibility - keep old behavior for simple text answers
+    function updateAnswerLegacy(input) {
       const qid = input.dataset.qid;
       if (input.value.trim()) {
         orchestrationAnswers[qid] = input.value.trim();
@@ -8188,19 +9463,34 @@
       }
     }
 
-    // Render plan tasks
+    // Render plan tasks with expandable chat
     function renderPlan(plan) {
       const container = document.getElementById('orch-plan-list');
 
       container.innerHTML = plan.map((task, idx) => `
-        <div class="plan-task">
-          <div class="plan-task-number">${idx + 1}</div>
-          <div class="plan-task-content">
-            <div class="plan-task-title">${task.title}</div>
-            <div class="plan-task-description">${task.description || ''}</div>
-            <div class="plan-task-meta">
-              <span class="plan-task-badge ${task.agentType}">${task.agentType}</span>
-              ${task.priority ? `<span class="plan-task-badge">${task.priority}</span>` : ''}
+        <div class="plan-task" id="plan-task-${task.id}" onclick="togglePlanTask('${task.id}', event)">
+          <div class="plan-task-header">
+            <div class="plan-task-number">${idx + 1}</div>
+            <div class="plan-task-content">
+              <div class="plan-task-title">${task.title}</div>
+              <div class="plan-task-description">${task.description || ''}</div>
+              <div class="plan-task-meta">
+                <span class="plan-task-badge ${task.agentType}">${task.agentType}</span>
+                ${task.priority ? `<span class="plan-task-badge">${task.priority}</span>` : ''}
+              </div>
+            </div>
+            <svg class="plan-task-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="plan-task-chat">
+            <div class="task-chat-messages" id="task-chat-${task.id}"></div>
+            <div class="task-chat-input-row">
+              <input type="text" class="task-chat-input" id="task-input-${task.id}"
+                     placeholder="Ask about this task or suggest changes..."
+                     onclick="event.stopPropagation()"
+                     onkeypress="if(event.key==='Enter') sendTaskChat('${task.id}')">
+              <button class="task-chat-send" onclick="event.stopPropagation(); sendTaskChat('${task.id}')">Send</button>
             </div>
           </div>
         </div>
@@ -8209,6 +9499,239 @@
       if (currentOrchestration) {
         currentOrchestration.plan = plan;
       }
+    }
+
+    // Toggle plan task expansion
+    function togglePlanTask(taskId, event) {
+      // Don't toggle if clicking on input or button
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON') {
+        return;
+      }
+      const taskEl = document.getElementById(`plan-task-${taskId}`);
+      if (taskEl) {
+        taskEl.classList.toggle('expanded');
+      }
+    }
+
+    // Send chat message for a specific task
+    async function sendTaskChat(taskId) {
+      const input = document.getElementById(`task-input-${taskId}`);
+      const messagesEl = document.getElementById(`task-chat-${taskId}`);
+      const message = input.value.trim();
+
+      if (!message || !currentOrchestration) return;
+
+      // Add user message to UI
+      messagesEl.innerHTML += `<div class="task-chat-message user">${escapeHtml(message)}</div>`;
+      input.value = '';
+
+      // Add thinking indicator
+      const thinkingId = `thinking-${taskId}-${Date.now()}`;
+      messagesEl.innerHTML += `
+        <div class="task-chat-message assistant thinking" id="${thinkingId}">
+          <span class="thinking-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </span>
+          <span class="thinking-text">Claude is thinking...</span>
+        </div>
+      `;
+
+      // Scroll to bottom
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/task/${taskId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await res.json();
+
+        // Remove thinking indicator
+        document.getElementById(thinkingId)?.remove();
+
+        if (data.response) {
+          // Format response with basic markdown rendering
+          const formattedResponse = formatMarkdown(data.response);
+          messagesEl.innerHTML += `<div class="task-chat-message assistant selectable-text">${formattedResponse}</div>`;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+      } catch (err) {
+        document.getElementById(thinkingId)?.remove();
+        messagesEl.innerHTML += `<div class="task-chat-message assistant error">Sorry, couldn't get a response. Please try again.</div>`;
+      }
+    }
+
+    // Basic markdown to HTML formatting
+    function formatMarkdown(text) {
+      if (!text) return '';
+
+      let html = escapeHtml(text);
+
+      // Code blocks (```...```)
+      html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>');
+
+      // Inline code (`...`)
+      html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+      // Bold (**...** or __...__)
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+      // Italic (*...* or _..._)
+      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+      // Bullet lists
+      html = html.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+      // Numbered lists
+      html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+
+      // Line breaks
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = html.replace(/\n/g, '<br>');
+
+      return `<p>${html}</p>`;
+    }
+
+    // Send chat message to orchestrator during execution
+    async function sendExecutionChat() {
+      const input = document.getElementById('execution-chat-input');
+      const messagesEl = document.getElementById('execution-chat-messages');
+      const message = input.value.trim();
+
+      if (!message || !currentOrchestration) return;
+
+      // Add user message to UI
+      messagesEl.innerHTML += `<div class="task-chat-message user">${escapeHtml(message)}</div>`;
+      input.value = '';
+
+      // Add thinking indicator
+      const thinkingId = `exec-thinking-${Date.now()}`;
+      messagesEl.innerHTML += `
+        <div class="task-chat-message assistant thinking" id="${thinkingId}">
+          <span class="thinking-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </span>
+          <span class="thinking-text">Orchestrator is thinking...</span>
+        </div>
+      `;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, phase: 'execution' })
+        });
+
+        const data = await res.json();
+        document.getElementById(thinkingId)?.remove();
+
+        if (data.response) {
+          const formattedResponse = formatMarkdown(data.response);
+          messagesEl.innerHTML += `<div class="task-chat-message assistant selectable-text">${formattedResponse}</div>`;
+
+          // If orchestrator took an action, show it
+          if (data.action) {
+            addProgressItem(`🤖 Orchestrator: ${data.action}`, 'info');
+          }
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      } catch (err) {
+        document.getElementById(thinkingId)?.remove();
+        messagesEl.innerHTML += `<div class="task-chat-message assistant error">Failed to get response. Please try again.</div>`;
+      }
+    }
+
+    // Ask for more clarifying questions
+    async function askMoreQuestions() {
+      if (!currentOrchestration) return;
+
+      showToast('Generating more questions...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/more-questions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await res.json();
+
+        if (data.newQuestions && data.newQuestions.length > 0) {
+          // Use the full question list from server if available
+          currentOrchestration.questions = data.allQuestions || [...(currentOrchestration.questions || []), ...data.newQuestions];
+          renderQuestions(data.newQuestions);
+          showOrchestratorPanel('questions');
+          updatePhaseIndicator('requirements');
+          showToast(`${data.newQuestions.length} more questions added!`, 'success');
+        } else {
+          showToast('No additional questions needed', 'info');
+        }
+      } catch (err) {
+        showToast('Failed to generate questions', 'error');
+      }
+    }
+
+    // Ask for more questions from requirements page (before plan is generated)
+    async function askMoreQuestionsFromRequirements() {
+      if (!currentOrchestration) return;
+
+      // Collect current answers first
+      collectCurrentAnswers();
+
+      showToast('Generating more questions based on your answers...', 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/orchestrator/${currentOrchestration.id}/more-questions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentAnswers: currentOrchestration.answers })
+        });
+
+        const data = await res.json();
+
+        if (data.newQuestions && data.newQuestions.length > 0) {
+          // Append new questions to the existing list
+          currentOrchestration.questions = data.allQuestions || [...(currentOrchestration.questions || []), ...data.newQuestions];
+          // Render the new questions (append to existing)
+          renderQuestions(data.newQuestions, true);
+          showToast(`${data.newQuestions.length} more questions added!`, 'success');
+        } else {
+          showToast('No additional questions needed at this time', 'info');
+        }
+      } catch (err) {
+        console.error('Error requesting more questions:', err);
+        showToast('Failed to generate more questions', 'error');
+      }
+    }
+
+    // Collect current answers from form inputs
+    function collectCurrentAnswers() {
+      if (!currentOrchestration) return;
+      const questions = currentOrchestration.questions || [];
+      const answers = {};
+      questions.forEach((q, idx) => {
+        const input = document.getElementById(`q-${q.id || idx}`);
+        if (input) {
+          answers[q.id || `q${idx}`] = input.value || '';
+        }
+      });
+      currentOrchestration.answers = { ...currentOrchestration.answers, ...answers };
+    }
+
+    // Helper to escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     // Modify plan (go back to questions for now)

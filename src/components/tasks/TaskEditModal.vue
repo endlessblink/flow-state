@@ -1,7 +1,8 @@
 <template>
   <Teleport to="body">
-    <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
-      <div class="modal-content" @click.stop>
+    <Transition name="modal" appear>
+      <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+        <div class="modal-content" @click.stop>
         <!-- Header -->
         <div class="modal-header">
           <h2 class="modal-title">
@@ -79,8 +80,9 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -192,6 +194,35 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 </script>
 
 <style scoped>
+/* Vue Transition: Smooth enter, INSTANT leave for responsive feel */
+.modal-enter-active {
+  transition: opacity var(--duration-normal) var(--spring-smooth);
+}
+.modal-enter-active .modal-content {
+  transition: opacity var(--duration-normal) var(--spring-smooth),
+              transform var(--duration-normal) var(--spring-gentle);
+}
+
+/* INSTANT leave - no animation on close for responsive feel (BUG-291) */
+.modal-leave-active {
+  transition: opacity 0ms;
+}
+.modal-leave-active .modal-content {
+  transition: opacity 0ms, transform 0ms;
+}
+
+.modal-enter-from {
+  opacity: 0;
+}
+.modal-enter-from .modal-content {
+  opacity: 0;
+  transform: translateY(20px) scale(0.96);
+}
+
+.modal-leave-to {
+  opacity: 0;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -202,12 +233,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   z-index: var(--z-modal);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  animation: fadeIn var(--duration-normal) var(--spring-smooth);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .modal-content {
@@ -222,12 +247,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   max-width: 650px;
   max-height: 85vh;
   overflow-y: auto;
-  animation: slideUp var(--duration-normal) var(--spring-gentle);
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .modal-header {

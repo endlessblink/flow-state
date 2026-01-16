@@ -16,6 +16,8 @@ import { useNodeStateManager, NodeState } from './state-machine'
 import { storeToRefs } from 'pinia'
 import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
+import { positionManager } from '@/services/canvas/PositionManager'
+import { lockManager } from '@/services/canvas/LockManager'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -362,21 +364,35 @@ export function useCanvasInteractions(deps?: {
      */
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
-        const positions = new Map(involvedNodes.map(n => [n.id, { x: n.position.x, y: n.position.y }]))
 
         // Guard: Only proceed if we can start a new drag (operation state is idle)
         // This is the AUTHORITATIVE guard that prevents duplicate drag starts
-        if (startDrag(involvedNodes.map(n => n.id), positions)) {
+        if (startDrag(involvedNodes.map(n => n.id))) {
             // Set per-node state (idempotent - safe to call even if already DRAGGING_LOCAL)
-            involvedNodes.forEach(node => setNodeState(node.id, NodeState.DRAGGING_LOCAL))
+            involvedNodes.forEach(node => {
+                setNodeState(node.id, NodeState.DRAGGING_LOCAL)
+                // TASK-213: Acquire Lock
+                lockManager.acquire(node.id, 'user-drag')
+            })
             // Set store-level drag flag ONCE per drag session
             canvasStore.isDragging = true
         }
         // If startDrag() returned false, we are already dragging - ignore duplicate event
     }
 
-    const onNodeDrag = (_event: NodeDragEvent) => {
-        // Vue Flow updates node.position automatically
+    const onNodeDrag = (event: NodeDragEvent) => {
+        // Vue Flow updates node.position automatically (Visuals)
+
+        // TASK-213: Update PositionManager (Truth)
+        const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+        event.nodes.forEach(node => {
+            const absPos = computeNodeAbsolutePosition(node, allGroups)
+            const parentId = node.parentNode
+                ? (node.parentNode.startsWith('section-') ? node.parentNode.replace('section-', '') : node.parentNode)
+                : null
+
+            positionManager.updatePosition(node.id, absPos, 'user-drag', parentId)
+        })
     }
 
     // useNodeSync expects Ref<Map> from storeToRefs for proper reactivity
@@ -413,175 +429,190 @@ export function useCanvasInteractions(deps?: {
         const { nodes: involvedNodes } = event
         canvasStore.isDragging = false
 
-        for (const node of involvedNodes) {
-            if (CanvasIds.isGroupNode(node.id)) {
-                // ============================================================
-                // GROUP DRAG END
-                // ============================================================
-                const { id: groupId } = CanvasIds.parseNodeId(node.id)
-                const allGroups = canvasStore._rawGroups || canvasStore.groups || []
-                const group = allGroups.find(g => g.id === groupId)
-                if (!group) continue
+        try {
 
-                // Compute absolute position for the group
-                const absolutePos = computeNodeAbsolutePosition(node, allGroups)
-                const groupWidth = group.position.width
-                const groupHeight = group.position.height
+            for (const node of involvedNodes) {
+                if (CanvasIds.isGroupNode(node.id)) {
+                    // ============================================================
+                    // GROUP DRAG END
+                    // ============================================================
+                    const { id: groupId } = CanvasIds.parseNodeId(node.id)
+                    const allGroups = canvasStore._rawGroups || canvasStore.groups || []
+                    const group = allGroups.find(g => g.id === groupId)
+                    if (!group) continue
 
-                // Use the unified helper for parent update logic
-                // This handles: containment detection, cycle prevention, position adjustment,
-                // Vue Flow node updates (parentNode but NOT extent)
-                const parentResult = updateGroupParentAfterDrag({
-                    groupId,
-                    absoluteRect: {
-                        x: absolutePos.x,
-                        y: absolutePos.y,
-                        width: groupWidth,
-                        height: groupHeight,
-                    },
-                    node,
-                    allGroups,
-                })
+                    // Compute absolute position for the group
+                    const absolutePos = computeNodeAbsolutePosition(node, allGroups)
+                    const groupWidth = group.position.width
+                    const groupHeight = group.position.height
 
-                // Update store with ABSOLUTE position AND parentGroupId
-                canvasStore.updateSection(groupId, {
-                    position: {
-                        x: absolutePos.x,
-                        y: absolutePos.y,
-                        width: groupWidth,
-                        height: groupHeight,
-                    },
-                    parentGroupId: parentResult.newParentId,
-                    positionFormat: 'absolute',
-                })
+                    // Use the unified helper for parent update logic
+                    // This handles: containment detection, cycle prevention, position adjustment,
+                    // Vue Flow node updates (parentNode but NOT extent)
+                    const parentResult = updateGroupParentAfterDrag({
+                        groupId,
+                        absoluteRect: {
+                            x: absolutePos.x,
+                            y: absolutePos.y,
+                            width: groupWidth,
+                            height: groupHeight,
+                        },
+                        node,
+                        allGroups,
+                    })
 
-                // Sync group to DB (persists parent_group_id)
-                // Re-fetch allGroups after store update to ensure we have latest data
-                const updatedAllGroups = canvasStore._rawGroups || canvasStore.groups || []
-                setNodeState(groupId, NodeState.SYNCING)
-                await syncNodePosition(groupId, node, updatedAllGroups, 'groups')
-                setNodeState(groupId, NodeState.IDLE)
+                    // Update store with ABSOLUTE position AND parentGroupId
+                    canvasStore.updateSection(groupId, {
+                        position: {
+                            x: absolutePos.x,
+                            y: absolutePos.y,
+                            width: groupWidth,
+                            height: groupHeight,
+                        },
+                        parentGroupId: parentResult.newParentId,
+                        positionFormat: 'absolute',
+                    })
 
-                // ================================================================
-                // SYNC DESCENDANTS: Tasks and Groups
-                // ================================================================
-                // When parent moves, Vue Flow moves all children visually.
-                // We must sync their NEW absolute positions to DB.
+                    // TASK-213: Update PositionManager
+                    positionManager.updatePosition(groupId, absolutePos, 'user-drag', parentResult.newParentId)
 
-                const descendantTasks = collectDescendantTasks(groupId, taskStore.tasks, updatedAllGroups)
-                const descendantGroups = collectDescendantGroups(groupId, updatedAllGroups)
+                    // Sync group to DB (persists parent_group_id)
+                    // Re-fetch allGroups after store update to ensure we have latest data
+                    const updatedAllGroups = canvasStore._rawGroups || canvasStore.groups || []
+                    setNodeState(groupId, NodeState.SYNCING)
+                    await syncNodePosition(groupId, node, updatedAllGroups, 'groups')
+                    setNodeState(groupId, NodeState.IDLE)
 
-                // Sync descendant GROUPS first (parents before their children)
-                for (const descendantGroup of descendantGroups) {
-                    const childNodeId = CanvasIds.groupNodeId(descendantGroup.id)
-                    const childNode = findNode(childNodeId)
-                    if (!childNode) continue
+                    // ================================================================
+                    // SYNC DESCENDANTS: Tasks and Groups
+                    // ================================================================
+                    // When parent moves, Vue Flow moves all children visually.
+                    // We must sync their NEW absolute positions to DB.
 
-                    setNodeState(descendantGroup.id, NodeState.SYNCING)
-                    await syncNodePosition(descendantGroup.id, childNode, updatedAllGroups, 'groups')
-                    setNodeState(descendantGroup.id, NodeState.IDLE)
-                }
+                    const descendantTasks = collectDescendantTasks(groupId, taskStore.tasks, updatedAllGroups)
+                    const descendantGroups = collectDescendantGroups(groupId, updatedAllGroups)
 
-                // Sync descendant TASKS
-                for (const descendantTask of descendantTasks) {
-                    const childNode = findNode(descendantTask.id)
-                    if (!childNode) continue
+                    // Sync descendant GROUPS first (parents before their children)
+                    for (const descendantGroup of descendantGroups) {
+                        const childNodeId = CanvasIds.groupNodeId(descendantGroup.id)
+                        const childNode = findNode(childNodeId)
+                        if (!childNode) continue
 
-                    setNodeState(descendantTask.id, NodeState.SYNCING)
-                    await syncNodePosition(descendantTask.id, childNode, updatedAllGroups, 'tasks')
-                    setNodeState(descendantTask.id, NodeState.IDLE)
-                }
-
-            } else {
-                // ============================================================
-                // TASK DRAG END
-                // ============================================================
-                const task = taskStore.getTask(node.id)
-                if (!task) continue
-
-                // Use _rawGroups to include hidden groups in lookups
-                const taskAllGroups = canvasStore._rawGroups || canvasStore.groups || []
-
-                // 1. Compute ABSOLUTE position for containment check
-                // When node has parentNode, node.position is RELATIVE, not absolute
-                // computedPosition is preferred; fallback calculates from parent's absolute
-                const absolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
-
-                // 2. Build spatial task with explicit dimensions for center-based containment
-                const spatialTask = {
-                    position: absolutePos,
-                    width: (node as any).width ?? DEFAULT_TASK_WIDTH,
-                    height: (node as any).height ?? DEFAULT_TASK_HEIGHT
-                }
-
-                // 3. Detect new parent using spatial containment (center inside group bounds)
-                const targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
-                const oldParentId = task.parentId
-                const newParentId = targetGroup?.id ?? null
-
-                // Skip if position didn't change meaningfully
-                // (prevents drift when task just followed parent group)
-                if (oldParentId === newParentId && oldParentId !== null) {
-                    const oldPos = task.canvasPosition || { x: 0, y: 0 }
-                    const posDelta = Math.abs(absolutePos.x - oldPos.x) + Math.abs(absolutePos.y - oldPos.y)
-                    if (posDelta < 1) {
-                        continue
+                        setNodeState(descendantGroup.id, NodeState.SYNCING)
+                        await syncNodePosition(descendantGroup.id, childNode, updatedAllGroups, 'groups')
+                        setNodeState(descendantGroup.id, NodeState.IDLE)
                     }
-                }
 
-                // 4. Optimistic Store Update (Absolute position + parentId)
-                // GEOMETRY WRITER: Primary drag handler (TASK-255)
-                taskStore.updateTask(task.id, {
-                    parentId: newParentId ?? undefined,
-                    canvasPosition: absolutePos,
-                    positionFormat: 'absolute'
-                }, 'DRAG')
+                    // Sync descendant TASKS
+                    for (const descendantTask of descendantTasks) {
+                        const childNode = findNode(descendantTask.id)
+                        if (!childNode) continue
 
-                if (oldParentId !== newParentId) {
-                    // REACTIVITY FIX: Bump version FIRST to trigger count recomputation
-                    // Then updateSectionTaskCounts can read the fresh values from computeds
-                    canvasStore.bumpTaskParentVersion()
-                    updateSectionTaskCounts(oldParentId || undefined, newParentId || undefined)
-                }
+                        setNodeState(descendantTask.id, NodeState.SYNCING)
+                        await syncNodePosition(descendantTask.id, childNode, updatedAllGroups, 'tasks')
+                        setNodeState(descendantTask.id, NodeState.IDLE)
+                    }
 
-                // 5. Update Vue Flow parentNode to match new containment
-                if (newParentId) {
-                    node.parentNode = CanvasIds.groupNodeId(newParentId)
                 } else {
-                    node.parentNode = undefined
-                }
+                    // ============================================================
+                    // TASK DRAG END
+                    // ============================================================
+                    const task = taskStore.getTask(node.id)
+                    if (!task) continue
 
-                // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)
-                // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
-                // TASK-272 FIX: Only apply if values actually differ to prevent reactive loops
-                if (targetGroup) {
-                    console.log(`🔍 [SMART-GROUP-DEBUG] Group name: "${targetGroup.name}", Task: "${task.title}"`)
-                    const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
-                    console.log(`🔍 [SMART-GROUP-DEBUG] Smart updates:`, smartUpdates)
-                    // Filter out updates where the task already has the same value
-                    const actualChanges: any = {}
-                    for (const [key, value] of Object.entries(smartUpdates)) {
-                        const taskKey = key as keyof typeof task
-                        if (task[taskKey] !== value) {
-                            actualChanges[key] = value
+                    // Use _rawGroups to include hidden groups in lookups
+                    const taskAllGroups = canvasStore._rawGroups || canvasStore.groups || []
+
+                    // 1. Compute ABSOLUTE position for containment check
+                    // When node has parentNode, node.position is RELATIVE, not absolute
+                    // computedPosition is preferred; fallback calculates from parent's absolute
+                    const absolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
+
+                    // 2. Build spatial task with explicit dimensions for center-based containment
+                    const spatialTask = {
+                        position: absolutePos,
+                        width: (node as any).width ?? DEFAULT_TASK_WIDTH,
+                        height: (node as any).height ?? DEFAULT_TASK_HEIGHT
+                    }
+
+                    // 3. Detect new parent using spatial containment (center inside group bounds)
+                    const targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
+                    const oldParentId = task.parentId
+                    const newParentId = targetGroup?.id ?? null
+
+                    // Skip if position didn't change meaningfully
+                    // (prevents drift when task just followed parent group)
+                    if (oldParentId === newParentId && oldParentId !== null) {
+                        const oldPos = task.canvasPosition || { x: 0, y: 0 }
+                        const posDelta = Math.abs(absolutePos.x - oldPos.x) + Math.abs(absolutePos.y - oldPos.y)
+                        if (posDelta < 1) {
+                            continue
                         }
                     }
-                    console.log(`🔍 [SMART-GROUP-DEBUG] Actual changes after filter:`, actualChanges)
-                    if (Object.keys(actualChanges).length > 0) {
-                        console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, actualChanges)
-                        taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP')
-                    }
-                } else {
-                    console.log(`🔍 [SMART-GROUP-DEBUG] No targetGroup found for task "${task.title}"`)
-                }
 
-                // 7. Sync task to DB with optimistic locking
-                setNodeState(task.id, NodeState.SYNCING)
-                await syncNodePosition(task.id, node, taskAllGroups, 'tasks')
-                setNodeState(task.id, NodeState.IDLE)
+                    // 4. Optimistic Store Update (Absolute position + parentId)
+                    // GEOMETRY WRITER: Primary drag handler (TASK-255)
+                    taskStore.updateTask(task.id, {
+                        parentId: newParentId ?? undefined,
+                        canvasPosition: absolutePos,
+                        positionFormat: 'absolute'
+                    }, 'DRAG')
+
+                    if (oldParentId !== newParentId) {
+                        // REACTIVITY FIX: Bump version FIRST to trigger count recomputation
+                        // Then updateSectionTaskCounts can read the fresh values from computeds
+                        canvasStore.bumpTaskParentVersion()
+                        updateSectionTaskCounts(oldParentId || undefined, newParentId || undefined)
+                    }
+
+                    // TASK-213: Update PositionManager
+                    positionManager.updatePosition(task.id, absolutePos, 'user-drag', newParentId ?? null)
+
+                    // 5. Update Vue Flow parentNode to match new containment
+                    if (newParentId) {
+                        node.parentNode = CanvasIds.groupNodeId(newParentId)
+                    } else {
+                        node.parentNode = undefined
+                    }
+
+                    // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)
+                    // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
+                    // TASK-272 FIX: Only apply if values actually differ to prevent reactive loops
+                    if (targetGroup) {
+                        console.log(`🔍 [SMART-GROUP-DEBUG] Group name: "${targetGroup.name}", Task: "${task.title}"`)
+                        const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
+                        console.log(`🔍 [SMART-GROUP-DEBUG] Smart updates:`, smartUpdates)
+                        // Filter out updates where the task already has the same value
+                        const actualChanges: any = {}
+                        for (const [key, value] of Object.entries(smartUpdates)) {
+                            const taskKey = key as keyof typeof task
+                            if (task[taskKey] !== value) {
+                                actualChanges[key] = value
+                            }
+                        }
+                        console.log(`🔍 [SMART-GROUP-DEBUG] Actual changes after filter:`, actualChanges)
+                        if (Object.keys(actualChanges).length > 0) {
+                            console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, actualChanges)
+                            taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP')
+                        }
+                    } else {
+                        console.log(`🔍 [SMART-GROUP-DEBUG] No targetGroup found for task "${task.title}"`)
+                    }
+
+                    // 7. Sync task to DB with optimistic locking
+                    setNodeState(task.id, NodeState.SYNCING)
+                    await syncNodePosition(task.id, node, taskAllGroups, 'tasks')
+                    setNodeState(task.id, NodeState.IDLE)
+                }
             }
+
+        } finally {
+            // TASK-213: Release Locks
+            involvedNodes.forEach(node => {
+                lockManager.release(node.id, 'user-drag')
+            })
+            endDrag(involvedNodes.map(n => n.id))
         }
-        endDrag(involvedNodes.map(n => n.id))
     }
 
     // --- RESIZE HANDLERS ---
@@ -619,12 +650,17 @@ export function useCanvasInteractions(deps?: {
         nodes.value.forEach(node => {
             if (node.parentNode === vueFlowParentId) {
                 resizeState.value.childStartPositions[node.id] = { ...node.position }
+                // TASK-213: Lock Children
+                lockManager.acquire(node.id, 'user-resize')
             }
         })
+
+        // TASK-213: Lock Group
+        lockManager.acquire(sectionId, 'user-resize')
     }
 
     const onSectionResize = ({ sectionId: _rawSectionId, event }: { sectionId: string; event: any }) => {
-        // const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
+        const { id: sectionId } = CanvasIds.parseNodeId(_rawSectionId)
         const typedEvent = event as { params?: { width?: number; height?: number; x?: number; y?: number } }
         const width = typedEvent?.params?.width
         const height = typedEvent?.params?.height
@@ -654,9 +690,25 @@ export function useCanvasInteractions(deps?: {
         const deltaY = resizeState.value.currentY - resizeState.value.startY
 
         if (deltaX !== 0 || deltaY !== 0) {
+            // TASK-213: Update Group in PositionManager
+            const groupNode = findNode(CanvasIds.groupNodeId(sectionId))
+            const parentId = groupNode?.parentNode ? groupNode.parentNode.replace('section-', '') : null
+
+            // TASK-213: Update Group in PositionManager via relative (local) coordinates
+            positionManager.updateFromRelative(
+                sectionId,
+                { x: resizeState.value.currentX, y: resizeState.value.currentY },
+                'user-resize',
+                parentId
+            )
+
             Object.entries(resizeState.value.childStartPositions).forEach(([childId, startPos]) => {
                 const newRelPos = calculateChildInverseDelta(startPos, deltaX, deltaY)
                 updateNode(childId, { position: newRelPos })
+
+                // TASK-213: Update Child in PositionManager via relative (local) coordinates
+                // We pass 'sectionId' as the parentId so PM can calculate absolute
+                positionManager.updateFromRelative(childId, newRelPos, 'user-resize', sectionId)
             })
         }
     }
@@ -741,6 +793,12 @@ export function useCanvasInteractions(deps?: {
         }
         // NOTE: When deltaX === 0 && deltaY === 0 (bottom-right resize only),
         // no child sync is needed because child absolute positions don't change.
+
+        // TASK-213: Release Locks
+        lockManager.release(sectionId, 'user-resize')
+        Object.keys(resizeState.value.childStartPositions).forEach(childId => {
+            lockManager.release(childId, 'user-resize')
+        })
 
         setTimeout(() => isResizeSettling.value = false, 1000)
     }

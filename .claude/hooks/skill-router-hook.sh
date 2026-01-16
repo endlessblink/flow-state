@@ -19,8 +19,8 @@ SKILL_MAPPINGS=(
   # Timer specific (before general debug)
   "dev-fix-timer:timer|pomodoro|countdown|session time|time display|timer stuck|timer won't start"
 
-  # Keyboard shortcuts (before general debug)
-  "dev-fix-keyboard:keyboard|shortcut|hotkey|ctrl\+|cmd\+|key binding|key handler|keypress"
+  # Keyboard shortcuts (routed to dev-debugging)
+  "dev-debugging:keyboard|shortcut|hotkey|ctrl\+|cmd\+|key binding|key handler|keypress"
 
   # Port issues (specific)
   "ops-port-manager:port conflict|server won't start|address in use|eaddrinuse|port 5546|port 6006"
@@ -34,8 +34,8 @@ SKILL_MAPPINGS=(
   # Calendar (specific)
   "calendar-interface-architect:calendar event|schedule task|inbox sync|date picker|scheduling"
 
-  # Task store (before general pinia)
-  "dev-fix-task-store:task store|tasks don't save|tasks disappear|crud operation|state persist"
+  # Task store (routed to dev-debugging)
+  "dev-debugging:task store|tasks don't save|tasks disappear|crud operation|state persist"
 
   # Storybook (specific)
   "dev-storybook:storybook|story file|component story|visual docs"
@@ -43,8 +43,8 @@ SKILL_MAPPINGS=(
   # Documentation
   "smart-doc-manager:documentation|consolidate docs|organize docs|readme"
 
-  # Master plan
-  "master-plan-manager:master plan|roadmap|task tracking|update plan"
+  # Master plan (routed to smart-doc-manager)
+  "smart-doc-manager:master plan|roadmap|task tracking|update plan"
 
   # Ideas/Issues
   "idea-issue-creator:process idea|new issue|ideas inbox|go over issues"
@@ -58,8 +58,8 @@ SKILL_MAPPINGS=(
   # Refactoring
   "dev-refactoring:refactor|extract composable|split component|reduce file size"
 
-  # TypeScript types
-  "persistence-type-fixer:type error|generic type|type inference|typescript error"
+  # TypeScript types (routed to dev-debugging)
+  "dev-debugging:type error|generic type|type inference|typescript error"
 
   # Filter management
   "vue-filter-manager:filter architecture|duplicate filter|cross-view filter"

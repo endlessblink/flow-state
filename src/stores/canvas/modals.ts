@@ -10,7 +10,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
 
     // Quick Task Create Modal
     const isQuickTaskCreateOpen = ref(false)
-    const quickTaskPosition = ref<{ x: number; y: number; parentId?: string }>({ x: 0, y: 0 })
+    const quickTaskPosition = ref<{ x: number; y: number; parentId?: string; parentTaskId?: string }>({ x: 0, y: 0 })
 
     // Batch Edit Modal
     const isBatchEditModalOpen = ref(false)
@@ -51,7 +51,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
         selectedTask.value = null
     }
 
-    const openQuickTaskCreate = (position: { x: number; y: number }) => {
+    const openQuickTaskCreate = (position: { x: number; y: number; parentId?: string; parentTaskId?: string }) => {
         quickTaskPosition.value = position
         isQuickTaskCreateOpen.value = true
     }

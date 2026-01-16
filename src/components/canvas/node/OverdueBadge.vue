@@ -1,5 +1,5 @@
 <template>
-  <div class="overdue-badge-wrapper" @click.stop>
+  <div ref="wrapperRef" class="overdue-badge-wrapper" @click.stop>
     <button
       class="overdue-badge"
       @click="toggleMenu"
@@ -21,14 +21,12 @@
         {{ option.label }}
       </button>
     </div>
-
-    <!-- Click outside to close -->
-    <div v-if="isMenuOpen" class="backdrop" @click="closeMenu" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { onClickOutside } from '@vueuse/core'
 import { AlertCircle, Calendar, Sun, Sunrise, CalendarDays, CalendarRange } from 'lucide-vue-next'
 
 const emit = defineEmits<{
@@ -36,6 +34,7 @@ const emit = defineEmits<{
 }>()
 
 const isMenuOpen = ref(false)
+const wrapperRef = ref<HTMLElement | null>(null)
 
 const rescheduleOptions = [
   { value: 'today', label: 'Today', icon: Sun },
@@ -57,6 +56,26 @@ const handleReschedule = (dateType: string) => {
   emit('reschedule', dateType)
   closeMenu()
 }
+
+// Close menu when clicking outside
+onClickOutside(wrapperRef, () => {
+  if (isMenuOpen.value) {
+    closeMenu()
+  }
+})
+
+// Also close on Escape key
+watch(isMenuOpen, (open) => {
+  if (open) {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeMenu()
+        document.removeEventListener('keydown', handleEscape)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+  }
+})
 </script>
 
 <style scoped>
@@ -120,14 +139,5 @@ const handleReschedule = (dateType: string) => {
 
 .reschedule-option:hover {
   background: var(--glass-bg-medium);
-}
-
-.backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 999;
 }
 </style>

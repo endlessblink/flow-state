@@ -1,40 +1,28 @@
-/* Hierarchical task row wrapper */
+/* Hierarchical task row wrapper - simplified, no card styling */
 .hierarchical-task-row {
     display: flex;
     flex-direction: column;
     position: relative;
-    background: var(--glass-bg-medium);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    transition: all var(--spring-smooth);
 }
 
-.hierarchical-task-row:hover {
-    background: var(--glass-bg-heavy);
-    border-color: var(--glass-border-hover);
-    box-shadow: var(--shadow-md);
-}
-
-/* Table-style task row matching TaskTable exactly */
+/* Lean task row - minimal like Linear/Notion */
 .task-row {
     display: grid;
-    grid-template-columns: 40px 1fr 40px 120px 100px 120px 100px 100px;
+    /* done  title  proj  status  prio  due   prog  actions */
+    grid-template-columns: 28px 1fr 32px 100px 65px 75px 50px 70px;
     grid-template-areas: "done title project status priority due progress actions";
     gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--glass-border);
+    padding: var(--space-0_5) var(--space-2);
+    border-bottom: 1px solid var(--border-subtle);
     background: transparent;
-    /* Remove default gray fill */
     cursor: pointer;
     transition: background-color var(--duration-fast) ease;
     position: relative;
     --indent-level: 0;
+    font-size: var(--text-sm);
 }
 
-/* Match TaskTable hover and selected states */
-.task-row:hover {
-    background-color: var(--glass-bg-medium);
-}
+/* Selected state */
 
 .task-row--selected {
     background-color: rgba(78, 205, 196, 0.05);
@@ -77,18 +65,16 @@
 }
 
 .task-row__status-select {
-    padding: var(--space-1) var(--space-2);
-    background-color: var(--glass-bg-soft);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
+    padding: 2px var(--space-1);
+    background-color: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
     cursor: pointer;
 }
 
 .task-row__status-select:hover {
-    background-color: var(--glass-bg-medium);
-    border-color: var(--glass-border-hover);
+    color: var(--text-primary);
 }
 
 /* Due Date cell - Match TaskTable */
@@ -101,9 +87,9 @@
 .task-row__due-date-content {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-1);
     font-size: var(--text-xs);
-    color: var(--text-secondary);
+    color: var(--text-muted);
 }
 
 .task-row__no-date {
@@ -118,12 +104,11 @@
     align-items: center;
 }
 
-/* Progress bar styles */
+/* Progress bar styles - minimal */
 .task-row__progress-bar {
     position: relative;
     width: 100%;
-    height: 6px;
-    /* Slightly thicker */
+    height: 3px;
     background: transparent;
     border-radius: var(--radius-full);
     display: flex;
@@ -203,9 +188,9 @@
     }
 }
 
-/* ADHD-friendly: Status-colored left border for instant visual recognition */
+/* Subtle status indicator - thin left border */
 .task-row {
-    border-left: 4px solid transparent;
+    border-left: 2px solid transparent;
 }
 
 .task-row[data-status="planned"] {
@@ -228,10 +213,10 @@
     border-left-color: var(--status-on-hold-border);
 }
 
-/* ADHD-friendly: Compact row height (40px) */
+/* Lean row height (32px) */
 .task-row {
-    min-height: 40px;
-    padding: var(--space-1_5) var(--space-3);
+    min-height: 32px;
+    padding: var(--space-0_5) var(--space-2);
 }
 
 /* No progress indicator styling */
@@ -240,11 +225,7 @@
     font-size: var(--text-xs);
 }
 
-/* ADHD-friendly: Subtle row striping for scanability */
-.hierarchical-task-row:nth-child(even) .task-row {
-    background: var(--glass-bg-light);
-}
-
-.hierarchical-task-row:nth-child(even) .task-row:hover {
-    background-color: var(--glass-bg-medium);
+/* Clean hover - no striping */
+.task-row:hover {
+    background: var(--surface-hover);
 }

@@ -473,13 +473,15 @@ const handleArrangeInGrid = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  /* Standardized overlay styling */
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border);
+  /* Glass morphism styling - more transparent with blur */
+  background: rgba(30, 30, 40, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-xl);
-  box-shadow: var(--overlay-component-shadow);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   padding: var(--space-2);
   min-width: 200px;
   max-width: 320px;
@@ -638,13 +640,15 @@ const handleArrangeInGrid = () => {
   position: absolute;
   left: calc(100% + var(--space-1));
   top: 0;
-  /* Standardized overlay styling */
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border);
+  /* Glass morphism styling - more transparent with blur */
+  background: rgba(30, 30, 40, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
-  box-shadow: var(--overlay-component-shadow);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   padding: var(--space-2) 0;
   min-width: 180px;
   max-width: 280px;
@@ -690,13 +694,15 @@ const handleArrangeInGrid = () => {
 <!-- Global styles for teleported submenu (escapes scoped styles) -->
 <style>
 .submenu-teleported {
-  /* Standardized overlay styling */
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border);
+  /* Glass morphism styling - more transparent with blur */
+  background: rgba(30, 30, 40, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md, 8px);
-  box-shadow: var(--overlay-component-shadow);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   padding: var(--space-2, 8px) 0;
   min-width: 200px;
   max-width: 280px;

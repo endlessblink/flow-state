@@ -117,12 +117,14 @@ interface Props {
   currentFilter?: 'today' | 'week' | null
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
+  viewType?: 'priority' | 'date' | 'status'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   currentFilter: null,
   density: 'comfortable',
-  showDoneColumn: false
+  showDoneColumn: false,
+  viewType: 'priority'
 })
 
 const emit = defineEmits<{
@@ -147,11 +149,8 @@ const { isDragging, isScrolling } = useHorizontalDragScroll(scrollContainer, {
   touchEnabled: true
 })
 
-// Store local view type to respect user selection (TASK-243: Default to priority)
-const localViewType = ref(props.project.viewType || 'priority')
-
-// Current view type (TASK-243: Default to priority view instead of status)
-const currentViewType = computed(() => localViewType.value || props.project.viewType || 'priority')
+// Current view type - now controlled from parent BoardView
+const currentViewType = computed(() => props.viewType || 'priority')
 
 // Column definitions
 const statusColumns = computed(() => {

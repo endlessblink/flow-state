@@ -15,11 +15,7 @@
         class="project-css-circle"
         :style="{ '--project-color': visual.color }"
       />
-      <ProjectEmojiIcon
-        v-else
-        emoji="📁"
-        size="xs"
-      />
+      <span v-else class="project-placeholder">–</span>
     </span>
   </div>
 </template>
@@ -42,25 +38,27 @@ defineProps<{
 }
 
 .project-emoji-badge {
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: none;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--spring-smooth) ease;
-  padding: var(--space-0_5) var(--space-2);
+  padding: var(--space-0_5);
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
 }
 
+.project-placeholder {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
 .project-emoji-badge:hover {
-  background: var(--brand-bg-subtle-hover);
-  border-color: var(--brand-border);
+  background: var(--surface-hover);
   transform: translateY(-1px) translateZ(0);
-  box-shadow: 0 4px 8px var(--shadow-subtle);
 }
 
 .project-css-circle {

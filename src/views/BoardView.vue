@@ -9,6 +9,21 @@
         <span class="task-count--subtle">{{ totalDisplayedTasks }}</span>
       </div>
       <div class="header-controls header-controls--minimal">
+        <!-- View Type Switcher -->
+        <div class="view-type-switcher">
+          <button
+            v-for="option in viewTypeOptions"
+            :key="option.value"
+            class="view-type-btn"
+            :class="{ active: currentViewType === option.value }"
+            :title="option.label"
+            @click="currentViewType = option.value"
+          >
+            <component :is="option.icon" :size="16" :stroke-width="1.5" />
+            <span class="view-type-label">{{ option.label }}</span>
+          </button>
+        </div>
+
         <!-- Filter Toggle (collapsed by default) -->
         <button
           class="filter-toggle icon-only"
@@ -50,6 +65,7 @@
           :current-filter="taskStore.activeSmartView || 'none'"
           :density="currentDensity"
           :show-done-column="!hideDoneTasks"
+          :view-type="currentViewType"
           @select-task="handleSelectTask"
           @start-timer="handleStartTimer"
           @edit-task="handleEditTask"
@@ -122,7 +138,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 
@@ -185,6 +201,14 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
 const showFilters = ref(false)
+
+// View Type Switcher (priority, date, status)
+const currentViewType = ref<'priority' | 'date' | 'status'>('priority')
+const viewTypeOptions = [
+  { value: 'priority' as const, label: 'Priority', icon: Flag },
+  { value: 'date' as const, label: 'Due Date', icon: Calendar },
+  { value: 'status' as const, label: 'Status', icon: ListTodo }
+]
 
 // Load saved settings on mount
 onMounted(() => {

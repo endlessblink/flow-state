@@ -171,6 +171,7 @@ export function useCanvasActions(
         // Task Actions & State
         createTaskHere: taskActions.createTaskHere,
         createTaskInGroup: taskActions.createTaskInGroup,
+        createConnectedTask: taskActions.createConnectedTask,
         handleQuickTaskCreate: taskActions.handleQuickTaskCreate,
         closeQuickTaskCreate: taskActions.closeQuickTaskCreate,
         moveSelectedTasksToInbox: taskActions.moveSelectedTasksToInbox,

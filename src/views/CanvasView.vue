@@ -93,7 +93,8 @@
           :pan-on-scroll="false"
           zoom-on-pinch
           :pan-on-drag="!shift && !control && !meta"
-          :nodes-draggable="!control && !meta"
+          :nodes-draggable="!control && !meta && !shift"
+          :selection-on-drag="shift"
           :multi-selection-key-code="['Control', 'Meta', 'Shift']"
           snap-to-grid
           :snap-grid="[16, 16]"
@@ -126,7 +127,6 @@
           @connect-end="handleConnectEnd"
           @keydown="handleKeyDown"
         >
-          <CanvasSelectionBox :selection-box="selectionBox" />
           <Background
             pattern-color="#e5e7eb"
             pattern="dots"
@@ -206,6 +206,8 @@
           </svg>
         </VueFlow>
 
+        <!-- Selection box outside VueFlow to avoid transform issues -->
+        <CanvasSelectionBox :selection-box="selectionBox" />
 
         <CanvasLoadingOverlay
           v-if="!isCanvasReady"
@@ -284,6 +286,7 @@ import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
+import type { CanvasGroup } from '@/types/canvas'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -397,7 +400,7 @@ const handleSectionContextMenu = (event: MouseEvent, section: Record<string, unk
     }
     // BUG-208 FIX: Use Pinia store instead of local refs
     // CanvasContextMenus.vue reads from the store, so we must write to it
-    contextMenuStore.openCanvasContextMenu(event.clientX, event.clientY, section)
+    contextMenuStore.openCanvasContextMenu(event.clientX, event.clientY, section as unknown as CanvasGroup)
 }
 
 // Expose for testing purposes (Fundamental Stability)
@@ -406,7 +409,10 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
     orchestrator,
     canvasStore,
     taskStore,
-    uiStore
+    uiStore,
+    // Debug Access to Singletons
+    get positionManager() { return import('../services/canvas/PositionManager').then(m => m.positionManager) },
+    get lockManager() { return import('../services/canvas/LockManager').then(m => m.lockManager) }
   }
 }
 </script>

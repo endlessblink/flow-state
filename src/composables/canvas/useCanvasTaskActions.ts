@@ -170,14 +170,15 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             const isDefaultPosition = quickTaskPosition.value.x === 0 && quickTaskPosition.value.y === 0
             const shouldCreateInInbox = isDefaultPosition
 
-            const { x, y, parentId } = quickTaskPosition.value
+            const { x, y, parentId, parentTaskId } = quickTaskPosition.value
 
             console.log('[TASK-288-DEBUG] handleQuickTaskCreate - Creating task with position:', {
                 quickTaskPosition: { ...quickTaskPosition.value },
                 isDefaultPosition,
                 shouldCreateInInbox,
                 finalPosition: shouldCreateInInbox ? 'INBOX' : { x, y },
-                finalParentId: shouldCreateInInbox ? 'NONE' : parentId
+                finalParentId: shouldCreateInInbox ? 'NONE' : parentId,
+                parentTaskId: parentTaskId || 'NONE'
             })
 
             await taskStore.createTaskWithUndo({
@@ -185,6 +186,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 description,
                 canvasPosition: shouldCreateInInbox ? undefined : { x, y },
                 parentId: shouldCreateInInbox ? undefined : parentId,
+                parentTaskId: shouldCreateInInbox ? undefined : parentTaskId,  // Creates connection if set
                 status: 'planned',
                 isInInbox: shouldCreateInInbox
             })
@@ -206,6 +208,26 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
     const closeQuickTaskCreate = () => {
         isQuickTaskCreateOpen.value = false
         quickTaskPosition.value = { x: 0, y: 0 }
+    }
+
+    /**
+     * Creates a new task at the specified position, pre-connected to a parent task.
+     * Called when user drops a connection cable on empty canvas space.
+     */
+    const createConnectedTask = (position: { x: number; y: number }, parentTaskId: string) => {
+        // Center task on drop position
+        const centeredX = position.x - (CANVAS.DEFAULT_TASK_WIDTH / 2)
+        const centeredY = position.y - (CANVAS.DEFAULT_TASK_HEIGHT / 2)
+
+        // Store position with parent task connection info
+        quickTaskPosition.value = {
+            x: centeredX,
+            y: centeredY,
+            parentTaskId  // This will create the connection when task is created
+        }
+
+        deps.closeCanvasContextMenu()
+        isQuickTaskCreateOpen.value = true
     }
 
     /**
@@ -305,6 +327,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         bulkDeleteIsPermanent,
         createTaskHere,
         createTaskInGroup,
+        createConnectedTask,
         handleQuickTaskCreate,
         closeQuickTaskCreate,
         moveSelectedTasksToInbox,

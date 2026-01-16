@@ -568,18 +568,20 @@ function handleSwipeEnd() {
   transition: all var(--spring-smooth) ease;
   backdrop-filter: var(--project-indicator-backdrop);
   opacity: var(--project-indicator-opacity); /* Apply subtle opacity */
-  /* Softened glow */
+  /* Softened glow - using project-color instead of currentColor for proper hue matching */
   box-shadow:
     var(--project-indicator-shadow-inset),
-    var(--project-indicator-glow-subtle);
+    0 0 4px var(--project-color),
+    0 0 8px var(--project-color);
 }
 
 .project-emoji-badge:hover .project-emoji.project-css-circle {
-  transform: translateZ(0) scale(1.1); 
+  transform: translateZ(0) scale(1.1);
   opacity: 1; /* Full brightness on hover */
   box-shadow:
     var(--project-indicator-shadow-inset),
-    var(--project-indicator-glow-medium);
+    0 0 6px var(--project-color),
+    0 0 12px var(--project-color);
 }
 
 /* Add radial gradient glow effect like canvas */

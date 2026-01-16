@@ -1,6 +1,6 @@
 ---
 name: smart-doc-manager
-description: Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities.
+description: Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, and validation. Triggers on "master-plan", "plan update", "documentation", "consolidate docs", "audit docs".
 ---
 
 # Smart Documentation Manager (SDM)
@@ -768,6 +768,139 @@ Detailed guides and reference materials:
 - **rollback_procedures.md** - Emergency recovery procedures
 
 These resources provide the technical implementation details for the workflows described above, enabling systematic and safe documentation management.
+
+---
+
+## MASTER_PLAN.md Management
+
+**Specialized workflows for intelligent master-plan file management.**
+
+This section provides dedicated capabilities for managing `docs/MASTER_PLAN.md` and related planning documents, including safe updates, progress tracking, and chief-architect integration.
+
+### Activation Triggers
+- **Keywords**: master-plan, plan update, document maintenance, progress update, ADR update
+- **Files**: `/docs/MASTER_PLAN.md` and related planning documents
+- **Contexts**: Chief-architect delegation, post-implementation updates, architectural decisions
+
+### Core Capabilities
+
+#### 1. Intelligent Document Analysis
+- **Complete File Reading**: Parse entire master-plan before any operations
+- **Content Structure Analysis**: Understand existing sections and format
+- **Change Detection**: Identify outdated, missing, or redundant content
+- **Currency Assessment**: Determine what needs updating vs. what's current
+- **Redundancy Prevention**: Avoid adding duplicate or unnecessary content
+
+#### 2. Safe Update Operations
+- **Read-First Approach**: Never write without comprehensive analysis
+- **Incremental Updates**: Apply changes section by section
+- **Content Merging**: Integrate new information with existing content
+- **Format Preservation**: Maintain existing structure and emoji usage
+- **Backup Location**: All backups stored with timestamps in `/docs/master-plan/backups/`
+
+### Master-Plan Management Domains
+
+#### Domain 1: Executive Summary Management
+- **Current State Assessment**: Analyze project health and status indicators
+- **Brutal Honesty Updates**: Update honest assessments with current data
+- **Success Criteria Refresh**: Update measurable success criteria
+- **Immediate Actions**: Maintain current prioritized action items
+
+#### Domain 2: Phase Progress Tracking
+- **Phase Completion Status**: Track and update phase progress with metrics
+- **Deliverable Documentation**: Update created deliverables and evidence
+- **Validation Results**: Document testing and validation outcomes
+- **Readiness Assessment**: Update phase-to-phase readiness status
+
+#### Domain 3: Architecture Decision Records (ADRs)
+- **Decision Documentation**: Add new architectural decisions with full rationale
+- **Alternative Analysis**: Document considered alternatives and trade-offs
+- **Impact Assessment**: Track decision impact on user experience and system
+- **Status Updates**: Update ADR status based on implementation outcomes
+
+#### Domain 4: Skills Execution Tracking
+- **Skills Inventory**: Update skills executed with actual outcomes
+- **Performance Metrics**: Document quantified results and improvements
+- **Learning Capture**: Update insights and patterns discovered
+- **Integration Status**: Track how skills work together
+
+#### Domain 5: Success Criteria Management
+- **Criteria Tracking**: Monitor progress toward measurable success criteria
+- **Completion Evidence**: Document proof of criteria fulfillment
+- **Metrics Updates**: Update quantified metrics with current data
+- **Status Validation**: Verify and document completion status
+
+### Integration with Chief-Architect
+
+The smart-doc-manager skill accepts delegation from chief-architect through standardized interfaces:
+
+#### Update with Implementation Results
+```typescript
+interface ImplementationUpdateRequest {
+  action: 'update-with-implementation-results';
+  decision: PersonalAppDecision;
+  results: PersonalImplementationResult;
+  context: PersonalAppContext;
+  safetyLevel: 'comprehensive' | 'standard' | 'quick';
+}
+```
+
+#### Update with Architecture Decision
+```typescript
+interface ArchitectureDecisionUpdateRequest {
+  action: 'update-with-architecture-decision';
+  decision: PersonalAppDecision;
+  alternatives: AlternativeAnalysis[];
+  rationale: DecisionRationale;
+  impact: ImpactAssessment;
+}
+```
+
+#### Update Progress Status
+```typescript
+interface ProgressUpdateRequest {
+  action: 'update-progress-status';
+  phase: number;
+  completion: CompletionStatus;
+  deliverables: DeliverableRecord[];
+  validation: ValidationResults;
+}
+```
+
+### Master-Plan Update Workflow
+
+```typescript
+async analyzeMasterPlan(): Promise<PlanAnalysis> {
+  // 1. Read complete current document
+  const currentContent = await this.readEntireFile(this.planPath);
+
+  // 2. Parse and understand structure
+  const parsedStructure = this.parseMarkdownStructure(currentContent);
+
+  // 3. Analyze content currency and completeness
+  const contentAnalysis = {
+    currentSections: parsedStructure.sections,
+    outdatedContent: this.detectOutdatedContent(parsedStructure),
+    missingContent: this.identifyMissingContent(parsedStructure),
+    redundantAreas: this.identifyRedundantContent(parsedStructure)
+  };
+
+  // 4. Create safety backup
+  await this.createTimestampedBackup(currentContent);
+
+  return contentAnalysis;
+}
+```
+
+### Master-Plan Manager Principles
+
+1. **Document Safety First**: Never compromise document integrity or existing content
+2. **Read Before Writing**: Never make changes without comprehensive analysis of current state
+3. **Meaningful Updates Only**: Only update when changes represent genuine improvements
+4. **Backup and Recovery**: Always maintain reliable backup and rollback capabilities
+5. **Format Preservation**: Maintain existing document structure, formatting, and style
+6. **Content Intelligence**: Understand context and meaning, not just text patterns
+7. **Integration Excellence**: Work seamlessly with chief-architect and other skills
 
 ---
 

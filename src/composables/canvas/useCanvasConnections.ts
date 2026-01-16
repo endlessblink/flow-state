@@ -10,6 +10,9 @@ interface ConnectionDeps {
     closeEdgeContextMenu: () => void
     closeNodeContextMenu: () => void
     withVueFlowErrorBoundary: (name: string, fn: (...args: any[]) => any, options?: any) => ((...args: any[]) => any)
+    // For drag-to-create feature
+    screenToFlowCoordinate?: (pos: { x: number; y: number }) => { x: number; y: number }
+    createConnectedTask?: (position: { x: number; y: number }, parentTaskId: string) => void
 }
 
 interface ConnectionState {
@@ -19,6 +22,9 @@ interface ConnectionState {
     edgeContextMenuX: Ref<number>
     edgeContextMenuY: Ref<number>
     selectedEdge: Ref<Edge | null>
+    // For drag-to-create feature
+    pendingConnectionSource?: Ref<string | null>
+    connectionWasSuccessful?: Ref<boolean>
 }
 
 export function useCanvasConnections(
@@ -27,23 +33,67 @@ export function useCanvasConnections(
 ) {
     const taskStore = useTaskStore()
 
-    const handleConnectStart = (_event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
+    const handleConnectStart = (event: { nodeId?: string; handleId?: string | null; handleType?: string }) => {
         state.isConnecting.value = true
         document.body.classList.add('connecting-active')
+
+        // Track source node for drag-to-create feature
+        if (state.pendingConnectionSource) {
+            state.pendingConnectionSource.value = event.nodeId || null
+        }
+        if (state.connectionWasSuccessful) {
+            state.connectionWasSuccessful.value = false
+        }
 
         deps.closeCanvasContextMenu()
         deps.closeEdgeContextMenu()
         deps.closeNodeContextMenu()
     }
 
-    const handleConnectEnd = (_event?: MouseEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
+    const handleConnectEnd = (event?: MouseEvent | TouchEvent | { nodeId?: string; handleId?: string; handleType?: string }) => {
+        const sourceTaskId = state.pendingConnectionSource?.value
+        const wasSuccessful = state.connectionWasSuccessful?.value
+
+        // Use setTimeout to ensure onConnect has time to fire first
         setTimeout(() => {
+            // Drag-to-create: Only trigger if:
+            // 1. We have a source task ID
+            // 2. Connection was NOT successful (dropped on empty space)
+            // 3. We have mouse coordinates
+            // 4. The deps are provided
+            if (
+                sourceTaskId &&
+                !wasSuccessful &&
+                event &&
+                'clientX' in event &&
+                deps.screenToFlowCoordinate &&
+                deps.createConnectedTask
+            ) {
+                const flowCoords = deps.screenToFlowCoordinate({
+                    x: (event as MouseEvent).clientX,
+                    y: (event as MouseEvent).clientY
+                })
+                deps.createConnectedTask(flowCoords, sourceTaskId)
+            }
+
+            // Cleanup
             state.isConnecting.value = false
+            if (state.pendingConnectionSource) {
+                state.pendingConnectionSource.value = null
+            }
+            if (state.connectionWasSuccessful) {
+                state.connectionWasSuccessful.value = false
+            }
             document.body.classList.remove('connecting-active')
-        }, 100)
+        }, 50) // Small delay to let onConnect fire first
     }
 
     const handleConnect = deps.withVueFlowErrorBoundary('handleConnect', async (connection: { source: string; target: string; sourceHandle?: string; targetHandle?: string }) => {
+        // Mark connection as successful FIRST - this prevents drag-to-create from firing
+        if (state.connectionWasSuccessful) {
+            state.connectionWasSuccessful.value = true
+        }
+
         const { source, target } = connection
 
         deps.closeCanvasContextMenu()

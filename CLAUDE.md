@@ -65,76 +65,17 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 
 ## Design Token Usage (MANDATORY)
 
-**Problem:** Hardcoded CSS values (rgba, px, hex) cause visual inconsistency and make theming impossible. Currently 52+ files have this issue.
+**NEVER hardcode CSS values** (rgba, px, hex). ALWAYS use design tokens from `src/assets/design-tokens.css`.
 
-**Solution:** ALWAYS use design tokens from `src/assets/design-tokens.css`.
+**Full reference:** [`docs/claude-md-extension/design-system.md`](docs/claude-md-extension/design-system.md)
 
-### Required Token Usage
-
-| Property | Never Use | Always Use |
-|----------|-----------|------------|
-| **Background colors** | `rgba(18, 18, 20, 0.98)` | `var(--overlay-component-bg)` |
-| **Glass effects** | `rgba(255, 255, 255, 0.06)` | `var(--glass-bg-heavy)` |
-| **Borders** | `rgba(255, 255, 255, 0.12)` | `var(--glass-border)` |
-| **Backdrop blur** | `blur(20px)` | `var(--overlay-component-backdrop)` |
-| **Border radius** | `12px`, `8px` | `var(--radius-lg)`, `var(--radius-md)` |
-| **Spacing** | `8px`, `12px`, `16px` | `var(--space-2)`, `var(--space-3)`, `var(--space-4)` |
-| **Font sizes** | `10px`, `13px` | `var(--text-xs)`, `var(--text-sm)` |
-| **Transitions** | `0.15s ease-out` | `var(--duration-fast) var(--ease-out)` |
-| **Shadows** | `0 12px 40px rgba(...)` | `var(--overlay-component-shadow)` |
-
-### Common Token Reference
-
+**Quick examples:**
 ```css
-/* Overlay backgrounds */
---overlay-component-bg        /* Dark overlay panels */
---glass-bg-light             /* rgba(255,255,255,0.02) */
---glass-bg-medium            /* rgba(255,255,255,0.04) */
---glass-bg-heavy             /* rgba(255,255,255,0.06) */
-
-/* Borders */
---glass-border               /* rgba(255,255,255,0.10) */
---glass-border-hover         /* rgba(255,255,255,0.15) */
---overlay-component-border   /* Full border declaration */
-
-/* Spacing (8px grid) */
---space-1 (4px), --space-2 (8px), --space-3 (12px), --space-4 (16px)
---space-1_5 (6px), --space-2_5 (10px)
-
-/* Typography */
---text-xs (12px), --text-sm (14px), --text-base (16px)
-
-/* Border radius */
---radius-sm (6px), --radius-md (8px), --radius-lg (16px), --radius-xl (20px)
-
-/* Animation */
---duration-fast (150ms), --duration-normal (200ms)
---ease-out, --spring-smooth
+/* ❌ WRONG */                    /* ✅ CORRECT */
+background: rgba(18,18,20,0.98);  background: var(--overlay-component-bg);
+padding: 8px 12px;                padding: var(--space-2) var(--space-3);
+border-radius: 12px;              border-radius: var(--radius-lg);
 ```
-
-### Example: Correct vs Incorrect
-
-```css
-/* ❌ WRONG - Hardcoded values */
-.menu {
-  background: rgba(18, 18, 20, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 8px 12px;
-  border-radius: 12px;
-  transition: all 0.15s ease-out;
-}
-
-/* ✅ CORRECT - Design tokens */
-.menu {
-  background: var(--overlay-component-bg);
-  border: var(--overlay-component-border);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-lg);
-  transition: all var(--duration-fast) var(--ease-out);
-}
-```
-
-**Full token reference:** `src/assets/design-tokens.css` (1,220 lines)
 
 ## Atomic Task Breakdown (CRITICAL)
 
@@ -186,15 +127,9 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 
 **Backup location:** `supabase/backups/` (not committed to git)
 
-**Dual-Engine Backup System (Shadow Mirror):**
-- **Engine A**: Standard Postgres Dump (`.sql`, 50-file rotation)
-- **Engine B**: Shadow Mirror (`backups/shadow.db` - SQLite)
-- **Engine C**: JSON Hub (`public/shadow-latest.json` - Frontend Bridge)
-- **Interval**: Automatic every 5 minutes via `npm run dev`
-- **Manual Trigger**: `npm run backup:watch` or `node scripts/shadow-mirror.cjs`
-- **Verification**: `node scripts/verify-shadow-layer.cjs` (verifies fidelity)
-- **Recovery UI**: Settings > Storage tab (System 2 Golden Restore & System 3 Shadow Hub)
-- **Configuration**: Service Role Key in `.env.local` required for full Shadow access bypass RLS.
+**Dual-Engine Backup System:** See [`docs/claude-md-extension/backup-system.md`](docs/claude-md-extension/backup-system.md) for full details.
+- Auto-backup every 5 minutes via `npm run dev`
+- Recovery UI: Settings > Storage tab
 
 **Hook enforcement:** `.claude/hooks/destructive-command-blocker.sh`
 
@@ -204,7 +139,7 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 
 ## Supabase Architecture
 
-**Database Layer:** `useSupabaseDatabaseV2.ts` (single source of truth)
+**Database Layer:** `useSupabaseDatabase.ts` (single source of truth)
 - All CRUD operations go through this composable
 - Type mappers in `src/utils/supabaseMappers.ts` convert between app/DB types
 - Auth via `src/services/auth/supabase.ts` + `src/stores/auth.ts`
@@ -220,7 +155,7 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 
 **Key Files:**
 ```
-src/composables/useSupabaseDatabaseV2.ts  # Main database composable
+src/composables/useSupabaseDatabase.ts   # Main database composable
 src/utils/supabaseMappers.ts              # Type conversion
 src/services/auth/supabase.ts             # Supabase client init
 src/stores/auth.ts                        # Auth state management
@@ -269,55 +204,27 @@ To fix, run: npm run generate:keys
 | Composable | Purpose |
 |------------|---------|
 | `useCanvasSync.ts` | **CRITICAL** - Single source of truth for node sync |
-| `useCanvasParentChild.ts` | Group nesting and parent-child relationships |
-| `useCanvasDragDrop.ts` | Drag-drop handlers and position updates |
+| `useCanvasInteractions.ts` | Drag-drop, selection, and node interactions |
+| `useCanvasParentChildHelpers.ts` | Parent-child relationship utilities |
 | `useCanvasEvents.ts` | Vue Flow event handlers |
 | `useCanvasActions.ts` | Task/group CRUD operations |
 
 ## Canvas Geometry Invariants (CRITICAL - TASK-255)
 
-**Position drift and "jumping" tasks occur when multiple code paths mutate geometry. Follow these invariants:**
+**Position drift and "jumping" tasks occur when multiple code paths mutate geometry.**
 
-### Core Rules
+**Full SOP:** [`docs/sop/SOP-002-canvas-geometry-invariants.md`](docs/sop/SOP-002-canvas-geometry-invariants.md)
 
-1. **Single Writer for Geometry** - Only drag handlers may change `parentId`, `canvasPosition`, `parentGroupId`, `position`
-2. **Sync is Read-Only** - `useCanvasSync.ts` MUST NEVER write to stores (no `updateTask`, `updateGroup`)
-3. **Metadata vs Layout** - Smart-Groups update `dueDate`/`status`/`priority` only, NEVER geometry
+### Quick Rules
+1. **Single Writer** - Only drag handlers may change `parentId`, `canvasPosition`, `position`
+2. **Sync is Read-Only** - `useCanvasSync.ts` MUST NEVER call `updateTask()` or `updateGroup()`
+3. **Metadata Only** - Smart-Groups update `dueDate`/`status`/`priority`, NEVER geometry
 
-### Allowed Geometry Writers
+### Quarantined Features (DO NOT RE-ENABLE)
+- `useMidnightTaskMover.ts` - Auto-moved tasks at midnight
+- `useCanvasOverdueCollector.ts` - Auto-collected overdue tasks
 
-| File | Function | OK to Change Geometry? |
-|------|----------|------------------------|
-| `useCanvasInteractions.ts` | `onMoveEnd()` | ✅ YES (drag handler) |
-| `useCanvasTaskActions.ts` | `handleQuickTaskCreate()` | ✅ YES (task creation) |
-| `useCanvasTaskActions.ts` | `moveSelectedTasksToInbox()` | ✅ YES (explicit move) |
-| `spatialContainment.ts` | `reconcileTaskParentsByContainment()` | ⚠️ ONE-TIME on load only |
-| Smart-Group logic | Any | ❌ NO - metadata only |
-| Sync/orchestrator | Any | ❌ NO - read-only |
-
-### Permanently Disabled Features (QUARANTINED)
-
-These features are **permanently disabled** (code removed, stubs remain for API compatibility):
-- `useMidnightTaskMover.ts` - Auto-moved tasks at midnight (violated geometry invariants)
-- `useCanvasOverdueCollector.ts` - Auto-collected overdue tasks into groups (violated geometry invariants)
-
-**Why quarantined**: These features mutated `canvasPosition` and `parentId` automatically,
-which caused position drift and sync cascades. Only user-initiated drag operations may change geometry.
-
-**DO NOT re-enable** without full sync architecture review. See ADR comments in each file.
-
-### Drift Detection
-
-When calling `updateTask()` with geometry changes, pass a source:
-```typescript
-taskStore.updateTask(taskId, updates, 'DRAG')        // ✅ Allowed
-taskStore.updateTask(taskId, updates, 'SMART-GROUP') // ⚠️ Warning if geometry
-taskStore.updateTask(taskId, updates, 'SYNC')        // ⚠️ Warning if geometry
-```
-
-Console will show: `📍 [GEOMETRY-DRAG]` or `⚠️ [GEOMETRY-DRIFT]` warnings.
-
-**Full SOP**: `docs/sop/SOP-002-canvas-geometry-invariants.md`
+These violated geometry invariants and caused position drift. See ADR comments in each file.
 
 ## MASTER_PLAN.md Task ID Format
 
@@ -376,10 +283,9 @@ Detailed docs available in `docs/claude-md-extension/`:
 | `architecture.md` | Project structure, stores, composables, data models |
 | `code-patterns.md` | Component/store patterns, naming conventions |
 | `testing.md` | Playwright/Vitest examples, dev workflow |
-| `database.md` | ⚠️ OUTDATED - references PouchDB (app now uses Supabase) |
+| `backup-system.md` | Dual-engine backup system (Postgres + Shadow Mirror) |
 | `design-system.md` | Design tokens, Tailwind config, glass morphism |
 | `troubleshooting.md` | Common issues, gotchas, SOPs |
-| `backup-system.md` | Dual-engine backup system documentation |
 
 ---
 

@@ -4,45 +4,44 @@
     role="group"
     aria-label="Task metadata"
   >
-    <!-- Due Date - text only -->
+    <!-- Due Date -->
     <span
       v-if="task.dueDate"
-      class="meta-badge due-date-badge"
+      class="meta-badge"
+      :class="dueDateClass"
       :title="`Due: ${formattedDueDate}`"
     >
       {{ formattedDueDate }}
     </span>
 
-    <!-- Priority - dot only for high priority -->
-    <span
-      v-if="task.priority === 'high'"
-      class="meta-badge priority-badge priority-high"
-      title="High Priority"
-    >
-      <span class="priority-dot" aria-hidden="true" />
-    </span>
+    <!-- Dot separator -->
+    <span v-if="task.dueDate && task.subtasks?.length" class="badge-separator">·</span>
 
-    <!-- Subtasks - text only -->
+    <!-- Subtasks -->
     <span
       v-if="task.subtasks?.length"
-      class="meta-badge subtasks-badge"
+      class="meta-badge"
       :title="`Subtasks: ${completedSubtasks}/${task.subtasks.length}`"
     >
       {{ completedSubtasks }}/{{ task.subtasks.length }}
     </span>
 
-    <!-- Pomodoros - just count -->
+    <!-- Dot separator for pomodoros -->
+    <span v-if="(task.dueDate || task.subtasks?.length) && task.completedPomodoros > 0" class="badge-separator">·</span>
+
+    <!-- Pomodoros (if any) -->
     <span
       v-if="task.completedPomodoros > 0"
       class="meta-badge pomodoro-badge"
       :title="`Pomodoro sessions: ${task.completedPomodoros}`"
     >
-      🍅{{ task.completedPomodoros }}
+      {{ task.completedPomodoros }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 
 const props = defineProps<{
@@ -55,89 +54,73 @@ const props = defineProps<{
   durationBadgeClass: string
   projectVisual: any
 }>()
+
+// Highlight overdue or today's tasks
+const dueDateClass = computed(() => {
+  if (!props.task.dueDate) return ''
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(props.task.dueDate)
+  due.setHours(0, 0, 0, 0)
+
+  if (due < today) return 'due-overdue'
+  if (due.getTime() === today.getTime()) return 'due-today'
+  return ''
+})
 </script>
 
 <style scoped>
 .task-card-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
   align-items: center;
   justify-content: flex-start;
-  min-height: 20px;
-  margin-top: 0;
+  min-height: 18px;
+  margin-top: var(--space-1);
 }
 
 /* Base Badge - Clean, minimal text style */
 .meta-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   font-size: 12px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.45);
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  border: none;
+  color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
 }
 
-.meta-badge--icon-only {
-  padding: 0;
-  min-width: auto;
-  min-height: auto;
+/* Dot separator between badges */
+.badge-separator {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  margin: 0 var(--space-1);
+  user-select: none;
 }
 
-/* All badges - just text, no backgrounds */
-.due-date-badge,
-.subtasks-badge,
-.dependency-badge,
-.pomodoro-badge,
-.duration-badge {
-  color: rgba(255, 255, 255, 0.45);
-  background: transparent;
-  border: none;
+/* Due date highlighting */
+.due-today {
+  color: var(--color-work, #22c55e);
+  font-weight: 500;
 }
 
-/* Priority - dot only, minimal */
-.priority-badge {
-  gap: 5px;
-  background: transparent;
-  padding: 0;
-}
-.priority-badge.priority-high { color: rgba(239, 68, 68, 0.7); }
-.priority-badge.priority-medium { color: rgba(255, 255, 255, 0.35); }
-.priority-badge.priority-low { color: rgba(96, 165, 250, 0.6); }
-
-.priority-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
+.due-overdue {
+  color: var(--color-priority-high, #ef4444);
+  font-weight: 500;
 }
 
-/* Duration - text only */
-.duration-badge.duration-quick,
-.duration-badge.duration-short,
-.duration-badge.duration-medium,
-.duration-badge.duration-long {
-  color: rgba(255, 255, 255, 0.45);
-  background: transparent;
-  border: none;
+/* Pomodoro badge - subtle tomato indicator */
+.pomodoro-badge {
+  color: rgba(239, 68, 68, 0.6);
 }
 
-/* Project Visual - minimal */
-.project-visual-container {
-  padding: 0;
-  background: transparent;
-  border: none;
-}
-.project-css-circle {
+.pomodoro-badge::before {
+  content: '';
+  display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--project-color);
-  opacity: 0.6;
+  background: currentColor;
+  margin-inline-end: 4px;
 }
 </style>

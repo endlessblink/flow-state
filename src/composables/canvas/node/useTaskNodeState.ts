@@ -1,13 +1,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
 import { useTimerStore } from '@/stores/timer'
+import { useTaskStore } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { Timer, Zap, Clock } from 'lucide-vue-next'
 
 export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     const timerStore = useTimerStore()
+    const taskStore = useTaskStore()
     const { getAlignmentClasses } = useHebrewAlignment()
+
+    // BUG-291 FIX: Read task from STORE (reactive) instead of PROPS (snapshot)
+    // This ensures the node updates instantly when task properties change
+    const task = computed(() => taskStore.tasks.find(t => t.id === props.task?.id) || props.task)
 
     // --- LOD Support ---
     // We use a safe wrapper to avoid breaking Storybook
@@ -32,8 +38,8 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
 
     // --- Visual State ---
 
-    // Hebrew text alignment
-    const titleAlignmentClasses = computed(() => getAlignmentClasses(props.task?.title || ''))
+    // Hebrew text alignment - use reactive task from store
+    const titleAlignmentClasses = computed(() => getAlignmentClasses(task.value?.title || ''))
 
     // Dragging state tracking
     const isNodeDragging = computed(() => props.isDragging || false)
@@ -42,8 +48,8 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     const isRecentlyCreated = ref(false)
 
     onMounted(() => {
-        if (props.task?.createdAt) {
-            const createdDate = new Date(props.task.createdAt)
+        if (task.value?.createdAt) {
+            const createdDate = new Date(task.value.createdAt)
             const now = new Date()
             const ageInSeconds = (now.getTime() - createdDate.getTime()) / 1000
 
@@ -58,6 +64,7 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
 
     // --- Computed Props for Display ---
 
+    // BUG-291: All computed properties now use reactive task from store
     const statusLabel = computed(() => {
         const labels: Record<TaskStatus, string> = {
             planned: 'Plan',
@@ -66,34 +73,34 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
             backlog: 'Back',
             on_hold: 'Hold'
         }
-        return labels[props.task.status] || 'Unknown'
+        return labels[task.value?.status] || 'Unknown'
     })
 
     const hasSchedule = computed(() =>
-        props.task?.instances && props.task.instances.length > 0
+        task.value?.instances && task.value.instances.length > 0
     )
 
     const formattedDueDate = computed(() => {
-        if (!props.task?.dueDate) return ''
+        if (!task.value?.dueDate) return ''
         try {
-            const date = new Date(props.task.dueDate)
-            if (isNaN(date.getTime())) return props.task.dueDate
+            const date = new Date(task.value.dueDate)
+            if (isNaN(date.getTime())) return task.value.dueDate
             return new Intl.DateTimeFormat('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric'
             }).format(date)
         } catch (_e) {
-            return props.task.dueDate
+            return task.value.dueDate
         }
     })
 
     // TASK-282: Overdue detection
     const isOverdue = computed(() => {
-        if (!props.task?.dueDate) return false
-        if (props.task.status === 'done') return false // Completed tasks aren't overdue
+        if (!task.value?.dueDate) return false
+        if (task.value.status === 'done') return false // Completed tasks aren't overdue
         try {
-            const dueDate = new Date(props.task.dueDate)
+            const dueDate = new Date(task.value.dueDate)
             dueDate.setHours(23, 59, 59, 999) // End of due date day
             const today = new Date()
             return dueDate < today
@@ -103,12 +110,12 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     })
 
     const isTimerActive = computed(() => {
-        return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+        return timerStore.isTimerActive && timerStore.currentTaskId === task.value?.id
     })
 
     // Duration Logic
     const durationBadgeClass = computed(() => {
-        const d = props.task?.estimatedDuration || 0
+        const d = task.value?.estimatedDuration || 0
         if (d <= 15) return 'duration-quick'
         if (d <= 30) return 'duration-short'
         if (d <= 60) return 'duration-medium'
@@ -116,14 +123,14 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     })
 
     const durationIcon = computed(() => {
-        const d = props.task?.estimatedDuration || 0
+        const d = task.value?.estimatedDuration || 0
         if (d <= 15) return Zap
         if (d <= 60) return Timer
         return Clock
     })
 
     const formattedDuration = computed(() => {
-        const d = props.task?.estimatedDuration || 0
+        const d = task.value?.estimatedDuration || 0
         if (d < 60) return `${d}m`
         const h = Math.floor(d / 60)
         const m = d % 60
@@ -131,6 +138,8 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     })
 
     return {
+        // BUG-291: Export reactive task for instant updates
+        task,
         zoom,
         isLOD1,
         isLOD2,

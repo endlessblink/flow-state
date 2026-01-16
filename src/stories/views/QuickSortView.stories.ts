@@ -382,7 +382,7 @@ export const EmptyState: Story = {
               color: var(--text-primary, #fff);
               margin: 0 0 0.5rem 0;
             ">
-              <Zap :size="32" style="color: var(--color-work, #3b82f6);" />
+              <Zap :size="32" />
               Quick Sort
             </h1>
             <p style="color: var(--text-secondary, rgba(255,255,255,0.6)); margin: 0;">
@@ -431,9 +431,9 @@ export const EmptyState: Story = {
           <button style="
             padding: 0.75rem 1.5rem;
             background: transparent;
-            border: 1px solid var(--color-work, #3b82f6);
+            border: 1px solid var(--brand-primary);
             border-radius: 10px;
-            color: var(--color-work, #3b82f6);
+            color: var(--brand-primary);
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
@@ -494,7 +494,7 @@ export const CompletionState: Story = {
               color: var(--text-primary, #fff);
               margin: 0 0 0.5rem 0;
             ">
-              <Zap :size="32" style="color: var(--color-work, #3b82f6);" />
+              <Zap :size="32" />
               Quick Sort
             </h1>
             <p style="color: var(--text-secondary, rgba(255,255,255,0.6)); margin: 0;">
@@ -625,9 +625,9 @@ export const CompletionState: Story = {
             gap: 0.5rem;
             padding: 0.75rem 1.5rem;
             background: transparent;
-            border: 1px solid var(--color-work, #3b82f6);
+            border: 1px solid var(--brand-primary);
             border-radius: 10px;
-            color: var(--color-work, #3b82f6);
+            color: var(--brand-primary);
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;

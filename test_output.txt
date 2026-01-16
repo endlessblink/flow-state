@@ -1,96 +1,46 @@
 
 Running 2 tests using 2 workers
 
-[1A[2K[1/2] [chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
-[1A[2K[2/2] [chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
-[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
-Starting Scenario 1
+[1A[2K[1/2] [chromium] › tests/user-flows/canvas-concurrency.spec.ts:27:5 › Canvas Concurrency & Race Conditions › should prioritize user drag over remote sync updates
+[1A[2K[2/2] [chromium] › tests/user-flows/canvas-concurrency.spec.ts:138:5 › Canvas Concurrency & Race Conditions › should prioritize user resize over remote sync updates
+[1A[2K[chromium] › tests/user-flows/canvas-concurrency.spec.ts:27:5 › Canvas Concurrency & Race Conditions › should prioritize user drag over remote sync updates
+Testing race condition on node: 72d42237-a203-4e98-9153-5cb4f4ae4cf6
 
-[1A[2K[ClientA] Attempting to create task: Sync-Test-1768415725407
+[1A[2KAttempting to start drag...
 
-[1A[2K[ClientA] Page Info: URL=http://localhost:5546/#/, Title=Pomo Flow
+[1A[2K[TEST-DEBUG] Attempt 1: Locked=true (user-drag), PosX=128
 
-[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
-Starting Scenario 2
+[1A[2KPM Comparison: Before=128, After=128
 
-[1A[2K[ClientA] Attempting to create task: Drag-Test-1768415725449
+[1A[2KFinal displacement X: 124
 
-[1A[2K[ClientA] Page Info: URL=http://localhost:5546/#/, Title=Pomo Flow
-
-[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
-[ClientA] Clicked Add Task button
-
-[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
-[ClientA] Clicked Add Task button
-
-[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition
-[ClientA] ERROR: Input field timeout.
-
-[1A[2K[ClientA] Body HTML (truncated 2000 chars): 
-    <div id="app" data-v-app=""><div class="n-config-provider"><!----><div data-v-22686b16="" class="app-layout" dir="ltr"><!-- LEFT SIDEBAR NAVIGATION --><!-- LEFT SIDEBAR NAVIGATION - Extracted from App.vue --><aside data-v-2414c5c4="" data-v-22686b16="" class="sidebar" aria-label="Main navigation" aria-hidden="false"><!-- App Header --><div data-v-2414c5c4="" class="sidebar-header"><div data-v-2414c5c4="" class="app-brand"><span data-v-2414c5c4="" class="brand-icon">🍅</span><span data-v-2414c5c4="" class="brand-text">Pomo-Flow</span></div><button data-v-33235260="" data-v-2414c5c4="" class="base-button variant-secondary size-md" type="button" aria-pressed="false" aria-busy="false" aria-disabled="false"><!-- Loading spinner --><!--v-if--><!-- Button content --><span data-v-33235260="" class="button-content"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Create project </span><!-- Keyboard focus indicator --><div data-v-33235260="" class="focus-indicator" aria-hidden="true"></div></button><div data-v-2414c5c4="" class="icon-button-group"><button data-v-2414c5c4="" class="icon-btn" title="Hide Sidebar" aria-label="Hide sidebar"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-left-close-icon lucide-panel-left-close"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg></button><button data-v-2414c5c4="" class="icon-btn" title="Settings" aria-label="Open settings"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-
-[1A[2K[chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention
-[ClientA] ERROR: Input field timeout.
-
-[1A[2K[ClientA] Body HTML (truncated 2000 chars): 
-    <div id="app" data-v-app=""><div class="n-config-provider"><!----><div data-v-22686b16="" class="app-layout" dir="ltr"><!-- LEFT SIDEBAR NAVIGATION --><!-- LEFT SIDEBAR NAVIGATION - Extracted from App.vue --><aside data-v-2414c5c4="" data-v-22686b16="" class="sidebar" aria-label="Main navigation" aria-hidden="false"><!-- App Header --><div data-v-2414c5c4="" class="sidebar-header"><div data-v-2414c5c4="" class="app-brand"><span data-v-2414c5c4="" class="brand-icon">🍅</span><span data-v-2414c5c4="" class="brand-text">Pomo-Flow</span></div><button data-v-33235260="" data-v-2414c5c4="" class="base-button variant-secondary size-md" type="button" aria-pressed="false" aria-busy="false" aria-disabled="false"><!-- Loading spinner --><!--v-if--><!-- Button content --><span data-v-33235260="" class="button-content"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Create project </span><!-- Keyboard focus indicator --><div data-v-33235260="" class="focus-indicator" aria-hidden="true"></div></button><div data-v-2414c5c4="" class="icon-button-group"><button data-v-2414c5c4="" class="icon-btn" title="Hide Sidebar" aria-label="Hide sidebar"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-left-close-icon lucide-panel-left-close"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path><path d="m16 15-3-3 3-3"></path></svg></button><button data-v-2414c5c4="" class="icon-btn" title="Settings" aria-label="Open settings"><svg data-v-2414c5c4="" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-
-[1A[2K  1) [chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention 
+[1A[2K  1) [chromium] › tests/user-flows/canvas-concurrency.spec.ts:138:5 › Canvas Concurrency & Race Conditions › should prioritize user resize over remote sync updates 
 
     TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
     Call log:
-    [2m  - waiting for locator('input[placeholder="Task name"]') to be visible[22m
+    [2m  - waiting for locator('.vue-flow__node-sectionNode').filter({ hasText: 'Resize Race Group' }).first() to be visible[22m
 
 
-      59 |         const input = page.locator('input[placeholder="Task name"]');
-      60 |         try {
-    > 61 |             await input.waitFor({ state: 'visible', timeout: 5000 });
-         |                         ^
-      62 |             console.log(`[${clientName}] Input field visible`);
-      63 |         } catch (e) {
-      64 |             console.log(`[${clientName}] ERROR: Input field timeout.`);
-        at createTask (/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:61:25)
-        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:108:9
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/sync-conflict-resolution-S-42039--Drag-Drop-Ghost-Prevention-chromium/test-failed-2.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/sync-conflict-resolution-S-42039--Drag-Drop-Ghost-Prevention-chromium/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: test-results/sync-conflict-resolution-S-42039--Drag-Drop-Ghost-Prevention-chromium/error-context.md
-
-
-[1A[2K  2) [chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition 
-
-    TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
-    Call log:
-    [2m  - waiting for locator('input[placeholder="Task name"]') to be visible[22m
-
-
-      59 |         const input = page.locator('input[placeholder="Task name"]');
-      60 |         try {
-    > 61 |             await input.waitFor({ state: 'visible', timeout: 5000 });
-         |                         ^
-      62 |             console.log(`[${clientName}] Input field visible`);
-      63 |         } catch (e) {
-      64 |             console.log(`[${clientName}] ERROR: Input field timeout.`);
-        at createTask (/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:61:25)
-        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-resolution.spec.ts:82:9
+      167 |         // Wait for group to render
+      168 |         const groupNode = page.locator('.vue-flow__node-sectionNode').filter({ hasText: 'Resize Race Group' }).first();
+    > 169 |         await groupNode.waitFor({ state: 'visible', timeout: 5000 });
+          |                         ^
+      170 |         const groupId = await groupNode.getAttribute('data-id');
+      171 |
+      172 |         // 2. Start Resizing
+        at /home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/user-flows/canvas-concurrency.spec.ts:169:25
 
     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/sync-conflict-resolution-S-a96d0-tatus-Toggle-Race-Condition-chromium/test-failed-2.png
+    test-results/user-flows-canvas-concurre-42cb0-ze-over-remote-sync-updates-chromium/test-failed-1.png
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
-    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/sync-conflict-resolution-S-a96d0-tatus-Toggle-Race-Condition-chromium/test-failed-1.png
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/user-flows-canvas-concurre-42cb0-ze-over-remote-sync-updates-chromium/video.webm
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
-    Error Context: test-results/sync-conflict-resolution-S-a96d0-tatus-Toggle-Race-Condition-chromium/error-context.md
+    Error Context: test-results/user-flows-canvas-concurre-42cb0-ze-over-remote-sync-updates-chromium/error-context.md
 
 
-[1A[2K  2 failed
-    [chromium] › tests/sync/conflict-resolution.spec.ts:77:5 › Sync Conflict Resolution (Multi-Device) › Scenario 1: Status Toggle Race Condition 
-    [chromium] › tests/sync/conflict-resolution.spec.ts:103:5 › Sync Conflict Resolution (Multi-Device) › Scenario 2: Drag & Drop Ghost Prevention 
+[1A[2K  1 failed
+    [chromium] › tests/user-flows/canvas-concurrency.spec.ts:138:5 › Canvas Concurrency & Race Conditions › should prioritize user resize over remote sync updates 
+  1 passed (10.8s)

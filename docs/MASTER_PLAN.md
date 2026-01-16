@@ -95,8 +95,18 @@
 | ~~**BUG-286**~~ | ✅ **DONE** **Fix Kanban View Clipping** | **P1** | ✅ **DONE** (2026-01-14) | - |
 | ~~**TASK-287**~~ | ✅ **DONE** **Kanban Shadow Overflow Fix (Padding Solution)** | **P1** | ✅ **DONE** (2026-01-15) | [SOP-004](./sop/SOP-004-css-shadow-overflow-clipping.md) |
 | ~~**TASK-289**~~ | ✅ **DONE** **Overdue Badge → Smart Group Movement** | **P2** | ✅ **DONE** (2026-01-15) | Canvas: Clicking reschedule option moves task to matching Smart Group if exists |
-| **TASK-290** | **Canvas Group Resize on Hover** | **P2** | 🔄 **IN PROGRESS** | Show resize handles when hovering over group (not just when selected) |
-| ~~**BUG-291**~~ | ✅ **DONE** **Edit Task Modal: Enter Key Doesn't Immediately Update Task** | **P1** | ✅ **DONE** (2026-01-15) | Fixed: saveTask() now awaits async updateTaskWithUndo before closing modal |
+| ~~**TASK-290**~~ | ✅ **DONE** **Canvas Group Resize on Hover** | **P2** | ✅ **DONE** (2026-01-15) | [SOP-005](./sop/SOP-005-canvas-resize-handle-visibility.md) |
+| ~~**BUG-294**~~ | ✅ **DONE** **Timer Start Button Not Working** | **P0** | ✅ **DONE** (2026-01-15) | Timer/Start buttons don't start timer or highlight active task on canvas |
+| ~~**TASK-213**~~ | ✅ **DONE** **Canvas Position System Refactor** | **P3** | ✅ **DONE** (2026-01-15) | Centralized PositionManager, Fixed Race Conditions, Standardized Coordinates |
+| ~~**TASK-295**~~ | ✅ **DONE** **Canvas Multi-Select with Shift+Drag** | **P2** | ✅ **DONE** (2026-01-16) | [SOP-006](./sop/SOP-006-canvas-shift-drag-selection.md) |
+| ~~**BUG-291**~~ | ✅ **DONE** **Edit Task Modal: 2-3s Delay on Enter Key** | **P1** | ✅ **DONE** (2026-01-16) | [SOP-009](./sop/SOP-009-reactive-task-nodes.md) - Root cause: TaskNode used snapshot props instead of reactive store. Fix: Computed reads from Pinia + instant modal close + fire-and-forget undo. Result: 1ms |
+| ~~**BUG-295**~~ | ✅ **DONE** **Canvas Badge Not Updating After Reschedule** | **P1** | ✅ **DONE** (2026-01-16) | Fix: Shallow clone task in useCanvasSync.ts to break reference equality for idempotence check |
+| ~~**TASK-297**~~ | ✅ **DONE** **Tomorrow Group Stale Due Date** | **P2** | ✅ **DONE** (2026-01-16) | Resolved: Existing Overdue badge (TASK-282) is sufficient |
+| ~~**TASK-298**~~ | ✅ **DONE** **Documentation Phase 1 - Quick Fixes** | **P1** | ✅ **DONE** (2026-01-15) | Fixed CLAUDE.md, README.md, .env.example, SOP naming, deleted 6MB obsolete |
+| ~~**TASK-299**~~ | ✅ **DONE** **Canvas Auto-Center on Today Group** | **P2** | ✅ **DONE** (2026-01-16) | On canvas load, center viewport on Today group or last active area with tasks |
+| **TASK-300** | **Documentation Phase 2 - Content Consolidation** | **P1** | 🔄 **IN PROGRESS** | [See Details](#task-300-documentation-phase-2---content-consolidation-in-progress) |
+| ~~**TASK-301**~~ | ✅ **DONE** **Canvas Connection UX Improvements** | **P2** | ✅ **DONE** (2026-01-16) | [SOP-008](./sop/SOP-008-canvas-connection-ux.md) |
+| ~~**TASK-302**~~ | ✅ **DONE** **Restore Automation Scripts** | **P1** | ✅ **DONE** (2026-01-16) | Restore missing consolidation scripts |
 
 ---
 

@@ -20,7 +20,7 @@
       </div>
 
       <div class="description">
-        <p>Pomo-Flow runs entirely on your device. No sign-up required, no data stored in the cloud.</p>
+        <p>FlowState runs entirely on your device. No sign-up required, no data stored in the cloud.</p>
       </div>
 
       <div class="features">
@@ -67,7 +67,7 @@
 
       <div class="actions">
         <button class="primary-btn" @click="startProductivity">
-          Start Using Pomo-Flow
+          Start Using FlowState
         </button>
         <button class="secondary-btn" @click="learnMore">
           Learn More

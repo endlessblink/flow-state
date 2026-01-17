@@ -140,7 +140,7 @@ export const useTimerStore = defineStore('timer', () => {
   })
 
   const tabTitleWithTimer = computed(() => {
-    const baseTitle = 'Pomo-Flow'
+    const baseTitle = 'FlowState'
     if (!currentSession.value || !isTimerActive.value) return baseTitle
     const time = tabDisplayTime.value
     const icon = currentSession.value.isBreak ? '🧎' : '🍅'

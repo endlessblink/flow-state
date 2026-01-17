@@ -3,7 +3,7 @@
     <header class="page-header glass">
       <div class="header-content--performance">
         <h1>Performance Dashboard</h1>
-        <p>System health and benchmarking suite for Pomo-Flow</p>
+        <p>System health and benchmarking suite for FlowState</p>
       </div>
       <div class="actions">
         <button 

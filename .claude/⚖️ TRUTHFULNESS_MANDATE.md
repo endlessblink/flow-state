@@ -332,7 +332,7 @@ This mandate is based on:
 
 **Last Updated**: 2025-11-24 (Enhanced with constitutional AI principles and research-based enforcement)
 **Purpose**: Prevent coordination chaos and ensure reliable rescue operation progress
-**Status**: ACTIVE - Required for all Pomo-Flow rescue work with enhanced enforcement
+**Status**: ACTIVE - Required for all FlowState rescue work with enhanced enforcement
 
 **This enhanced mandate addresses the root cause of selective truthfulness by requiring complete system verification, not just accurate metric reporting.**
 
@@ -378,7 +378,7 @@ This mandate is based on:
 **Truthfulness Mandate for Service Restoration:**
 1. **Complete Verification**: All restored services must be tested end-to-end
 2. **Exact Measurements**: Provide precise performance and functionality metrics
-3. **Integration Testing**: Verify services work with existing Pomo-Flow architecture
+3. **Integration Testing**: Verify services work with existing FlowState architecture
 4. **No Optimistic Claims**: Only report success when verified working
 
 **📍 IMPLEMENTATION PLAN REFERENCE:**
@@ -405,7 +405,7 @@ End-to-end user workflow validation      # Verify complete functionality
 **MANDATORY SUCCESS CRITERIA:**
 - [ ] All services restored with exact git backup verification
 - [ ] Dashboard provides real-time visual evidence of functionality
-- [ ] Integration with Pomo-Flow verified without breaking changes
+- [ ] Integration with FlowState verified without breaking changes
 - [ ] Performance metrics documented with exact measurements
 - [ ] User workflows tested with visual confirmation
 

@@ -8,7 +8,7 @@ test('design system loads on port 5173', async ({ page }) => {
   
   // Check home page title
   const title = page.locator('h1')
-  await expect(title).toContainText('Pomo-Flow Design System')
+  await expect(title).toContainText('FlowState Design System')
   
   console.log('✓ Home page loaded successfully')
 })

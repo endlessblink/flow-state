@@ -1,4 +1,4 @@
-**Last Updated**: January 16, 2026 (TASK-304 Claude Code Skill Consolidation Phase 2 - Done)
+**Last Updated**: January 17, 2026 (TASK-312 TaskRowDueDate Dropdown Component)
 **Version**: 5.45 (Skill Consolidation Phase 2)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -110,6 +110,8 @@
 | **TASK-303**             | **Dev-Manager AI Orchestrator Enhancement**                            | **P1**                                              | 🔄 **IN PROGRESS** [See Details](#task-303-dev-manager-ai-orchestrator-in-progress)                                             | [SOP-010](./sop/SOP-010-dev-manager-orchestrator.md)                                                                                                                                                           |                                                        |
 | ~~**TASK-304**~~         | ✅ **DONE** **Claude Code Skill Consolidation Phase 2**                 | **P1**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | Merged: master-plan-manager→smart-doc-manager. Archived: tauri-e2e-testing, persistence-type-fixer, detect-competing-systems, parallel-decomposer. Final: 26 active, 6 archived                                |                                                        |
 | ~~**TASK-305**~~         | ✅ **DONE** **Automated Master Plan Archival**                          | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | [Implementation Plan](./plans/automated-archival-system.md). Automated archival of completed tasks via "Update Master Plan" workflow.                                                                          |                                                        |
+| ~~**BUG-311**~~          | ✅ **DONE** **Fix Vite Module Loading & Startup Loop**                  | **P0**                                              | ✅ **DONE** (2026-01-17)                                                                                                         | Resolved circular dependencies in `spatialContainment.ts` and `stores/canvas`. Fixed type errors in `CanvasView.vue`.                                                                                                          |                                                        |
+| ~~**TASK-312**~~         | ✅ **DONE** **TaskRowDueDate Dropdown Component**                       | **P2**                                              | ✅ **DONE** (2026-01-17)                                                                                                         | Created TaskRowDueDate.vue with standardized dropdown (Today/Tomorrow/In 3 days/In 1 week/No due date). Updated TaskRow.vue and HierarchicalTaskRowContent.vue.                                                                |                                                        |
 
 ---
 
@@ -166,56 +168,81 @@ Target: Create 3 organized files from 12 scattered SOPs (Deferred to future sess
 ### TASK-305: Tauri Desktop Distribution - Complete Setup (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH
-**Status**: 🔄 In Progress (2026-01-16)
+**Status**: 🔄 In Progress (2026-01-17)
 **Related**: TASK-079 (Tauri Desktop & Mobile)
 
-Complete the Tauri desktop distribution setup for open-source release. Enable end users to install PomoFlow as a standalone desktop app with automated Docker + Supabase local stack setup.
+Complete the Tauri desktop distribution setup for open-source release. Enable end users to install FlowState as a standalone desktop app with automated Docker + Supabase local stack setup.
 
-**Current State (✅ Implemented)**:
+**Backend Implementation (✅ COMPLETE)**:
 
-- [x] Rust backend with Docker/Supabase commands
-- [x] Shell plugin + permissions configured
+- [x] Rust backend with Docker/Supabase orchestration (`lib.rs`)
+- [x] `check_docker_status`, `start_docker_desktop` (platform-specific)
+- [x] `check_supabase_status`, `start_supabase`, `stop_supabase`
+- [x] `run_supabase_migrations` - runs `supabase db push`
+- [x] `cleanup_services` - graceful shutdown
+- [x] Shell plugin + capabilities configured
+
+**Frontend Implementation (✅ COMPLETE)**:
+
 - [x] Vue startup composable (`useTauriStartup.ts`)
 - [x] Startup screen UI (`TauriStartupScreen.vue`)
+- [x] Error detection: Docker not installed, not running, port conflicts
+- [x] Error detection: Supabase CLI missing, port conflicts
+- [x] Targeted help text for each error type
 - [x] App.vue integration (Tauri detection)
 - [x] PWA disabled for Tauri builds
-- [x] Build pipeline (creates .deb, .rpm, .AppImage)
 
-**Phase 1: Migration Auto-Run (🔄 IN PROGRESS)**:
+**Renaming (✅ COMPLETE - 2026-01-17)**:
 
-- [ ] Add `run_supabase_migrations` Rust command
-- [ ] Call migrations in `useTauriStartup.ts` after Supabase ready
-- [ ] Handle migration errors gracefully
+- [x] `tauri.conf.json` - FlowState, com.flowstate.app
+- [x] `Cargo.toml` - Updated metadata, author, license
+- [x] `capabilities/default.json` - FlowState description
+- [x] All source files - UI text updated
 
-**Phase 2: Error Detection Improvements**:
+**CI/CD (✅ COMPLETE - 2026-01-17)**:
 
-- [ ] Detect: Docker not installed, not running, port conflicts
-- [ ] Detect: Supabase CLI missing, port conflicts
-- [ ] Show targeted help text for each error type
+- [x] `.github/workflows/release.yml` - Multi-platform builds
+- [x] Linux (ubuntu-22.04) - AppImage, .deb
+- [x] Windows (windows-latest) - .exe, .msi
+- [x] macOS (macos-latest) - .dmg (arm64 + x86_64)
 
-**Phase 3: Graceful Shutdown**:
+**Phase 5: Auto-Updater Signing (🔄 TODO)**:
 
-- [ ] Add `cleanup_services` Rust command
-- [ ] Stop Supabase on app close (configurable)
+- [ ] Generate signing keypair: `npm run tauri signer generate`
+- [ ] Add to GitHub secrets: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+- [ ] Update `tauri.conf.json` with public key
+- [ ] Test update flow on Linux
 
-**Phase 4: Auto-Updater**:
+**Phase 6: Platform Testing**:
 
-- [ ] Add `tauri-plugin-updater`
-- [ ] Configure GitHub releases endpoint
-- [ ] Add "Check for updates" in settings
+- [ ] Test fresh install on Linux VM
+- [ ] Test on Windows (cross-compile or CI)
+- [ ] Test on macOS (cross-compile or CI)
+- [ ] Document prerequisites (Docker Desktop, Supabase CLI)
 
 **Files**:
 
-- `src-tauri/src/lib.rs` - Rust commands
-- `src-tauri/Cargo.toml` - Dependencies
-- `src/composables/useTauriStartup.ts` - Startup logic
+- `src-tauri/src/lib.rs` - Rust commands (9 Tauri commands)
+- `src-tauri/Cargo.toml` - Dependencies + metadata
+- `src-tauri/tauri.conf.json` - App identity + bundle config
+- `src/composables/useTauriStartup.ts` - Startup sequence
 - `src/components/startup/TauriStartupScreen.vue` - UI
+- `.github/workflows/release.yml` - Multi-platform CI/CD
+
+**User Prerequisites**:
+
+| Software | Why | Install |
+|----------|-----|---------|
+| Docker Desktop | Runs Supabase containers | docker.com/products/docker-desktop |
+| Supabase CLI | Manages local database | `npm install -g supabase` |
 
 **Success Criteria**:
 
-- Fresh install on Linux VM works end-to-end
-- Clear error messages guide users to fix issues
-- App cleans up services on exit
+- [x] App automatically starts Docker + Supabase
+- [x] Clear error messages guide users to fix issues
+- [x] App cleans up services on exit
+- [ ] Fresh install on Linux VM works end-to-end
+- [ ] Auto-updater works for new releases
 
 ---
 
@@ -324,6 +351,30 @@ When pressing Start or Timer buttons from task context menu, the timer doesn't s
 2. Click Timer button on any task
 3. Check console for `🎯 [CONTEXT-MENU] startTimer called` log
 4. Verify timer starts and task is highlighted
+
+---
+
+### BUG-309: Ctrl+Z Keyboard Shortcut Not Triggering Undo (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH
+**Status**: 🔄 Analysis Complete (2026-01-17)
+
+Ctrl+Z keyboard shortcut is detected but doesn't execute undo. The global keyboard handler detects the keypress but never calls the undo function.
+
+**Root Cause Identified**:
+
+- `src/composables/keyboard/globalKeyboardHandlerSimple.ts` detects Ctrl+Z/Ctrl+Y in `handleKeydown()` but doesn't call `executeUndo()`/`executeRedo()`
+- The key detection code exists but lacks the actual execution call
+
+**Fix Required**:
+
+- [ ] Add `this.executeUndo()` call when Ctrl+Z is detected
+- [ ] Add `this.executeRedo()` call when Ctrl+Y / Ctrl+Shift+Z is detected
+- [ ] Verify undo/redo operations work end-to-end
+
+**Files to Modify**:
+
+- `src/composables/keyboard/globalKeyboardHandlerSimple.ts` - Add execution calls
 
 ---
 
@@ -500,6 +551,32 @@ When pressing Start or Timer buttons from task context menu, the timer doesn't s
 
 ---
 
+### TASK-310: Automated SQL Backup to Cloud Storage (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Complexity**: Low
+**Status**: Planned
+**Created**: January 17, 2026
+
+**Feature**: Set up automated SQL backups of Supabase data to a cloud-synced location (Dropbox or QNAP backup drive) for additional data safety beyond local Docker volumes.
+
+**Requirements**:
+1. Periodic SQL dumps (e.g., every hour or on demand)
+2. Store in cloud-synced location (Dropbox preferred, QNAP_BU_2 as fallback)
+3. Retain multiple backup versions with timestamp naming
+4. Integrate with existing `npm run db:backup` workflow
+
+**Files to modify**:
+- `scripts/backup-db.sh` - Add cloud sync target
+- `package.json` - Add `db:backup:cloud` script
+- Consider cron/systemd timer for automation
+
+**Notes**:
+- Dropbox location: `/home/endlessblink/my-projects/Sync/Dropbox` (needs Dropbox service running)
+- QNAP location: `/media/endlessblink/QNAP_BU_2/linux-system-bu/`
+
+---
+
 ### TASK-293: Canvas Viewport - Center on Today + Persist Position (📋 PLANNED)
 
 **Priority**: P2-MEDIUM
@@ -521,7 +598,7 @@ When pressing Start or Timer buttons from task context menu, the timer doesn't s
 
 **Implementation Steps**:
 
-- [ ] Add viewport persistence to localStorage (key: `pomoflow-canvas-viewport`)
+- [ ] Add viewport persistence to localStorage (key: `flowstate-canvas-viewport`)
 - [ ] On mount: Check if saved viewport exists
   - If yes: Restore saved position
   - If no: Find "Today" group and center on it using `fitView()` or `setCenter()`
@@ -547,7 +624,7 @@ if (todayGroup) {
 
 // Save viewport on change
 onMoveEnd(({ viewport }) => {
-  localStorage.setItem('pomoflow-canvas-viewport', JSON.stringify(viewport))
+  localStorage.setItem('flowstate-canvas-viewport', JSON.stringify(viewport))
 })
 ```
 
@@ -937,7 +1014,7 @@ All use `assertNoDuplicateIds()` from `src/utils/canvas/invariants.ts` for consi
 
 **Problem**: No formal agent/tool API layer exists. Zoom controls require Vue context and aren't agent-accessible.
 
-**Resolution**: Removed - the proposed `window.__pomoflowAgent` pattern is too simple to be meaningful. Playwright already covers testing needs. If AI integration becomes a goal, MCP (Model Context Protocol) would be the proper foundation, not a thin CRUD wrapper.
+**Resolution**: Removed - the proposed `window.__flowstateAgent` pattern is too simple to be meaningful. Playwright already covers testing needs. If AI integration becomes a goal, MCP (Model Context Protocol) would be the proper foundation, not a thin CRUD wrapper.
 
 ---
 

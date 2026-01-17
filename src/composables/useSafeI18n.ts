@@ -48,7 +48,7 @@ const messages: Record<string, Messages> = {
       },
       signup: {
         title: 'Create Account',
-        subtitle: 'Join Pomo-Flow to boost your productivity'
+        subtitle: 'Join FlowState to boost your productivity'
       },
       resetPassword: {
         title: 'Reset Password',
@@ -95,7 +95,7 @@ const messages: Record<string, Messages> = {
       },
       signup: {
         title: 'צור חשבון',
-        subtitle: 'הצטרף ל-Pomo-Flow כדי להגביר את הפרודוקטיביות שלך'
+        subtitle: 'הצטרף ל-FlowState כדי להגביר את הפרודוקטיביות שלך'
       },
       resetPassword: {
         title: 'איפוס סיסמה',

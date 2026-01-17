@@ -1,13 +1,13 @@
 #!/bin/bash
-# Dev Manager Install/Update Script
-# Usage: curl -sSL https://raw.githubusercontent.com/endlessblink/flow-state/main/install.sh | bash
+# Dev Maestro Install/Update Script
+# Usage: curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
 
 set -e
 
 # Configuration
-REPO_URL="https://github.com/endlessblink/flow-state.git"
-INSTALL_DIR="${FLOW_STATE_DIR:-$HOME/.flow-state}"
-BRANCH="${FLOW_STATE_BRANCH:-main}"
+REPO_URL="https://github.com/endlessblink/dev-maestro.git"
+INSTALL_DIR="${DEV_MAESTRO_DIR:-$HOME/.dev-maestro}"
+BRANCH="${DEV_MAESTRO_BRANCH:-main}"
 
 # Colors
 RED='\033[0;31m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}"
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║           FLOW STATE INSTALLER / UPDATER               ║"
+echo "║           DEV MAESTRO INSTALLER / UPDATER              ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -46,7 +46,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
 
     echo -e "${GREEN}✓ Updated to latest version${NC}"
 else
-    echo -e "${BLUE}Installing Flow State to $INSTALL_DIR...${NC}"
+    echo -e "${BLUE}Installing Dev Maestro to $INSTALL_DIR...${NC}"
 
     # Clone the repository
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
@@ -55,7 +55,7 @@ else
     echo -e "${GREEN}✓ Cloned repository${NC}"
 fi
 
-# Navigate to install directory (repo root is dev-manager)
+# Navigate to install directory
 cd "$INSTALL_DIR"
 
 # Install dependencies
@@ -83,12 +83,12 @@ echo -e "║  To start:                                             ║"
 echo -e "║    cd $INSTALL_DIR && npm start"
 echo -e "║                                                        ║"
 echo -e "║  Or add alias to ~/.bashrc:                            ║"
-echo -e "║    alias flow-state='node $INSTALL_DIR/server.js'"
+echo -e "║    alias dev-maestro='node $INSTALL_DIR/server.js'"
 echo -e "╚════════════════════════════════════════════════════════╝${NC}"
 
 # Optional: Start the server
 if [ "$1" = "--start" ]; then
     echo ""
-    echo -e "${BLUE}Starting Flow State...${NC}"
+    echo -e "${BLUE}Starting Dev Maestro...${NC}"
     node server.js
 fi

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flow State - Task Management</title>
+  <title>Dev Maestro - Task Management</title>
   <style>
     /* Design tokens - Pure black theme (matching Storybook) */
     :root {
@@ -5013,8 +5013,8 @@
                   <h3>Branches Ready for Review</h3>
                   <div class="review-bulk-btns">
                     <button class="review-bulk-btn small" onclick="viewAllDiffs()">👁 View All Diffs</button>
-                    <button class="review-bulk-btn small merge" onclick="mergeAllReviewBranches()">✅ Merge All</button>
-                    <button class="review-bulk-btn small discard" onclick="discardAllReviewBranches()">🗑 Discard All</button>
+                    <button class="review-bulk-btn small merge" onclick="mergeAllCompletedTasks()">✅ Merge All</button>
+                    <button class="review-bulk-btn small discard" onclick="discardAllCompletedTasks()">🗑 Discard All</button>
                   </div>
                 </div>
                 <div class="review-branches-list" id="review-branches-list">
@@ -9504,6 +9504,20 @@
         console.error('Failed to copy:', err);
         showToast('Failed to copy commands', 'error');
       });
+    }
+
+    // View all diffs in new tabs
+    function viewAllDiffs() {
+      if (completedTasksForReview.size === 0) {
+        showToast('No completed tasks to view', 'info');
+        return;
+      }
+
+      const taskIds = [...completedTasksForReview.keys()];
+      taskIds.forEach(taskId => {
+        window.open(`/api/orchestrator/task/${taskId}/diff`, '_blank');
+      });
+      showToast(`Opening ${taskIds.length} diff(s)...`, 'success');
     }
 
     // Update phase indicator

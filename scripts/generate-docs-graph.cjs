@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
-const OUTPUT_FILE = path.join(__dirname, '..', 'dev-manager', 'docs', 'graph-data.json');
+const OUTPUT_FILE = path.join(__dirname, '..', 'dev-maestro', 'docs', 'graph-data.json');
 
 // Category colors (matching dark theme)
 const CATEGORY_COLORS = {

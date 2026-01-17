@@ -18,7 +18,7 @@ test.describe('Task Linking Core Functionality Tests', () => {
 
     // Basic application should load
     const title = await page.title()
-    expect(title).toContain('Pomo-Flow')
+    expect(title).toContain('FlowState')
 
     // Wait to collect any console errors
     await page.waitForTimeout(2000)

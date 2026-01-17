@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Pomo-Flow Basic Functionality E2E Tests', () => {
+test.describe('FlowState Basic Functionality E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the application
     await page.goto('http://localhost:5546');
@@ -15,7 +15,7 @@ test.describe('Pomo-Flow Basic Functionality E2E Tests', () => {
 
     // Check for title
     const title = await page.title();
-    expect(title).toContain('Pomo-Flow');
+    expect(title).toContain('FlowState');
 
     // Check for no console errors
     const messages = [];

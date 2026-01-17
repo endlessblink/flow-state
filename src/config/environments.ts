@@ -152,7 +152,7 @@ export const stagingConfig: EnvironmentConfig = {
   },
   security: {
     requireHTTPS: true,
-    allowedOrigins: ['https://staging.pomoflow.com'],
+    allowedOrigins: ['https://staging.flowstate.app'],
     corsEnabled: true,
     validateSSL: true
   },
@@ -206,7 +206,7 @@ export const productionConfig: EnvironmentConfig = {
   },
   security: {
     requireHTTPS: true,
-    allowedOrigins: ['https://app.pomoflow.com'],
+    allowedOrigins: ['https://app.flowstate.app'],
     corsEnabled: true,
     validateSSL: true
   },

@@ -9,7 +9,7 @@
     <div class="sidebar-header">
       <div class="app-brand">
         <span class="brand-icon">🍅</span>
-        <span class="brand-text">Pomo-Flow v9 - DEBUGGING TEST</span>
+        <span class="brand-text">FlowState</span>
       </div>
       <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
         <Plus :size="14" />

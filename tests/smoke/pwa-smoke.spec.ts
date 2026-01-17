@@ -5,7 +5,7 @@
  * These tests are designed to run against production or staging environments.
  *
  * Usage:
- *   PROD_URL=https://pomoflow.yourdomain.com npx playwright test tests/smoke/pwa-smoke.spec.ts
+ *   PROD_URL=https://flowstate.yourdomain.com npx playwright test tests/smoke/pwa-smoke.spec.ts
  */
 
 import { test, expect } from '@playwright/test';
@@ -22,7 +22,7 @@ test.describe('PWA Smoke Tests', () => {
     await expect(page.locator('#app')).toBeVisible({ timeout: 10000 });
 
     // Check page title
-    await expect(page).toHaveTitle(/Pomo/i);
+    await expect(page).toHaveTitle(/FlowState/i);
 
     // Verify no critical console errors
     const errors: string[] = [];

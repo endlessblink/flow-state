@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Pomo-Flow Comprehensive E2E Tests', () => {
+test.describe('FlowState Comprehensive E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the application
     await page.goto('http://localhost:5546');

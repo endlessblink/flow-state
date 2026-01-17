@@ -291,7 +291,7 @@ const sendTestNotification = async () => {
 
   try {
     const notification = new Notification('Test Notification', {
-      body: 'This is a test notification from Pomo-Flow',
+      body: 'This is a test notification from FlowState',
       icon: '/favicon.ico',
       badge: '/favicon.ico',
       tag: 'test-notification',

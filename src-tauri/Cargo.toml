@@ -1,10 +1,10 @@
 [package]
-name = "app"
+name = "flow-state"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "FlowState - Productivity app with task management and pomodoro timer"
+authors = ["EndlessBlink"]
+license = "MIT"
+repository = "https://github.com/endlessblink/flow-state"
 edition = "2021"
 rust-version = "1.77.2"
 

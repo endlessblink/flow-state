@@ -14,7 +14,7 @@
               <span class="logo">🍅</span>
               <div>
                 <h2 class="modal-title">
-                  Welcome to Pomo-Flow
+                  Welcome to FlowState
                 </h2>
                 <p class="modal-subtitle">
                   Your productivity companion

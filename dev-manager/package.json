@@ -1,7 +1,7 @@
 {
-  "name": "pomo-flow-dev-manager",
+  "name": "flow-state",
   "version": "1.0.0",
-  "description": "Development management dashboard for Pomo-Flow",
+  "description": "Development dashboard with Kanban, Health scanning, Skills visualization, and multi-agent orchestration",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

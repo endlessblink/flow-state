@@ -1,20 +1,20 @@
-# Dev Manager
+# Flow State
 
-Unified development management dashboard with Kanban board for tracking tasks via MASTER_PLAN.md.
+Development dashboard with Kanban board, Health scanning, Skills visualization, and multi-agent orchestration for tracking tasks via MASTER_PLAN.md.
 
 ## Installation (Standalone)
 
-Install dev-manager on any system with one command:
+Install Flow State on any system with one command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/flow-state/main/install.sh | bash
 ```
 
-This installs to `~/.dev-manager/`. To customize the location:
+This installs to `~/.flow-state/`. To customize the location:
 
 ```bash
-export DEV_MANAGER_DIR=/path/to/install
-curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+export FLOW_STATE_DIR=/path/to/install
+curl -sSL https://raw.githubusercontent.com/endlessblink/flow-state/main/install.sh | bash
 ```
 
 ## Updating
@@ -22,21 +22,21 @@ curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-ma
 Run the same install command to update to the latest version:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/endlessblink/flow-state/main/install.sh | bash
 ```
 
 Or manually:
 
 ```bash
-cd ~/.dev-manager
-git pull origin master
-cd dev-manager && npm install
+cd ~/.flow-state
+git pull origin main
+npm install
 ```
 
 ## Starting the Server
 
 ```bash
-cd ~/.dev-manager/dev-manager
+cd ~/.flow-state
 npm start
 # Open http://localhost:6010
 ```
@@ -44,7 +44,7 @@ npm start
 Or with install + start:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash -s -- --start
+curl -sSL https://raw.githubusercontent.com/endlessblink/flow-state/main/install.sh | bash -s -- --start
 ```
 
 ## Configuration
@@ -60,20 +60,11 @@ cp .env.example .env
 | `PORT` | `6010` | Server port |
 | `MASTER_PLAN_PATH` | `../docs/MASTER_PLAN.md` | Path to your MASTER_PLAN.md file |
 
-**Using with your own project:**
+**Using with any project:**
 
 ```bash
 # In your .env file:
 MASTER_PLAN_PATH=/path/to/your/project/docs/MASTER_PLAN.md
-```
-
-## Usage within Pomo-Flow
-
-If you cloned the full pomo-flow repo:
-
-```bash
-npm run dev:manager
-# Open http://localhost:6010
 ```
 
 ## Tabs
@@ -81,6 +72,7 @@ npm run dev:manager
 | Tab | Description |
 |-----|-------------|
 | **Kanban** | Development task tracking parsed from MASTER_PLAN.md |
+| **Health** | Code quality scanning (TypeScript, ESLint, npm audit, etc.) |
 | **Skills** | Claude Code skills with analytics and relationship mapping |
 | **Docs** | Interactive documentation canvas with search |
 | **Timeline** | Development timeline view |
@@ -90,6 +82,8 @@ npm run dev:manager
 
 - Live sync: Changes to MASTER_PLAN.md auto-refresh the UI
 - Drag-and-drop task status updates
+- Health scanning with 8+ code quality metrics
+- Beads workflow for multi-agent orchestration
 - Dark theme
 - Tab selection persists across sessions
 
@@ -98,7 +92,7 @@ npm run dev:manager
 Add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-alias dev-manager='cd ~/.dev-manager/dev-manager && node server.js'
+alias flow-state='cd ~/.flow-state && node server.js'
 ```
 
-Then just run `dev-manager` from anywhere.
+Then just run `flow-state` from anywhere.

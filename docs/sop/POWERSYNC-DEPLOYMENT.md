@@ -57,7 +57,7 @@
 
 ```bash
 # From project root
-cd /home/endlessblink/my-projects/ai-development/productivity/pomo-flow
+cd /home/endlessblink/my-projects/ai-development/productivity/flow-state
 
 # Start all services
 docker-compose up -d

@@ -102,7 +102,7 @@ Currently, there's no marketing presence - only the GitHub repo and internal doc
 
 ### Architecture Decision: Separate Landing Page Repository
 
-**Recommended:** Create a new repository `pomo-flow-landing` for the landing page.
+**Recommended:** Create a new repository `flow-state-landing` for the landing page.
 
 **Rationale:**
 - Clean separation of marketing site from application code
@@ -117,7 +117,7 @@ Currently, there's no marketing presence - only the GitHub repo and internal doc
 ### Tech Stack for Landing Page
 
 ```
-pomo-flow-landing/
+flow-state-landing/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions deployment
@@ -215,7 +215,7 @@ jobs:
 
 ### Custom Domain Setup
 
-1. Register domain (suggestions: `pomoflow.app`, `pomo-flow.io`, `getpomoflow.com`)
+1. Register domain (suggestions: `pomoflow.app`, `flow-state.io`, `getpomoflow.com`)
 2. Add `CNAME` file to `public/` with domain name
 3. Configure DNS:
    - A records pointing to GitHub Pages IPs
@@ -262,12 +262,12 @@ jobs:
 ### Phase 1: Foundation (MVP)
 **Goal:** Get a working landing page live
 
-1. Create new repository `pomo-flow-landing`
+1. Create new repository `flow-state-landing`
 2. Set up Vue 3 + Vite + Tailwind project
 3. Copy design tokens from main app
 4. Build Hero section with basic CTA
 5. Add email signup form (Formspree)
-6. Deploy to GitHub Pages (username.github.io/pomo-flow-landing)
+6. Deploy to GitHub Pages (username.github.io/flow-state-landing)
 7. Test form submission
 
 **Deliverable:** Basic landing page collecting emails
@@ -398,7 +398,7 @@ jobs:
 ### Before Starting
 
 1. **Domain name choice?**
-   - Options: `pomoflow.app`, `pomo-flow.io`, `getpomoflow.com`
+   - Options: `pomoflow.app`, `flow-state.io`, `getpomoflow.com`
    - Budget: ~$12-40/year depending on TLD
 
 2. **Email service provider?**

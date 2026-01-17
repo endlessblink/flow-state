@@ -240,7 +240,7 @@ export class UnifiedTaskService {
     return await this.storage.findById(id);
   }
 
-  async findByLegacyId(legacyId: string, system: 'issue-creator' | 'markdown-manager' | 'pomo-flow'): Promise<UnifiedTask | null> {
+  async findByLegacyId(legacyId: string, system: 'issue-creator' | 'markdown-manager' | 'flow-state'): Promise<UnifiedTask | null> {
     const unifiedId = await this.idMapping.getUnifiedId(legacyId, system);
     return unifiedId ? this.findById(unifiedId) : null;
   }

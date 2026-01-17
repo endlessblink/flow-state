@@ -506,12 +506,12 @@ _rawGroups.value = loadedGroups  // Empty means empty
 | Key | File | Risk Level | Notes |
 |-----|------|------------|-------|
 | `pomoflow-guest-groups` | canvas.ts | **FIXED** | Was resurrecting deleted groups |
-| `pomo-flow-golden-backup` | useBackupSystem.ts | **HIGH** | Never expires, can restore old data |
+| `flow-state-golden-backup` | useBackupSystem.ts | **HIGH** | Never expires, can restore old data |
 | `pomoflow-offline-queue` | offlineQueue.ts | **MEDIUM** | No TTL, infinite retry |
-| `pomo-flow-resolution-rules` | userResolutionRules.ts | **MEDIUM** | Could affect conflict resolution |
+| `flow-state-resolution-rules` | userResolutionRules.ts | **MEDIUM** | Could affect conflict resolution |
 | `canvas-viewport` | canvas.ts | **MEDIUM** | Loaded before Supabase ready |
-| `pomo-flow-filters` | taskPersistence.ts | **MEDIUM** | Stale filters show wrong view |
-| `pomo-flow-backup-history` | useBackupSystem.ts | **MEDIUM** | Old backups persist indefinitely |
+| `flow-state-filters` | taskPersistence.ts | **MEDIUM** | Stale filters show wrong view |
+| `flow-state-backup-history` | useBackupSystem.ts | **MEDIUM** | Old backups persist indefinitely |
 | `pomoflow-canvas-locks` | canvasStateLock.ts | **LOW** | Has 7s TTL |
 | `pomoflow-canvas-has-initial-fit` | canvasUi.ts | **LOW** | Has 5min TTL |
 

@@ -16,7 +16,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 
 ## Project Overview
 
-**Pomo-Flow** - Vue 3 productivity app combining Pomodoro timer with task management across Board, Calendar, and Canvas views. Uses Supabase for persistence/auth with glass morphism design.
+**FlowState** - Vue 3 productivity app combining task management across Board, Calendar, and Canvas views with an integrated Pomodoro timer. Uses Supabase for persistence/auth with glass morphism design.
 
 ## Current Status
 
@@ -37,7 +37,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 
 ```bash
 npm run dev          # Start dev server (port 5546) - validates JWT keys first
-npm run kill         # Kill all PomoFlow processes (CRITICAL - DO NOT REMOVE)
+npm run kill         # Kill all FlowState processes (CRITICAL - DO NOT REMOVE)
 npm run build        # Production build
 npm run test         # Run tests
 npm run lint         # Lint code

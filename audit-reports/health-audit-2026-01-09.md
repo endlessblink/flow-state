@@ -1,7 +1,7 @@
 # Codebase Health Audit Report
 
 **Generated**: 2026-01-09T14:59:27.467Z
-**Project**: /home/endlessblink/my-projects/ai-development/productivity/pomo-flow
+**Project**: /home/endlessblink/my-projects/ai-development/productivity/flow-state
 **Duration**: 14.88s
 
 ## Summary

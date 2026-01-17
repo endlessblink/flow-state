@@ -22,7 +22,7 @@ const cloneForBroadcast = (data: any): any => {
     }
 }
 
-export function useBroadcastChannelSync(channelName = 'pomo-flow-sync') {
+export function useBroadcastChannelSync(channelName = 'flow-state-sync') {
     const tabId = ref(`tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
     const isConnected = ref(false)
 

@@ -44,7 +44,7 @@ export const customTheme = create({
 
   // Brand
   brandTitle: 'Pomo Flow Design System',
-  brandUrl: 'https://github.com/yourusername/pomo-flow',
+  brandUrl: 'https://github.com/yourusername/flow-state',
   brandTarget: '_self',
 })
 

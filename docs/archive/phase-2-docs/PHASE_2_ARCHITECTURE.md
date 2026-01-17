@@ -41,7 +41,7 @@ Documentation: Storybook for component library
 
 ### **Application Structure**
 ```
-pomo-flow/
+flow-state/
 ├── src/
 │   ├── components/          # 83 Vue components
 │   │   ├── base/           # 6 base components

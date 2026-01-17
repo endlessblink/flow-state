@@ -1,6 +1,6 @@
 ---
 name: dev-refactoring
-description: AUTO-ACTIVATE when working in pomo-flow-refactor worktree or refactoring large components. MANDATORY port 5550 for refactor worktree. Extract Vue composables, split large files, reduce component size, baseline testing, zero regressions. Triggers on keywords refactor, composable, extract, split component, reduce file size, pomo-flow-refactor directory.
+description: AUTO-ACTIVATE when working in flow-state-refactor worktree or refactoring large components. MANDATORY port 5550 for refactor worktree. Extract Vue composables, split large files, reduce component size, baseline testing, zero regressions. Triggers on keywords refactor, composable, extract, split component, reduce file size, flow-state-refactor directory.
 ---
 
 # Systematic Code Refactoring
@@ -8,7 +8,7 @@ description: AUTO-ACTIVATE when working in pomo-flow-refactor worktree or refact
 ## 🚨 AUTO-ACTIVATION TRIGGERS
 
 This skill AUTOMATICALLY activates when:
-- Working directory is `/pomo-flow-refactor/`
+- Working directory is `/flow-state-refactor/`
 - Keywords: refactor, composable, extract, split, reduce file size
 - Task involves breaking down large components (>2000 lines)
 - Creating or modifying files in `src/composables/`
@@ -19,8 +19,8 @@ This skill AUTOMATICALLY activates when:
 **REFACTOR WORKTREE EXCLUSIVELY USES PORT 5550**
 
 ```bash
-# ✅ CORRECT: Always use port 5550 for pomo-flow-refactor
-cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/pomo-flow/pomo-flow-refactor
+# ✅ CORRECT: Always use port 5550 for flow-state-refactor
+cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/flow-state/flow-state-refactor
 
 # Kill any existing process on 5550
 lsof -ti:5550 | xargs kill -9
@@ -34,7 +34,7 @@ curl http://localhost:5550
 ```
 
 ### Port Rules (NEVER VIOLATE)
-1. ✅ **ALWAYS** port 5550 for `/pomo-flow-refactor/` worktree
+1. ✅ **ALWAYS** port 5550 for `/flow-state-refactor/` worktree
 2. ❌ **NEVER** use 5546 (main worktree only)
 3. ❌ **NEVER** use auto-assigned ports (5547, 5548, 5554, etc.)
 4. ✅ **ALWAYS** explicitly specify `--port 5550`
@@ -53,7 +53,7 @@ curl http://localhost:5550
 
 ```bash
 # 1. Navigate to ORIGINAL code on main worktree
-cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/pomo-flow
+cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/flow-state
 
 # 2. Ensure server is running on port 5546
 npm run dev
@@ -243,7 +243,7 @@ export function useWindowResize() {
 
 ```bash
 # 1. Navigate to REFACTOR worktree
-cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/pomo-flow/pomo-flow-refactor
+cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/flow-state/flow-state-refactor
 
 # 2. Kill any processes on port 5550
 lsof -ti:5550 | xargs kill -9

@@ -28,7 +28,7 @@ export interface AppSettings {
     canvasViewport?: { x: number; y: number; zoom: number } | null
 }
 
-const STORAGE_KEY = 'pomo-flow-settings-v2'
+const STORAGE_KEY = 'flow-state-settings-v2'
 
 export const useSettingsStore = defineStore('settings', {
     state: (): AppSettings => ({
@@ -66,9 +66,9 @@ export const useSettingsStore = defineStore('settings', {
 
             if (!saved) {
                 // Migration from old keys
-                const oldTimerSettings = localStorage.getItem('pomo-flow-settings')
-                const oldKanbanSettings = localStorage.getItem('pomo-flow-kanban-settings')
-                const oldUiState = localStorage.getItem('pomo-flow-ui-state')
+                const oldTimerSettings = localStorage.getItem('flow-state-settings')
+                const oldKanbanSettings = localStorage.getItem('flow-state-kanban-settings')
+                const oldUiState = localStorage.getItem('flow-state-ui-state')
                 const oldLocale = localStorage.getItem('app-locale')
 
                 if (oldTimerSettings || oldKanbanSettings || oldUiState || oldLocale) {
@@ -122,8 +122,8 @@ export const useSettingsStore = defineStore('settings', {
 
                     // Clean up old keys (optional: might want to keep them for a bit just in case, 
                     // but the prompt says to clean them up)
-                    localStorage.removeItem('pomo-flow-settings')
-                    localStorage.removeItem('pomo-flow-kanban-settings')
+                    localStorage.removeItem('flow-state-settings')
+                    localStorage.removeItem('flow-state-kanban-settings')
                     // We don't remove ui-state yet as it contains other non-setting UI state 
                     // like sidebar visibility which isn't moved here (yet?). 
                     // Actually, looking at ui.ts, much of it IS UI state. 

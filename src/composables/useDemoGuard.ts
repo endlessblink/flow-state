@@ -74,12 +74,12 @@ export function useDemoGuard() {
 
   // Get demo data confirmation status
   const getDemoDataConfirmation = (): boolean => {
-    return localStorage.getItem('pomo-flow-demo-confirmed') === 'true'
+    return localStorage.getItem('flow-state-demo-confirmed') === 'true'
   }
 
   // Set demo data confirmation
   const setDemoDataConfirmation = (confirmed: boolean): void => {
-    localStorage.setItem('pomo-flow-demo-confirmed', String(confirmed))
+    localStorage.setItem('flow-state-demo-confirmed', String(confirmed))
   }
 
   // Main guard function - returns whether demo data is allowed
@@ -143,7 +143,7 @@ export function useDemoGuard() {
 
   // Reset demo confirmation
   const resetDemoConfirmation = (): void => {
-    localStorage.removeItem('pomo-flow-demo-confirmed')
+    localStorage.removeItem('flow-state-demo-confirmed')
     console.log('🔄 Demo data confirmation reset')
   }
 

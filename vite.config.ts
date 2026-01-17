@@ -28,8 +28,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Pomo-Flow',
-        short_name: 'PomoFlow',
+        name: 'FlowState',
+        short_name: 'FlowState',
         description: 'Pomodoro timer with task management',
         theme_color: '#4F46E5',
         background_color: '#0f172a', // Dark mode background

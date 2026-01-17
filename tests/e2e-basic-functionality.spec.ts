@@ -107,7 +107,7 @@ test.describe('Pomo-Flow Basic Functionality E2E Tests', () => {
     // Evaluate IndexedDB in the browser context
     const dbStatus = await page.evaluate(() => {
       return new Promise((resolve) => {
-        const request = indexedDB.open('pomo-flow');
+        const request = indexedDB.open('flow-state');
 
         request.onerror = () => resolve({ error: 'Failed to open IndexedDB' });
         request.onsuccess = () => {

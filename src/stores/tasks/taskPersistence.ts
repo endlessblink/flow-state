@@ -22,7 +22,7 @@ export function useTaskPersistence(
     _runAllTaskMigrations: () => void
 ) {
     const projectStore = useProjectStore()
-    const FILTER_STORAGE_KEY = 'pomo-flow-filters'
+    const FILTER_STORAGE_KEY = 'flow-state-filters'
 
     interface PersistedFilterState {
         activeProjectId: string | null

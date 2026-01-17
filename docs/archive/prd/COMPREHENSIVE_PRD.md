@@ -369,7 +369,7 @@ Testing Layers:
 - **Feedback Channels**: Available for questions and clarifications
 
 ### **Related Resources**
-- **Project Repository**: `/mnt/d/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow`
+- **Project Repository**: `/mnt/d/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/flow-state`
 - **Documentation Directory**: `/docs/prd/`
 - **Architecture Directory**: `/docs/mapping/2.11.25/`
 - **Archive Directory**: `/archive/` (archived content and documentation)

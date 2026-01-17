@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
-const UI_STATE_STORAGE_KEY = 'pomo-flow-ui-state'
+const UI_STATE_STORAGE_KEY = 'flow-state-ui-state'
 
 /**
  * Helper to ensure a value is a Set<string>

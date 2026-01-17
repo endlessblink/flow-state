@@ -1,4 +1,4 @@
-# Pomo-Flow Ideas
+# Ideas
 
 **Last Updated**: December 5, 2025
 

@@ -158,4 +158,4 @@ export const DEFAULT_THEME = 'dark'
 /**
  * Theme storage key
  */
-export const THEME_STORAGE_KEY = 'pomo-flow-theme'
+export const THEME_STORAGE_KEY = 'flow-state-theme'

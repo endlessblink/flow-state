@@ -28,7 +28,7 @@ Execute database analysis to identify state inconsistencies:
 4. Verify Hebrew content preservation across all storage layers
 
 The analysis reveals:
-- Multiple IndexedDB database versions (pomo-flow v1, v2, v3)
+- Multiple IndexedDB database versions (flow-state v1, v2, v3)
 - Data inconsistencies between storage layers
 - Stale data sources being read by backup system
 - Unicode handling issues in backup/restore cycles

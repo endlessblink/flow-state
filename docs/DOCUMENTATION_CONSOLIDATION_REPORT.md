@@ -238,7 +238,7 @@ done
 | `fix-task-position-jump-after-edit.md` | PLANNED | Not started |
 | `improve-milkdown-or-replace.md` | PLANNED | Decision framework |
 | `pwa-mobile-support.md` | PLANNED | ROAD-004, not started |
-| `pomo-flow-landing-page.md` | PARTIAL | Canvas part done |
+| `flow-state-landing-page.md` | PARTIAL | Canvas part done |
 | `dev-manager-health-dashboard.md` | ACTIVE | Jan 11 work |
 | `canvas-group-task-counting-tests.md` | PLANNED | Test design ready |
 

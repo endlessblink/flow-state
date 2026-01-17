@@ -327,7 +327,7 @@
         "name": "css-design-token-enforcer",
         "description": "Systematically find and replace ALL hardcoded hex values with proper CSS design tokens to ensure complete color consistency across the Pomo-Flow application. This skill addresses the critical issue of yellow vs orange medium priority colors by enforcing a unified design token system based on industry best practices from Atlassian, Salesforce, and enterprise design systems.",
         "keywords": [
-          "replace all hardcoded hex values  proper css design tokens  ensure complete color consistency across  pomo-flow application  skill addresses  critical issue  yellow vs orange medium priority colors  enforcing  unified design token system based  industry best practices from atlassian",
+          "replace all hardcoded hex values  proper css design tokens  ensure complete color consistency across  flow-state application  skill addresses  critical issue  yellow vs orange medium priority colors  enforcing  unified design token system based  industry best practices from atlassian",
           "systematically find",
           "enterprise design systems",
           "salesforce"
@@ -750,17 +750,17 @@
       "has_skill_md": true,
       "frontmatter": {
         "name": "Systematic Code Refactoring",
-        "description": "AUTO-ACTIVATE when working in pomo-flow-refactor worktree or refactoring large components. MANDATORY port 5550 for refactor worktree. Extract Vue composables, split large files, reduce component size, baseline testing, zero regressions. Triggers on keywords refactor, composable, extract, split component, reduce file size, pomo-flow-refactor directory.",
+        "description": "AUTO-ACTIVATE when working in flow-state-refactor worktree or refactoring large components. MANDATORY port 5550 for refactor worktree. Extract Vue composables, split large files, reduce component size, baseline testing, zero regressions. Triggers on keywords refactor, composable, extract, split component, reduce file size, flow-state-refactor directory.",
         "keywords": [
           "composable",
           "split component",
           "extract",
           "reduce component size",
           "zero regressions triggers  keywords refactor",
-          "pomo-flow-refactor directory",
+          "flow-state-refactor directory",
           "split large files",
           "reduce file size",
-          "auto-activate when working  pomo-flow-refactor worktree  refactoring large components mandatory port 5550  refactor worktree extract vue composables",
+          "auto-activate when working  flow-state-refactor worktree  refactoring large components mandatory port 5550  refactor worktree extract vue composables",
           "baseline testing"
         ]
       },
@@ -1067,8 +1067,8 @@
       "total_size_kb": 10.41
     },
     {
-      "name": "pomo-flow-quick-sort-counter-debugger",
-      "path": "skills/pomo-flow-quick-sort-counter-debugger",
+      "name": "flow-state-quick-sort-counter-debugger",
+      "path": "skills/flow-state-quick-sort-counter-debugger",
       "exists": true,
       "has_skill_md": true,
       "frontmatter": {},
@@ -1623,8 +1623,8 @@
       "total_size_kb": 14.88
     },
     {
-      "name": "⏱️ pomo-flow-quick-sort-counter-debugger",
-      "path": "skills/⏱️ pomo-flow-quick-sort-counter-debugger",
+      "name": "⏱️ flow-state-quick-sort-counter-debugger",
+      "path": "skills/⏱️ flow-state-quick-sort-counter-debugger",
       "exists": true,
       "has_skill_md": true,
       "frontmatter": {},

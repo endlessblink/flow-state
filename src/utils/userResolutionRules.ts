@@ -233,7 +233,7 @@ export class UserResolutionRulesManager {
    */
   private async loadUserRules(): Promise<void> {
     try {
-      const stored = localStorage.getItem('pomo-flow-resolution-rules')
+      const stored = localStorage.getItem('flow-state-resolution-rules')
       if (stored) {
         const data = JSON.parse(stored)
         this.globalRules = data.globalRules || []
@@ -258,7 +258,7 @@ export class UserResolutionRulesManager {
         globalRules: this.globalRules,
         ruleSets: Array.from(this.ruleSets.values())
       }
-      localStorage.setItem('pomo-flow-resolution-rules', JSON.stringify(data))
+      localStorage.setItem('flow-state-resolution-rules', JSON.stringify(data))
     } catch (error) {
       console.warn('Failed to save user resolution rules:', error)
     }

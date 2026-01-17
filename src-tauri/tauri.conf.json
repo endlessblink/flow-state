@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "PomoFlow",
+  "productName": "FlowState",
   "version": "0.1.0",
-  "identifier": "com.pomoflow.desktop",
+  "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5546",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "PomoFlow",
+        "title": "FlowState",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -37,13 +37,13 @@
       "icons/icon.ico"
     ],
     "category": "Productivity",
-    "shortDescription": "Pomodoro timer with task management",
-    "longDescription": "PomoFlow combines a Pomodoro timer with powerful task management across Board, Calendar, and Canvas views."
+    "shortDescription": "Productivity app with task management and pomodoro timer",
+    "longDescription": "FlowState combines powerful task management across Board, Calendar, and Canvas views with an integrated Pomodoro timer."
   },
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/YOUR_USERNAME/pomo-flow/releases/latest/download/latest.json"
+        "https://github.com/endlessblink/flow-state/releases/latest/download/latest.json"
       ],
       "pubkey": ""
     }

@@ -219,7 +219,7 @@ Feel free to comment on:
 
 ## 🔗 How to Create the PR
 
-1. Go to GitHub: https://github.com/endlessblink/pomo-flow/pull/new/claude/review-master-plan-roPjF
+1. Go to GitHub: https://github.com/endlessblink/flow-state/pull/new/claude/review-master-plan-roPjF
 
 2. Copy the PR title and description from above
 

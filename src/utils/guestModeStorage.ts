@@ -14,18 +14,18 @@ const GUEST_EPHEMERAL_KEYS = [
   'pomoflow-canvas-locks',
 
   // Local auth
-  'pomo-flow-local-user',
+  'flow-state-local-user',
 
   // Filters and view state
-  'pomo-flow-filters',
-  'pomo-flow-kanban-settings',
+  'flow-state-filters',
+  'flow-state-kanban-settings',
 
   // Backups (no data to backup in guest mode)
-  'pomo-flow-backup-history',
-  'pomo-flow-latest-backup',
-  'pomo-flow-golden-backup',
-  'pomo-flow-max-task-count',
-  'pomo-flow-simple-latest-backup',
+  'flow-state-backup-history',
+  'flow-state-latest-backup',
+  'flow-state-golden-backup',
+  'flow-state-max-task-count',
+  'flow-state-simple-latest-backup',
 
   // Quick Sort
   'quickSort_sessionHistory',
@@ -33,12 +33,12 @@ const GUEST_EPHEMERAL_KEYS = [
 
   // Other user-specific data
   'recent-emojis',
-  'pomo-flow-local-banner-dismissed',
-  'pomo-flow-offline-queue',
+  'flow-state-local-banner-dismissed',
+  'flow-state-offline-queue',
 
   // UI state
-  'pomo-flow-ui-state',
-  'pomo-flow-theme'
+  'flow-state-ui-state',
+  'flow-state-theme'
 ]
 
 /**

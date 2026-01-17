@@ -80,7 +80,7 @@ describe('Task 153: Backup Validation', () => {
         const backup = createMockBackup(oldTimestamp);
 
         // Setup golden backup in localStorage
-        localStorageMock.setItem('pomo-flow-golden-backup', JSON.stringify(backup));
+        localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(backup));
 
         const validation = await backupSystem.validateGoldenBackup();
 
@@ -94,7 +94,7 @@ describe('Task 153: Backup Validation', () => {
             { id: 'task-2', title: 'Task 2' }
         ]);
 
-        localStorageMock.setItem('pomo-flow-golden-backup', JSON.stringify(backup));
+        localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(backup));
 
         // Mock Supabase returning 'task-1' as deleted
         mockFetchDeletedTaskIds.mockResolvedValue(['task-1']);
@@ -113,7 +113,7 @@ describe('Task 153: Backup Validation', () => {
             { id: 'task-2', title: 'Task 2' }
         ]);
 
-        localStorageMock.setItem('pomo-flow-golden-backup', JSON.stringify(backup));
+        localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(backup));
         mockFetchDeletedTaskIds.mockResolvedValue(['task-1']);
 
         // Execute restore

@@ -52,7 +52,7 @@ pouchDb.changes({
   live: true,
   since: 'now',
   include_docs: true,
-  doc_ids: ['pomo-flow-timer-session:data']  // Filter to timer only
+  doc_ids: ['flow-state-timer-session:data']  // Filter to timer only
 }).on('change', (change) => {
   if (change.doc) {
     handleRemoteTimerUpdate(change.doc)
@@ -110,7 +110,7 @@ interface SavedTimerDocument {
   deviceLeaderId?: string | null
   deviceLeaderLastSeen?: number | null
 }
-const saved = await db.load<SavedTimerDocument>('pomo-flow-timer-session')
+const saved = await db.load<SavedTimerDocument>('flow-state-timer-session')
 const savedSession = saved?.session
 
 if (savedSession && savedSession.isActive) {  // ✅ Correct
@@ -201,7 +201,7 @@ watch(() => syncManager.syncStatus.value, (newStatus, oldStatus) => {
 
 ### Console Indicators (Success)
 ```
-[TIMER CHANGES] Starting changes feed listener for: pomo-flow-timer-session:data
+[TIMER CHANGES] Starting changes feed listener for: flow-state-timer-session:data
 [TIMER CHANGES] Received timer update from changes feed
 📡 [TIMER CROSS-DEVICE] Received remote timer update via changes feed
 🔄 [TIMER CROSS-DEVICE] Updated session, remaining: XX seconds, leader timestamp: XXXX

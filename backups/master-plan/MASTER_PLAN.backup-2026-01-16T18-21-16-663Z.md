@@ -1387,7 +1387,7 @@ Comprehensive tech debt audit of all major systems to identify problems before t
 
 ---
 
-### [TASK-192: Calendar View Refactor](file:///home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CalendarView.vue)
+### [TASK-192: Calendar View Refactor](file:///home/endlessblink/my-projects/ai-development/productivity/flow-state/src/views/CalendarView.vue)
 **Priority**: P1-HIGH
 **Status**: DONE
 **Completed**: January 15, 2026
@@ -2646,7 +2646,7 @@ Guest Mode:
 **Created**: January 9, 2026
 **Completed**: January 9, 2026
 
-**Problem**: `pomo-flow-backup-history` in `useBackupSystem.ts` persists old backups indefinitely with no expiration. Could consume significant localStorage space and restore stale data.
+**Problem**: `flow-state-backup-history` in `useBackupSystem.ts` persists old backups indefinitely with no expiration. Could consume significant localStorage space and restore stale data.
 
 **Files Modified**:
 - `src/composables/useBackupSystem.ts` - Added TTL constants and pruning logic
@@ -2714,7 +2714,7 @@ Guest Mode:
 **Completed**: January 11, 2026
 **Status**: ✅ DONE - Golden Validation UI & Smart filtering implemented.
 
-**Problem**: `pomo-flow-golden-backup` in `useBackupSystem.ts` NEVER expires. It can contain tasks/groups deleted weeks ago. Restoring it resurrects deleted data.
+**Problem**: `flow-state-golden-backup` in `useBackupSystem.ts` NEVER expires. It can contain tasks/groups deleted weeks ago. Restoring it resurrects deleted data.
 
 **Files Modified**:
 - `src/composables/useBackupSystem.ts` - Added validation and filtering functions
@@ -2925,10 +2925,10 @@ Implemented architectural safety pattern across all Pinia stores to prevent acci
 
 ### ~~TASK-111~~: Landing Page for Early Access (✅ DONE)
 **Priority**: P1-HIGH
-**Plan**: [plans/pomo-flow-landing-page.md](../plans/pomo-flow-landing-page.md)
+**Plan**: [plans/flow-state-landing-page.md](../plans/flow-state-landing-page.md)
 **Started**: January 8, 2026
 **Completed**: January 8, 2026
-**Live URL**: https://endlessblink.github.io/pomo-flow-landing/
+**Live URL**: https://endlessblink.github.io/flow-state-landing/
 - [x] Create landing page hosted on GitHub Pages (free)
 - [x] Showcase features: Board, Calendar, Canvas views, Pomodoro timer
 - [x] Email signup for early access waitlist (Formspree integration - needs form ID)

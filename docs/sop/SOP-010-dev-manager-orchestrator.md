@@ -102,7 +102,7 @@ agentProcess.stdin.end();
 ## Worktree Structure
 
 ```
-pomo-flow/
+flow-state/
 ├── .agent-worktrees/           # Gitignored
 │   ├── orch-task-1/           # Worktree for task 1
 │   │   └── (full repo copy)

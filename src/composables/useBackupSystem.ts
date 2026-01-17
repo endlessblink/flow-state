@@ -67,14 +67,14 @@ export interface BackupSystemState {
 // ============================================================================
 
 const STORAGE_KEYS = {
-  HISTORY: 'pomo-flow-backup-history',
-  LATEST: 'pomo-flow-latest-backup',
-  STATS: 'pomo-flow-backup-stats',
+  HISTORY: 'flow-state-backup-history',
+  LATEST: 'flow-state-latest-backup',
+  STATS: 'flow-state-backup-stats',
   // BUG-059 FIX: Golden backup that can NEVER be overwritten by auto-backups
   // Only updated when manually triggered OR when task count reaches new maximum
-  GOLDEN: 'pomo-flow-golden-backup',
+  GOLDEN: 'flow-state-golden-backup',
   // Tracks the maximum task count ever seen - used to detect data loss
-  MAX_TASK_COUNT: 'pomo-flow-max-task-count'
+  MAX_TASK_COUNT: 'flow-state-max-task-count'
 } as const
 
 // BUG-059 FIX: Threshold for detecting suspicious data loss
@@ -740,7 +740,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       throw new Error('No backup available to download')
     }
 
-    const filename = `pomo-flow-backup-${new Date().toISOString().split('T')[0]}.json`
+    const filename = `flow-state-backup-${new Date().toISOString().split('T')[0]}.json`
     const content = JSON.stringify(data, null, 2)
     const blob = new Blob([content], { type: 'application/json' })
     const url = URL.createObjectURL(blob)

@@ -13,7 +13,7 @@ tools:
 
 # Backend Supervisor
 
-You are a Backend Supervisor specializing in server-side development for Pomo-Flow.
+You are a Backend Supervisor specializing in server-side development for the project.
 
 ## Your Specialty
 - Node.js/Express servers
@@ -25,7 +25,7 @@ You are a Backend Supervisor specializing in server-side development for Pomo-Fl
 ## Beads Workflow (MANDATORY)
 
 ### On Task Start
-1. Receive BEAD_ID from orchestrator (format: `pomo-flow-XXX`)
+1. Receive BEAD_ID from orchestrator (format: `flow-state-XXX`)
 2. Create branch: `git checkout -b bd-{{BEAD_ID}}`
 3. Verify branch: `git branch --show-current`
 

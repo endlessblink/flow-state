@@ -41,7 +41,7 @@ This comprehensive reference document consolidates all configuration, build, dep
 ### Project Structure
 
 ```
-pomo-flow/
+flow-state/
 ├── src/
 │   ├── components/           # Vue components (6 categories, 83 total)
 │   │   ├── base/            # Base components (Button, Modal, Input)
@@ -84,7 +84,7 @@ npm --version   # Latest npm
 ```bash
 # 1. Clone repository
 git clone <repository-url>
-cd pomo-flow
+cd flow-state
 
 # 2. Install dependencies
 npm install
@@ -369,9 +369,9 @@ if (isConfigValid) {
 
 | Key | Purpose | Data Type | Persistence |
 |-----|---------|-----------|-------------|
-| `'pomo-flow-theme'` | Theme preference | `'light' | 'dark' | 'auto'` | localStorage |
-| `'pomo-flow-language'` | Language preference | `'en' | 'he'` | localStorage |
-| `'pomo-flow-backup-schedule'` | Backup settings | `BackupSchedule` | localStorage |
+| `'flow-state-theme'` | Theme preference | `'light' | 'dark' | 'auto'` | localStorage |
+| `'flow-state-language'` | Language preference | `'en' | 'he'` | localStorage |
+| `'flow-state-backup-schedule'` | Backup settings | `BackupSchedule` | localStorage |
 
 ---
 
@@ -382,7 +382,7 @@ if (isConfigValid) {
 ```typescript
 const config: CapacitorConfig = {
   appId: 'com.pomoflow.app',
-  appName: 'pomo-flow',
+  appName: 'flow-state',
   webDir: 'dist',                               // Build output directory
   server: {
     androidScheme: 'https',                      // HTTPS for Android

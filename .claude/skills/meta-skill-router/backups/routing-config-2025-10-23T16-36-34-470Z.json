@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "project": "pomo-flow",
+  "project": "flow-state",
   "description": "Intelligent skill routing configuration for Pomo-Flow productivity application",
 
   "routingPatterns": {

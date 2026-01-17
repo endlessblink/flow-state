@@ -76,6 +76,6 @@ To verify this fix (or if you suspect it has regressed):
 ## Rollback / Emergency
 If this fix causes data loss (e.g., users *needed* that legacy data because migration failed):
 
-1.  **Clear Flag**: Run `localStorage.removeItem('pomo-flow-initialized')` in the console.
+1.  **Clear Flag**: Run `localStorage.removeItem('flow-state-initialized')` in the console.
 2.  **Reload**: The app will attempt to auto-seed again.
 3.  **Disable Individual Only**: Set `INDIVIDUAL_TASKS_ONLY: false` in `src/config/database.ts` to restore legacy fallback.

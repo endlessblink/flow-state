@@ -2,8 +2,8 @@
   "timestamp": "2025-11-09T11:13:00.274Z",
   "summary": {
     "databases": {
-      "pomo-flow-v1": {
-        "name": "pomo-flow",
+      "flow-state-v1": {
+        "name": "flow-state",
         "version": 1,
         "taskCount": 22,
         "tasks": [
@@ -121,8 +121,8 @@
         "timestamp": "2025-11-09T11:13:00.254Z",
         "hebrewTasks": 0
       },
-      "pomo-flow-v2": {
-        "name": "pomo-flow",
+      "flow-state-v2": {
+        "name": "flow-state",
         "version": 2,
         "taskCount": 22,
         "tasks": [
@@ -240,8 +240,8 @@
         "timestamp": "2025-11-09T11:13:00.259Z",
         "hebrewTasks": 0
       },
-      "pomo-flow-v3": {
-        "name": "pomo-flow",
+      "flow-state-v3": {
+        "name": "flow-state",
         "version": 3,
         "taskCount": 22,
         "tasks": [
@@ -359,8 +359,8 @@
         "timestamp": "2025-11-09T11:13:00.264Z",
         "hebrewTasks": 0
       },
-      "pomo-flow-v3-v3": {
-        "name": "pomo-flow-v3",
+      "flow-state-v3-v3": {
+        "name": "flow-state-v3",
         "version": 3,
         "taskCount": 2,
         "tasks": [
@@ -383,10 +383,10 @@
       {
         "type": "task_count_mismatch",
         "databases": [
-          "pomo-flow-v1: 22",
-          "pomo-flow-v2: 22",
-          "pomo-flow-v3: 22",
-          "pomo-flow-v3-v3: 2"
+          "flow-state-v1: 22",
+          "flow-state-v2: 22",
+          "flow-state-v3: 22",
+          "flow-state-v3-v3: 2"
         ],
         "severity": "high"
       }

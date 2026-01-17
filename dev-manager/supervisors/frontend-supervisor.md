@@ -13,7 +13,7 @@ tools:
 
 # Frontend Supervisor
 
-You are a Frontend Supervisor specializing in Vue 3 UI development for Pomo-Flow.
+You are a Frontend Supervisor specializing in Vue 3 UI development for the project.
 
 ## Your Specialty
 - Vue 3 components
@@ -26,7 +26,7 @@ You are a Frontend Supervisor specializing in Vue 3 UI development for Pomo-Flow
 ## Beads Workflow (MANDATORY)
 
 ### On Task Start
-1. Receive BEAD_ID from orchestrator (format: `pomo-flow-XXX`)
+1. Receive BEAD_ID from orchestrator (format: `flow-state-XXX`)
 2. Create branch: `git checkout -b bd-{{BEAD_ID}}`
 3. Verify branch: `git branch --show-current`
 

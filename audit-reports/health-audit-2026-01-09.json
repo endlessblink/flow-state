@@ -1,7 +1,7 @@
 {
   "metadata": {
     "timestamp": "2026-01-09T14:59:27.467Z",
-    "projectRoot": "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow",
+    "projectRoot": "/home/endlessblink/my-projects/ai-development/productivity/flow-state",
     "version": "1.0.0",
     "executionTime": "14.88"
   },
@@ -4091,7 +4091,7 @@
       "type": "missing-dependency",
       "name": "@eslint/js",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/eslint.config.js"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/eslint.config.js"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4103,7 +4103,7 @@
       "type": "missing-dependency",
       "name": "vue-eslint-parser",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/eslint.config.js"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/eslint.config.js"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4115,9 +4115,9 @@
       "type": "missing-dependency",
       "name": "playwright",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/canvas-characterization.spec.ts",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/manual/comprehensive-test.cjs",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/manual/manual-test.cjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/tests/canvas-characterization.spec.ts",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/tests/manual/comprehensive-test.cjs",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/tests/manual/manual-test.cjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4129,7 +4129,7 @@
       "type": "missing-dependency",
       "name": "pouchdb",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/sync/conflict-reproduction.spec.ts"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/tests/sync/conflict-reproduction.spec.ts"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4141,9 +4141,9 @@
       "type": "missing-dependency",
       "name": "puppeteer",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/tests/debug/run-undo-test.cjs",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/debug/check-browser-storage.cjs",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/debug/check-db.cjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/tests/debug/run-undo-test.cjs",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/debug/check-browser-storage.cjs",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/debug/check-db.cjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4155,9 +4155,9 @@
       "type": "missing-dependency",
       "name": "@storybook/vue3",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stories/views/QuickSortView.stories.ts",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stories/task-management/CalendarInboxPanel.stories.ts",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/stories/task-management/CategorySelector.stories.ts"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/src/stories/views/QuickSortView.stories.ts",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/src/stories/task-management/CalendarInboxPanel.stories.ts",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/src/stories/task-management/CategorySelector.stories.ts"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4169,7 +4169,7 @@
       "type": "missing-dependency",
       "name": "lodash",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/services/data/MarkdownExportService.ts"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/src/services/data/MarkdownExportService.ts"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4181,9 +4181,9 @@
       "type": "missing-dependency",
       "name": "pg",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/add-missing-columns.cjs",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/sync-backend.cjs",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/verify-db-state.cjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/add-missing-columns.cjs",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/sync-backend.cjs",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/verify-db-state.cjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4195,7 +4195,7 @@
       "type": "missing-dependency",
       "name": "chokidar",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/lint-watch.js"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/lint-watch.js"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4207,7 +4207,7 @@
       "type": "missing-dependency",
       "name": "node-fetch",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/migrate-db.mjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/migrate-db.mjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4219,7 +4219,7 @@
       "type": "missing-dependency",
       "name": "express",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/sync-backend.cjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/sync-backend.cjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4231,7 +4231,7 @@
       "type": "missing-dependency",
       "name": "jsonwebtoken",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/sync-backend.cjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/sync-backend.cjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4243,7 +4243,7 @@
       "type": "missing-dependency",
       "name": "cors",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/sync-backend.cjs"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/sync-backend.cjs"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4255,8 +4255,8 @@
       "type": "missing-dependency",
       "name": "localforage",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/debug/add-test-data.js",
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/scripts/debug/check-projects.js"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/debug/add-test-data.js",
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/scripts/debug/check-projects.js"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4268,7 +4268,7 @@
       "type": "missing-dependency",
       "name": "glob",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/.claude/skills/🧹 ts-architectural-cleanup/execute.js"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/.claude/skills/🧹 ts-architectural-cleanup/execute.js"
       ],
       "source": "depcheck",
       "confidence": 90,
@@ -4280,7 +4280,7 @@
       "type": "missing-dependency",
       "name": "archiver",
       "usedIn": [
-        "/home/endlessblink/my-projects/ai-development/productivity/pomo-flow/.claude/skills/⏰ calendar-scheduling-fixer/scripts/package-skill.js"
+        "/home/endlessblink/my-projects/ai-development/productivity/flow-state/.claude/skills/⏰ calendar-scheduling-fixer/scripts/package-skill.js"
       ],
       "source": "depcheck",
       "confidence": 90,

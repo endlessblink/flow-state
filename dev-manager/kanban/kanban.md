@@ -1,4 +1,4 @@
-# Pomo-Flow Task Board
+# Task Board
 
 **Last Updated**: December 23, 2025
 **Source**: Synced with MASTER_PLAN.md

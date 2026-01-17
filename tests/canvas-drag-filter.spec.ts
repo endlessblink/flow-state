@@ -10,7 +10,7 @@ test.describe('Canvas Drag-and-Drop Filter Logic', () => {
         await page.setViewportSize({ width: 1280, height: 720 });
         await page.goto('/');
         // Wait for app to be ready
-        await page.waitForSelector('.pomo-flow-app');
+        await page.waitForSelector('.flow-state-app');
 
         // Clear any existing tasks to start fresh
         await page.evaluate(() => {

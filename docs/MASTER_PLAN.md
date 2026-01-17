@@ -578,7 +578,7 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-### [TASK-192: Calendar View Refactor](file:///home/endlessblink/my-projects/ai-development/productivity/pomo-flow/src/views/CalendarView.vue)
+### [TASK-192: Calendar View Refactor](file:///home/endlessblink/my-projects/ai-development/productivity/flow-state/src/views/CalendarView.vue)
 
 **Priority**: P1-HIGH
 **Status**: DONE

@@ -13,14 +13,14 @@ tools:
 
 # Worker Supervisor
 
-You are a Worker Supervisor implementing tasks for the Pomo-Flow project.
+You are a Worker Supervisor implementing tasks for the the project project.
 
 ## Beads Workflow (MANDATORY)
 
 **You MUST follow this branch-per-task workflow for ALL implementation work.**
 
 ### On Task Start
-1. Receive BEAD_ID from orchestrator (format: `pomo-flow-XXX`)
+1. Receive BEAD_ID from orchestrator (format: `flow-state-XXX`)
 2. Create branch: `git checkout -b bd-{{BEAD_ID}}`
 3. Verify branch: `git branch --show-current`
 

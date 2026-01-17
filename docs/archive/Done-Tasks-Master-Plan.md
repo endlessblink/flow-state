@@ -2118,7 +2118,7 @@ const { t } = useI18n()
 
 **Unified System**: `src/composables/useBackupSystem.ts`
 - Single API for backup/restore operations
-- localStorage keys: `pomo-flow-backup-history`, `pomo-flow-latest-backup`
+- localStorage keys: `flow-state-backup-history`, `flow-state-latest-backup`
 - Mock task filtering built-in
 - Supports manual, auto, and emergency backup types
 
@@ -2782,7 +2782,7 @@ CouchDB Remote ──► Live Sync Handler (line 1046) ──► Task Store ✅ 
 
 1. **NEW**: `src/composables/useTimerChangesSync.ts` ✅
    - Direct PouchDB changes feed for timer document
-   - Uses `doc_ids: ['pomo-flow-timer-session:data']` filter
+   - Uses `doc_ids: ['flow-state-timer-session:data']` filter
    - Proper cleanup with `cancel()` method
    - Auto-reconnect on error (up to 5 attempts)
 

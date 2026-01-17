@@ -14,7 +14,7 @@ import type {
 } from '@/types/suggestions'
 
 // Session storage key for dismissed suggestions
-const DISMISSED_KEY = 'pomo-flow-dismissed-suggestions'
+const DISMISSED_KEY = 'flow-state-dismissed-suggestions'
 
 /**
  * Core suggestion system composable.

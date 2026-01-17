@@ -236,7 +236,7 @@ export const DB_KEYS = {
 export const useDatabase = () => {
   // Initialize LocalForage with custom configuration
   const db = localforage.createInstance({
-    name: 'pomo-flow',
+    name: 'flow-state',
     storeName: 'main-store',
     description: 'Pomo-Flow application data'
   })
@@ -369,7 +369,7 @@ export const useGitHubGist = () => {
           description,
           public: false,
           files: {
-            'pomo-flow-backup.json': {
+            'flow-state-backup.json': {
               content: JSON.stringify(data, null, 2)
             }
           }
@@ -396,7 +396,7 @@ export const useGitHubGist = () => {
       }
 
       const gist = await response.json()
-      const fileContent = gist.files['pomo-flow-backup.json']?.content
+      const fileContent = gist.files['flow-state-backup.json']?.content
 
       if (!fileContent) {
         throw new Error('Backup file not found in gist')

@@ -769,7 +769,7 @@ import { WebsocketProvider } from 'y-websocket'
 
 const wsProvider = new WebsocketProvider(
   'ws://localhost:1234',
-  'pomo-flow-room',
+  'flow-state-room',
   doc
 )
 ```
@@ -779,7 +779,7 @@ const wsProvider = new WebsocketProvider(
 ```typescript
 import { IndexeddbPersistence } from 'y-indexeddb'
 
-const indexeddbProvider = new IndexeddbPersistence('pomo-flow', doc)
+const indexeddbProvider = new IndexeddbPersistence('flow-state', doc)
 ```
 
 #### **Y Protocols** (`y-protocols: ^1.0.6`)

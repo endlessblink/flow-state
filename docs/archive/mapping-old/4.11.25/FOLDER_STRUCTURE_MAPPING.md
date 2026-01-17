@@ -3,7 +3,7 @@
 ## Root Directory Structure
 
 ```
-pomo-flow/
+flow-state/
 ├── docs/                           # Documentation directory
 │   ├── mapping/                    # Project structure documentation (THIS DOC)
 │   └── mapping_2.11.25/           # Versioned backup documentation

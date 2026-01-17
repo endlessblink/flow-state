@@ -289,10 +289,10 @@ export function cleanBackupStorage(): {
   const errors: string[] = []
 
   const backupKeys = [
-    'pomo-flow-user-backup',
-    'pomo-flow-imported-tasks',
-    'pomo-flow-simple-backups',
-    'pomo-flow-simple-latest-backup'
+    'flow-state-user-backup',
+    'flow-state-imported-tasks',
+    'flow-state-simple-backups',
+    'flow-state-simple-latest-backup'
   ]
 
   backupKeys.forEach(key => {

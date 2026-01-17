@@ -158,7 +158,7 @@ import { ref, computed } from 'vue'
 
 1. **Find files with unused vars:**
 ```bash
-grep -B5 "is assigned a value but never used" /tmp/lint-output.txt | grep "pomo-flow" | sort -u
+grep -B5 "is assigned a value but never used" /tmp/lint-output.txt | grep "flow-state" | sort -u
 ```
 
 2. **Check specific file errors:**
@@ -295,8 +295,8 @@ Error: Found 2 matches of the string to replace
 **Solution**: Add more context to make the match unique:
 ```typescript
 // Instead of just the variable line, include surrounding context
-const userBackup = localStorage.getItem('pomo-flow-user-backup')
-const importedTasks = localStorage.getItem('pomo-flow-imported-tasks')
+const userBackup = localStorage.getItem('flow-state-user-backup')
+const importedTasks = localStorage.getItem('flow-state-imported-tasks')
 ```
 
 ### Gotcha 2: Variable Used in Template
@@ -385,7 +385,7 @@ npm run lint 2>&1 | tail -5
 npm run lint 2>&1 > /tmp/lint-output.txt
 
 # Find files with unused vars
-grep -B5 "is assigned a value but never used" /tmp/lint-output.txt | grep "pomo-flow" | sort -u
+grep -B5 "is assigned a value but never used" /tmp/lint-output.txt | grep "flow-state" | sort -u
 
 # Count remaining unused var errors
 grep "is assigned a value but never used" /tmp/lint-output.txt | wc -l

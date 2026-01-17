@@ -1,13 +1,13 @@
 #!/bin/bash
 # Dev Manager Install/Update Script
-# Usage: curl -sSL https://raw.githubusercontent.com/endlessblink/pomo-flow/master/dev-manager/install.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/endlessblink/flow-state/main/install.sh | bash
 
 set -e
 
 # Configuration
-REPO_URL="https://github.com/endlessblink/pomo-flow.git"
-INSTALL_DIR="${DEV_MANAGER_DIR:-$HOME/.dev-manager}"
-BRANCH="${DEV_MANAGER_BRANCH:-master}"
+REPO_URL="https://github.com/endlessblink/flow-state.git"
+INSTALL_DIR="${FLOW_STATE_DIR:-$HOME/.flow-state}"
+BRANCH="${FLOW_STATE_BRANCH:-main}"
 
 # Colors
 RED='\033[0;31m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}"
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║           DEV MANAGER INSTALLER / UPDATER              ║"
+echo "║           FLOW STATE INSTALLER / UPDATER               ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -46,18 +46,17 @@ if [ -d "$INSTALL_DIR/.git" ]; then
 
     echo -e "${GREEN}✓ Updated to latest version${NC}"
 else
-    echo -e "${BLUE}Installing dev-manager to $INSTALL_DIR...${NC}"
+    echo -e "${BLUE}Installing Flow State to $INSTALL_DIR...${NC}"
 
-    # Clone the repository (sparse checkout for dev-manager + docs)
-    git clone --depth 1 --filter=blob:none --sparse "$REPO_URL" "$INSTALL_DIR"
+    # Clone the repository
+    git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     cd "$INSTALL_DIR"
-    git sparse-checkout set dev-manager docs
 
     echo -e "${GREEN}✓ Cloned repository${NC}"
 fi
 
-# Navigate to dev-manager directory
-cd "$INSTALL_DIR/dev-manager"
+# Navigate to install directory (repo root is dev-manager)
+cd "$INSTALL_DIR"
 
 # Install dependencies
 echo -e "${BLUE}Installing dependencies...${NC}"
@@ -77,19 +76,19 @@ echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════╗"
 echo -e "║           INSTALLATION COMPLETE                         ║"
 echo -e "╠════════════════════════════════════════════════════════╣"
-echo -e "║  Location: $INSTALL_DIR/dev-manager"
+echo -e "║  Location: $INSTALL_DIR"
 echo -e "║  Version:  $VERSION"
 echo -e "║                                                        ║"
 echo -e "║  To start:                                             ║"
-echo -e "║    cd $INSTALL_DIR/dev-manager && npm start"
+echo -e "║    cd $INSTALL_DIR && npm start"
 echo -e "║                                                        ║"
 echo -e "║  Or add alias to ~/.bashrc:                            ║"
-echo -e "║    alias dev-manager='node $INSTALL_DIR/dev-manager/server.js'"
+echo -e "║    alias flow-state='node $INSTALL_DIR/server.js'"
 echo -e "╚════════════════════════════════════════════════════════╝${NC}"
 
 # Optional: Start the server
 if [ "$1" = "--start" ]; then
     echo ""
-    echo -e "${BLUE}Starting dev-manager...${NC}"
+    echo -e "${BLUE}Starting Flow State...${NC}"
     node server.js
 fi

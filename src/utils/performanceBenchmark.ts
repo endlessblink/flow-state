@@ -619,7 +619,7 @@ export class PerformanceBenchmark {
 
     // Save to localStorage for persistence
     try {
-      localStorage.setItem('pomo-flow-benchmark-report', JSON.stringify(report))
+      localStorage.setItem('flow-state-benchmark-report', JSON.stringify(report))
       console.log('\n💾 Report saved to localStorage')
     } catch (error) {
       console.warn('Failed to save report to localStorage:', error)
@@ -677,7 +677,7 @@ export class PerformanceBenchmark {
 
   async getLatestReport(): Promise<unknown> {
     try {
-      const report = localStorage.getItem('pomo-flow-benchmark-report')
+      const report = localStorage.getItem('flow-state-benchmark-report')
       return report ? JSON.parse(report) : null
     } catch {
       return null

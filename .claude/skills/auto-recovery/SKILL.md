@@ -32,7 +32,7 @@ db.close();
 ### Step 2: Check Current Database State
 
 ```bash
-docker exec supabase_db_pomo-flow psql -U postgres -d postgres -c "
+docker exec supabase_db_flow-state psql -U postgres -d postgres -c "
 SELECT 'tasks' as tbl, COUNT(*) FROM tasks
 UNION ALL SELECT 'groups', COUNT(*) FROM groups
 UNION ALL SELECT 'projects', COUNT(*) FROM projects
@@ -75,7 +75,7 @@ npm run restore
 ### Step 4: Verify Recovery
 
 ```bash
-docker exec supabase_db_pomo-flow psql -U postgres -d postgres -c "
+docker exec supabase_db_flow-state psql -U postgres -d postgres -c "
 SELECT 'tasks' as tbl, COUNT(*) FROM tasks
 UNION ALL SELECT 'groups', COUNT(*) FROM groups
 UNION ALL SELECT 'projects', COUNT(*) FROM projects;"

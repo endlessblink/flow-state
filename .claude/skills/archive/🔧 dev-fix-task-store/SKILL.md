@@ -243,7 +243,7 @@ async function diagnosePiniaIndexedDBSync() {
 
   // 2. Check IndexedDB directly
   try {
-    const db = await idb.openDB('pomo-flow-tasks', 1)
+    const db = await idb.openDB('flow-state-tasks', 1)
     const allTasks = await db.getAll('tasks')
     console.log('💾 IndexedDB:')
     console.log('  Tasks count:', allTasks.length)

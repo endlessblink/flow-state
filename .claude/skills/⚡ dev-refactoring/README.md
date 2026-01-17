@@ -9,7 +9,7 @@ This skill MUST be automatically activated whenever working on refactoring tasks
 ### Directory-Based Activation
 ```bash
 # Working in this directory? → Skill activates automatically
-/mnt/d/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/pomo-flow/pomo-flow-refactor
+/mnt/d/MY PROJECTS/AI/LLM/AI Code Gen/my-builds/Productivity/flow-state/flow-state-refactor
 ```
 
 ### Keyword Triggers
@@ -20,16 +20,16 @@ Skill activates when task description contains:
 - "split component"
 - "reduce file size"
 - "break down component"
-- "pomo-flow-refactor"
+- "flow-state-refactor"
 
 ### File Path Triggers
 Skill activates when working with:
 - `src/composables/**/*.ts`
-- Any file in `/pomo-flow-refactor/` worktree
+- Any file in `/flow-state-refactor/` worktree
 
 ## Critical Enforcement: Port 5550 ONLY
 
-**MANDATORY RULE**: The refactor worktree (`pomo-flow-refactor`) MUST use port 5550.
+**MANDATORY RULE**: The refactor worktree (`flow-state-refactor`) MUST use port 5550.
 
 ### Why This Matters
 - Main worktree uses port 5546
@@ -40,7 +40,7 @@ Skill activates when working with:
 ### Enforcement Commands
 ```bash
 # Always use these commands for refactor worktree
-cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/pomo-flow/pomo-flow-refactor
+cd /mnt/d/MY\ PROJECTS/AI/LLM/AI\ Code\ Gen/my-builds/Productivity/flow-state/flow-state-refactor
 lsof -ti:5550 | xargs kill -9
 npm run dev -- --port 5550
 ```

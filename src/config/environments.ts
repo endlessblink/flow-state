@@ -62,7 +62,7 @@ export const developmentConfig: EnvironmentConfig = {
   mode: 'development',
   database: {
     local: {
-      name: 'pomo-flow-dev',
+      name: 'flow-state-dev',
       adapter: 'idb',
       auto_compaction: true,
       revs_limit: 50
@@ -116,7 +116,7 @@ export const stagingConfig: EnvironmentConfig = {
   mode: 'staging',
   database: {
     local: {
-      name: 'pomo-flow-staging',
+      name: 'flow-state-staging',
       adapter: 'idb',
       auto_compaction: true,
       revs_limit: 100
@@ -170,7 +170,7 @@ export const productionConfig: EnvironmentConfig = {
   mode: 'production',
   database: {
     local: {
-      name: 'pomo-flow',
+      name: 'flow-state',
       adapter: 'idb',
       auto_compaction: true,
       revs_limit: 200

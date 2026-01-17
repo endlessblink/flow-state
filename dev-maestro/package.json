@@ -1,12 +1,14 @@
 {
-  "name": "flow-state",
+  "name": "dev-maestro",
   "version": "1.0.0",
-  "description": "Development dashboard with Kanban, Health scanning, Skills visualization, and multi-agent orchestration",
+  "description": "AI agent orchestration platform - Kanban, Health scanning, multi-agent workflows, Beads integration",
   "main": "server.js",
+  "bin": {
+    "dev-maestro": "./server.js"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "dev:manager": "npm run dev"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

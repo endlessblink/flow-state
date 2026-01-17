@@ -3,8 +3,8 @@ const path = require('path');
 
 const REPORT_PATH = 'full-dead-code.json';
 const ENTRY_POINTS = [
-    'dev-manager/server.js',
-    'dev-manager/scripts/health-scanner.js',
+    'dev-maestro/server.js',
+    'dev-maestro/scripts/health-scanner.js',
     'scripts/',
     '.claude/',
     'tauri/',

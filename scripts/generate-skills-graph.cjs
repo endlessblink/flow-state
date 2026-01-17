@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SKILLS_DIR = path.join(__dirname, '..', '.claude', 'skills');
-const OUTPUT_FILE = path.join(__dirname, '..', 'dev-manager', 'skills', 'graph-data.json');
+const OUTPUT_FILE = path.join(__dirname, '..', 'dev-maestro', 'skills', 'graph-data.json');
 const METRICS_FILE = path.join(__dirname, '..', '.claude', 'logs', 'skill-metrics.json');
 
 // Category colors (matching dark theme)

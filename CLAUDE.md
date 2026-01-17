@@ -280,9 +280,9 @@ These violated geometry invariants and caused position drift. See ADR comments i
 - Completed items: `~~TASK-001~~` with strikethrough
 - **NEVER reuse IDs** - Always run `./scripts/utils/get-next-task-id.cjs` first
 
-## Dev-Manager Kanban Compatibility
+## Dev-Maestro Kanban Compatibility
 
-The dev-manager at `http://localhost:6010` parses MASTER_PLAN.md.
+The dev-maestro at `http://localhost:6010` parses MASTER_PLAN.md.
 
 **Task Header Format:**
 ```markdown

@@ -11,7 +11,8 @@
       'task-row--focused': isFocused,
       'task-row--completed': task.status === 'done',
       'task-row--overdue': isOverdue,
-      'task-row--high-priority': task.priority === 'high'
+      'task-row--high-priority': task.priority === 'high',
+      'task-row--timer-active': isTimerActive
     }"
     :data-status="task.status"
     :style="{
@@ -109,7 +110,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
+import { useTimerStore } from '@/stores/timer'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowTitle from './row/TaskRowTitle.vue'
@@ -138,7 +141,14 @@ interface Props {
   statusOptions: Array<{ label: string, value: string }>
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const timerStore = useTimerStore()
+
+// Timer active state
+const isTimerActive = computed(() => {
+  return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+})
 
 defineEmits<{
   dragstart: [event: DragEvent]

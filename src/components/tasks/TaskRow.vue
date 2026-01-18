@@ -3,7 +3,7 @@
     class="task-row"
     :class="[
       `task-row--${density}`,
-      { 'task-row--selected': selected, 'task-row--anchor': isAnchorRow },
+      { 'task-row--selected': selected, 'task-row--anchor': isAnchorRow, 'task-row--timer-active': isTimerActive },
       `priority-${task.priority || 'none'}`
     ]"
     @click="$emit('select', task.id)"
@@ -89,6 +89,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { useTimerStore } from '@/stores/timer'
 import { Play, Edit } from 'lucide-vue-next'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -125,9 +126,15 @@ const statusOptions = [
 ]
 
 const taskStore = useTaskStore()
+const timerStore = useTimerStore()
 
 // Hebrew text alignment support
 const { getAlignmentClasses } = useHebrewAlignment()
+
+// Timer active state
+const isTimerActive = computed(() => {
+  return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+})
 
 // ADHD-friendly: Every 5th row gets visual anchor
 const isAnchorRow = computed(() => (props.rowIndex + 1) % 5 === 0)
@@ -348,5 +355,25 @@ const projectVisual = computed(() =>
   background: var(--glass-bg-soft);
   border-color: var(--brand-primary-alpha-50);
   box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
+}
+
+/* Timer active state - amber glow */
+.task-row--timer-active {
+  border-color: var(--timer-active-border);
+  box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+  animation: pulse-timer-row 2s ease-in-out infinite;
+}
+
+.task-row--timer-active:hover {
+  box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+}
+
+@keyframes pulse-timer-row {
+  0%, 100% {
+    box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+  }
+  50% {
+    box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+  }
 }
 </style>

@@ -229,3 +229,23 @@
 .task-row:hover {
     background: var(--surface-hover);
 }
+
+/* Timer active state - amber glow */
+.task-row--timer-active {
+    border-left-color: var(--timer-active-border) !important;
+    box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+    animation: pulse-timer-hierarchical 2s ease-in-out infinite;
+}
+
+.task-row--timer-active:hover {
+    box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+}
+
+@keyframes pulse-timer-hierarchical {
+    0%, 100% {
+        box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+    }
+    50% {
+        box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+    }
+}

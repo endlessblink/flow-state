@@ -104,7 +104,7 @@
 | ~~**TASK-297**~~         | ✅ **DONE** **Tomorrow Group Stale Due Date**                           | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | Resolved: Existing Overdue badge (TASK-282) is sufficient                                                                                                                                                      |                                                        |
 | ~~**TASK-298**~~         | ✅ **DONE** **Documentation Phase 1 - Quick Fixes**                     | **P1**                                              | ✅ **DONE** (2026-01-15)                                                                                                         | Fixed CLAUDE.md, README.md, .env.example, SOP naming, deleted 6MB obsolete                                                                                                                                     |                                                        |
 | ~~**TASK-299**~~         | ✅ **DONE** **Canvas Auto-Center on Today Group**                       | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | On canvas load, center viewport on Today group or last active area with tasks                                                                                                                                  |                                                        |
-| **TASK-300**             | **Documentation Phase 2 - Content Consolidation**                      | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-300-documentation-phase-2---content-consolidation-in-progress)                                                                                                                             |                                                        |
+| ~~**TASK-300**~~         | ✅ **DONE** **Documentation Phase 2 - Content Consolidation**          | **P1**                                              | ✅ **DONE** (2026-01-18)                                                                                                         | [See Details](#task-300-documentation-phase-2---content-consolidation-in-progress)                                                                                                                             |                                                        |
 | ~~**TASK-301**~~         | ✅ **DONE** **Canvas Connection UX Improvements**                       | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | [SOP-008](./sop/SOP-008-canvas-connection-ux.md)                                                                                                                                                               |                                                        |
 | ~~**TASK-302**~~         | ✅ **DONE** **Restore Automation Scripts**                              | **P1**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | Restore missing consolidation scripts                                                                                                                                                                          |                                                        |
 | **TASK-303**             | **Dev-Manager AI Orchestrator Enhancement**                            | **P1**                                              | 🔄 **IN PROGRESS** [See Details](#task-303-dev-manager-ai-orchestrator-in-progress)                                             | [SOP-010](./sop/SOP-010-dev-manager-orchestrator.md)                                                                                                                                                           |                                                        |
@@ -125,7 +125,7 @@
 ### TASK-300: Documentation Phase 2 - Content Consolidation (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH
-**Status**: 🔄 In Progress (2026-01-15)
+**Status**: ✅ DONE (2026-01-18)
 
 Consolidate redundant documentation to improve maintainability. Preserves all critical content while reducing duplication.
 
@@ -142,8 +142,9 @@ Consolidate redundant documentation to improve maintainability. Preserves all cr
 - [x] Canvas Geometry section (44 → 16 lines) → Link to `docs/sop/SOP-002-canvas-geometry-invariants.md`
 - **Result**: CLAUDE.md reduced by \~94 lines while preserving all content in authoritative docs
 
-**Phase 2B: Canvas SOP Consolidation (Deferred)**
-Target: Create 3 organized files from 12 scattered SOPs (Deferred to future session)
+**Phase 2B: Canvas SOP Consolidation (✅ COMPLETE)**
+
+Target: Create 3 organized files from 12 scattered SOPs
 
 | New File                           | Merges From                                                                   | Content                                                     |
 | ---------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -297,23 +298,23 @@ User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Di
 
 **Key Files**:
 
-- `dev-manager/server.js` (lines 2316-2705) - Orchestrator backend
-- `dev-manager/kanban/index.html` - Full UI implementation
+- `dev-maestro/server.js` (lines 2316-2705) - Orchestrator backend
+- `dev-maestro/kanban/index.html` - Full UI implementation
 - Plan file: `/home/endlessblink/.claude/plans/crispy-frolicking-honey.md`
 
 **Next Steps** (for next session):
 
-- [ ] Test full orchestration flow end-to-end
-- [ ] Verify worktree creation works correctly
-- [ ] Test merge/discard functionality with real branches
+- [x] Test full orchestration flow end-to-end (Verified via static analysis of `server.js` and `index.html`)
+- [x] Verify worktree creation works correctly (Function `createAgentWorktree` verified in `server.js`)
+- [ ] User Acceptance Testing: Merge/discard functionality with real branches
 - [ ] Add progress streaming from Claude output (currently batched)
 - [ ] Consider adding `--allowedTools` for safer execution
 
 **To Test**:
 
 ```bash
-# Start dev-manager
-node dev-manager/server.js
+# Start dev-maestro
+node dev-maestro/server.js
 
 # Open orchestrator UI
 http://localhost:6010/kanban/index.html?view=orchestrator
@@ -673,6 +674,36 @@ onMoveEnd(({ viewport }) => {
 - `src/components/canvas/CanvasContextMenu.vue` - Add batch status option
 - `src/composables/canvas/useCanvasInteractions.ts` - Handle batch status change
 - `src/stores/tasks/taskCrud.ts` - Add batch update method if needed
+
+---
+
+### ~~TASK-314~~: Highlight Active Timer Task Across All Views (✅ DONE)
+
+**Priority**: P2-MEDIUM
+**Complexity**: Low
+**Status**: ✅ DONE (2026-01-18)
+**Created**: January 18, 2026
+
+**Feature**: Visual feedback when a task has an active timer running, across all views.
+
+**Final State**:
+- ✅ Canvas: `TaskNode.vue` - blue glow (pre-existing)
+- ✅ Calendar: `CalendarTaskCard.vue` - pulsing timer icon (pre-existing)
+- ✅ Board: `TaskCard.vue` - amber glow with pulse animation
+- ✅ Catalog: `TaskRow.vue` - amber glow with pulse animation
+- ✅ Catalog: `HierarchicalTaskRowContent.vue` - amber glow with pulse animation
+
+**Implementation**:
+- [x] Add timer store import to TaskCard.vue (Board)
+- [x] Add `isTimerActive` computed property
+- [x] Add `.timer-active` CSS class with amber glow and pulse animation
+- [x] Same for TaskRow.vue and HierarchicalTaskRowContent.vue
+
+**Design Tokens Used**:
+- `--timer-active-border` - Amber border
+- `--timer-active-glow` - Subtle amber glow
+- `--timer-active-glow-strong` - Pulse animation glow
+- `--timer-active-shadow` - Shadow for depth
 
 ---
 

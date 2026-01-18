@@ -7,6 +7,7 @@
       { 'completed': task.progress === 100 },
       { 'focused': isFocused },
       { 'selected': isSelected },
+      { 'timer-active': isTimerActive },
       density ? `task-card--${density}` : ''
     ]"
     :tabindex="disabled ? -1 : 0"
@@ -78,9 +79,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskCardState } from '@/composables/tasks/card/useTaskCardState'
 import { useTaskCardActions } from '@/composables/tasks/card/useTaskCardActions'
+import { useTimerStore } from '@/stores/timer'
 
 // Sub-components
 import TaskCardStatus from './card/TaskCardStatus.vue'
@@ -111,8 +114,14 @@ const emit = defineEmits<{
 }>()
 
 // --- Logic ---
+const timerStore = useTimerStore()
 const state = useTaskCardState(props)
 const actions = useTaskCardActions(props, emit as any, state)
+
+// Timer active state
+const isTimerActive = computed(() => {
+  return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+})
 
 const {
   isExpanded, isFocused, isPressed, cardRef,

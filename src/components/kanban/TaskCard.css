@@ -63,6 +63,26 @@
     box-shadow: 0 0 0 2px var(--brand-primary), var(--state-hover-shadow), var(--state-hover-glow);
 }
 
+/* Timer active state - amber glow */
+.task-card.timer-active {
+    border-color: var(--timer-active-border);
+    box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+    animation: pulse-timer 2s ease-in-out infinite;
+}
+
+.task-card.timer-active:hover {
+    box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+}
+
+@keyframes pulse-timer {
+    0%, 100% {
+        box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+    }
+    50% {
+        box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+    }
+}
+
 /* Clean header layout with better spacing */
 .card-header {
     display: flex;

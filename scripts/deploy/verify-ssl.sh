@@ -5,7 +5,7 @@
 
 set -e
 
-DOMAIN="${1:-pomoflow.yourdomain.com}"
+DOMAIN="${1:-flowstate.yourdomain.com}"
 TIMEOUT=10
 ERRORS=0
 

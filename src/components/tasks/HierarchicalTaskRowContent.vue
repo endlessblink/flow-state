@@ -84,13 +84,10 @@
     />
 
     <!-- Due Date Cell -->
-    <div class="task-row__due-date">
-      <span v-if="task.dueDate" class="task-row__due-date-content">
-        <Calendar :size="14" />
-        {{ formattedDueDate }}
-      </span>
-      <span v-else class="task-row__no-date">-</span>
-    </div>
+    <TaskRowDueDate
+      :due-date="task.dueDate"
+      @update:due-date="(val) => $emit('updateDueDate', val)"
+    />
 
     <!-- Progress Bar -->
     <div class="task-row__progress">
@@ -113,12 +110,12 @@
 
 <script setup lang="ts">
 import type { Task } from '@/stores/tasks'
-import { Calendar } from 'lucide-vue-next'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowTitle from './row/TaskRowTitle.vue'
 import TaskRowProject from './row/TaskRowProject.vue'
 import TaskRowPriority from './row/TaskRowPriority.vue'
+import TaskRowDueDate from './row/TaskRowDueDate.vue'
 import TaskRowActions from './row/TaskRowActions.vue'
 
 interface Props {
@@ -138,7 +135,6 @@ interface Props {
   titleAlignmentClasses: any
   projectVisual: any
   projectDisplayName: string
-  formattedDueDate: string
   statusOptions: Array<{ label: string, value: string }>
 }
 
@@ -163,6 +159,7 @@ defineEmits<{
   updateStatus: [val: string]
   updateProjectId: [val: string | null]
   updatePriority: [val: string]
+  updateDueDate: [val: string | null]
   startTimer: []
   edit: []
   duplicate: []

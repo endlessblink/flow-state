@@ -105,7 +105,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       // BUG-169 Safety
       if (loadedGroups.length === 0 && groupsModule._rawGroups.value.length > 0) {
-        const sessionStart = (window as unknown as Record<string, unknown>).PomoFlowSessionStart as number || 0
+        const sessionStart = (window as unknown as Record<string, unknown>).FlowStateSessionStart as number || 0
         if (Date.now() - sessionStart < 10000) {
           console.warn(`🛡️[GROUP-LOAD] BLOCKED empty overwrite`)
           return

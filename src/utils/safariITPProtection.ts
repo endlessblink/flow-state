@@ -16,8 +16,8 @@
 import { ref, computed, readonly } from 'vue'
 
 // LocalStorage key for tracking last interaction
-const LAST_INTERACTION_KEY = 'pomoflow_last_user_interaction'
-const ITP_CHECK_KEY = 'pomoflow_itp_warned'
+const LAST_INTERACTION_KEY = 'flowstate_last_user_interaction'
+const ITP_CHECK_KEY = 'flowstate_itp_warned'
 
 // Safari ITP deletes after 7 days, warn at 5 days
 export const ITP_THRESHOLDS = {

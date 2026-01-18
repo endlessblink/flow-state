@@ -1,6 +1,6 @@
 ---
 name: ops-port-manager
-description: FIX port conflicts when development server won't start or tests fail. Manage port 5546 for PomoFlow, kill existing processes, and resolve server startup issues. Use when npm run dev fails, port is in use, or server won't start.
+description: FIX port conflicts when development server won't start or tests fail. Manage port 5546 for FlowState, kill existing processes, and resolve server startup issues. Use when npm run dev fails, port is in use, or server won't start.
 ---
 
 # Port Manager

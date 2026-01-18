@@ -56,11 +56,11 @@ const isVisible = ref(true)
 
 const dismissBanner = () => {
   isVisible.value = false
-  localStorage.setItem('pomo-flow-local-banner-dismissed', 'true')
+  localStorage.setItem('flow-state-local-banner-dismissed', 'true')
 }
 
 // Check if banner was previously dismissed
-if (localStorage.getItem('pomo-flow-local-banner-dismissed') === 'true') {
+if (localStorage.getItem('flow-state-local-banner-dismissed') === 'true') {
   isVisible.value = false
 }
 </script>

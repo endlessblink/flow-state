@@ -34,7 +34,7 @@
 
 ## Overview
 
-Implement Progressive Web App (PWA) mobile support for Pomo-Flow, enabling:
+Implement Progressive Web App (PWA) mobile support for FlowState, enabling:
 - **Installable app experience** on mobile devices
 - **Offline-first data sync** with Supabase/PostgreSQL
 - ~~**Push notifications** for task reminders~~ (Deferred to v2)
@@ -103,8 +103,8 @@ const pwaConfig: Partial<VitePWAOptions> = {
   registerType: 'prompt',
   includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
   manifest: {
-    name: 'Pomo-Flow',
-    short_name: 'PomoFlow',
+    name: 'FlowState',
+    short_name: 'FlowState',
     description: 'Pomodoro timer with task management',
     theme_color: '#4F46E5',
     background_color: '#ffffff',
@@ -283,8 +283,8 @@ const close = () => {
 
 ```
 # Caddyfile (4 lines vs 30 for Nginx)
-pomoflow.yourdomain.com {
-    root * /var/www/pomoflow/dist
+flowstate.yourdomain.com {
+    root * /var/www/flowstate/dist
     try_files {path} /index.html
     file_server
 }
@@ -297,11 +297,11 @@ Caddy provides automatic HTTPS via Let's Encrypt with zero configuration.
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name pomoflow.yourdomain.com;
+    server_name flowstate.yourdomain.com;
 
     # SSL (Let's Encrypt)
-    ssl_certificate /etc/letsencrypt/live/pomoflow.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/pomoflow.yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/flowstate.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/flowstate.yourdomain.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     # Security Headers
@@ -311,7 +311,7 @@ server {
     add_header Cross-Origin-Opener-Policy "same-origin" always;
     add_header Cross-Origin-Embedder-Policy "require-corp" always;
 
-    root /var/www/pomoflow/dist;
+    root /var/www/flowstate/dist;
     index index.html;
 
     # SPA fallback
@@ -336,7 +336,7 @@ server {
 # Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name pomoflow.yourdomain.com;
+    server_name flowstate.yourdomain.com;
     return 301 https://$host$request_uri;
 }
 ```
@@ -386,7 +386,7 @@ jobs:
           REMOTE_HOST: ${{ secrets.VPS_HOST }}
           REMOTE_USER: deploy
           SOURCE: "dist/"
-          TARGET: "/var/www/pomoflow/dist"
+          TARGET: "/var/www/flowstate/dist"
 ```
 
 #### 2.4 Monitoring Stack
@@ -639,7 +639,7 @@ src/
 └── workflows/
     └── deploy.yml
 
-Caddyfile (or nginx/pomoflow.conf)
+Caddyfile (or nginx/flowstate.conf)
 ```
 
 ### Modified Files

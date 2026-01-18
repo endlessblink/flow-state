@@ -1,4 +1,4 @@
-# TASK-111: Pomo-Flow Landing Page for Early Access
+# TASK-111: FlowState Landing Page for Early Access
 
 **Status:** PLANNING
 **Priority:** High
@@ -8,11 +8,11 @@
 
 ## Overview
 
-Create a landing page for Pomo-Flow hosted on GitHub Pages (free) that showcases features, collects early access signups, and clearly communicates the semi open-source business model.
+Create a landing page for FlowState hosted on GitHub Pages (free) that showcases features, collects early access signups, and clearly communicates the semi open-source business model.
 
 ## Problem Statement
 
-Pomo-Flow needs a public-facing landing page to:
+FlowState needs a public-facing landing page to:
 1. Attract potential users and build a waitlist before public launch
 2. Communicate the value proposition (Pomodoro + Task Management)
 3. Explain the open-core business model transparently
@@ -57,7 +57,7 @@ Currently, there's no marketing presence - only the GitHub repo and internal doc
 │  └─────────────┘ └─────────────┘ └─────────────┘      │
 ├─────────────────────────────────────────────────────────┤
 │  EARLY ACCESS SIGNUP                                    │
-│  "Be the first to experience Pomo-Flow"                 │
+│  "Be the first to experience FlowState"                 │
 │  [email input] [Join Waitlist]                          │
 │  ○ Interested in: Free / Cloud / Pro                    │
 ├─────────────────────────────────────────────────────────┤
@@ -151,7 +151,7 @@ flow-state-landing/
 ```html
 <form action="https://formspree.io/f/{form-id}" method="POST">
   <input type="email" name="email" required />
-  <input type="hidden" name="_subject" value="Pomo-Flow Early Access" />
+  <input type="hidden" name="_subject" value="FlowState Early Access" />
 
   <!-- Tier interest segmentation -->
   <select name="tier_interest">
@@ -215,7 +215,7 @@ jobs:
 
 ### Custom Domain Setup
 
-1. Register domain (suggestions: `pomoflow.app`, `flow-state.io`, `getpomoflow.com`)
+1. Register domain (suggestions: `flowstate.app`, `flow-state.io`, `getflowstate.com`)
 2. Add `CNAME` file to `public/` with domain name
 3. Configure DNS:
    - A records pointing to GitHub Pages IPs
@@ -398,7 +398,7 @@ jobs:
 ### Before Starting
 
 1. **Domain name choice?**
-   - Options: `pomoflow.app`, `flow-state.io`, `getpomoflow.com`
+   - Options: `flowstate.app`, `flow-state.io`, `getflowstate.com`
    - Budget: ~$12-40/year depending on TLD
 
 2. **Email service provider?**

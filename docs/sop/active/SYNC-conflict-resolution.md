@@ -50,7 +50,7 @@ npx vitest run tests/sync/conflict-reproduction.spec.ts -c vitest.sync.config.ts
 If this test fails, it means the bulk deletion logic is not propagating deletions correctly.
 
 ### Manual Verification
-1. Open DevTools -> Application -> Storage -> IndexedDB -> `_pouch_pomo_flow_local`.
+1. Open DevTools -> Application -> Storage -> IndexedDB -> `_pouch_flow_state_local`.
 2. Find a document that had conflicts.
 3. In Console run:
    ```javascript

@@ -69,11 +69,11 @@ docker-compose ps
 **Expected output:**
 ```
 NAME                    STATUS
-pomoflow-postgres       Up (healthy)
-pomoflow-mongodb        Up
-pomoflow-redis          Up
-pomoflow-powersync      Up
-pomoflow-sync-backend   Up (healthy)
+flowstate-postgres       Up (healthy)
+flowstate-mongodb        Up
+flowstate-redis          Up
+flowstate-powersync      Up
+flowstate-sync-backend   Up (healthy)
 ```
 
 ### Step 2: Initialize PostgreSQL Schema
@@ -83,10 +83,10 @@ pomoflow-sync-backend   Up (healthy)
 sleep 10
 
 # Run init script
-docker exec -i pomoflow-postgres psql -U user -d pomoflow < scripts/init-postgres.sql
+docker exec -i flowstate-postgres psql -U user -d flowstate < scripts/init-postgres.sql
 
 # Verify tables created
-docker exec -it pomoflow-postgres psql -U user -d pomoflow -c "\dt"
+docker exec -it flowstate-postgres psql -U user -d flowstate -c "\dt"
 ```
 
 **Expected output:**
@@ -107,7 +107,7 @@ docker exec -it pomoflow-postgres psql -U user -d pomoflow -c "\dt"
 
 ```bash
 # Check PowerSync logs
-docker logs pomoflow-powersync --tail 50
+docker logs flowstate-powersync --tail 50
 
 # Look for: "Replication connected"
 ```
@@ -180,17 +180,17 @@ docker-compose restart powersync
 
 ```bash
 # Verify replication slot exists
-docker exec -it pomoflow-postgres psql -U user -d pomoflow -c "SELECT * FROM pg_replication_slots;"
+docker exec -it flowstate-postgres psql -U user -d flowstate -c "SELECT * FROM pg_replication_slots;"
 
 # Verify publication exists
-docker exec -it pomoflow-postgres psql -U user -d pomoflow -c "SELECT * FROM pg_publication;"
+docker exec -it flowstate-postgres psql -U user -d flowstate -c "SELECT * FROM pg_publication;"
 ```
 
 ### MongoDB replica set issues
 
 ```bash
 # Initialize replica set manually
-docker exec -it pomoflow-mongodb mongosh --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})"
+docker exec -it flowstate-mongodb mongosh --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})"
 ```
 
 ### Frontend connection errors

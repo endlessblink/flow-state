@@ -1,17 +1,17 @@
 ---
-name: PomoFlow Undo/Redo Unification
-description: Replace all conflicting undo/redo implementations with one proven VueUse + Pinia system that works end-to-end across the entire PomoFlow application.
+name: FlowState Undo/Redo Unification
+description: Replace all conflicting undo/redo implementations with one proven VueUse + Pinia system that works end-to-end across the entire FlowState application.
 ---
 
-# PomoFlow Undo/Redo Unification
+# FlowState Undo/Redo Unification
 
 **🎯 ACTIVATING POMOFLOW UNDO/REDO UNIFICATION SKILL**
 
-Replacing ALL current undo/redo implementations with ONE proven system based on VueUse + Pinia that provides consistent, reliable, and performant undo/redo functionality across the entire PomoFlow application.
+Replacing ALL current undo/redo implementations with ONE proven system based on VueUse + Pinia that provides consistent, reliable, and performant undo/redo functionality across the entire FlowState application.
 
 ## Current Problem Analysis
 
-PomoFlow currently has **7 conflicting undo/redo implementations**:
+FlowState currently has **7 conflicting undo/redo implementations**:
 
 1. `useUndoRedo.ts` - Complex manual system with circular reference issues
 2. `useUnifiedUndoRedo.ts` - VueUse-based but incomplete
@@ -31,7 +31,7 @@ PomoFlow currently has **7 conflicting undo/redo implementations**:
 
 ## **THE SOLUTION: VueUse + Pinia Unified System**
 
-Based on research and production best practices, **VueUse's `useManualRefHistory` with Pinia** is the definitive solution for PomoFlow.
+Based on research and production best practices, **VueUse's `useManualRefHistory` with Pinia** is the definitive solution for FlowState.
 
 ### Why This System is Recommended
 
@@ -131,7 +131,7 @@ export const useUnifiedUndoRedo = () => {
     redo,
     clear,
 
-    // PomoFlow-specific methods
+    // FlowState-specific methods
     saveState,
 
     // Convenience getters
@@ -452,4 +452,4 @@ When this skill is used, Claude Code will start with:
 Replacing all conflicting undo/redo systems with one proven VueUse + Pinia implementation for consistent, reliable functionality...
 ```
 
-This skill provides a definitive, production-ready solution that will solve all of PomoFlow's undo/redo challenges with minimal complexity and maximum reliability.
+This skill provides a definitive, production-ready solution that will solve all of FlowState's undo/redo challenges with minimal complexity and maximum reliability.

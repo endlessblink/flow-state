@@ -1,6 +1,8 @@
 import { ref } from 'vue'
 import type { Task } from '@/stores/tasks'
 
+export type BoardViewType = 'status' | 'priority' | 'date'
+
 export function useBoardModals() {
     // Edit modal state
     const showEditModal = ref(false)
@@ -8,7 +10,9 @@ export function useBoardModals() {
 
     // Quick Task Create Modal state
     const showQuickTaskCreate = ref(false)
-    const pendingTaskStatus = ref<string>('planned')
+    const pendingTaskColumnKey = ref<string>('planned')
+    const pendingTaskProjectId = ref<string | undefined>(undefined)
+    const pendingTaskViewType = ref<BoardViewType>('status')
 
     // Confirmation modal state
     const showConfirmModal = ref(false)
@@ -24,14 +28,22 @@ export function useBoardModals() {
         selectedTask.value = null
     }
 
-    const openQuickTaskCreate = (status: string) => {
-        pendingTaskStatus.value = status
+    const openQuickTaskCreate = (
+        columnKey: string,
+        projectId?: string,
+        viewType?: BoardViewType
+    ) => {
+        pendingTaskColumnKey.value = columnKey
+        pendingTaskProjectId.value = projectId
+        pendingTaskViewType.value = viewType || 'status'
         showQuickTaskCreate.value = true
     }
 
     const closeQuickTaskCreate = () => {
         showQuickTaskCreate.value = false
-        pendingTaskStatus.value = 'planned'
+        pendingTaskColumnKey.value = 'planned'
+        pendingTaskProjectId.value = undefined
+        pendingTaskViewType.value = 'status'
     }
 
     const openConfirmModal = (taskId: string) => {
@@ -49,7 +61,9 @@ export function useBoardModals() {
         showEditModal,
         selectedTask,
         showQuickTaskCreate,
-        pendingTaskStatus,
+        pendingTaskColumnKey,
+        pendingTaskProjectId,
+        pendingTaskViewType,
         showConfirmModal,
         taskToDelete,
 

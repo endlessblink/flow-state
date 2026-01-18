@@ -48,7 +48,7 @@ export class SimpleGlobalKeyboardHandler {
         const { getUndoSystem } = await import('@/composables/undoSingleton')
         this.undoRedo = getUndoSystem() as UndoRedoSystem
       } catch (error) {
-        console.error('❌ Failed to load unified undo/redo system:', error)
+        console.error('❌ [KEYBOARD] Failed to load undo system:', error)
       }
 
       window.addEventListener('keydown', this.keydownHandler, false)
@@ -111,26 +111,28 @@ export class SimpleGlobalKeyboardHandler {
    * Handle keyboard events
    */
   private handleKeydown(event: KeyboardEvent): void {
-    // Comprehensive logging for global keyboard handler debugging
-
+    if (!this.enabled) return
 
     const { ctrlKey, metaKey, shiftKey, key } = event
     const hasModifier = ctrlKey || metaKey
 
-    // Check if this is Shift+1-5 that might interfere with App.vue
-    if (shiftKey && !ctrlKey && !metaKey && !event.altKey && key >= '1' && key <= '5') {
+    // Only process if we have a modifier key (Ctrl/Cmd)
+    if (!hasModifier) return
 
+    // Check if we should ignore this element (inputs, modals)
+    const target = event.target as Element
+    if (target && this.shouldIgnoreElement(target)) {
+      return
     }
-
 
     // Handle Ctrl+Z (Undo) and Ctrl+Shift+Z (Redo)
     if (hasModifier && key.toLowerCase() === 'z') {
       if (shiftKey) {
         // Ctrl+Shift+Z = Redo
-
+        this.executeRedo()
       } else {
         // Ctrl+Z = Undo
-
+        this.executeUndo()
       }
 
       if (this.preventDefault) {
@@ -141,7 +143,7 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+Y (Redo alternative)
     else if (hasModifier && key.toLowerCase() === 'y') {
-
+      this.executeRedo()
 
       if (this.preventDefault) {
         event.preventDefault()
@@ -151,7 +153,7 @@ export class SimpleGlobalKeyboardHandler {
 
     // Handle Ctrl+N (New Task)
     else if (hasModifier && key.toLowerCase() === 'n') {
-
+      this.executeNewTask()
 
       if (this.preventDefault) {
         event.preventDefault()
@@ -173,19 +175,19 @@ export class SimpleGlobalKeyboardHandler {
    */
   private async executeUndo(): Promise<void> {
     if (!this.undoRedo) {
+      console.warn('⚠️ [UNDO] Undo system not initialized')
       return
     }
 
     try {
-      // Check if undo is possible - use fresh reference
-      if (!this.undoRedo.canUndo.value) {
-        return
+      // Check if undo is possible
+      if (!this.undoRedo.canUndo?.value) {
+        return // Nothing to undo - silent return
       }
 
-      // Execute undo
       await this.undoRedo.undo()
     } catch (error) {
-      console.error('❌ Undo operation failed:', error)
+      console.error('❌ [UNDO] Undo failed:', error)
     }
   }
 

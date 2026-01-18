@@ -32,6 +32,7 @@
             :title="column.label"
             :status="column.key as Task['status']"
             :tasks="tasksByStatus[column.key]"
+            column-type="status"
             class="swimlane-column"
             @add-task="handleAddTask"
             @move-task="handleMoveTask"
@@ -51,6 +52,7 @@
             :title="column.label"
             :status="column.key as any"
             :tasks="tasksByDate[column.key]"
+            column-type="date"
             class="swimlane-column"
             @add-task="handleAddTask"
             @move-task="handleMoveTask"
@@ -70,6 +72,7 @@
             :title="column.label"
             :status="column.key as any"
             :tasks="tasksByPriority[column.key]"
+            column-type="priority"
             class="swimlane-column"
             @add-task="handleAddTask"
             @move-task="handleMoveTask"
@@ -133,7 +136,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [statusOrDateKey: string]
+  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' }]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()
@@ -187,7 +190,13 @@ const tasksByPriority = computed(() => groupTasksByPriority(props.tasks))
 const tasksByDate = computed(() => groupTasksByDate(props.tasks, taskStore.hideDoneTasks))
 
 const toggleCollapse = () => { isCollapsed.value = !isCollapsed.value }
-const handleAddTask = (statusOrDateKey: string) => { emit('addTask', statusOrDateKey) }
+const handleAddTask = (columnKey: string) => {
+  emit('addTask', {
+    columnKey,
+    projectId: props.project.id,
+    viewType: currentViewType.value
+  })
+}
 
 const handleGroupContextMenu = (event: MouseEvent) => {
   try {

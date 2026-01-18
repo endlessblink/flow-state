@@ -2,7 +2,7 @@
 
 ## Overview
 
-PomoFlow uses a comprehensive design token system to ensure visual consistency across all components. **NEVER hardcode CSS values** - always use design tokens.
+FlowState uses a comprehensive design token system to ensure visual consistency across all components. **NEVER hardcode CSS values** - always use design tokens.
 
 **Token file:** `src/assets/design-tokens.css` (1,248 lines)
 
@@ -128,7 +128,7 @@ Extensive customization in `tailwind.config.js`:
 
 ## Glass Morphism Theme
 
-PomoFlow uses a glass morphism design language:
+FlowState uses a glass morphism design language:
 - Consistent dark/light mode support
 - Backdrop filters for modern glass effects
 - Smooth transitions between themes

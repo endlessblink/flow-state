@@ -45,7 +45,7 @@ if (deps.recentlyDeletedGroups) {
 Store deleted IDs in localStorage until confirmed by server.
 
 ```typescript
-const DELETED_GROUPS_KEY = 'pomoflow-deleted-groups'
+const DELETED_GROUPS_KEY = 'flowstate-deleted-groups'
 
 function markGroupDeleted(groupId: string) {
     const deleted = JSON.parse(localStorage.getItem(DELETED_GROUPS_KEY) || '[]')

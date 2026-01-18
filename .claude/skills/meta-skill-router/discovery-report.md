@@ -144,7 +144,7 @@ Generated: 2025-10-23T16:34:45.956Z
 ### Resolve Port Conflicts
 - **Category**: debugging
 - **Priority**: 9
-- **Description**: FIX port conflicts when development server won't start or tests fail. Manage port 5546 for PomoFlow,...
+- **Description**: FIX port conflicts when development server won't start or tests fail. Manage port 5546 for FlowState,...
 - **Generated Patterns**: 8
 - **Top Patterns**:
   - `resolve.*port.*conflicts.*` (90.0% - Direct skill name match: "Resolve Port Conflicts")

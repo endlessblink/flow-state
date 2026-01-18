@@ -1,7 +1,7 @@
-# Pomo-Flow Standard Operating Procedures (SOPs)
+# FlowState Standard Operating Procedures (SOPs)
 
-**Last Updated**: January 16, 2026
-**Total Documents**: 32 (added TIMER-sync-architecture.md)
+**Last Updated**: January 18, 2026
+**Total Documents**: 33 (added SOP-011-tauri-distribution.md)
 
 ---
 
@@ -11,6 +11,7 @@
 |----------|--------|-------------|
 | Canvas | `CANVAS-` | Vue Flow canvas view fixes |
 | Calendar | `CALENDAR-` | Calendar drag, resize, scheduling |
+| Distribution | `SOP-011` | Tauri desktop builds, releases |
 | Migration | `MIGRATION-` | Database migration procedures |
 | Sync | `SYNC-` | PouchDB/CouchDB sync, conflicts |
 | Styling | `STYLING-` | CSS, glassmorphism, design tokens |
@@ -103,6 +104,12 @@ docs/sop/
 | File | Description |
 |------|-------------|
 | `TIMER-sync-architecture.md` | Cross-device timer sync (Vue app + KDE widget) |
+
+### Distribution (SOP-011)
+
+| File | Description |
+|------|-------------|
+| `SOP-011-tauri-distribution.md` | Tauri builds, signing, GitHub releases, auto-updater |
 
 ---
 

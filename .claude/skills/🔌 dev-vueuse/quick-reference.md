@@ -1,6 +1,6 @@
 # VueUse Quick Reference
 
-## Essential Composables for PomoFlow
+## Essential Composables for FlowState
 
 ### 🎯 Most Used
 ```typescript

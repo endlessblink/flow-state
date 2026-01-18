@@ -1,6 +1,6 @@
-# Pomo Flow Storybook Design System
+# FlowState Storybook Design System
 
-A comprehensive design system and component documentation for the Pomo Flow productivity application.
+A comprehensive design system and component documentation for the FlowState productivity application.
 
 ## 🚀 Getting Started
 

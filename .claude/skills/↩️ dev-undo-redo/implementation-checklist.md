@@ -196,7 +196,7 @@
 ## 📋 Quality Assurance Checklist
 
 ### ✅ Functional Requirements
-- [ ] All PomoFlow features support undo/redo
+- [ ] All FlowState features support undo/redo
 - [ ] Undo/redo works consistently across entire application
 - [ ] Keyboard shortcuts follow standard conventions (Ctrl+Z, Ctrl+Shift+Z)
 - [ ] UI controls show correct enable/disable states
@@ -368,4 +368,4 @@ git commit -m "Rollback: Unified undo/redo system caused issues"
 # Document what went wrong and lessons learned
 ```
 
-This comprehensive checklist ensures successful implementation of the unified undo/redo system with minimal risk and maximum benefit for PomoFlow users.
+This comprehensive checklist ensures successful implementation of the unified undo/redo system with minimal risk and maximum benefit for FlowState users.

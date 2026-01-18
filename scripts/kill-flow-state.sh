@@ -11,7 +11,7 @@ is_flow_state_process() {
   local pid=$1
   local pwd_output=$(pwdx "$pid" 2>/dev/null)
 
-  if [[ $pwd_output == *"flow-state"* ]] || [[ $pwd_output == *"pomo-flow"* ]]; then
+  if [[ $pwd_output == *"flow-state"* ]]; then
     return 0
   else
     return 1

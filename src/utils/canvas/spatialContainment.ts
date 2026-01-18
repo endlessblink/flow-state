@@ -13,8 +13,9 @@
  * CONTAINMENT RULE: A task is "inside" a group if its CENTER lies within the group's bounds.
  */
 
-import type { CanvasSection } from '@/stores/canvas'
+import type { CanvasSection } from '@/types/canvas'
 import { CANVAS } from '@/constants/canvas'
+import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
 
 export interface NodePosition {
     x: number
@@ -98,8 +99,12 @@ export function findContainingGroups(
         // Skip hidden groups
         if (group.isVisible === false) return false
 
+        // FIX: Convert to ABSOLUTE position for accurate containment check
+        // group.position may be RELATIVE if group has a parentGroupId
+        const absolutePos = getGroupAbsolutePosition(group.id, allGroups)
+
         const containerBounds: ContainerBounds = {
-            position: group.position,
+            position: absolutePos,
             width: group.position.width,
             height: group.position.height
         }

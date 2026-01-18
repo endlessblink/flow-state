@@ -324,6 +324,9 @@ export function fromSupabaseProject(record: SupabaseProject): Project {
     }
 }
 
+// Valid status values per database constraint
+const VALID_TASK_STATUSES = ['planned', 'in_progress', 'done', 'backlog', 'on_hold'] as const
+
 export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     const now = new Date().toISOString()
 
@@ -334,13 +337,18 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     // Sanitize depends_on array - filter out invalid UUIDs
     const sanitizedDependsOn = (task.dependsOn || []).filter(id => isValidUUID(id))
 
+    // SAFETY: Ensure status is valid per database constraint (tasks_status_check)
+    const sanitizedStatus = VALID_TASK_STATUSES.includes(task.status as any)
+        ? task.status
+        : 'planned' // Default fallback
+
     return {
         id: task.id,
         user_id: userId,
         project_id: sanitizedProjectId,
         title: task.title,
         description: task.description,
-        status: task.status,
+        status: sanitizedStatus,
         priority: task.priority,
 
         progress: task.progress,

@@ -250,8 +250,7 @@ onUnmounted(() => {
 }
 
 .project-dropdown__item.is-active {
-  background: rgba(78, 205, 196, 0.15);
-  color: var(--brand-primary);
+  /* Simple checkmark indicator, no background highlight */
 }
 
 .project-dropdown__icon {
@@ -277,8 +276,8 @@ onUnmounted(() => {
 }
 
 .project-dropdown__check {
-  color: var(--brand-primary);
   flex-shrink: 0;
+  opacity: 0.7;
 }
 
 .project-dropdown__overlay {

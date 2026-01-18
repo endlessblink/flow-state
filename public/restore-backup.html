@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restore Pomo-Flow Backup</title>
+    <title>Restore FlowState Backup</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -49,16 +49,16 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Restore Pomo-Flow Backup</h1>
+        <h1>Restore FlowState Backup</h1>
         <p>Restoring your 19 tasks from the backup file...</p>
-        <button onclick="restoreBackup()">🔄 Restore Backup Now</button>
+        <button onclick="restoreBackup()">Restore Backup Now</button>
         <div id="result"></div>
     </div>
 
     <script>
         async function restoreBackup() {
             const resultDiv = document.getElementById('result')
-            resultDiv.textContent = '🔄 Restoring backup...'
+            resultDiv.textContent = 'Restoring backup...'
 
             try {
                 // Fetch the backup file
@@ -76,14 +76,14 @@
                 }
 
                 // Store in localStorage for the recovery tool to pick up
-                localStorage.setItem('pomo-flow-user-backup', JSON.stringify(backup.data))
+                localStorage.setItem('flowstate-user-backup', JSON.stringify(backup.data))
 
                 resultDiv.className = 'result success'
-                resultDiv.textContent = `✅ Successfully restored ${backup.data.length} tasks!\n\nTasks found:\n${backup.data.map(task => `• ${task.title} (${task.status})`).join('\n')}\n\nRefresh the Pomo-Flow app to see your restored tasks.`
+                resultDiv.textContent = `Successfully restored ${backup.data.length} tasks!\n\nTasks found:\n${backup.data.map(task => `- ${task.title} (${task.status})`).join('\n')}\n\nRefresh the FlowState app to see your restored tasks.`
 
             } catch (error) {
                 resultDiv.className = 'result'
-                resultDiv.textContent = `❌ Error restoring backup: ${error.message}`
+                resultDiv.textContent = `Error restoring backup: ${error.message}`
             }
         }
 

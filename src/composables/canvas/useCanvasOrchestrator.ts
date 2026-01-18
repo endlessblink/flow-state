@@ -72,6 +72,9 @@ export function useCanvasOrchestrator() {
     const contextMenuStore = useCanvasContextMenuStore()
     const uiStore = useUIStore()
 
+    // Store cleanup functions for onUnmounted - must be registered synchronously
+    const positionManagerUnsubscribe = ref<(() => void) | null>(null)
+
     // --- 1. Core State & Vue Flow (Via useCanvasCore) ---
     const {
         nodes,
@@ -412,7 +415,7 @@ export function useCanvasOrchestrator() {
         // TASK-213: Position Manager Subscription
         // Listen for updates from other sources (e.g. Alignment tools, Auto-layout)
         // that are NOT 'user-drag' (handled by Vue Flow) or 'remote-sync' (handled by sync loop)
-        const unsubscribe = positionManager.subscribe((event) => {
+        positionManagerUnsubscribe.value = positionManager.subscribe((event) => {
             const { nodeId, payload } = event
             if (payload.source !== 'user-drag' && payload.source !== 'remote-sync') {
                 console.log(`📡[ORCHESTRATOR] Applying external position update for ${nodeId} from ${payload.source}`)
@@ -438,10 +441,15 @@ export function useCanvasOrchestrator() {
                 }
             }
         })
+    })
 
-        onUnmounted(() => {
-            unsubscribe()
-        })
+    // CRITICAL: Register onUnmounted synchronously (not inside async onMounted)
+    // This fixes Vue warning: "onUnmounted is called when there is no active component instance"
+    onUnmounted(() => {
+        if (positionManagerUnsubscribe.value) {
+            positionManagerUnsubscribe.value()
+            positionManagerUnsubscribe.value = null
+        }
     })
 
     // Persist Viewport on Change

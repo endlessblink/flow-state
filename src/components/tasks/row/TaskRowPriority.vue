@@ -211,16 +211,14 @@ onUnmounted(() => {
 }
 
 .priority-dropdown__item.is-active {
-  background: rgba(78, 205, 196, 0.15);
-  color: var(--brand-primary);
+  /* Simple checkmark indicator, no background highlight */
 }
 
 .priority-dropdown__item--high {
   color: var(--priority-high-text);
 }
 
-.priority-dropdown__item--high:hover,
-.priority-dropdown__item--high.is-active {
+.priority-dropdown__item--high:hover {
   background: var(--priority-high-bg);
 }
 
@@ -228,8 +226,7 @@ onUnmounted(() => {
   color: var(--priority-medium-text);
 }
 
-.priority-dropdown__item--medium:hover,
-.priority-dropdown__item--medium.is-active {
+.priority-dropdown__item--medium:hover {
   background: var(--priority-medium-bg);
 }
 
@@ -237,8 +234,7 @@ onUnmounted(() => {
   color: var(--priority-low-text);
 }
 
-.priority-dropdown__item--low:hover,
-.priority-dropdown__item--low.is-active {
+.priority-dropdown__item--low:hover {
   background: var(--priority-low-bg);
 }
 

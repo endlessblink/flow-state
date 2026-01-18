@@ -1,4 +1,4 @@
-# Pomo-Flow
+# FlowState
 
 A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with task management across multiple views.
 
@@ -24,7 +24,7 @@ npm run dev
 
 ## Cloud Sync (Supabase)
 
-Pomo-Flow uses Supabase for cloud sync with Row Level Security (RLS).
+FlowState uses Supabase for cloud sync with Row Level Security (RLS).
 
 ### Local Development
 
@@ -46,7 +46,7 @@ npm run build        # Production build
 npm run test         # Run tests
 npm run test:watch   # Tests with UI
 npm run storybook    # Component documentation (port 6006)
-npm run kill         # Kill all PomoFlow processes
+npm run kill         # Kill all FlowState processes
 npm run lint         # Lint code
 npm run lint:fix     # Fix linting issues
 ```

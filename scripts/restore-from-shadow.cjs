@@ -216,20 +216,35 @@ async function restoreTasks(supabase, tasks, userId) {
   let success = 0, skipped = 0, failed = 0
 
   for (const task of tasks) {
+    // Build position jsonb from various possible sources
+    let positionJson = task.position
+    if (!positionJson && task.canvasPosition) {
+      positionJson = {
+        x: task.canvasPosition.x ?? 0,
+        y: task.canvasPosition.y ?? 0,
+        format: 'absolute',
+        parentId: task.canvasPosition.parentId || null
+      }
+    }
+
     const taskData = {
       id: task.id,
       user_id: userId,
       title: task.title || 'Untitled Task',
       description: task.description || '',
-      status: task.status || 'inbox',
-      priority: task.priority || 'none',
+      status: task.status || 'planned',
+      priority: task.priority || 'medium',
       due_date: task.dueDate || task.due_date || null,
-      parent_id: task.parentId || task.parent_id || null,
+      due_time: task.due_time || null,
+      parent_task_id: task.parent_task_id || task.parentId || task.parent_id || null,
       project_id: task.projectId || task.project_id || null,
-      canvas_x: task.canvasPosition?.x ?? task.canvas_x ?? task.position?.x ?? 0,
-      canvas_y: task.canvasPosition?.y ?? task.canvas_y ?? task.position?.y ?? 0,
+      position: positionJson || null,
+      subtasks: task.subtasks || [],
+      tags: task.tags || [],
       estimated_pomodoros: task.estimatedPomodoros || task.estimated_pomodoros || 0,
       completed_pomodoros: task.completedPomodoros || task.completed_pomodoros || 0,
+      is_in_inbox: task.is_in_inbox ?? false,
+      order: task.order ?? 0,
       completed_at: task.completedAt || task.completed_at || null,
       is_deleted: false,
       created_at: task.createdAt || task.created_at || new Date().toISOString(),
@@ -329,7 +344,7 @@ async function main() {
       const { execSync } = require('child_process')
       try {
         const result = execSync(
-          'docker exec supabase_db_pomo-flow psql -U postgres -d postgres -t -c "SELECT id, email FROM auth.users ORDER BY created_at DESC LIMIT 1;"',
+          'docker exec supabase_db_flow-state psql -U postgres -d postgres -t -c "SELECT id, email FROM auth.users ORDER BY created_at DESC LIMIT 1;"',
           { encoding: 'utf-8', timeout: 5000 }
         ).trim()
 

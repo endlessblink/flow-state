@@ -1,6 +1,6 @@
 # Composable Patterns & Anti-Patterns
 
-## Proven Patterns from PomoFlow Refactoring
+## Proven Patterns from FlowState Refactoring
 
 ### Pattern 1: Dependency Injection via Parameters
 

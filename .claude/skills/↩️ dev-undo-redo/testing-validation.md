@@ -4,7 +4,7 @@
 
 ## Testing Overview
 
-This plan ensures the unified undo/redo system works reliably across all PomoFlow features and meets performance requirements.
+This plan ensures the unified undo/redo system works reliably across all FlowState features and meets performance requirements.
 
 ## Test Environment Setup
 
@@ -917,7 +917,7 @@ jobs:
 
 The unified undo/redo system is considered successful when:
 
-1. **Functionality**: All PomoFlow features work with consistent undo/redo
+1. **Functionality**: All FlowState features work with consistent undo/redo
 2. **Performance**: Operations complete within specified time limits
 3. **Stability**: No crashes or memory leaks in extended testing
 4. **Usability**: User experience is intuitive and reliable

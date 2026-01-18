@@ -3,7 +3,7 @@
 > This file provides instructions for AI coding agents working on this project.
 > See [agents.md](https://agents.md/) for the specification.
 
-## Project: Pomo-Flow
+## Project: FlowState
 
 A Vue 3 productivity application combining Pomodoro timer with task management across multiple views (Board, Calendar, Canvas).
 
@@ -54,7 +54,7 @@ npm run dev      # Start dev server (port 5546)
 npm run build    # Production build
 npm run test     # Run tests
 npm run lint     # Lint code
-npm run kill     # Kill all PomoFlow processes
+npm run kill     # Kill all FlowState processes
 ```
 
 ## Code Style

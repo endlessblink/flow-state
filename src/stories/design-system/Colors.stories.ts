@@ -10,7 +10,7 @@ const meta: Meta = {
     },
     docs: {
       description: {
-        component: 'Choose the primary brand color for PomoFlow. This color will be used consistently across all views for selected states, primary actions, and brand identity.'
+        component: 'Choose the primary brand color for FlowState. This color will be used consistently across all views for selected states, primary actions, and brand identity.'
       }
     }
   },

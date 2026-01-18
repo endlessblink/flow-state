@@ -42,7 +42,8 @@
             @click="selectOption(option)"
             @mouseenter="focusedIndex = index"
           >
-            {{ option.label }}
+            <span class="select-option__label">{{ option.label }}</span>
+            <Check v-if="option.value === modelValue" :size="14" class="select-option__check" />
           </li>
         </ul>
       </Transition>
@@ -52,7 +53,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown, Check } from 'lucide-vue-next'
 
 interface SelectOption {
   label: string
@@ -324,6 +325,7 @@ watch(isOpen, (newVal) => {
 .select-option {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-1_5) var(--space-2);
 
@@ -341,19 +343,28 @@ watch(isOpen, (newVal) => {
   min-height: 28px;
 }
 
+.select-option__label {
+  flex: 1;
+}
+
+.select-option__check {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
 .select-option:hover,
 .select-option.is-focused {
   background: var(--surface-hover);
 }
 
 .select-option.is-selected {
-  background: rgba(78, 205, 196, 0.15);
-  color: var(--brand-primary);
+  /* Simple checkmark indicator, no background highlight */
+  color: var(--text-primary);
 }
 
 .select-option.is-selected:hover,
 .select-option.is-selected.is-focused {
-  background: rgba(78, 205, 196, 0.2);
+  background: var(--surface-hover);
 }
 
 /* Dropdown transition */

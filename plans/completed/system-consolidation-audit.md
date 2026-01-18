@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive audit and consolidation plan to eliminate duplicate, redundant, and competing systems across the Pomo-Flow codebase. Goal: **ONE lean system for every aspect without collisions.**
+Comprehensive audit and consolidation plan to eliminate duplicate, redundant, and competing systems across the FlowState codebase. Goal: **ONE lean system for every aspect without collisions.**
 
 ---
 

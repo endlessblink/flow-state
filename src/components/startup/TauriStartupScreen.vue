@@ -63,7 +63,7 @@ function openSupabaseInstall() {
           <div class="logo">
             <span class="logo-icon">🍅</span>
           </div>
-          <h1 class="app-name">PomoFlow</h1>
+          <h1 class="app-name">FlowState</h1>
         </div>
 
         <!-- Status Message -->

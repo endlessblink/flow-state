@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pomo-Flow Task Data Recovery</title>
+    <title>FlowState Task Data Recovery</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -77,11 +77,11 @@
     </style>
 </head>
 <body>
-    <h1>🔍 Pomo-Flow Task Data Recovery Tool</h1>
+    <h1>🔍 FlowState Task Data Recovery Tool</h1>
 
     <div class="container">
         <h2>Browser Storage Analysis</h2>
-        <p>This tool will search all browser storage locations for your original Pomo-Flow tasks.</p>
+        <p>This tool will search all browser storage locations for your original FlowState tasks.</p>
 
         <button onclick="checkAllStorage()">🔎 Check All Storage Locations</button>
         <button onclick="clearResults()">🗑️ Clear Results</button>
@@ -378,13 +378,13 @@
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `pomo-flow-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `flow-state-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            addResult('✅ Export Complete', `Exported ${allTasks.length} tasks to pomo-flow-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`, 'success');
+            addResult('✅ Export Complete', `Exported ${allTasks.length} tasks to flow-state-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`, 'success');
         }
 
         // Auto-run when page loads

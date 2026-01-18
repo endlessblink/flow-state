@@ -30,7 +30,7 @@
 
 ## Overview
 
-The Pomo-Flow task management app uses Milkdown v7.18.0 for markdown editing in task descriptions. Recent bug fixes (TASK-109, BUG-005) have improved functionality, but known issues persist. This plan evaluates whether to:
+The FlowState task management app uses Milkdown v7.18.0 for markdown editing in task descriptions. Recent bug fixes (TASK-109, BUG-005) have improved functionality, but known issues persist. This plan evaluates whether to:
 
 1. **Fix Milkdown** - Address remaining issues to achieve flawless operation
 2. **Replace with Alternative** - Migrate to Tiptap or md-editor-v3
@@ -67,7 +67,7 @@ Current implementation (line 87-94) uses `tr.insertText('- [ ] ', lineStart)` wh
 5. Save-in-progress without guard
 
 ### Why This Matters
-- Task descriptions are core to Pomo-Flow's value proposition
+- Task descriptions are core to FlowState's value proposition
 - Unreliable editor = frustrated users = abandoned app
 - Technical debt accumulates if issues aren't resolved decisively
 

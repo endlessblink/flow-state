@@ -6,9 +6,9 @@ description: UNIFIED ARCHITECT - Strategic development orchestrator AND systemat
 
 # Unified Architect - Strategic Orchestrator & Project Planner
 
-**Version:** 3.0.0
+**Version:** 3.1.0
 **Category:** Meta-Skill / Unified Architect
-**Related Skills:** dev-debugging, dev-vue, qa-testing, codebase-health-auditor, smart-doc-manager
+**Related Skills:** dev-debugging, dev-vue, qa-testing, codebase-health-auditor, smart-doc-manager, kde-plasma-widget-dev
 
 ## Overview
 
@@ -363,10 +363,11 @@ To find current skills, check `.claude/skills/` directory. Current categories:
 | **Development** | `dev-vue`, `dev-vueuse`, `dev-refactoring`, `dev-implement-ui-ux`, `tiptap-vue3` |
 | **Fixes** | `dev-fix-timer`, `dev-undo-redo` |
 | **Quality** | `qa-testing`, `codebase-health-auditor` |
-| **Documentation** | `smart-doc-manager`, `dev-storybook` |
-| **Infrastructure** | `ops-port-manager` |
+| **Documentation** | `smart-doc-manager`, `dev-storybook`, `add-task-master-plan` |
+| **Infrastructure** | `ops-port-manager`, `kde-plasma-widget-dev` |
 | **Analysis** | `ts-architectural-cleanup`, `vue-filter-manager` |
 | **Meta** | `meta-skill-router`, `skill-creator-doctor`, `calendar-interface-architect` |
+| **Utilities** | `idea-issue-creator`, `auto-recovery` |
 
 ### Skill Routing Guidance
 
@@ -399,10 +400,20 @@ function routeTask(taskType: string): string {
     // Documentation
     'documentation': 'smart-doc-manager',
     'master-plan': 'smart-doc-manager',  // merged into smart-doc-manager
+    'add-task': 'add-task-master-plan',  // quick task addition to MASTER_PLAN
     'storybook': 'dev-storybook',
 
     // Infrastructure
     'port-conflict': 'ops-port-manager',
+    'kde-widget': 'kde-plasma-widget-dev',  // KDE Plasma widget development
+    'plasma-widget': 'kde-plasma-widget-dev',
+
+    // Utilities
+    'idea': 'idea-issue-creator',  // process ideas inbox
+    'recovery': 'auto-recovery',  // data recovery workflows
+    'calendar': 'calendar-interface-architect',  // calendar system issues
+
+    // Quality (continued)
     'e2e-test': 'qa-testing'  // tauri-e2e-testing archived
   };
 
@@ -412,7 +423,7 @@ function routeTask(taskType: string): string {
 
 ---
 
-## Pomo-Flow Specific Considerations
+## FlowState Specific Considerations
 
 **When planning for this project, always:**
 
@@ -495,7 +506,7 @@ function routeTask(taskType: string): string {
 
 ### Example 1: Plan a New Feature
 ```
-User: "I want to add recurring tasks to Pomo-Flow"
+User: "I want to add recurring tasks to FlowState"
 
 chief-architect response:
 1. Analyzes current task data model

@@ -40,7 +40,7 @@ export function useTaskPersistence(
     const { fetchTasks, saveTasks, deleteTask: deleteFromDB, bulkDeleteTasks: bulkDeleteFromDB } = useSupabaseDatabase()
 
     // TASK-142 FIX: Guest Mode localStorage persistence for tasks
-    const GUEST_TASKS_KEY = 'pomoflow-guest-tasks'
+    const GUEST_TASKS_KEY = 'flowstate-guest-tasks'
 
     const saveTasksToLocalStorage = () => {
         try {
@@ -175,7 +175,7 @@ export function useTaskPersistence(
             // BUG-169 FIX: Safety guard - don't overwrite existing tasks with empty array
             // This prevents data loss from race conditions during auth propagation
             if (loadedTasks.length === 0 && _rawTasks.value.length > 0) {
-                const sessionStart = typeof window !== 'undefined' ? (window as any).PomoFlowSessionStart || 0 : 0
+                const sessionStart = typeof window !== 'undefined' ? (window as any).FlowStateSessionStart || 0 : 0
                 const timeSinceSessionStart = Date.now() - sessionStart
 
                 // In the first 10 seconds, don't overwrite existing tasks with empty

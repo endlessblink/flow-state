@@ -1,0 +1,75 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hex-grad" x1="100" y1="100" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF3333"/>
+      <stop offset="1" stop-color="#990000"/>
+    </linearGradient>
+    <filter id="pixel-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="#111" rx="32"/>
+
+  <!-- Pixelated/Voxel Tomato -->
+  <g filter="url(#pixel-glow)" transform="translate(56, 80) scale(40)">
+     <!-- Row 1 -->
+     <rect x="4" y="0" width="1" height="1" fill="#00FF00" /> <!-- Stem -->
+     <rect x="5" y="0" width="1" height="1" fill="#00CC00" /> <!-- Stem -->
+
+     <!-- Row 2 -->
+     <rect x="2" y="1" width="1" height="1" fill="#FF3333" opacity="0.8"/>
+     <rect x="3" y="1" width="1" height="1" fill="#FF3333" />
+     <rect x="4" y="1" width="1" height="1" fill="#FF3333" />
+     <rect x="5" y="1" width="1" height="1" fill="#FF3333" />
+     <rect x="6" y="1" width="1" height="1" fill="#FF3333" />
+     <rect x="7" y="1" width="1" height="1" fill="#FF3333" opacity="0.8"/>
+     
+     <!-- Row 3 -->
+     <rect x="1" y="2" width="1" height="1" fill="#FF3333" />
+     <rect x="2" y="2" width="1" height="1" fill="#FF3333" />
+     <rect x="3" y="2" width="1" height="1" fill="#FF3333" />
+     <rect x="4" y="2" width="1" height="1" fill="#990000" /> <!-- Shader pixel -->
+     <rect x="5" y="2" width="1" height="1" fill="#FF3333" />
+     <rect x="6" y="2" width="1" height="1" fill="#FF3333" />
+     <rect x="7" y="2" width="1" height="1" fill="#FF3333" />
+     <rect x="8" y="2" width="1" height="1" fill="#FF3333" />
+
+     <!-- Row 4 -->
+     <rect x="1" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="2" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="3" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="4" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="5" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="6" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="7" y="3" width="1" height="1" fill="#FF3333" />
+     <rect x="8" y="3" width="1" height="1" fill="#FF3333" />
+
+     <!-- Row 5 -->
+     <rect x="1" y="4" width="1" height="1" fill="#FF3333" />
+     <rect x="2" y="4" width="1" height="1" fill="#FF3333" />
+     <rect x="3" y="4" width="1" height="1" fill="#FF3333" />
+     <rect x="4" y="4" width="1" height="1" fill="#CC0000" /> <!-- Shader -->
+     <rect x="5" y="4" width="1" height="1" fill="#990000" /> <!-- Shader -->
+     <rect x="6" y="4" width="1" height="1" fill="#FF3333" />
+     <rect x="7" y="4" width="1" height="1" fill="#FF3333" />
+     <rect x="8" y="4" width="1" height="1" fill="#FF3333" />
+
+     <!-- Row 6 -->
+     <rect x="2" y="5" width="1" height="1" fill="#FF3333" />
+     <rect x="3" y="5" width="1" height="1" fill="#FF3333" />
+     <rect x="4" y="5" width="1" height="1" fill="#FF3333" />
+     <rect x="5" y="5" width="1" height="1" fill="#FF3333" />
+     <rect x="6" y="5" width="1" height="1" fill="#FF3333" />
+     <rect x="7" y="5" width="1" height="1" fill="#FF3333" />
+  </g>
+  
+  <!-- Glitch Elements -->
+  <rect x="90" y="240" width="80" height="10" fill="#00FFFF" opacity="0.6"/>
+  <rect x="340" y="280" width="60" height="8" fill="#00FFFF" opacity="0.6"/>
+
+</svg>

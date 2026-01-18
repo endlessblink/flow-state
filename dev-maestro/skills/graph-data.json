@@ -129,7 +129,7 @@
     {
       "id": "skill-14",
       "name": "dev-undo-redo",
-      "title": "PomoFlow Undo/Redo Unification",
+      "title": "FlowState Undo/Redo Unification",
       "description": "```typescript",
       "category": "development",
       "color": "#10b981",
@@ -210,7 +210,7 @@
     {
       "id": "skill-23",
       "name": "↩️ dev-undo-redo",
-      "title": "PomoFlow Undo/Redo Unification",
+      "title": "FlowState Undo/Redo Unification",
       "description": "```typescript",
       "category": "development",
       "color": "#10b981",
@@ -274,7 +274,7 @@
       "id": "skill-30",
       "name": "🎛️ vue-filter-manager",
       "title": "Vue Filter Manager Skill",
-      "description": "Pomo-Flow has a sophisticated filtering system but suffers from multiple issues:",
+      "description": "FlowState has a sophisticated filtering system but suffers from multiple issues:",
       "category": "development",
       "color": "#10b981",
       "usage": 0
@@ -283,7 +283,7 @@
       "id": "skill-31",
       "name": "🎨 css-design-token-enforcer",
       "title": "CSS Design Token Enforcer",
-      "description": "This skill provides a comprehensive workflow for eliminating hardcoded hex values and enforcing consistent CSS design token usage across the entire Pomo-Flow codebase. It addresses the critical color ...",
+      "description": "This skill provides a comprehensive workflow for eliminating hardcoded hex values and enforcing consistent CSS design token usage across the entire FlowState codebase. It addresses the critical color ...",
       "category": "other",
       "color": "#94a3b8",
       "usage": 0
@@ -337,7 +337,7 @@
       "id": "skill-37",
       "name": "👤 user-flow-testing-skills",
       "title": "User Flow Testing Skill",
-      "description": "Comprehensive user flow testing skill for Pomo-Flow Vue.js application using Playwright with intelligent reporting and fix recommendations.",
+      "description": "Comprehensive user flow testing skill for FlowState Vue.js application using Playwright with intelligent reporting and fix recommendations.",
       "category": "testing",
       "color": "#06b6d4",
       "usage": 0
@@ -400,7 +400,7 @@
       "id": "skill-44",
       "name": "📆 calendar-interface-architect",
       "title": "TypeScript Calendar Interface Architect",
-      "description": "This skill provides comprehensive architectural resolution of calendar interface and temporal type system issues in the Pomo-Flow application.",
+      "description": "This skill provides comprehensive architectural resolution of calendar interface and temporal type system issues in the FlowState application.",
       "category": "architecture",
       "color": "#3b82f6",
       "usage": 0
@@ -526,7 +526,7 @@
       "id": "skill-58",
       "name": "🔧 persistence-type-fixer",
       "title": "TypeScript Persistence Type System Fixer",
-      "description": "This skill provides comprehensive resolution of generic type system issues in the persistence and backup layers of the Pomo-Flow application.",
+      "description": "This skill provides comprehensive resolution of generic type system issues in the persistence and backup layers of the FlowState application.",
       "category": "debugging",
       "color": "#ef4444",
       "usage": 0
@@ -544,7 +544,7 @@
       "id": "skill-60",
       "name": "🔧 ts-foundation-restorer",
       "title": "TypeScript Foundation Restoration",
-      "description": "This skill provides systematic TypeScript foundation restoration for the Pomo-Flow application when compilation fails due to missing interface properties, store methods, or type definitions.",
+      "description": "This skill provides systematic TypeScript foundation restoration for the FlowState application when compilation fails due to missing interface properties, store methods, or type definitions.",
       "category": "other",
       "color": "#94a3b8",
       "usage": 0
@@ -580,7 +580,7 @@
       "id": "skill-64",
       "name": "🟢 dev-vue",
       "title": "Tier 1: Metadata",
-      "description": "This skill provides Vue 3 component development with Composition API and TypeScript for the Pomo-Flow productivity application.",
+      "description": "This skill provides Vue 3 component development with Composition API and TypeScript for the FlowState productivity application.",
       "category": "development",
       "color": "#10b981",
       "usage": 0

@@ -313,14 +313,14 @@ const viewportInitializedAt = ref<number | null>(null)
 function setHasInitialFit(value: boolean) {
   hasInitialFit.value = value
   viewportInitializedAt.value = value ? Date.now() : null
-  localStorage.setItem('pomoflow-canvas-has-initial-fit', JSON.stringify({
+  localStorage.setItem('flowstate-canvas-has-initial-fit', JSON.stringify({
     value,
     timestamp: Date.now()
   }))
 }
 
 function loadHasInitialFit() {
-  const saved = localStorage.getItem('pomoflow-canvas-has-initial-fit')
+  const saved = localStorage.getItem('flowstate-canvas-has-initial-fit')
   if (saved) {
     try {
       const parsed = JSON.parse(saved)

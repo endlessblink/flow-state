@@ -107,7 +107,7 @@ class MarkdownExportService {
 
             const a = document.createElement('a')
             a.href = url
-            a.download = `pomo_flow_backup_${new Date().toISOString().slice(0, 10)}.zip`
+            a.download = `flow_state_backup_${new Date().toISOString().slice(0, 10)}.zip`
             document.body.appendChild(a)
             a.click()
             document.body.removeChild(a)

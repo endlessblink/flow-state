@@ -43,7 +43,7 @@ export const customTheme = create({
   booleanSelectedBg: '#3b82f6',
 
   // Brand
-  brandTitle: 'Pomo Flow Design System',
+  brandTitle: 'FlowState Design System',
   brandUrl: 'https://github.com/yourusername/flow-state',
   brandTarget: '_self',
 })

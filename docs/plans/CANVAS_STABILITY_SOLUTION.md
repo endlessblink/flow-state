@@ -175,9 +175,9 @@ AFTER (5 files):
 if (isNodeDragging.value ||
     isDragSettlingRef.value ||
     canvasStore.isDragging ||
-    window.__PomoFlowIsDragging ||
-    window.__PomoFlowIsResizing ||
-    window.__PomoFlowIsSettling) {
+    window.__FlowStateIsDragging ||
+    window.__FlowStateIsResizing ||
+    window.__FlowStateIsSettling) {
   return // ignore
 }
 

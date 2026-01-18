@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# PomoFlow Process Cleanup Script
-# Kills all running PomoFlow-specific processes
+# FlowState Process Cleanup Script
+# Kills all running FlowState-specific processes
 
 set +e  # Don't exit on error
 
-echo "🔍 Searching for PomoFlow processes..."
+echo "🔍 Searching for FlowState processes..."
 echo ""
 
 KILLED_ANY=false
@@ -44,25 +44,25 @@ kill_pattern() {
     fi
 }
 
-# Kill dev servers on PomoFlow ports
+# Kill dev servers on FlowState ports
 kill_port 5546
 kill_port 5547
 kill_port 6006  # Storybook
 
 echo ""
 
-# Kill npm/node processes running from pomo-flow directory
-kill_pattern "pomo-flow.*npm" "NPM processes in pomo-flow"
-kill_pattern "pomo-flow.*node" "Node processes in pomo-flow"
-kill_pattern "pomo-flow.*vite" "Vite processes in pomo-flow"
-kill_pattern "pomo-flow.*playwright" "Playwright processes in pomo-flow"
+# Kill npm/node processes running from flow-state directory
+kill_pattern "flow-state.*npm" "NPM processes in flow-state"
+kill_pattern "flow-state.*node" "Node processes in flow-state"
+kill_pattern "flow-state.*vite" "Vite processes in flow-state"
+kill_pattern "flow-state.*playwright" "Playwright processes in flow-state"
 
 echo ""
 
 if [ "$KILLED_ANY" = true ]; then
-    echo "✅ PomoFlow processes terminated"
+    echo "✅ FlowState processes terminated"
 else
-    echo "✨ No PomoFlow processes found running"
+    echo "✨ No FlowState processes found running"
 fi
 
 echo ""

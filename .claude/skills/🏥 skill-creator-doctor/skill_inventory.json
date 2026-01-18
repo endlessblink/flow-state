@@ -275,7 +275,7 @@
       "frontmatter": {
         "name": "comprehensive-system-analyzer",
         "emoji": "📊",
-        "description": "Deep comprehensive system status analyzer that provides honest truth reporting about entire Pomo-Flow application health, performance, and integrity",
+        "description": "Deep comprehensive system status analyzer that provides honest truth reporting about entire FlowState application health, performance, and integrity",
         "triggers": "",
         "keywords": "",
         "activation_count": "0",
@@ -325,7 +325,7 @@
       "has_skill_md": true,
       "frontmatter": {
         "name": "css-design-token-enforcer",
-        "description": "Systematically find and replace ALL hardcoded hex values with proper CSS design tokens to ensure complete color consistency across the Pomo-Flow application. This skill addresses the critical issue of yellow vs orange medium priority colors by enforcing a unified design token system based on industry best practices from Atlassian, Salesforce, and enterprise design systems.",
+        "description": "Systematically find and replace ALL hardcoded hex values with proper CSS design tokens to ensure complete color consistency across the FlowState application. This skill addresses the critical issue of yellow vs orange medium priority colors by enforcing a unified design token system based on industry best practices from Atlassian, Salesforce, and enterprise design systems.",
         "keywords": [
           "replace all hardcoded hex values  proper css design tokens  ensure complete color consistency across  flow-state application  skill addresses  critical issue  yellow vs orange medium priority colors  enforcing  unified design token system based  industry best practices from atlassian",
           "systematically find",
@@ -827,7 +827,7 @@
         "other": [
           "implementation-checklist.md",
           "migration-plan.md",
-          "pomoflow-undo-redo-unification.md",
+          "flowstate-undo-redo-unification.md",
           "testing-validation.md"
         ]
       },
@@ -1014,10 +1014,10 @@
       "has_skill_md": true,
       "frontmatter": {
         "name": "Resolve Port Conflicts",
-        "description": "FIX port conflicts when development server won't start or tests fail. Manage port 5546 for PomoFlow, kill existing processes, and resolve server startup issues. Use when npm run dev fails, port is in use, or server won't start.",
+        "description": "FIX port conflicts when development server won't start or tests fail. Manage port 5546 for FlowState, kill existing processes, and resolve server startup issues. Use when npm run dev fails, port is in use, or server won't start.",
         "keywords": [
           "server wont start",
-          "fix port conflicts when development server wont start  tests fail manage port 5546  pomoflow",
+          "fix port conflicts when development server wont start  tests fail manage port 5546  flowstate",
           "resolve server startup issues use when npm run dev fails",
           "port   use",
           "kill existing processes"
@@ -1148,7 +1148,7 @@
         "description": "COMPREHENSIVE UI/UX audit combining code analysis AND visual screenshot analysis. Detects design system violations, visual inconsistencies across views, button/card/modal style variants, color palette chaos, theme breaks, and accessibility issues. Provides detailed visual evidence and prioritized fixes. INCLUDES Storybook design decision workflow for user-driven choices. CRITICAL - Must analyze actual rendered screenshots, not just code.",
         "keywords": "design system, consistency, UI, UX, accessibility, design tokens, visual hierarchy, interaction patterns, component design, WCAG, screenshot analysis, visual inconsistency, button variants, card styles, color palette, cross-view comparison, storybook, design decisions, interactive comparison",
         "category": "audit",
-        "project": "PomoFlow",
+        "project": "FlowState",
         "version": "1.2.0",
         "last_updated": "2025-10-26"
       },
@@ -1541,7 +1541,7 @@
         "assets": [],
         "other": [
           "analyze.cjs",
-          "pomoflow-validator.cjs"
+          "flowstate-validator.cjs"
         ]
       },
       "file_count": 2,

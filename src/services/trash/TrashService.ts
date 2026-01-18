@@ -31,7 +31,7 @@ export class TrashService {
             console.log(`♻️ [TRASH] Restored task ${taskId}`)
 
             // Trigger store reload or event
-            window.dispatchEvent(new CustomEvent('pomoflow-task-restored', { detail: { taskId } }))
+            window.dispatchEvent(new CustomEvent('flowstate-task-restored', { detail: { taskId } }))
 
         } catch (error) {
             console.error(`❌ [TRASH] Failed to restore task ${taskId}:`, error)

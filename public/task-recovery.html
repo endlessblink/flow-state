@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pomo-Flow Task Recovery Tool</title>
+    <title>FlowState Task Recovery Tool</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -108,7 +108,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔍 Pomo-Flow Task Recovery Tool</h1>
+        <h1>🔍 FlowState Task Recovery Tool</h1>
         <p class="subtitle">Find and restore your missing personal tasks</p>
 
         <!-- Section 1: Check Browser Storage -->
@@ -240,9 +240,9 @@
                 }
 
                 // Store in local storage so the app can find them
-                localStorage.setItem('pomo-flow-imported-tasks', JSON.stringify(tasks));
+                localStorage.setItem('flow-state-imported-tasks', JSON.stringify(tasks));
 
-                resultsDiv.innerHTML = `<div class="result success">✅ Successfully imported ${tasks.length} tasks!\n\nRefresh the Pomo-Flow app to see them.\n\nTasks stored in localStorage as 'pomo-flow-imported-tasks'</div>`;
+                resultsDiv.innerHTML = `<div class="result success">✅ Successfully imported ${tasks.length} tasks!\n\nRefresh the FlowState app to see them.\n\nTasks stored in localStorage as 'flow-state-imported-tasks'</div>`;
 
                 // Clear textarea
                 textarea.value = '';
@@ -326,17 +326,17 @@
                 }
             ];
 
-            localStorage.setItem('pomo-flow-imported-tasks', JSON.stringify(sampleTasks));
+            localStorage.setItem('flow-state-imported-tasks', JSON.stringify(sampleTasks));
 
             document.getElementById('quick-add-results').innerHTML = `
-                <div class="result success">✅ Added ${sampleTasks.length} sample personal tasks!\n\nRefresh the Pomo-Flow app to see them.\n\nTasks include: groceries, dentist, bills, presentation, and family call.</div>
+                <div class="result success">✅ Added ${sampleTasks.length} sample personal tasks!\n\nRefresh the FlowState app to see them.\n\nTasks include: groceries, dentist, bills, presentation, and family call.</div>
             `;
         }
 
         // Clear all tasks (warning)
         function clearAllTasks() {
             if (confirm('⚠️ This will clear ALL tasks from the current browser storage. Are you sure?')) {
-                localStorage.removeItem('pomo-flow-imported-tasks');
+                localStorage.removeItem('flow-state-imported-tasks');
                 document.getElementById('quick-add-results').innerHTML = '<div class="result warning">🗑️ All imported tasks cleared from localStorage.</div>';
             }
         }

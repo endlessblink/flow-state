@@ -55,7 +55,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🍅 Pomo-Flow Task Import Test</h1>
+        <h1>🍅 FlowState Task Import Test</h1>
 
         <div class="test-section">
             <h2>Test Status</h2>
@@ -163,7 +163,7 @@
                 const databases = await indexedDB.databases();
 
                 for (const db of databases) {
-                    if (db.name === 'pomo-flow') {
+                    if (db.name === 'flow-state') {
                         await indexedDB.deleteDatabase(db.name);
                         addLogEntry(`✅ Deleted database: ${db.name}`, 'success');
                     }
@@ -180,7 +180,7 @@
 
         async function checkIndexedDBStatus() {
             try {
-                const request = indexedDB.open('pomo-flow', 3);
+                const request = indexedDB.open('flow-state', 3);
 
                 request.onerror = () => {
                     addLogEntry('❌ IndexedDB not accessible', 'error');
@@ -192,9 +192,9 @@
                     addLogEntry('✅ IndexedDB is accessible', 'success');
                     document.getElementById('indexeddb-status').innerHTML = '<p><strong>IndexedDB:</strong> ✅ Accessible</p>';
 
-                    if (db.objectStoreNames.contains('pomo_flow_data')) {
-                        const transaction = db.transaction(['pomo_flow_data'], 'readonly');
-                        const store = transaction.objectStore('pomo_flow_data');
+                    if (db.objectStoreNames.contains('flow_state_data')) {
+                        const transaction = db.transaction(['flow_state_data'], 'readonly');
+                        const store = transaction.objectStore('flow_state_data');
                         const getRequest = store.get('tasks');
 
                         getRequest.onsuccess = (event) => {
@@ -217,7 +217,7 @@
                             addLogEntry('❌ Failed to read tasks from IndexedDB', 'error');
                         };
                     } else {
-                        addLogEntry('⚠️ pomo_flow_data store not found', 'warning');
+                        addLogEntry('⚠️ flow_state_data store not found', 'warning');
                     }
 
                     db.close();
@@ -239,12 +239,12 @@
             try {
                 const response = await fetch('http://localhost:5550');
                 if (response.ok) {
-                    addLogEntry('✅ Pomo-Flow application is running', 'success');
+                    addLogEntry('✅ FlowState application is running', 'success');
                 } else {
                     throw new Error(`HTTP ${response.status}`);
                 }
             } catch (error) {
-                addLogEntry(`❌ Cannot reach Pomo-Flow application: ${error.message}`, 'error');
+                addLogEntry(`❌ Cannot reach FlowState application: ${error.message}`, 'error');
                 updateStatus('❌ Application not reachable', 'error');
                 return;
             }

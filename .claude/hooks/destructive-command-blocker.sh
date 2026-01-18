@@ -139,7 +139,7 @@ if echo "$COMMAND_LOWER" | grep -qE "supabase\s+stop"; then
     echo "  4. Restore backup if needed"
     echo ""
     echo "SAFER ALTERNATIVE:"
-    echo "  - Restart specific service: docker restart supabase_db_pomo-flow"
+    echo "  - Restart specific service: docker restart supabase_db_flow-state"
     echo "  - This preserves your data"
     echo "═══════════════════════════════════════════════════════════════════"
     exit 1

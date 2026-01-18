@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pomo-Flow Task Recovery Tool</title>
+    <title>FlowState Task Recovery Tool</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -163,7 +163,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🔍 Pomo-Flow Task Recovery Tool</h1>
+        <h1>🔍 FlowState Task Recovery Tool</h1>
         <p>Find and restore your personal productivity tasks from browser storage</p>
     </div>
 
@@ -443,7 +443,7 @@
             addResult('🎯 Adding Sample Personal Tasks', 'Creating sample personal productivity tasks...', 'warning');
 
             // Store sample tasks in localStorage for recovery
-            localStorage.setItem('pomo-flow-sample-personal-tasks', JSON.stringify(samplePersonalTasks));
+            localStorage.setItem('flow-state-sample-personal-tasks', JSON.stringify(samplePersonalTasks));
 
             let taskInfo = `<strong>Added ${samplePersonalTasks.length} sample personal tasks:</strong><br>`;
             samplePersonalTasks.forEach(task => {
@@ -456,8 +456,8 @@
             addResult('📋 Next Steps',
                 'Now you can:<br>' +
                 '1. Click "🔍 Search All Browser Storage" to verify the tasks are stored<br>' +
-                '2. Click "📥 Import to Main App" to load them into Pomo-Flow<br>' +
-                '3. Refresh the main Pomo-Flow app to see your personal tasks',
+                '2. Click "📥 Import to Main App" to load them into FlowState<br>' +
+                '3. Refresh the main FlowState app to see your personal tasks',
                 'warning'
             );
         }
@@ -649,13 +649,13 @@
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `pomo-flow-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `flow-state-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            addResult('✅ Export Complete', `Exported ${allTasks.length} tasks to pomo-flow-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`, 'success');
+            addResult('✅ Export Complete', `Exported ${allTasks.length} tasks to flow-state-tasks-recovery-${new Date().toISOString().split('T')[0]}.json`, 'success');
         }
 
         function importToMainApp() {
@@ -683,12 +683,12 @@
                 }
 
                 // Store in localStorage for main app to import
-                localStorage.setItem('pomo-flow-import-ready-tasks', JSON.stringify(allTasks));
+                localStorage.setItem('flow-state-import-ready-tasks', JSON.stringify(allTasks));
 
                 addResult('📥 Import Ready',
                     `Prepared ${allTasks.length} tasks for import.<br><br>` +
                     '<strong>Next Steps:</strong><br>' +
-                    '1. Go to the main Pomo-Flow app (http://localhost:5550)<br>' +
+                    '1. Go to the main FlowState app (http://localhost:5550)<br>' +
                     '2. Look for an "Import Tasks" button or option<br>' +
                     '3. The tasks should be automatically available for import<br>' +
                     '4. Refresh the main app if needed',
@@ -712,7 +712,7 @@
                 '<strong>Getting Started:</strong><br>' +
                 '1. Click "🔍 Search All Browser Storage" to scan for existing tasks<br>' +
                 '2. If no personal tasks are found, click "🎯 Add Sample Personal Tasks"<br>' +
-                '3. Use "📥 Import to Main App" to load tasks into Pomo-Flow',
+                '3. Use "📥 Import to Main App" to load tasks into FlowState',
                 'success'
             );
         };

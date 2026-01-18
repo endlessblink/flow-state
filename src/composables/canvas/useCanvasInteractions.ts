@@ -372,7 +372,9 @@ export function useCanvasInteractions(deps?: {
             involvedNodes.forEach(node => {
                 setNodeState(node.id, NodeState.DRAGGING_LOCAL)
                 // TASK-213: Acquire Lock
-                lockManager.acquire(node.id, 'user-drag')
+                // FIX: Use raw ID (not Vue Flow node ID) to match PositionManager's key format
+                const { id: rawId } = CanvasIds.parseNodeId(node.id)
+                lockManager.acquire(rawId, 'user-drag')
             })
             // Set store-level drag flag ONCE per drag session
             canvasStore.isDragging = true
@@ -391,7 +393,9 @@ export function useCanvasInteractions(deps?: {
                 ? (node.parentNode.startsWith('section-') ? node.parentNode.replace('section-', '') : node.parentNode)
                 : null
 
-            positionManager.updatePosition(node.id, absPos, 'user-drag', parentId)
+            // FIX: Use raw ID (not Vue Flow node ID) to match PositionManager's key format
+            const { id: rawId } = CanvasIds.parseNodeId(node.id)
+            positionManager.updatePosition(rawId, absPos, 'user-drag', parentId)
         })
     }
 
@@ -608,8 +612,10 @@ export function useCanvasInteractions(deps?: {
 
         } finally {
             // TASK-213: Release Locks
+            // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
             involvedNodes.forEach(node => {
-                lockManager.release(node.id, 'user-drag')
+                const { id: rawId } = CanvasIds.parseNodeId(node.id)
+                lockManager.release(rawId, 'user-drag')
             })
             endDrag(involvedNodes.map(n => n.id))
         }
@@ -649,9 +655,11 @@ export function useCanvasInteractions(deps?: {
         const vueFlowParentId = CanvasIds.groupNodeId(sectionId)
         nodes.value.forEach(node => {
             if (node.parentNode === vueFlowParentId) {
-                resizeState.value.childStartPositions[node.id] = { ...node.position }
+                // FIX: Use raw ID for consistent locking with PositionManager
+                const { id: childRawId } = CanvasIds.parseNodeId(node.id)
+                resizeState.value.childStartPositions[childRawId] = { ...node.position }
                 // TASK-213: Lock Children
-                lockManager.acquire(node.id, 'user-resize')
+                lockManager.acquire(childRawId, 'user-resize')
             }
         })
 

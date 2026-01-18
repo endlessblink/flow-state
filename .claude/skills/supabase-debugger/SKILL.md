@@ -501,19 +501,19 @@ const loadedGroups = await fetchGroups()
 _rawGroups.value = loadedGroups  // Empty means empty
 ```
 
-### Step 3: Pomo-Flow localStorage Inventory
+### Step 3: FlowState localStorage Inventory
 
 | Key | File | Risk Level | Notes |
 |-----|------|------------|-------|
-| `pomoflow-guest-groups` | canvas.ts | **FIXED** | Was resurrecting deleted groups |
+| `flowstate-guest-groups` | canvas.ts | **FIXED** | Was resurrecting deleted groups |
 | `flow-state-golden-backup` | useBackupSystem.ts | **HIGH** | Never expires, can restore old data |
-| `pomoflow-offline-queue` | offlineQueue.ts | **MEDIUM** | No TTL, infinite retry |
+| `flowstate-offline-queue` | offlineQueue.ts | **MEDIUM** | No TTL, infinite retry |
 | `flow-state-resolution-rules` | userResolutionRules.ts | **MEDIUM** | Could affect conflict resolution |
 | `canvas-viewport` | canvas.ts | **MEDIUM** | Loaded before Supabase ready |
 | `flow-state-filters` | taskPersistence.ts | **MEDIUM** | Stale filters show wrong view |
 | `flow-state-backup-history` | useBackupSystem.ts | **MEDIUM** | Old backups persist indefinitely |
-| `pomoflow-canvas-locks` | canvasStateLock.ts | **LOW** | Has 7s TTL |
-| `pomoflow-canvas-has-initial-fit` | canvasUi.ts | **LOW** | Has 5min TTL |
+| `flowstate-canvas-locks` | canvasStateLock.ts | **LOW** | Has 7s TTL |
+| `flowstate-canvas-has-initial-fit` | canvasUi.ts | **LOW** | Has 5min TTL |
 
 ### Step 4: Audit Checklist
 
@@ -543,7 +543,7 @@ For each localStorage key that stores user data:
 // 3. Refresh page
 // 4. Check groups are still gone:
 console.log('Groups after refresh:',
-  JSON.parse(localStorage.getItem('pomoflow-guest-groups') || '[]').length,
+  JSON.parse(localStorage.getItem('flowstate-guest-groups') || '[]').length,
   'local,',
   // Check Pinia store
   useCanvasStore().groups.length,

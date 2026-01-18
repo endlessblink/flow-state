@@ -80,10 +80,12 @@ interface Props {
   status: Task['status']
   tasks: Task[]
   wipLimit?: number
+  columnType?: 'status' | 'priority' | 'date'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  wipLimit: 10
+  wipLimit: 10,
+  columnType: 'status'
 })
 
 defineEmits<{
@@ -125,7 +127,18 @@ const taskStore = useTaskStore()
 const handleDragChange = async (event: any) => {
   if (event.added) {
     try {
-      await taskStore.moveTaskWithUndo(event.added.element.id, props.status)
+      const taskId = event.added.element.id
+
+      if (props.columnType === 'priority') {
+        // Priority columns: update task priority
+        taskStore.moveTaskToPriority(taskId, props.status as any)
+      } else if (props.columnType === 'date') {
+        // Date columns: update task due date
+        taskStore.moveTaskToDate(taskId, props.status as any)
+      } else {
+        // Status columns (default): update task status
+        await taskStore.moveTaskWithUndo(taskId, props.status)
+      }
     } catch (_error) {
       // Error moving task
     }

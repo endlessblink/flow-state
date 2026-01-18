@@ -3,7 +3,7 @@
     {
       "id": "doc-0",
       "path": "MASTER_PLAN.md",
-      "title": "Pomo-Flow Master Plan & Roadmap",
+      "title": "FlowState Master Plan & Roadmap",
       "description": "Two canvas operations didn't update automatically - users had to refresh to see changes:",
       "category": "other",
       "isArchived": false,
@@ -84,8 +84,8 @@
     {
       "id": "doc-9",
       "path": "archive/SYNC_REQUIREMENTS.md",
-      "title": "Pomo-Flow Comprehensive Sync Requirements",
-      "description": "This document identifies ALL data that should sync across devices/browsers in Pomo-Flow. Based on comprehensive analysis of 8 Pinia stores, persistence layers, and UI exploration.",
+      "title": "FlowState Comprehensive Sync Requirements",
+      "description": "This document identifies ALL data that should sync across devices/browsers in FlowState. Based on comprehensive analysis of 8 Pinia stores, persistence layers, and UI exploration.",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -93,7 +93,7 @@
     {
       "id": "doc-10",
       "path": "archive/claude-docs/SKILL_ENHANCEMENT_GUIDE.md",
-      "title": "Skill Enhancement Guide for PomoFlow",
+      "title": "Skill Enhancement Guide for FlowState",
       "description": "This guide covers advanced techniques for enhancing Claude Code skills to maximize activation, visibility, and effectiveness. It combines our successful skill optimization work with new strategies for...",
       "category": "archive",
       "isArchived": true,
@@ -129,8 +129,8 @@
     {
       "id": "doc-14",
       "path": "archive/mapping-old/3.11.25/2.11.25.md",
-      "title": "Pomo-Flow Design Tokens Implementation Map",
-      "description": "Pomo-Flow implements a **world-class design tokens system** with 755 lines of comprehensive CSS custom properties, organized in a sophisticated 3-tier architecture. The system provides complete design...",
+      "title": "FlowState Design Tokens Implementation Map",
+      "description": "FlowState implements a **world-class design tokens system** with 755 lines of comprehensive CSS custom properties, organized in a sophisticated 3-tier architecture. The system provides complete design...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -138,8 +138,8 @@
     {
       "id": "doc-15",
       "path": "archive/mapping-old/3.11.25/ARCHITECTURAL_RECOMMENDATIONS.md",
-      "title": "Pomo-Flow - Architectural Gaps and Recommendations",
-      "description": "This comprehensive analysis identifies architectural gaps, unused components, missing error handling, and provides actionable recommendations for improving the Pomo-Flow Vue.js productivity applicatio...",
+      "title": "FlowState - Architectural Gaps and Recommendations",
+      "description": "This comprehensive analysis identifies architectural gaps, unused components, missing error handling, and provides actionable recommendations for improving the FlowState Vue.js productivity applicatio...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -147,7 +147,7 @@
     {
       "id": "doc-16",
       "path": "archive/mapping-old/3.11.25/ARCHITECTURE_REFERENCE.md",
-      "title": "Pomo-Flow Architecture Reference",
+      "title": "FlowState Architecture Reference",
       "description": "This consolidated architecture reference combines project structure overview, state management ecosystem, store architecture, and development patterns into a comprehensive guide for understanding and ...",
       "category": "archive",
       "isArchived": true,
@@ -156,8 +156,8 @@
     {
       "id": "doc-17",
       "path": "archive/mapping-old/3.11.25/CANVAS_SYSTEM_ARCHITECTURE.md",
-      "title": "Pomo-Flow - Canvas System Architecture",
-      "description": "The Canvas System is one of Pomo-Flow's most sophisticated features, providing a visual, node-based interface for task organization. Built on Vue Flow with custom extensions, it supports free-form tas...",
+      "title": "FlowState - Canvas System Architecture",
+      "description": "The Canvas System is one of FlowState's most sophisticated features, providing a visual, node-based interface for task organization. Built on Vue Flow with custom extensions, it supports free-form tas...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -165,8 +165,8 @@
     {
       "id": "doc-18",
       "path": "archive/mapping-old/3.11.25/COMPONENT_REFERENCE.md",
-      "title": "Pomo-Flow Component Reference",
-      "description": "This consolidated reference document combines component architecture, relationships, drag-and-drop systems, views analysis, and UI flows into a comprehensive guide for the Pomo-Flow Vue.js productivit...",
+      "title": "FlowState Component Reference",
+      "description": "This consolidated reference document combines component architecture, relationships, drag-and-drop systems, views analysis, and UI flows into a comprehensive guide for the FlowState Vue.js productivit...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -174,8 +174,8 @@
     {
       "id": "doc-19",
       "path": "archive/mapping-old/3.11.25/COMPOSABLES_CATALOG.md",
-      "title": "Pomo-Flow - Composables Catalog",
-      "description": "Pomo-Flow utilizes Vue 3's Composition API with 27+ composables that encapsulate reusable logic across the application. These composables provide clean, testable, and reusable functionality that can b...",
+      "title": "FlowState - Composables Catalog",
+      "description": "FlowState utilizes Vue 3's Composition API with 27+ composables that encapsulate reusable logic across the application. These composables provide clean, testable, and reusable functionality that can b...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -192,8 +192,8 @@
     {
       "id": "doc-21",
       "path": "archive/mapping-old/3.11.25/DATA_PERSISTENCE_STRATEGY.md",
-      "title": "Pomo-Flow - Data Persistence Strategy",
-      "description": "Pomo-Flow implements a sophisticated multi-layered data persistence strategy that ensures data reliability, performance, and user experience. The system combines IndexedDB for primary storage, localSt...",
+      "title": "FlowState - Data Persistence Strategy",
+      "description": "FlowState implements a sophisticated multi-layered data persistence strategy that ensures data reliability, performance, and user experience. The system combines IndexedDB for primary storage, localSt...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -201,8 +201,8 @@
     {
       "id": "doc-22",
       "path": "archive/mapping-old/3.11.25/DEPLOYMENT_AND_CONFIG.md",
-      "title": "Pomo-Flow - Deployment and Configuration Reference",
-      "description": "This comprehensive reference document consolidates all configuration, build, deployment, and API interaction aspects of the Pomo-Flow Vue.js productivity application. It covers development setup, prod...",
+      "title": "FlowState - Deployment and Configuration Reference",
+      "description": "This comprehensive reference document consolidates all configuration, build, deployment, and API interaction aspects of the FlowState Vue.js productivity application. It covers development setup, prod...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -210,7 +210,7 @@
     {
       "id": "doc-23",
       "path": "archive/mapping-old/3.11.25/FOLDER_STRUCTURE_MAPPING.md",
-      "title": "Pomo-Flow - Complete Folder Structure Mapping",
+      "title": "FlowState - Complete Folder Structure Mapping",
       "description": "```",
       "category": "archive",
       "isArchived": true,
@@ -219,7 +219,7 @@
     {
       "id": "doc-24",
       "path": "archive/mapping-old/3.11.25/INTERACTION_FLOWS.md",
-      "title": "Pomo-Flow Interaction Flows Reference",
+      "title": "FlowState Interaction Flows Reference",
       "description": "This consolidated interaction flows reference combines visual flow diagrams, route analysis, drag-and-drop system architecture, and event system analysis into a comprehensive guide for understanding u...",
       "category": "archive",
       "isArchived": true,
@@ -228,8 +228,8 @@
     {
       "id": "doc-25",
       "path": "archive/mapping-old/3.11.25/PERFORMANCE_AND_ISSUES.md",
-      "title": "Pomo-Flow - Performance and Issues Reference",
-      "description": "This comprehensive reference document consolidates all performance optimization strategies, known issues, debugging approaches, and problem-solving techniques for the Pomo-Flow Vue.js productivity app...",
+      "title": "FlowState - Performance and Issues Reference",
+      "description": "This comprehensive reference document consolidates all performance optimization strategies, known issues, debugging approaches, and problem-solving techniques for the FlowState Vue.js productivity app...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -237,8 +237,8 @@
     {
       "id": "doc-26",
       "path": "archive/mapping-old/3.11.25/README.md",
-      "title": "Drag-and-Drop System Mapping - Pomo-Flow",
-      "description": "This directory contains a comprehensive technical analysis of the drag-and-drop system failure in the Pomo-Flow Vue 3 productivity application. The analysis reveals that recent horizontal scroll isola...",
+      "title": "Drag-and-Drop System Mapping - FlowState",
+      "description": "This directory contains a comprehensive technical analysis of the drag-and-drop system failure in the FlowState Vue 3 productivity application. The analysis reveals that recent horizontal scroll isola...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -246,8 +246,8 @@
     {
       "id": "doc-27",
       "path": "archive/mapping-old/3.11.25/TESTING_STRATEGY.md",
-      "title": "Pomo-Flow - Testing Strategy and Quality Assurance",
-      "description": "This comprehensive testing strategy document outlines the complete testing approach for the Pomo-Flow Vue.js productivity application. It covers unit testing, integration testing, end-to-end testing, ...",
+      "title": "FlowState - Testing Strategy and Quality Assurance",
+      "description": "This comprehensive testing strategy document outlines the complete testing approach for the FlowState Vue.js productivity application. It covers unit testing, integration testing, end-to-end testing, ...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -255,8 +255,8 @@
     {
       "id": "doc-28",
       "path": "archive/mapping-old/3.11.25/THIRD_PARTY_LIBRARIES.md",
-      "title": "Pomo-Flow - Third-Party Libraries & Plugins Documentation",
-      "description": "This document provides a comprehensive mapping of all third-party libraries, Vue plugins, and external dependencies used in the Pomo-Flow Vue.js productivity application, including their purposes, usa...",
+      "title": "FlowState - Third-Party Libraries & Plugins Documentation",
+      "description": "This document provides a comprehensive mapping of all third-party libraries, Vue plugins, and external dependencies used in the FlowState Vue.js productivity application, including their purposes, usa...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -264,8 +264,8 @@
     {
       "id": "doc-29",
       "path": "archive/mapping-old/3.11.25/UNDO_REDO_SYSTEM.md",
-      "title": "Pomo-Flow - Unified Undo/Redo System Architecture",
-      "description": "Pomo-Flow implements a sophisticated **unified undo/redo system** that replaces multiple conflicting implementations with a single, consistent solution. Built on VueUse's `useManualRefHistory` with de...",
+      "title": "FlowState - Unified Undo/Redo System Architecture",
+      "description": "FlowState implements a sophisticated **unified undo/redo system** that replaces multiple conflicting implementations with a single, consistent solution. Built on VueUse's `useManualRefHistory` with de...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -273,8 +273,8 @@
     {
       "id": "doc-30",
       "path": "archive/mapping-old/3.11.25.md",
-      "title": "Pomo-Flow Documentation Version 3.11.25",
-      "description": "This version (3.11.25) contains the most up-to-date documentation for the Pomo-Flow application, reflecting recent architectural improvements and feature enhancements.",
+      "title": "FlowState Documentation Version 3.11.25",
+      "description": "This version (3.11.25) contains the most up-to-date documentation for the FlowState application, reflecting recent architectural improvements and feature enhancements.",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -282,8 +282,8 @@
     {
       "id": "doc-31",
       "path": "archive/mapping-old/4.11.25/2.11.25.md",
-      "title": "Pomo-Flow Design Tokens Implementation Map",
-      "description": "Pomo-Flow implements a **world-class design tokens system** with 755 lines of comprehensive CSS custom properties, organized in a sophisticated 3-tier architecture. The system provides complete design...",
+      "title": "FlowState Design Tokens Implementation Map",
+      "description": "FlowState implements a **world-class design tokens system** with 755 lines of comprehensive CSS custom properties, organized in a sophisticated 3-tier architecture. The system provides complete design...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -291,8 +291,8 @@
     {
       "id": "doc-32",
       "path": "archive/mapping-old/4.11.25/ARCHITECTURAL_RECOMMENDATIONS.md",
-      "title": "Pomo-Flow - Architectural Gaps and Recommendations",
-      "description": "This comprehensive analysis identifies architectural gaps, unused components, missing error handling, and provides actionable recommendations for improving the Pomo-Flow Vue.js productivity applicatio...",
+      "title": "FlowState - Architectural Gaps and Recommendations",
+      "description": "This comprehensive analysis identifies architectural gaps, unused components, missing error handling, and provides actionable recommendations for improving the FlowState Vue.js productivity applicatio...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -300,7 +300,7 @@
     {
       "id": "doc-33",
       "path": "archive/mapping-old/4.11.25/ARCHITECTURE_REFERENCE.md",
-      "title": "Pomo-Flow Architecture Reference",
+      "title": "FlowState Architecture Reference",
       "description": "This consolidated architecture reference combines project structure overview, state management ecosystem, store architecture, and development patterns into a comprehensive guide for understanding and ...",
       "category": "archive",
       "isArchived": true,
@@ -309,8 +309,8 @@
     {
       "id": "doc-34",
       "path": "archive/mapping-old/4.11.25/CANVAS_SYSTEM_ARCHITECTURE.md",
-      "title": "Pomo-Flow - Canvas System Architecture",
-      "description": "The Canvas System is one of Pomo-Flow's most sophisticated features, providing a visual, node-based interface for task organization. Built on Vue Flow with custom extensions, it supports free-form tas...",
+      "title": "FlowState - Canvas System Architecture",
+      "description": "The Canvas System is one of FlowState's most sophisticated features, providing a visual, node-based interface for task organization. Built on Vue Flow with custom extensions, it supports free-form tas...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -318,8 +318,8 @@
     {
       "id": "doc-35",
       "path": "archive/mapping-old/4.11.25/COMPONENT_REFERENCE.md",
-      "title": "Pomo-Flow Component Reference",
-      "description": "This consolidated reference document combines component architecture, relationships, drag-and-drop systems, views analysis, and UI flows into a comprehensive guide for the Pomo-Flow Vue.js productivit...",
+      "title": "FlowState Component Reference",
+      "description": "This consolidated reference document combines component architecture, relationships, drag-and-drop systems, views analysis, and UI flows into a comprehensive guide for the FlowState Vue.js productivit...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -327,8 +327,8 @@
     {
       "id": "doc-36",
       "path": "archive/mapping-old/4.11.25/COMPOSABLES_CATALOG.md",
-      "title": "Pomo-Flow - Composables Catalog",
-      "description": "Pomo-Flow utilizes Vue 3's Composition API with 27+ composables that encapsulate reusable logic across the application. These composables provide clean, testable, and reusable functionality that can b...",
+      "title": "FlowState - Composables Catalog",
+      "description": "FlowState utilizes Vue 3's Composition API with 27+ composables that encapsulate reusable logic across the application. These composables provide clean, testable, and reusable functionality that can b...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -345,8 +345,8 @@
     {
       "id": "doc-38",
       "path": "archive/mapping-old/4.11.25/DATA_PERSISTENCE_STRATEGY.md",
-      "title": "Pomo-Flow - Data Persistence Strategy",
-      "description": "Pomo-Flow implements a sophisticated multi-layered data persistence strategy that ensures data reliability, performance, and user experience. The system combines IndexedDB for primary storage, localSt...",
+      "title": "FlowState - Data Persistence Strategy",
+      "description": "FlowState implements a sophisticated multi-layered data persistence strategy that ensures data reliability, performance, and user experience. The system combines IndexedDB for primary storage, localSt...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -354,8 +354,8 @@
     {
       "id": "doc-39",
       "path": "archive/mapping-old/4.11.25/DEPLOYMENT_AND_CONFIG.md",
-      "title": "Pomo-Flow - Deployment and Configuration Reference",
-      "description": "This comprehensive reference document consolidates all configuration, build, deployment, and API interaction aspects of the Pomo-Flow Vue.js productivity application. It covers development setup, prod...",
+      "title": "FlowState - Deployment and Configuration Reference",
+      "description": "This comprehensive reference document consolidates all configuration, build, deployment, and API interaction aspects of the FlowState Vue.js productivity application. It covers development setup, prod...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -363,7 +363,7 @@
     {
       "id": "doc-40",
       "path": "archive/mapping-old/4.11.25/FOLDER_STRUCTURE_MAPPING.md",
-      "title": "Pomo-Flow - Complete Folder Structure Mapping",
+      "title": "FlowState - Complete Folder Structure Mapping",
       "description": "```",
       "category": "archive",
       "isArchived": true,
@@ -372,7 +372,7 @@
     {
       "id": "doc-41",
       "path": "archive/mapping-old/4.11.25/INTERACTION_FLOWS.md",
-      "title": "Pomo-Flow Interaction Flows Reference",
+      "title": "FlowState Interaction Flows Reference",
       "description": "This consolidated interaction flows reference combines visual flow diagrams, route analysis, drag-and-drop system architecture, and event system analysis into a comprehensive guide for understanding u...",
       "category": "archive",
       "isArchived": true,
@@ -381,8 +381,8 @@
     {
       "id": "doc-42",
       "path": "archive/mapping-old/4.11.25/PERFORMANCE_AND_ISSUES.md",
-      "title": "Pomo-Flow - Performance and Issues Reference",
-      "description": "This comprehensive reference document consolidates all performance optimization strategies, known issues, debugging approaches, and problem-solving techniques for the Pomo-Flow Vue.js productivity app...",
+      "title": "FlowState - Performance and Issues Reference",
+      "description": "This comprehensive reference document consolidates all performance optimization strategies, known issues, debugging approaches, and problem-solving techniques for the FlowState Vue.js productivity app...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -390,8 +390,8 @@
     {
       "id": "doc-43",
       "path": "archive/mapping-old/4.11.25/README.md",
-      "title": "Pomo-Flow Architecture Mapping - Version 4.11.25",
-      "description": "This directory contains comprehensive technical documentation for the Pomo-Flow Vue 3 productivity application, version 4.11.25. This release includes significant architectural enhancements focused on...",
+      "title": "FlowState Architecture Mapping - Version 4.11.25",
+      "description": "This directory contains comprehensive technical documentation for the FlowState Vue 3 productivity application, version 4.11.25. This release includes significant architectural enhancements focused on...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -399,8 +399,8 @@
     {
       "id": "doc-44",
       "path": "archive/mapping-old/4.11.25/TESTING_STRATEGY.md",
-      "title": "Pomo-Flow - Testing Strategy and Quality Assurance",
-      "description": "This comprehensive testing strategy document outlines the complete testing approach for the Pomo-Flow Vue.js productivity application. It covers unit testing, integration testing, end-to-end testing, ...",
+      "title": "FlowState - Testing Strategy and Quality Assurance",
+      "description": "This comprehensive testing strategy document outlines the complete testing approach for the FlowState Vue.js productivity application. It covers unit testing, integration testing, end-to-end testing, ...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -408,8 +408,8 @@
     {
       "id": "doc-45",
       "path": "archive/mapping-old/4.11.25/THIRD_PARTY_LIBRARIES.md",
-      "title": "Pomo-Flow - Third-Party Libraries & Plugins Documentation",
-      "description": "This document provides a comprehensive mapping of all third-party libraries, Vue plugins, and external dependencies used in the Pomo-Flow Vue.js productivity application, including their purposes, usa...",
+      "title": "FlowState - Third-Party Libraries & Plugins Documentation",
+      "description": "This document provides a comprehensive mapping of all third-party libraries, Vue plugins, and external dependencies used in the FlowState Vue.js productivity application, including their purposes, usa...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -417,8 +417,8 @@
     {
       "id": "doc-46",
       "path": "archive/mapping-old/4.11.25/UNDO_REDO_SYSTEM.md",
-      "title": "Pomo-Flow - Unified Undo/Redo System Architecture",
-      "description": "Pomo-Flow implements a sophisticated **unified undo/redo system** that replaces multiple conflicting implementations with a single, consistent solution. Built on VueUse's `useManualRefHistory` with de...",
+      "title": "FlowState - Unified Undo/Redo System Architecture",
+      "description": "FlowState implements a sophisticated **unified undo/redo system** that replaces multiple conflicting implementations with a single, consistent solution. Built on VueUse's `useManualRefHistory` with de...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -427,7 +427,7 @@
       "id": "doc-47",
       "path": "archive/phase-2-docs/PHASE_2C_INTEGRATION_PATTERNS.md",
       "title": "Phase 2C: Integration Patterns Analysis",
-      "description": "Phase 2C focuses on comprehensive documentation and analysis of all integration patterns within the Pomo-Flow application. This phase examines how the application integrates with external services, AP...",
+      "description": "Phase 2C focuses on comprehensive documentation and analysis of all integration patterns within the FlowState application. This phase examines how the application integrates with external services, AP...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -445,7 +445,7 @@
       "id": "doc-49",
       "path": "archive/phase-2-docs/PHASE_2_ARCHITECTURE.md",
       "title": "Phase 2: Architecture Documentation",
-      "description": "Phase 2 focuses on comprehensive documentation of the Pomo-Flow application architecture. This phase ensures complete understanding of the current system structure, component relationships, and integr...",
+      "description": "Phase 2 focuses on comprehensive documentation of the FlowState application architecture. This phase ensures complete understanding of the current system structure, component relationships, and integr...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -463,7 +463,7 @@
       "id": "doc-51",
       "path": "archive/phase-2-docs/Phase-2A-Component-Analysis.md",
       "title": "Phase 2A Component Architecture Analysis",
-      "description": "This analysis provides a comprehensive examination of all Vue components in the Pomo-Flow application, cataloging their relationships, sizes, architectural patterns, and dependencies. The analysis rev...",
+      "description": "This analysis provides a comprehensive examination of all Vue components in the FlowState application, cataloging their relationships, sizes, architectural patterns, and dependencies. The analysis rev...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -472,7 +472,7 @@
       "id": "doc-52",
       "path": "archive/phase-2-docs/Phase-2B-Recommendations.md",
       "title": "Phase 2B Refactoring Recommendations",
-      "description": "This document provides specific, actionable recommendations for Phase 2B refactoring based on the comprehensive analysis of Pomo-Flow's 81 Vue components. The recommendations prioritize reducing compo...",
+      "description": "This document provides specific, actionable recommendations for Phase 2B refactoring based on the comprehensive analysis of FlowState's 81 Vue components. The recommendations prioritize reducing compo...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -489,8 +489,8 @@
     {
       "id": "doc-54",
       "path": "archive/prd/COMPREHENSIVE_PRD.md",
-      "title": "Pomo-Flow Comprehensive Product Requirements Document",
-      "description": "This document provides a comprehensive Product Requirements Document (PRD) for the Pomo-Flow productivity application. The PRD covers all aspects of the application including architecture, implementat...",
+      "title": "FlowState Comprehensive Product Requirements Document",
+      "description": "This document provides a comprehensive Product Requirements Document (PRD) for the FlowState productivity application. The PRD covers all aspects of the application including architecture, implementat...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -517,7 +517,7 @@
       "id": "doc-57",
       "path": "archive/prd/PHASE_3_ARCHITECTURE.md",
       "title": "Phase 3: Design System & Architecture Modernization",
-      "description": "Phase 3 focuses on systematic architectural improvements to the Pomo-Flow application, emphasizing component decomposition, store modernization, and performance optimization while maintaining zero reg...",
+      "description": "Phase 3 focuses on systematic architectural improvements to the FlowState application, emphasizing component decomposition, store modernization, and performance optimization while maintaining zero reg...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -525,8 +525,8 @@
     {
       "id": "doc-58",
       "path": "archive/prd/README.md",
-      "title": "Pomo-Flow Product Requirements Documentation",
-      "description": "This directory contains comprehensive Product Requirements Documentation (PRD) for the Pomo-Flow productivity application. The documentation covers architectural decisions, implementation strategies, ...",
+      "title": "FlowState Product Requirements Documentation",
+      "description": "This directory contains comprehensive Product Requirements Documentation (PRD) for the FlowState productivity application. The documentation covers architectural decisions, implementation strategies, ...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -535,7 +535,7 @@
       "id": "doc-59",
       "path": "archive/prd/RECURRING_TASKS_NOTIFICATIONS_PRD.md",
       "title": "Recurring Tasks and Notifications Feature PRD",
-      "description": "This PRD outlines the implementation of recurring tasks and intelligent notifications for Pomo-Flow, enhancing the productivity application with automated task scheduling and timely reminders.",
+      "description": "This PRD outlines the implementation of recurring tasks and intelligent notifications for FlowState, enhancing the productivity application with automated task scheduling and timely reminders.",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -543,8 +543,8 @@
     {
       "id": "doc-60",
       "path": "archive/prd/SAFE_REFACTORING_PLAN.md",
-      "title": "Pomo-Flow Safe Refactoring Plan",
-      "description": "This document outlines a comprehensive, safety-first refactoring strategy for the Pomo-Flow Vue.js productivity application. The plan prioritizes production stability, user experience preservation, an...",
+      "title": "FlowState Safe Refactoring Plan",
+      "description": "This document outlines a comprehensive, safety-first refactoring strategy for the FlowState Vue.js productivity application. The plan prioritizes production stability, user experience preservation, an...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -570,7 +570,7 @@
     {
       "id": "doc-63",
       "path": "archive/prd/restoreation-plan/CRITICAL_SYSTEM_RESTORATION_PRD.md",
-      "title": "Pomo-Flow Critical System Restoration PRD",
+      "title": "FlowState Critical System Restoration PRD",
       "description": "- **Document ID**: PRD-RESTORE-001",
       "category": "archive",
       "isArchived": true,
@@ -580,7 +580,7 @@
       "id": "doc-64",
       "path": "archive/prd/rtl-hebrew-support.md",
       "title": "RTL and Hebrew Language Support Implementation PRD",
-      "description": "Enable Pomo-Flow to fully support Hebrew (and other RTL) languages, expanding market reach to Hebrew and Arabic speaking users while maintaining the application's sophisticated user experience and fun...",
+      "description": "Enable FlowState to fully support Hebrew (and other RTL) languages, expanding market reach to Hebrew and Arabic speaking users while maintaining the application's sophisticated user experience and fun...",
       "category": "archive",
       "isArchived": true,
       "color": "#64748b"
@@ -598,7 +598,7 @@
       "id": "doc-66",
       "path": "conflict-systems-resolution/01-user-guide/resolution-workflows.md",
       "title": "Resolution Workflows",
-      "description": "Step-by-step guides for resolving sync conflicts in Pomo-Flow.",
+      "description": "Step-by-step guides for resolving sync conflicts in FlowState.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -607,7 +607,7 @@
       "id": "doc-67",
       "path": "conflict-systems-resolution/01-user-guide/troubleshooting.md",
       "title": "Troubleshooting",
-      "description": "Common issues and solutions for conflict resolution in Pomo-Flow.",
+      "description": "Common issues and solutions for conflict resolution in FlowState.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -616,7 +616,7 @@
       "id": "doc-68",
       "path": "conflict-systems-resolution/01-user-guide/understanding-conflicts.md",
       "title": "Understanding Conflicts",
-      "description": "When you use Pomo-Flow across multiple devices (phone, tablet, computer), your tasks and data synchronize between them. A **sync conflict** occurs when the same task is modified on two different devic...",
+      "description": "When you use FlowState across multiple devices (phone, tablet, computer), your tasks and data synchronize between them. A **sync conflict** occurs when the same task is modified on two different devic...",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -625,7 +625,7 @@
       "id": "doc-69",
       "path": "conflict-systems-resolution/02-developer-guide/api-reference.md",
       "title": "API Reference",
-      "description": "Complete API documentation for Pomo-Flow's conflict resolution system.",
+      "description": "Complete API documentation for FlowState's conflict resolution system.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -634,7 +634,7 @@
       "id": "doc-70",
       "path": "conflict-systems-resolution/02-developer-guide/architecture-overview.md",
       "title": "Architecture Overview",
-      "description": "Pomo-Flow's conflict resolution system is built on a layered architecture designed for PouchDB/CouchDB synchronization with cross-device support.",
+      "description": "FlowState's conflict resolution system is built on a layered architecture designed for PouchDB/CouchDB synchronization with cross-device support.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -643,7 +643,7 @@
       "id": "doc-71",
       "path": "conflict-systems-resolution/02-developer-guide/extending-the-system.md",
       "title": "Extending the System",
-      "description": "How to extend and customize Pomo-Flow's conflict resolution system.",
+      "description": "How to extend and customize FlowState's conflict resolution system.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -652,7 +652,7 @@
       "id": "doc-72",
       "path": "conflict-systems-resolution/02-developer-guide/integration-guide.md",
       "title": "Integration Guide",
-      "description": "How to integrate the conflict resolution system into your Pomo-Flow components and workflows.",
+      "description": "How to integrate the conflict resolution system into your FlowState components and workflows.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -661,7 +661,7 @@
       "id": "doc-73",
       "path": "conflict-systems-resolution/03-implementation-details/conflict-detection.md",
       "title": "Conflict Detection Algorithms",
-      "description": "Deep dive into how Pomo-Flow detects and classifies sync conflicts.",
+      "description": "Deep dive into how FlowState detects and classifies sync conflicts.",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -759,8 +759,8 @@
     {
       "id": "doc-84",
       "path": "conflict-systems-resolution/README.md",
-      "title": "🔍 Pomo-Flow Conflict Resolution System",
-      "description": "Pomo-Flow includes a **sophisticated, enterprise-grade conflict detection and resolution system** that automatically handles synchronization conflicts across multiple devices. This system was designed...",
+      "title": "🔍 FlowState Conflict Resolution System",
+      "description": "FlowState includes a **sophisticated, enterprise-grade conflict detection and resolution system** that automatically handles synchronization conflicts across multiple devices. This system was designed...",
       "category": "conflict-systems-resolution",
       "isArchived": false,
       "color": "#8b5cf6"
@@ -832,7 +832,7 @@
       "id": "doc-92",
       "path": "reports/29.11.25/filtering-system-analysis.md",
       "title": "Comprehensive Filtering System Analysis Report",
-      "description": "The Pomo-Flow filtering system is **functional but has significant issues** that affect user experience and consistency. The system is centralized in the task store but has inconsistencies across view...",
+      "description": "The FlowState filtering system is **functional but has significant issues** that affect user experience and consistency. The system is centralized in the task store but has inconsistencies across view...",
       "category": "reports",
       "isArchived": false,
       "color": "#f59e0b"
@@ -967,7 +967,7 @@
       "id": "doc-107",
       "path": "🐛 debug/sop/css-dark-theme-invisible-text-2025-11-27/css-dark-theme-fix-2025-11-27.md",
       "title": "SOP: CSS Dark Theme Fix",
-      "description": "The Pomo-Flow application UI was completely broken with:",
+      "description": "The FlowState application UI was completely broken with:",
       "category": "debug",
       "isArchived": false,
       "color": "#ef4444"
@@ -993,7 +993,7 @@
     {
       "id": "doc-110",
       "path": "🐛 debug/sop/sidebar-categories-fix-2025-11-28/sidebar-categories-fix-2025-11-28.md",
-      "title": "🐛 Debug SOP - Pomo-Flow Sidebar Categories Issue Resolution",
+      "title": "🐛 Debug SOP - FlowState Sidebar Categories Issue Resolution",
       "description": "Categories (projects) don't appear on the main side panel despite database loading correctly.",
       "category": "debug",
       "isArchived": false,

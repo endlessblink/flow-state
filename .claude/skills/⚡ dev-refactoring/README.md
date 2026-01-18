@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This skill MUST be automatically activated whenever working on refactoring tasks in the PomoFlow project.
+This skill MUST be automatically activated whenever working on refactoring tasks in the FlowState project.
 
 ## Auto-Activation Rules
 

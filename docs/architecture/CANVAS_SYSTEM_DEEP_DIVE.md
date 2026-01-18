@@ -129,7 +129,7 @@ const checkLocks = () => {
          canvasStore.isDragging ||
          deps.resizeState.value.isResizing ||
          deps.isResizeSettling.value ||
-         (window as any).__PomoFlowIsDragging
+         (window as any).__FlowStateIsDragging
 }
 ```
 
@@ -232,7 +232,7 @@ const handleNodeDragStart = (event) => {
 
   // 3. Set global drag locks
   canvasStore.isDragging = true
-  window.__PomoFlowIsDragging = true
+  window.__FlowStateIsDragging = true
 
   // 4. Elevate z-index for groups
   if (isGroup) node.zIndex = 1000 + node.zIndex
@@ -251,7 +251,7 @@ const handleNodeDragStop = (node, draggedNodes) => {
   // Release locks after 300ms + 800ms settling
   setTimeout(() => {
     canvasStore.isDragging = false
-    window.__PomoFlowIsDragging = false
+    window.__FlowStateIsDragging = false
   }, 300)
 
   isDragSettlingRef.value = true
@@ -338,7 +338,7 @@ const patchGroups = (updates: Map<string, GroupPatch>) => {
 const loadFromDatabase = async () => {
   // BUG-169 FIX: Safety guard - don't overwrite existing groups in first 10s
   if (loadedGroups.length === 0 && _rawGroups.value.length > 0) {
-    const timeSinceSession = Date.now() - window.PomoFlowSessionStart
+    const timeSinceSession = Date.now() - window.FlowStateSessionStart
     if (timeSinceSession < 10000) {
       console.warn('BLOCKED empty overwrite during auth race')
       return
@@ -931,12 +931,12 @@ const channel = supabase.channel(`db-changes-${userId.substring(0,8)}`)
 ```typescript
 const onTaskChange = (payload) => {
   // DRIFTING SHIELD: Ignore during drag
-  if (canvas.isDragging || window.__PomoFlowIsDragging) {
+  if (canvas.isDragging || window.__FlowStateIsDragging) {
     return
   }
 
   // Anti-race guard: First 5s of session
-  if (Date.now() - window.PomoFlowSessionStart < 5000) {
+  if (Date.now() - window.FlowStateSessionStart < 5000) {
     return
   }
 
@@ -1132,9 +1132,9 @@ const isLocked = () => {
   return isNodeDragging.value ||
          isDragSettlingRef.value ||
          canvasStore.isDragging ||
-         window.__PomoFlowIsDragging ||
-         window.__PomoFlowIsResizing ||
-         window.__PomoFlowIsSettling
+         window.__FlowStateIsDragging ||
+         window.__FlowStateIsResizing ||
+         window.__FlowStateIsSettling
 }
 
 // In applyRemoteChanges:
@@ -1261,7 +1261,7 @@ GroupNodeSimple.vue re-renders
 
 ## Summary
 
-The PomoFlow canvas system is a sophisticated multi-layered architecture that handles:
+The FlowState canvas system is a sophisticated multi-layered architecture that handles:
 
 1. **Position Sync**: Bidirectional sync with Supabase using absolute coordinates, with relative coordinate conversion for Vue Flow rendering
 2. **Group Nesting**: Recursive parent-child relationships with proper z-index layering and containment detection

@@ -10,7 +10,7 @@
  * 3. Has TTL cleanup for stale entries (fallback)
  */
 
-const STORAGE_KEY = 'pomoflow-deleted-groups'
+const STORAGE_KEY = 'flowstate-deleted-groups'
 const TTL_MS = 60000 // 60 seconds fallback TTL (was 10s, now more generous)
 
 interface DeletedGroupEntry {

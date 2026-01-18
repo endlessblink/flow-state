@@ -349,7 +349,7 @@ const _handleVueDraggableChange = (_evt: unknown) => {
   
 }
 
-// Native HTML5 Drag-Drop handlers for inbox → calendar (per PomoFlow Development Prompt)
+// Native HTML5 Drag-Drop handlers for inbox → calendar (per FlowState Development Prompt)
 // CRITICAL: @dragover.prevent is required or @drop never fires
 // These wrap the composable handlers with proper event handling
 const onDragOver = (e: DragEvent, slot: TimeSlot) => {

@@ -157,7 +157,9 @@ const {
   showEditModal,
   selectedTask,
   showQuickTaskCreate,
-  pendingTaskStatus,
+  pendingTaskColumnKey,
+  pendingTaskProjectId,
+  pendingTaskViewType,
   showConfirmModal,
   taskToDelete,
   openEditModal,
@@ -180,7 +182,7 @@ const {
 const {
   selectTask: handleSelectTask,
   startTimer: handleStartTimer,
-  quickTaskCreate,
+  createTaskForColumn,
   deleteTask: doDeleteTask,
   moveTask: handleMoveTask,
   addSubtask: _handleAddSubtaskFromMenu
@@ -220,8 +222,8 @@ onMounted(() => {
 })
 
 // Task management methods (wrappers for composables to match template emitters)
-const handleAddTask = (status: string) => {
-  openQuickTaskCreate(status)
+const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' }) => {
+  openQuickTaskCreate(payload.columnKey, payload.projectId, payload.viewType)
 }
 
 const handleEditTask = (taskId: string) => {
@@ -236,7 +238,13 @@ const handleDeleteTask = (taskId: string) => {
 }
 
 const handleQuickTaskCreate = async (title: string, description: string) => {
-  const newTask = await quickTaskCreate(title, description, pendingTaskStatus.value, taskStore.activeProjectId || undefined)
+  const newTask = await createTaskForColumn(
+    title,
+    description,
+    pendingTaskColumnKey.value,
+    pendingTaskViewType.value,
+    pendingTaskProjectId.value
+  )
   if (newTask) {
     closeQuickTaskCreate()
   }

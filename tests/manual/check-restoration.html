@@ -58,7 +58,7 @@
     <div class="container">
         <h1>🔍 Check Backup Restoration Status</h1>
         <button onclick="checkRestoration()">🔄 Check Restoration Status</button>
-        <button onclick="goToApp()">📱 Open Pomo-Flow App</button>
+        <button onclick="goToApp()">📱 Open FlowState App</button>
         <div id="status"></div>
         <div id="tasks"></div>
     </div>
@@ -73,7 +73,7 @@
 
             try {
                 // Check localStorage for backup data
-                const backupData = localStorage.getItem('pomo-flow-user-backup')
+                const backupData = localStorage.getItem('flow-state-user-backup')
 
                 if (backupData) {
                     const tasks = JSON.parse(backupData)

@@ -498,7 +498,7 @@ export const useTaskClipboard = () => {
       task.description ? `\n${task.description}` : '',
       task.priority ? `\nPriority: ${task.priority}` : '',
       task.dueDate ? `\nDue: ${new Date(task.dueDate).toLocaleDateString()}` : '',
-      `\n\nCopied from PomoFlow`
+      `\n\nCopied from FlowState`
     ].filter(Boolean).join('\n')
 
     try {
@@ -550,7 +550,7 @@ export const useTaskClipboard = () => {
   // Global paste handler
   const handlePaste = async (event: ClipboardEvent) => {
     const pastedText = event.clipboardData?.getData('text')
-    if (pastedText && pastedText.includes('Copied from PomoFlow')) {
+    if (pastedText && pastedText.includes('Copied from FlowState')) {
       event.preventDefault()
       await pasteTask()
     }

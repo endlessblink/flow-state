@@ -411,7 +411,7 @@ if (process.env.NODE_ENV === 'development') {
 ### Quick Health Check
 ```javascript
 const quickHealthCheck = () => {
-  console.group('🔍 PomoFlow Health Check')
+  console.group('🔍 FlowState Health Check')
 
   // Check Vue DevTools
   const hasDevTools = !!window.__VUE_DEVTOOLS_GLOBAL_HOOK__

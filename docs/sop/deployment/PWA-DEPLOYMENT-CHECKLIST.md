@@ -2,14 +2,14 @@
 
 **Document Type**: Deployment Verification Procedures
 **Target Environment**: VPS (Ubuntu 22.04+, Nginx, SSL)
-**Application**: Pomo-Flow PWA
+**Application**: FlowState PWA
 **Last Updated**: January 7, 2026
 
 ---
 
 ## Overview
 
-This document provides executable checklists for deploying Pomo-Flow PWA to production. Unlike database migrations, PWA deployments require verification of service workers, caching headers, SSL configuration, and installability criteria.
+This document provides executable checklists for deploying FlowState PWA to production. Unlike database migrations, PWA deployments require verification of service workers, caching headers, SSL configuration, and installability criteria.
 
 **Deployment Stack:**
 - Ubuntu 22.04+ VPS
@@ -61,7 +61,7 @@ fi
 | Check | Command/Action | Expected Result |
 |-------|----------------|-----------------|
 | Manifest exists | `ls dist/manifest.webmanifest` | File exists |
-| Name correct | `jq '.name' dist/manifest.webmanifest` | "Pomo-Flow" |
+| Name correct | `jq '.name' dist/manifest.webmanifest` | "FlowState" |
 | Start URL valid | `jq '.start_url' dist/manifest.webmanifest` | "/" or "/?source=pwa" |
 | Display mode | `jq '.display' dist/manifest.webmanifest` | "standalone" |
 | Icons present | `jq '.icons \| length' dist/manifest.webmanifest` | >= 4 icons |
@@ -257,16 +257,16 @@ bash scripts/validate-manifest.sh
 
 # 2. On VPS - Create backup
 ssh deploy@your-vps.com
-sudo cp -r /var/www/pomoflow/dist /var/www/pomoflow/dist.backup.$(date +%Y%m%d_%H%M%S)
+sudo cp -r /var/www/flowstate/dist /var/www/flowstate/dist.backup.$(date +%Y%m%d_%H%M%S)
 
 # 3. Upload new build (via rsync or GitHub Actions)
-rsync -avz --delete dist/ deploy@your-vps.com:/var/www/pomoflow/dist/
+rsync -avz --delete dist/ deploy@your-vps.com:/var/www/flowstate/dist/
 
 # 4. Verify nginx config (if updated)
 sudo nginx -t
 
 # 5. Test SSL
-openssl s_client -connect pomoflow.yourdomain.com:443 -servername pomoflow.yourdomain.com < /dev/null 2>/dev/null | openssl x509 -noout -dates
+openssl s_client -connect flowstate.yourdomain.com:443 -servername flowstate.yourdomain.com < /dev/null 2>/dev/null | openssl x509 -noout -dates
 
 # 6. Reload nginx
 sudo systemctl reload nginx
@@ -282,10 +282,10 @@ sudo systemctl reload nginx
 
 | Check | Command/Action | Expected Result |
 |-------|----------------|-----------------|
-| HTTPS redirect works | `curl -I http://pomoflow.yourdomain.com` | 301/302 redirect to HTTPS |
-| SSL certificate valid | `curl -vI https://pomoflow.yourdomain.com 2>&1 \| grep "SSL certificate verify ok"` | Verification passes |
-| Certificate not expiring soon | `echo \| openssl s_client -servername pomoflow.yourdomain.com -connect pomoflow.yourdomain.com:443 2>/dev/null \| openssl x509 -noout -dates` | Expires > 14 days |
-| HSTS header present | `curl -sI https://pomoflow.yourdomain.com \| grep -i strict-transport` | Header present |
+| HTTPS redirect works | `curl -I http://flowstate.yourdomain.com` | 301/302 redirect to HTTPS |
+| SSL certificate valid | `curl -vI https://flowstate.yourdomain.com 2>&1 \| grep "SSL certificate verify ok"` | Verification passes |
+| Certificate not expiring soon | `echo \| openssl s_client -servername flowstate.yourdomain.com -connect flowstate.yourdomain.com:443 2>/dev/null \| openssl x509 -noout -dates` | Expires > 14 days |
+| HSTS header present | `curl -sI https://flowstate.yourdomain.com \| grep -i strict-transport` | Header present |
 | No mixed content | Browser dev tools | No console warnings |
 
 **SSL Verification Script:**
@@ -293,7 +293,7 @@ sudo systemctl reload nginx
 #!/bin/bash
 # scripts/verify-ssl.sh
 
-DOMAIN="pomoflow.yourdomain.com"
+DOMAIN="flowstate.yourdomain.com"
 
 echo "=== SSL/HTTPS Verification for $DOMAIN ==="
 
@@ -348,18 +348,18 @@ echo "=== SSL verification complete ==="
 
 | Check | Command | Expected Result |
 |-------|---------|-----------------|
-| HTML no-cache | `curl -sI https://pomoflow.yourdomain.com/ \| grep -i cache-control` | no-cache or max-age=0 |
-| JS immutable cache | `curl -sI https://pomoflow.yourdomain.com/assets/[hash].js \| grep -i cache-control` | max-age=31536000, immutable |
-| CSS immutable cache | `curl -sI https://pomoflow.yourdomain.com/assets/[hash].css \| grep -i cache-control` | max-age=31536000, immutable |
-| SW no-cache | `curl -sI https://pomoflow.yourdomain.com/sw.js \| grep -i cache-control` | no-store or no-cache |
-| Manifest cached | `curl -sI https://pomoflow.yourdomain.com/manifest.webmanifest \| grep -i cache-control` | max-age < 86400 |
+| HTML no-cache | `curl -sI https://flowstate.yourdomain.com/ \| grep -i cache-control` | no-cache or max-age=0 |
+| JS immutable cache | `curl -sI https://flowstate.yourdomain.com/assets/[hash].js \| grep -i cache-control` | max-age=31536000, immutable |
+| CSS immutable cache | `curl -sI https://flowstate.yourdomain.com/assets/[hash].css \| grep -i cache-control` | max-age=31536000, immutable |
+| SW no-cache | `curl -sI https://flowstate.yourdomain.com/sw.js \| grep -i cache-control` | no-store or no-cache |
+| Manifest cached | `curl -sI https://flowstate.yourdomain.com/manifest.webmanifest \| grep -i cache-control` | max-age < 86400 |
 
 **Caching Headers Script:**
 ```bash
 #!/bin/bash
 # scripts/verify-caching.sh
 
-DOMAIN="https://pomoflow.yourdomain.com"
+DOMAIN="https://flowstate.yourdomain.com"
 
 echo "=== Cache Header Verification ==="
 
@@ -410,7 +410,7 @@ echo "=== Cache header verification complete ==="
 | Manifest linked | Browser DevTools > Application > Manifest | Manifest detected |
 | Service worker registered | DevTools > Application > Service Workers | SW active |
 | Install prompt available | Chrome Desktop/Android | "Install app" option shows |
-| Lighthouse PWA score | `npx lighthouse https://pomoflow.yourdomain.com --only-categories=pwa --output=json` | Score >= 90 |
+| Lighthouse PWA score | `npx lighthouse https://flowstate.yourdomain.com --only-categories=pwa --output=json` | Score >= 90 |
 | iOS Add to Home Screen | Safari > Share > Add to Home Screen | Works correctly |
 
 **PWA Verification Script (Lighthouse):**
@@ -418,7 +418,7 @@ echo "=== Cache header verification complete ==="
 #!/bin/bash
 # scripts/verify-pwa.sh
 
-DOMAIN="https://pomoflow.yourdomain.com"
+DOMAIN="https://flowstate.yourdomain.com"
 OUTPUT_DIR="lighthouse-reports"
 
 mkdir -p "$OUTPUT_DIR"
@@ -471,7 +471,7 @@ fi
 // tests/smoke/pwa-smoke.spec.js
 import { test, expect } from '@playwright/test';
 
-const PROD_URL = process.env.PROD_URL || 'https://pomoflow.yourdomain.com';
+const PROD_URL = process.env.PROD_URL || 'https://flowstate.yourdomain.com';
 
 test.describe('PWA Smoke Tests', () => {
   test('app loads successfully', async ({ page }) => {
@@ -484,7 +484,7 @@ test.describe('PWA Smoke Tests', () => {
     const response = await page.goto(`${PROD_URL}/manifest.webmanifest`);
     expect(response.status()).toBe(200);
     const manifest = await response.json();
-    expect(manifest.name).toBe('Pomo-Flow');
+    expect(manifest.name).toBe('FlowState');
     expect(manifest.display).toBe('standalone');
     expect(manifest.icons.length).toBeGreaterThan(0);
   });
@@ -538,11 +538,11 @@ test.describe('PWA Smoke Tests', () => {
 ```bash
 # On VPS
 # 1. Identify latest backup
-ls -la /var/www/pomoflow/dist.backup.*
+ls -la /var/www/flowstate/dist.backup.*
 
 # 2. Swap to backup
-sudo mv /var/www/pomoflow/dist /var/www/pomoflow/dist.failed.$(date +%Y%m%d_%H%M%S)
-sudo mv /var/www/pomoflow/dist.backup.[latest] /var/www/pomoflow/dist
+sudo mv /var/www/flowstate/dist /var/www/flowstate/dist.failed.$(date +%Y%m%d_%H%M%S)
+sudo mv /var/www/flowstate/dist.backup.[latest] /var/www/flowstate/dist
 
 # 3. Clear any nginx cache
 sudo rm -rf /var/cache/nginx/*
@@ -551,7 +551,7 @@ sudo rm -rf /var/cache/nginx/*
 sudo systemctl reload nginx
 
 # 5. Verify rollback
-curl -I https://pomoflow.yourdomain.com
+curl -I https://flowstate.yourdomain.com
 ```
 
 ### Service Worker Rollback (Force Update)
@@ -619,7 +619,7 @@ location /health {
 #!/bin/bash
 # scripts/health-check.sh
 
-DOMAIN="https://pomoflow.yourdomain.com"
+DOMAIN="https://flowstate.yourdomain.com"
 TIMEOUT=10
 
 echo "=== Health Check ==="
@@ -713,13 +713,13 @@ if (import.meta.env.PROD) {
 
 | Monitor Name | Type | URL | Interval | Alert |
 |-------------|------|-----|----------|-------|
-| PomoFlow Main | HTTP(s) | https://pomoflow.yourdomain.com | 5 min | Email + Slack |
-| PomoFlow Health | HTTP(s) | https://pomoflow.yourdomain.com/health | 5 min | Email |
-| PomoFlow SW | HTTP(s) | https://pomoflow.yourdomain.com/sw.js | 15 min | Email |
-| SSL Certificate | SSL | pomoflow.yourdomain.com | 1 day | Email (14 day warning) |
+| FlowState Main | HTTP(s) | https://flowstate.yourdomain.com | 5 min | Email + Slack |
+| FlowState Health | HTTP(s) | https://flowstate.yourdomain.com/health | 5 min | Email |
+| FlowState SW | HTTP(s) | https://flowstate.yourdomain.com/sw.js | 15 min | Email |
+| SSL Certificate | SSL | flowstate.yourdomain.com | 1 day | Email (14 day warning) |
 
 **Status Page:**
-- Create public status page: `status.pomoflow.yourdomain.com`
+- Create public status page: `status.flowstate.yourdomain.com`
 - Include all monitors
 - Enable incident management
 
@@ -744,7 +744,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v10
         with:
           urls: |
-            https://pomoflow.yourdomain.com/
+            https://flowstate.yourdomain.com/
           uploadArtifacts: true
           temporaryPublicStorage: true
 
@@ -813,7 +813,7 @@ jobs:
 - [ ] 2. Upload build artifacts to VPS
 - [ ] 3. Verify nginx config: `sudo nginx -t`
 - [ ] 4. Reload nginx: `sudo systemctl reload nginx`
-- [ ] 5. Verify site loads: `curl -I https://pomoflow.yourdomain.com`
+- [ ] 5. Verify site loads: `curl -I https://flowstate.yourdomain.com`
 ```
 
 ### Post-Deploy (Within 15 Minutes)
@@ -875,21 +875,21 @@ jobs:
 ## Appendix: Nginx Configuration Reference
 
 ```nginx
-# /etc/nginx/sites-available/pomoflow
+# /etc/nginx/sites-available/flowstate
 
 server {
     listen 80;
-    server_name pomoflow.yourdomain.com;
+    server_name flowstate.yourdomain.com;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name pomoflow.yourdomain.com;
+    server_name flowstate.yourdomain.com;
 
     # SSL Configuration
-    ssl_certificate /etc/letsencrypt/live/pomoflow.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/pomoflow.yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/flowstate.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/flowstate.yourdomain.com/privkey.pem;
     ssl_session_timeout 1d;
     ssl_session_cache shared:SSL:50m;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -902,7 +902,7 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
 
-    root /var/www/pomoflow/dist;
+    root /var/www/flowstate/dist;
     index index.html;
 
     # Health check endpoint
@@ -970,7 +970,7 @@ on:
 env:
   VPS_HOST: ${{ secrets.VPS_HOST }}
   VPS_USER: deploy
-  DEPLOY_PATH: /var/www/pomoflow/dist
+  DEPLOY_PATH: /var/www/flowstate/dist
 
 jobs:
   build:
@@ -1049,7 +1049,7 @@ jobs:
       - name: Health check
         run: |
           sleep 10
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://pomoflow.yourdomain.com)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://flowstate.yourdomain.com)
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Health check failed: HTTP $HTTP_CODE"
             exit 1
@@ -1058,8 +1058,8 @@ jobs:
 
       - name: Verify PWA resources
         run: |
-          curl -sf https://pomoflow.yourdomain.com/sw.js > /dev/null
-          curl -sf https://pomoflow.yourdomain.com/manifest.webmanifest > /dev/null
+          curl -sf https://flowstate.yourdomain.com/sw.js > /dev/null
+          curl -sf https://flowstate.yourdomain.com/manifest.webmanifest > /dev/null
           echo "PWA resources verified"
 
   notify:

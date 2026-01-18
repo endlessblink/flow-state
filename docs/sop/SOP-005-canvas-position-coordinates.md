@@ -2,7 +2,7 @@
 
 ## Overview
 
-This SOP documents the coordinate system used for canvas task and group positions in PomoFlow, and the critical distinction between **absolute** and **relative** coordinates.
+This SOP documents the coordinate system used for canvas task and group positions in FlowState, and the critical distinction between **absolute** and **relative** coordinates.
 
 ## The Problem (TASK-288)
 

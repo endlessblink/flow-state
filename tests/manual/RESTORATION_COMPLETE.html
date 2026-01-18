@@ -97,7 +97,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Pomo-Flow Backup Restoration Verification</h1>
+        <h1>🔧 FlowState Backup Restoration Verification</h1>
 
         <div class="success">
             <strong>✅ RESTORATION INFRASTRUCTURE READY</strong><br>
@@ -110,7 +110,7 @@
             🔄 STEP 1: Restore Backup Now
         </button>
         <button class="big-button" onclick="openMainApp()">
-            📱 STEP 2: Open Pomo-Flow App
+            📱 STEP 2: Open FlowState App
         </button>
 
         <div id="status"></div>
@@ -142,7 +142,7 @@
                 `;
 
                 // Step 2: Store in localStorage
-                localStorage.setItem('pomo-flow-user-backup', JSON.stringify(tasks));
+                localStorage.setItem('flow-state-user-backup', JSON.stringify(tasks));
 
                 statusDiv.innerHTML += `
                     <div class="success">
@@ -192,7 +192,7 @@
                 statusDiv.innerHTML += `
                     <div class="success" style="margin-top: 20px;">
                         <strong>🎉 RESTORATION COMPLETE!</strong><br>
-                        ✅ ${tasks.length} tasks ready to be loaded in Pomo-Flow<br>
+                        ✅ ${tasks.length} tasks ready to be loaded in FlowState<br>
                         📱 Open the main app to see your restored tasks
                     </div>
                 `;

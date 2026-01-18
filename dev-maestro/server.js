@@ -32,6 +32,9 @@ const broadcastLog = (message) => {
 // Enable CORS
 app.use(cors());
 
+// Handle favicon requests (prevents CSP errors)
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Serve static files from current directory
 app.use(express.static(__dirname));
 
@@ -2375,8 +2378,10 @@ Instructions:
 Focus only on this task. Other tasks are being handled by other specialists.
 You are working in an isolated git worktree. Your changes will be reviewed before merging.`;
 
+    console.log(`[Orchestrator] Spawning Claude agent for task ${task.id} in ${worktreePath}`);
+
     const agentProcess = spawn('claude', [
-        '--permission-mode', 'bypassPermissions',
+        '--dangerously-skip-permissions',
         '--output-format', 'stream-json',
         '--max-turns', '30',
         '-p', prompt
@@ -2386,14 +2391,20 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
         env: { ...process.env }  // Preserve API key!
     });
 
-    // Close stdin immediately to prevent hanging
-    agentProcess.stdin.end();
+    // Close stdin after a brief delay to let Claude initialize
+    setTimeout(() => {
+        if (agentProcess.stdin && !agentProcess.stdin.destroyed) {
+            agentProcess.stdin.end();
+        }
+    }, 500);
 
     subAgentData.process = agentProcess;
+    subAgentData.stderrBuffer = '';  // Track stderr for debugging
 
     agentProcess.stdout.on('data', (data) => {
         const output = data.toString();
         subAgentData.output.push(output);
+        console.log(`[Orchestrator] Task ${task.id} stdout: ${output.slice(0, 200)}...`);
 
         // Send periodic summaries instead of raw output
         if (subAgentData.output.length % 10 === 0) {
@@ -2408,11 +2419,19 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
     agentProcess.stderr.on('data', (data) => {
         const error = data.toString();
         subAgentData.output.push(`[ERROR] ${error}`);
+        subAgentData.stderrBuffer += error;
+        console.log(`[Orchestrator] Task ${task.id} stderr: ${error}`);
     });
 
     agentProcess.on('close', (code) => {
         subAgentData.endTime = Date.now();
         const stats = getOrchestrationStats(orch);
+        const duration = subAgentData.endTime - subAgentData.startTime;
+
+        console.log(`[Orchestrator] Task ${task.id} closed with code ${code} after ${duration}ms`);
+        if (code !== 0 && subAgentData.stderrBuffer) {
+            console.log(`[Orchestrator] Task ${task.id} stderr: ${subAgentData.stderrBuffer}`);
+        }
 
         if (code === 0) {
             subAgentData.status = 'completed';

@@ -1,4 +1,4 @@
-# PomoFlow Undo/Redo Migration Plan
+# FlowState Undo/Redo Migration Plan
 
 ## Phase-by-Phase Implementation Strategy
 
@@ -129,7 +129,7 @@ export const useUnifiedUndoRedo = () => {
     clear,
     reset,
 
-    // PomoFlow specific
+    // FlowState specific
     saveState,
     batchOperation,
 
@@ -911,7 +911,7 @@ module.exports = {
 
 ## Undo/Redo System
 
-PomoFlow uses a unified undo/redo system based on VueUse's `useManualRefHistory`.
+FlowState uses a unified undo/redo system based on VueUse's `useManualRefHistory`.
 
 ### Key Points:
 - **Single System**: Only `useUnifiedUndoRedo()` is used throughout the app
@@ -971,4 +971,4 @@ If issues arise:
 - [ ] No unexpected state corruption
 - [ ] Smooth performance under heavy usage
 
-This migration plan provides a structured, safe approach to unifying PomoFlow's undo/redo system with minimal risk and maximum benefit.
+This migration plan provides a structured, safe approach to unifying FlowState's undo/redo system with minimal risk and maximum benefit.

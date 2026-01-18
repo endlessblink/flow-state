@@ -26,7 +26,7 @@ export function useAppInitialization() {
     onMounted(async () => {
         // MARK: SESSION START for stability guards
         if (typeof window !== 'undefined') {
-            (window as any).PomoFlowSessionStart = Date.now()
+            (window as any).FlowStateSessionStart = Date.now()
         }
 
 
@@ -87,9 +87,9 @@ export function useAppInitialization() {
 
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
             const isLocked = canvas.isDragging || (typeof window !== 'undefined' && (
-                (window as any).__PomoFlowIsDragging ||
-                (window as any).__PomoFlowIsResizing ||
-                (window as any).__PomoFlowIsSettling
+                (window as any).__FlowStateIsDragging ||
+                (window as any).__FlowStateIsResizing ||
+                (window as any).__FlowStateIsSettling
             ))
 
             if (isLocked) {
@@ -114,9 +114,9 @@ export function useAppInitialization() {
 
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
             const isLocked = canvas.isDragging || (typeof window !== 'undefined' && (
-                (window as any).__PomoFlowIsDragging ||
-                (window as any).__PomoFlowIsResizing ||
-                (window as any).__PomoFlowIsSettling
+                (window as any).__FlowStateIsDragging ||
+                (window as any).__FlowStateIsResizing ||
+                (window as any).__FlowStateIsSettling
             ))
 
             if (isLocked) {
@@ -144,7 +144,7 @@ export function useAppInitialization() {
 
             if (isHardDelete || isSoftDelete) {
                 // Extra safety: Check session start time
-                const sessionStart = (window as any).PomoFlowSessionStart || 0
+                const sessionStart = (window as any).FlowStateSessionStart || 0
                 const timeSinceSessionStart = Date.now() - sessionStart
 
                 // Don't process deletions in the first 5 seconds of the session (anti-race guard)

@@ -8,10 +8,10 @@
 // Keys that should NOT persist in guest mode (user data)
 const GUEST_EPHEMERAL_KEYS = [
   // Canvas
-  'pomoflow-guest-groups',
+  'flowstate-guest-groups',
   'canvas-viewport',
-  'pomoflow-canvas-has-initial-fit',
-  'pomoflow-canvas-locks',
+  'flowstate-canvas-has-initial-fit',
+  'flowstate-canvas-locks',
 
   // Local auth
   'flow-state-local-user',

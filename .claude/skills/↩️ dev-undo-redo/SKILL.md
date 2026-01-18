@@ -3,13 +3,13 @@ name: dev-undo-redo
 description: FIX conflicting undo/redo implementations with VueUse + Pinia and DESIGN robust patterns for complex applications. Use for both stabilizing existing systems and implementing advanced undo/redo architecture.
 ---
 
-# PomoFlow Undo/Redo Unification
+# FlowState Undo/Redo Unification
 
 ## Instructions
 
 ### **MANDATORY: Use VueUse + Pinia System Only**
 
-**ALWAYS** use this exact pattern for PomoFlow undo/redo:
+**ALWAYS** use this exact pattern for FlowState undo/redo:
 
 ```typescript
 import { useManualRefHistory } from '@vueuse/core'
@@ -75,7 +75,7 @@ const { canUndo, canRedo, undo, redo } = useUnifiedUndoRedo()
 </template>
 ```
 
-This skill ensures ONE consistent undo/redo system across PomoFlow, eliminating all conflicts and providing reliable functionality.
+This skill ensures ONE consistent undo/redo system across FlowState, eliminating all conflicts and providing reliable functionality.
 
 ---
 
@@ -197,7 +197,7 @@ Use Command Pattern and advanced architecture when:
 ### When to Use VueUse + Pinia
 
 Use the VueUse approach (from primary section above) when:
-- Fixing existing PomoFlow undo/redo issues
+- Fixing existing FlowState undo/redo issues
 - Working with Vue 3 + Pinia stack
 - Need rapid implementation with proven patterns
 - Managing state within single store or related stores

@@ -20,7 +20,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     // Initialize hasInitialFit from localStorage on store creation
     const initHasInitialFit = () => {
         try {
-            const saved = localStorage.getItem('pomoflow-canvas-has-initial-fit')
+            const saved = localStorage.getItem('flowstate-canvas-has-initial-fit')
             if (saved) {
                 const parsed = JSON.parse(saved)
                 // Only restore if within 5 minutes (session still active)
@@ -149,7 +149,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     const setHasInitialFit = (value: boolean) => {
         hasInitialFit.value = value
         viewportInitializedAt.value = value ? Date.now() : null
-        localStorage.setItem('pomoflow-canvas-has-initial-fit', JSON.stringify({
+        localStorage.setItem('flowstate-canvas-has-initial-fit', JSON.stringify({
             value,
             timestamp: Date.now()
         }))
@@ -159,7 +159,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     const resetHasInitialFit = () => {
         hasInitialFit.value = false
         viewportInitializedAt.value = null
-        localStorage.removeItem('pomoflow-canvas-has-initial-fit')
+        localStorage.removeItem('flowstate-canvas-has-initial-fit')
     }
 
     // Display preference toggles

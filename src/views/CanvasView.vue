@@ -26,7 +26,7 @@
     - Canvas viewport controls
 
   These rules are based on analysis of previous refactoring failures in
-  old-pomo-flow-worktrees where Vue Flow extraction caused complete
+  old-flow-state-worktrees where Vue Flow extraction caused complete
   breakage of canvas functionality.
 -->
 
@@ -287,6 +287,7 @@ import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
 import type { CanvasGroup } from '@/types/canvas'
+import type { Task } from '@/types/tasks'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -295,7 +296,8 @@ const modalsStore = useCanvasModalsStore()
 const contextMenuStore = useCanvasContextMenuStore()
 
 // Register custom node types
-const nodeTypes: Record<string, unknown> = {
+// @ts-ignore - Vue Flow types are strict about NodeProps
+const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }
@@ -380,7 +382,7 @@ const handleNodeDoubleClick = ({ node }: NodeMouseEvent) => {
         handleEditTask(node.data.task)
     }
 }
-const handleTaskContextMenu = (event: MouseEvent, task: Record<string, unknown>) => {
+const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
     if (event) event.preventDefault()
     // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
     window.dispatchEvent(new CustomEvent('task-context-menu', {
@@ -388,7 +390,7 @@ const handleTaskContextMenu = (event: MouseEvent, task: Record<string, unknown>)
     }))
 }
 
-const handleSectionContextMenu = (event: MouseEvent, section: Record<string, unknown>) => {
+const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
     console.debug('[BUG-251] handleSectionContextMenu called', {
         sectionId: section?.id,
         sectionName: section?.name,

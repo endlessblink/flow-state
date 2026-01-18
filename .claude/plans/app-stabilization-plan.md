@@ -183,7 +183,7 @@ npm run dev
 npm run kill && npm run dev
 
 # 2. Check sync status
-curl -s -u admin:pomoflow-2024 "http://84.46.253.137:5984/pomoflow-tasks" | jq .doc_count
+curl -s -u admin:flowstate-2024 "http://84.46.253.137:5984/flowstate-tasks" | jq .doc_count
 
 # Instance B - Focus on CanvasView
 # 1. Check current TS errors

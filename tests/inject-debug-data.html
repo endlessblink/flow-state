@@ -16,7 +16,7 @@
     </style>
 </head>
 <body>
-    <h1>Pomo-Flow Debug Data Injection</h1>
+    <h1>FlowState Debug Data Injection</h1>
 
     <div id="status" class="status info">Ready to inject debug data...</div>
 
@@ -24,19 +24,19 @@
         <button onclick="injectSampleData()">Inject Sample Tasks & Projects</button>
         <button onclick="checkExistingData()">Check Existing Data</button>
         <button onclick="clearAllData()">Clear All Data</button>
-        <button onclick="openPomoFlow()">Open Pomo-Flow</button>
+        <button onclick="openFlowState()">Open FlowState</button>
     </div>
 
     <div id="output"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script>
-        // Configure localforage to match Pomo-Flow's configuration
+        // Configure localforage to match FlowState's configuration
         localforage.config({
-            name: 'pomo-flow',
+            name: 'flow-state',
             version: 3,
-            storeName: 'pomo_flow_data',
-            description: 'Pomo-Flow productivity data storage'
+            storeName: 'flow_state_data',
+            description: 'FlowState productivity data storage'
         });
 
         const DB_KEYS = {
@@ -289,7 +289,7 @@
                 await localforage.removeItem(DB_KEYS.HIDE_DONE_TASKS);
                 await localforage.removeItem(DB_KEYS.VERSION);
 
-                log('All Pomo-Flow data cleared from IndexedDB');
+                log('All FlowState data cleared from IndexedDB');
                 updateStatus('All data cleared', 'success');
 
             } catch (error) {
@@ -298,7 +298,7 @@
             }
         }
 
-        function openPomoFlow() {
+        function openFlowState() {
             window.open('http://localhost:5547', '_blank');
         }
 

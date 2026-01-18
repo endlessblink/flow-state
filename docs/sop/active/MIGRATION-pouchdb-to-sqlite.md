@@ -323,7 +323,7 @@ If issues occur after migration:
 1. **Restore from Golden Backup**:
    ```javascript
    // Check if golden backup exists
-   const backup = localStorage.getItem('pomo_flow_golden_backup');
+   const backup = localStorage.getItem('flow_state_golden_backup');
    if (backup) {
        const data = JSON.parse(backup);
        console.log('Golden backup has', data.tasks?.length, 'tasks');

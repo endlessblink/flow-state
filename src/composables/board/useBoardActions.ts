@@ -1,9 +1,48 @@
-import type { useTaskStore } from '@/stores/tasks'
+import type { useTaskStore, Task } from '@/stores/tasks'
 import type { useTimerStore } from '@/stores/timer'
+import type { BoardViewType } from './useBoardModals'
 
 interface BoardActionsDependencies {
     taskStore: ReturnType<typeof useTaskStore>
     timerStore: ReturnType<typeof useTimerStore>
+}
+
+/**
+ * Convert date column keys to actual date strings
+ */
+function getDateFromColumnKey(key: string): string | undefined {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    switch (key) {
+        case 'today':
+            return today.toISOString().split('T')[0]
+        case 'tomorrow': {
+            const tomorrow = new Date(today)
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            return tomorrow.toISOString().split('T')[0]
+        }
+        case 'overdue':
+            // For overdue column, set to today (the task is being created as "due today")
+            return today.toISOString().split('T')[0]
+        case 'thisWeek': {
+            // End of current week (Sunday)
+            const endOfWeek = new Date(today)
+            const daysUntilSunday = 7 - today.getDay()
+            endOfWeek.setDate(today.getDate() + daysUntilSunday)
+            return endOfWeek.toISOString().split('T')[0]
+        }
+        case 'later': {
+            // Two weeks from today
+            const later = new Date(today)
+            later.setDate(today.getDate() + 14)
+            return later.toISOString().split('T')[0]
+        }
+        case 'inbox':
+        case 'noDate':
+        default:
+            return undefined
+    }
 }
 
 export function useBoardActions(deps: BoardActionsDependencies) {
@@ -40,6 +79,41 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         )
     }
 
+    /**
+     * Create a task with correct field based on view type
+     * - Status view: sets status field
+     * - Priority view: sets priority field
+     * - Date view: sets dueDate field
+     */
+    const createTaskForColumn = async (
+        title: string,
+        description: string,
+        columnKey: string,
+        viewType: BoardViewType,
+        projectId?: string
+    ) => {
+        const taskData: Partial<Task> = {
+            title,
+            description,
+            projectId,
+            status: 'planned' // default status
+        }
+
+        // Set correct field based on view type
+        if (viewType === 'status') {
+            taskData.status = columnKey as Task['status']
+        } else if (viewType === 'priority') {
+            taskData.priority = columnKey === 'no_priority' ? undefined : columnKey as Task['priority']
+        } else if (viewType === 'date') {
+            taskData.dueDate = getDateFromColumnKey(columnKey)
+        }
+
+        return handleWithError(
+            () => taskStore.createTaskWithUndo(taskData),
+            '❌ Error creating task:'
+        )
+    }
+
     const deleteTask = async (taskId: string) => {
         return handleWithError(
             () => taskStore.deleteTaskWithUndo(taskId),
@@ -65,6 +139,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         selectTask,
         startTimer,
         quickTaskCreate,
+        createTaskForColumn,
         deleteTask,
         moveTask,
         addSubtask

@@ -79,7 +79,7 @@ export interface SyncQueueEntry {
     attempts: number
 }
 
-export class PomoFlowOfflineDB extends Dexie {
+export class FlowStateOfflineDB extends Dexie {
     tasks!: EntityTable<OfflineTask, 'id'>
     projects!: EntityTable<OfflineProject, 'id'>
     groups!: EntityTable<OfflineGroup, 'id'>
@@ -87,7 +87,7 @@ export class PomoFlowOfflineDB extends Dexie {
     syncQueue!: EntityTable<SyncQueueEntry, 'id'>
 
     constructor() {
-        super('PomoFlowOfflineDB')
+        super('FlowStateOfflineDB')
         this.version(1).stores({
             tasks: 'id, status, projectId, dueDate, syncStatus, updatedAt, isDeleted',
             projects: 'id, syncStatus, updatedAt, isDeleted',
@@ -98,10 +98,10 @@ export class PomoFlowOfflineDB extends Dexie {
     }
 }
 
-let dbInstance: PomoFlowOfflineDB | null = null
+let dbInstance: FlowStateOfflineDB | null = null
 
-export function getOfflineDB(): PomoFlowOfflineDB {
-    if (!dbInstance) dbInstance = new PomoFlowOfflineDB()
+export function getOfflineDB(): FlowStateOfflineDB {
+    if (!dbInstance) dbInstance = new FlowStateOfflineDB()
     return dbInstance
 }
 

@@ -37,13 +37,10 @@
     />
 
     <!-- Due Date -->
-    <div class="task-row__due-date">
-      <Calendar v-if="task.dueDate" :size="14" class="task-row__icon" />
-      <span v-if="task.dueDate" :class="getDueDateClass()">
-        {{ formatDueDate(task.dueDate) }}
-      </span>
-      <span v-else class="task-row__empty">-</span>
-    </div>
+    <TaskRowDueDate
+      :due-date="task.dueDate"
+      @update:due-date="(dueDate) => $emit('updateDueDate', task.id, dueDate)"
+    />
 
     <!-- Status Dropdown -->
     <div class="task-row__status" @click.stop>
@@ -92,10 +89,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
-import { Calendar, Play, Edit } from 'lucide-vue-next'
+import { Play, Edit } from 'lucide-vue-next'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowProject from '@/components/tasks/row/TaskRowProject.vue'
+import TaskRowDueDate from '@/components/tasks/row/TaskRowDueDate.vue'
 import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
@@ -115,6 +113,7 @@ defineEmits<{
   contextMenu: [event: MouseEvent, task: Task]
   updateStatus: [taskId: string, status: string]
   updateProject: [taskId: string, projectId: string | null]
+  updateDueDate: [taskId: string, dueDate: string | null]
 }>()
 
 const statusOptions = [
@@ -146,33 +145,6 @@ const hasMoreTags = computed(() =>
 const projectVisual = computed(() =>
   taskStore.getProjectVisual(props.task.projectId)
 )
-
-// Due date formatting and coloring
-const formatDueDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  if (date.toDateString() === today.toDateString()) return 'Today'
-  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-const getDueDateClass = (): string => {
-  if (!props.task.dueDate) return ''
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const dueDate = new Date(props.task.dueDate)
-  dueDate.setHours(0, 0, 0, 0)
-  const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) return 'task-row__date--overdue'
-  if (diffDays === 0) return 'task-row__date--today'
-  if (diffDays <= 3) return 'task-row__date--soon'
-  return ''
-}
 
 </script>
 
@@ -283,34 +255,7 @@ const getDueDateClass = (): string => {
 
 /* Project Emoji Cell - handled by TaskRowProject component */
 
-/* Due Date Cell */
-.task-row__due-date {
-  grid-area: due;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1_5);
-  font-size: var(--text-xs);
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.task-row__icon {
-  flex-shrink: 0;
-  opacity: 0.6;
-}
-
-.task-row__date--overdue {
-  color: #ff6b6b;
-  text-shadow: 0 0 8px rgba(255, 107, 107, 0.2);
-}
-
-.task-row__date--today {
-  color: #feca57;
-  font-weight: 500;
-}
-
-.task-row__date--soon {
-  color: #54a0ff;
-}
+/* Due Date Cell - handled by TaskRowDueDate component */
 
 /* Status Cell */
 .task-row__status {
@@ -395,12 +340,6 @@ const getDueDateClass = (): string => {
   width: 3px;
   border-radius: var(--radius-sm);
   opacity: 0.8;
-}
-
-/* Empty state */
-.task-row__empty {
-  color: var(--glass-border);
-  font-size: var(--text-xs);
 }
 
 /* Focus */

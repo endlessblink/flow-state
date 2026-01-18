@@ -1,0 +1,46 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="synth-grad" x1="256" y1="100" x2="256" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF2A6D"/> <!-- Cyber Pink -->
+      <stop offset="1" stop-color="#7700FF"/> <!-- Cyber Purple -->
+    </linearGradient>
+    <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="blur" in2="SourceAlpha" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="#050510" rx="32"/>
+
+  <!-- Main Synthwave Sun/Tomato Body -->
+  <!-- Masking technique: Draw full circle, then overlay bars to "cut" it -->
+  <mask id="scanlines">
+    <rect x="0" y="0" width="512" height="512" fill="white"/>
+    <!-- The cuts (black bars) -->
+    <rect x="0" y="300" width="512" height="12" fill="black"/>
+    <rect x="0" y="325" width="512" height="15" fill="black"/>
+    <rect x="0" y="355" width="512" height="20" fill="black"/>
+    <rect x="0" y="390" width="512" height="25" fill="black"/>
+    <rect x="0" y="430" width="512" height="30" fill="black"/>
+  </mask>
+
+  <!-- The Tomato Shade -->
+  <circle cx="256" cy="280" r="180" fill="url(#synth-grad)" mask="url(#scanlines)" filter="url(#soft-glow)"/>
+
+  <!-- The Cyber Stem -->
+  <!-- Low poly, angular angular aesthetic -->
+  <path d="M256 100 L 266 50 L 316 70 L 286 110 L 256 100 Z" fill="#05D9E8" stroke="#05D9E8" stroke-width="2" filter="url(#soft-glow)"/>
+  <path d="M256 100 L 246 50 L 196 70 L 226 110 L 256 100 Z" fill="#005678" stroke="#05D9E8" stroke-width="2" filter="url(#soft-glow)"/>
+
+  <!-- Grid Background (Subtle) -->
+  <path d="M0 350 L 512 350" stroke="#7700FF" stroke-width="1" opacity="0.3"/>
+  <path d="M0 400 L 512 400" stroke="#7700FF" stroke-width="1" opacity="0.3"/>
+  <path d="M0 450 L 512 450" stroke="#7700FF" stroke-width="1" opacity="0.3"/>
+  <line x1="256" y1="350" x2="0" y2="512" stroke="#7700FF" stroke-width="1" opacity="0.3"/>
+  <line x1="256" y1="350" x2="512" y2="512" stroke="#7700FF" stroke-width="1" opacity="0.3"/>
+
+</svg>

@@ -4,7 +4,7 @@ description: [ACTION] when [SPECIFIC PROBLEM OCCURS]. [BRIEF SOLUTION]. Use when
 keywords: [KEY1], [KEY2], [KEY3]
 category: [DEBUG/FIX/CREATE/OPTIMIZE/IMPLEMENT/DESIGN/RESOLVE/TEST]
 triggers: [TRIGGER PHRASE 1], [TRIGGER PHRASE 2], [TRIGGER PHRASE 3]
-project: PomoFlow
+project: FlowState
 version: "1.0.0"
 ---
 
@@ -66,4 +66,4 @@ This skill activates when you mention:
 
 ---
 
-*This skill provides specialized solutions for [PROBLEM AREA] in the PomoFlow productivity application.*
+*This skill provides specialized solutions for [PROBLEM AREA] in the FlowState productivity application.*

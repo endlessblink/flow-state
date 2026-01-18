@@ -1,7 +1,7 @@
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { CanvasGroup } from '@/types/canvas'
 
-const GUEST_GROUPS_KEY = 'pomoflow-guest-groups'
+const GUEST_GROUPS_KEY = 'flowstate-guest-groups'
 
 export const useCanvasPersistence = () => {
     const { fetchGroups, saveGroup, deleteGroup: deleteGroupRemote } = useSupabaseDatabase()

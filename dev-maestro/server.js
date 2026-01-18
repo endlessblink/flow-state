@@ -3326,6 +3326,6 @@ app.get('/api/events', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Dev Manager running at http://localhost:${PORT}`);
+    console.log(`Dev Maestro running at http://localhost:${PORT}`);
     console.log(`Serving static files from: ${__dirname}`);
 });

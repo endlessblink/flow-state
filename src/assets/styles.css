@@ -91,6 +91,10 @@ body {
   /* Allow canvas controls to overflow */
   height: 100vh;
   width: 100vw;
+
+  /* PWA Mobile Support - ROAD-004 */
+  overscroll-behavior: none; /* Prevent rubber-banding on mobile */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #root {

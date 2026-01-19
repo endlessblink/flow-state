@@ -202,9 +202,55 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
     }
 
+    // TASK-317: Record tombstone for permanent deletions
+    // Tombstones prevent zombie data resurrection during backup restore
+    const recordTombstone = async (entityType: 'task' | 'group' | 'project', entityId: string): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping recordTombstone - not authenticated')
+            return
+        }
+        try {
+            const { error } = await supabase.from('tombstones').upsert({
+                user_id: userId,
+                entity_type: entityType,
+                entity_id: entityId,
+                deleted_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() // 90 days
+            }, { onConflict: 'entity_type,entity_id,user_id' })
+            if (error) {
+                console.warn(`[TASK-317] Failed to record tombstone for ${entityType}:${entityId}:`, error.message)
+            } else {
+                console.log(`🪦 [TOMBSTONE] Recorded permanent deletion: ${entityType}:${entityId}`)
+            }
+        } catch (e: unknown) {
+            // Non-fatal: tombstone recording failure shouldn't block deletion
+            console.warn(`[TASK-317] Tombstone recording error:`, e)
+        }
+    }
+
+    // TASK-317: Fetch tombstones for restore filtering
+    const fetchTombstones = async (): Promise<{ entityType: string; entityId: string }[]> => {
+        const userId = getUserIdSafe()
+        if (!userId) return []
+        try {
+            const { data, error } = await supabase
+                .from('tombstones')
+                .select('entity_type, entity_id')
+                .eq('user_id', userId)
+            if (error) throw error
+            return data?.map((t: any) => ({ entityType: t.entity_type, entityId: t.entity_id })) || []
+        } catch (e: unknown) {
+            console.error('[TASK-317] Failed to fetch tombstones:', e)
+            return []
+        }
+    }
+
     const permanentlyDeleteProject = async (projectId: string): Promise<void> => {
         try {
             isSyncing.value = true
+            // TASK-317: Record tombstone before permanent deletion
+            await recordTombstone('project', projectId)
             const { error } = await supabase
                 .from('projects')
                 .delete()
@@ -387,6 +433,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const permanentlyDeleteTask = async (taskId: string): Promise<void> => {
         try {
             isSyncing.value = true
+            // TASK-317: Record tombstone before permanent deletion
+            await recordTombstone('task', taskId)
             const { error } = await supabase
                 .from('tasks')
                 .delete()
@@ -565,10 +613,10 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
 
             // TASK-149 FIX: Add user_id filter and verify rows affected
+            // TASK-317: Now includes deleted_at after migration
             const { data, error, count } = await supabase
                 .from('groups')
-                // FIX: Column 'deleted_at' does not exist in schema. Use 'is_deleted' only.
-                .update({ is_deleted: true })
+                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
                 .eq('id', groupId)
                 .eq('user_id', userId)
                 .select('id, is_deleted', { count: 'exact' })
@@ -590,6 +638,26 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             console.error(`❌ [SUPABASE-DELETE-GROUP] Failed:`, e)
             handleError(e, 'deleteGroup')
             throw e // Only re-throw actual errors (network, auth, etc)
+        } finally {
+            isSyncing.value = false
+        }
+    }
+
+    // TASK-317: Permanent group deletion with tombstone
+    const permanentlyDeleteGroup = async (groupId: string): Promise<void> => {
+        try {
+            isSyncing.value = true
+            // Record tombstone before permanent deletion
+            await recordTombstone('group', groupId)
+            const { error } = await supabase
+                .from('groups')
+                .delete()
+                .eq('id', groupId)
+            if (error) throw error
+            lastSyncError.value = null
+            console.log(`🪦 [PERMANENT-DELETE-GROUP] Group ${groupId} permanently deleted`)
+        } catch (e: unknown) {
+            handleError(e, 'permanentlyDeleteGroup')
         } finally {
             isSyncing.value = false
         }
@@ -920,6 +988,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         fetchGroups,
         saveGroup,
         deleteGroup,
+        permanentlyDeleteGroup,
+        // TASK-317: Tombstone functions
+        fetchTombstones,
         fetchNotifications,
         saveNotification,
         saveNotifications,

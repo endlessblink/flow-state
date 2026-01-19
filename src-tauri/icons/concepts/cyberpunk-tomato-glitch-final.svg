@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Glow filter for cyan -->
+    <filter id="cyanGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Glow filter for magenta -->
+    <filter id="magentaGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Black background -->
+  <rect width="512" height="512" fill="#0a0a0a" rx="0"/>
+
+  <!-- Glitch bars - BEHIND tomato (cyan, offset left) -->
+  <g fill="#22d3ee" opacity="0.9">
+    <rect x="60" y="175" width="140" height="8" rx="2"/>
+    <rect x="40" y="185" width="80" height="5" rx="1"/>
+    <rect x="320" y="172" width="150" height="10" rx="2"/>
+    <rect x="380" y="184" width="90" height="6" rx="1"/>
+  </g>
+  <g fill="#ec4899" opacity="0.8">
+    <rect x="50" y="180" width="120" height="6" rx="2"/>
+    <rect x="340" y="178" width="130" height="7" rx="2"/>
+  </g>
+
+  <!-- Cyan outline/glow layer (offset slightly) -->
+  <ellipse cx="260" cy="295" rx="155" ry="145"
+           fill="none" stroke="#22d3ee" stroke-width="8"
+           filter="url(#cyanGlow)" opacity="0.8"/>
+
+  <!-- Main tomato body - magenta -->
+  <ellipse cx="256" cy="290" rx="150" ry="140"
+           fill="#ec4899" opacity="0.95"/>
+
+  <!-- Inner dark hollow -->
+  <ellipse cx="256" cy="290" rx="100" ry="95"
+           fill="#0a0a0a"/>
+
+  <!-- Inner cyan ring -->
+  <ellipse cx="256" cy="290" rx="105" ry="100"
+           fill="none" stroke="#22d3ee" stroke-width="3" opacity="0.6"/>
+
+  <!-- Tomato segment lines (subtle) -->
+  <g stroke="#0a0a0a" stroke-width="3" fill="none" opacity="0.4">
+    <path d="M256 150 Q256 290 256 430"/>
+    <path d="M140 220 Q256 290 372 360"/>
+    <path d="M140 360 Q256 290 372 220"/>
+  </g>
+
+  <!-- Stem/Leaves - dark with cyan outline -->
+  <g filter="url(#cyanGlow)">
+    <!-- Center stem -->
+    <path d="M256 155 L256 100 Q256 85 256 80"
+          stroke="#22d3ee" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M256 155 L256 105"
+          stroke="#0a0a0a" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+    <!-- Left leaves -->
+    <path d="M256 130 Q210 100 175 115 Q200 130 240 145"
+          fill="#0a0a0a" stroke="#22d3ee" stroke-width="3"/>
+    <path d="M256 140 Q220 120 195 130 Q215 140 250 150"
+          fill="#0a0a0a" stroke="#22d3ee" stroke-width="2"/>
+
+    <!-- Right leaves -->
+    <path d="M256 130 Q302 100 337 115 Q312 130 272 145"
+          fill="#0a0a0a" stroke="#22d3ee" stroke-width="3"/>
+    <path d="M256 140 Q292 120 317 130 Q297 140 262 150"
+          fill="#0a0a0a" stroke="#22d3ee" stroke-width="2"/>
+  </g>
+
+  <!-- Horizontal glitch bars - cutting through -->
+  <!-- Upper glitch section -->
+  <g>
+    <rect x="30" y="230" width="180" height="12" fill="#22d3ee" opacity="0.85"/>
+    <rect x="25" y="232" width="160" height="8" fill="#ec4899" opacity="0.9"/>
+    <rect x="320" y="225" width="170" height="14" fill="#22d3ee" opacity="0.85"/>
+    <rect x="330" y="228" width="150" height="9" fill="#ec4899" opacity="0.9"/>
+  </g>
+
+  <!-- Middle glitch section -->
+  <g>
+    <rect x="20" y="290" width="120" height="18" fill="#ec4899" opacity="0.9"/>
+    <rect x="15" y="293" width="100" height="12" fill="#22d3ee" opacity="0.8"/>
+    <rect x="380" y="285" width="120" height="20" fill="#ec4899" opacity="0.9"/>
+    <rect x="390" y="290" width="110" height="13" fill="#22d3ee" opacity="0.8"/>
+  </g>
+
+  <!-- Lower glitch section -->
+  <g>
+    <rect x="40" y="350" width="140" height="10" fill="#22d3ee" opacity="0.8"/>
+    <rect x="50" y="352" width="110" height="6" fill="#ec4899" opacity="0.85"/>
+    <rect x="340" y="355" width="150" height="12" fill="#22d3ee" opacity="0.8"/>
+    <rect x="350" y="358" width="120" height="7" fill="#ec4899" opacity="0.85"/>
+  </g>
+
+  <!-- Small glitch fragments -->
+  <g fill="#22d3ee" opacity="0.7">
+    <rect x="70" y="200" width="25" height="4"/>
+    <rect x="420" y="205" width="30" height="5"/>
+    <rect x="55" y="380" width="35" height="5"/>
+    <rect x="430" y="375" width="28" height="4"/>
+    <rect x="85" y="260" width="20" height="3"/>
+    <rect x="410" y="320" width="22" height="4"/>
+  </g>
+  <g fill="#ec4899" opacity="0.6">
+    <rect x="80" y="202" width="20" height="3"/>
+    <rect x="425" y="208" width="25" height="4"/>
+    <rect x="60" y="382" width="28" height="4"/>
+    <rect x="435" y="377" width="22" height="3"/>
+  </g>
+
+  <!-- Scan line overlay (subtle) -->
+  <g stroke="#0a0a0a" stroke-width="1" opacity="0.15">
+    <line x1="100" y1="200" x2="412" y2="200"/>
+    <line x1="100" y1="220" x2="412" y2="220"/>
+    <line x1="100" y1="240" x2="412" y2="240"/>
+    <line x1="100" y1="260" x2="412" y2="260"/>
+    <line x1="100" y1="280" x2="412" y2="280"/>
+    <line x1="100" y1="300" x2="412" y2="300"/>
+    <line x1="100" y1="320" x2="412" y2="320"/>
+    <line x1="100" y1="340" x2="412" y2="340"/>
+    <line x1="100" y1="360" x2="412" y2="360"/>
+    <line x1="100" y1="380" x2="412" y2="380"/>
+  </g>
+
+</svg>

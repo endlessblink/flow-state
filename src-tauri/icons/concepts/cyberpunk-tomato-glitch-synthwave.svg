@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Clip path for tomato shape -->
+    <clipPath id="tomatoClipGlitchSynth">
+      <ellipse cx="256" cy="290" rx="160" ry="140"/>
+    </clipPath>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="512" height="512" fill="#0a0a1a" rx="64"/>
+
+  <!-- Scan lines background - more visible -->
+  <g opacity="0.15">
+    <rect y="0" width="512" height="2" fill="#ec4899"/>
+    <rect y="8" width="512" height="2" fill="#8b5cf6"/>
+    <rect y="16" width="512" height="2" fill="#06b6d4"/>
+    <rect y="24" width="512" height="2" fill="#ec4899"/>
+    <rect y="32" width="512" height="2" fill="#8b5cf6"/>
+    <rect y="168" width="512" height="2" fill="#06b6d4"/>
+    <rect y="176" width="512" height="2" fill="#ec4899"/>
+    <rect y="184" width="512" height="2" fill="#8b5cf6"/>
+    <rect y="336" width="512" height="2" fill="#06b6d4"/>
+    <rect y="344" width="512" height="2" fill="#ec4899"/>
+    <rect y="352" width="512" height="2" fill="#8b5cf6"/>
+    <rect y="480" width="512" height="2" fill="#06b6d4"/>
+    <rect y="488" width="512" height="2" fill="#ec4899"/>
+    <rect y="496" width="512" height="2" fill="#8b5cf6"/>
+  </g>
+
+  <!-- Main tomato body -->
+  <ellipse cx="256" cy="290" rx="160" ry="140" fill="#150a20"/>
+  <ellipse cx="256" cy="290" rx="160" ry="140"
+           fill="none" stroke="#ec4899" stroke-width="4"/>
+
+  <!-- Glitch slices - offset fragments -->
+  <g clip-path="url(#tomatoClipGlitchSynth)">
+    <!-- Horizontal glitch bands - RGB style -->
+    <rect x="96" y="230" width="320" height="25" fill="#06b6d4" opacity="0.25"/>
+    <rect x="106" y="230" width="320" height="25" fill="#ec4899" opacity="0.2" transform="translate(10,0)"/>
+    <rect x="86" y="230" width="320" height="25" fill="#8b5cf6" opacity="0.15" transform="translate(-10,0)"/>
+
+    <rect x="96" y="310" width="320" height="20" fill="#ec4899" opacity="0.25"/>
+    <rect x="86" y="310" width="320" height="20" fill="#06b6d4" opacity="0.2" transform="translate(-12,0)"/>
+
+    <rect x="96" y="370" width="320" height="15" fill="#8b5cf6" opacity="0.2"/>
+    <rect x="116" y="370" width="320" height="15" fill="#06b6d4" opacity="0.15" transform="translate(8,0)"/>
+  </g>
+
+  <!-- Glitched outline fragments -->
+  <path d="M100 250 H180" stroke="#06b6d4" stroke-width="4" opacity="0.8" transform="translate(8, 2)"/>
+  <path d="M330 250 H410" stroke="#06b6d4" stroke-width="4" opacity="0.8" transform="translate(-8, 2)"/>
+  <path d="M120 330 H200" stroke="#ec4899" stroke-width="3" opacity="0.7" transform="translate(10, 0)"/>
+  <path d="M310 330 H390" stroke="#ec4899" stroke-width="3" opacity="0.7" transform="translate(-10, 0)"/>
+  <path d="M150 380 H230" stroke="#8b5cf6" stroke-width="3" opacity="0.5" transform="translate(5, 0)"/>
+
+  <!-- RGB shift effect on tomato segments -->
+  <path d="M256 160 Q256 290 256 420" stroke="#06b6d4" stroke-width="4" fill="none" opacity="0.4" transform="translate(-6, 0)"/>
+  <path d="M256 160 Q256 290 256 420" stroke="#ec4899" stroke-width="4" fill="none" opacity="0.4" transform="translate(6, 0)"/>
+  <path d="M256 160 Q256 290 256 420" stroke="white" stroke-width="2" fill="none" opacity="0.4"/>
+
+  <!-- Stem - with heavy glitch offset -->
+  <path d="M256 150 L256 100" stroke="#8b5cf6" stroke-width="6" stroke-linecap="round"/>
+  <path d="M250 150 L250 100" stroke="#06b6d4" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <path d="M262 150 L262 100" stroke="#ec4899" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Glitched leaves -->
+  <path d="M256 130 Q200 100 180 140 Q210 130 256 150" fill="#8b5cf6" opacity="0.8"/>
+  <path d="M262 126 Q206 96 186 136" fill="none" stroke="#06b6d4" stroke-width="3" opacity="0.5"/>
+  <path d="M250 134 Q194 104 174 144" fill="none" stroke="#ec4899" stroke-width="2" opacity="0.4"/>
+  <path d="M256 130 Q312 100 332 140 Q302 130 256 150" fill="#8b5cf6" opacity="0.8"/>
+  <path d="M250 126 Q306 96 326 136" fill="none" stroke="#06b6d4" stroke-width="3" opacity="0.5"/>
+  <path d="M262 134 Q318 104 338 144" fill="none" stroke="#ec4899" stroke-width="2" opacity="0.4"/>
+
+  <!-- Digital noise dots - multicolor -->
+  <g opacity="0.7">
+    <rect x="140" y="270" width="5" height="5" fill="#06b6d4"/>
+    <rect x="200" y="305" width="7" height="4" fill="#ec4899"/>
+    <rect x="350" y="280" width="6" height="6" fill="#8b5cf6"/>
+    <rect x="300" y="355" width="5" height="7" fill="#06b6d4"/>
+    <rect x="175" y="385" width="4" height="4" fill="#ec4899"/>
+    <rect x="320" y="390" width="5" height="3" fill="#8b5cf6"/>
+  </g>
+</svg>

@@ -10,6 +10,7 @@ A sophisticated Vue 3 productivity application combining Pomodoro timer function
 - **Canvas Organization**: Free-form spatial task arrangement with Vue Flow
 - **Cloud Sync**: Supabase (PostgreSQL) with RLS and automatic backup
 - **Glass Morphism UI**: Modern design system with dark/light themes
+- **PWA (Mobile Support)**: Installable on iOS/Android with offline support and screen wake lock for timers
 
 ## Quick Start
 
@@ -37,6 +38,14 @@ npm run generate:keys
 ```
 
 See `.env.example` for configuration options.
+
+## PWA Installation
+
+FlowState is fully optimized for mobile devices as a Progressive Web App:
+
+- **iOS**: Open the app in Safari, tap the **Share** button, and select **Add to Home Screen**.
+- **Android**: Open the app in Chrome, tap the menu (three dots), and select **Install App** or **Add to Home Screen**.
+- **Desktop**: Look for the "Install" icon in the address bar of your browser.
 
 ## Development Commands
 

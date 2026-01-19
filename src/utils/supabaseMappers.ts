@@ -132,6 +132,7 @@ export interface SupabaseGroup {
     property_value?: string | number | boolean | Record<string, unknown> | null
 
     is_deleted?: boolean
+    deleted_at?: string | null  // TASK-317: Added for deletion-aware restore
     created_at?: string
     updated_at?: string
 }

@@ -13,7 +13,12 @@
         <MainLayout ref="mainLayout" />
         <ModalManager ref="modalManager" />
         <FaviconManager />
+        <!-- PWA Reload Prompt (Browser Only) -->
+        <ReloadPrompt v-if="!isTauriApp" />
+        <!-- iOS Install Prompt (Mobile Browser Only) -->
+        <IOSInstallPrompt v-if="!isTauriApp" />
       </template>
+
     </NMessageProvider>
   </NConfigProvider>
 </template>
@@ -30,6 +35,8 @@ import { useAppShortcuts } from '@/composables/app/useAppShortcuts'
 import MainLayout from '@/layouts/MainLayout.vue'
 import ModalManager from '@/layouts/ModalManager.vue'
 import FaviconManager from '@/components/common/FaviconManager.vue'
+import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
+import IOSInstallPrompt from '@/components/common/IOSInstallPrompt.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 

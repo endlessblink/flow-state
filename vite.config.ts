@@ -132,7 +132,11 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: false,
     rollupOptions: {
-      external: ['fsevents'],
+      external: [
+        'fsevents',
+        // Externalize PWA virtual modules for Tauri builds (they're disabled anyway)
+        ...(isTauri ? ['virtual:pwa-register/vue', 'virtual:pwa-register'] : [])
+      ],
       output: {
         format: 'es', // Workers MUST be 'es' format
         manualChunks(id) {

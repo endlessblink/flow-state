@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Neon glow filter - Purple -->
+    <filter id="neonGlowPurple" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur1"/>
+      <feGaussianBlur stdDeviation="16" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Neon glow filter - Magenta -->
+    <filter id="neonGlowMagenta" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur1"/>
+      <feGaussianBlur stdDeviation="12" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Neon glow filter - Cyan -->
+    <filter id="neonGlowCyan" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur1"/>
+      <feGaussianBlur stdDeviation="8" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background with purple tint -->
+  <rect width="512" height="512" fill="#0a0a1a" rx="64"/>
+
+  <!-- Tomato body - dark silhouette -->
+  <ellipse cx="256" cy="290" rx="160" ry="140" fill="#1a0a20"/>
+
+  <!-- Neon outline - outer glow (Magenta) -->
+  <ellipse cx="256" cy="290" rx="160" ry="140"
+           fill="none" stroke="#ec4899" stroke-width="6"
+           filter="url(#neonGlowMagenta)"/>
+
+  <!-- Inner outline (Purple) -->
+  <ellipse cx="256" cy="290" rx="140" ry="120"
+           fill="none" stroke="#8b5cf6" stroke-width="3"
+           filter="url(#neonGlowPurple)" opacity="0.6"/>
+
+  <!-- Tomato segments - cyan neon lines -->
+  <path d="M256 150 Q256 290 256 430"
+        stroke="#06b6d4" stroke-width="3" fill="none" opacity="0.8"
+        filter="url(#neonGlowCyan)"/>
+  <path d="M130 220 Q256 290 382 360"
+        stroke="#06b6d4" stroke-width="3" fill="none" opacity="0.6"
+        filter="url(#neonGlowCyan)"/>
+  <path d="M130 360 Q256 290 382 220"
+        stroke="#06b6d4" stroke-width="3" fill="none" opacity="0.6"
+        filter="url(#neonGlowCyan)"/>
+
+  <!-- Stem - purple neon -->
+  <path d="M256 150 L256 100 M230 120 Q256 80 282 120"
+        stroke="#8b5cf6" stroke-width="8" fill="none" stroke-linecap="round"
+        filter="url(#neonGlowPurple)"/>
+
+  <!-- Leaf accent - cyan -->
+  <path d="M256 130 Q200 100 180 140 Q210 130 256 150"
+        fill="#06b6d4" opacity="0.9"
+        filter="url(#neonGlowCyan)"/>
+  <path d="M256 130 Q312 100 332 140 Q302 130 256 150"
+        fill="#06b6d4" opacity="0.9"
+        filter="url(#neonGlowCyan)"/>
+
+  <!-- Highlight spots -->
+  <ellipse cx="200" cy="250" rx="25" ry="15" fill="#ec4899" opacity="0.25"/>
+  <ellipse cx="310" cy="320" rx="15" ry="10" fill="#06b6d4" opacity="0.2"/>
+</svg>

@@ -827,3 +827,102 @@ Please confirm the fix works as expected, or let me know what's still not workin
 4. Clear description of what was changed
 
 **Remember: The user is the final authority on whether something is fixed. No exceptions.**
+
+---
+
+## Tauri/Linux Desktop Icon Troubleshooting
+
+### When Icons Don't Update After Build
+
+If you rebuild a Tauri app with new icons but the old icons still appear in the taskbar/window title bar, follow this troubleshooting guide.
+
+#### Common Causes
+1. **Conflicting .desktop files** - User-local file takes precedence over system file
+2. **KDE icon cache** - Cached icons not refreshed
+3. **StartupWMClass mismatch** - Desktop file doesn't match app's WM_CLASS
+4. **Old binary still running** - System using old installed version
+
+#### Diagnostic Commands
+```bash
+# 1. Find all .desktop files for your app
+find /usr/share/applications ~/.local/share/applications -iname "*flowstate*" -o -iname "*flow-state*" 2>/dev/null
+
+# 2. Check WM_CLASS of running app (click on app window when prompted)
+xprop WM_CLASS
+
+# 3. View .desktop file contents
+cat /usr/share/applications/FlowState.desktop
+cat ~/.local/share/applications/flowstate.desktop
+
+# 4. Check installed icon locations
+ls -la /usr/share/icons/hicolor/*/apps/flow-state.png
+```
+
+#### Fix Procedure (KDE Plasma)
+```bash
+# Step 1: Remove conflicting user .desktop file
+rm -f ~/.local/share/applications/flowstate.desktop
+
+# Step 2: Clear ALL icon caches
+rm -f ~/.cache/icon-cache.kcache
+rm -f ~/.cache/ksvg-elements-*
+rm -rf ~/.cache/ksycoca6*
+
+# Step 3: Update desktop database
+update-desktop-database ~/.local/share/applications 2>/dev/null
+
+# Step 4: Rebuild KDE system configuration
+kbuildsycoca6 --noincremental  # For Plasma 6
+# OR
+kbuildsycoca5 --noincremental  # For Plasma 5
+
+# Step 5: Kill the app
+pkill -f "flow-state"
+
+# Step 6: Restart plasmashell
+kquitapp6 plasmashell && kstart plasmashell
+
+# Step 7: Relaunch app
+/usr/bin/flow-state &
+```
+
+#### If Icons Still Don't Update
+1. **Reinstall the .deb package**:
+   ```bash
+   sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb
+   ```
+
+2. **Manually copy icons** (requires sudo):
+   ```bash
+   sudo cp src-tauri/icons/32x32.png /usr/share/icons/hicolor/32x32/apps/flow-state.png
+   sudo cp src-tauri/icons/128x128.png /usr/share/icons/hicolor/128x128/apps/flow-state.png
+   sudo cp src-tauri/icons/128x128@2x.png /usr/share/icons/hicolor/256x256@2/apps/flow-state.png
+   sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/
+   ```
+
+3. **Log out and log back in** - Some icon changes only take effect after re-login
+
+#### Key Files Reference
+| File | Purpose |
+|------|---------|
+| `src-tauri/icons/` | Source icons for Tauri build |
+| `src-tauri/tauri.conf.json` | Icon configuration (`bundle.icon` array) |
+| `/usr/share/applications/FlowState.desktop` | System .desktop file |
+| `~/.local/share/applications/` | User .desktop files (take precedence!) |
+| `/usr/share/icons/hicolor/*/apps/` | Installed icon locations |
+| `~/.cache/icon-cache.kcache` | KDE icon cache |
+
+#### Desktop File Best Practices
+```ini
+[Desktop Entry]
+Name=FlowState
+Comment=Productivity app
+Exec=flow-state
+Icon=flow-state
+Terminal=false
+Type=Application
+Categories=Office;Productivity;
+StartupWMClass=flow-state  # MUST match app's WM_CLASS exactly!
+```
+
+**Note**: The `StartupWMClass` must match the WM_CLASS reported by `xprop WM_CLASS` when clicking on the app window.

@@ -26,7 +26,7 @@
 | ------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | ~~ROAD-001~~             | ✅ **DONE**                                                             | Power Groups                                        | [Details](./archive/Done-Tasks-Master-Plan.md)                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**ROAD-013**~~         | ✅ **DONE** **Sync Hardening**                                          | **P0**                                              | ✅ **DONE** (2026-01-14) - Triple Shield Locks, Optimistic Sync, & Safety Toasts.                                                | -                                                                                                                                                                                                              |                                                        |
-| ROAD-004                 | Mobile support (PWA)                                                   | P2                                                  | 🔄 **IN PROGRESS** Phase 2 [See Detailed Plan](#roadmaps)                                                                       | ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (Phase 1 Done), TASK-324, TASK-325, TASK-326 (Phase 2)                                                                                    |                                                        |
+| ROAD-004                 | Mobile support (PWA)                                                   | P2                                                  | ✅ **DONE** (2026-01-19) - Phase 2 Complete (VPS & Reload Prompt)                                                                | ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~, ~~TASK-324~~, ~~TASK-325~~, ~~TASK-326~~ |                                                        |
 | ROAD-011                 | AI Assistant                                                           | P1                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~ROAD-022~~             | ✅ **DONE**                                                             | Auth (Supabase)                                     | [Details](./archive/MASTER_PLAN_JAN_2026.md)                                                                                    | -                                                                                                                                                                                                              |                                                        |
 | ~~TASK-132~~             | ✅ **DONE**                                                             | Fix Canvas & Auth                                   | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/3f8d0816-9774-4fe5-aa58-d6f311bc2d36/walkthrough.md)          | -                                                                                                                                                                                                              |                                                        |
@@ -115,7 +115,7 @@
 | ~~**TASK-314**~~         | ✅ **DONE** **Highlight Active Timer Task**                             | **P2**                                              | ✅ **DONE** (2026-01-18)                                                                                                         | Active timer task now highlighted in Board and Catalog views                                                                                                                                                    |                                                        |
 | ~~**TASK-315**~~         | ✅ **DONE** **Documentation & Skills Consolidation**                    | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-012](./sop/active/SOP-012-skills-config-sync.md) - Synced skills.json (10→30), created canvas index, doc validator, staleness checker                                                                      |                                                        |
 | ~~**TASK-316**~~         | ✅ **DONE** **TaskCard Design Fix (Board View)**                        | **P3**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Changed selected state from filled to outline-only, removed strikethrough from completed titles. File: `TaskCard.css`                                                                                           |                                                        |
-| **TASK-317**             | **Shadow Backup Deletion-Aware Restore + Supabase Data Persistence**   | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-317-shadow-backup-deletion-aware-restore-in-progress)                                                                                                                                       |                                                        |
+| ~~**TASK-317**~~         | ✅ **DONE** **Shadow Backup Deletion-Aware Restore + Supabase Data Persistence**   | **P0**                                              | ✅ **DONE** (2026-01-19)                                                                                                        | Tombstones table, deletion-aware restore, shadow-mirror guards, atomic writes                                                                                                                                       |                                                        |
 | ~~**BUG-317**~~          | ✅ **DONE** **Board View Priority Column Drag Fix**                     | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Fixed priority swimlane drag: `columnType` prop distinguishes status vs priority columns                                                                                                                        |                                                        |
 | ~~**TASK-318**~~         | ✅ **DONE** **Tauri Standalone Build Verified**                         | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Built standalone packages: `.deb`, `.rpm`, `.AppImage` for Linux                                                                                                                                                |                                                        |
 | **TASK-319**             | **Fix Agent Output Capture in Orchestrator**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-319-fix-agent-output-capture-in-orchestrator-planned) - TASK-303 subtask                                                                                                                    |                                                        |
@@ -123,9 +123,10 @@
 | **TASK-321**             | **Test and Fix Merge/Discard Workflow E2E**                            | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-321-test-and-fix-mergediscard-workflow-end-to-end-planned) - TASK-303 subtask                                                                                                               |                                                        |
 | **TASK-322**             | **Add Automatic Error Recovery for Orchestrator**                      | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-322-add-automatic-error-recovery-for-orchestrator-agents-planned) - TASK-303 subtask                                                                                                        |                                                        |
 | **TASK-323**             | **Fix Stale Agent Cleanup in Orchestrator**                            | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-323-fix-stale-agent-cleanup-in-orchestrator-planned) - TASK-303 subtask                                                                                                                     |                                                        |
-| **TASK-324**             | **PWA Install Prompt Component**                                       | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-324-pwa-install-prompt-component-planned) - ROAD-004 Phase 2                                                                                                                                |                                                        |
-| **TASK-325**             | **VPS Deployment Configuration**                                       | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-325-vps-deployment-configuration-planned) - ROAD-004 Phase 2                                                                                                                                |                                                        |
-| **TASK-326**             | **PWA Cross-Device Testing**                                           | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-326-pwa-cross-device-testing-planned) - ROAD-004 Phase 2                                                                                                                                    |                                                        |
+| ~~**TASK-324**~~         | ✅ **DONE** **PWA Install Prompt Component**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/62e1538b-8b24-4393-965e-f11ae95f2523/walkthrough.md)                                                                                          |                                                        |
+| ~~**TASK-325**~~         | ✅ **DONE** **VPS Deployment Configuration**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-VPS](./sop/deployment/VPS-DEPLOYMENT.md)                                                                                                                                                                  |                                                        |
+| ~~**TASK-326**~~         | ✅ **DONE** **PWA Cross-Device Testing**                                           | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Verified SW & Manifest via Lighthouse                                                                                                                                                                          |                                                        |
+| **TASK-327**             | **Create Custom Tauri App Icon**                                       | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Design and generate app icon for all platforms (ICO, ICNS, PNG, favicon)                                                                                                                                        |                                                        |
 
 ---
 
@@ -180,10 +181,10 @@ Target: Create 3 organized files from 12 scattered SOPs
 
 ---
 
-### TASK-317: Shadow Backup Deletion-Aware Restore + Supabase Data Persistence (🔄 IN PROGRESS)
+### ~~TASK-317~~: Shadow Backup Deletion-Aware Restore + Supabase Data Persistence (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS
+**Status**: ✅ DONE (2026-01-19)
 **Root Cause**: Supabase crash wiped auth.users, shadow backup restored deleted items
 
 **Problem Analysis**:
@@ -337,10 +338,10 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 
 ---
 
-### TASK-303: Dev-Manager AI Orchestrator Enhancement (🔄 IN PROGRESS)
+### TASK-303: Dev-Manager AI Orchestrator Enhancement (⏸️ PAUSED)
 
 **Priority**: P1-HIGH
-**Status**: 🔄 In Progress (2026-01-16)
+**Status**: Paused
 **SOP**: [SOP-010](./sop/SOP-010-dev-manager-orchestrator.md)
 
 Major enhancement to the dev-manager orchestrator to enable Claude agents to **actually implement code changes** (not just describe them), using git worktrees for safe isolation.
@@ -571,10 +572,10 @@ The following tasks address stability issues discovered during orchestrator test
 
 ---
 
-### BUG-294: Timer Start Button Not Working (🔄 IN PROGRESS)
+### ~~BUG-294~~: Timer Start Button Not Working (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 Awaiting User Verification (2026-01-15)
+**Status**: ✅ DONE (2026-01-15)
 
 When pressing Start or Timer buttons from task context menu, the timer doesn't start and the task isn't highlighted as active on the canvas.
 
@@ -745,10 +746,10 @@ Instead of restoring full snapshots, track which entities were affected by each 
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
-### ROAD-004: Mobile PWA (🔄 IN PROGRESS)
+### ROAD-004: Mobile PWA (✅ DONE)
 
 **Priority**: P2-MEDIUM
-**Status**: 🔄 IN PROGRESS - Phase 2 VPS Deployment
+**Status**: ✅ DONE (2026-01-19) - Phase 2 (VPS & Reload Prompt) Complete
 
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
 - **Phase 1 Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
@@ -780,11 +781,11 @@ Instead of restoring full snapshots, track which entities were affected by each 
 - [x] Build verified with service worker generation
 - [x] Tested: Service worker registered & activated, manifest linked
 
-**Phase 2: VPS Deployment** (🔄 IN PROGRESS):
+**Phase 2: VPS Deployment** (✅ DONE):
 
-- [ ] TASK-324: PWA Install Prompt Component (`ReloadPrompt.vue`)
-- [ ] TASK-325: VPS Deployment Configuration (Caddyfile, GitHub Actions)
-- [ ] TASK-326: PWA Cross-Device Testing (iOS, Android, Lighthouse)
+- [x] TASK-324: PWA Install Prompt Component (`ReloadPrompt.vue`)
+- [x] TASK-325: VPS Deployment Configuration (Caddyfile, GitHub Actions)
+- [x] TASK-326: PWA Cross-Device Testing (iOS, Android, Lighthouse)
 
 </details>
 
@@ -963,7 +964,7 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-### TASK-324: PWA Install Prompt Component (📋 PLANNED)
+### TASK-324: PWA Install Prompt Component (🔄 IN PROGRESS)
 
 **Priority**: P2-MEDIUM
 **Related**: ROAD-004 (PWA Mobile Support)

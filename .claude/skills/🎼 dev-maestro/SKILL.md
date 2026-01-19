@@ -1,125 +1,78 @@
 ---
 name: dev-maestro
-description: Start and manage Dev Maestro - the AI agent orchestration platform for Kanban task management. Use when user says "start maestro", "open kanban", "show tasks", or needs to manage MASTER_PLAN.md tasks visually. Detects if running, starts if needed.
+description: Start Dev Maestro dashboard for MASTER_PLAN.md tasks. Use when user says "start maestro", "open kanban", or "show tasks".
 ---
 
-# Dev Maestro
+# Dev Maestro Skill
 
-## What is Dev Maestro?
-
-**AI Agent Orchestration Platform** providing:
-- Kanban board for MASTER_PLAN.md tasks
-- Multi-agent orchestration workflows
-- Health scanning (TypeScript, ESLint, Knip, npm audit)
-- Skills visualization
-- Documentation canvas
-- Project timeline
-
-## Quick Reference
+## QUICK REFERENCE
 
 | Item | Value |
 |------|-------|
 | URL | http://localhost:6010 |
-| Install Dir | `~/.dev-maestro` |
+| Install | `~/.dev-maestro` |
 | Port | 6010 |
-| Status API | http://localhost:6010/api/status |
 
-## Instructions
+## WHEN TO USE
 
-### Check if Dev Maestro is Running
+- User says "start maestro" / "open kanban" / "show tasks"
+- User wants to see MASTER_PLAN.md visually
+- User asks about task status in Kanban view
 
+## WHEN NOT TO USE
+
+- User is working on their main project (Dev Maestro is a tool, not a target)
+- User didn't mention Dev Maestro
+- You're tempted to "improve" or extend Dev Maestro
+
+## WORKFLOW
+
+### Step 1: Check if Running
 ```bash
-# Quick check
-curl -s http://localhost:6010/api/status 2>/dev/null | grep -q '"running":true' && echo "Running" || echo "Not running"
-
-# Get full status
-curl -s http://localhost:6010/api/status | jq .
+curl -s http://localhost:6010/api/status 2>/dev/null && echo "RUNNING" || echo "NOT RUNNING"
 ```
 
-### Start Dev Maestro
+### Step 2: Start if Needed
 
-**Option 1: Use project launcher (if exists)**
+**Option A - Project has launcher:**
 ```bash
 ./maestro.sh
 ```
 
-**Option 2: Direct start**
+**Option B - Direct start:**
 ```bash
-cd ~/.dev-maestro && npm start
+cd ~/.dev-maestro && npm start &
 ```
 
-**Option 3: With custom MASTER_PLAN.md path**
-```bash
-cd ~/.dev-maestro
-MASTER_PLAN_PATH=/path/to/project/docs/MASTER_PLAN.md npm start
-```
-
-### Install Dev Maestro (if not installed)
-
+**Option C - Not installed:**
 ```bash
 curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
 ```
 
-**With project integration:**
+### Step 3: Tell User
+> "Dev Maestro is running at http://localhost:6010"
+
+## API ENDPOINTS
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /api/status | Check if running |
+| GET | /api/master-plan | Get tasks from MASTER_PLAN.md |
+| GET | /api/health/quick | Project health summary |
+| POST | /api/task/add | Add task (body: `{"title":"..."}`) |
+
+## ANTI-SIDETRACKING RULES
+
+1. **Don't build features for Dev Maestro** - It's a separate project
+2. **Don't add MCP wrappers** - REST API via curl is sufficient
+3. **Don't refactor Dev Maestro code** - Stay focused on user's actual task
+4. **Use curl directly** - No abstractions needed
+
+## TROUBLESHOOTING
+
+**Port 6010 in use:**
 ```bash
-PROJECT_ROOT=/path/to/project curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
-```
-
-### Detection Methods
-
-1. **Marker file**: Check for `.dev-maestro.json` in project root
-2. **Status API**: `curl localhost:6010/api/status`
-3. **Launcher script**: Check for `./maestro.sh` in project root
-
-### API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| GET /api/status | Check if running, get version/config |
-| GET /api/master-plan | Get MASTER_PLAN.md content |
-| GET /api/health | Run full health scan |
-| GET /api/health/quick | Quick cached health check |
-| GET /api/skills | Get skills data |
-| GET /api/docs | Get documentation graph |
-
-### Dashboard Views
-
-1. **Kanban** - Task management from MASTER_PLAN.md
-2. **Orchestrator** - Multi-agent workflow UI
-3. **Skills** - Claude skills dependency graph
-4. **Docs** - Documentation canvas
-5. **Stats** - Project metrics
-6. **Timeline** - Locks and dependencies
-7. **Health** - Code quality dashboard
-
-### Common Tasks
-
-**View tasks:**
-- Open http://localhost:6010 in browser
-- Or use API: `curl localhost:6010/api/master-plan`
-
-**Update task status:**
-- Drag cards in Kanban UI
-- Changes sync to MASTER_PLAN.md
-
-**Check project health:**
-```bash
-curl -s localhost:6010/api/health/quick | jq '.summary'
-```
-
-### Troubleshooting
-
-**Port 6010 already in use:**
-```bash
-lsof -ti:6010 | xargs kill -9
-cd ~/.dev-maestro && npm start
-```
-
-**Server not starting:**
-```bash
-cd ~/.dev-maestro
-npm install
-npm start
+lsof -ti:6010 | xargs kill -9 && cd ~/.dev-maestro && npm start &
 ```
 
 **MASTER_PLAN.md not found:**
@@ -127,6 +80,6 @@ npm start
 # Check current path
 curl -s localhost:6010/api/status | jq '.masterPlanPath'
 
-# Set correct path in .env
-echo "MASTER_PLAN_PATH=/path/to/docs/MASTER_PLAN.md" >> ~/.dev-maestro/.env
+# Reconfigure
+cd ~/.dev-maestro && ./install.sh --reconfigure
 ```

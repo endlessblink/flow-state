@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Holographic gradient - synthwave -->
+    <linearGradient id="holoGradSynth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+      <stop offset="30%" stop-color="#ec4899" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#06b6d4" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+    </linearGradient>
+    <!-- Glow filter - purple -->
+    <filter id="holoGlowSynth" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Inner glow -->
+    <filter id="innerGlowSynth" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="512" height="512" fill="#0a0a1a" rx="64"/>
+
+  <!-- Grid floor effect -->
+  <g stroke="#8b5cf6" stroke-width="1" opacity="0.2">
+    <line x1="56" y1="460" x2="456" y2="460"/>
+    <line x1="76" y1="480" x2="436" y2="480"/>
+    <line x1="96" y1="500" x2="416" y2="500"/>
+    <line x1="156" y1="430" x2="156" y2="512"/>
+    <line x1="256" y1="420" x2="256" y2="512"/>
+    <line x1="356" y1="430" x2="356" y2="512"/>
+  </g>
+
+  <!-- Holographic base platform - magenta -->
+  <ellipse cx="256" cy="410" rx="130" ry="35" fill="#ec4899" opacity="0.25"
+           filter="url(#holoGlowSynth)"/>
+
+  <!-- Holographic projection lines - multicolor -->
+  <g stroke-width="1.5" opacity="0.4">
+    <line x1="126" y1="410" x2="175" y2="330" stroke="#8b5cf6"/>
+    <line x1="386" y1="410" x2="337" y2="330" stroke="#ec4899"/>
+    <line x1="166" y1="410" x2="195" y2="300" stroke="#06b6d4"/>
+    <line x1="346" y1="410" x2="317" y2="300" stroke="#06b6d4"/>
+  </g>
+
+  <!-- Main tomato body - translucent -->
+  <ellipse cx="256" cy="270" rx="150" ry="130" fill="url(#holoGradSynth)"/>
+
+  <!-- Outer glow ring - magenta -->
+  <ellipse cx="256" cy="270" rx="150" ry="130"
+           fill="none" stroke="#ec4899" stroke-width="3" opacity="0.8"
+           filter="url(#holoGlowSynth)"/>
+
+  <!-- Inner structure lines - hologram wireframe -->
+  <g stroke-width="1.5" fill="none" opacity="0.6" filter="url(#innerGlowSynth)">
+    <!-- Horizontal rings - alternating colors -->
+    <ellipse cx="256" cy="210" rx="120" ry="40" stroke="#06b6d4"/>
+    <ellipse cx="256" cy="270" rx="140" ry="50" stroke="#ec4899"/>
+    <ellipse cx="256" cy="330" rx="120" ry="40" stroke="#8b5cf6"/>
+
+    <!-- Vertical segments -->
+    <path d="M256 140 Q256 270 256 400" stroke="#06b6d4"/>
+    <path d="M130 190 Q256 270 382 350" stroke="#8b5cf6"/>
+    <path d="M130 350 Q256 270 382 190" stroke="#ec4899"/>
+  </g>
+
+  <!-- Cyan accent highlights -->
+  <ellipse cx="195" cy="230" rx="35" ry="20" fill="#06b6d4" opacity="0.3"
+           filter="url(#innerGlowSynth)"/>
+  <ellipse cx="315" cy="300" rx="25" ry="15" fill="#ec4899" opacity="0.25"/>
+
+  <!-- Center core glow -->
+  <ellipse cx="256" cy="270" rx="45" ry="40" fill="#8b5cf6" opacity="0.35"
+           filter="url(#holoGlowSynth)"/>
+  <ellipse cx="256" cy="270" rx="25" ry="22" fill="#06b6d4" opacity="0.5"/>
+  <ellipse cx="256" cy="270" rx="12" ry="10" fill="white" opacity="0.4"/>
+
+  <!-- Stem - holographic purple -->
+  <path d="M256 140 L256 90"
+        stroke="#8b5cf6" stroke-width="5" stroke-linecap="round" opacity="0.9"
+        filter="url(#innerGlowSynth)"/>
+  <path d="M256 90 Q238 68 225 80 M256 90 Q274 68 287 80"
+        stroke="#ec4899" stroke-width="3" stroke-linecap="round" opacity="0.7"
+        fill="none"/>
+
+  <!-- Holographic leaves - cyan -->
+  <path d="M256 120 Q195 88 178 125 Q210 115 256 138"
+        fill="#06b6d4" opacity="0.5" filter="url(#innerGlowSynth)"/>
+  <path d="M256 120 Q317 88 334 125 Q302 115 256 138"
+        fill="#06b6d4" opacity="0.5" filter="url(#innerGlowSynth)"/>
+
+  <!-- Sparkle effects - multicolor -->
+  <g opacity="0.9">
+    <circle cx="175" cy="220" r="4" fill="#06b6d4"/>
+    <circle cx="335" cy="250" r="3" fill="#ec4899"/>
+    <circle cx="215" cy="330" r="3" fill="#8b5cf6"/>
+    <circle cx="305" cy="190" r="3" fill="white"/>
+    <circle cx="260" cy="270" r="2" fill="white"/>
+  </g>
+</svg>

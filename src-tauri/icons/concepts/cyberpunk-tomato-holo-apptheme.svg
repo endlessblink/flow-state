@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Holographic gradient -->
+    <linearGradient id="holoGradApp" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0.4"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="holoGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Inner glow -->
+    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="512" height="512" fill="#1e1b4b" rx="64"/>
+
+  <!-- Holographic base platform -->
+  <ellipse cx="256" cy="420" rx="120" ry="30" fill="#6366f1" opacity="0.2"
+           filter="url(#holoGlow)"/>
+
+  <!-- Holographic projection lines -->
+  <g stroke="#6366f1" stroke-width="1" opacity="0.3">
+    <line x1="136" y1="420" x2="180" y2="350"/>
+    <line x1="376" y1="420" x2="332" y2="350"/>
+    <line x1="176" y1="420" x2="200" y2="320"/>
+    <line x1="336" y1="420" x2="312" y2="320"/>
+  </g>
+
+  <!-- Main tomato body - translucent -->
+  <ellipse cx="256" cy="280" rx="150" ry="130" fill="url(#holoGradApp)"/>
+
+  <!-- Outer glow ring -->
+  <ellipse cx="256" cy="280" rx="150" ry="130"
+           fill="none" stroke="#6366f1" stroke-width="3" opacity="0.8"
+           filter="url(#holoGlow)"/>
+
+  <!-- Inner structure lines - hologram wireframe -->
+  <g stroke="#6366f1" stroke-width="1.5" fill="none" opacity="0.6" filter="url(#innerGlow)">
+    <!-- Horizontal rings -->
+    <ellipse cx="256" cy="220" rx="120" ry="40"/>
+    <ellipse cx="256" cy="280" rx="140" ry="50"/>
+    <ellipse cx="256" cy="340" rx="120" ry="40"/>
+
+    <!-- Vertical segments -->
+    <path d="M256 150 Q256 280 256 410"/>
+    <path d="M140 200 Q256 280 372 360"/>
+    <path d="M140 360 Q256 280 372 200"/>
+  </g>
+
+  <!-- Amber accent highlights -->
+  <ellipse cx="200" cy="240" rx="35" ry="20" fill="#f59e0b" opacity="0.25"
+           filter="url(#innerGlow)"/>
+  <ellipse cx="310" cy="310" rx="25" ry="15" fill="#f59e0b" opacity="0.2"/>
+
+  <!-- Center core glow -->
+  <ellipse cx="256" cy="280" rx="40" ry="35" fill="#6366f1" opacity="0.4"
+           filter="url(#holoGlow)"/>
+  <ellipse cx="256" cy="280" rx="20" ry="17" fill="#f59e0b" opacity="0.6"/>
+
+  <!-- Stem - holographic -->
+  <path d="M256 150 L256 100"
+        stroke="#f59e0b" stroke-width="5" stroke-linecap="round" opacity="0.8"
+        filter="url(#innerGlow)"/>
+  <path d="M256 100 Q240 80 230 90 M256 100 Q272 80 282 90"
+        stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.7"
+        fill="none"/>
+
+  <!-- Holographic leaves -->
+  <path d="M256 130 Q200 100 185 135 Q215 125 256 145"
+        fill="#6366f1" opacity="0.5" filter="url(#innerGlow)"/>
+  <path d="M256 130 Q312 100 327 135 Q297 125 256 145"
+        fill="#6366f1" opacity="0.5" filter="url(#innerGlow)"/>
+
+  <!-- Sparkle effects -->
+  <g fill="white" opacity="0.8">
+    <circle cx="180" cy="230" r="3"/>
+    <circle cx="330" cy="260" r="2"/>
+    <circle cx="220" cy="340" r="2"/>
+    <circle cx="300" cy="200" r="2"/>
+  </g>
+</svg>

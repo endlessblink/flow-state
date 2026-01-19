@@ -1,0 +1,36 @@
+{
+    # Basic options
+    email your-email@example.com
+}
+
+# Production domain (replace with actual domain)
+:80 {
+    # Reverse proxy to the app container
+    reverse_proxy app:3000
+
+    # Security Headers
+    header {
+        # HSTS (Strict-Transport-Security)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        
+        # X-Frame-Options
+        X-Frame-Options "DENY"
+        
+        # X-Content-Type-Options
+        X-Content-Type-Options "nosniff"
+        
+        # Referrer-Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Content-Security-Policy (adjust as needed)
+        Content-Security-Policy "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests;"
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+    }
+}

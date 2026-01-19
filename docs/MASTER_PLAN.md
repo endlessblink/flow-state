@@ -403,6 +403,159 @@ http://localhost:6010/kanban/index.html?view=orchestrator
 
 ---
 
+### Dev-Maestro Orchestrator Stability (TASK-303 Subtasks)
+
+The following tasks address stability issues discovered during orchestrator testing. All are subtasks of TASK-303.
+
+#### TASK-319: Fix Agent Output Capture in Orchestrator (📋 PLANNED)
+
+**Priority**: P1-HIGH
+**Related**: TASK-303
+**Created**: January 19, 2026
+
+**Problem**: Agent stdout isn't reliably captured in logs. The `subAgentData.outputLines` stays at 0 even when agents create files successfully. Progress tracking is blind.
+
+**Root Cause** (server.js:2459-2472):
+- stdout only logged every 10 outputs (batching)
+- `outputLines` counter not incremented properly
+- Output array grows but count doesn't reflect it
+
+**Solution**:
+1. Increment `outputLines` on every stdout chunk
+2. Stream output to a log file per agent (persistent)
+3. Parse JSON from `--output-format stream-json` if needed
+
+**Key Files**:
+- `dev-maestro/server.js` (lines 2459-2472, stdout handler)
+
+**Success Criteria**:
+- [ ] Real-time output visible in logs
+- [ ] `outputLines` count matches actual output chunks
+- [ ] Agent logs persisted to `dev-maestro/logs/agent-{taskId}.log`
+
+---
+
+#### TASK-320: Fix Task Completion Detection in Orchestrator (📋 PLANNED)
+
+**Priority**: P1-HIGH
+**Related**: TASK-303
+**Created**: January 19, 2026
+
+**Problem**: Task shows "running" with "outputLines: 0" even after agent created files. Completion detection relies only on exit code.
+
+**Root Cause** (server.js:2510-2595):
+- Only checks `code === 0` for success
+- No validation that files were actually changed
+- Git diff may be empty if agent didn't commit
+
+**Solution**:
+1. Check git status for uncommitted changes
+2. Validate diff output has actual file changes
+3. Add agent activity timeout (no output for 60s = stuck)
+4. Parse agent's final summary from output
+
+**Key Files**:
+- `dev-maestro/server.js` (lines 2510-2595, close handler)
+
+**Success Criteria**:
+- [ ] Task marked complete only when files changed
+- [ ] Stuck agents detected via activity timeout
+- [ ] Clear status: running/completed/failed/stuck
+
+---
+
+#### TASK-321: Test and Fix Merge/Discard Workflow End-to-End (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Related**: TASK-303
+**Created**: January 19, 2026
+
+**Problem**: Merge and discard endpoints (server.js:2642-2744) haven't been tested end-to-end. Potential issues:
+- Merge may fail silently if conflicts exist
+- No validation that merge succeeded before cleanup
+- Parallel operations could corrupt git state
+
+**Solution**:
+1. Add merge conflict detection and abort
+2. Validate merge success before deleting branch
+3. Add mutex/lock for git operations per orchestration
+4. Test: create task, execute, review diff, merge, verify in main
+
+**Key Files**:
+- `dev-maestro/server.js` (lines 2642-2701, merge endpoint)
+- `dev-maestro/server.js` (lines 2703-2744, discard endpoint)
+
+**Success Criteria**:
+- [ ] Merge with conflicts shows clear error
+- [ ] Successful merge cleans up branch and worktree
+- [ ] Discard removes all traces (worktree + branch)
+- [ ] Concurrent operations don't corrupt state
+
+---
+
+#### TASK-322: Add Automatic Error Recovery for Orchestrator Agents (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Related**: TASK-303
+**Created**: January 19, 2026
+
+**Problem**: If an agent fails mid-task, recovery is manual. User must manually clean up worktrees and restart.
+
+**Current State**:
+- Retry logic exists (maxRetries) but uses fixed 2s delay
+- No exponential backoff
+- Cleanup on failure doesn't always succeed
+- No partial progress recovery
+
+**Solution**:
+1. Implement exponential backoff for retries (2s, 4s, 8s)
+2. Preserve partial work in worktree on failure
+3. Add "resume" option to continue from partial state
+4. Admin endpoint to force-cleanup stuck orchestrations
+
+**Key Files**:
+- `dev-maestro/server.js` (lines 2545-2595, retry logic)
+
+**Success Criteria**:
+- [ ] Retries use exponential backoff
+- [ ] Failed tasks show clear error reason
+- [ ] Admin can force-cleanup via API endpoint
+- [ ] Partial work preserved for manual review
+
+---
+
+#### TASK-323: Fix Stale Agent Cleanup in Orchestrator (📋 PLANNED)
+
+**Priority**: P1-HIGH
+**Related**: TASK-303
+**Created**: January 19, 2026
+
+**Problem**: Found stale Claude agent processes from previous tests still running. Worktrees accumulate without cleanup.
+
+**Root Cause**:
+- `cleanupWorktree()` only removes worktree, not branch
+- Process kill on timeout may not work (SIGTERM vs SIGKILL)
+- No startup cleanup of orphaned resources
+
+**Solution**:
+1. Kill process with SIGKILL after SIGTERM timeout
+2. Clean up both worktree AND branch in `cleanupWorktree()`
+3. Add startup scan for orphaned worktrees/branches
+4. Add periodic cleanup job (every 10 minutes)
+5. Track all spawned PIDs and kill on server shutdown
+
+**Key Files**:
+- `dev-maestro/server.js` (lines 914-930, cleanup function)
+- `dev-maestro/server.js` (lines 870-911, createAgentWorktree)
+
+**Success Criteria**:
+- [ ] No orphaned Claude processes after orchestration ends
+- [ ] No orphaned branches (`bd-orch-*`)
+- [ ] No orphaned worktrees (`.agent-worktrees/*`)
+- [ ] Server shutdown cleans up all resources
+
+---
+
 ### BUG-294: Timer Start Button Not Working (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL
@@ -577,13 +730,14 @@ Instead of restoring full snapshots, track which entities were affected by each 
 - **Features**: Task Breakdown, Auto-Categorization, NL Input ("Add meeting tomorrow 3pm").
 - **Stack**: Local (Ollama) + Cloud (Claude/GPT-4).
 
-### ROAD-004: Mobile PWA (⏸️ PAUSED)
+### ROAD-004: Mobile PWA (🔄 IN PROGRESS)
 
 **Priority**: P2-MEDIUM
-**Status**: ⏸️ PAUSED
+**Status**: 🔄 IN PROGRESS - Phase 2 VPS Deployment
 
 - **Plan**: [plans/pwa-mobile-support.md](../plans/pwa-mobile-support.md)
-- **Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
+- **Phase 1 Dependencies**: ~~TASK-118~~, ~~TASK-119~~, ~~TASK-120~~, ~~TASK-121~~, ~~TASK-122~~ (All ✅ DONE)
+- **Phase 2 Tasks**: TASK-324, TASK-325, TASK-326
 
 ### ROAD-025: Backup Containerization (VPS Distribution)
 

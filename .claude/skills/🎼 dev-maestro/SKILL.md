@@ -9,9 +9,9 @@ description: Start Dev Maestro dashboard for MASTER_PLAN.md tasks. Use when user
 
 | Item | Value |
 |------|-------|
-| URL | http://localhost:6010 |
+| URL | http://localhost:PORT |
 | Install | `~/.dev-maestro` |
-| Port | 6010 |
+| Default Port | 6010 |
 
 ## WHEN TO USE
 
@@ -27,31 +27,47 @@ description: Start Dev Maestro dashboard for MASTER_PLAN.md tasks. Use when user
 
 ## WORKFLOW
 
-### Step 1: Check if Running
+### Step 0: Ask User for Port Preference
+
+Before installing or starting, ask the user:
+
+> "What port should Dev Maestro run on? (default: 6010)"
+
+Use their answer for PORT in all subsequent commands. If they say "default" or don't specify, use 6010.
+
+### Step 1: Check if Already Running
+
 ```bash
-curl -s http://localhost:6010/api/status 2>/dev/null && echo "RUNNING" || echo "NOT RUNNING"
+curl -s http://localhost:PORT/api/status 2>/dev/null && echo "RUNNING" || echo "NOT RUNNING"
 ```
 
-### Step 2: Start if Needed
+### Step 2: Install if Needed (Foolproof Method)
 
-**Option A - Project has launcher:**
+**Download first, then run (avoids terminal line-wrap issues):**
+
 ```bash
-./maestro.sh
+curl -sSL "https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh" -o /tmp/dm-install.sh
 ```
 
-**Option B - Direct start (with path):**
 ```bash
-cd ~/.dev-maestro && MASTER_PLAN_PATH=/path/to/docs/MASTER_PLAN.md npm start &
+bash /tmp/dm-install.sh -m /path/to/docs/MASTER_PLAN.md
 ```
 
-**Option C - Not installed (non-interactive for AI agents):**
+### Step 3: Start with Custom Port
+
 ```bash
-# Replace /path/to with actual project path
-curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash -s -- -m /path/to/docs/MASTER_PLAN.md
+cd ~/.dev-maestro && PORT=PORT npm start &
 ```
 
-### Step 3: Tell User
-> "Dev Maestro is running at http://localhost:6010"
+### Step 4: Verify
+
+```bash
+sleep 3 && curl -s http://localhost:PORT/api/status
+```
+
+### Step 5: Tell User
+
+> "Dev Maestro is running at http://localhost:PORT"
 
 ## API ENDPOINTS
 
@@ -71,15 +87,15 @@ curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/instal
 
 ## TROUBLESHOOTING
 
-**Port 6010 in use:**
+**Port in use:**
 ```bash
-lsof -ti:6010 | xargs kill -9 && cd ~/.dev-maestro && npm start &
+lsof -ti:PORT | xargs kill -9 && cd ~/.dev-maestro && PORT=PORT npm start &
 ```
 
 **MASTER_PLAN.md not found:**
 ```bash
 # Check current path
-curl -s localhost:6010/api/status | jq '.masterPlanPath'
+curl -s localhost:PORT/api/status | jq '.masterPlanPath'
 
 # Reconfigure
 cd ~/.dev-maestro && ./install.sh --reconfigure

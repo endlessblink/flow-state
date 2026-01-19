@@ -1,4 +1,4 @@
-**Last Updated**: January 19, 2026 (TASK-316 TaskCard Design Fix)
+**Last Updated**: January 19, 2026 (BUG-317 Board Priority Drag Fix, TASK-318 Tauri Build Verified)
 **Version**: 5.47 (Board View UI Polish)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -115,6 +115,9 @@
 | ~~**TASK-314**~~         | ✅ **DONE** **Highlight Active Timer Task**                             | **P2**                                              | ✅ **DONE** (2026-01-18)                                                                                                         | Active timer task now highlighted in Board and Catalog views                                                                                                                                                    |                                                        |
 | ~~**TASK-315**~~         | ✅ **DONE** **Documentation & Skills Consolidation**                    | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-012](./sop/active/SOP-012-skills-config-sync.md) - Synced skills.json (10→30), created canvas index, doc validator, staleness checker                                                                      |                                                        |
 | ~~**TASK-316**~~         | ✅ **DONE** **TaskCard Design Fix (Board View)**                        | **P3**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Changed selected state from filled to outline-only, removed strikethrough from completed titles. File: `TaskCard.css`                                                                                           |                                                        |
+| **TASK-317**             | **Shadow Backup Deletion-Aware Restore + Supabase Data Persistence**   | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-317-shadow-backup-deletion-aware-restore-in-progress)                                                                                                                                       |                                                        |
+| ~~**BUG-317**~~          | ✅ **DONE** **Board View Priority Column Drag Fix**                     | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Fixed priority swimlane drag: `columnType` prop distinguishes status vs priority columns                                                                                                                        |                                                        |
+| ~~**TASK-318**~~         | ✅ **DONE** **Tauri Standalone Build Verified**                         | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Built standalone packages: `.deb`, `.rpm`, `.AppImage` for Linux                                                                                                                                                |                                                        |
 
 ---
 
@@ -166,6 +169,75 @@ Target: Create 3 organized files from 12 scattered SOPs
 - No content loss (all critical info preserved)
 - Clear single source of truth for each topic
 - Reduced maintenance burden (fewer files to update)
+
+---
+
+### TASK-317: Shadow Backup Deletion-Aware Restore + Supabase Data Persistence (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS
+**Root Cause**: Supabase crash wiped auth.users, shadow backup restored deleted items
+
+**Problem Analysis**:
+1. **Supabase Data Loss** - When Supabase containers crash/restart, auth.users table gets reset
+2. **Shadow Backup Overwrites** - Empty snapshots (when DB unreachable) overwrite good backups
+3. **Deletion Not Tracked** - Backup can't distinguish "deleted" from "never existed"
+4. **Incomplete Restore** - Parent-child ordering not respected, some items fail FK constraints
+
+**Requirements (MUST achieve all)**:
+- ✅ Items created and NOT deleted → MUST be fully restored (100% coverage)
+- ✅ Items deleted by user → MUST NOT be restored
+- ✅ Supabase crash/restart → Data survives without manual intervention
+- ✅ Auth credentials → Persist across restarts OR auto-recreate dev user
+
+**Solution - 4 Layers of Protection**:
+
+**Layer 1: Supabase Data Persistence (Prevent Loss at Source)**
+- [ ] Investigate why `auth.users` resets on container restart (likely schema re-init)
+- [ ] Configure PostgreSQL data persistence in Docker volume
+- [ ] Create `supabase/seed.sql` with dev user auto-creation (fallback safety net)
+- [ ] Add pre-stop hook: graceful shutdown before any container removal
+- [ ] Document safe restart: ALWAYS use `supabase stop` (NEVER `docker rm -f`)
+- [ ] Backup `.env` Supabase credentials separately
+
+**Layer 2: Shadow Backup Smart Saving (Prevent Corrupted Backups)**
+- [ ] **Threshold Guard**: Skip save if item count drops >50% from last good snapshot
+- [ ] **Connection Check**: Validate DB reachable before fetch, tag snapshot `connection_healthy`
+- [ ] **Protected Ring**: Keep last 10 snapshots with item_count > 0 as immutable
+- [ ] **Alert on Anomaly**: Log WARNING + optional notification on dramatic drops
+- [ ] **Atomic Writes**: Write to temp file, then rename (prevent partial corruption)
+
+**Layer 3: Complete Item Tracking (Track Everything Needed for Full Restore)**
+- [ ] **Deletion State**: Include `is_deleted` boolean in every snapshot item
+- [ ] **Deletion Timestamp**: Include `deleted_at` to know when deletion occurred
+- [ ] **Creation Timestamp**: Include `created_at` to verify item legitimacy
+- [ ] **User Mapping**: Track user email↔id mapping (for re-signup scenarios)
+- [ ] **Parent References**: Store `parent_id`/`parent_group_id` for ordering
+- [ ] **Schema Version**: Tag snapshots with schema version for compatibility
+
+**Layer 4: Reliable Restore (Restore Correctly & Completely)**
+- [ ] **Deletion Filter**: Only restore where `is_deleted = false`
+- [ ] **Topological Sort**: Insert parents before children (prevent FK errors)
+- [ ] **User ID Remap**: Automatically map old user_id → new user_id
+- [ ] **Upsert Strategy**: `ON CONFLICT DO UPDATE` for idempotent restores
+- [ ] **Validation**: Count restored items, compare to expected, report mismatches
+- [ ] **Preview Mode**: Show what WILL be restored before committing
+- [ ] **Transaction Safety**: Wrap in transaction, rollback on any error
+
+**Files to Modify**:
+- `src/composables/useBackupSystem.ts` - Smart save + threshold logic
+- `src/utils/shadowMirror.ts` - Enhanced schema with deletion tracking
+- `supabase/seed.sql` (new) - Dev user auto-creation fallback
+- `scripts/restore-from-shadow.ts` (new) - Full restore with ordering + remapping
+- `scripts/validate-backup.ts` (new) - Backup integrity checker
+
+**Verification Tests**:
+- [ ] Create 10 items → Force Supabase crash → Restart → All 10 items present
+- [ ] Delete 3 items → Crash → Restore → Only 7 items restored
+- [ ] Kill DB mid-backup → No empty snapshot saved → Last good preserved
+- [ ] Nested groups restore → Parents inserted first → Zero FK errors
+- [ ] New user signup → Restore → Old user_id remapped to new → Data accessible
+- [ ] 1000 backup cycles → Protected ring of 10 snapshots still intact
 
 ---
 

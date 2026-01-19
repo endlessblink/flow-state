@@ -1,7 +1,7 @@
 {
   "project": "FlowState",
   "version": "2.0.0",
-  "last_updated": "2026-01-13",
+  "last_updated": "2026-01-18",
   "skills": {
     "meta-skill-router": {
       "name": "Meta Skill Router",
@@ -29,6 +29,32 @@
       "last_used": null,
       "related_skills": [],
       "description": "MASTER ROUTER. The entry point for complex requests. Analyzes intent and routes to specialized skills."
+    },
+    "dev-maestro": {
+      "name": "Dev Maestro",
+      "category": "tooling",
+      "triggers": [
+        "maestro",
+        "kanban",
+        "tasks",
+        "master plan",
+        "orchestrator",
+        "start maestro",
+        "open kanban",
+        "show tasks",
+        "task board"
+      ],
+      "keywords": [
+        "maestro",
+        "kanban",
+        "orchestrator",
+        "dashboard",
+        "tasks"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["chief-architect", "smart-doc-manager"],
+      "description": "Start and manage Dev Maestro - the AI agent orchestration platform for Kanban task management. Use when user says 'start maestro', 'open kanban', 'show tasks', or needs to manage MASTER_PLAN.md tasks visually."
     },
     "dev-frontend-master": {
       "name": "Frontend Master",
@@ -270,6 +296,439 @@
         "dev-bug-fixer"
       ],
       "description": "Comprehensive frontend debugging toolkit: fix layout issues (clipping, spacing, overflow), accessibility (WCAG), JavaScript bugs, and performance (Core Web Vitals)."
+    },
+    "kde-plasma-widget-dev": {
+      "name": "kde-plasma-widget-dev",
+      "category": "debug",
+      "triggers": [
+        "fix",
+        "debug",
+        "test"
+      ],
+      "keywords": [
+        "kde",
+        "plasma",
+        "widget",
+        "dev",
+        "skill",
+        "should",
+        "used",
+        "developing,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "This skill should be used when developing, debugging, or fixing KDE Plasma 6 widgets (plasmoids). Triggers on QML widget issues, compactRepresentation not showing, system tray integration, Kirigami.Icon usage, plasmoidviewer testing, and Plasma 6 widget development. Covers common issues like emoji not rendering, widget not appearing in panel, and proper imports for Plasma 6."
+    },
+    "supabase-debugger": {
+      "name": "supabase-debugger",
+      "category": "debug",
+      "triggers": [
+        "debug"
+      ],
+      "keywords": [
+        "supabase",
+        "debugger",
+        "skill",
+        "should",
+        "used",
+        "debugging,",
+        "monitoring,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "This skill should be used when debugging, monitoring, or optimizing Supabase applications. Triggers on Supabase connection issues, RLS policy problems, authentication failures, slow queries, realtime subscription bugs, memory leaks, and database schema validation. Provides real-time inspection, error tracking, performance analysis, and systematic debugging workflows for local and cloud Supabase environments."
+    },
+    "tiptap-vue3": {
+      "name": "tiptap-vue3",
+      "category": "debug",
+      "triggers": [
+        "fix",
+        "debug",
+        "implement"
+      ],
+      "keywords": [
+        "tiptap",
+        "vue3",
+        "skill",
+        "should",
+        "used",
+        "implementing,",
+        "debugging,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "This skill should be used when implementing, debugging, or fixing Tiptap WYSIWYG editors in Vue 3 applications. Triggers on Tiptap setup, WYSIWYG editors, rich text editors, task list creation, markdown editing, and Vue 3 editor implementation. Provides production-ready patterns with ZERO auto-conversion interference."
+    },
+    "dev-undo-redo": {
+      "name": "dev-undo-redo",
+      "category": "fix",
+      "triggers": [
+        "fix",
+        "implement"
+      ],
+      "keywords": [
+        "dev",
+        "undo",
+        "redo",
+        "conflicting",
+        "undo/redo",
+        "implementations",
+        "vueuse",
+        "pinia"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "FIX conflicting undo/redo implementations with VueUse + Pinia and DESIGN robust patterns for complex applications. Use for both stabilizing existing systems and implementing advanced undo/redo architecture."
+    },
+    "dev-fix-timer": {
+      "name": "dev-fix-timer",
+      "category": "debug",
+      "triggers": [
+        "fix",
+        "debug"
+      ],
+      "keywords": [
+        "dev",
+        "fix",
+        "timer",
+        "debug",
+        "pomodoro",
+        "state",
+        "issues,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "DEBUG Pomodoro timer state issues, incorrect countdown behavior, and timer synchronization problems. Fix when timer won't start, time display is wrong, or timer gets stuck. Use for timer state management, countdown logic, and session persistence."
+    },
+    "dev-refactoring": {
+      "name": "dev-refactoring",
+      "category": "test",
+      "triggers": [
+        "test"
+      ],
+      "keywords": [
+        "dev",
+        "refactoring",
+        "auto-activate",
+        "working",
+        "flow-state-refactor",
+        "worktree"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "AUTO-ACTIVATE when working in flow-state-refactor worktree or refactoring large components. MANDATORY port 5550 for refactor worktree. Extract Vue composables, split large files, reduce component size, baseline testing, zero regressions. Triggers on keywords refactor, composable, extract, split component, reduce file size, flow-state-refactor directory."
+    },
+    "vue-filter-manager": {
+      "name": "vue-filter-manager",
+      "category": "fix",
+      "triggers": [
+        "fix"
+      ],
+      "keywords": [
+        "vue",
+        "filter",
+        "manager",
+        "comprehensive",
+        "vue.js",
+        "management",
+        "system"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "COMPREHENSIVE Vue.js filter management system that eliminates duplicate filters, standardizes filter architecture, and ensures cross-view consistency. This skill combines the capabilities of vue-filter-consistency-fixer, vue-filter-architecture-standardizer, and vue-duplicate-filter-remover to provide unified filter management."
+    },
+    "chief-architect": {
+      "name": "chief-architect",
+      "category": "design",
+      "triggers": [
+        "plan",
+        "break down",
+        "how should i implement",
+        "architecture",
+        "strategy",
+        "roadmap",
+        "design pattern",
+        "implement"
+      ],
+      "keywords": [
+        "chief",
+        "architect",
+        "unified",
+        "strategic",
+        "development",
+        "orchestrator"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "UNIFIED ARCHITECT - Strategic development orchestrator AND systematic project planner for personal productivity applications. Use for architecture decisions, feature planning, task breakdown, implementation strategy, roadmaps. Triggers on \"plan\", \"break down\", \"how should I implement\", \"architecture\", \"strategy\", \"roadmap\", \"design pattern\"."
+    },
+    "dev-implement-ui-ux": {
+      "name": "dev-implement-ui-ux",
+      "category": "create",
+      "triggers": [
+        "implement"
+      ],
+      "keywords": [
+        "dev",
+        "implement",
+        "comprehensive",
+        "ui/ux",
+        "design",
+        "implementation",
+        "skill"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Comprehensive UI/UX design and implementation skill covering visual design principles, color theory, typography, spacing systems, layout composition, accessibility (WCAG 2.2), animation, and systematic implementation workflows"
+    },
+    "skill-creator-doctor": {
+      "name": "skill-creator-doctor",
+      "category": "fix",
+      "triggers": [
+        "fix",
+        "audit",
+        "create"
+      ],
+      "keywords": [
+        "skill",
+        "creator",
+        "doctor",
+        "complete",
+        "lifecycle",
+        "management",
+        "create,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Complete skill lifecycle management - create, repair, maintain, audit, and consolidate Claude Code skills. This skill should be used when users want to create new skills, fix broken skills that won't load, diagnose skill system issues, maintain skill health, audit skill effectiveness, or consolidate duplicate/obsolete skills. Analyzes project state and tech stack, detects redundancies with necessity scoring, and safely manages skills with backup, confirmations, and rollback capabilities. Provides comprehensive skill ecosystem management including duplicate detection, merge workflows, archival processes, and emoji organization."
+    },
+    "dev-debugging": {
+      "name": "dev-debugging",
+      "category": "debug",
+      "triggers": [
+        "not working",
+        "broken",
+        "fix bug",
+        "debug",
+        "tasks missing",
+        "shortcuts not working",
+        "state not updating",
+        "fix"
+      ],
+      "keywords": [
+        "dev",
+        "debugging",
+        "unified",
+        "debugger",
+        "tasks",
+        "disappear,",
+        "data"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "UNIFIED DEBUGGER - Use when tasks disappear, data is lost, things are broken, or bugs need fixing. Debug Vue.js reactivity, Pinia state, task store CRUD, keyboard shortcuts, canvas positions, drag-drop, cache, memory leaks, and performance. Invoke for \"not working\", \"broken\", \"fix bug\", \"debug\", \"tasks missing\", \"shortcuts not working\", \"state not updating\"."
+    },
+    "idea-issue-creator": {
+      "name": "idea-issue-creator",
+      "category": "implement",
+      "triggers": [
+        "plan"
+      ],
+      "keywords": [
+        "idea",
+        "issue",
+        "creator",
+        "transform",
+        "bullet",
+        "points",
+        "into",
+        "enhanced,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Transform bullet points into enhanced, prioritized items for MASTER_PLAN.md. Process ideas inbox and integrate with project tracking."
+    },
+    "calendar-interface-architect": {
+      "name": "calendar-interface-architect",
+      "category": "design",
+      "triggers": [],
+      "keywords": [
+        "calendar",
+        "interface",
+        "architect",
+        "comprehensive",
+        "system",
+        "skill",
+        "combining"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "COMPREHENSIVE calendar system skill combining TypeScript interface architecture,"
+    },
+    "add-task-master-plan": {
+      "name": "add-task-master-plan",
+      "category": "design",
+      "triggers": [
+        "s master plan. triggers on ",
+        ", ",
+        ", ",
+        ", ",
+        "plan"
+      ],
+      "keywords": [
+        "add",
+        "task",
+        "master",
+        "plan",
+        "master_plan.md",
+        "auto-generated",
+        "skill",
+        "should"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Add a new task to MASTER_PLAN.md with auto-generated ID. This skill should be used when the user wants to track a new task, bug, or feature in the project's master plan. Triggers on \"add task to master plan\", \"new master plan task\", \"track this task\", \"/add-task-master-plan\"."
+    },
+    "dev-storybook": {
+      "name": "dev-storybook",
+      "category": "test",
+      "triggers": [
+        "test",
+        "audit"
+      ],
+      "keywords": [
+        "dev",
+        "storybook",
+        "comprehensive",
+        "skill",
+        "story",
+        "creation,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Comprehensive Storybook skill for Vue 3 - story creation, auditing, component discovery, visual testing, and CI integration. Merged from dev-storybook, storybook-audit, and storybook-master."
+    },
+    "smart-doc-manager": {
+      "name": "smart-doc-manager",
+      "category": "audit",
+      "triggers": [
+        "master-plan",
+        "plan update",
+        "documentation",
+        "consolidate docs",
+        "audit docs",
+        "plan",
+        "audit"
+      ],
+      "keywords": [
+        "smart",
+        "doc",
+        "manager",
+        "universal",
+        "documentation",
+        "consolidation",
+        "skill",
+        "verifies"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, and validation. Triggers on \"master-plan\", \"plan update\", \"documentation\", \"consolidate docs\", \"audit docs\"."
+    },
+    "dev-vueuse": {
+      "name": "dev-vueuse",
+      "category": "implement",
+      "triggers": [
+        "implement"
+      ],
+      "keywords": [
+        "dev",
+        "vueuse",
+        "implement",
+        "composables",
+        "browser",
+        "apis,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "IMPLEMENT VueUse composables for browser APIs, event handling, and performance optimization. Add keyboard shortcuts, local storage, clipboard functionality, drag-and-drop, and responsive design. Use when you need browser integration or enhanced reactivity."
+    },
+    "ops-port-manager": {
+      "name": "ops-port-manager",
+      "category": "fix",
+      "triggers": [
+        "fix",
+        "test"
+      ],
+      "keywords": [
+        "ops",
+        "port",
+        "manager",
+        "conflicts",
+        "development",
+        "server",
+        "won't"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "FIX port conflicts when development server won't start or tests fail. Manage port 5546 for FlowState, kill existing processes, and resolve server startup issues. Use when npm run dev fails, port is in use, or server won't start."
+    },
+    "dev-vue": {
+      "name": "dev-vue",
+      "category": "debug",
+      "triggers": [
+        "debug",
+        "test",
+        "create",
+        "implement",
+        "optimize"
+      ],
+      "keywords": [
+        "dev",
+        "vue",
+        "comprehensive",
+        "development",
+        "composition",
+        "api,",
+        "typescript,"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "COMPREHENSIVE Vue 3 development with Composition API, TypeScript, and advanced reactivity debugging. Create reactive components, handle props/events, implement lifecycle hooks, integrate with Pinia state management, debug reactivity issues, and optimize component performance. CRITICAL: All component changes MUST be tested with Playwright before claiming success. Use DevTools for debugging when available."
+    },
+    "ts-architectural-cleanup": {
+      "name": "ts-architectural-cleanup",
+      "category": "design",
+      "triggers": [],
+      "keywords": [
+        "architectural",
+        "cleanup",
+        "comprehensive",
+        "using",
+        "analysis"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "COMPREHENSIVE architectural cleanup using AST analysis to detect duplicates,"
     }
   },
   "categories": {

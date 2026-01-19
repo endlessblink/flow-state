@@ -27,6 +27,7 @@
 ```
 docs/sop/
 ├── active/      # Current, actively-referenced SOPs
+├── canvas/      # Canvas system documentation (Vue Flow)
 ├── reference/   # Comprehensive guides (not bug-fixes)
 └── archived/    # Completed fixes (historical reference)
 ```
@@ -37,16 +38,22 @@ docs/sop/
 
 ### Canvas (CANVAS-*)
 
+> **See Also:** [Canvas System Index](./canvas/README.md) for architecture documentation
+
 | File | Description |
 |------|-------------|
-| `CANVAS-viewport-jump-fix.md` | Viewport initialization without jumps |
-| `CANVAS-group-drag-fix.md` | Group/section drag operations |
-| `CANVAS-nested-groups-fix.md` | Nested group drag behavior |
-| `CANVAS-blurry-text-fix.md` | Text rendering clarity |
-| `CANVAS-done-toggle-fix.md` | Task completion toggle positioning |
-| `CANVAS-header-overflow-fix.md` | Section header overflow handling |
-| `CANVAS-resize-jump-fix.md` | Section resize without jumps |
-| `CANVAS-modularization.md` | CanvasView.vue modularization |
+| `canvas/README.md` | **Index**: Canvas architecture and composable reference |
+| `canvas/CANVAS-POSITION-SYSTEM.md` | Position/coordinate system, geometry invariants |
+| `canvas/CANVAS-DRAG-DROP.md` | Drag, drop, and selection behavior |
+| `canvas/CANVAS-DEBUGGING.md` | Debugging tools and troubleshooting |
+| `active/CANVAS-viewport-jump-fix.md` | Viewport initialization without jumps |
+| `active/CANVAS-group-drag-fix.md` | Group/section drag operations |
+| `active/CANVAS-nested-groups-fix.md` | Nested group drag behavior |
+| `active/CANVAS-blurry-text-fix.md` | Text rendering clarity |
+| `active/CANVAS-done-toggle-fix.md` | Task completion toggle positioning |
+| `active/CANVAS-header-overflow-fix.md` | Section header overflow handling |
+| `active/CANVAS-resize-jump-fix.md` | Section resize without jumps |
+| `active/CANVAS-modularization.md` | CanvasView.vue modularization |
 
 ### Calendar (CALENDAR-*)
 

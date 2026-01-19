@@ -35,6 +35,55 @@ interface UnifiedUndoState {
   groups: CanvasGroup[]
 }
 
+// =============================================================================
+// BUG-309-B: Operation-Scoped Undo System
+// =============================================================================
+// Instead of restoring full snapshots, we track which entities were affected
+// by each operation and only restore those. This prevents position drift where
+// undoing task B's creation would incorrectly revert task A's position.
+
+/**
+ * Describes what type of operation was performed for selective restoration
+ */
+export type UndoOperationType =
+  | 'task-create'
+  | 'task-delete'
+  | 'task-update'
+  | 'task-move'
+  | 'task-bulk-delete'
+  | 'group-create'
+  | 'group-delete'
+  | 'group-update'
+  | 'group-resize'
+  | 'legacy' // For backward compatibility with entries that don't have metadata
+
+/**
+ * Operation metadata stored alongside each undo snapshot
+ */
+export interface UndoOperation {
+  type: UndoOperationType
+  affectedIds: string[]  // Which tasks/groups were actually modified
+  description: string    // Human-readable description for debugging
+  timestamp: number      // When the operation occurred
+}
+
+/**
+ * Extended snapshot that includes operation metadata
+ */
+interface OperationSnapshot {
+  operation: UndoOperation
+  snapshotBefore: UnifiedUndoState  // State before the operation (for undo)
+  snapshotAfter: UnifiedUndoState   // State after the operation (for redo)
+}
+
+// Separate operation history that parallels VueUse's refHistory
+// This allows us to associate metadata with each history entry
+let operationStack: OperationSnapshot[] = []
+let redoOperationStack: OperationSnapshot[] = []
+
+// Flag to track if we're in operation-aware mode
+let useOperationAwareUndo = true
+
 // Global singleton refHistory instance - created only ONCE
 let refHistoryInstance: ReturnType<typeof useManualRefHistory<UnifiedUndoState>> | null = null
 let unifiedState: Ref<UnifiedUndoState> | null = null
@@ -133,10 +182,275 @@ function initializeRefHistory() {
   }
 }
 
+// =============================================================================
+// BUG-309-B: SELECTIVE RESTORATION (Operation-Aware Undo/Redo)
+// =============================================================================
+// Instead of restoring the entire state, we only restore the entities that
+// were affected by the operation. This prevents position drift.
+
+/**
+ * Perform selective undo based on operation type
+ * Only restores entities that were actually affected by the operation
+ */
+const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promise<boolean> => {
+  const { operation, snapshotBefore } = operationSnapshot
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+  const canvasStore = useCanvasStore()
+  const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
+  const canvasUiStore = useCanvasUiStore()
+
+  console.log(`🔄 [UNDO] Selective undo for: ${operation.type} (${operation.description})`)
+
+  switch (operation.type) {
+    case 'task-create': {
+      // Undo creation = delete the created task
+      const taskId = operation.affectedIds[0]
+      if (taskId) {
+        console.log(`🔄 [UNDO] Removing created task: ${taskId}`)
+        await taskStore.deleteTask(taskId)
+      }
+      break
+    }
+
+    case 'task-delete': {
+      // Undo deletion = restore the deleted task from snapshot
+      const taskId = operation.affectedIds[0]
+      const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
+      if (deletedTask) {
+        console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
+        await taskStore.createTask(deletedTask)
+      }
+      break
+    }
+
+    case 'task-bulk-delete': {
+      // Undo bulk deletion = restore all deleted tasks
+      for (const taskId of operation.affectedIds) {
+        const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        if (deletedTask) {
+          console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
+          await taskStore.createTask(deletedTask)
+        }
+      }
+      break
+    }
+
+    case 'task-update':
+    case 'task-move': {
+      // Undo update/move = restore previous state of affected tasks only
+      for (const taskId of operation.affectedIds) {
+        const previousTask = snapshotBefore.tasks.find(t => t.id === taskId)
+        if (previousTask) {
+          console.log(`🔄 [UNDO] Restoring task state: ${previousTask.title}`)
+          // Use updateTask to restore all properties including position
+          // Use 'USER' as the source since this is a user-initiated undo
+          taskStore.updateTask(taskId, {
+            ...previousTask,
+            // Ensure position fields are included
+            canvasPosition: previousTask.canvasPosition,
+            parentId: previousTask.parentId,
+            positionFormat: previousTask.positionFormat
+          }, 'USER')
+        }
+      }
+      break
+    }
+
+    case 'group-create': {
+      // Undo group creation = delete the created group
+      const groupId = operation.affectedIds[0]
+      if (groupId) {
+        console.log(`🔄 [UNDO] Removing created group: ${groupId}`)
+        await canvasStore.deleteGroup(groupId)
+      }
+      break
+    }
+
+    case 'group-delete': {
+      // Undo group deletion = restore the deleted group from snapshot
+      const groupId = operation.affectedIds[0]
+      const deletedGroup = snapshotBefore.groups.find(g => g.id === groupId)
+      if (deletedGroup) {
+        console.log(`🔄 [UNDO] Restoring deleted group: ${deletedGroup.name}`)
+        await canvasStore.createGroup(deletedGroup)
+      }
+      break
+    }
+
+    case 'group-update':
+    case 'group-resize': {
+      // Undo group update/resize = restore previous state of affected groups only
+      for (const groupId of operation.affectedIds) {
+        const previousGroup = snapshotBefore.groups.find(g => g.id === groupId)
+        if (previousGroup) {
+          console.log(`🔄 [UNDO] Restoring group state: ${previousGroup.name}`)
+          await canvasStore.updateGroup(groupId, {
+            ...previousGroup,
+            position: previousGroup.position,
+            parentGroupId: previousGroup.parentGroupId
+          })
+        }
+      }
+      break
+    }
+
+    case 'legacy':
+    default: {
+      // Fall back to full-state restoration for legacy entries
+      console.log(`🔄 [UNDO] Legacy mode - restoring full state`)
+      canvasStore.setGroups([...snapshotBefore.groups])
+      await taskStore.restoreState(snapshotBefore.tasks)
+      break
+    }
+  }
+
+  // Request canvas sync after restoration
+  try {
+    canvasUiStore.requestSync('user:undo')
+  } catch (error) {
+    console.warn('⚠️ [UNDO] Could not request canvas sync:', error)
+  }
+
+  return true
+}
+
+/**
+ * Perform selective redo based on operation type
+ */
+const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promise<boolean> => {
+  const { operation, snapshotAfter } = operationSnapshot
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+  const canvasStore = useCanvasStore()
+  const { useCanvasUiStore } = await import('../stores/canvas/canvasUi')
+  const canvasUiStore = useCanvasUiStore()
+
+  console.log(`🔁 [REDO] Selective redo for: ${operation.type} (${operation.description})`)
+
+  switch (operation.type) {
+    case 'task-create': {
+      // Redo creation = recreate the task
+      const taskId = operation.affectedIds[0]
+      const createdTask = snapshotAfter.tasks.find(t => t.id === taskId)
+      if (createdTask) {
+        console.log(`🔁 [REDO] Re-creating task: ${createdTask.title}`)
+        await taskStore.createTask(createdTask)
+      }
+      break
+    }
+
+    case 'task-delete': {
+      // Redo deletion = delete the task again
+      const taskId = operation.affectedIds[0]
+      console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
+      await taskStore.deleteTask(taskId)
+      break
+    }
+
+    case 'task-bulk-delete': {
+      // Redo bulk deletion = delete all tasks again
+      for (const taskId of operation.affectedIds) {
+        console.log(`🔁 [REDO] Re-deleting task: ${taskId}`)
+        await taskStore.deleteTask(taskId)
+      }
+      break
+    }
+
+    case 'task-update':
+    case 'task-move': {
+      // Redo update/move = apply the after state to affected tasks
+      for (const taskId of operation.affectedIds) {
+        const afterTask = snapshotAfter.tasks.find(t => t.id === taskId)
+        if (afterTask) {
+          console.log(`🔁 [REDO] Re-applying task state: ${afterTask.title}`)
+          // Use 'USER' as the source since this is a user-initiated redo
+          taskStore.updateTask(taskId, {
+            ...afterTask,
+            canvasPosition: afterTask.canvasPosition,
+            parentId: afterTask.parentId,
+            positionFormat: afterTask.positionFormat
+          }, 'USER')
+        }
+      }
+      break
+    }
+
+    case 'group-create': {
+      // Redo group creation = recreate the group
+      const groupId = operation.affectedIds[0]
+      const createdGroup = snapshotAfter.groups.find(g => g.id === groupId)
+      if (createdGroup) {
+        console.log(`🔁 [REDO] Re-creating group: ${createdGroup.name}`)
+        await canvasStore.createGroup(createdGroup)
+      }
+      break
+    }
+
+    case 'group-delete': {
+      // Redo group deletion = delete the group again
+      const groupId = operation.affectedIds[0]
+      console.log(`🔁 [REDO] Re-deleting group: ${groupId}`)
+      await canvasStore.deleteGroup(groupId)
+      break
+    }
+
+    case 'group-update':
+    case 'group-resize': {
+      // Redo group update/resize = apply the after state
+      for (const groupId of operation.affectedIds) {
+        const afterGroup = snapshotAfter.groups.find(g => g.id === groupId)
+        if (afterGroup) {
+          console.log(`🔁 [REDO] Re-applying group state: ${afterGroup.name}`)
+          await canvasStore.updateGroup(groupId, {
+            ...afterGroup,
+            position: afterGroup.position,
+            parentGroupId: afterGroup.parentGroupId
+          })
+        }
+      }
+      break
+    }
+
+    case 'legacy':
+    default: {
+      // Fall back to full-state restoration for legacy entries
+      console.log(`🔁 [REDO] Legacy mode - restoring full state`)
+      canvasStore.setGroups([...snapshotAfter.groups])
+      await taskStore.restoreState(snapshotAfter.tasks)
+      break
+    }
+  }
+
+  // Request canvas sync after restoration
+  try {
+    canvasUiStore.requestSync('user:redo')
+  } catch (error) {
+    console.warn('⚠️ [REDO] Could not request canvas sync:', error)
+  }
+
+  return true
+}
+
 // ✅ FIXED - Functions defined at module level (outside return object)
 // FIX: Made async to properly await restoreState which is an async function
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
+// BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
+  // BUG-309-B: Try operation-aware undo first
+  if (useOperationAwareUndo && operationStack.length > 0) {
+    const operationSnapshot = operationStack.pop()!
+    redoOperationStack.push(operationSnapshot)
+
+    // Also advance VueUse's history for consistency (even though we don't use its state)
+    if (refHistoryInstance) {
+      refHistoryInstance.undo()
+    }
+
+    return await performSelectiveUndo(operationSnapshot)
+  }
+
+  // Fall back to legacy full-state undo
   if (!refHistoryInstance || !unifiedState) return false
   refHistoryInstance.undo()
 
@@ -176,7 +490,22 @@ const performUndo = async () => {
 
 // FIX: Made async to properly await restoreState which is an async function
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
+// BUG-309-B: Enhanced with operation-aware selective restoration
 const performRedo = async () => {
+  // BUG-309-B: Try operation-aware redo first
+  if (useOperationAwareUndo && redoOperationStack.length > 0) {
+    const operationSnapshot = redoOperationStack.pop()!
+    operationStack.push(operationSnapshot)
+
+    // Also advance VueUse's history for consistency
+    if (refHistoryInstance) {
+      refHistoryInstance.redo()
+    }
+
+    return await performSelectiveRedo(operationSnapshot)
+  }
+
+  // Fall back to legacy full-state redo
   if (!refHistoryInstance || !unifiedState) return false
   refHistoryInstance.redo()
 
@@ -213,8 +542,84 @@ const performRedo = async () => {
   return false
 }
 
+// =============================================================================
+// OPERATION-AWARE STATE MANAGEMENT (BUG-309-B)
+// =============================================================================
+
+/**
+ * Capture current state as a snapshot (deep clone)
+ */
+const captureCurrentState = async (): Promise<UnifiedUndoState> => {
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+  const canvasStore = useCanvasStore()
+
+  return {
+    tasks: JSON.parse(JSON.stringify(taskStore.tasks)),
+    groups: JSON.parse(JSON.stringify(canvasStore.groups))
+  }
+}
+
+/**
+ * Track the state BEFORE an operation starts
+ * Call this BEFORE performing the operation
+ */
+let pendingOperationBefore: UnifiedUndoState | null = null
+let pendingOperation: UndoOperation | null = null
+
+const beginOperation = async (operation: Omit<UndoOperation, 'timestamp'>) => {
+  pendingOperationBefore = await captureCurrentState()
+  pendingOperation = {
+    ...operation,
+    timestamp: Date.now()
+  }
+}
+
+/**
+ * Complete the operation and save the undo entry
+ * Call this AFTER performing the operation
+ */
+const commitOperation = async () => {
+  if (!pendingOperationBefore || !pendingOperation) {
+    console.warn('⚠️ [UNDO] commitOperation called without beginOperation')
+    return false
+  }
+
+  const snapshotAfter = await captureCurrentState()
+
+  // Push to operation stack (limit capacity to 50)
+  operationStack.push({
+    operation: pendingOperation,
+    snapshotBefore: pendingOperationBefore,
+    snapshotAfter
+  })
+  if (operationStack.length > 50) {
+    operationStack.shift()
+  }
+
+  // Clear redo stack on new operation
+  redoOperationStack = []
+
+  // Also update VueUse's refHistory for backward compatibility
+  if (unifiedState && commit) {
+    unifiedState.value = snapshotAfter
+    commit()
+  }
+
+  // Capture description before clearing
+  const operationDescription = pendingOperation.description
+
+  // Clear pending state
+  pendingOperationBefore = null
+  pendingOperation = null
+
+  console.log(`✅ [UNDO] Committed operation: ${operationDescription}`)
+  return true
+}
+
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
-const saveState = async (_description?: string) => {
+// BUG-309-B: Enhanced to support operation metadata for selective restoration
+const saveState = async (_description?: string, operation?: Omit<UndoOperation, 'timestamp'>) => {
   // BUG-008 DEBUG: Log when refHistoryInstance is null
   if (!refHistoryInstance) {
     console.error('❌ [UNDO-CRITICAL] saveState() called but refHistoryInstance is NULL! Calling initializeRefHistory()...')
@@ -255,6 +660,7 @@ const saveState = async (_description?: string) => {
   }
 }
 
+// BUG-309-B: Operation-aware task operations
 const deleteTaskWithUndo = async (taskId: string) => {
   // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
@@ -266,18 +672,25 @@ const deleteTaskWithUndo = async (taskId: string) => {
     return
   }
 
-  // FIXED: Use proper VueUse pattern - save state before operation
-  await saveState('Before task deletion')
+  // BUG-309-B: Begin operation-aware tracking
+  await beginOperation({
+    type: 'task-delete',
+    affectedIds: [taskId],
+    description: `Delete task: ${taskToDelete.title}`
+  })
 
   try {
     // Perform the deletion
     await taskStore.deleteTask(taskId)
 
-    // FIXED: Save state after operation
+    // BUG-309-B: Commit the operation
     await nextTick()
-    await saveState('After task deletion')
+    await commitOperation()
   } catch (error) {
     console.error('❌ deleteTaskWithUndo failed:', error)
+    // Clear pending operation on error
+    pendingOperationBefore = null
+    pendingOperation = null
     throw error
   }
 }
@@ -293,15 +706,22 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
     return
   }
 
-  // FIXED: Use proper VueUse pattern - save state before operation
-  await saveState('Before task update')
+  // BUG-309-B: Determine operation type based on what's being updated
+  const isPositionUpdate = 'canvasPosition' in updates || 'parentId' in updates
+  const operationType: UndoOperationType = isPositionUpdate ? 'task-move' : 'task-update'
+
+  await beginOperation({
+    type: operationType,
+    affectedIds: [taskId],
+    description: `${operationType === 'task-move' ? 'Move' : 'Update'} task: ${taskToUpdate.title}`
+  })
 
   // Perform the update
   taskStore.updateTask(taskId, updates)
 
-  // FIXED: Save state after operation
+  // BUG-309-B: Commit the operation
   await nextTick()
-  await saveState('After task update')
+  await commitOperation()
 }
 
 const createTaskWithUndo = async (taskData: Partial<Task>) => {
@@ -310,8 +730,12 @@ const createTaskWithUndo = async (taskData: Partial<Task>) => {
     guardTaskCreation(taskData.title)
   }
 
-  // FIXED: Use proper VueUse pattern - save state before operation
-  await saveState('Before task creation')
+  // BUG-309-B: Begin operation-aware tracking (we don't know ID yet, will update)
+  await beginOperation({
+    type: 'task-create',
+    affectedIds: [], // Will be updated after creation
+    description: `Create task: ${taskData.title || 'Untitled'}`
+  })
 
   // Create the task
   // Dynamic import
@@ -319,34 +743,49 @@ const createTaskWithUndo = async (taskData: Partial<Task>) => {
   const taskStore = useTaskStore()
   const newTask = await taskStore.createTask(taskData)
 
-  // FIXED: Save state after operation
+  // BUG-309-B: Update affectedIds with the actual new task ID
+  if (pendingOperation && newTask) {
+    pendingOperation.affectedIds = [newTask.id]
+  }
+
+  // BUG-309-B: Commit the operation
   await nextTick()
-  await saveState('After task creation')
+  await commitOperation()
   return newTask
 }
 
-// NEW: Create group with undo support (BUG-008 fix)
+// BUG-309-B: Operation-aware group operations
 const createGroupWithUndo = async (groupData: Omit<CanvasGroup, 'id'>) => {
   const canvasStore = useCanvasStore()
 
-  // Save state before operation
-  await saveState('Before group creation')
+  // BUG-309-B: Begin operation-aware tracking
+  await beginOperation({
+    type: 'group-create',
+    affectedIds: [], // Will be updated after creation
+    description: `Create group: ${groupData.name || 'Untitled'}`
+  })
 
   try {
     // Perform the creation
     const newGroup = await canvasStore.createGroup(groupData)
 
-    // Save state after operation
+    // BUG-309-B: Update affectedIds with the actual new group ID
+    if (pendingOperation && newGroup) {
+      pendingOperation.affectedIds = [newGroup.id]
+    }
+
+    // BUG-309-B: Commit the operation
     await nextTick()
-    await saveState('After group creation')
+    await commitOperation()
     return newGroup
   } catch (error) {
     console.error('❌ createGroupWithUndo failed:', error)
+    pendingOperationBefore = null
+    pendingOperation = null
     throw error
   }
 }
 
-// NEW: Update group with undo support (BUG-008 fix)
 const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup>) => {
   const canvasStore = useCanvasStore()
 
@@ -356,23 +795,31 @@ const updateGroupWithUndo = async (groupId: string, updates: Partial<CanvasGroup
     return
   }
 
-  // Save state before operation
-  await saveState('Before group update')
+  // BUG-309-B: Determine operation type based on what's being updated
+  const isResizeUpdate = updates.position && ('width' in updates.position || 'height' in updates.position)
+  const operationType: UndoOperationType = isResizeUpdate ? 'group-resize' : 'group-update'
+
+  await beginOperation({
+    type: operationType,
+    affectedIds: [groupId],
+    description: `${operationType === 'group-resize' ? 'Resize' : 'Update'} group: ${groupToUpdate.name}`
+  })
 
   try {
     // Perform the update
     await canvasStore.updateGroup(groupId, updates)
 
-    // Save state after operation
+    // BUG-309-B: Commit the operation
     await nextTick()
-    await saveState('After group update')
+    await commitOperation()
   } catch (error) {
     console.error('❌ updateGroupWithUndo failed:', error)
+    pendingOperationBefore = null
+    pendingOperation = null
     throw error
   }
 }
 
-// NEW: Delete group with undo support (ISSUE-008 fix)
 const deleteGroupWithUndo = async (groupId: string) => {
   const canvasStore = useCanvasStore()
 
@@ -382,29 +829,40 @@ const deleteGroupWithUndo = async (groupId: string) => {
     return
   }
 
-  // Save state before operation
-  await saveState('Before group deletion')
+  // BUG-309-B: Begin operation-aware tracking
+  await beginOperation({
+    type: 'group-delete',
+    affectedIds: [groupId],
+    description: `Delete group: ${groupToDelete.name}`
+  })
 
   try {
     // Perform the deletion
     await canvasStore.deleteGroup(groupId)
 
-    // Save state after operation
+    // BUG-309-B: Commit the operation
     await nextTick()
-    await saveState('After group deletion')
+    await commitOperation()
   } catch (error) {
     console.error('❌ deleteGroupWithUndo failed:', error)
+    pendingOperationBefore = null
+    pendingOperation = null
     throw error
   }
 }
 
-// BUG-036 FIX: Batch delete support in singleton
+// BUG-309-B: Operation-aware bulk delete
 const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
   // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  await saveState(`Before bulk delete of ${taskIds.length} tasks`)
+  // BUG-309-B: Begin operation-aware tracking
+  await beginOperation({
+    type: 'task-bulk-delete',
+    affectedIds: [...taskIds],
+    description: `Bulk delete ${taskIds.length} tasks`
+  })
 
   try {
     if (taskStore.bulkDeleteTasks) {
@@ -417,27 +875,61 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
       }
     }
 
+    // BUG-309-B: Commit the operation
     await nextTick()
-    await saveState('After bulk delete')
+    await commitOperation()
   } catch (error) {
     console.error('❌ bulkDeleteTasksWithUndo failed:', error)
+    pendingOperationBefore = null
+    pendingOperation = null
     throw error
   }
 }
 
 /**
  * Get the global undo system functions that use the shared refHistory instance
+ * BUG-309-B: Enhanced with operation-aware undo/redo support
  */
 export function getUndoSystem() {
   if (!refHistoryInstance) {
     initializeRefHistory()
   }
 
+  // BUG-309-B: Override canUndo/canRedo to consider operation stack
+  const operationAwareCanUndo = computed(() => {
+    if (useOperationAwareUndo && operationStack.length > 0) {
+      return true
+    }
+    return canUndo?.value ?? false
+  })
+
+  const operationAwareCanRedo = computed(() => {
+    if (useOperationAwareUndo && redoOperationStack.length > 0) {
+      return true
+    }
+    return canRedo?.value ?? false
+  })
+
+  const operationAwareUndoCount = computed(() => {
+    if (useOperationAwareUndo) {
+      return operationStack.length
+    }
+    return undoCount?.value ?? 0
+  })
+
+  const operationAwareRedoCount = computed(() => {
+    if (useOperationAwareUndo) {
+      return redoOperationStack.length
+    }
+    return redoCount?.value ?? 0
+  })
+
   return {
-    canUndo,
-    canRedo,
-    undoCount,
-    redoCount,
+    // BUG-309-B: Use operation-aware computed refs
+    canUndo: operationAwareCanUndo,
+    canRedo: operationAwareCanRedo,
+    undoCount: operationAwareUndoCount,
+    redoCount: operationAwareRedoCount,
     history,
 
     // Standard undo/redo operations
@@ -446,6 +938,10 @@ export function getUndoSystem() {
 
     // FIXED: Unified state management using VueUse pattern
     saveState,               // Use unified saveState function instead of before/after
+
+    // BUG-309-B: Operation-aware API for fine-grained control
+    beginOperation,
+    commitOperation,
 
     // Task operations that use the shared refHistory
     deleteTaskWithUndo,
@@ -456,7 +952,12 @@ export function getUndoSystem() {
     // Group operations with undo (ISSUE-008 fix / BUG-008 fix)
     createGroupWithUndo,
     updateGroupWithUndo,
-    deleteGroupWithUndo
+    deleteGroupWithUndo,
+
+    // BUG-309-B: Debugging/inspection
+    getOperationStack: () => [...operationStack],
+    getRedoOperationStack: () => [...redoOperationStack],
+    isOperationAwareMode: () => useOperationAwareUndo
   }
 }
 
@@ -469,6 +970,7 @@ export function isUndoSystemInitialized(): boolean {
 
 /**
  * Reset the undo system (useful for testing)
+ * BUG-309-B: Also clears operation stacks
  */
 export function resetUndoSystem() {
   refHistoryInstance = null
@@ -482,6 +984,13 @@ export function resetUndoSystem() {
   redo = null
   commit = null
   clear = null
+
+  // BUG-309-B: Clear operation stacks
+  operationStack = []
+  redoOperationStack = []
+  pendingOperationBefore = null
+  pendingOperation = null
+
   if (typeof window !== 'undefined') {
     delete (window as Window & typeof globalThis).__pomoFlowUndoSystem
   }

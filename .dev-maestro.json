@@ -1,0 +1,8 @@
+{
+  "installed": true,
+  "installDir": "~/.dev-maestro",
+  "port": 6010,
+  "startCommand": "cd ~/.dev-maestro && npm start",
+  "url": "http://localhost:6010",
+  "apiStatus": "http://localhost:6010/api/status"
+}

@@ -8,6 +8,20 @@ license: Complete terms in LICENSE.txt
 
 This skill provides comprehensive skill lifecycle management: creation, repair, and maintenance.
 
+## Skill Boundary (IMPORTANT)
+
+| This Skill Manages | NOT This Skill (Use Instead) |
+|-------------------|------------------------------|
+| `.claude/skills/` directory | `docs/` → Use `Skill(smart-doc-manager)` |
+| Skill YAML frontmatter | `MASTER_PLAN.md` → Use `Skill(smart-doc-manager)` |
+| `.claude/config/skills.json` | SOPs → Use `Skill(smart-doc-manager)` |
+| Skill consolidation/merge | Architecture docs → Use `Skill(smart-doc-manager)` |
+| Skill telemetry setup | README in docs/ → Use `Skill(smart-doc-manager)` |
+
+**Clear division**: This skill manages `.claude/skills/` and skill infrastructure. For anything in `docs/`, use `smart-doc-manager` instead.
+
+---
+
 ## About Skills
 
 Skills are modular, self-contained packages that extend Claude's capabilities by providing

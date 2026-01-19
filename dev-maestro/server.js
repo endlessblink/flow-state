@@ -2,7 +2,62 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 require('dotenv').config();
+
+// Find Claude binary path - check multiple locations
+function findClaudeBinary() {
+    // 1. Check environment variable
+    if (process.env.CLAUDE_BINARY_PATH && fs.existsSync(process.env.CLAUDE_BINARY_PATH)) {
+        console.log(`[Claude] Using binary from env: ${process.env.CLAUDE_BINARY_PATH}`);
+        return process.env.CLAUDE_BINARY_PATH;
+    }
+
+    // 2. Check ~/.local/bin/claude (symlink location)
+    const localBin = path.join(process.env.HOME || '/home', '.local/bin/claude');
+    if (fs.existsSync(localBin)) {
+        console.log(`[Claude] Using binary from ~/.local/bin: ${localBin}`);
+        return localBin;
+    }
+
+    // 3. Search VS Code extensions for Claude Code extension
+    const vscodeExtensions = path.join(process.env.HOME || '/home', '.vscode/extensions');
+    if (fs.existsSync(vscodeExtensions)) {
+        try {
+            const extensions = fs.readdirSync(vscodeExtensions);
+            const claudeExt = extensions
+                .filter(e => e.startsWith('anthropic.claude-code-'))
+                .sort()
+                .reverse()[0]; // Get newest version
+            if (claudeExt) {
+                const binaryPath = path.join(vscodeExtensions, claudeExt, 'resources/native-binary/claude');
+                if (fs.existsSync(binaryPath)) {
+                    console.log(`[Claude] Using binary from VS Code extension: ${binaryPath}`);
+                    return binaryPath;
+                }
+            }
+        } catch (err) {
+            console.error('[Claude] Error searching VS Code extensions:', err.message);
+        }
+    }
+
+    // 4. Try which command as last resort
+    try {
+        const whichResult = execSync('which claude 2>/dev/null', { encoding: 'utf-8' }).trim();
+        if (whichResult && fs.existsSync(whichResult)) {
+            console.log(`[Claude] Using binary from which: ${whichResult}`);
+            return whichResult;
+        }
+    } catch (err) {
+        // which command failed, continue
+    }
+
+    console.error('[Claude] WARNING: Claude binary not found! Orchestration will use fallback questions.');
+    return null;
+}
+
+// Cached Claude binary path - resolved once at startup
+const CLAUDE_BINARY = findClaudeBinary();
 
 // Health scanner
 const healthScanner = require('./scripts/health-scanner');
@@ -37,6 +92,26 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // Serve static files from current directory
 app.use(express.static(__dirname));
+
+// Status API - for Claude to detect if Dev Maestro is running
+app.get('/api/status', (req, res) => {
+    const pkg = require('./package.json');
+    const defaultPath = path.join(__dirname, '../docs/MASTER_PLAN.md');
+    const masterPlanPath = process.env.MASTER_PLAN_PATH
+        ? path.resolve(process.env.MASTER_PLAN_PATH)
+        : defaultPath;
+
+    res.json({
+        running: true,
+        name: 'Dev Maestro',
+        version: pkg.version,
+        port: PORT,
+        project: path.dirname(masterPlanPath),
+        masterPlanPath: masterPlanPath,
+        uptime: process.uptime(),
+        url: `http://localhost:${PORT}`
+    });
+});
 
 // API Endpoint to get MASTER_PLAN.md content
 app.get('/api/master-plan', (req, res) => {
@@ -702,7 +777,7 @@ app.get('/api/docs', (req, res) => {
 });
 
 // ============== BEADS API ==============
-const { execSync, spawn } = require('child_process');
+const { spawn } = require('child_process');
 const BD_PATH = process.env.BD_PATH || `${process.env.HOME}/go/bin/bd`;
 
 // Track running agents
@@ -952,7 +1027,7 @@ Start working now. Be thorough and complete the task.`;
             // Spawn claude process with FIXED configuration
             // Critical: inherit stdin and set ANTHROPIC_API_KEY to empty string
             // Note: --verbose is required when using --print with --output-format stream-json
-            const agentProcess = spawn('claude', [
+            const agentProcess = spawn(CLAUDE_BINARY, [
                 '--print',
                 '--verbose',
                 '--output-format', 'stream-json',
@@ -1414,7 +1489,7 @@ ${recentOutput.slice(-2000)}
 
 Execute the user's instruction now.`;
 
-    const followUpProcess = spawn('claude', [
+    const followUpProcess = spawn(CLAUDE_BINARY, [
         '--output-format', 'stream-json',
         '--dangerously-skip-permissions',
         '-p', prompt
@@ -1790,7 +1865,7 @@ Example:
     try {
         // Spawn Claude to generate questions
         // Use 'pipe' for stdin and close it immediately to prevent hanging
-        const questionProcess = spawn('claude', [
+        const questionProcess = spawn(CLAUDE_BINARY, [
             '--print',
             '-p', prompt
         ], {
@@ -2004,7 +2079,7 @@ Output ONLY a JSON array of questions:
 Use type "choice" with options when there are clear alternatives, or "text" for open-ended.`;
 
     try {
-        const followUpProcess = spawn('claude', ['--print', '-p', prompt], {
+        const followUpProcess = spawn(CLAUDE_BINARY, ['--print', '-p', prompt], {
             cwd: path.join(__dirname, '..'),
             stdio: ['inherit', 'pipe', 'pipe'],
             env: { ...process.env, ANTHROPIC_API_KEY: '' }
@@ -2158,7 +2233,7 @@ Create 5-10 tasks that cover the full implementation.`;
     console.log('[Orchestrator] Prompt length:', prompt.length);
 
     try {
-        const planProcess = spawn('claude', [
+        const planProcess = spawn(CLAUDE_BINARY, [
             '--print',
             '-p', prompt
         ], {
@@ -2380,9 +2455,8 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
 
     console.log(`[Orchestrator] Spawning Claude agent for task ${task.id} in ${worktreePath}`);
 
-    const agentProcess = spawn('claude', [
+    const agentProcess = spawn(CLAUDE_BINARY, [
         '--dangerously-skip-permissions',
-        '--output-format', 'stream-json',
         '--max-turns', '30',
         '-p', prompt
     ], {
@@ -2769,7 +2843,7 @@ Format your response for readability - use **bold** for emphasis, \`code\` for t
 Keep responses concise but complete (3-5 sentences).`;
 
     try {
-        const chatProcess = spawn('claude', ['--print', '-p', contextPrompt], {
+        const chatProcess = spawn(CLAUDE_BINARY, ['--print', '-p', contextPrompt], {
             cwd: path.join(__dirname, '..'),
             stdio: ['pipe', 'pipe', 'pipe'],
             env: { ...process.env }
@@ -2858,7 +2932,7 @@ Rules for new questions:
 Think step by step: What do I already know? What critical gaps remain?`;
 
     try {
-        const questionsProcess = spawn('claude', ['--print', '-p', prompt], {
+        const questionsProcess = spawn(CLAUDE_BINARY, ['--print', '-p', prompt], {
             cwd: path.join(__dirname, '..'),
             stdio: ['inherit', 'pipe', 'pipe'],
             env: { ...process.env }
@@ -2998,7 +3072,7 @@ Respond helpfully about this specific task:
 Keep response focused and concise (2-4 sentences). If the user wants to modify the task, explain what changes you recommend.`;
 
     try {
-        const chatProcess = spawn('claude', ['--print', '-p', contextPrompt], {
+        const chatProcess = spawn(CLAUDE_BINARY, ['--print', '-p', contextPrompt], {
             cwd: path.join(__dirname, '..'),
             stdio: ['inherit', 'pipe', 'pipe'],
             env: { ...process.env }
@@ -3090,7 +3164,7 @@ Keep it conversational and concise (3-5 sentences).`;
     }
 
     try {
-        const deepenProcess = spawn('claude', ['--print', '-p', prompt], {
+        const deepenProcess = spawn(CLAUDE_BINARY, ['--print', '-p', prompt], {
             cwd: path.join(__dirname, '..'),
             stdio: ['inherit', 'pipe', 'pipe'],
             env: { ...process.env, ANTHROPIC_API_KEY: '' }
@@ -3230,7 +3304,7 @@ ${feedback}
 Create 1-5 new tasks to address this feedback. Output as JSON array:
 [{"id": "refine-1", "title": "...", "description": "...", "agentType": "...", "dependencies": [], "priority": "P1"}]`;
 
-    const refineProcess = spawn('claude', ['--print', '-p', prompt], {
+    const refineProcess = spawn(CLAUDE_BINARY, ['--print', '-p', prompt], {
         cwd: path.join(__dirname, '..'),
         stdio: ['inherit', 'pipe', 'pipe'],
         env: { ...process.env, ANTHROPIC_API_KEY: '' }

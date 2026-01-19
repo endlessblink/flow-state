@@ -1,5 +1,5 @@
-**Last Updated**: January 17, 2026 (TASK-312 TaskRowDueDate Dropdown Component)
-**Version**: 5.45 (Skill Consolidation Phase 2)
+**Last Updated**: January 19, 2026 (TASK-316 TaskCard Design Fix)
+**Version**: 5.47 (Board View UI Polish)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -112,6 +112,9 @@
 | ~~**TASK-305**~~         | ✅ **DONE** **Automated Master Plan Archival**                          | **P2**                                              | ✅ **DONE** (2026-01-16)                                                                                                         | [Implementation Plan](./plans/automated-archival-system.md). Automated archival of completed tasks via "Update Master Plan" workflow.                                                                          |                                                        |
 | ~~**BUG-311**~~          | ✅ **DONE** **Fix Vite Module Loading & Startup Loop**                  | **P0**                                              | ✅ **DONE** (2026-01-17)                                                                                                         | Resolved circular dependencies in `spatialContainment.ts` and `stores/canvas`. Fixed type errors in `CanvasView.vue`.                                                                                                          |                                                        |
 | ~~**TASK-312**~~         | ✅ **DONE** **TaskRowDueDate Dropdown Component**                       | **P2**                                              | ✅ **DONE** (2026-01-17)                                                                                                         | Created TaskRowDueDate.vue with standardized dropdown (Today/Tomorrow/In 3 days/In 1 week/No due date). Updated TaskRow.vue and HierarchicalTaskRowContent.vue.                                                                |                                                        |
+| ~~**TASK-314**~~         | ✅ **DONE** **Highlight Active Timer Task**                             | **P2**                                              | ✅ **DONE** (2026-01-18)                                                                                                         | Active timer task now highlighted in Board and Catalog views                                                                                                                                                    |                                                        |
+| ~~**TASK-315**~~         | ✅ **DONE** **Documentation & Skills Consolidation**                    | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-012](./sop/active/SOP-012-skills-config-sync.md) - Synced skills.json (10→30), created canvas index, doc validator, staleness checker                                                                      |                                                        |
+| ~~**TASK-316**~~         | ✅ **DONE** **TaskCard Design Fix (Board View)**                        | **P3**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Changed selected state from filled to outline-only, removed strikethrough from completed titles. File: `TaskCard.css`                                                                                           |                                                        |
 
 ---
 
@@ -202,13 +205,16 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 - [x] All source files - UI text, branding, environment URLs updated
 - [x] Test files - Updated assertions and descriptions
 
-**CI/CD Release Workflow (✅ COMPLETE - 2026-01-18)**:
+**CI/CD Release Workflow (✅ COMPLETE - 2026-01-19)**:
 
 - [x] `.github/workflows/release.yml` - Multi-platform builds
 - [x] Linux (ubuntu-22.04) - AppImage, .deb, .rpm
 - [x] Windows (windows-latest) - .exe, .msi
 - [x] macOS (macos-latest) - .dmg (arm64 + x86_64)
 - [x] Automatic draft release creation on tag push
+- [x] Fixed: `tauriScript: npm run tauri` (was defaulting to pnpm)
+- [x] Fixed: Added Rust targets for macOS cross-compilation
+- [x] Verified: All 4 platform builds passing (2026-01-19)
 
 **Auto-Updater Signing (✅ COMPLETE - 2026-01-18)**:
 
@@ -383,6 +389,45 @@ Ctrl+Z keyboard shortcut is detected but doesn't execute undo. The global keyboa
 **Files Modified**:
 
 - `src/utils/globalKeyboardHandlerSimple.ts` - Added execution calls + element ignore check
+
+---
+
+### ~~BUG-309-B~~: Undo/Redo Position Drift (✅ DONE)
+
+**Priority**: P1-HIGH
+**Status**: ✅ DONE (2026-01-18)
+
+When undoing an operation (e.g., deleting a task), other tasks that weren't involved in the operation "jumped back" to their positions from the time of the snapshot.
+
+**Root Cause**:
+
+- The undo system used full-state snapshots that captured ALL task/group positions
+- Restoring a snapshot would overwrite ALL positions, not just the affected entity's position
+- Example: User moves Task A to (300,400), creates Task B, presses Ctrl+Z → Task A jumps back to (100,200)
+
+**Solution - Operation-Scoped Undo**:
+
+Instead of restoring full snapshots, track which entities were affected by each operation and only restore those.
+
+**Implementation**:
+
+1. Added `UndoOperation` interface with `type`, `affectedIds`, `description`, `timestamp`
+2. Added operation stack (`operationStack`, `redoOperationStack`) that tracks before/after snapshots per operation
+3. Implemented `performSelectiveUndo()` and `performSelectiveRedo()` that only restore affected entities:
+   - `task-create`: Undo = delete the created task (others unchanged)
+   - `task-delete`: Undo = restore the deleted task from snapshot
+   - `task-update`/`task-move`: Undo = restore only the moved task's position
+   - Similar for group operations
+4. Updated all `*WithUndo` functions to use `beginOperation()` + `commitOperation()` pattern
+5. Legacy entries (without metadata) fall back to full-state restoration for backward compatibility
+
+**Files Modified**:
+
+- `src/composables/undoSingleton.ts` - Core operation-aware undo system implementation
+
+**Documentation**:
+
+- SOP: [`docs/sop/active/UNDO-system-architecture.md`](docs/sop/active/UNDO-system-architecture.md)
 
 ---
 

@@ -11,6 +11,7 @@ import resourceManager from '../../utils/canvas/resourceManager'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { reconcileTaskParentsByContainment } from '@/utils/canvas/spatialContainment'
 import { logHierarchySummary } from '@/utils/canvas/invariants'
+import { useCanvasOperationState } from './useCanvasOperationState'
 
 // --- NEW COMPOSABLES (Phase 3) ---
 import { useCanvasCore } from './useCanvasCore'
@@ -123,6 +124,8 @@ export function useCanvasOrchestrator() {
     const persistence = useCanvasSync()
 
     // Unified Interactions (Drag & Resize)
+    const { canAcceptRemoteUpdate } = useCanvasOperationState()
+
     const interactions = useCanvasInteractions({
         nodes,
         findNode,
@@ -153,6 +156,13 @@ export function useCanvasOrchestrator() {
         // Prevent sync if explicitly unwanted (e.g. during specific interactions)
         if (canvasUiStore.operationLoading.syncing) return
 
+        // TASK-241: State Machine Guard
+        // Block READ-PATH syncs if user is interacting (dragging/resizing)
+        if (!canAcceptRemoteUpdate.value) {
+            console.debug('🛡️ [ORCHESTRATOR] syncNodes BLOCKED by operation state (User Interaction)')
+            return
+        }
+
         console.debug('👉 [ORCHESTRATOR] Calling syncNodes', { hasTasks: !!tasks })
         try {
             const tasksToSync = tasks || tasksWithCanvasPosition.value
@@ -176,7 +186,12 @@ export function useCanvasOrchestrator() {
     // Edge sync: build edges from task.dependsOn arrays
     const recentlyRemovedEdges = ref(new Set<string>())
     const edgeSync = useCanvasEdgeSync({ recentlyRemovedEdges })
-    const syncEdges = () => edgeSync.syncEdges(tasksWithCanvasPosition.value)
+    const syncEdges = () => {
+        if (!canAcceptRemoteUpdate.value) {
+            return
+        }
+        edgeSync.syncEdges(tasksWithCanvasPosition.value)
+    }
 
     // Batched edge sync to coalesce multiple updates
     let isEdgeSyncScheduled = false
@@ -655,6 +670,10 @@ export function useCanvasOrchestrator() {
         storeHealth: lifecycle.storeHealth,
 
         // Hotkeys
-        handleKeyDown
+        handleKeyDown,
+
+        // TASK-241: State Machine Debug
+        operationState: useCanvasOperationState().state,
+        getOperationDebug: useCanvasOperationState().getDebugInfo
     }
 }

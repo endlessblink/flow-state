@@ -1,6 +1,7 @@
 # SOP-011: Tauri Desktop Distribution
 
 **Created**: 2026-01-18
+**Updated**: 2026-01-19
 **Status**: Active
 **Related Task**: TASK-305
 
@@ -269,6 +270,23 @@ ls -la /usr/share/applications/FlowState.desktop
 - Verify `pubkey` in tauri.conf.json matches generated public key
 - Ensure GitHub secrets are correctly set
 - Check release is published (not draft)
+
+### GitHub Actions Build Fails with "pnpm not found"
+The tauri-action defaults to pnpm. Fix by adding `tauriScript`:
+```yaml
+- uses: tauri-apps/tauri-action@v0
+  with:
+    tauriScript: npm run tauri  # Use npm instead of pnpm
+```
+
+### macOS Cross-Compilation Fails
+Add Rust targets in the workflow:
+```yaml
+- name: Install Rust stable
+  uses: dtolnay/rust-toolchain@stable
+  with:
+    targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+```
 
 ### Windows SmartScreen Warning
 Users may see "Windows protected your PC" warning. This is normal for unsigned apps. To resolve:

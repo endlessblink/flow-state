@@ -127,7 +127,7 @@ To fix, run: npm run generate:keys
 
 **Solution**: Access viewport through computed property with guards.
 
-**SOP**: `docs/sop/SOP-001-vue-flow-viewport-reactivity.md`
+**SOP**: `docs/sop/canvas/CANVAS-POSITION-SYSTEM.md` (Section 5)
 
 **Key File**: `src/components/canvas/TaskNode.vue` (lines 161-180)
 
@@ -140,7 +140,7 @@ SOPs document production fixes with root cause analysis, solution steps, and rol
 ### Available SOPs
 | ID | Title | Related Bug |
 |----|-------|-------------|
-| SOP-001 | Vue Flow Viewport Reactivity | BUG-151 |
+| SOP-001 (Merged) | Vue Flow Viewport Reactivity | BUG-151 (See `canvas/CANVAS-POSITION-SYSTEM.md`) |
 | CANVAS-group-resurrection-fix | Deleted Groups Reappearing | BUG-060, BUG-061 |
 
 ### When to Create SOPs

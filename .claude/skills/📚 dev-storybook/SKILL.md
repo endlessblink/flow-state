@@ -26,6 +26,21 @@ BUILD, AUDIT, and AUTOMATE Storybook stories for Vue 3 components with TypeScrip
 
 When user asks to **"streamline"** a Storybook story, they mean: **Make the story look EXACTLY like the component appears in the actual app.**
 
+### What "Streamlined" Means in This Project
+
+**CRITICAL**: In FlowState, "streamlined" specifically means using **glass morphism** instead of solid black backgrounds.
+
+- ❌ **NOT streamlined**: Solid black/opaque backgrounds (`--glass-bg-solid`, `rgba(0,0,0,0.95)`)
+- ✅ **Streamlined**: Semi-transparent backgrounds with blur so the purple gradient shows through
+
+```css
+/* Streamlined = Glass Morphism */
+background: rgba(30, 32, 45, 0.75);
+backdrop-filter: blur(24px) saturate(180%);
+```
+
+**The app's signature look is glass panels floating over a purple/indigo gradient. If a component looks like a flat black box, it's NOT streamlined.**
+
 ### Streamlining Checklist
 
 When streamlining a story, verify ALL of the following:
@@ -34,10 +49,11 @@ When streamlining a story, verify ALL of the following:
 |-------|-------------|------------|
 | **1. Use Actual Components** | Story imports and renders the REAL Vue component, not a mockup | Import from `@/components/...` |
 | **2. App Background** | Story background matches app's purple/indigo gradient | Use `background: var(--app-background-gradient)` |
-| **3. Design Tokens** | All styling uses CSS variables, no hardcoded values | Replace `#hex` and `rgba()` with `var(--token)` |
-| **4. Correct Props** | Story passes the same props the component expects | Check `defineProps` in component |
-| **5. Event Handlers** | All emitted events have handlers | Add `@event="handler"` |
-| **6. Mock Data** | Data looks realistic, matches production patterns | Use actual Task/Project types |
+| **3. Glass Morphism** | Modals/overlays use semi-transparent bg with blur, NOT solid black | Use `rgba(30, 32, 45, 0.75)` + `backdrop-filter: blur(24px)` |
+| **4. Design Tokens** | All styling uses CSS variables, no hardcoded values | Replace `#hex` and `rgba()` with `var(--token)` |
+| **5. Correct Props** | Story passes the same props the component expects | Check `defineProps` in component |
+| **6. Event Handlers** | All emitted events have handlers | Add `@event="handler"` |
+| **7. Mock Data** | Data looks realistic, matches production patterns | Use actual Task/Project types |
 
 ### Streamlining Workflow
 
@@ -129,12 +145,47 @@ export const Default: Story = {
 }
 ```
 
+### Glass Morphism vs Solid Black (CRITICAL)
+
+**Problem**: Components using `--glass-bg-solid` or opaque black backgrounds look wrong because they block the app's purple gradient from showing through.
+
+**Solution**: Use semi-transparent backgrounds with blur so the gradient is visible through the glass effect.
+
+```css
+/* ❌ WRONG - Solid black, no glass effect */
+background: var(--glass-bg-solid);           /* rgba(0, 0, 0, 0.95) */
+background: rgba(0, 0, 0, 0.95);
+background: #121214;
+
+/* ✅ CORRECT - Semi-transparent with blur (glass morphism) */
+background: rgba(30, 32, 45, 0.75);
+backdrop-filter: blur(24px) saturate(180%);
+-webkit-backdrop-filter: blur(24px) saturate(180%);
+border: 1px solid var(--glass-border-medium);
+```
+
+**Glass Morphism Recipe**:
+| Property | Value | Purpose |
+|----------|-------|---------|
+| `background` | `rgba(30, 32, 45, 0.75)` | Semi-transparent dark with slight purple tint |
+| `backdrop-filter` | `blur(24px) saturate(180%)` | Blur + color boost for depth |
+| `border` | `1px solid var(--glass-border-medium)` | Subtle edge definition |
+| `box-shadow` | `inset 0 1px 0 rgba(255, 255, 255, 0.1)` | Top highlight for polish |
+
+**When to use glass morphism**:
+- Modals and overlays
+- Command palettes
+- Dropdown menus
+- Floating panels
+- Any component that appears over the app background
+
 ### Common Streamlining Issues
 
 | Issue | Symptom | Fix |
 |-------|---------|-----|
 | **Mockup instead of component** | Story shows different UI than app | Import actual component |
 | **Wrong background color** | Black/gray instead of purple gradient | Use `var(--app-background-gradient)` |
+| **Solid black modal** | Modal looks flat, no depth | Use glass morphism with `rgba()` + `backdrop-filter` |
 | **Hardcoded colors** | Colors don't match design system | Use CSS variables |
 | **Missing components** | Card missing buttons/badges | Import child components |
 | **Wrong spacing** | Elements too cramped/spread | Use `var(--space-X)` tokens |

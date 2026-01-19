@@ -199,16 +199,17 @@ defineExpose({ open, close })
 
 /* Modal */
 .command-palette-modal {
-  background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid var(--glass-border);
+  background: rgba(30, 32, 45, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border-medium);
   border-radius: var(--radius-2xl);
   width: 600px;
   max-width: 90vw;
   box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+    0 32px 64px rgba(0, 0, 0, 0.4),
+    0 16px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: visible;
   animation: slideUp var(--duration-normal) var(--spring-bounce);
 }

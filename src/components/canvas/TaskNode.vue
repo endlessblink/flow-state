@@ -51,7 +51,6 @@
         v-if="!isLOD2"
         :show-status="showStatus"
         :status-label="statusLabel"
-        :status="task?.status"
         :due-date="task?.dueDate"
         :formatted-due-date="formattedDueDate"
         :show-schedule="showSchedule"

@@ -22,6 +22,25 @@ User: "Fix the bug where tasks disappear"
 4. Only then claim the fix is complete
 ```
 
+## When to Defer to Specialized Skills
+
+**IMPORTANT**: This skill handles general debugging. For domain-specific issues, use specialized skills instead:
+
+| Issue Type | Use This Skill Instead |
+|------------|------------------------|
+| Timer/Pomodoro bugs | `Skill(dev-fix-timer)` |
+| Canvas/Vue Flow issues | `Skill(vue-flow-debug)` |
+| Supabase/Auth problems | `Skill(supabase-debugger)` |
+| Calendar interface bugs | `Skill(calendar-interface-architect)` |
+| Port/server conflicts | `Skill(ops-port-manager)` |
+
+**When to use THIS skill (dev-debugging)**:
+- General Vue.js reactivity issues
+- Pinia state management bugs
+- Task store CRUD problems
+- Keyboard shortcut failures
+- Memory leaks and performance issues
+- Cross-cutting bugs that span multiple systems
 
 # Comprehensive Debugging
 

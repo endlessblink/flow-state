@@ -29,6 +29,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Backup System | ✅ Hardened (Smart Layers 1-3) |
 | Timer Sync | ✅ Working (cross-device, KDE widget) |
 | KDE Widget | ✅ Working (`kde-widget/`) |
+| Tauri Desktop | ✅ Working (Linux/Win/Mac releases) |
 | Build/CI | ✅ Passing |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
@@ -52,6 +53,28 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 - **Vue Flow** for canvas, **Vuedraggable** for drag-drop
 - **Supabase** (Postgres + Auth + Realtime)
 - **TipTap** for rich text editing
+- **Tauri 2.x** for desktop distribution (Linux, Windows, macOS)
+
+## Tauri Desktop Distribution
+
+FlowState is distributed as a native desktop app via Tauri. The app auto-orchestrates Docker + Supabase on launch.
+
+**Full SOP:** [`docs/sop/SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md)
+
+| Command | Purpose |
+|---------|---------|
+| `npm run tauri build` | Build desktop app locally |
+| `npm run tauri dev` | Run in Tauri dev mode |
+
+**Release workflow:** Push a git tag (`v0.1.0`) to trigger GitHub Actions multi-platform builds.
+
+**Key Files:**
+```
+src-tauri/tauri.conf.json              # App config, version, updater
+src-tauri/src/lib.rs                   # Rust commands (Docker/Supabase orchestration)
+src/composables/useTauriStartup.ts     # Frontend startup sequence
+.github/workflows/release.yml          # CI/CD release workflow
+```
 
 ## Key Development Rules
 
@@ -200,6 +223,23 @@ src/stores/timer.ts                      # Timer state + leadership logic
 kde-widget/package/contents/ui/main.qml  # KDE Plasma widget
 ```
 
+## Timer Active Task Highlighting
+
+When a timer is running, the associated task is visually highlighted across all views with an amber glow + pulse animation.
+
+**Full SOP:** [`docs/sop/SOP-012-timer-active-highlight.md`](docs/sop/SOP-012-timer-active-highlight.md)
+
+**Quick Pattern:**
+```typescript
+const timerStore = useTimerStore()
+const isTimerActive = computed(() =>
+  timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+)
+// Add class binding: { 'timer-active': isTimerActive }
+```
+
+**Design Tokens:** `--timer-active-border`, `--timer-active-glow`, `--timer-active-glow-strong`
+
 ## Supabase JWT Key Validation
 
 **Problem:** JWT keys in `.env.local` can drift from local Supabase's JWT secret, causing WebSocket 403 errors.
@@ -252,7 +292,7 @@ To fix, run: npm run generate:keys
 
 **Position drift and "jumping" tasks occur when multiple code paths mutate geometry.**
 
-**Full SOP:** [`docs/sop/SOP-002-canvas-geometry-invariants.md`](docs/sop/SOP-002-canvas-geometry-invariants.md)
+**Full SOP:** [`docs/sop/canvas/CANVAS-POSITION-SYSTEM.md`](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md)
 
 ### Quick Rules
 1. **Single Writer** - Only drag handlers may change `parentId`, `canvasPosition`, `position`
@@ -280,9 +320,26 @@ These violated geometry invariants and caused position drift. See ADR comments i
 - Completed items: `~~TASK-001~~` with strikethrough
 - **NEVER reuse IDs** - Always run `./scripts/utils/get-next-task-id.cjs` first
 
-## Dev-Maestro Kanban Compatibility
+## Dev Maestro
 
-The dev-maestro at `http://localhost:6010` parses MASTER_PLAN.md.
+**AI Agent Orchestration Platform** - Kanban board for MASTER_PLAN.md tasks with health scanning, skills visualization, and multi-agent workflows.
+
+| Item | Value |
+|------|-------|
+| URL | http://localhost:6010 |
+| Install Dir | `~/.dev-maestro` |
+| Start | `./maestro.sh` or `cd ~/.dev-maestro && npm start` |
+| Status API | `curl -s localhost:6010/api/status` |
+| Skill | `dev-maestro` |
+
+**Views**: Kanban, Orchestrator, Skills, Docs, Stats, Timeline, Health
+
+**To check if running:**
+```bash
+curl -s localhost:6010/api/status | grep -q '"running":true' && echo "Running" || echo "Not running"
+```
+
+### MASTER_PLAN.md Parsing Format
 
 **Task Header Format:**
 ```markdown
@@ -326,7 +383,28 @@ Detailed docs available in `docs/claude-md-extension/`:
 | `design-system.md` | Design tokens, Tailwind config, glass morphism |
 | `troubleshooting.md` | Common issues, gotchas, SOPs |
 
+**SOPs (Standard Operating Procedures)** in `docs/sop/`:
+
+| File | Contents |
+|------|----------|
+| [`SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md) | Tauri builds, signing, GitHub Actions releases |
+| [`active/UNDO-system-architecture.md`](docs/sop/active/UNDO-system-architecture.md) | Undo/redo system with operation-scoped selective restoration (BUG-309-B) |
+| [`active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md) | Cross-device timer sync (Vue app + KDE widget) |
+| [`active/SOP-012-skills-config-sync.md`](docs/sop/active/SOP-012-skills-config-sync.md) | Skills config auto-sync and maintenance |
+| [`canvas/README.md`](docs/sop/canvas/README.md) | Canvas system documentation index |
+| [`canvas/CANVAS-POSITION-SYSTEM.md`](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md) | Canvas position/coordinate system, geometry invariants |
+
+## Skills Maintenance
+
+| Command | Purpose |
+|---------|---------|
+| `npm run skills:sync` | Sync filesystem skills to `.claude/config/skills.json` |
+| `npm run skills:staleness` | Detect stale, broken, or deprecated skills |
+| `npm run docs:validate` | Validate all markdown links in docs |
+
+**Skill Boundaries:** `smart-doc-manager` → docs/, MASTER_PLAN.md | `skill-creator-doctor` → .claude/skills/
+
 ---
 
-**Last Updated**: January 16, 2026
+**Last Updated**: January 19, 2026
 **Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

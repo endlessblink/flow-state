@@ -7,6 +7,20 @@ description: Universal documentation consolidation skill that verifies system re
 
 **Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions.**
 
+## Skill Boundary (IMPORTANT)
+
+| This Skill Manages | NOT This Skill (Use Instead) |
+|-------------------|------------------------------|
+| `docs/` directory | `.claude/skills/` → Use `Skill(skill-creator-doctor)` |
+| `MASTER_PLAN.md` | Skill frontmatter/description → Use `Skill(skill-creator-doctor)` |
+| SOPs in `docs/sop/` | Skill telemetry/stats → See `skills.json` |
+| README files in docs/ | Skills consolidation → Use `Skill(skill-creator-doctor)` |
+| Architecture docs | - |
+
+**Clear division**: This skill manages `docs/` and project documentation. For anything in `.claude/skills/`, use `skill-creator-doctor` instead.
+
+---
+
 ## Core Safety Principle
 
 **NEVER ASSUME - ALWAYS VERIFY**

@@ -1,11 +1,7 @@
 <template>
   <div class="task-metadata">
     <!-- Status -->
-    <span
-      v-if="showStatus"
-      class="status-badge"
-      :class="statusClass"
-    >{{ statusLabel }}</span>
+    <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
 
     <!-- TASK-282: Overdue Badge (takes priority over regular due date display) -->
     <OverdueBadge
@@ -45,14 +41,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { Calendar, Check } from 'lucide-vue-next'
 import OverdueBadge from './OverdueBadge.vue'
 
-const props = defineProps<{
+defineProps<{
   showStatus: boolean
   statusLabel: string
-  status?: string // 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   dueDate?: string | null
   formattedDueDate: string
   showSchedule: boolean
@@ -65,14 +59,6 @@ const props = defineProps<{
   isDone: boolean
   isOverdue: boolean
 }>()
-
-// Compute status class for badge styling
-const statusClass = computed(() => {
-  if (!props.status) return ''
-  // Convert status to CSS class format (e.g., 'in_progress' -> 'status-badge--in-progress')
-  const normalizedStatus = props.status.replace(/_/g, '-')
-  return `status-badge--${normalizedStatus}`
-})
 
 defineEmits<{
   reschedule: [dateType: string]
@@ -97,47 +83,6 @@ defineEmits<{
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-}
-
-/* Status-specific badge colors using design tokens */
-.status-badge {
-  font-weight: var(--font-medium);
-  transition: all var(--duration-fast) var(--spring-smooth);
-}
-
-.status-badge--planned {
-  background: var(--status-planned-bg);
-  border-color: var(--status-planned-border);
-  color: var(--status-planned-text);
-  box-shadow: 0 0 8px var(--status-planned-bg);
-}
-
-.status-badge--in-progress {
-  background: var(--status-in-progress-bg);
-  border-color: var(--status-in-progress-border);
-  color: var(--status-in-progress-text);
-  box-shadow: 0 0 8px var(--status-in-progress-bg);
-}
-
-.status-badge--done {
-  background: var(--status-done-bg);
-  border-color: var(--status-done-border);
-  color: var(--status-done-text);
-  box-shadow: 0 0 8px var(--status-done-bg);
-}
-
-.status-badge--backlog {
-  background: var(--status-backlog-bg);
-  border-color: var(--status-backlog-border);
-  color: var(--status-backlog-text);
-  /* No glow for backlog - more subtle appearance */
-}
-
-.status-badge--on-hold {
-  background: var(--status-on-hold-bg);
-  border-color: var(--status-on-hold-border);
-  color: var(--status-on-hold-text);
-  box-shadow: 0 0 8px var(--status-on-hold-bg);
 }
 
 .due-date-badge {

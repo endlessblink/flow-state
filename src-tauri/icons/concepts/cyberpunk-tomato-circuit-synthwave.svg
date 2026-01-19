@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Glow for circuits -->
+    <filter id="circuitGlowSynth" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Gradient for tomato body -->
+    <linearGradient id="tomatoGradSynth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d1a3d"/>
+      <stop offset="100%" stop-color="#1a0a25"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="512" height="512" fill="#0a0a1a" rx="64"/>
+
+  <!-- Grid lines background effect -->
+  <g stroke="#8b5cf6" stroke-width="1" opacity="0.15">
+    <line x1="96" y1="0" x2="96" y2="512"/>
+    <line x1="192" y1="0" x2="192" y2="512"/>
+    <line x1="320" y1="0" x2="320" y2="512"/>
+    <line x1="416" y1="0" x2="416" y2="512"/>
+  </g>
+
+  <!-- Tomato body -->
+  <ellipse cx="256" cy="290" rx="160" ry="140" fill="url(#tomatoGradSynth)"/>
+
+  <!-- Tomato outline - magenta -->
+  <ellipse cx="256" cy="290" rx="160" ry="140"
+           fill="none" stroke="#ec4899" stroke-width="4"/>
+
+  <!-- Circuit traces - cyan -->
+  <g stroke="#06b6d4" stroke-width="2.5" fill="none" filter="url(#circuitGlowSynth)">
+    <path d="M120 260 H200 L220 280 H290 L310 260 H380"/>
+    <path d="M140 320 H180 L200 340 H310 L330 320 H380"/>
+    <path d="M160 380 H220 L240 360 H280 L300 380 H360"/>
+  </g>
+
+  <!-- Circuit traces - vertical - purple -->
+  <g stroke="#8b5cf6" stroke-width="2.5" fill="none" filter="url(#circuitGlowSynth)">
+    <path d="M200 180 V240 L180 260 V320"/>
+    <path d="M310 180 V220 L330 240 V300"/>
+    <path d="M256 200 V260 L276 280 V340"/>
+  </g>
+
+  <!-- Circuit nodes - magenta -->
+  <g fill="#ec4899">
+    <circle cx="200" cy="260" r="8"/>
+    <circle cx="290" cy="280" r="6"/>
+    <circle cx="180" cy="320" r="6"/>
+    <circle cx="330" cy="320" r="8"/>
+    <circle cx="310" cy="240" r="6"/>
+    <circle cx="220" cy="380" r="6"/>
+    <circle cx="300" cy="380" r="6"/>
+  </g>
+
+  <!-- Main processor node - center - cyan -->
+  <rect x="236" y="270" width="40" height="40" rx="4"
+        fill="#0a0a1a" stroke="#06b6d4" stroke-width="3"/>
+  <rect x="246" y="280" width="20" height="20" rx="2" fill="#06b6d4" opacity="0.9"/>
+
+  <!-- Stem with circuit aesthetic -->
+  <path d="M256 150 L256 100"
+        stroke="#8b5cf6" stroke-width="6" stroke-linecap="round"
+        filter="url(#circuitGlowSynth)"/>
+  <path d="M256 100 L240 80 M256 100 L272 80"
+        stroke="#8b5cf6" stroke-width="4" stroke-linecap="round"
+        filter="url(#circuitGlowSynth)"/>
+
+  <!-- Tech leaves - cyan -->
+  <path d="M256 140 L200 120 L190 140 L230 145 Z"
+        fill="#06b6d4" opacity="0.8"/>
+  <path d="M256 140 L312 120 L322 140 L282 145 Z"
+        fill="#06b6d4" opacity="0.8"/>
+
+  <!-- Small circuit dots on leaves - magenta -->
+  <circle cx="210" cy="130" r="4" fill="#ec4899"/>
+  <circle cx="302" cy="130" r="4" fill="#ec4899"/>
+</svg>

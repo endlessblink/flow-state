@@ -1,8 +1,9 @@
 {
   "installed": true,
-  "installDir": "~/.dev-maestro",
+  "installDir": "/home/endlessblink/.dev-maestro",
   "port": 6010,
-  "startCommand": "cd ~/.dev-maestro && npm start",
+  "masterPlanPath": "/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/docs/MASTER_PLAN.md",
+  "startCommand": "cd /home/endlessblink/.dev-maestro && npm start",
   "url": "http://localhost:6010",
   "apiStatus": "http://localhost:6010/api/status"
 }

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Strong glow filter -->
+    <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background with subtle gradient -->
+  <rect width="512" height="512" fill="#0f0f14" rx="80"/>
+
+  <!-- Main tomato body - BRIGHT magenta/pink -->
+  <ellipse cx="256" cy="280" rx="155" ry="145"
+           fill="#ff2d8a"/>
+
+  <!-- Tomato highlight (lighter pink) -->
+  <ellipse cx="210" cy="240" rx="60" ry="45"
+           fill="#ff6eb4" opacity="0.6"/>
+
+  <!-- Inner dark shadow -->
+  <ellipse cx="280" cy="310" rx="80" ry="70"
+           fill="#c41e6a" opacity="0.5"/>
+
+  <!-- Cyan outline glow -->
+  <ellipse cx="256" cy="280" rx="155" ry="145"
+           fill="none" stroke="#00f5ff" stroke-width="8"
+           filter="url(#strongGlow)"/>
+
+  <!-- Glitch bars - BRIGHT and visible -->
+  <!-- Top glitch -->
+  <g filter="url(#strongGlow)">
+    <rect x="40" y="210" width="130" height="14" fill="#00f5ff" rx="3"/>
+    <rect x="350" y="205" width="120" height="16" fill="#00f5ff" rx="3"/>
+  </g>
+
+  <!-- Middle glitch -->
+  <g filter="url(#strongGlow)">
+    <rect x="30" y="280" width="100" height="18" fill="#ff2d8a" rx="3"/>
+    <rect x="25" y="283" width="80" height="12" fill="#00f5ff" rx="2"/>
+    <rect x="390" y="275" width="95" height="20" fill="#ff2d8a" rx="3"/>
+    <rect x="400" y="280" width="75" height="12" fill="#00f5ff" rx="2"/>
+  </g>
+
+  <!-- Bottom glitch -->
+  <g filter="url(#strongGlow)">
+    <rect x="50" y="350" width="110" height="12" fill="#00f5ff" rx="3"/>
+    <rect x="360" y="355" width="100" height="14" fill="#00f5ff" rx="3"/>
+  </g>
+
+  <!-- Stem - BRIGHT cyan -->
+  <g filter="url(#strongGlow)">
+    <path d="M256 135 L256 85"
+          stroke="#00f5ff" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- Leaves - bright cyan -->
+    <path d="M256 120 Q195 85 170 115 Q205 110 256 135"
+          fill="#00f5ff"/>
+    <path d="M256 120 Q317 85 342 115 Q307 110 256 135"
+          fill="#00f5ff"/>
+  </g>
+
+  <!-- Small accent sparkles -->
+  <circle cx="180" cy="230" r="6" fill="white" opacity="0.9"/>
+  <circle cx="340" cy="320" r="4" fill="white" opacity="0.7"/>
+  <circle cx="200" cy="350" r="3" fill="white" opacity="0.6"/>
+</svg>

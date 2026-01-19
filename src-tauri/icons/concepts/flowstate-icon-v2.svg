@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- FlowState Icon - Concept 2: Abstract F with Flow -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b"/>
+      <stop offset="100%" style="stop-color:#312e81"/>
+    </linearGradient>
+    <linearGradient id="flowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8"/>
+      <stop offset="50%" style="stop-color:#a78bfa"/>
+      <stop offset="100%" style="stop-color:#c4b5fd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bgGrad)"/>
+
+  <!-- Stylized F made of flowing curves -->
+  <path d="M160 120
+           L160 392
+           Q160 420, 188 420
+           Q216 420, 216 392
+           L216 280
+           L300 280
+           Q340 280, 340 240
+           Q340 200, 300 200
+           L216 200
+           L216 176
+           L340 176
+           Q380 176, 380 136
+           Q380 96, 340 96
+           L188 96
+           Q160 96, 160 120Z"
+        fill="url(#flowGrad)"/>
+
+  <!-- Flow accent wave -->
+  <path d="M280 320 Q320 280, 360 320 Q400 360, 360 400"
+        stroke="#f59e0b" stroke-width="20" fill="none"
+        stroke-linecap="round"/>
+
+  <!-- Small timer dot -->
+  <circle cx="360" cy="400" r="16" fill="#f59e0b"/>
+</svg>

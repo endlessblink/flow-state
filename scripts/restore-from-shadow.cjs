@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 /**
  * Foolproof Shadow Backup Recovery Script
+ * TASK-317: Enhanced with tombstone filtering to prevent zombie data resurrection
  *
  * Restores data from shadow.db to Supabase with:
  * - Automatic user_id remapping
- * - Correct FK constraint ordering
+ * - Correct FK constraint ordering (topological sort)
  * - UPSERT to handle existing data
+ * - Tombstone filtering (skips permanently deleted items)
+ * - Soft-delete filtering (skips is_deleted=true items)
  * - Dry-run mode for previewing
  *
  * Usage:
  *   npm run restore              # Auto-detect user, restore all
  *   npm run restore:dry-run      # Preview without changes
  *   node scripts/restore-from-shadow.cjs [user_id] [--dry-run]
+ *   node scripts/restore-from-shadow.cjs [user_id] [--no-filter]  # Skip tombstone filtering
  *
  * @since 2026-01-16
+ * @updated 2026-01-20 - TASK-317 tombstone filtering
  */
 
 const Database = require('better-sqlite3')
@@ -30,6 +35,7 @@ const SHADOW_DB_PATH = path.join(__dirname, '../backups/shadow.db')
 // Parse command line args
 const args = process.argv.slice(2)
 const DRY_RUN = args.includes('--dry-run')
+const SKIP_FILTER = args.includes('--no-filter')  // TASK-317: Skip tombstone/soft-delete filtering
 const USER_ID_ARG = args.find(a => !a.startsWith('--'))
 
 // =============================================================================
@@ -54,6 +60,60 @@ function loadEnv() {
       })
     }
   }
+}
+
+// =============================================================================
+// TASK-317: Tombstone Filtering
+// =============================================================================
+
+/**
+ * Fetch tombstones from Supabase to filter permanently deleted items
+ */
+async function fetchTombstones(supabase) {
+  try {
+    const { data, error } = await supabase
+      .from('tombstones')
+      .select('entity_type, entity_id')
+
+    if (error) {
+      log('⚠️', `Could not fetch tombstones: ${error.message}`)
+      return new Set()
+    }
+
+    return new Set(data.map(t => `${t.entity_type}:${t.entity_id}`))
+  } catch (e) {
+    log('⚠️', `Tombstone fetch failed: ${e.message}`)
+    return new Set()
+  }
+}
+
+/**
+ * Filter items based on soft-delete flag and tombstones
+ */
+function filterDeletedItems(items, entityType, tombstones) {
+  if (SKIP_FILTER) return items
+
+  const original = items.length
+  const filtered = items.filter(item => {
+    // Skip soft-deleted items
+    if (item.is_deleted === true) {
+      return false
+    }
+
+    // Skip tombstoned items (permanently deleted)
+    if (tombstones.has(`${entityType}:${item.id}`)) {
+      return false
+    }
+
+    return true
+  })
+
+  const removed = original - filtered.length
+  if (removed > 0) {
+    log('🗑️', `Filtered ${removed} deleted ${entityType}s (${filtered.length} remaining)`)
+  }
+
+  return filtered
 }
 
 // =============================================================================
@@ -377,6 +437,23 @@ async function main() {
 
     log('👤', `Restoring for user: ${userId}`)
     console.log('')
+
+    // TASK-317: Fetch tombstones and filter deleted items
+    if (!SKIP_FILTER) {
+      log('🪦', 'Fetching tombstones (permanently deleted items)...')
+      const tombstones = await fetchTombstones(supabase)
+      log('🪦', `Found ${tombstones.size} tombstoned items`)
+      console.log('')
+
+      // Filter soft-deleted and tombstoned items
+      snapshot.projects = filterDeletedItems(snapshot.projects, 'project', tombstones)
+      snapshot.groups = filterDeletedItems(snapshot.groups, 'group', tombstones)
+      snapshot.tasks = filterDeletedItems(snapshot.tasks, 'task', tombstones)
+      console.log('')
+    } else {
+      log('⚠️', '--no-filter: Skipping tombstone/soft-delete filtering')
+      console.log('')
+    }
 
     // Restore in order: Projects → Groups → Tasks
     const results = {

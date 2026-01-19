@@ -7,6 +7,7 @@ import { useSettingsStore } from './settings'
 import { formatTime } from '@/utils/timer/formatTime'
 import { getCrossTabSync } from '@/composables/useCrossTabSync'
 import { useIntervalFn } from '@vueuse/core'
+import { useWakeLock } from '@/composables/useWakeLock'
 
 /**
  * Timer Session Interface
@@ -70,6 +71,9 @@ export const useTimerStore = defineStore('timer', () => {
 
   // Cross-tab sync integration
   const crossTabSync = getCrossTabSync()
+
+  // Wake Lock for PWA Mobile - ROAD-004
+  const { requestWakeLock, releaseWakeLock } = useWakeLock()
 
   // Intervals
   const { pause: pauseTimerInterval, resume: resumeTimerInterval } = useIntervalFn(() => {
@@ -283,6 +287,7 @@ export const useTimerStore = defineStore('timer', () => {
     await saveTimerSessionWithLeadership()
     playStartSound()
     resumeTimerInterval()
+    await requestWakeLock() // Keep screen on - ROAD-004
     console.log('🍅 [TIMER] Timer started successfully, interval resumed')
   }
 
@@ -291,6 +296,7 @@ export const useTimerStore = defineStore('timer', () => {
       currentSession.value.isPaused = true
       pauseTimerInterval()
       broadcastSession()
+      releaseWakeLock() // Allow sleep - ROAD-004
     }
   }
 
@@ -299,6 +305,7 @@ export const useTimerStore = defineStore('timer', () => {
       currentSession.value.isPaused = false
       resumeTimerInterval()
       broadcastSession()
+      requestWakeLock() // Keep screen on - ROAD-004
     }
   }
 
@@ -306,6 +313,7 @@ export const useTimerStore = defineStore('timer', () => {
     pauseTimerInterval()
     pauseHeartbeat()
     isDeviceLeader.value = false
+    releaseWakeLock() // Allow sleep - ROAD-004
     if (currentSession.value) {
       completedSessions.value.push({ ...currentSession.value, isActive: false, completedAt: new Date() })
       currentSession.value = null
@@ -339,6 +347,7 @@ export const useTimerStore = defineStore('timer', () => {
     currentSession.value = null
     broadcastSession()
     playEndSound()
+    releaseWakeLock() // Allow sleep - ROAD-004
 
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(`Session Complete! 🍅`, {
@@ -450,14 +459,14 @@ export const useTimerStore = defineStore('timer', () => {
       const lastSeen = saved.deviceLeaderLastSeen || 0
       const timeSinceLastSeen = Date.now() - lastSeen
       const shouldTakeOverLeadership = saved.deviceLeaderId === deviceId ||
-                                        timeSinceLastSeen >= DEVICE_LEADER_TIMEOUT_MS ||
-                                        !saved.deviceLeaderId
+        timeSinceLastSeen >= DEVICE_LEADER_TIMEOUT_MS ||
+        !saved.deviceLeaderId
 
       if (shouldTakeOverLeadership) {
         console.log('🍅 [TIMER] Taking over leadership', {
           reason: saved.deviceLeaderId === deviceId ? 'same device' :
-                  !saved.deviceLeaderId ? 'no previous leader' :
-                  `previous leader timed out (${Math.round(timeSinceLastSeen / 1000)}s ago)`,
+            !saved.deviceLeaderId ? 'no previous leader' :
+              `previous leader timed out (${Math.round(timeSinceLastSeen / 1000)}s ago)`,
           newLeaderId: deviceId
         })
         isDeviceLeader.value = true

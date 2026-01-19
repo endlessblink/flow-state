@@ -39,14 +39,15 @@ curl -s http://localhost:6010/api/status 2>/dev/null && echo "RUNNING" || echo "
 ./maestro.sh
 ```
 
-**Option B - Direct start:**
+**Option B - Direct start (with path):**
 ```bash
-cd ~/.dev-maestro && npm start &
+cd ~/.dev-maestro && MASTER_PLAN_PATH=/path/to/docs/MASTER_PLAN.md npm start &
 ```
 
-**Option C - Not installed:**
+**Option C - Not installed (non-interactive for AI agents):**
 ```bash
-curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash
+# Replace /path/to with actual project path
+curl -sSL https://raw.githubusercontent.com/endlessblink/dev-maestro/main/install.sh | bash -s -- -m /path/to/docs/MASTER_PLAN.md
 ```
 
 ### Step 3: Tell User

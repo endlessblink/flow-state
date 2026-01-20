@@ -98,7 +98,7 @@ Tests backup creation, restoration, and data fidelity.
 
 ```bash
 # Run backup test script
-node scripts/test-backup-restore.cjs --create
+node scripts/verify-backup-system.cjs --create
 ```
 
 **Manual Test:**
@@ -116,7 +116,7 @@ node scripts/test-backup-restore.cjs --create
 
 ```bash
 # Full restore cycle test
-node scripts/test-backup-restore.cjs --restore
+node scripts/verify-backup-system.cjs --restore
 ```
 
 **Manual Test:**

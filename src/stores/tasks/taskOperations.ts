@@ -64,7 +64,8 @@ export function useTaskOperations(
             guardTaskCreation(taskData.title)
         }
 
-        const taskId = crypto.randomUUID()
+        // BUG-336: Preserve task ID if provided (needed for undo restore)
+        const taskId = taskData.id || crypto.randomUUID()
         manualOperationInProgress.value = true
 
         try {

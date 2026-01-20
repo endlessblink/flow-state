@@ -216,10 +216,15 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
     case 'task-delete': {
       // Undo deletion = restore the deleted task from snapshot
       const taskId = operation.affectedIds[0]
+      console.log('🔴 [UNDO] task-delete undo, looking for task:', taskId)
+      console.log('🔴 [UNDO] snapshotBefore has', snapshotBefore.tasks.length, 'tasks')
       const deletedTask = snapshotBefore.tasks.find(t => t.id === taskId)
       if (deletedTask) {
         console.log(`🔄 [UNDO] Restoring deleted task: ${deletedTask.title}`)
         await taskStore.createTask(deletedTask)
+        console.log('🔴 [UNDO] createTask completed')
+      } else {
+        console.error('❌ [UNDO] Could not find task in snapshot:', taskId)
       }
       break
     }
@@ -437,15 +442,17 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced with operation-aware selective restoration
 const performUndo = async () => {
+  console.log('🔴 [UNDO] performUndo called, operationStack length:', operationStack.length)
+
   // BUG-309-B: Try operation-aware undo first
   if (useOperationAwareUndo && operationStack.length > 0) {
+    console.log('🔴 [UNDO] Using operation-aware undo')
     const operationSnapshot = operationStack.pop()!
     redoOperationStack.push(operationSnapshot)
 
-    // Also advance VueUse's history for consistency (even though we don't use its state)
-    if (refHistoryInstance) {
-      refHistoryInstance.undo()
-    }
+    // BUG-336 FIX: Don't call refHistoryInstance.undo() here
+    // The operation stack is the source of truth in operation-aware mode.
+    // Calling VueUse undo creates a "ghost" undo that requires double Ctrl+Z.
 
     return await performSelectiveUndo(operationSnapshot)
   }
@@ -497,10 +504,8 @@ const performRedo = async () => {
     const operationSnapshot = redoOperationStack.pop()!
     operationStack.push(operationSnapshot)
 
-    // Also advance VueUse's history for consistency
-    if (refHistoryInstance) {
-      refHistoryInstance.redo()
-    }
+    // BUG-336 FIX: Don't call refHistoryInstance.redo() here
+    // Operation stack is source of truth in operation-aware mode.
 
     return await performSelectiveRedo(operationSnapshot)
   }
@@ -688,6 +693,52 @@ const deleteTaskWithUndo = async (taskId: string) => {
     await commitOperation()
   } catch (error) {
     console.error('❌ deleteTaskWithUndo failed:', error)
+    // Clear pending operation on error
+    pendingOperationBefore = null
+    pendingOperation = null
+    throw error
+  }
+}
+
+/**
+ * Permanently delete a task with undo support (Shift+Delete from canvas)
+ * Uses the same undo mechanism as soft delete - undo will recreate the task from snapshot
+ */
+const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
+  console.log('🔴 [UNDO] permanentlyDeleteTaskWithUndo called:', taskId)
+
+  // Dynamic import
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+
+  const taskToDelete = taskStore.tasks.find(t => t.id === taskId)
+  if (!taskToDelete) {
+    console.warn('⚠️ Task not found for permanent deletion:', taskId)
+    return
+  }
+
+  console.log('🔴 [UNDO] Task found, capturing snapshot before deletion:', taskToDelete.title)
+
+  // BUG-309-B: Begin operation-aware tracking
+  await beginOperation({
+    type: 'task-delete',
+    affectedIds: [taskId],
+    description: `Permanently delete task: ${taskToDelete.title}`
+  })
+
+  console.log('🔴 [UNDO] beginOperation completed, pendingOperationBefore has', pendingOperationBefore?.tasks.length, 'tasks')
+
+  try {
+    // Perform permanent deletion (hard delete from database)
+    await taskStore.permanentlyDeleteTask(taskId)
+    console.log('🔴 [UNDO] permanentlyDeleteTask completed')
+
+    // BUG-309-B: Commit the operation
+    await nextTick()
+    await commitOperation()
+    console.log('🔴 [UNDO] commitOperation completed, operationStack length:', operationStack.length)
+  } catch (error) {
+    console.error('❌ permanentlyDeleteTaskWithUndo failed:', error)
     // Clear pending operation on error
     pendingOperationBefore = null
     pendingOperation = null
@@ -945,6 +996,7 @@ export function getUndoSystem() {
 
     // Task operations that use the shared refHistory
     deleteTaskWithUndo,
+    permanentlyDeleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
     updateTaskWithUndo,
     createTaskWithUndo,

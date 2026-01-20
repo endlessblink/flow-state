@@ -9,6 +9,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const Database = require('better-sqlite3');
 const writeFileAtomic = require('write-file-atomic');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
@@ -45,9 +46,12 @@ const PUBLIC_DIR = path.join(__dirname, '../public');
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
 
 // Key Priority: Service Role (Bypass RLS) > Anon (Respect RLS)
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
+// Track which key type was used for accurate logging
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_KEY = SERVICE_ROLE_KEY || ANON_KEY;
+const IS_SERVICE_ROLE = !!SERVICE_ROLE_KEY;
 
 if (!SUPABASE_KEY) {
     console.error('[Shadow] ❌ Error: No Supabase Key found in environment or .env/.env.local');
@@ -206,7 +210,7 @@ async function runShadowSync() {
     const timestamp = Date.now();
     console.log(`[Shadow] 🌑 Starting Mirror Sync at ${new Date(timestamp).toLocaleTimeString()}...`);
 
-    if (SUPABASE_KEY.includes('service_role')) {
+    if (IS_SERVICE_ROLE) {
         console.log('         🔐 Mode: SERVICE_ROLE (Full Access)');
     } else {
         console.log('         ⚠️  Mode: ANON (RLS Restricted - Backup might be empty)');
@@ -232,6 +236,48 @@ async function runShadowSync() {
         const { data: projects, error: projectError } = await supabase.from('projects').select('*');
         if (projectError) throw projectError;
 
+        // CRITICAL: Backup auth.users to prevent user account loss
+        // Use direct RPC call to bypass admin API JWT issues with local Supabase
+        let authUsers = [];
+        if (IS_SERVICE_ROLE) {
+            try {
+                // Direct SQL query via service role - safer than admin API for local dev
+                const { data: users, error: usersError } = await supabase
+                    .rpc('get_auth_users_backup', {})
+                    .single();
+
+                if (usersError) {
+                    // Fallback: try raw fetch to auth endpoint
+                    console.warn('[Shadow] RPC not available, trying direct query...');
+                    const { execSync } = require('child_process');
+                    const result = execSync(
+                        'docker exec supabase_db_flow-state psql -U postgres -d postgres -t -A -c "SELECT json_agg(json_build_object(\'id\', id, \'email\', email, \'created_at\', created_at, \'email_confirmed_at\', email_confirmed_at)) FROM auth.users"',
+                        { encoding: 'utf-8', timeout: 5000 }
+                    ).trim();
+
+                    if (result && result !== '' && result !== 'null') {
+                        authUsers = JSON.parse(result) || [];
+                        console.log(`[Shadow] 👤 Auth users backed up via Docker: ${authUsers.length}`);
+                    }
+                } else {
+                    authUsers = users || [];
+                    console.log(`[Shadow] 👤 Auth users backed up: ${authUsers.length}`);
+                }
+            } catch (e) {
+                console.warn('[Shadow] ⚠️ Could not backup auth.users:', e.message);
+            }
+        } else {
+            console.warn('[Shadow] ⚠️ Cannot backup auth.users without SERVICE_ROLE key');
+        }
+
+        // Also fetch user_settings for complete backup
+        const { data: userSettings, error: settingsError } = await supabase.from('user_settings').select('*');
+        if (settingsError) console.warn('[Shadow] ⚠️ Could not backup user_settings:', settingsError.message);
+
+        // Fetch timer_sessions for active timer state
+        const { data: timerSessions, error: timerError } = await supabase.from('timer_sessions').select('*');
+        if (timerError) console.warn('[Shadow] ⚠️ Could not backup timer_sessions:', timerError.message);
+
         // TASK-317: Threshold guard - compare with last good snapshot
         const newCounts = {
             tasks: tasks.length,
@@ -253,6 +299,10 @@ async function runShadowSync() {
             tasks,
             groups,
             projects,
+            // CRITICAL: Include auth data to prevent user loss on DB reset
+            authUsers,
+            userSettings: userSettings || [],
+            timerSessions: timerSessions || [],
             meta: {
                 timestamp,
                 schema_version: SCHEMA_VERSION,
@@ -261,7 +311,10 @@ async function runShadowSync() {
                 counts: {
                     tasks: tasks.length,
                     groups: groups.length,
-                    projects: projects.length
+                    projects: projects.length,
+                    authUsers: authUsers.length,
+                    userSettings: (userSettings || []).length,
+                    timerSessions: (timerSessions || []).length
                 }
             }
         };
@@ -274,8 +327,15 @@ async function runShadowSync() {
             VALUES (?, 'full', ?, ?, ?, ?, ?)
         `);
 
-        // Simple hash-based checksum
-        const checksum = `sha:${simpleHash(json)}`;
+        // TASK-338: Use SHA256 checksum matching verify-backup-system.cjs algorithm
+        // Checksum = first 16 hex chars of SHA256(tasksJson + groupsJson)
+        const tasksJson = JSON.stringify(tasks || []);
+        const groupsJson = JSON.stringify(groups || []);
+        const checksum = crypto
+            .createHash('sha256')
+            .update(tasksJson + groupsJson)
+            .digest('hex')
+            .substring(0, 16);
 
         insert.run(
             timestamp,
@@ -287,10 +347,18 @@ async function runShadowSync() {
         );
 
         // 4. TASK-317: Atomic write for JSON export (prevents corruption)
-        const exportPath = path.join(PUBLIC_DIR, 'shadow-latest.json');
-        await writeFileAtomic(exportPath, json, { fsync: true });
+        // TASK-338: Add timestamp and checksum at root level for stress tester compatibility
+        const exportData = {
+            ...snapshot,
+            timestamp: timestamp,  // Add timestamp at root (stress tester expects this)
+            checksum: checksum     // Add checksum at root (stress tester expects this)
+        };
+        const exportJson = JSON.stringify(exportData, null, 2);
 
-        console.log(`[Shadow] ✅ Snapshot saved! (${tasks.length} tasks, ${groups.length} groups, ${projects.length} projects)`);
+        const exportPath = path.join(PUBLIC_DIR, 'shadow-latest.json');
+        await writeFileAtomic(exportPath, exportJson, { fsync: true });
+
+        console.log(`[Shadow] ✅ Snapshot saved! (${tasks.length} tasks, ${groups.length} groups, ${projects.length} projects, ${authUsers.length} users)`);
 
         // 5. TASK-317: Protected ring buffer pruning
         pruneWithProtection(10);

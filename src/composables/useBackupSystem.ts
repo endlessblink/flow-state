@@ -1,4 +1,5 @@
 import IntegrityService from '@/utils/integrity'
+import { isTauri } from '@/composables/useTauriStartup'
 
 /**
  * Unified Backup System
@@ -733,6 +734,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
   /**
    * Download backup as file
+   * BUG-336: Fixed for Tauri - uses native file dialog instead of browser download
    */
   async function downloadBackup(backup?: BackupData): Promise<void> {
     const data = backup || getLatestBackup()
@@ -742,6 +744,79 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
     const filename = `flow-state-backup-${new Date().toISOString().split('T')[0]}.json`
     const content = JSON.stringify(data, null, 2)
+
+    // BUG-336: Use Tauri dialog for file save in desktop app
+    if (isTauri()) {
+      console.log('[Backup] Tauri detected, attempting native save dialog...')
+
+      try {
+        // Method 1: Try dynamic imports (preferred)
+        console.log('[Backup] Importing Tauri plugins...')
+        const dialogModule = await import('@tauri-apps/plugin-dialog')
+        const fsModule = await import('@tauri-apps/plugin-fs')
+        const pathModule = await import('@tauri-apps/api/path')
+
+        console.log('[Backup] Plugins loaded successfully')
+
+        // Get downloads directory for default path
+        let defaultPath = filename
+        try {
+          const downloadsPath = await pathModule.downloadDir()
+          defaultPath = `${downloadsPath}${filename}`
+          console.log('[Backup] Default path:', defaultPath)
+        } catch (pathError) {
+          console.warn('[Backup] Could not get downloads dir, using filename only:', pathError)
+        }
+
+        // Open save dialog - the selected path is automatically added to FS scope
+        console.log('[Backup] Opening save dialog...')
+        const filePath = await dialogModule.save({
+          defaultPath,
+          filters: [{
+            name: 'JSON',
+            extensions: ['json']
+          }]
+        })
+
+        console.log('[Backup] Dialog result:', filePath)
+
+        if (filePath) {
+          // Write file to selected path (scope automatically granted by dialog)
+          console.log('[Backup] Writing file to:', filePath)
+          await fsModule.writeTextFile(filePath, content)
+          console.log('[Backup] Downloaded successfully (Tauri):', filePath)
+        } else {
+          console.log('[Backup] Download cancelled by user')
+        }
+        return
+      } catch (error) {
+        console.error('[Backup] Tauri save failed:', error)
+
+        // Method 2: Try global __TAURI__ object as fallback
+        const win = window as any
+        if (win.__TAURI__?.dialog?.save && win.__TAURI__?.fs?.writeTextFile) {
+          console.log('[Backup] Attempting fallback via __TAURI__ global...')
+          try {
+            const filePath = await win.__TAURI__.dialog.save({
+              defaultPath: filename,
+              filters: [{ name: 'JSON', extensions: ['json'] }]
+            })
+            if (filePath) {
+              await win.__TAURI__.fs.writeTextFile(filePath, content)
+              console.log('[Backup] Downloaded via __TAURI__ global:', filePath)
+              return
+            }
+          } catch (fallbackError) {
+            console.error('[Backup] __TAURI__ fallback also failed:', fallbackError)
+          }
+        }
+
+        console.warn('[Backup] All Tauri methods failed, falling back to browser download')
+        // Fall through to browser method
+      }
+    }
+
+    // Browser fallback method
     const blob = new Blob([content], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
 

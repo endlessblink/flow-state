@@ -6,6 +6,9 @@
  */
 
 // Keys that should NOT persist in guest mode (user data)
+// NOTE: flowstate-guest-tasks is INTENTIONALLY NOT included here!
+// Guest tasks must persist across refreshes so users can sign in and migrate them.
+// They are cleared only AFTER successful migration in auth.ts migrateGuestData().
 const GUEST_EPHEMERAL_KEYS = [
   // Canvas
   'flowstate-guest-groups',

@@ -12,14 +12,16 @@ export interface InboxContextProps {
     hideDoneTasks?: boolean
 }
 
+export type TimeFilterType = 'all' | 'today' | 'week' | 'month'
+
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
-    const { isTodayTask } = useSmartViews()
+    const { isTodayTask, isWeekTask, isThisMonthTask } = useSmartViews()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
 
     // --- Core Filter State ---
     const isCollapsed = ref(false)
-    const activeTimeFilter = ref<'all' | 'today'>('all')
+    const activeTimeFilter = ref<TimeFilterType>('all')
 
     // --- Advanced Filter State ---
     const showAdvancedFilters = ref(false)
@@ -98,6 +100,14 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return baseInboxTasks.value.filter(task => isTodayTask(task)).length
     })
 
+    const weekCount = computed(() => {
+        return baseInboxTasks.value.filter(task => isWeekTask(task)).length
+    })
+
+    const monthCount = computed(() => {
+        return baseInboxTasks.value.filter(task => isThisMonthTask(task)).length
+    })
+
     const isScheduledOnCalendar = (task: Task): boolean => {
         if (!task.instances || task.instances.length === 0) return false
         return task.instances.some(inst => inst.scheduledDate)
@@ -115,9 +125,13 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             )
         }
 
-        // 2. Today Filter
+        // 2. Time Filter
         if (activeTimeFilter.value === 'today') {
             tasks = tasks.filter(task => isTodayTask(task))
+        } else if (activeTimeFilter.value === 'week') {
+            tasks = tasks.filter(task => isWeekTask(task))
+        } else if (activeTimeFilter.value === 'month') {
+            tasks = tasks.filter(task => isThisMonthTask(task))
         }
 
         // 3. Unscheduled Filter
@@ -198,6 +212,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         baseInboxTasks,
         inboxTasks,
         todayCount,
+        weekCount,
+        monthCount,
 
         // Actions (State Mutators)
         toggleHideDoneTasks,

@@ -44,6 +44,12 @@ export const useAuthStore = defineStore('auth', () => {
       user.value?.user_metadata?.role === 'developer'
   })
 
+  // TASK-337: Check if user has email/password auth (vs OAuth-only)
+  const hasPasswordAuth = computed(() => {
+    const providers = user.value?.app_metadata?.providers as string[] | undefined
+    return providers?.includes('email') ?? false
+  })
+
   // Actions
   const initialize = async () => {
     if (isInitialized.value) return
@@ -63,6 +69,15 @@ export const useAuthStore = defineStore('auth', () => {
       session.value = data.session
       user.value = data.session?.user || null
 
+      // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
+      // check if there's guest data to migrate. This catches redirect-based auth flows.
+      if (data.session?.user) {
+        // Run migration asynchronously - don't block initialization
+        migrateGuestData().catch(e => {
+          console.error('[AUTH] Post-init migration failed:', e)
+        })
+      }
+
       // Listen for auth changes (sign in, sign out, etc.)
       supabase.auth.onAuthStateChange((_event: string, newSession: Session | null) => {
         session.value = newSession
@@ -79,44 +94,117 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /* 
-   * Helper to migrate guest data to the new user account
+  /**
+   * BUG-339: Migrate guest data to user account with deduplication
+   *
+   * This improved migration:
+   * 1. Checks if migration already happened (per-user flag)
+   * 2. Fetches existing user tasks to build fingerprints
+   * 3. Only inserts tasks that don't already exist
+   * 4. Clears guest data BEFORE migration to prevent contamination on interruption
+   *
+   * CRITICAL FIXES (BUG #8, #9):
+   * - Only use localStorage as source (in-memory could be Supabase data after loadFromDatabase)
+   * - Clear localStorage BEFORE creating tasks (prevents duplicates if interrupted)
+   * - Pass explicit empty string for null dates (prevents createTask's default from breaking fingerprints)
    */
   const migrateGuestData = async () => {
     try {
+      // Safety check: ensure user is authenticated before migration
+      if (!user.value?.id) {
+        console.warn('[AUTH] Cannot migrate guest data: user not authenticated')
+        return
+      }
+
+      // 1. Check if already migrated for this user
+      const migrationKey = `flowstate-migrated-${user.value.id}`
+      if (localStorage.getItem(migrationKey)) {
+        console.log('[AUTH] Guest data already migrated for this user, skipping')
+        return
+      }
+
       // Dynamic import to avoid circular dependency
       const { useTaskStore } = await import('@/stores/tasks')
       const taskStore = useTaskStore()
 
-      const guestTasks = [...taskStore.tasks]
-      if (guestTasks.length === 0) return
+      // BUG #8 FIX: ONLY use localStorage as the source of guest tasks
+      // In-memory tasks could be contaminated with Supabase data if loadFromDatabase() ran first
+      // (race condition with async migration in initialize())
+      const guestTasksJson = localStorage.getItem('flowstate-guest-tasks')
+      const allGuestTasks = guestTasksJson ? JSON.parse(guestTasksJson) : []
 
-      console.log(`📦 [AUTH] Migrating ${guestTasks.length} guest tasks to new user...`)
+      if (allGuestTasks.length === 0) {
+        console.log('[AUTH] No guest tasks to migrate')
+        localStorage.setItem(migrationKey, new Date().toISOString())
+        return
+      }
 
-      // We need to re-create these tasks for the new user
-      // The simple way is to use createTask for each, which handles the ID generation and DB insert
-      for (const task of guestTasks) {
-        // Skip tasks that might already look like they have an owner (sanity check)
-        // But realistically, all local tasks are guest tasks at this point
+      console.log(`[AUTH] Migrating ${allGuestTasks.length} guest tasks...`)
 
+      // 2. Fetch existing user tasks for deduplication
+      if (!supabase) {
+        console.error('[AUTH] Supabase not available for migration')
+        return
+      }
+
+      const { data: existingTasks, error: fetchError } = await supabase
+        .from('tasks')
+        .select('title, due_date, status')
+        .eq('user_id', user.value.id)
+
+      if (fetchError) {
+        console.error('[AUTH] Failed to fetch existing tasks for deduplication:', fetchError)
+        // Continue anyway - better to potentially have duplicates than lose data
+      }
+
+      // 3. Generate fingerprints for existing tasks
+      // CRITICAL: Supabase returns snake_case (due_date), guest tasks use camelCase (dueDate)
+      // Normalize both to the same format for comparison
+      const existingFingerprints = new Set(
+        existingTasks?.map((t: { title: string; due_date: string | null; status: string }) =>
+          `${(t.title || '').toLowerCase().trim()}|${t.due_date || ''}|${t.status}`
+        ) || []
+      )
+
+      // 4. Filter out duplicates
+      // Guest tasks use camelCase (dueDate) - normalize to match Supabase fingerprints
+      const uniqueTasks = allGuestTasks.filter((task: { title: string; dueDate: string | null; status: string }) => {
+        const fp = `${(task.title || '').toLowerCase().trim()}|${task.dueDate || ''}|${task.status}`
+        return !existingFingerprints.has(fp)
+      })
+
+      const duplicateCount = allGuestTasks.length - uniqueTasks.length
+      console.log(`[AUTH] Migrating ${uniqueTasks.length} unique tasks (${duplicateCount} duplicates skipped)`)
+
+      // BUG #8 FIX: Clear localStorage BEFORE creating tasks
+      // This prevents duplicates if migration is interrupted - guest tasks are already gone
+      // so they won't be re-migrated on next attempt
+      localStorage.removeItem('flowstate-guest-tasks')
+
+      // 5. Insert only unique tasks - spread ALL properties to preserve canvas/inbox state
+      for (const task of uniqueTasks) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, createdAt, updatedAt, ...taskDataWithoutMeta } = task
         await taskStore.createTask({
-          title: task.title,
-          description: task.description,
-          status: task.status,
-          priority: task.priority,
-          dueDate: task.dueDate,
-          // Canvas specific
-          canvasPosition: task.canvasPosition,
-          isInInbox: task.isInInbox,
-          // Other fields
-          estimatedDuration: task.estimatedDuration,
-          projectId: task.projectId
+          ...taskDataWithoutMeta,
+          // BUG #9 FIX: Pass explicit empty string for null/undefined dates
+          // This prevents createTask's default (today's date) from kicking in
+          // which would break fingerprint matching if migration is interrupted
+          dueDate: task.dueDate || ''
         })
       }
 
-      console.log('✅ [AUTH] Guest data migration complete')
+      // 6. Mark migration complete
+      localStorage.setItem(migrationKey, new Date().toISOString())
+
+      // 7. BUG-339 FIX: Reload tasks from database to replace in-memory guest tasks
+      // Without this, _rawTasks would have BOTH old guest tasks AND new migrated tasks
+      console.log('[AUTH] Reloading tasks from database after migration...')
+      await taskStore.loadFromDatabase()
+
+      console.log('[AUTH] Guest data migration complete')
     } catch (e) {
-      console.error('❌ [AUTH] Guest data migration failed:', e)
+      console.error('[AUTH] Guest data migration failed:', e)
     }
   }
 
@@ -129,12 +217,19 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true
       error.value = null
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
       if (signInError) throw signInError
+
+      // BUG-339 FIX: Set user/session immediately from response
+      // Don't wait for onAuthStateChange (async) - we need user.id for migration
+      if (data.session) {
+        session.value = data.session
+        user.value = data.user
+      }
 
       // 2. Migrate Data
       await migrateGuestData()
@@ -282,6 +377,7 @@ export const useAuthStore = defineStore('auth', () => {
     photoURL,
     isAdmin,
     isDev,
+    hasPasswordAuth,
 
     // Actions
     initialize,

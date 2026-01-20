@@ -12,6 +12,8 @@
       :task-count="inboxTasks.length"
       :active-time-filter="activeTimeFilter"
       :today-count="todayCount"
+      :week-count="weekCount"
+      :month-count="monthCount"
       :show-group-chips="context === 'calendar' && canvasGroupOptions.length > 1"
       :group-options="canvasGroupOptions"
       :selected-canvas-groups="selectedCanvasGroups"
@@ -24,9 +26,9 @@
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
       :context="context"
-      
+
       @toggleCollapse="isCollapsed = !isCollapsed"
-      @toggleToday="activeTimeFilter = activeTimeFilter === 'today' ? 'all' : 'today'"
+      @update:activeTimeFilter="activeTimeFilter = $event"
       @toggleAdvancedFilters="showAdvancedFilters = !showAdvancedFilters"
       @update:selected-canvas-groups="selectedCanvasGroups = $event"
       @update:unscheduled-only="unscheduledOnly = $event"
@@ -146,6 +148,8 @@ const {
   baseInboxTasks,
   inboxTasks,
   todayCount,
+  weekCount,
+  monthCount,
   toggleHideDoneTasks,
   clearAllFilters
 } = useUnifiedInboxState(props)

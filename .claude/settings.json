@@ -23,10 +23,27 @@
           {
             "type": "command",
             "command": ".claude/hooks/skill-router-hook.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/artifact-checker.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/require-user-confirmation.sh"
           }
         ]
       }
     ],
-    "PostToolUse": []
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/auto-test-after-edit.sh"
+          }
+        ]
+      }
+    ]
   }
 }

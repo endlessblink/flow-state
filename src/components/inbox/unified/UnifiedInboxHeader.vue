@@ -22,18 +22,19 @@
     <!-- Count Badge -->
     <NBadge v-if="!isCollapsed" :value="taskCount" type="info" />
 
-    <!-- Quick Today Filter -->
-    <button
+    <!-- Time Filter Dropdown -->
+    <NDropdown
       v-if="!isCollapsed"
-      class="today-quick-filter"
-      :class="{ active: activeTimeFilter === 'today' }"
-      :title="`Filter inbox: Show only today's tasks (${todayCount})`"
-      @click="$emit('toggleToday')"
+      :options="timeFilterOptions"
+      trigger="click"
+      @select="handleTimeFilterSelect"
     >
-      <CalendarDays :size="14" />
-      <span>Today</span>
-      <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
-    </button>
+      <button class="time-filter-dropdown" :class="{ active: activeTimeFilter !== 'all' }">
+        <CalendarDays :size="14" />
+        <span>{{ timeFilterLabel }}</span>
+        <ChevronDown :size="12" />
+      </button>
+    </NDropdown>
   </div>
 
   <!-- Filter Chips (Canvas Groups) -->
@@ -87,11 +88,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown } from 'lucide-vue-next'
-import { NBadge } from 'naive-ui'
+import { NBadge, NDropdown } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
+import type { TimeFilterType } from '@/composables/inbox/useUnifiedInboxState'
 
 interface GroupOption {
   label: string
@@ -103,8 +106,10 @@ interface GroupOption {
 const props = defineProps<{
   isCollapsed: boolean
   taskCount: number
-  activeTimeFilter: 'all' | 'today'
+  activeTimeFilter: TimeFilterType
   todayCount: number
+  weekCount: number
+  monthCount: number
   showGroupChips: boolean
   groupOptions: GroupOption[]
   selectedCanvasGroups: Set<string>
@@ -121,7 +126,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'toggleCollapse'): void
-  (e: 'toggleToday'): void
+  (e: 'update:activeTimeFilter', value: TimeFilterType): void
   (e: 'toggleAdvancedFilters'): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void
@@ -176,6 +181,28 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   } else {
     emit('update:selected-canvas-groups', new Set([group.value]))
   }
+}
+
+// Time Filter Dropdown Options
+const timeFilterOptions = computed(() => [
+  { label: 'All', key: 'all' },
+  { label: `Today (${props.todayCount})`, key: 'today' },
+  { label: `This Week (${props.weekCount})`, key: 'week' },
+  { label: `This Month (${props.monthCount})`, key: 'month' }
+])
+
+const timeFilterLabel = computed(() => {
+  const labels: Record<TimeFilterType, string> = {
+    all: 'All',
+    today: 'Today',
+    week: 'This Week',
+    month: 'This Month'
+  }
+  return labels[props.activeTimeFilter]
+})
+
+const handleTimeFilterSelect = (key: string) => {
+  emit('update:activeTimeFilter', key as TimeFilterType)
 }
 </script>
 
@@ -233,7 +260,7 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   color: var(--text-primary);
 }
 
-.today-quick-filter {
+.time-filter-dropdown {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -247,28 +274,16 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
   transition: all var(--duration-normal) var(--ease-out);
 }
 
-.today-quick-filter:hover {
+.time-filter-dropdown:hover {
   background: var(--surface-hover);
   color: var(--text-primary);
 }
 
-.today-quick-filter.active {
+.time-filter-dropdown.active {
   background: var(--brand-primary-subtle);
   color: var(--brand-primary);
   border-color: var(--brand-primary-dim);
   font-weight: var(--font-medium);
-}
-
-.count-badge {
-  background: var(--brand-primary);
-  color: white;
-  font-size: var(--text-xs);
-  padding: 0 5px;
-  border-radius: var(--radius-md);
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* Filter Chips */

@@ -260,6 +260,8 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the main window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
@@ -279,6 +281,7 @@ pub fn run() {
             cleanup_services,
         ])
         .setup(|app| {
+            // Enable logging in debug mode
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -286,6 +289,10 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // DevTools: Right-click → Inspect still works (devtools cargo feature enabled)
+            // Auto-open removed to prevent freezing issues
+
             Ok(())
         })
         .run(tauri::generate_context!())

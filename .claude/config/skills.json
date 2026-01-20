@@ -183,9 +183,49 @@
       "related_skills": [
         "qa-master",
         "vue-flow-debug",
-        "dev-bug-fixer"
+        "dev-bug-fixer",
+        "stress-tester"
       ],
       "description": "Comprehensive QA testing skill including canvas geometry invariants (TASK-256). Covers data integrity, memory testing, offline sync, and geometry stability tests."
+    },
+    "stress-tester": {
+      "name": "Comprehensive Stress Testing",
+      "category": "test",
+      "triggers": [
+        "stress test",
+        "reliability test",
+        "security audit",
+        "backup verification",
+        "container health",
+        "regression test",
+        "find vulnerabilities",
+        "test everything",
+        "comprehensive test",
+        "catch what I missed",
+        "load test",
+        "chaos test",
+        "penetration test"
+      ],
+      "keywords": [
+        "stress",
+        "reliability",
+        "security",
+        "backup",
+        "container",
+        "regression",
+        "vulnerability",
+        "load",
+        "chaos",
+        "comprehensive"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "qa-testing",
+        "qa-master",
+        "codebase-health-auditor"
+      ],
+      "description": "TASK-338: Comprehensive stress testing agent that rigorously tests reliability, backup systems, container stability, security, and data integrity. Designed to catch issues that manual testing and qa-testing skill miss. Covers OWASP security, RLS policies, memory leaks, load testing, and chaos engineering."
     },
     "dev-bug-fixer": {
       "name": "Bug Fixer",

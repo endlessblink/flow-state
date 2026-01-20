@@ -177,13 +177,37 @@ async fn get_supabase_config(app: tauri::AppHandle) -> Result<String, String> {
     }
 }
 
+/// Check if a remote Supabase project is linked
+fn is_remote_project_linked() -> bool {
+    // Supabase CLI creates .supabase/project-ref when linked to a remote project
+    let project_ref_path = std::path::Path::new(".supabase/project-ref");
+    if project_ref_path.exists() {
+        // Verify the file has content (not empty)
+        if let Ok(content) = std::fs::read_to_string(project_ref_path) {
+            return !content.trim().is_empty();
+        }
+    }
+    false
+}
+
 /// Run Supabase database migrations
+/// Automatically detects local vs remote and uses appropriate flags
 #[tauri::command]
 async fn run_supabase_migrations(app: tauri::AppHandle) -> Result<String, String> {
+    let use_local = !is_remote_project_linked();
+
+    let args: Vec<&str> = if use_local {
+        vec!["db", "push", "--local"]
+    } else {
+        vec!["db", "push"]
+    };
+
+    log::info!("Running migrations with args: {:?} (local={})", args, use_local);
+
     let output = app
         .shell()
         .command("supabase")
-        .args(["db", "push"])
+        .args(&args)
         .output()
         .await
         .map_err(|e| format!("Failed to run migrations: {}", e))?;
@@ -262,6 +286,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the main window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {

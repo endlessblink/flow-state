@@ -1,7 +1,7 @@
 {
   "project": "FlowState",
   "version": "2.0.0",
-  "last_updated": "2026-01-18",
+  "last_updated": "2026-01-20",
   "skills": {
     "meta-skill-router": {
       "name": "Meta Skill Router",
@@ -53,7 +53,10 @@
       ],
       "activation_count": 0,
       "last_used": null,
-      "related_skills": ["chief-architect", "smart-doc-manager"],
+      "related_skills": [
+        "chief-architect",
+        "smart-doc-manager"
+      ],
       "description": "Start and manage Dev Maestro - the AI agent orchestration platform for Kanban task management. Use when user says 'start maestro', 'open kanban', 'show tasks', or needs to manage MASTER_PLAN.md tasks visually."
     },
     "dev-frontend-master": {
@@ -379,6 +382,29 @@
       "last_used": null,
       "related_skills": [],
       "description": "This skill should be used when debugging, monitoring, or optimizing Supabase applications. Triggers on Supabase connection issues, RLS policy problems, authentication failures, slow queries, realtime subscription bugs, memory leaks, and database schema validation. Provides real-time inspection, error tracking, performance analysis, and systematic debugging workflows for local and cloud Supabase environments."
+    },
+    "tauri-debugger": {
+      "name": "tauri-debugger",
+      "category": "debug",
+      "triggers": [
+        "debug",
+        "fix",
+        "tauri"
+      ],
+      "keywords": [
+        "tauri",
+        "dialog",
+        "csp",
+        "pwa",
+        "xdg-portal",
+        "file-save",
+        "desktop",
+        "linux"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": ["supabase-debugger", "dev-debugging"],
+      "description": "Debug Tauri 2.x desktop app issues including dialogs, CSP, plugins, and Vite integration. Triggers on: Tauri dialog not opening, file save dialog doesn't work, CSP errors, virtual:pwa-register errors, click handlers not working in Tauri, XDG Portal issues on Linux."
     },
     "tiptap-vue3": {
       "name": "tiptap-vue3",

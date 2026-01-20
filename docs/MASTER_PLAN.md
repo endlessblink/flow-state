@@ -134,10 +134,12 @@
 | **BUG-333**              | **Duplicate Tasks After Restore + Login**                              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md) - 109 tasks, 64 unique titles. Login sync merged localStorage + Supabase without deduplication                                                 |                                                        |
 | **TASK-334**             | **AI "Done" Claim Verification System (5-Layer Defense)**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-334-ai-done-claim-verification-system-in-progress) - Hooks + Judge Agent in Dev-Maestro                                                                                                      |                                                        |
 | **TASK-335**             | **Judge Agent Integration in Dev-Maestro**                             | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-335-judge-agent-integration-in-dev-maestro-planned) - Layer 5 of TASK-334                                                                                                                    | TASK-334                                               |
-| **BUG-336**              | **Fix Backup Download in Tauri App**                                   | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Can't download backups from Tauri desktop app - file save dialog doesn't work                                                                                                                                    |                                                        |
+| ~~**BUG-336**~~          | **Fix Backup Download in Tauri App**                                   | **P0**                                              | ✅ **DONE**                                                                                                                     | Fixed: PWA plugin stub modules, TAURI_DEV env var, xdg-portal dialog                                                                                                                                              |                                                        |
 | **TASK-337**             | **Reliable Password Change Feature**                                   | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Fix template logic error in AccountSettingsTab.vue - v-else binds to wrong v-if                                                                                                                                  |                                                        |
 | **TASK-338**             | **Comprehensive Stress Testing Agent/Skill**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-338-comprehensive-stress-testing-agentskill-in-progress) - Reliability, backup, container stability, redundancy assessment                                                                   |                                                        |
 | **BUG-339**              | **Tauri App Auto-Signout + Data Loss Concern**                         | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | User signed out unexpectedly from Tauri app; unclear if signing back in will lose local data                                                                                                                     |                                                        |
+| **BUG-341**              | **Tauri App Freezing - Add Comprehensive Logging**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add logging/diagnostics to debug Tauri app freezing/crash issues. Research solutions online.                                                                                                                      |                                                        |
+| **BUG-342**              | **Canvas Multi-Drag Bug: Unselected Tasks Move Together**              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Dragging one task causes another unselected task to move with it                                                                                                                                                  |                                                        |
 
 ---
 
@@ -155,42 +157,90 @@
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
 
-### BUG-339: Tauri App Auto-Signout + Data Loss Concern (🔄 IN PROGRESS)
+### BUG-342: Canvas Multi-Drag Bug - Unselected Tasks Move Together (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL
 **Status**: IN PROGRESS (2026-01-20)
 
-User was unexpectedly signed out from the Tauri desktop app. Concern about whether signing back in will lose current local data.
+When dragging a single task on the canvas, another unselected task moves along with it. Both tasks appear to be linked even though only one is selected.
 
-**Investigation**:
-- [ ] Identify cause of automatic signout (token expiry, session management, Tauri-specific issue)
-- [ ] Audit auth token storage and refresh logic in Tauri context
-- [ ] Verify localStorage/Tauri storage persistence across sessions
+**Observed Behavior**:
+- User drags one task
+- A second, unselected task also moves
+- Tasks are not visually connected or grouped
 
-**Data Safety Assessment**:
-- [ ] Confirm local data is preserved independently of auth state
-- [ ] Test sign-in flow: does it merge local + Supabase data or overwrite?
-- [ ] Document expected behavior for users
+**Expected Behavior**:
+- Only the selected/dragged task should move
+- Other tasks should remain stationary unless explicitly selected
 
-**Tasks**:
-- [ ] Fix auto-signout root cause
-- [ ] Ensure safe data merge on re-authentication
-- [ ] Add user-facing indication of data sync status
+**Investigation Areas**:
+- [ ] Check Vue Flow selection state
+- [ ] Check canvas drag handlers in `useCanvasInteractions.ts`
+- [ ] Check if tasks share parent or have hidden edge connection
+- [ ] Check multi-select state persistence
 
 ---
 
-### BUG-336: Fix Backup Download in Tauri App (🔄 IN PROGRESS)
+### BUG-339: Auth Reliability - Tauri Signouts & Password Failures (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL
 **Status**: IN PROGRESS (2026-01-20)
 
+Multiple auth reliability issues: random Tauri signouts, password login failures, and seeded credentials not working.
+
+**Root Causes Identified**:
+1. **Password Login Failures**: `seed.sql` used `crypt()` instead of `extensions.crypt()` with wrong cost factor
+2. **Tauri IPC Failures**: Missing `ipc:` and `http://ipc.localhost` in CSP causing protocol fallback
+3. **Session Instability**: Supabase client missing explicit auth configuration for desktop apps
+
+**Fixes Implemented**:
+- [x] `seed.sql`: Changed to `extensions.crypt(password, extensions.gen_salt('bf', 10))` for GoTrue compatibility
+- [x] `tauri.conf.json`: Added `ipc:` and `connect-src` directive for IPC protocol
+- [x] `supabase.ts`: Added explicit auth config with custom storage key and Tauri-aware settings
+
+**Files Changed**:
+- `supabase/seed.sql` - Fixed password hashing
+- `src-tauri/tauri.conf.json` - Fixed CSP for IPC
+- `src/services/auth/supabase.ts` - Enhanced auth client config
+
+**Verification**:
+- [x] Auth API test passes: `curl POST /auth/v1/token` returns valid JWT
+- [ ] Tauri app login tested by user
+- [ ] No random signouts after extended use
+
+---
+
+### ~~BUG-336~~: Fix Backup Download in Tauri App (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-20)
+
 Can't download backups from Tauri desktop app - file save dialog doesn't work.
 
+**Root Causes Found & Fixed**:
+1. **PWA Plugin CSP Error** - `VitePWA` was conditionally excluded (`!isTauri && VitePWA()`), but this didn't provide stub modules for `virtual:pwa-register/vue` imports, causing CSP errors that broke Vue event handlers
+2. **Tauri Detection Not Working in Dev** - `TAURI_ENV_PLATFORM` is only set during `tauri build`, not `tauri dev`
+3. **Missing XDG Portal Fallback** - `zenity` package needed for Linux dialog fallback
+
+**Solution**:
+- Changed `vite.config.ts` to use `VitePWA({ disable: isTauri })` which provides proper stub modules
+- Added `TAURI_DEV=true` env var in `tauri.conf.json` `beforeDevCommand`
+- Updated `isTauri` detection to check for both `TAURI_ENV_PLATFORM` (build) and `TAURI_DEV` (dev)
+- Upgraded `@tauri-apps/plugin-dialog` to 2.6.0 with `xdg-portal` feature
+- Added auto-detection for local vs remote Supabase in migration command
+
+**Files Changed**:
+- `vite.config.ts` - PWA disable option, isTauri detection
+- `src-tauri/tauri.conf.json` - beforeDevCommand with TAURI_DEV env var
+- `src-tauri/Cargo.toml` - dialog plugin with xdg-portal feature
+- `src-tauri/src/lib.rs` - Supabase migration auto-detection
+- `package.json` - Upgraded Tauri plugin versions
+
 **Tasks**:
-- [ ] Investigate Tauri file save dialog implementation
-- [ ] Check if Tauri plugin for dialogs is properly configured
-- [ ] Test backup download functionality in browser vs Tauri
-- [ ] Fix file save dialog or implement alternative download method
+- [x] Investigate Tauri file save dialog implementation
+- [x] Check if Tauri plugin for dialogs is properly configured
+- [x] Test backup download functionality in browser vs Tauri
+- [x] Fix file save dialog or implement alternative download method
 
 ---
 
@@ -966,8 +1016,8 @@ Instead of restoring full snapshots, track which entities were affected by each 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  ROAD-004: PWA Mobile Support (🔄 IN PROGRESS)                   │
-│  Status: Phase 1 Implementation - PWA Plugin Configured          │
+│  ROAD-004: PWA Mobile Support (✅ DONE)                          │
+│  Status: Phase 2 Complete (VPS & Reload Prompt)                  │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
                               │ All Prerequisites Done
@@ -1254,7 +1304,7 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-### TASK-324: PWA Install Prompt Component (🔄 IN PROGRESS)
+### TASK-324: PWA Install Prompt Component (✅ DONE)
 
 **Priority**: P2-MEDIUM
 **Related**: ROAD-004 (PWA Mobile Support)
@@ -1265,12 +1315,12 @@ onMoveEnd(({ viewport }) => {
 **Solution**: Create component per PWA plan (`plans/pwa-mobile-support.md` lines 219-257)
 
 **Implementation**:
-- [ ] Create `src/components/common/ReloadPrompt.vue` component
-- [ ] Handle "update available" events from service worker
-- [ ] Show toast notification when new version available
-- [ ] Add "Reload" button with sync guard (wait for pending saves)
-- [ ] Show "offline ready" notification on first install
-- [ ] Integrate component in `src/App.vue`
+- [x] Create `src/components/common/ReloadPrompt.vue` component
+- [x] Handle "update available" events from service worker
+- [x] Show toast notification when new version available
+- [x] Add "Reload" button with sync guard (wait for pending saves)
+- [x] Show "offline ready" notification on first install
+- [x] Integrate component in `src/App.vue`
 
 **Key Files**:
 - `src/components/common/ReloadPrompt.vue` (create)
@@ -1283,7 +1333,7 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-### TASK-325: VPS Deployment Configuration (📋 PLANNED)
+### TASK-325: VPS Deployment Configuration (✅ DONE)
 
 **Priority**: P2-MEDIUM
 **Related**: ROAD-004 (PWA Mobile Support)
@@ -1298,11 +1348,11 @@ onMoveEnd(({ viewport }) => {
 4. Document rollback procedure
 
 **Implementation**:
-- [ ] Create `Caddyfile` with auto-SSL configuration
-- [ ] Create `.github/workflows/deploy.yml` for VPS deployment
-- [ ] Configure security headers (CSP, HSTS, X-Frame-Options)
-- [ ] Create `docs/sop/deployment/VPS-DEPLOYMENT.md` with rollback docs
-- [ ] Test deployment on staging environment
+- [x] Create `Caddyfile` with auto-SSL configuration
+- [x] Create `.github/workflows/deploy.yml` for VPS deployment
+- [x] Configure security headers (CSP, HSTS, X-Frame-Options)
+- [x] Create `docs/sop/deployment/VPS-DEPLOYMENT.md` with rollback docs
+- [x] Test deployment on staging environment
 
 **Key Files**:
 - `Caddyfile` (create)
@@ -1316,7 +1366,7 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-### TASK-326: PWA Cross-Device Testing (📋 PLANNED)
+### TASK-326: PWA Cross-Device Testing (✅ DONE)
 
 **Priority**: P2-MEDIUM
 **Related**: ROAD-004 (PWA Mobile Support)
@@ -1331,12 +1381,12 @@ onMoveEnd(({ viewport }) => {
 4. Document device-specific limitations
 
 **Testing Matrix**:
-- [ ] iOS Safari - Install PWA to home screen
-- [ ] iOS Safari - Offline mode functionality
-- [ ] Android Chrome - Install PWA
-- [ ] Android Chrome - Offline mode functionality
-- [ ] Desktop Chrome - Install and offline
-- [ ] Run Lighthouse PWA audit
+- [x] iOS Safari - Install PWA to home screen
+- [x] iOS Safari - Offline mode functionality
+- [x] Android Chrome - Install PWA
+- [x] Android Chrome - Offline mode functionality
+- [x] Desktop Chrome - Install and offline
+- [x] Run Lighthouse PWA audit
 
 **Success Criteria**:
 - [ ] Installable on iOS Safari
@@ -2318,16 +2368,16 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 
 #### Roadmap Updates (Crisis Stabilization)
 
-##### TASK-329: Auth & Data Persistence Hardening (🔄 IN PROGRESS)
-- [ ] Implement `post-start` hook to verify `endlessblink` user exists.
-- [ ] Configure PostgreSQL data persistence in Docker volume more robustly.
-- [ ] Update `useSupabaseDatabase.ts` to retry auth on 401/403 with exponential backoff.
+##### TASK-329: Auth & Data Persistence Hardening (✅ DONE)
+- [x] Implement `post-start` hook to verify `endlessblink` user exists.
+- [x] Configure PostgreSQL data persistence in Docker volume more robustly.
+- [x] Update `useSupabaseDatabase.ts` to retry auth on 401/403 with exponential backoff.
 
-##### TASK-330: Shadow-Mirror Reliability & Automation (📋 PLANNED)
-- [ ] Implement automatic `supabase stop --backup` hook.
-- [ ] Add `npm run shadow` trigger to `npm run dev` startup.
-- [ ] Add cron-like monitoring to ensure `shadow.db` is updating every 5 minutes.
-- [ ] Add `auth.users` export via `docker exec` to `shadow-mirror.cjs` (✅ Done).
+##### TASK-330: Shadow-Mirror Reliability & Automation (✅ DONE)
+- [x] Implement automatic `supabase stop --backup` hook via `scripts/db-stop.sh`.
+- [x] Add `npm run shadow` trigger to `npm run dev` startup (via `backup:watch`).
+- [x] Add cron-like monitoring to ensure `shadow.db` is updating every 5 minutes.
+- [x] Add `auth.users` export via `docker exec` to `shadow-mirror.cjs` (✅ Done).
 
 ##### TASK-331: Tauri Multi-App Migration (LocalStorage) (📋 PLANNED)
 - [ ] Create migration script to copy data from `com.pomoflow.desktop` to `com.flowstate.app`.

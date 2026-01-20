@@ -6,10 +6,11 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5546",
-    "beforeDevCommand": "",
+    "beforeDevCommand": "TAURI_DEV=true npm run dev",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "FlowState",
@@ -23,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' http: https: ws: wss: data: blob: tauri: asset:;"
+      "csp": null
     }
   },
   "bundle": {

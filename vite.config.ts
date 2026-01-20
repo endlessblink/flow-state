@@ -17,14 +17,20 @@ const CACHE_DURATIONS = {
   ONE_YEAR: 60 * 60 * 24 * 365,
 } as const
 
-// Check if building for Tauri (TAURI env var is set during tauri build)
-const isTauri = process.env.TAURI_ENV_PLATFORM !== undefined
+// Check if running in Tauri context (dev or build)
+// BUG-336: TAURI_DEV is set via beforeDevCommand in tauri.conf.json
+// TAURI_ENV_PLATFORM is set during `tauri build`
+const isTauri =
+  process.env.TAURI_ENV_PLATFORM !== undefined ||
+  process.env.TAURI_DEV !== undefined
 
 export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)
-    !isTauri && VitePWA({
+    // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules
+    VitePWA({
+      disable: isTauri, // Provides empty stub modules for virtual:pwa-register imports
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
@@ -133,9 +139,8 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     rollupOptions: {
       external: [
-        'fsevents',
-        // Externalize PWA virtual modules for Tauri builds (they're disabled anyway)
-        ...(isTauri ? ['virtual:pwa-register/vue', 'virtual:pwa-register'] : [])
+        'fsevents'
+        // BUG-336: Removed PWA externals - VitePWA({ disable: true }) now provides proper stubs
       ],
       output: {
         format: 'es', // Workers MUST be 'es' format

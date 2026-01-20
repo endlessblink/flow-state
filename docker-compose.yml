@@ -1,10 +1,33 @@
-version: '3.8'
-
 services:
+  caddy:
+    image: caddy:alpine
+    container_name: flowstate_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - flowstate-caddy-data:/data
+      - flowstate-caddy-config:/config
+    networks:
+      - flowstate-net
+    depends_on:
+      - app
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: flowstate_tunnel
+    restart: always
+    # Quick Tunnel - generates a random stable URL
+    command: tunnel --url http://caddy:80
+    networks:
+      - flowstate-net
+    depends_on:
+      - caddy
+
   app:
     build: .
-    ports:
-      - "8080:80"
     networks:
       - flowstate-net
     depends_on:
@@ -14,8 +37,6 @@ services:
     image: public.ecr.aws/supabase/postgres:17.6.1.071
     container_name: flowstate_db
     restart: always
-    ports:
-      - "54322:5432"
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: postgres
@@ -31,4 +52,8 @@ networks:
 
 volumes:
   flowstate-db-data:
+    driver: local
+  flowstate-caddy-data:
+    driver: local
+  flowstate-caddy-config:
     driver: local

@@ -117,8 +117,17 @@ export function useTaskPersistence(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
 
-        // Always save to localStorage for persistence across refreshes (guest mode)
-        saveTasksToLocalStorage()
+        // BUG-339 FIX: Only save to guest localStorage when NOT authenticated
+        // Previously this saved unconditionally, leaking Supabase tasks to guest storage
+        // which caused duplicates when migrating on next sign-in
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (!authStore.isAuthenticated) {
+            saveTasksToLocalStorage()
+        } else {
+            // BUG-339: Clear guest tasks if signed in (prevents stale data buildup)
+            localStorage.removeItem(GUEST_TASKS_KEY)
+        }
 
         try {
             // Validation
@@ -158,6 +167,9 @@ export function useTaskPersistence(
                 _rawTasks.value = localTasks
                 return
             }
+
+            // BUG-339: Guest localStorage is now cleared in useAppInitialization
+            // via clearStaleGuestTasks() BEFORE this function is called
 
             const loadedTasks = await fetchTasks()
 
@@ -271,14 +283,68 @@ export function useTaskPersistence(
             // Disabled
         },
         recoverSoftDeletedTasks: async () => 0, // TBD: SQL Implementation needed later
+
+        /**
+         * TASK-344: Import tasks with immutable ID enforcement
+         * Checks both local store AND Supabase for existing/tombstoned IDs
+         */
         importTasks: async (tasksToImport: Task[]) => {
-            // Basic import logic reused
-            if (!tasksToImport.length) return
-            const existingIds = new Set(_rawTasks.value.map(t => t.id))
-            const newTasks = tasksToImport.filter(t => !existingIds.has(t.id))
-            if (newTasks.length > 0) {
-                _rawTasks.value.push(...newTasks)
+            if (!tasksToImport.length) return { imported: 0, skipped: 0, skippedIds: [] as string[] }
+
+            // First, filter out tasks that exist locally
+            const localIds = new Set(_rawTasks.value.map(t => t.id))
+            const notInLocal = tasksToImport.filter(t => !localIds.has(t.id))
+
+            if (notInLocal.length === 0) {
+                console.log('[TASK-344] All tasks already exist locally - nothing to import')
+                return { imported: 0, skipped: tasksToImport.length, skippedIds: tasksToImport.map(t => t.id) }
+            }
+
+            // TASK-344: Check Supabase for existing/tombstoned IDs
+            const { useAuthStore } = await import('@/stores/auth')
+            const authStore = useAuthStore()
+
+            let tasksToAdd = notInLocal
+            const skippedIds: string[] = tasksToImport.filter(t => localIds.has(t.id)).map(t => t.id)
+
+            if (authStore.isAuthenticated) {
+                const { checkTaskIdsAvailability, logDedupDecision } = useSupabaseDatabase()
+                const taskIds = notInLocal.map(t => t.id)
+                const availability = await checkTaskIdsAvailability(taskIds)
+
+                const availableIds = new Set(
+                    availability
+                        .filter(a => a.status === 'available')
+                        .map(a => a.taskId)
+                )
+
+                tasksToAdd = notInLocal.filter(t => availableIds.has(t.id))
+
+                // Log skipped tasks
+                for (const result of availability) {
+                    if (result.status !== 'available') {
+                        skippedIds.push(result.taskId)
+                        await logDedupDecision(
+                            'sync',
+                            result.taskId,
+                            result.status === 'tombstoned' ? 'skipped_tombstoned' : 'skipped_exists',
+                            result.reason
+                        )
+                    }
+                }
+
+                console.log(`[TASK-344] Import filter: ${tasksToAdd.length}/${notInLocal.length} tasks available (${notInLocal.length - tasksToAdd.length} exist/tombstoned)`)
+            }
+
+            if (tasksToAdd.length > 0) {
+                _rawTasks.value.push(...tasksToAdd)
                 await saveTasksToStorage(_rawTasks.value, 'import-tool')
+            }
+
+            return {
+                imported: tasksToAdd.length,
+                skipped: tasksToImport.length - tasksToAdd.length,
+                skippedIds
             }
         }
     }

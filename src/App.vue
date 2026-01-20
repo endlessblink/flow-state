@@ -10,7 +10,8 @@
 
       <!-- Main App (renders after startup completes or immediately in browser mode) -->
       <template v-if="appReady">
-        <MainLayout ref="mainLayout" />
+        <MobileLayout v-if="isMobile" />
+        <MainLayout v-else ref="mainLayout" />
         <ModalManager ref="modalManager" />
         <FaviconManager />
         <!-- PWA Reload Prompt (Browser Only) -->
@@ -33,16 +34,22 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAppInitialization } from '@/composables/app/useAppInitialization'
 import { useAppShortcuts } from '@/composables/app/useAppShortcuts'
 import MainLayout from '@/layouts/MainLayout.vue'
+import MobileLayout from '@/mobile/layouts/MobileLayout.vue'
 import ModalManager from '@/layouts/ModalManager.vue'
 import FaviconManager from '@/components/common/FaviconManager.vue'
 import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
 import IOSInstallPrompt from '@/components/common/IOSInstallPrompt.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
+import { useMobileDetection } from '@/composables/useMobileDetection'
 
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
 const modalManager = ref<InstanceType<typeof ModalManager> | null>(null)
+
+// Core Composables
+const { isMobile } = useMobileDetection()
+const { handleKeydown } = useAppShortcuts()
 
 // Startup state - check Tauri AFTER mount to ensure __TAURI__ is injected
 const startupComplete = ref(false)
@@ -60,15 +67,14 @@ const onStartupReady = () => {
   startupComplete.value = true
 }
 
-// Composables
-const { handleKeydown } = useAppShortcuts()
-
 // Initialize App Logic
 useAppInitialization()
 
 // Handle global events that require interaction with MainLayout
 const handleGlobalNewTask = () => {
-  mainLayout.value?.focusQuickTask()
+  if (!isMobile.value) {
+    mainLayout.value?.focusQuickTask()
+  }
 }
 
 onMounted(() => {

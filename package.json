@@ -144,9 +144,9 @@
     "test:stress:quick": "npx playwright test tests/stress/ --config=tests/stress/playwright.stress.config.ts --grep @quick",
     "test:bench": "vitest bench --config vitest.bench.config.ts",
     "test:memory": "node tests/memory/run-fuite.mjs",
-    "test:backup": "node scripts/test-backup-restore.cjs",
-    "test:backup:create": "node scripts/test-backup-restore.cjs --create",
-    "test:backup:restore": "node scripts/test-backup-restore.cjs --restore",
+    "test:backup": "node scripts/verify-backup-system.cjs",
+    "test:backup:create": "node scripts/verify-backup-system.cjs --create",
+    "test:backup:restore": "node scripts/verify-backup-system.cjs --restore",
     "test:security": "npm audit --audit-level=high && echo '✅ npm audit passed'",
     "test:db": "npx supabase test db"
   },

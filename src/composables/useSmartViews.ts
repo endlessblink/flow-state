@@ -113,8 +113,9 @@ export const useSmartViews = () => {
       return true
     }
 
-    // Include tasks created today (for new tasks that haven't been scheduled yet)
-    if (task.createdAt) {
+    // Only include tasks created today if they have NO due date
+    // (prevents tasks with future due dates from appearing in Today)
+    if (!task.dueDate && task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
         createdDate.setHours(0, 0, 0, 0)
@@ -188,9 +189,69 @@ export const useSmartViews = () => {
       return true
     }
 
-    // Include tasks created today (for new tasks that haven't been scheduled yet)
-    // This ensures consistency with isTodayTask - tasks created today appear in both Today and This Week
-    if (task.createdAt) {
+    // Only include tasks created today if they have NO due date
+    // (prevents tasks with future due dates from appearing in This Week)
+    if (!task.dueDate && task.createdAt) {
+      const createdDate = new Date(task.createdAt)
+      if (!isNaN(createdDate.getTime())) {
+        createdDate.setHours(0, 0, 0, 0)
+        if (createdDate.getTime() === today.getTime()) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Check if a task is due this month (from today to end of current month)
+   */
+  const isThisMonthTask = (task: Task): boolean => {
+    if (task.status === 'done') return false
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayStr = getLocalDateString(today)
+
+    // End of current month
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    const monthEndStr = getLocalDateString(monthEnd)
+
+    // Check dueDate within this month
+    if (task.dueDate) {
+      const normalizedDueDate = normalizeDateString(task.dueDate)
+      if (normalizedDueDate && normalizedDueDate >= todayStr && normalizedDueDate <= monthEndStr) {
+        return true
+      }
+    }
+
+    // Check instances within this month
+    if (task.instances && task.instances.length > 0) {
+      if (task.instances.some(inst => {
+        if (!inst || !inst.scheduledDate) return false
+        const normalizedInstDate = normalizeDateString(inst.scheduledDate)
+        return normalizedInstDate && normalizedInstDate >= todayStr && normalizedInstDate <= monthEndStr
+      })) {
+        return true
+      }
+    }
+
+    // Check legacy scheduled dates within this month
+    if (task.scheduledDate) {
+      const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
+      if (normalizedScheduledDate && normalizedScheduledDate >= todayStr && normalizedScheduledDate <= monthEndStr) {
+        return true
+      }
+    }
+
+    // Tasks currently in progress should be included
+    if (task.status === 'in_progress') {
+      return true
+    }
+
+    // Only include tasks created today if they have NO due date
+    if (!task.dueDate && task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
         createdDate.setHours(0, 0, 0, 0)
@@ -346,6 +407,7 @@ export const useSmartViews = () => {
     // Individual task checkers
     isTodayTask,
     isWeekTask,
+    isThisMonthTask,
     isUncategorizedTask,
     isUnscheduledTask,
     isInProgressTask,

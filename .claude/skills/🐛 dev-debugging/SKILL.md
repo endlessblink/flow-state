@@ -926,3 +926,137 @@ StartupWMClass=flow-state  # MUST match app's WM_CLASS exactly!
 ```
 
 **Note**: The `StartupWMClass` must match the WM_CLASS reported by `xprop WM_CLASS` when clicking on the app window.
+
+### Creating Transparent Taskbar Icons from Complex SVGs
+
+Professional taskbar icons (like Spotify, Chrome, Telegram) have **transparent backgrounds** - just the icon shape floating, no visible background square. Here's how to convert complex SVGs to proper transparent icons.
+
+#### Why Icons Look Wrong
+| Problem | Cause |
+|---------|-------|
+| Visible dark/black square behind icon | SVG has background rectangle or fill |
+| Icon doesn't match other taskbar icons | Background not truly transparent |
+| Icon looks muddy/dark | Opaque background blending with panel |
+
+#### The Solution: Flood-Fill Transparency
+
+Use ImageMagick to flood-fill from corners, which removes connected background pixels:
+
+```bash
+# Step 1: Render SVG and make background transparent via flood-fill from all 4 corners
+magick convert "original.svg" \
+  -fuzz 25% -fill none -draw "color 0,0 floodfill" \
+  -fuzz 25% -fill none -draw "color WIDTH-1,0 floodfill" \
+  -fuzz 25% -fill none -draw "color 0,HEIGHT-1 floodfill" \
+  -fuzz 25% -fill none -draw "color WIDTH-1,HEIGHT-1 floodfill" \
+  /tmp/transparent.png
+
+# Step 2: Trim transparent areas and resize to 512x512
+magick convert /tmp/transparent.png \
+  -trim +repage \
+  -resize 490x490 \
+  -gravity center \
+  -background none \
+  -extent 512x512 \
+  src-tauri/icons/icon.png
+
+# Step 3: Verify corners are transparent (should output 0)
+magick convert src-tauri/icons/icon.png -crop 10x10+0+0 +repage -alpha extract -format "%[fx:mean]" info:
+```
+
+**Key Parameters:**
+- `-fuzz 25%` - Tolerance for color matching (increase if background not fully removed)
+- `floodfill` - Removes connected pixels of similar color starting from specified point
+- `-trim +repage` - Remove transparent borders, reset canvas
+- `-background none` - Ensure transparent background when extending
+
+#### Generate Full Icon Set
+
+```bash
+# Generate all required sizes
+for size in 16 24 32 48 64 128 256; do
+  magick convert src-tauri/icons/icon.png -resize ${size}x${size} /tmp/ico/${size}.png
+done
+
+# Windows ICO (multi-size)
+magick convert /tmp/ico/16.png /tmp/ico/24.png /tmp/ico/32.png /tmp/ico/48.png \
+  /tmp/ico/64.png /tmp/ico/128.png /tmp/ico/256.png src-tauri/icons/icon.ico
+
+# macOS ICNS (requires icnsutil: pip install icnsutil)
+python3 -c "
+import icnsutil
+img = icnsutil.IcnsFile()
+for size in [16, 32, 128, 256, 512]:
+    img.add_media(file=f'/tmp/icns/icon_{size}x{size}.png')
+img.write('src-tauri/icons/icon.icns')
+"
+
+# Tauri-specific sizes
+magick convert src-tauri/icons/icon.png -resize 32x32 src-tauri/icons/32x32.png
+magick convert src-tauri/icons/icon.png -resize 128x128 src-tauri/icons/128x128.png
+magick convert src-tauri/icons/icon.png -resize 256x256 "src-tauri/icons/128x128@2x.png"
+```
+
+#### Full Workflow: SVG → Tauri App → KDE Taskbar
+
+```bash
+# 1. Create transparent icon from SVG
+SVG_FILE="/path/to/original.svg"
+# Get SVG dimensions first
+identify "$SVG_FILE"  # Note WIDTH and HEIGHT
+
+magick convert "$SVG_FILE" \
+  -fuzz 25% -fill none -draw "color 0,0 floodfill" \
+  -fuzz 25% -fill none -draw "color WIDTH-1,0 floodfill" \
+  -fuzz 25% -fill none -draw "color 0,HEIGHT-1 floodfill" \
+  -fuzz 25% -fill none -draw "color WIDTH-1,HEIGHT-1 floodfill" \
+  -trim +repage \
+  -resize 490x490 \
+  -gravity center \
+  -background none \
+  -extent 512x512 \
+  src-tauri/icons/icon.png
+
+# 2. Generate all icon sizes (run the generate script above)
+
+# 3. Rebuild Tauri app
+npm run tauri build
+
+# 4. Reinstall deb to update system icons
+sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb
+
+# 5. Refresh KDE caches
+kbuildsycoca6 --noincremental
+
+# 6. Restart plasmashell (REQUIRED for icon to appear)
+kquitapp6 plasmashell && kstart plasmashell
+```
+
+#### Adjusting Icon Size Within Frame
+
+To make the icon larger/smaller within the 512x512 frame:
+
+```bash
+# Larger icon (less padding) - use 500x500 or 510x510
+magick convert /tmp/transparent.png -trim +repage \
+  -resize 510x510 -gravity center -background none -extent 512x512 \
+  src-tauri/icons/icon.png
+
+# Smaller icon (more padding) - use 450x450 or 400x400
+magick convert /tmp/transparent.png -trim +repage \
+  -resize 450x450 -gravity center -background none -extent 512x512 \
+  src-tauri/icons/icon.png
+```
+
+#### Troubleshooting Transparency
+
+```bash
+# Check alpha range (should be 0-1, not 1-1)
+magick convert icon.png -alpha extract -format "Alpha: %[fx:minima]-%[fx:maxima]" info:
+
+# Check specific corner (should be 0 for transparent)
+magick convert icon.png -crop 10x10+0+0 +repage -alpha extract -format "%[fx:mean]" info:
+
+# If alpha is 1-1 (fully opaque), try increasing fuzz:
+magick convert original.svg -fuzz 35% -fill none -draw "color 0,0 floodfill" ...
+```

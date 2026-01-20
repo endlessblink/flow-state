@@ -57,3 +57,17 @@ setTimeout(() => {
     runBackup();
     setInterval(runBackup, CONFIG.INTERVAL_MS);
 }, 30000); // 30s delay on startup
+
+// TASK-330: Staleness Monitoring
+// Check every minute if the shadow file looks stale (> 6 mins old)
+setInterval(() => {
+    const fs = require('fs');
+    const shadowPath = path.join(__dirname, '../backups/shadow.db');
+    if (fs.existsSync(shadowPath)) {
+        const stats = fs.statSync(shadowPath);
+        const ageMs = Date.now() - stats.mtimeMs;
+        if (ageMs > (CONFIG.INTERVAL_MS + 60000)) {
+            console.warn(`[${new Date().toLocaleTimeString()}] ⚠️  WARNING: Shadow backup is STALE (${Math.round(ageMs / 60000)} mins old)`);
+        }
+    }
+}, 60000);

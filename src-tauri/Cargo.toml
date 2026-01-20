@@ -28,3 +28,6 @@ tauri-plugin-shell = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-dialog = { version = "2.6", default-features = false, features = ["xdg-portal"] }
+tauri-plugin-fs = "2.4"
+tauri-plugin-store = "2"

@@ -1,5 +1,5 @@
-**Last Updated**: January 19, 2026 (TASK-319-323 Orchestrator Stability, TASK-324-326 PWA Phase 2)
-**Version**: 5.48 (Orchestrator Stability + PWA Phase 2 Planning)
+**Last Updated**: January 20, 2026 (TASK-329-332 Data Crisis & Stabilization)
+**Version**: 5.49 (Data Crisis & System Stabilization)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -126,16 +126,167 @@
 | ~~**TASK-324**~~         | ✅ **DONE** **PWA Install Prompt Component**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/62e1538b-8b24-4393-965e-f11ae95f2523/walkthrough.md)                                                                                          |                                                        |
 | ~~**TASK-325**~~         | ✅ **DONE** **VPS Deployment Configuration**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-VPS](./sop/deployment/VPS-DEPLOYMENT.md)                                                                                                                                                                  |                                                        |
 | ~~**TASK-326**~~         | ✅ **DONE** **PWA Cross-Device Testing**                                           | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Verified SW & Manifest via Lighthouse                                                                                                                                                                          |                                                        |
-| **TASK-327**             | **Create Custom Tauri App Icon**                                       | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Design and generate app icon for all platforms (ICO, ICNS, PNG, favicon)                                                                                                                                        |                                                        |
+| **TASK-327**             | ✅ **DONE** **Create Custom Tauri App Icon**                      | **P1**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Design and generate app icon for all platforms (ICO, ICNS, PNG, favicon)                                                                                                                                        |                                                        |
+| ~~**TASK-329**~~         | ✅ **DONE** **Auth & Data Persistence Hardening**                       | **P0**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md) - Fixed seed.sql, NULL columns, password change UI                                                                                            |                                                        |
+| **TASK-330**             | **Shadow-Mirror Reliability & Automation**                             | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Automatic runs & monitoring                                                                                                                 |                                                        |
+| **TASK-331**             | **Tauri Multi-App Migration (LocalStorage)**                          | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Migrate from com.pomoflow.desktop to com.flowstate.app                                                                                     |                                                        |
+| **TASK-332**             | **Backup Reliability & Verification**                                  | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Golden backup rotation, validation tests, fix Tauri dialog                                                                                  |
+| **BUG-333**              | **Duplicate Tasks After Restore + Login**                              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md) - 109 tasks, 64 unique titles. Login sync merged localStorage + Supabase without deduplication                                                 |                                                        |
+| **TASK-334**             | **AI "Done" Claim Verification System (5-Layer Defense)**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-334-ai-done-claim-verification-system-in-progress) - Hooks + Judge Agent in Dev-Maestro                                                                                                      |                                                        |
+| **TASK-335**             | **Judge Agent Integration in Dev-Maestro**                             | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-335-judge-agent-integration-in-dev-maestro-planned) - Layer 5 of TASK-334                                                                                                                    | TASK-334                                               |
+| **BUG-336**              | **Fix Backup Download in Tauri App**                                   | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Can't download backups from Tauri desktop app - file save dialog doesn't work                                                                                                                                    |                                                        |
+| **TASK-337**             | **Reliable Password Change Feature**                                   | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Fix template logic error in AccountSettingsTab.vue - v-else binds to wrong v-if                                                                                                                                  |                                                        |
+| **TASK-338**             | **Comprehensive Stress Testing Agent/Skill**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-338-comprehensive-stress-testing-agentskill-in-progress) - Reliability, backup, container stability, redundancy assessment                                                                   |                                                        |
+| **BUG-339**              | **Tauri App Auto-Signout + Data Loss Concern**                         | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | User signed out unexpectedly from Tauri app; unclear if signing back in will lose local data                                                                                                                     |                                                        |
 
 ---
 
 ---
+
+
+### TASK-328: Test task from API
+
+**Priority**: Medium
+**Status**: Backlog
+
 
 ## Active Work (Summary)
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+### BUG-339: Tauri App Auto-Signout + Data Loss Concern (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: IN PROGRESS (2026-01-20)
+
+User was unexpectedly signed out from the Tauri desktop app. Concern about whether signing back in will lose current local data.
+
+**Investigation**:
+- [ ] Identify cause of automatic signout (token expiry, session management, Tauri-specific issue)
+- [ ] Audit auth token storage and refresh logic in Tauri context
+- [ ] Verify localStorage/Tauri storage persistence across sessions
+
+**Data Safety Assessment**:
+- [ ] Confirm local data is preserved independently of auth state
+- [ ] Test sign-in flow: does it merge local + Supabase data or overwrite?
+- [ ] Document expected behavior for users
+
+**Tasks**:
+- [ ] Fix auto-signout root cause
+- [ ] Ensure safe data merge on re-authentication
+- [ ] Add user-facing indication of data sync status
+
+---
+
+### BUG-336: Fix Backup Download in Tauri App (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: IN PROGRESS (2026-01-20)
+
+Can't download backups from Tauri desktop app - file save dialog doesn't work.
+
+**Tasks**:
+- [ ] Investigate Tauri file save dialog implementation
+- [ ] Check if Tauri plugin for dialogs is properly configured
+- [ ] Test backup download functionality in browser vs Tauri
+- [ ] Fix file save dialog or implement alternative download method
+
+---
+
+### TASK-338: Comprehensive Stress Testing Agent/Skill (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: IN PROGRESS (2026-01-20)
+
+Create a specialized stress testing agent/skill that rigorously tests all completed tasks, finds missed issues, vulnerabilities, and loopholes. Must assess what other agents missed and ensure system reliability.
+
+**Scope**:
+- **Reliability Testing** - Verify all critical paths work under stress
+- **Backup System Verification** - Test backup/restore integrity, shadow-mirror reliability
+- **Container Stability** - Docker/Supabase container health, restart resilience
+- **Redundancy Assessment** - Identify single points of failure
+- **Security Audit** - OWASP top 10, input validation, auth edge cases
+- **Data Integrity** - Sync conflicts, race conditions, deduplication
+- **Performance Profiling** - Memory leaks, response times under load
+
+**Research Phase** (✅ COMPLETE 2026-01-20):
+- [x] Research Vue.js stress testing best practices (2026) - Artillery, k6, Vitest bench, Fuite
+- [x] Research Supabase reliability patterns and testing approaches - pgTAP, RLS testing, WebSocket monitoring
+- [x] Research Docker/container health monitoring strategies - cAdvisor, Pumba, Prometheus
+- [x] Research backup verification methodologies - pgBackRest, restore testing, checksum validation
+- [x] Research security testing tools for web apps - OWASP ZAP, Trivy, Snyk
+- [x] Analyze FlowState codebase for critical paths to test - Full critical path map created
+
+**Research Output**: `docs/research/TASK-338-stress-testing-research.md`
+
+**Implementation Phase** (IN PROGRESS):
+- [x] Design skill architecture based on research findings
+- [x] Create skill file structure (`.claude/skills/stress-tester/`)
+- [x] Add to skills.json configuration
+- [ ] Create test matrix covering all completed TASK-* items
+- [ ] Implement reliability test suite
+- [ ] Implement backup/restore verification tests
+- [ ] Implement container stability checks
+- [ ] Implement security audit checks
+- [ ] Create comprehensive report generation
+- [ ] Integrate with existing qa-testing skill
+
+**Success Criteria**:
+- Catches issues that manual testing and qa-testing skill miss
+- Provides actionable vulnerability reports
+- Verifies backup system works under all conditions
+- Validates container orchestration reliability
+- Zero false positives in security audit
+
+---
+
+### TASK-335: Fix Canvas Distribution for Stacked Tasks (✅ DONE)
+
+**Priority**: P2
+**Status**: DONE (2026-01-20)
+
+When multiple tasks share the same position (stacked), the distribute functions calculated spacing as 0, causing tasks not to move.
+
+**Solution**:
+- Added minimum spacing constants (`DEFAULT_SPACING_X = 240px`, `DEFAULT_SPACING_Y = 120px`)
+- Modified `distributeHorizontal()` and `distributeVertical()` in `useCanvasAlignment.ts`
+- If natural spacing < 10px, use default fixed spacing instead
+
+**Files Changed**:
+- `src/composables/canvas/useCanvasAlignment.ts`
+
+---
+
+### TASK-340: Layout Submenu Icon Grid Panel (🔄 IN PROGRESS)
+
+**Priority**: P2
+**Status**: IN PROGRESS (2026-01-20)
+
+Replace the Layout submenu list with a compact icon grid panel (industry standard pattern used by Figma, Adobe, Canva).
+
+**Problem**:
+- Current Layout submenu has 11 items that get cut off at viewport edges
+- Nested submenus are problematic UX (users "fall out" when moving cursor)
+
+**Solution**:
+- Convert to icon grid layout with grouped sections:
+  - **Align**: 2x3 grid (Left, Center H, Right | Top, Center V, Bottom)
+  - **Distribute**: 1x2 row (Horizontal, Vertical)
+  - **Arrange**: 1x3 row (Row, Column, Grid)
+- Add tooltips for discoverability
+- Much more compact, fits any viewport
+
+**Files to Change**:
+- `src/components/canvas/CanvasContextMenu.vue`
+
+**Success Criteria**:
+- [ ] Icon grid renders correctly
+- [ ] All alignment/distribution functions work
+- [ ] Tooltips show on hover
+- [ ] Fits in viewport without cutoff
+
+---
 
 ### TASK-300: Documentation Phase 2 - Content Consolidation (🔄 IN PROGRESS)
 
@@ -335,6 +486,145 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 - [x] Local Linux install works end-to-end
 - [x] Auto-updater signing configured
 - [x] GitHub Actions release workflow operational
+
+---
+
+### TASK-334: AI "Done" Claim Verification System (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH
+**Status**: In Progress
+**Created**: January 20, 2026
+**Plan File**: `/home/endlessblink/.claude/plans/bubbly-stargazing-galaxy.md`
+
+**Problem**: Claude claims tasks are "done" without user verification. Self-verification is fundamentally flawed because Claude writes both code AND tests.
+
+**Solution**: 5-Layer Defense System with Judge Agent integrated into Dev-Maestro.
+
+**Layers**:
+
+| Layer | What | Implementation |
+|-------|------|----------------|
+| **1. Artifacts** | Must provide git diff, test output, verification instructions | CLAUDE.md update |
+| **2. Pre-existing tests** | Auto-run `npm test` after edits | PostToolUse hook |
+| **3. Falsifiability** | Define success/failure criteria BEFORE starting | CLAUDE.md update |
+| **4. User confirmation** | Block "done" until user verifies | Stop hook |
+| **5. Judge agent** | Separate agent evaluates claims | Dev-Maestro integration |
+
+**Dev-Maestro Integration** (Layer 5):
+- Judge agent callable via `/api/judge/evaluate` endpoint
+- Observable in Dev-Maestro UI (new "Judge" tab/panel)
+- Monitored by orchestrator for multi-agent workflows
+- Isolated context (separate from executor agent)
+
+**Files to Create**:
+- `.claude/hooks/auto-test-after-edit.sh` - Layer 2
+- `.claude/hooks/artifact-checker.sh` - Layer 1
+- `.claude/hooks/require-user-confirmation.sh` - Layer 4
+- `dev-maestro/judge-agent.js` - Layer 5 (Dev-Maestro module)
+- Update `.claude/settings.json` to register hooks
+- Update `CLAUDE.md` with completion protocol
+
+**Research Sources**:
+- Multi-agent code verification (72.4% vs 32.8% accuracy)
+- Chain-of-Verification (CoVe) technique
+- NIST AI TEVV Framework
+- FTC evidence requirements (2025)
+
+**Progress**:
+- [x] Research completed (6 agents)
+- [x] Plan documented
+- [x] Update CLAUDE.md with protocol
+- [x] Create auto-test hook (Layer 2) - `.claude/hooks/auto-test-after-edit.sh`
+- [x] Create artifact checker hook (Layer 1) - `.claude/hooks/artifact-checker.sh`
+- [x] Create user confirmation hook (Layer 4) - `.claude/hooks/require-user-confirmation.sh`
+- [x] Register hooks in `.claude/settings.json`
+- [ ] Integrate judge agent into Dev-Maestro (Layer 5) → TASK-335
+- [ ] Test full flow
+
+---
+
+### TASK-335: Judge Agent Integration in Dev-Maestro (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH
+**Status**: In Progress
+**Created**: January 20, 2026
+**Depends On**: TASK-334
+
+**Purpose**: Layer 5 of the AI "Done" Claim Verification System. A separate judge agent that evaluates Claude's work claims with isolated context.
+
+**Integration Points**:
+
+1. **API Endpoint**: `/api/judge/evaluate`
+   - Accepts: task description, artifacts, claimed completion
+   - Returns: verdict (pass/fail), reasoning, gaps identified
+
+2. **Dev-Maestro UI**: New "Judge" panel/tab
+   - Real-time verdict display
+   - History of evaluations
+   - Integration with orchestrator workflow
+
+3. **Orchestrator Integration**:
+   - Called automatically when agent claims "done"
+   - Blocks merge until judge approves
+   - Disagreement requires user decision
+
+4. **Isolated Context**:
+   - Judge has separate prompt (not executor's context)
+   - Reviews artifacts objectively
+   - Checks against success criteria from Layer 3
+
+**Implementation**:
+
+| File | Purpose |
+|------|---------|
+| `dev-maestro/judge-agent.js` | Core judge logic and API |
+| `dev-maestro/kanban/judge-panel.html` | UI component |
+| `dev-maestro/server.js` | API routes integration |
+
+**Judge Evaluation Criteria**:
+- Did artifacts match the claimed work?
+- Were Layer 3 success criteria met?
+- Are there obvious gaps or missing pieces?
+- Did existing tests pass?
+
+**Research Basis**:
+- Multi-agent code verification: 72.4% vs 32.8% accuracy
+- Judge-executor separation prevents self-preference bias
+- Diverse judges outperform single evaluators
+
+**Tasks**:
+- [x] Add /api/judge/evaluate endpoint (added to server.js:2749-2884)
+- [x] Add /api/judge/history endpoint (placeholder for future)
+- [ ] Create Judge panel in Dev-Maestro UI
+- [ ] Integrate with orchestrator workflow
+- [ ] Test with real completion claims
+
+---
+
+### BUG-336: Ctrl+Z Not Working After Shift+Delete (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM
+**Status**: In Progress
+**Created**: January 20, 2026
+
+**Problem**: When using Shift+Delete to permanently delete a task from the canvas, Ctrl+Z (undo) doesn't restore it. Regular Delete (moves to inbox) works fine with undo.
+
+**Root Cause**: In `useCanvasTaskActions.ts:294-295`, the permanent delete path calls `taskStore.permanentlyDeleteTask()` directly **without** recording the operation in the undo history.
+
+**Fix Applied**:
+1. Added `permanentlyDeleteTaskWithUndo()` function to `undoSingleton.ts`
+2. Updated `useCanvasTaskActions.ts` to use the new function
+3. **Critical**: Fixed `createTask` in `taskOperations.ts` to preserve task ID when provided (was always generating new ID, breaking undo restore)
+
+**Testing Status**:
+- [x] Works in web browser (Playwright verified)
+- [ ] Works in Tauri desktop app (user verification needed)
+
+**Files Modified**:
+- `src/composables/undoSingleton.ts` - Added `permanentlyDeleteTaskWithUndo` function + debug logging
+- `src/composables/canvas/useCanvasTaskActions.ts` - Use new undo-aware function
+- `src/stores/tasks/taskOperations.ts` - Preserve task ID in `createTask` for undo restore
+- `src/utils/globalKeyboardHandlerSimple.ts` - Debug logging for keyboard handler
 
 ---
 
@@ -2003,10 +2293,58 @@ If user visually sees a duplicate task/group node, **at least one** of these MUS
 
 ---
 
-#### Related
+---
 
-- TASK-232: Canvas System Stability Solution (parent investigation)
-- TASK-255: Canvas Stability Hardening (Geometry Invariants)
-- SOP-002: Canvas Geometry Invariants (`docs/sop/SOP-002-canvas-geometry-invariants.md`)
+### January 20, 2026: Data Crisis & System Stabilization
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS
+**Crisis Analysis**: [reports/2026-01-20-auth-data-loss-analysis.md](../reports/2026-01-20-auth-data-loss-analysis.md)
+
+On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and backup systems failed to recover the data due to root causes in persistence and automation.
+
+| ID | Issue | Root Cause | Status | Deep Context |
+|----|-------|------------|--------|--------------|
+| 1 | Auth wiped | No DB volumes | **Fixed** | Supabase restart lost `auth.users`; recreated with original UUID. |
+| 2 | Seed missing | Partial `seed.sql` | **Fixed** | Added `endlessblink@gmail.com` with UUID `717f5209-42d8-4bb9-8781-740107a384e5`. |
+| 3 | Shadow-mirror | Automation gap | **Partial** | Script exists but wasn't auto-running; now manually verified. |
+| 4 | LocalStorage | Tauri ID mismatch | **Fixed** | Pointed to `com.flowstate.app` instead of `com.pomoflow.desktop`. |
+| 5 | Role detector | String check bug | **Fixed** | Corrected `shadow-mirror.cjs` to check decoded payload for service role. |
+| 6 | Password lost | Reset required | **Resolved** | Used temporary password for recovery. |
+| 7 | Download stuck | Tauri Webview bug | **Workaround** | Manual extraction; native dialog fix planned in TASK-332. |
+| 8 | Schema error | PostgREST Cache | **Fixed** | Service restart cleared schema cache issues. |
+| 9 | Golden Offline | Conn. required | **Expected** | Feature requires Supabase connectivity for validation. |
+| 10| Data mismatch | Local > Cloud | **Active** | 53 local tasks vs 42 cloud; reconciliation required. |
+
+#### Roadmap Updates (Crisis Stabilization)
+
+##### TASK-329: Auth & Data Persistence Hardening (🔄 IN PROGRESS)
+- [ ] Implement `post-start` hook to verify `endlessblink` user exists.
+- [ ] Configure PostgreSQL data persistence in Docker volume more robustly.
+- [ ] Update `useSupabaseDatabase.ts` to retry auth on 401/403 with exponential backoff.
+
+##### TASK-330: Shadow-Mirror Reliability & Automation (📋 PLANNED)
+- [ ] Implement automatic `supabase stop --backup` hook.
+- [ ] Add `npm run shadow` trigger to `npm run dev` startup.
+- [ ] Add cron-like monitoring to ensure `shadow.db` is updating every 5 minutes.
+- [ ] Add `auth.users` export via `docker exec` to `shadow-mirror.cjs` (✅ Done).
+
+##### TASK-331: Tauri Multi-App Migration (LocalStorage) (📋 PLANNED)
+- [ ] Create migration script to copy data from `com.pomoflow.desktop` to `com.flowstate.app`.
+- [ ] Update all persistence layers to use the unified app name.
+
+##### TASK-332: Backup Reliability & Verification (📋 PLANNED)
+- [ ] Fix Tauri native file dialog for "Download Backup" button.
+- [ ] Implement Golden Backup rotation (keep last 3 peak task counts).
+- [ ] Add Automated Backup Verification tests.
+
+##### TASK-333: Independent Audit of Crisis Analysis (🔄 IN PROGRESS)
+- [ ] Spawn independent QA Supervisor via `dev-maestro`.
+- [ ] Verify consistency between documented fixes and codebase state.
+- [ ] Review crisis report for any missing deep context or technical inaccuracies.
 
 ---
+
+#### Related
+- [TASK-317: Shadow Backup Deletion-Aware Restore](#task-317-shadow-backup-deletion-aware-restore--supabase-data-persistence-done)
+- [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md)

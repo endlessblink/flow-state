@@ -1,0 +1,78 @@
+# Comprehensive Stress Testing Skill
+# TASK-338: Find what other agents missed
+
+name: stress-tester
+description: >
+  Comprehensive stress testing agent that rigorously tests FlowState reliability,
+  backup systems, container stability, security, and data integrity. Designed to
+  catch issues that manual testing and qa-testing skill miss.
+
+triggers:
+  - stress test
+  - reliability test
+  - security audit
+  - backup verification
+  - container health
+  - regression test
+  - find vulnerabilities
+  - test everything
+  - comprehensive test
+  - catch what I missed
+
+category: testing
+priority: critical
+
+# Reference documentation
+references:
+  - docs/research/TASK-338-stress-testing-research.md
+  - docs/sop/canvas/CANVAS-POSITION-SYSTEM.md
+  - docs/claude-md-extension/backup-system.md
+
+# Required tools for full execution
+tools_required:
+  - npm
+  - node
+  - docker
+  - supabase (CLI)
+  - playwright (optional)
+  - trivy (optional)
+
+# Execution modes
+modes:
+  quick:
+    description: Fast smoke test (5-10 minutes)
+    categories: [data-integrity-basic, security-deps]
+
+  standard:
+    description: Standard reliability check (30-60 minutes)
+    categories: [data-integrity, backup, container-health, security]
+
+  comprehensive:
+    description: Full stress test suite (2-4 hours)
+    categories: [all]
+
+# Test categories
+categories:
+  data-integrity:
+    description: Task CRUD, sync, canvas position tests
+    priority: 1
+
+  backup:
+    description: Backup create/restore verification
+    priority: 1
+
+  container-health:
+    description: Docker/Supabase container resilience
+    priority: 2
+
+  security:
+    description: OWASP, RLS, dependency scanning
+    priority: 2
+
+  performance:
+    description: Load testing, memory leaks
+    priority: 3
+
+  timer:
+    description: Cross-device timer sync, leadership
+    priority: 2

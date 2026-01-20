@@ -102,6 +102,43 @@ export const useTaskMigrations = (tasks: Ref<Task[]>) => {
     }
 
     /**
+     * Clean up placeholder description text that was incorrectly stored as content
+     * BUG: "Task description..." was set as actual content instead of relying on placeholder
+     */
+    const migratePlaceholderDescriptions = () => {
+        let cleanedCount = 0
+        tasks.value.forEach(task => {
+            if (task.description === 'Task description...' || task.description === 'Task description...') {
+                task.description = ''
+                cleanedCount++
+            }
+        })
+
+        if (cleanedCount > 0) {
+            console.log(`🧹 [DESCRIPTION_MIGRATION] Cleaned placeholder text from ${cleanedCount} task descriptions`)
+        }
+    }
+
+    /**
+     * DONE-ZONE: Backfill completedAt for existing done tasks
+     * Uses updatedAt as a reasonable approximation for when the task was completed
+     */
+    const migrateCompletedAtTimestamp = () => {
+        let backfilledCount = 0
+        tasks.value.forEach(task => {
+            // If task is done but has no completedAt, backfill with updatedAt
+            if (task.status === 'done' && !task.completedAt) {
+                task.completedAt = task.updatedAt || new Date()
+                backfilledCount++
+            }
+        })
+
+        if (backfilledCount > 0) {
+            console.log(`✅ [DONE-ZONE] Backfilled completedAt for ${backfilledCount} existing done tasks`)
+        }
+    }
+
+    /**
      * Run all task migrations
      */
     const runAllTaskMigrations = () => {
@@ -111,6 +148,8 @@ export const useTaskMigrations = (tasks: Ref<Task[]>) => {
         migrateInboxFlag()
         migrateTaskUncategorizedFlag()
         migrateNestedTaskProjectIds()
+        migrateCompletedAtTimestamp()
+        migratePlaceholderDescriptions()
         console.log('✅ Task migrations complete')
     }
 
@@ -120,6 +159,8 @@ export const useTaskMigrations = (tasks: Ref<Task[]>) => {
         migrateInboxFlag,
         migrateTaskUncategorizedFlag,
         migrateNestedTaskProjectIds,
+        migrateCompletedAtTimestamp,
+        migratePlaceholderDescriptions,
         runAllTaskMigrations
     }
 }

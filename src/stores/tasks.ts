@@ -119,8 +119,11 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  // Auto-init on store creation
-  initializeFromDatabase().catch(() => { })
+  // BUG-339 FIX: REMOVED auto-init on store creation
+  // The task store was initializing BEFORE auth was ready, causing it to load
+  // from localStorage (guest mode) instead of Supabase.
+  // Initialization now happens ONLY from useAppInitialization.ts AFTER auth.
+  // initializeFromDatabase().catch(() => { })
 
   // BUG-057 FIX: Incremental update from sync - updates individual task without full reload
   // This prevents infinite loops by not triggering save watchers

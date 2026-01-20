@@ -223,6 +223,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     // TASK-317: Record tombstone for permanent deletions
     // Tombstones prevent zombie data resurrection during backup restore
+    // TASK-344: Task tombstones are now permanent (expires_at = NULL)
     const recordTombstone = async (entityType: 'task' | 'group' | 'project', entityId: string): Promise<void> => {
         const userId = getUserIdSafe()
         if (!userId) {
@@ -230,17 +231,22 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             return
         }
         try {
+            // TASK-344: Task tombstones are permanent (no expiry), others expire in 90 days
+            const expiresAt = entityType === 'task'
+                ? null  // Permanent for tasks
+                : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()  // 90 days for others
+
             const { error } = await supabase.from('tombstones').upsert({
                 user_id: userId,
                 entity_type: entityType,
                 entity_id: entityId,
                 deleted_at: new Date().toISOString(),
-                expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() // 90 days
+                expires_at: expiresAt
             }, { onConflict: 'entity_type,entity_id,user_id' })
             if (error) {
                 console.warn(`[TASK-317] Failed to record tombstone for ${entityType}:${entityId}:`, error.message)
             } else {
-                console.log(`🪦 [TOMBSTONE] Recorded permanent deletion: ${entityType}:${entityId}`)
+                console.log(`🪦 [TOMBSTONE] Recorded permanent deletion: ${entityType}:${entityId} (expires: ${expiresAt || 'never'})`)
             }
         } catch (e: unknown) {
             // Non-fatal: tombstone recording failure shouldn't block deletion
@@ -262,6 +268,300 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         } catch (e: unknown) {
             console.error('[TASK-317] Failed to fetch tombstones:', e)
             return []
+        }
+    }
+
+    // =============================================================================
+    // TASK-344: Immutable Task ID System
+    // =============================================================================
+    // Types are exported at the bottom of this file
+
+    /**
+     * TASK-344: Safely create a task, checking for existing IDs and tombstones.
+     * Returns a result object instead of throwing errors for existing/tombstoned IDs.
+     *
+     * This function:
+     * 1. Checks if task ID already exists (active or soft-deleted)
+     * 2. Checks if task ID is tombstoned (permanently deleted)
+     * 3. Only creates if ID is truly available
+     *
+     * @param task - The task to create
+     * @returns SafeCreateTaskResult with status and details
+     */
+    const safeCreateTask = async (task: Task): Promise<SafeCreateTaskResult> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] safeCreateTask - not authenticated, falling back to local')
+            return {
+                status: 'created',
+                taskId: task.id,
+                message: 'Task created locally (guest mode)'
+            }
+        }
+
+        try {
+            // Try to use the RPC function if available (more efficient)
+            const { data: rpcResult, error: rpcError } = await supabase.rpc('safe_create_task', {
+                p_task_id: task.id,
+                p_user_id: userId,
+                p_title: task.title,
+                p_description: task.description || '',
+                p_status: task.status || 'planned',
+                p_priority: task.priority || 'medium',
+                p_due_date: task.dueDate || null,
+                p_project_id: task.projectId || 'uncategorized',
+                p_position: task.canvasPosition ? JSON.stringify(task.canvasPosition) : null,
+                p_tags: task.tags || [],
+                p_is_in_inbox: task.isInInbox !== false,
+                p_parent_task_id: task.parentTaskId || null
+            })
+
+            if (rpcError) {
+                // RPC function might not exist yet - fall back to manual check
+                console.warn('[TASK-344] RPC failed, falling back to manual check:', rpcError.message)
+                return await safeCreateTaskManual(task, userId)
+            }
+
+            // Parse RPC result
+            const result = rpcResult as { status: string; task_id: string; message: string; is_deleted?: boolean; title?: string; deleted_at?: string }
+            return {
+                status: result.status as SafeCreateTaskResult['status'],
+                taskId: result.task_id,
+                message: result.message,
+                isDeleted: result.is_deleted,
+                title: result.title,
+                deletedAt: result.deleted_at
+            }
+
+        } catch (e: unknown) {
+            console.error('[TASK-344] safeCreateTask failed:', e)
+            // Fall back to manual check
+            return await safeCreateTaskManual(task, userId)
+        }
+    }
+
+    /**
+     * Manual implementation of safe task creation (fallback if RPC not available)
+     */
+    const safeCreateTaskManual = async (task: Task, userId: string): Promise<SafeCreateTaskResult> => {
+        try {
+            // 1. Check if task already exists
+            const { data: existing, error: existError } = await supabase
+                .from('tasks')
+                .select('id, is_deleted, title')
+                .eq('id', task.id)
+                .eq('user_id', userId)
+                .maybeSingle()
+
+            if (existError && existError.code !== 'PGRST116') {
+                throw existError
+            }
+
+            if (existing) {
+                console.log(`🔒 [TASK-344] Task ID ${task.id.slice(0, 8)}... already exists (is_deleted: ${existing.is_deleted})`)
+                return {
+                    status: 'exists',
+                    taskId: existing.id,
+                    message: 'Task with this ID already exists',
+                    isDeleted: existing.is_deleted,
+                    title: existing.title
+                }
+            }
+
+            // 2. Check tombstones
+            const { data: tombstone, error: tombError } = await supabase
+                .from('tombstones')
+                .select('entity_id, deleted_at')
+                .eq('entity_type', 'task')
+                .eq('entity_id', task.id)
+                .eq('user_id', userId)
+                .maybeSingle()
+
+            if (tombError && tombError.code !== 'PGRST116') {
+                throw tombError
+            }
+
+            if (tombstone) {
+                console.log(`🪦 [TASK-344] Task ID ${task.id.slice(0, 8)}... is tombstoned (deleted: ${tombstone.deleted_at})`)
+                return {
+                    status: 'tombstoned',
+                    taskId: task.id,
+                    message: 'Task ID was permanently deleted and cannot be reused',
+                    deletedAt: tombstone.deleted_at
+                }
+            }
+
+            // 3. Safe to create - use regular saveTask
+            const payload = toSupabaseTask(task, userId)
+            const { error: insertError } = await supabase.from('tasks').insert(payload)
+
+            if (insertError) {
+                // Check for unique violation (race condition)
+                if (insertError.code === '23505') {
+                    return {
+                        status: 'exists',
+                        taskId: task.id,
+                        message: 'Task was created by another transaction (race condition)'
+                    }
+                }
+                throw insertError
+            }
+
+            console.log(`✅ [TASK-344] Task ${task.id.slice(0, 8)}... created safely`)
+            return {
+                status: 'created',
+                taskId: task.id,
+                message: 'Task created successfully'
+            }
+
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e)
+            console.error('[TASK-344] safeCreateTaskManual failed:', e)
+            return {
+                status: 'error',
+                taskId: task.id,
+                message: `Failed to create task: ${message}`
+            }
+        }
+    }
+
+    /**
+     * TASK-344: Batch check task ID availability for restore/sync operations.
+     * More efficient than checking one at a time.
+     *
+     * @param taskIds - Array of task IDs to check
+     * @returns Array of availability results
+     */
+    const checkTaskIdsAvailability = async (taskIds: string[]): Promise<TaskIdAvailability[]> => {
+        const userId = getUserIdSafe()
+        if (!userId || taskIds.length === 0) {
+            return taskIds.map(id => ({
+                taskId: id,
+                status: 'available' as const,
+                reason: 'Guest mode or empty array'
+            }))
+        }
+
+        try {
+            // Try RPC function first
+            const { data: rpcResult, error: rpcError } = await supabase.rpc('check_task_ids_availability', {
+                p_user_id: userId,
+                p_task_ids: taskIds
+            })
+
+            if (!rpcError && rpcResult) {
+                return (rpcResult as any[]).map(r => ({
+                    taskId: r.task_id,
+                    status: r.status as TaskIdAvailability['status'],
+                    reason: r.reason
+                }))
+            }
+
+            // Fall back to manual batch check
+            console.warn('[TASK-344] RPC check_task_ids_availability not available, using manual check')
+            return await checkTaskIdsAvailabilityManual(taskIds, userId)
+
+        } catch (e: unknown) {
+            console.error('[TASK-344] checkTaskIdsAvailability failed:', e)
+            return await checkTaskIdsAvailabilityManual(taskIds, userId)
+        }
+    }
+
+    /**
+     * Manual batch check for task ID availability
+     */
+    const checkTaskIdsAvailabilityManual = async (taskIds: string[], userId: string): Promise<TaskIdAvailability[]> => {
+        const results: TaskIdAvailability[] = []
+
+        try {
+            // Batch fetch existing tasks
+            const { data: existingTasks, error: tasksError } = await supabase
+                .from('tasks')
+                .select('id, is_deleted')
+                .in('id', taskIds)
+                .eq('user_id', userId)
+
+            if (tasksError) throw tasksError
+
+            const existingMap = new Map<string, boolean>()
+            for (const t of existingTasks || []) {
+                existingMap.set(t.id, t.is_deleted)
+            }
+
+            // Batch fetch tombstones
+            const { data: tombstones, error: tombError } = await supabase
+                .from('tombstones')
+                .select('entity_id')
+                .eq('entity_type', 'task')
+                .in('entity_id', taskIds)
+                .eq('user_id', userId)
+
+            if (tombError) throw tombError
+
+            const tombstoneSet = new Set((tombstones || []).map((t: { entity_id: string }) => t.entity_id))
+
+            // Build results
+            for (const id of taskIds) {
+                if (existingMap.has(id)) {
+                    const isDeleted = existingMap.get(id)
+                    results.push({
+                        taskId: id,
+                        status: isDeleted ? 'soft_deleted' : 'active',
+                        reason: `Task exists in database (${isDeleted ? 'soft_deleted' : 'active'})`
+                    })
+                } else if (tombstoneSet.has(id)) {
+                    results.push({
+                        taskId: id,
+                        status: 'tombstoned',
+                        reason: 'Task ID is tombstoned (permanently deleted)'
+                    })
+                } else {
+                    results.push({
+                        taskId: id,
+                        status: 'available',
+                        reason: 'Task ID is available for creation'
+                    })
+                }
+            }
+
+        } catch (e: unknown) {
+            console.error('[TASK-344] checkTaskIdsAvailabilityManual failed:', e)
+            // Return all as available on error (fail open for restore operations)
+            return taskIds.map(id => ({
+                taskId: id,
+                status: 'available' as const,
+                reason: 'Check failed, assuming available'
+            }))
+        }
+
+        return results
+    }
+
+    /**
+     * TASK-344: Log dedup decision to audit table (non-blocking)
+     */
+    const logDedupDecision = async (
+        operation: 'restore' | 'sync' | 'create',
+        taskId: string,
+        decision: 'created' | 'skipped_exists' | 'skipped_tombstoned' | 'failed',
+        reason: string,
+        backupSource?: string
+    ): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) return
+
+        try {
+            await supabase.from('task_dedup_audit').insert({
+                user_id: userId,
+                operation,
+                task_id: taskId,
+                decision,
+                reason,
+                backup_source: backupSource || null
+            })
+        } catch (e: unknown) {
+            // Non-fatal - audit logging should never block operations
+            console.warn('[TASK-344] Failed to log dedup decision:', e)
         }
     }
 
@@ -1034,6 +1334,10 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         permanentlyDeleteGroup,
         // TASK-317: Tombstone functions
         fetchTombstones,
+        // TASK-344: Immutable Task ID System
+        safeCreateTask,
+        checkTaskIdsAvailability,
+        logDedupDecision,
         fetchNotifications,
         saveNotification,
         saveNotifications,
@@ -1047,4 +1351,29 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         saveQuickSortSession,
         initRealtimeSubscription
     }
+}
+
+// =============================================================================
+// TASK-344: Exported Types for Immutable Task ID System
+// =============================================================================
+
+/**
+ * Result type for safe task creation operations
+ */
+export interface SafeCreateTaskResult {
+    status: 'created' | 'exists' | 'tombstoned' | 'error'
+    taskId: string
+    message: string
+    isDeleted?: boolean
+    title?: string
+    deletedAt?: string
+}
+
+/**
+ * Result type for batch ID availability check
+ */
+export interface TaskIdAvailability {
+    taskId: string
+    status: 'available' | 'active' | 'soft_deleted' | 'tombstoned'
+    reason: string
 }

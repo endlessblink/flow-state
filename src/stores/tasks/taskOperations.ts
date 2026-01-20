@@ -96,7 +96,7 @@ export function useTaskOperations(
             const newTask: Task = {
                 id: taskId,
                 title: taskData.title || 'New Task',
-                description: taskData.description || 'Task description...',
+                description: taskData.description || '',
                 status: taskData.status || 'planned',
                 priority: taskData.priority || 'medium',
                 progress: 0,
@@ -233,6 +233,26 @@ export function useTaskOperations(
             // TASK-240: Handle position versioning
             const currentVersion = task.positionVersion || 0
             const newVersion = updates.canvasPosition ? currentVersion + 1 : currentVersion
+
+            // DONE-ZONE: Track completedAt when task status changes to/from 'done'
+            // This enables age-based filtering for Done Zone (1-7 days) vs Inbox (7+ days)
+            if ('status' in updates) {
+                const wasNotDone = task.status !== 'done'
+                const isNowDone = updates.status === 'done'
+                const wasDone = task.status === 'done'
+                const isNowNotDone = updates.status !== 'done'
+
+                // Set completedAt when status changes TO 'done'
+                if (wasNotDone && isNowDone) {
+                    updates.completedAt = new Date()
+                    console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set`)
+                }
+                // Clear completedAt when status changes FROM 'done' (task reopened)
+                else if (wasDone && isNowNotDone) {
+                    updates.completedAt = undefined
+                    console.log(`🔄 [DONE-ZONE] Task "${task.title?.slice(0, 30)}" reopened, completedAt cleared`)
+                }
+            }
 
             _rawTasks.value[index] = {
                 ...task,

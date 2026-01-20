@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => ({
     // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules
     VitePWA({
       disable: isTauri, // Provides empty stub modules for virtual:pwa-register imports
-      registerType: 'prompt',
+      registerType: 'autoUpdate', // Force update to clear old cache for user verification
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'FlowState',

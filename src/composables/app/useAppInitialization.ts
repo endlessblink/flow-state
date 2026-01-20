@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
-import { clearGuestData } from '@/utils/guestModeStorage'
+import { clearGuestData, clearStaleGuestTasks } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
 import { fromSupabaseTask, fromSupabaseProject, type SupabaseTask, type SupabaseProject } from '@/utils/supabaseMappers'
 
@@ -37,18 +37,27 @@ export function useAppInitialization() {
         if (!authStore.isAuthenticated) {
             // Guest mode: clear all persisted data for fresh experience
             clearGuestData()
-
+        } else {
+            // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
+            // This fixes race condition and historical key naming issues
+            clearStaleGuestTasks()
         }
 
         // 1. Initial Load from Supabase
 
         uiStore.loadState()
 
+        console.log('🔍 [BUG-339-DEBUG] Starting database load...')
+        console.log('🔍 [BUG-339-DEBUG] Auth status:', authStore.isAuthenticated)
+
         await Promise.all([
             taskStore.loadFromDatabase(),
             projectStore.loadProjectsFromDatabase(),
             canvasStore.loadFromDatabase()
         ])
+
+        console.log('🔍 [BUG-339-DEBUG] Task count after load:', taskStore.tasks.length)
+        console.log('🔍 [BUG-339-DEBUG] Raw tasks:', taskStore._rawTasks?.length || 'N/A')
 
 
 

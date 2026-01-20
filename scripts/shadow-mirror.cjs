@@ -43,7 +43,10 @@ const env = { ...loadEnv('.env'), ...loadEnv('.env.local') };
 
 const BACKUP_DIR = path.join(__dirname, '../backups');
 const PUBLIC_DIR = path.join(__dirname, '../public');
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
+
+// Get Supabase URL - handle relative URLs (used for Vite proxy) by falling back to local
+const rawSupabaseUrl = process.env.VITE_SUPABASE_URL || env.VITE_SUPABASE_URL || '';
+const SUPABASE_URL = rawSupabaseUrl.startsWith('http') ? rawSupabaseUrl : 'http://127.0.0.1:54321';
 
 // Key Priority: Service Role (Bypass RLS) > Anon (Respect RLS)
 // Track which key type was used for accurate logging

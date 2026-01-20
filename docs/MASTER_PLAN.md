@@ -140,6 +140,8 @@
 | **BUG-339**              | **Tauri App Auto-Signout + Data Loss Concern**                         | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | User signed out unexpectedly from Tauri app; unclear if signing back in will lose local data                                                                                                                     |                                                        |
 | **BUG-341**              | **Tauri App Freezing - Add Comprehensive Logging**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add logging/diagnostics to debug Tauri app freezing/crash issues. Research solutions online.                                                                                                                      |                                                        |
 | **BUG-342**              | **Canvas Multi-Drag Bug: Unselected Tasks Move Together**              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Dragging one task causes another unselected task to move with it                                                                                                                                                  |                                                        |
+| **TASK-345**             | **PWA Infrastructure: Docker & Reliable HTTPS Tunnel**                 | **P2**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Set up Dockerized stack, Caddy proxy, and Cloudflare Tunnel for stable remote testing.                                                                                                                            |                                                        |
+| **TASK-346**             | **Mobile-Specific UI: Feature Subset & Touch Navigation**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Designing a mobile-first dashboard and navigation that serves only the necessary "on-the-go" features.                                                                                                           |                                                        |
 
 ---
 
@@ -241,6 +243,62 @@ Can't download backups from Tauri desktop app - file save dialog doesn't work.
 - [x] Check if Tauri plugin for dialogs is properly configured
 - [x] Test backup download functionality in browser vs Tauri
 - [x] Fix file save dialog or implement alternative download method
+
+---
+
+### ~~TASK-343~~: Fix Canvas Inbox Today Filter + Add Time Filter Dropdown (✅ DONE)
+
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-20)
+
+**Problem**: The "Today" filter in Canvas Inbox showed tasks that weren't due today. A task with due date "Jan 26" appeared when "Today" filter is active (today is Jan 20).
+
+**Root Cause** (in `src/composables/useSmartViews.ts:116-125`):
+The `isTodayTask()` function included tasks created today regardless of their due date. This was incorrect - a task with a future due date should NOT appear in "Today" just because it was created today.
+
+**Solution**:
+1. **Bug Fix**: Changed `if (task.createdAt)` to `if (!task.dueDate && task.createdAt)` - only include created-today tasks if they have NO due date
+2. **New Feature**: Replaced single "Today" toggle button with dropdown offering: All, Today, This Week, This Month
+3. Added `isThisMonthTask()` function for month filtering
+
+**Files Changed**:
+- `src/composables/useSmartViews.ts` - Bug fix + added `isThisMonthTask()`
+- `src/composables/inbox/useUnifiedInboxState.ts` - Expanded filter types + counts
+- `src/components/inbox/unified/UnifiedInboxHeader.vue` - Replaced toggle with NDropdown
+- `src/components/inbox/UnifiedInboxPanel.vue` - Pass new props
+
+---
+
+### ~~TASK-344~~: Immutable Task ID System - Prevent System-Generated Duplicates (✅ DONE)
+
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-20)
+**SOP**: [`docs/sop/active/SOP-013-immutable-task-ids.md`](docs/sop/active/SOP-013-immutable-task-ids.md)
+
+**Problem**: The system (sync, backup restore, Claude Code automation) can accidentally create duplicate tasks with the same ID or recreate deleted tasks. Task IDs should be immutable - once an ID is used (or was used), it can NEVER be recreated by the system.
+
+**Solution - ID Immutability Enforcement**:
+```
+Once a task ID is used → That ID is PERMANENTLY reserved
+- Active task exists → ID is in use
+- Soft-deleted task exists → ID is still reserved
+- Hard-deleted task → ID recorded in tombstones, still reserved
+```
+
+**Implementation Layers**:
+| Layer | Component | Protection |
+|-------|-----------|------------|
+| Database | `safe_create_task()` RPC | `FOR UPDATE SKIP LOCKED`, checks existing + tombstones |
+| Database | `trg_task_tombstone` trigger | Auto-creates permanent tombstone on DELETE |
+| Application | `safeCreateTask()` | TypeScript wrapper, calls RPC or manual fallback |
+| Application | `checkTaskIdsAvailability()` | Batch check for restore/sync operations |
+| Audit | `task_dedup_audit` table | Logs all dedup decisions with reasons |
+
+**Files Changed**:
+- `supabase/migrations/20260120000002_immutable_task_ids.sql` - Permanent tombstones, DELETE trigger, safe_create_task RPC, audit table
+- `src/composables/useSupabaseDatabase.ts` - `safeCreateTask()`, `checkTaskIdsAvailability()`, `logDedupDecision()`
+- `src/composables/useBackupSystem.ts` - Uses `safeCreateTask()` for each restored task (race-condition safe)
+- `src/stores/tasks/taskPersistence.ts` - Dedup-aware `importTasks()`
 
 ---
 

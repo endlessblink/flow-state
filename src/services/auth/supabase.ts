@@ -1,5 +1,4 @@
-import { createClient, type SupportedStorage } from '@supabase/supabase-js'
-import { TauriStorageAdapter } from './tauriStorageAdapter'
+import { createClient } from '@supabase/supabase-js'
 
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
@@ -11,21 +10,17 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
 
 /**
- * BUG-339: Select appropriate storage backend
+ * BUG-339 UPDATE: Using localStorage for auth persistence
  *
- * - Tauri: Use TauriStorageAdapter (persistent native key-value store)
- * - Browser: Use localStorage (standard behavior)
+ * Research findings (2026-01-20):
+ * - localStorage IS reliable in Tauri 2.x (random port issue fixed in 2022)
+ * - tauri-plugin-store causes Tokio runtime panic when called from JS
+ * - The proactive token refresh in auth.ts handles session expiry
  *
- * The TauriStorageAdapter solves the issue where localStorage in WebView
- * contexts can lose sessions between app restarts.
+ * Sources:
+ * - https://github.com/tauri-apps/tauri/issues/896 (RESOLVED)
+ * - https://aptabase.com/blog/persistent-state-tauri-apps
  */
-function getAuthStorage(): SupportedStorage {
-  if (isTauri) {
-    console.log('[SUPABASE] Using TauriStorageAdapter for auth persistence')
-    return TauriStorageAdapter
-  }
-  return localStorage
-}
 
 let supabaseClient;
 try {
@@ -39,8 +34,9 @@ try {
             // For desktop apps (Tauri), don't try to detect session from URL
             // This prevents issues with redirect flows in WebView
             detectSessionInUrl: !isTauri,
-            // BUG-339: Use appropriate storage backend for platform
-            storage: typeof window !== 'undefined' ? getAuthStorage() : undefined,
+            // BUG-339: Use localStorage (reliable in Tauri 2.x)
+            // Combined with proactive token refresh in auth.ts for session persistence
+            storage: typeof window !== 'undefined' ? localStorage : undefined,
         }
     }) : null
 } catch (e) {

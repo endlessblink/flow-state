@@ -9,6 +9,13 @@
 // NOTE: flowstate-guest-tasks is INTENTIONALLY NOT included here!
 // Guest tasks must persist across refreshes so users can sign in and migrate them.
 // They are cleared only AFTER successful migration in auth.ts migrateGuestData().
+//
+// BUG-339: Historical keys that may still exist from older versions
+const LEGACY_GUEST_KEYS = [
+  'pomoflow-guest-tasks',    // Old key name before rename
+  'pomoflow-guest-groups',   // Old key name before rename
+]
+
 const GUEST_EPHEMERAL_KEYS = [
   // Canvas
   'flowstate-guest-groups',
@@ -51,6 +58,7 @@ const GUEST_EPHEMERAL_KEYS = [
 export function clearGuestData(): void {
   let clearedCount = 0
 
+  // Clear current ephemeral keys
   for (const key of GUEST_EPHEMERAL_KEYS) {
     if (localStorage.getItem(key) !== null) {
       localStorage.removeItem(key)
@@ -58,8 +66,41 @@ export function clearGuestData(): void {
     }
   }
 
+  // BUG-339: Also clear legacy keys from older versions
+  for (const key of LEGACY_GUEST_KEYS) {
+    if (localStorage.getItem(key) !== null) {
+      localStorage.removeItem(key)
+      clearedCount++
+      console.log(`🧹 [BUG-339] Cleared legacy key: ${key}`)
+    }
+  }
+
   if (clearedCount > 0) {
     console.log(`🧹 [GUEST-MODE] Cleared ${clearedCount} localStorage keys for fresh guest session`)
+  }
+}
+
+/**
+ * BUG-339: Clear stale guest task data when user is authenticated.
+ * This prevents localStorage contamination from causing duplicates.
+ */
+export function clearStaleGuestTasks(): void {
+  const keysToCheck = [
+    'flowstate-guest-tasks',
+    'pomoflow-guest-tasks',  // Legacy key
+  ]
+
+  for (const key of keysToCheck) {
+    const data = localStorage.getItem(key)
+    if (data) {
+      try {
+        const tasks = JSON.parse(data)
+        console.log(`🧹 [BUG-339] Clearing stale ${key} (had ${tasks.length} tasks)`)
+      } catch {
+        console.log(`🧹 [BUG-339] Clearing corrupted ${key}`)
+      }
+      localStorage.removeItem(key)
+    }
   }
 }
 

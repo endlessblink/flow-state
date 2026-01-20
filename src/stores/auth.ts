@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
+import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -10,6 +11,67 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const error = ref<AuthError | null>(null)
   const isInitialized = ref(false)
+
+  // BUG-339: Proactive token refresh timer
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * BUG-339: Schedule proactive token refresh before expiry
+   * Refreshes 5 minutes before expiry to ensure continuous auth
+   */
+  const scheduleTokenRefresh = (expiresAt: number) => {
+    // Clear any existing timer
+    if (refreshTimer) {
+      clearTimeout(refreshTimer)
+      refreshTimer = null
+    }
+
+    const now = Date.now()
+    const expiresMs = expiresAt * 1000
+    const refreshBufferMs = 5 * 60 * 1000 // 5 minutes before expiry
+    const timeUntilRefresh = expiresMs - now - refreshBufferMs
+
+    if (timeUntilRefresh <= 0) {
+      // Already expired or about to expire, refresh now
+      console.log('[AUTH] Token expired or expiring soon, refreshing immediately')
+      performTokenRefresh()
+      return
+    }
+
+    console.log(`[AUTH] Scheduling token refresh in ${Math.round(timeUntilRefresh / 60000)} minutes`)
+    refreshTimer = setTimeout(performTokenRefresh, timeUntilRefresh)
+  }
+
+  /**
+   * BUG-339: Perform token refresh and reschedule
+   */
+  const performTokenRefresh = async () => {
+    if (!supabase) return
+
+    try {
+      console.log('[AUTH] Proactive token refresh starting...')
+      const { data, error: refreshError } = await supabase.auth.refreshSession()
+
+      if (refreshError) {
+        console.error('[AUTH] Proactive token refresh failed:', refreshError)
+        // Don't clear session - let user continue until actual API call fails
+        return
+      }
+
+      if (data.session) {
+        console.log('[AUTH] Proactive token refresh successful')
+        session.value = data.session
+        user.value = data.session.user
+
+        // Schedule next refresh
+        if (data.session.expires_at) {
+          scheduleTokenRefresh(data.session.expires_at)
+        }
+      }
+    } catch (e) {
+      console.error('[AUTH] Proactive token refresh error:', e)
+    }
+  }
 
   // Getters
   const isAuthenticated = computed(() => !!user.value)
@@ -66,8 +128,42 @@ export const useAuthStore = defineStore('auth', () => {
       const { data, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) throw sessionError
 
-      session.value = data.session
-      user.value = data.session?.user || null
+      // BUG-339 FIX: Check if session is expired and refresh it
+      // getSession() returns the stored session but doesn't auto-refresh expired tokens
+      if (data.session?.expires_at) {
+        const expiresAt = data.session.expires_at * 1000 // Convert to milliseconds
+        const now = Date.now()
+        const bufferMs = 60 * 1000 // 1 minute buffer before expiry
+
+        if (now >= expiresAt - bufferMs) {
+          console.log('[AUTH] Session expired or expiring soon, refreshing...')
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshError) {
+            console.error('[AUTH] Failed to refresh session:', refreshError)
+            // Clear stale session - user needs to sign in again
+            session.value = null
+            user.value = null
+            return
+          }
+          if (refreshData.session) {
+            console.log('[AUTH] Session refreshed successfully')
+            session.value = refreshData.session
+            user.value = refreshData.session.user
+            // BUG-339: Schedule next refresh
+            if (refreshData.session.expires_at) {
+              scheduleTokenRefresh(refreshData.session.expires_at)
+            }
+          }
+        } else {
+          session.value = data.session
+          user.value = data.session?.user || null
+          // BUG-339: Schedule proactive refresh for valid session
+          scheduleTokenRefresh(data.session.expires_at)
+        }
+      } else {
+        session.value = data.session
+        user.value = data.session?.user || null
+      }
 
       // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
       // check if there's guest data to migrate. This catches redirect-based auth flows.
@@ -181,18 +277,27 @@ export const useAuthStore = defineStore('auth', () => {
       // so they won't be re-migrated on next attempt
       localStorage.removeItem('flowstate-guest-tasks')
 
-      // 5. Insert only unique tasks - spread ALL properties to preserve canvas/inbox state
+      // 5. TASK-344: Use safeCreateTask to preserve IDs and prevent duplicates
+      // This respects the Immutable Task ID System - same ID = same task
+      const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+      const db = useSupabaseDatabase()
+
+      let created = 0
+      let skipped = 0
+
       for (const task of uniqueTasks) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, createdAt, updatedAt, ...taskDataWithoutMeta } = task
-        await taskStore.createTask({
-          ...taskDataWithoutMeta,
-          // BUG #9 FIX: Pass explicit empty string for null/undefined dates
-          // This prevents createTask's default (today's date) from kicking in
-          // which would break fingerprint matching if migration is interrupted
-          dueDate: task.dueDate || ''
-        })
+        // PRESERVE the original task ID - don't generate new ones
+        const result = await db.safeCreateTask(task as Task)
+
+        if (result.status === 'created') {
+          created++
+        } else {
+          skipped++
+          console.log(`[AUTH] Task ${task.id.slice(0, 8)} skipped: ${result.status}`)
+        }
       }
+
+      console.log(`[AUTH] Migration: ${created} created, ${skipped} skipped (already exist/tombstoned)`)
 
       // 6. Mark migration complete
       localStorage.setItem(migrationKey, new Date().toISOString())
@@ -229,6 +334,10 @@ export const useAuthStore = defineStore('auth', () => {
       if (data.session) {
         session.value = data.session
         user.value = data.user
+        // BUG-339: Schedule proactive refresh
+        if (data.session.expires_at) {
+          scheduleTokenRefresh(data.session.expires_at)
+        }
       }
 
       // 2. Migrate Data
@@ -272,6 +381,13 @@ export const useAuthStore = defineStore('auth', () => {
   const signOut = async () => {
     try {
       isLoading.value = true
+
+      // BUG-339: Clear refresh timer on sign-out
+      if (refreshTimer) {
+        clearTimeout(refreshTimer)
+        refreshTimer = null
+      }
+
       const { error: signOutError } = await supabase.auth.signOut()
       if (signOutError) throw signOutError
 
@@ -327,6 +443,10 @@ export const useAuthStore = defineStore('auth', () => {
       if (data.session) {
         session.value = data.session
         user.value = data.user
+        // BUG-339: Schedule proactive refresh
+        if (data.session.expires_at) {
+          scheduleTokenRefresh(data.session.expires_at)
+        }
         await migrateGuestData()
       }
 

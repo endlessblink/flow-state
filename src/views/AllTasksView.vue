@@ -1,49 +1,53 @@
 <template>
   <div class="all-tasks-view">
-    <!-- View Controls -->
-    <ViewControls
-      v-model:view-type="viewType"
-      v-model:density="density"
-      v-model:sort-by="sortBy"
-      :filter-status="filterStatus"
-      :hide-done-tasks="hideDoneTasks"
-      @update:filter-status="taskStore.setActiveStatusFilter"
-      @update:hide-done-tasks="handleToggleDoneTasksFromControl"
-      @expand-all="handleExpandAll"
-      @collapse-all="handleCollapseAll"
-    />
+    <!-- Mobile View -->
+    <MobileInboxView v-if="isMobile" />
 
-    <!-- Content Area -->
-
-    <!-- Content Area -->
-    <div class="tasks-container">
-      <!-- Table Mode -->
-      <TaskTable
-        v-if="viewType === 'table'"
-        :tasks="sortedTasks"
-        :density="density"
-        @select="handleSelectTask"
-        @start-timer="handleStartTimer"
-        @edit="handleEditTask"
-        @context-menu="handleContextMenu"
-        @update-task="handleUpdateTask"
+    <!-- Desktop View -->
+    <template v-else>
+      <!-- View Controls -->
+      <ViewControls
+        v-model:view-type="viewType"
+        v-model:density="density"
+        v-model:sort-by="sortBy"
+        :filter-status="filterStatus"
+        :hide-done-tasks="hideDoneTasks"
+        @update:filter-status="taskStore.setActiveStatusFilter"
+        @update:hide-done-tasks="handleToggleDoneTasksFromControl"
+        @expand-all="handleExpandAll"
+        @collapse-all="handleCollapseAll"
       />
 
-      <!-- List Mode -->
-      <TaskList
-        v-else
-        ref="taskListRef"
-        :tasks="sortedTasks"
-        :empty-message="getEmptyMessage()"
-        @select="handleSelectTask"
-        @toggle-complete="handleToggleComplete"
-        @start-timer="handleStartTimer"
-        @edit="handleEditTask"
-        @context-menu="handleContextMenu"
-        @move-task="handleMoveTask"
-        @update-task="handleUpdateTask"
-      />
-    </div>
+      <!-- Content Area -->
+      <div class="tasks-container">
+        <!-- Table Mode -->
+        <TaskTable
+          v-if="viewType === 'table'"
+          :tasks="sortedTasks"
+          :density="density"
+          @select="handleSelectTask"
+          @start-timer="handleStartTimer"
+          @edit="handleEditTask"
+          @context-menu="handleContextMenu"
+          @update-task="handleUpdateTask"
+        />
+
+        <!-- List Mode -->
+        <TaskList
+          v-else
+          ref="taskListRef"
+          :tasks="sortedTasks"
+          :empty-message="getEmptyMessage()"
+          @select="handleSelectTask"
+          @toggle-complete="handleToggleComplete"
+          @start-timer="handleStartTimer"
+          @edit="handleEditTask"
+          @context-menu="handleContextMenu"
+          @move-task="handleMoveTask"
+          @update-task="handleUpdateTask"
+        />
+      </div>
+    </template>
 
     <!-- Task Edit Modal -->
     <TaskEditModal
@@ -80,14 +84,19 @@ import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useMobileDetection } from '@/composables/useMobileDetection'
 import ViewControls, { type ViewType, type DensityType } from '@/components/layout/ViewControls.vue'
 import TaskTable from '@/components/tasks/TaskTable.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
+import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
 import type { Task } from '@/stores/tasks'
+
+// Mobile Detection
+const { isMobile } = useMobileDetection()
 
 // Stores
 const taskStore = useTaskStore()

@@ -2744,6 +2744,189 @@ app.post('/api/orchestrator/task/:taskId/discard', (req, res) => {
 });
 
 // ============================================================
+// JUDGE AGENT (Layer 5 - TASK-334/TASK-335)
+// Evaluates Claude's completion claims with isolated context
+// ============================================================
+
+// POST /api/judge/evaluate - Evaluate a completion claim
+// Query params: ?mode=fast (use rule-based), ?mode=claude (use Claude)
+app.post('/api/judge/evaluate', async (req, res) => {
+    const { taskDescription, artifacts, successCriteria, failureCriteria, claimedCompletion } = req.body;
+    const mode = req.query.mode || 'fast';  // Default to fast rule-based for reliability
+
+    if (!taskDescription) {
+        return res.status(400).json({ error: 'Task description required' });
+    }
+
+    console.log('[Judge] Evaluating completion claim for:', taskDescription.slice(0, 50) + '... (mode:', mode + ')');
+
+    // Build the judge prompt - isolated context, objective evaluation
+    const judgePrompt = `You are an independent JUDGE evaluating whether a task was completed successfully.
+You have NO knowledge of how the task was implemented - only the evidence provided.
+Be SKEPTICAL. Your job is to find gaps, not confirm success.
+
+## TASK DESCRIPTION
+${taskDescription}
+
+## SUCCESS CRITERIA (defined before implementation)
+${successCriteria || 'Not provided - be extra skeptical'}
+
+## FAILURE CONDITIONS (what would prove it failed)
+${failureCriteria || 'Not provided - define your own'}
+
+## ARTIFACTS PROVIDED
+${artifacts ? JSON.stringify(artifacts, null, 2) : 'No artifacts provided - AUTOMATIC FAIL'}
+
+## CLAIMED COMPLETION
+${claimedCompletion || 'No explicit claim provided'}
+
+## YOUR EVALUATION
+
+Evaluate STRICTLY based on evidence. Answer these questions:
+
+1. **Artifacts Check**: Were appropriate artifacts provided (git diff, test output, screenshots)?
+2. **Success Criteria Met**: Does the evidence show success criteria were satisfied?
+3. **Failure Conditions**: Is there evidence any failure condition occurred?
+4. **Gaps Identified**: What's missing or unclear?
+5. **Verdict**: PASS, FAIL, or NEEDS_VERIFICATION
+
+Respond in this JSON format ONLY:
+{
+  "artifactsProvided": true/false,
+  "successCriteriaMet": true/false/null,
+  "failureConditionsTriggered": true/false/null,
+  "gaps": ["gap1", "gap2"],
+  "verdict": "PASS" | "FAIL" | "NEEDS_VERIFICATION",
+  "reasoning": "Brief explanation of verdict",
+  "recommendation": "What should happen next"
+}`;
+
+    // If Claude binary not available, use a simplified evaluation
+    if (!CLAUDE_BINARY) {
+        console.log('[Judge] Claude binary not available - using rule-based evaluation');
+
+        const hasArtifacts = artifacts && Object.keys(artifacts).length > 0;
+        const hasSuccessCriteria = successCriteria && successCriteria.trim().length > 0;
+
+        const ruleBasedVerdict = {
+            artifactsProvided: hasArtifacts,
+            successCriteriaMet: hasArtifacts && hasSuccessCriteria ? null : false,
+            failureConditionsTriggered: false,
+            gaps: [],
+            verdict: hasArtifacts ? 'NEEDS_VERIFICATION' : 'FAIL',
+            reasoning: hasArtifacts
+                ? 'Artifacts provided but require human verification'
+                : 'No artifacts provided - cannot verify completion',
+            recommendation: hasArtifacts
+                ? 'User should manually verify the artifacts'
+                : 'Require artifacts before claiming done'
+        };
+
+        if (!hasArtifacts) ruleBasedVerdict.gaps.push('No artifacts provided');
+        if (!hasSuccessCriteria) ruleBasedVerdict.gaps.push('No success criteria defined');
+
+        return res.json({ success: true, evaluation: ruleBasedVerdict, source: 'rule-based' });
+    }
+
+    // If mode is 'fast', use rule-based evaluation even if Claude is available
+    if (mode === 'fast') {
+        const hasArtifacts = artifacts && Object.keys(artifacts).length > 0;
+        const hasSuccessCriteria = successCriteria && successCriteria.trim().length > 0;
+
+        const fastVerdict = {
+            artifactsProvided: hasArtifacts,
+            successCriteriaMet: null,  // Cannot determine without LLM
+            failureConditionsTriggered: null,
+            gaps: [],
+            verdict: hasArtifacts && hasSuccessCriteria ? 'NEEDS_VERIFICATION' : 'FAIL',
+            reasoning: hasArtifacts
+                ? 'Fast mode: Artifacts provided, requires human verification'
+                : 'No artifacts provided - cannot verify completion',
+            recommendation: 'User should verify manually'
+        };
+
+        if (!hasArtifacts) fastVerdict.gaps.push('No artifacts provided');
+        if (!hasSuccessCriteria) fastVerdict.gaps.push('No success criteria defined');
+
+        console.log('[Judge] Fast mode verdict:', fastVerdict.verdict);
+        return res.json({ success: true, evaluation: fastVerdict, source: 'rule-based-fast' });
+    }
+
+    // Spawn Claude judge with isolated context (mode=claude)
+    const { spawn } = require('child_process');
+    const judgeProcess = spawn(CLAUDE_BINARY, [
+        '--print',  // Print-only mode for judge (no file changes)
+        '--model', 'haiku',  // Use smaller model for faster evaluation
+        '-p', judgePrompt
+    ], {
+        cwd: path.join(__dirname, '..'),
+        env: { ...process.env },
+        stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let output = '';
+    let errorOutput = '';
+
+    judgeProcess.stdout.on('data', (data) => {
+        output += data.toString();
+    });
+
+    judgeProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+    });
+
+    judgeProcess.on('close', (code) => {
+        console.log(`[Judge] Process exited with code ${code}`);
+
+        if (code === 0 && output) {
+            // Try to parse JSON from output
+            try {
+                // Find JSON in the output (it might have surrounding text)
+                const jsonMatch = output.match(/\{[\s\S]*"verdict"[\s\S]*\}/);
+                if (jsonMatch) {
+                    const evaluation = JSON.parse(jsonMatch[0]);
+                    console.log(`[Judge] Verdict: ${evaluation.verdict}`);
+                    return res.json({ success: true, evaluation, source: 'claude' });
+                }
+            } catch (parseErr) {
+                console.error('[Judge] Failed to parse JSON:', parseErr.message);
+            }
+
+            // Fallback: return raw output
+            res.json({
+                success: true,
+                evaluation: {
+                    verdict: 'NEEDS_VERIFICATION',
+                    reasoning: output.trim(),
+                    gaps: ['Could not parse structured evaluation']
+                },
+                source: 'claude-unstructured'
+            });
+        } else {
+            console.error('[Judge] Evaluation failed:', errorOutput);
+            res.status(500).json({
+                error: 'Judge evaluation failed',
+                details: errorOutput || 'No output from judge'
+            });
+        }
+    });
+
+    judgeProcess.on('error', (err) => {
+        console.error('[Judge] Process error:', err);
+        res.status(500).json({ error: err.message });
+    });
+});
+
+// GET /api/judge/history - Get recent judge evaluations (future enhancement)
+app.get('/api/judge/history', (req, res) => {
+    // Placeholder for future enhancement - storing evaluation history
+    res.json({
+        message: 'Judge history not yet implemented',
+        hint: 'Future: Store evaluations in orchestrations.json'
+    });
+});
+
+// ============================================================
 // GENERIC :id ROUTES - After task-specific routes
 // ============================================================
 

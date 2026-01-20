@@ -87,6 +87,81 @@ src/composables/useTauriStartup.ts     # Frontend startup sequence
 7. **Database Safety** - NEVER run destructive database commands without user approval (see below)
 8. **Atomic Tasks** - ALWAYS break broad requests into single-action steps (see below)
 9. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
+10. **Completion Protocol** - NEVER claim "done" without artifacts + user verification (see below)
+
+## Completion Protocol (MANDATORY - TASK-334)
+
+**Problem**: Self-verification is fundamentally flawed. Claude can write tests that pass but don't verify the right things.
+
+**Solution**: 5-Layer Defense System. EVERY completed task must follow this protocol.
+
+### Before Starting Any Task (Layer 3: Falsifiability)
+
+**MANDATORY**: Define success/failure criteria BEFORE implementation.
+
+```
+TEMPLATE:
+┌─────────────────────────────────────────────────────────┐
+│ Task: [What you're implementing]                        │
+│ SUCCESS: [Observable outcome that proves it works]      │
+│ FAILURE: [What would prove it DOESN'T work]             │
+└─────────────────────────────────────────────────────────┘
+
+EXAMPLE:
+┌─────────────────────────────────────────────────────────┐
+│ Task: Implement backup restore                          │
+│ SUCCESS: User clicks restore → sees previous data →     │
+│          can create/edit tasks normally                 │
+│ FAILURE: Button errors, data doesn't appear, data is    │
+│          corrupted, or can't interact with restored data│
+└─────────────────────────────────────────────────────────┘
+```
+
+### After Implementation (Layer 1: Artifacts)
+
+**MANDATORY**: Provide context-aware proof before ANY "done" claim.
+
+| Context | Required Artifacts |
+|---------|-------------------|
+| **Web UI changes** | Playwright screenshot, test output, git diff |
+| **Tauri/Desktop app** | Console logs, test output, git diff, step-by-step verification instructions |
+| **Backend/API changes** | curl/API response, test output, database query results |
+| **Database changes** | Before/after query results, migration logs |
+| **Build/Config changes** | Build output, npm run dev logs |
+| **Pure logic changes** | Unit test output, git diff |
+
+**Minimum for ANY change:**
+```
+├── Git diff (what changed)
+├── Test output (existing tests pass)
+└── Verification instructions (how USER can test it)
+```
+
+### Completion Phrase (Layer 4: User Confirmation)
+
+**NEVER say**: "Done", "Complete", "Working", "Ready", "Fixed", "Implemented"
+
+**ALWAYS say**: "I've implemented X. Here are the artifacts: [artifacts]. Can you test it and confirm it works?"
+
+**Task Status**:
+- Only mark MASTER_PLAN tasks as ✅ DONE after USER explicitly confirms
+- Until user confirms: keep status as 🔄 IN PROGRESS or 👀 REVIEW
+
+### What Gets Blocked
+
+The enforcement hooks will BLOCK:
+- "Done" claims without recent test run (`npm run test`)
+- Completion without git diff provided
+- Stopping without asking user to verify
+
+### Judge Agent (Layer 5)
+
+For complex features, a separate judge agent (integrated with Dev-Maestro) evaluates:
+- Did artifacts match the claimed work?
+- Were success criteria from Layer 3 met?
+- Are there obvious gaps?
+
+**To invoke**: Available via Dev-Maestro at http://localhost:6010 or `/api/judge/evaluate`
 
 ## Design Token Usage (MANDATORY)
 
@@ -406,5 +481,5 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: January 19, 2026
+**Last Updated**: January 20, 2026
 **Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

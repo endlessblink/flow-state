@@ -292,7 +292,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                         deps.recentlyDeletedGroups?.value.delete(item.id)
                     }
                 } else if (isPermanent) {
-                    await taskStore.permanentlyDeleteTask(item.id)
+                    await undoHistory.permanentlyDeleteTaskWithUndo(item.id)
                 } else {
                     await undoHistory.updateTaskWithUndo(item.id, {
                         canvasPosition: undefined,

@@ -6,6 +6,16 @@ echo ""
 KILLED_COUNT=0
 KILLED_PORTS=()
 
+# TASK-330: EMERGENCY BACKUP before killing
+echo "💾 [TASK-330] Triggering emergency shadow backup..."
+# Try running shadow-mirror.cjs if it exists
+if [ -f "./scripts/shadow-mirror.cjs" ]; then
+  node ./scripts/shadow-mirror.cjs 2>/dev/null || echo "⚠️  Warning: Shadow backup failed, proceeding with kill..."
+else
+  echo "⚠️  Warning: shadow-mirror.cjs not found, skipping emergency backup."
+fi
+echo ""
+
 # Function to check if a PID belongs to flow-state
 is_flow_state_process() {
   local pid=$1

@@ -47,9 +47,10 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     }
 
     /**
-     * Helper to execute Supabase operations with transient error retries (e.g. clock skew)
+     * Helper to execute Supabase operations with transient error retries (e.g. clock skew, 401/403 restarts)
+     * TASK-329: Added exponential backoff and auth resilience
      */
-    const withRetry = async <T>(operation: () => Promise<T>, context: string, maxRetries = 2): Promise<T> => {
+    const withRetry = async <T>(operation: () => Promise<T>, context: string, maxRetries = 3): Promise<T> => {
         let lastErr: any = null
 
         for (let i = 0; i < maxRetries; i++) {
@@ -58,11 +59,29 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             } catch (err: any) {
                 lastErr = err
                 const message = err?.message || String(err)
+                const status = err?.status || err?.code
 
-                // Check for "JWT issued at future" (Clock Skew)
+                // Exponential backoff delay: 1s, 2s, 4s...
+                const delay = Math.pow(2, i) * 1000
+
+                // 1. Clock Skew (JWT issued at future)
                 if (message.includes('JWT issued at future')) {
-                    console.warn(`🕒 [CLOCK-SKEW] ${context} failed due to clock skew. Retrying in 1s... (Attempt ${i + 1}/${maxRetries})`)
-                    await new Promise(resolve => setTimeout(resolve, 1000))
+                    console.warn(`🕒 [CLOCK-SKEW] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
+                    await new Promise(resolve => setTimeout(resolve, delay))
+                    continue
+                }
+
+                // 2. Auth Errors (401/403) - Can happen if GoTrue/PostgREST is restarting or cache is stale
+                if (status === 401 || status === 403 || status === '401' || status === '403' || message.includes('JWKS') || message.includes('invalid_token')) {
+                    console.warn(`🔐 [AUTH-RETRY] ${context} failed (${status}). Retrying with backoff in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
+                    await new Promise(resolve => setTimeout(resolve, delay))
+                    continue
+                }
+
+                // 3. Network / Connection Errors
+                if (message.includes('Failed to fetch') || message.includes('Network Error') || message.includes('Service Unavailable')) {
+                    console.warn(`🌐 [NETWORK-RETRY] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
+                    await new Promise(resolve => setTimeout(resolve, delay))
                     continue
                 }
 
@@ -322,10 +341,20 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
             const payload = toSupabaseTask(task, userId)
 
-            await withRetry(async () => {
-                const { error } = await supabase.from('tasks').upsert(payload, { onConflict: 'id' })
+            // FK-aware upsert with single retry for orphaned parent references
+            const attemptUpsert = async (payloadToSave: typeof payload, isRetry = false): Promise<void> => {
+                const { error } = await supabase.from('tasks').upsert(payloadToSave, { onConflict: 'id' })
+
+                // Handle FK constraint violation on parent_task_id
+                if (error?.code === '23503' && error?.message?.includes('parent_task_id') && !isRetry) {
+                    console.warn(`⚠️ [saveTask] FK violation on parent_task_id, clearing and retrying`)
+                    return attemptUpsert({ ...payloadToSave, parent_task_id: null }, true)
+                }
+
                 if (error) throw error
-            }, 'saveTask')
+            }
+
+            await withRetry(() => attemptUpsert(payload), 'saveTask')
 
             lastSyncError.value = null
         } catch (e: unknown) {
@@ -354,17 +383,29 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                     tasksWithPos.map(t => ({ id: t.id?.substring(0, 8), pos: t.position })))
             }
 
-            // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
-            // Supabase RLS can block writes but return { error: null, data: [] }
-            // Also detect PARTIAL failures where some rows are blocked
-            await withRetry(async () => {
-                const { data, error } = await supabase.from('tasks').upsert(payload, { onConflict: 'id' }).select('id, position')
-                if (error) throw error
-                if (!data || data.length !== payload.length) {
-                    const writtenCount = data?.length ?? 0
-                    const failedCount = payload.length - writtenCount
-                    throw new Error(`RLS blocked ${failedCount} of ${payload.length} writes (only ${writtenCount} succeeded)`)
+            // FK-aware upsert with single retry for orphaned parent references
+            const attemptUpsert = async (payloadToSave: typeof payload, isRetry = false): Promise<void> => {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .upsert(payloadToSave, { onConflict: 'id' })
+                    .select('id, position')
+
+                // Handle FK constraint violation on parent_task_id
+                if (error?.code === '23503' && error?.message?.includes('parent_task_id') && !isRetry) {
+                    console.warn(`⚠️ [saveTasks] FK violation on parent_task_id, clearing orphaned references and retrying`)
+                    const clearedPayload = payloadToSave.map(t => ({ ...t, parent_task_id: null }))
+                    return attemptUpsert(clearedPayload, true)
                 }
+
+                if (error) throw error
+
+                // RLS check
+                if (!data || data.length !== payloadToSave.length) {
+                    const writtenCount = data?.length ?? 0
+                    const failedCount = payloadToSave.length - writtenCount
+                    throw new Error(`RLS blocked ${failedCount} of ${payloadToSave.length} writes (only ${writtenCount} succeeded)`)
+                }
+
                 // TASK-142 DEBUG: Log what Supabase returned
                 const positionSaves = data.filter((d: any) => d.position)
                 if (positionSaves.length > 0) {
@@ -373,7 +414,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 } else if (tasksWithPos.length > 0) {
                     console.error(`❌ [TASK-142] POSITION LOST! Sent ${tasksWithPos.length} with positions, received 0 back!`)
                 }
-            }, 'saveTasks')
+            }
+
+            await withRetry(() => attemptUpsert(payload), 'saveTasks')
 
             lastSyncError.value = null
         } catch (e: unknown) {

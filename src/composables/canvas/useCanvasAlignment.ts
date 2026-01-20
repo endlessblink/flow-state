@@ -27,6 +27,12 @@ interface NodeWithComputed extends Node {
 const DEFAULT_WIDTH = 200
 const DEFAULT_HEIGHT = 80
 
+// TASK-335: Minimum spacing for distribution when tasks are stacked
+// Same values as "Arrange in Row/Column" for consistency
+const DEFAULT_SPACING_X = 240  // Task width (200) + gap (40)
+const DEFAULT_SPACING_Y = 120  // Task height (80) + gap (40)
+const MIN_SPACING_THRESHOLD = 10  // Below this, use default spacing
+
 /**
  * Get absolute position for a node.
  * Uses computedPosition if available (nested nodes), falls back to position (root nodes).
@@ -142,7 +148,9 @@ export function useCanvasAlignment(
         minNodes: number = 2
     ) => {
         // Pre-alignment state validation
+        console.log('🔍 executeAlignmentOperation:', operationName, 'minNodes:', minNodes)
         const validation = validateAlignmentState(minNodes)
+        console.log('🔍 validation result:', validation)
         if (!validation.canProceed) {
             message.warning(validation.reason || 'Validation failed')
             return false
@@ -293,7 +301,9 @@ export function useCanvasAlignment(
     }
 
     const distributeHorizontal = () => {
+        console.log('🎯 distributeHorizontal called in useCanvasAlignment')
         executeAlignmentOperation('Distribute Horizontal', (selectedNodes) => {
+            console.log('🎯 distributeHorizontal operation executing with', selectedNodes.length, 'nodes')
             if (selectedNodes.length < 3) return
 
             const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
@@ -302,7 +312,9 @@ export function useCanvasAlignment(
 
             const startX = sorted[0].bounds.centerX
             const endX = sorted[sorted.length - 1].bounds.centerX
-            const spacing = (endX - startX) / (sorted.length - 1)
+            const naturalSpacing = (endX - startX) / (sorted.length - 1)
+            // TASK-335: If tasks are stacked (no natural spread), use fixed spacing
+            const spacing = naturalSpacing > MIN_SPACING_THRESHOLD ? naturalSpacing : DEFAULT_SPACING_X
 
             sorted.forEach(({ node, bounds }, index) => {
                 const targetCenterX = startX + (spacing * index)
@@ -326,7 +338,9 @@ export function useCanvasAlignment(
 
             const startY = sorted[0].bounds.centerY
             const endY = sorted[sorted.length - 1].bounds.centerY
-            const spacing = (endY - startY) / (sorted.length - 1)
+            const naturalSpacing = (endY - startY) / (sorted.length - 1)
+            // TASK-335: If tasks are stacked (no natural spread), use fixed spacing
+            const spacing = naturalSpacing > MIN_SPACING_THRESHOLD ? naturalSpacing : DEFAULT_SPACING_Y
 
             sorted.forEach(({ node, bounds }, index) => {
                 const targetCenterY = startY + (spacing * index)

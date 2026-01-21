@@ -65,8 +65,8 @@
         <div class="task-content">
           <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
           <div class="task-meta">
-            <span v-if="task.priority && task.priority !== 'none'" :class="['priority-badge', task.priority]">
-              {{ priorityLabel(task.priority) }}
+            <span v-if="task.priority" :class="['priority-badge', task.priority]">
+              {{ priorityLabel(task.priority || 'none') }}
             </span>
             <span v-if="task.dueDate" :class="['due-date', { overdue: isOverdue(task.dueDate) }]">
               <Calendar :size="12" />
@@ -218,7 +218,7 @@ const handleTaskClick = (task: Task) => {
 }
 
 const startTimer = (task: Task) => {
-  timerStore.startTimer(task.id, task.title)
+  timerStore.startTimer(task.id)
 }
 
 const isTimerActive = (taskId: string) => {

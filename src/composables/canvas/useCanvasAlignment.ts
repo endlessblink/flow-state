@@ -24,13 +24,13 @@ interface NodeWithComputed extends Node {
 }
 
 // TASK-258: Standard dimensions for fallback
-const DEFAULT_WIDTH = 200
-const DEFAULT_HEIGHT = 80
+const DEFAULT_WIDTH = 280  // Actual task cards are wider with content
+const DEFAULT_HEIGHT = 100 // Actual task cards are taller with metadata
 
-// TASK-335: Minimum spacing for distribution when tasks are stacked
-// Same values as "Arrange in Row/Column" for consistency
-const DEFAULT_SPACING_X = 240  // Task width (200) + gap (40)
-const DEFAULT_SPACING_Y = 120  // Task height (80) + gap (40)
+// TASK-335/TASK-340: Spacing for layout operations
+// Use generous spacing to prevent overlap with varying task sizes
+const DEFAULT_SPACING_X = 300  // Comfortable horizontal gap
+const DEFAULT_SPACING_Y = 130  // Comfortable vertical gap
 const MIN_SPACING_THRESHOLD = 10  // Below this, use default spacing
 
 /**
@@ -366,8 +366,8 @@ export function useCanvasAlignment(
             // Find the leftmost X position (absolute)
             const startX = sorted[0].bounds.left
 
-            // Standard task node width is 200px, add 40px gap = 240px spacing
-            const SPACING = 240
+            // Use generous spacing to prevent overlap
+            const SPACING = DEFAULT_SPACING_X
 
             sorted.forEach(({ node, bounds }, index) => {
                 taskStore.updateTask(node.id, {
@@ -395,8 +395,8 @@ export function useCanvasAlignment(
             // Find the topmost Y position (absolute)
             const startY = sorted[0].bounds.top
 
-            // Standard task node height is 80px, add 40px gap = 120px spacing
-            const SPACING = 120
+            // Use generous spacing to prevent overlap
+            const SPACING = DEFAULT_SPACING_Y
 
             sorted.forEach(({ node, bounds }, index) => {
                 taskStore.updateTask(node.id, {
@@ -424,9 +424,9 @@ export function useCanvasAlignment(
             const avgCenterX = boundsMapping.reduce((sum, b) => sum + b.bounds.centerX, 0) / boundsMapping.length
             const avgCenterY = boundsMapping.reduce((sum, b) => sum + b.bounds.centerY, 0) / boundsMapping.length
 
-            // Spacing constants
-            const SPACING_X = 240 // Task width (200) + gap (40)
-            const SPACING_Y = 120 // Task height (80) + gap (40)
+            // Use generous spacing to prevent overlap
+            const SPACING_X = DEFAULT_SPACING_X
+            const SPACING_Y = DEFAULT_SPACING_Y
 
             // Calculate grid starting position (centered around average position)
             const rows = Math.ceil(count / cols)

@@ -110,7 +110,7 @@
       :current-status="currentTask?.status"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('status')"
-      @select="setStatus"
+      @select="(s: any) => setStatus(s)"
     />
 
     <DurationSubmenu
@@ -298,8 +298,8 @@ const deleteText = computed(() => {
   if (isBatchOperation.value) {
     return `Delete ${props.selectedCount}`
   }
-  const task = currentTask.value as unknown as { isCalendarEvent?: boolean }
-  return task?.isCalendarEvent ? 'Remove' : 'Delete'
+  const task = currentTask.value
+  return (task && 'isCalendarEvent' in task && (task as any).isCalendarEvent) ? 'Remove' : 'Delete'
 })
 
 // Menu positioning

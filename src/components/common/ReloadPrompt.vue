@@ -11,6 +11,7 @@ let updateServiceWorker = () => {}
 
 // Dynamically import PWA register only when available (web builds)
 if (typeof window !== 'undefined' && !('__TAURI__' in window)) {
+  // @ts-ignore - Virtual module provided by vite-plugin-pwa
   import('virtual:pwa-register/vue').then(({ useRegisterSW }) => {
     const sw = useRegisterSW()
     offlineReady.value = sw.offlineReady.value

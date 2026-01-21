@@ -49,6 +49,18 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
+      path: '/timer',
+      name: 'mobile-timer',
+      component: () => import('@/mobile/views/MobileTimerView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/today',
+      name: 'mobile-today',
+      component: () => import('@/mobile/views/MobileTodayView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/catalog',
       name: 'catalog',
       component: () => import('@/views/AllTasksView.vue'),

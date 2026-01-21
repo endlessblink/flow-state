@@ -1,0 +1,34 @@
+{
+    # Basic options
+    # Update this with your email for Let's Encrypt
+    # email your-email@example.com 
+}
+
+# The block below matches all requests. 
+# Caddy will automatically serve HTTPS if you provide a domain name here instead of :80
+# e.g. example.com { ... }
+:80 {
+    # Reverse proxy to the app container
+    reverse_proxy app:80
+
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; upgrade-insecure-requests;"
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+    }
+    
+    # Handle SPA routing (if app returns 404, serve index.html)
+    # Since we are proxying to nginx (which handles try_files), this might not be strictly necessary 
+    # but good to have if we switch to serving static files directly with Caddy later.
+}

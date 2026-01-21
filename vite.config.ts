@@ -174,5 +174,8 @@ export default defineConfig(({ mode }) => ({
   },
   worker: {
     format: 'es' // CRITICAL: production builds require 'es' format
+  },
+  server: {
+    allowedHosts: true
   }
 }))

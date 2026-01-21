@@ -85,7 +85,7 @@
           :edges="edges"
           :class="{ 'canvas-ready': isCanvasReady }"
           class="vue-flow-container"
-          :node-types="nodeTypes as any"
+          :node-types="nodeTypes"
           edges-focusable
           :elevate-nodes-on-select="false"
           elevate-edges-on-select
@@ -264,7 +264,6 @@ import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '../assets/vue-flow-overrides.css'
-import '../assets/canvas-view-overrides.css'
 import { useEventListener } from '@vueuse/core'
 
 import { useTaskStore } from '../stores/tasks'
@@ -298,7 +297,7 @@ const contextMenuStore = useCanvasContextMenuStore()
 
 // Register custom node types
 // @ts-ignore - Vue Flow types are strict about NodeProps
-const nodeTypes = {
+const nodeTypes: any = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }
@@ -421,3 +420,4 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
 </script>
 
 <style scoped src="@/assets/canvas-view-layout.css"></style>
+<style src="@/assets/canvas-view-overrides.css"></style>

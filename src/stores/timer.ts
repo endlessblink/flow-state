@@ -449,6 +449,27 @@ export const useTimerStore = defineStore('timer', () => {
         }
       }
 
+      // If timer already expired while app was closed, silently complete it (no beep)
+      if (adjustedRemainingTime <= 0) {
+        console.log('🍅 [TIMER] Session already expired on load, silently completing', {
+          sessionId: saved.id,
+          originalRemaining: saved.remainingTime,
+          driftApplied: saved.remainingTime - adjustedRemainingTime
+        })
+        // Mark as complete in DB without playing sounds
+        try {
+          const { supabase } = await import('@/services/auth/supabase')
+          await supabase
+            .from('timer_sessions')
+            .update({ is_active: false, completed_at: new Date().toISOString() })
+            .eq('id', saved.id)
+        } catch (e) {
+          console.warn('🍅 [TIMER] Failed to mark expired session complete:', e)
+        }
+        currentSession.value = null
+        return // Don't start timer interval for already-expired session
+      }
+
       currentSession.value = {
         ...saved,
         startTime: new Date(saved.startTime),

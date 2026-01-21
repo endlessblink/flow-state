@@ -24,7 +24,7 @@
         <div
           v-if="isOpen"
           class="select-dropdown"
-          :style="dropdownStyle"
+          :style="dropdownStyle as any"
           role="listbox"
         >
           <!-- Special Option: None / Inbox -->
@@ -102,7 +102,8 @@ const dropdownStyle = ref({
   position: 'fixed' as const,
   top: '0px',
   left: '0px',
-  width: '0px'
+  width: '0px',
+  minWidth: '0px'
 })
 
 const calculateDropdownPosition = () => {
@@ -123,7 +124,7 @@ const calculateDropdownPosition = () => {
     top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
     left: `${rect.left}px`,
     minWidth: '200px',
-    width: 'auto'
+    width: 'auto' as const // Explicitly cast 'auto' to ensure type compatibility
   }
 }
 

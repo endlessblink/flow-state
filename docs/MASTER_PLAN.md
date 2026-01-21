@@ -449,10 +449,10 @@ When multiple tasks share the same position (stacked), the distribute functions 
 
 ---
 
-### TASK-340: Layout Submenu Icon Grid Panel (🔄 IN PROGRESS)
+### ~~TASK-340~~: Layout Submenu Icon Grid Panel (✅ DONE)
 
 **Priority**: P2
-**Status**: IN PROGRESS (2026-01-20)
+**Status**: ✅ DONE (2026-01-21)
 
 Replace the Layout submenu list with a compact icon grid panel (industry standard pattern used by Figma, Adobe, Canva).
 
@@ -468,14 +468,21 @@ Replace the Layout submenu list with a compact icon grid panel (industry standar
 - Add tooltips for discoverability
 - Much more compact, fits any viewport
 
-**Files to Change**:
+**Implementation Notes** (critical for Tauri compatibility):
+- MUST use existing `submenu submenu-teleported` base classes (proven to work with Tauri's WebView)
+- MUST use `menu-item` class on all buttons (has working `pointer-events: auto`)
+- Add visual modifier classes (`layout-grid-mode`, `menu-item-icon`) on top of working base
+- See SOP: `docs/sop/SOP-013-teleported-menu-patterns.md`
+
+**Files Changed**:
 - `src/components/canvas/CanvasContextMenu.vue`
 
 **Success Criteria**:
-- [ ] Icon grid renders correctly
-- [ ] All alignment/distribution functions work
-- [ ] Tooltips show on hover
-- [ ] Fits in viewport without cutoff
+- [x] Icon grid renders correctly
+- [x] All alignment/distribution functions work
+- [x] Tooltips show on hover
+- [x] Fits in viewport without cutoff
+- [x] Works in Tauri (critical - first attempt failed due to click handling)
 
 ---
 

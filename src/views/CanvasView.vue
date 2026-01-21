@@ -85,7 +85,7 @@
           :edges="edges"
           :class="{ 'canvas-ready': isCanvasReady }"
           class="vue-flow-container"
-          :node-types="nodeTypes"
+          :node-types="nodeTypes as any"
           edges-focusable
           :elevate-nodes-on-select="false"
           elevate-edges-on-select

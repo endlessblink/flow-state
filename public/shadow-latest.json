@@ -4816,46 +4816,6 @@
       "position_version": 14
     },
     {
-      "id": "439848c2-102e-4d08-b6ff-87d3e4fb9052",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
-      "title": "לתקן את הטמפלטים",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-21T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": "0062ed01-8725-4487-a060-116aa642bae9",
-      "depends_on": null,
-      "position": {
-        "x": -176,
-        "y": 992,
-        "format": "absolute",
-        "parentId": "group-1768240525319-4b92rpv"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-18T12:46:10.102+00:00",
-      "updated_at": "2026-01-20T16:15:12.989817+00:00",
-      "position_version": 12
-    },
-    {
       "id": "f0ed712b-b3d4-419d-9d95-67da44e75ff1",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "85accc3c-26ff-4a2c-ba07-0212ee9f14d8",
@@ -5409,10 +5369,10 @@
       "position_version": 2
     },
     {
-      "id": "0062ed01-8725-4487-a060-116aa642bae9",
+      "id": "439848c2-102e-4d08-b6ff-87d3e4fb9052",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
-      "title": "לבחון את אפליקציית הסרטונים",
+      "title": "לתקן את הטמפלטים",
       "description": "",
       "status": "planned",
       "priority": "medium",
@@ -5420,16 +5380,16 @@
       "total_pomodoros": 0,
       "estimated_pomodoros": 1,
       "completed_pomodoros": 0,
-      "due_date": "2026-01-22T00:00:00+00:00",
+      "due_date": "2026-01-21T00:00:00+00:00",
       "due_time": null,
       "estimated_duration": null,
       "subtasks": [],
       "tags": [],
-      "parent_task_id": "e9f9d6e0-d825-43c5-b10b-480e3ac3b816",
+      "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -160,
-        "y": 832,
+        "x": -176,
+        "y": 992,
         "format": "absolute",
         "parentId": "group-1768240525319-4b92rpv"
       },
@@ -5444,9 +5404,9 @@
       "is_deleted": false,
       "deleted_at": null,
       "completed_at": null,
-      "created_at": "2026-01-18T10:51:28.871+00:00",
-      "updated_at": "2026-01-21T17:56:25.087183+00:00",
-      "position_version": 2
+      "created_at": "2026-01-18T12:46:10.102+00:00",
+      "updated_at": "2026-01-21T17:56:29.98255+00:00",
+      "position_version": 12
     },
     {
       "id": "8227c65a-280e-4d09-a989-8dee9cb6b483",
@@ -6757,6 +6717,46 @@
       "position_version": 28
     },
     {
+      "id": "ada9a27e-8833-4a08-923e-f532c2064639",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": "650a1e2d-e5e9-457f-b5b4-293b7e4d16a9",
+      "title": "להתקשר לוטרינר",
+      "description": "",
+      "status": "planned",
+      "priority": "medium",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-22T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": 464,
+        "y": 608,
+        "format": "absolute",
+        "parentId": "group-1768903188815-xhzb6vn"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-18T07:18:26.023+00:00",
+      "updated_at": "2026-01-21T17:57:15.460794+00:00",
+      "position_version": 7
+    },
+    {
       "id": "a7c0c89d-b5b9-4549-897a-db364f39a91b",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
@@ -7472,86 +7472,6 @@
       "position_version": 3
     },
     {
-      "id": "ada9a27e-8833-4a08-923e-f532c2064639",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "650a1e2d-e5e9-457f-b5b4-293b7e4d16a9",
-      "title": "להתקשר לוטרינר",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-22T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": 432,
-        "y": 944,
-        "format": "absolute",
-        "parentId": "group-1768903188815-xhzb6vn"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-18T07:18:26.023+00:00",
-      "updated_at": "2026-01-20T16:15:12.989817+00:00",
-      "position_version": 5
-    },
-    {
-      "id": "e9f9d6e0-d825-43c5-b10b-480e3ac3b816",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
-      "title": "לצלם סרטון על המעבר ללינוקס",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-21T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": -160,
-        "y": 688,
-        "format": "absolute",
-        "parentId": "group-1768240525319-4b92rpv"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-18T10:51:17.529+00:00",
-      "updated_at": "2026-01-20T16:15:12.989817+00:00",
-      "position_version": 9
-    },
-    {
       "id": "3229b3af-b078-40c6-8d6c-7c7ba9d0f158",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "85accc3c-26ff-4a2c-ba07-0212ee9f14d8",
@@ -7709,6 +7629,46 @@
       "created_at": "2026-01-20T14:19:46.455+00:00",
       "updated_at": "2026-01-20T20:00:49.594497+00:00",
       "position_version": 1
+    },
+    {
+      "id": "e9f9d6e0-d825-43c5-b10b-480e3ac3b816",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
+      "title": "לצלם סרטון על המעבר ללינוקס",
+      "description": "",
+      "status": "planned",
+      "priority": "medium",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-22T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": 480,
+        "y": 736,
+        "format": "absolute",
+        "parentId": "group-1768903188815-xhzb6vn"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-18T10:51:17.529+00:00",
+      "updated_at": "2026-01-21T17:57:21.83129+00:00",
+      "position_version": 12
     },
     {
       "id": "5fafba81-03e8-4c2a-b5a6-648f4e84a8af",
@@ -8332,7 +8292,7 @@
       "is_deleted": false,
       "deleted_at": null,
       "created_at": "2026-01-12T12:18:08.71+00:00",
-      "updated_at": "2026-01-21T17:25:31.822822+00:00"
+      "updated_at": "2026-01-21T18:05:40.972252+00:00"
     },
     {
       "id": "a737226b-8181-4036-ab90-ee68ab751622",
@@ -8346,7 +8306,7 @@
       "is_deleted": false,
       "deleted_at": null,
       "created_at": "2026-01-12T12:18:29.078+00:00",
-      "updated_at": "2026-01-21T17:25:31.822822+00:00"
+      "updated_at": "2026-01-21T18:05:40.972252+00:00"
     },
     {
       "id": "650a1e2d-e5e9-457f-b5b4-293b7e4d16a9",
@@ -8360,7 +8320,7 @@
       "is_deleted": false,
       "deleted_at": null,
       "created_at": "2026-01-12T12:18:48.294+00:00",
-      "updated_at": "2026-01-21T17:25:31.822822+00:00"
+      "updated_at": "2026-01-21T18:05:40.972252+00:00"
     }
   ],
   "authUsers": [
@@ -8406,19 +8366,19 @@
       "is_paused": false,
       "is_break": true,
       "completed_at": null,
-      "device_leader_id": "2a7d18c3-a986-4166-b735-ec90d3a286a2",
-      "device_leader_last_seen": "2026-01-21T17:25:30.746+00:00",
+      "device_leader_id": "17370a0f-0d1b-49cd-831d-9629a76207ea",
+      "device_leader_last_seen": "2026-01-21T18:05:39.54+00:00",
       "created_at": "2026-01-20T22:04:05.025218+00:00",
-      "updated_at": "2026-01-21T17:25:30.793133+00:00"
+      "updated_at": "2026-01-21T18:05:40.18179+00:00"
     }
   ],
   "meta": {
-    "timestamp": 1769018185705,
+    "timestamp": 1769018741182,
     "schema_version": "3.1.0",
     "connection_healthy": true,
     "latency_ms": 17,
     "counts": {
-      "tasks": 207,
+      "tasks": 206,
       "groups": 8,
       "projects": 3,
       "authUsers": 2,
@@ -8426,6 +8386,6 @@
       "timerSessions": 2
     }
   },
-  "timestamp": 1769018185705,
-  "checksum": "9864e1b09a6f9ae9"
+  "timestamp": 1769018741182,
+  "checksum": "9fb845c4fc8b2af1"
 }

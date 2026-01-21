@@ -23,8 +23,7 @@
       <Transition name="dropdown">
         <div
           v-if="isOpen"
-          class="select-dropdown"
-          :style="dropdownStyle as any"
+          :style="dropdownStyle"
           role="listbox"
         >
           <!-- Special Option: None / Inbox -->
@@ -98,8 +97,8 @@ const isOpen = ref(false)
 const dropdownId = Math.random().toString(36).substring(2, 9)
 
 // Dropdown positioning (copied from CustomSelect for consistency)
-const dropdownStyle = ref({
-  position: 'fixed' as const,
+const dropdownStyle = ref<any>({
+  position: 'fixed',
   top: '0px',
   left: '0px',
   width: '0px',

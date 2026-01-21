@@ -319,6 +319,65 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         isBulkDeleteModalOpen.value = false
     }
 
+    /**
+     * GEOMETRY WRITER: Arranges all done tasks in a grid at bottom-left of canvas (TASK-255)
+     * This is an ALLOWED geometry write as it's an explicit user action.
+     *
+     * Grid layout:
+     * - Starting position: x=100, y=2000 (bottom-left area)
+     * - Task card size: ~200x80
+     * - Gap: 16px
+     * - Columns: 5 tasks per row
+     */
+    const arrangeDoneTasksInGrid = async () => {
+        // Find all done tasks that have a canvas position
+        const doneTasks = taskStore.tasks.filter(
+            (t) => t.status === 'done' && t.canvasPosition
+        )
+
+        if (doneTasks.length === 0) {
+            console.log('[ARRANGE-DONE] No done tasks with canvas positions to arrange')
+            return
+        }
+
+        console.log(`[ARRANGE-DONE] Arranging ${doneTasks.length} done tasks in grid`)
+
+        // Grid configuration
+        const startX = 100
+        const startY = 2000
+        const cardWidth = 200
+        const cardHeight = 80
+        const gap = 16
+        const columns = 5
+
+        try {
+            for (let i = 0; i < doneTasks.length; i++) {
+                const task = doneTasks[i]
+                const col = i % columns
+                const row = Math.floor(i / columns)
+
+                const newX = startX + col * (cardWidth + gap)
+                const newY = startY + row * (cardHeight + gap)
+
+                await undoHistory.updateTaskWithUndo(task.id, {
+                    parentId: undefined, // Remove from any group
+                    canvasPosition: { x: newX, y: newY }
+                })
+            }
+
+            // Sync canvas after all updates
+            if (deps.batchSyncNodes) {
+                deps.batchSyncNodes('high')
+            } else {
+                deps.syncNodes()
+            }
+
+            console.log(`[ARRANGE-DONE] Successfully arranged ${doneTasks.length} tasks`)
+        } catch (error) {
+            console.error('[ASYNC-ERROR] arrangeDoneTasksInGrid failed', error)
+        }
+    }
+
     return {
         isQuickTaskCreateOpen,
         quickTaskPosition,
@@ -333,6 +392,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         moveSelectedTasksToInbox,
         deleteSelectedTasks,
         confirmBulkDelete,
-        cancelBulkDelete
+        cancelBulkDelete,
+        arrangeDoneTasksInGrid
     }
 }

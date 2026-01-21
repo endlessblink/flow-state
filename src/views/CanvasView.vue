@@ -69,6 +69,7 @@
       <CanvasToolbar
         @add-task="handleAddTask"
         @create-group="handleToolbarCreateGroup"
+        @arrange-done-tasks="handleArrangeDoneTasks"
       />
 
       <!-- Canvas Container -->
@@ -326,9 +327,10 @@ const {
   
   // From consolidated features
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
-  alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical, 
+  alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge,
+  arrangeDoneTasksInGrid
 } = orchestrator
 
 // Register global hotkeys
@@ -341,6 +343,7 @@ useEventListener(window, 'keydown', (e) => {
 const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
+const handleArrangeDoneTasks = () => arrangeDoneTasksInGrid()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }
 // UI Wrappers
 const handleOpenSectionSettings = (id: string) => {

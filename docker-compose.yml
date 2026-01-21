@@ -3,6 +3,8 @@ services:
     image: caddy:alpine
     container_name: flowstate_caddy
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "80:80"
       - "443:443"
@@ -27,7 +29,17 @@ services:
       - caddy
 
   app:
-    build: .
+    build:
+      context: .
+      target: build-stage
+    command: npx vite --host 0.0.0.0 --port 80
+    environment:
+      # Override .env.local for tunnel/PWA mode - use relative path so it works through Caddy proxy
+      VITE_SUPABASE_URL: "/supabase"
+      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODMzMzkxMjR9.quujL-cYcPusBhirDQFq9p-iTN0hRwjY2GLx6XUtYDg"
+    volumes:
+      - .:/app
+      - /app/node_modules
     networks:
       - flowstate-net
     depends_on:

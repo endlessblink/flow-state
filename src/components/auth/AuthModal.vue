@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore, type User } from '@/stores/auth'
@@ -76,12 +76,20 @@ const resetEmail = ref('')
 
 // ===== Watchers =====
 // Auto-close modal when user becomes authenticated
-watch(() => authStore.isAuthenticated, (isAuth) => {
-  console.log('👁️ Auth state changed in modal, isAuthenticated:', isAuth, 'modalOpen:', uiStore.authModalOpen)
-  if (isAuth && uiStore.authModalOpen) {
-    console.log('✅ User is now authenticated, auto-closing modal')
+// BUG-340: Fixed Tauri WebView reactivity issue - use nextTick + immediate close
+watch(() => authStore.isAuthenticated, async (isAuth, oldIsAuth) => {
+  console.log('👁️ Auth state changed in modal, isAuthenticated:', isAuth, 'was:', oldIsAuth, 'modalOpen:', uiStore.authModalOpen)
+
+  // Only act on transition from false -> true (sign-in), not on initial load
+  if (isAuth && !oldIsAuth && uiStore.authModalOpen) {
+    console.log('✅ User just signed in, auto-closing modal')
     const redirectPath = uiStore.authModalRedirect
+
+    // BUG-340: Use nextTick to ensure Vue reactivity catches up in Tauri WebView
+    await nextTick()
+
     uiStore.closeAuthModal()
+    console.log('✅ Modal closed, authModalOpen is now:', uiStore.authModalOpen)
 
     // Redirect if needed
     if (redirectPath && router.currentRoute.value && redirectPath !== router.currentRoute.value.fullPath) {
@@ -89,7 +97,7 @@ watch(() => authStore.isAuthenticated, (isAuth) => {
       router.push(redirectPath)
     }
   }
-})
+}, { flush: 'post' })
 
 // ===== Methods =====
 async function handleAuthSuccess(user: User) {
@@ -101,12 +109,15 @@ async function handleAuthSuccess(user: User) {
     isAuthenticated: authStore.isAuthenticated
   })
 
-  // Small delay to ensure auth state is fully updated
-  await new Promise(resolve => setTimeout(resolve, 100))
+  // BUG-340: Use nextTick to ensure Vue reactivity catches up in Tauri WebView
+  await nextTick()
 
-  // Close modal
+  // Close modal immediately - don't wait for reactive state
   const redirectPath = uiStore.authModalRedirect
   uiStore.closeAuthModal()
+
+  // BUG-340: Force another tick to ensure UI updates in Tauri
+  await nextTick()
 
   console.log('✅ Auth modal closed. New state:', {
     isOpen: uiStore.authModalOpen,

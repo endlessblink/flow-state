@@ -1,0 +1,54 @@
+services:
+  caddy:
+    image: caddy:alpine
+    container_name: flowstate_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - flowstate-caddy-data:/data
+      - flowstate-caddy-config:/config
+    networks:
+      - flowstate-net
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: .
+      target: production-stage
+    container_name: flowstate_app
+    restart: always
+    environment:
+      # If using Supabase Cloud, set the URL and Key in .env file on VPS
+      # If using Self-Hosted (uncommon for simple setups), configure accordingly
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    networks:
+      - flowstate-net
+
+  # Optional: Simple Postgres DB if not using Supabase Cloud
+  # note: This is just a raw DB, not the full Supabase stack (Auth/Realtime will NOT work with just this)
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: flowstate_db
+  #   restart: always
+  #   environment:
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
+  #     POSTGRES_DB: flowstate
+  #     POSTGRES_USER: postgres
+  #   volumes:
+  #     - flowstate-db-data:/var/lib/postgresql/data
+  #   networks:
+  #     - flowstate-net
+
+networks:
+  flowstate-net:
+    driver: bridge
+
+volumes:
+  flowstate-caddy-data:
+  flowstate-caddy-config:
+  flowstate-db-data:

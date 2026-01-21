@@ -8,10 +8,23 @@
 :80 {
     # Reverse proxy for Supabase API - strips /supabase/ prefix
     handle_path /supabase/* {
-        reverse_proxy http://192.168.5.45:54321 {
+        # CORS headers for cross-origin requests (tunnel domain varies)
+        header Access-Control-Allow-Origin "*"
+        header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        header Access-Control-Allow-Headers "apikey, authorization, content-type, x-client-info, x-supabase-api-version"
+        header Access-Control-Expose-Headers "content-range, x-supabase-api-version"
+
+        # Handle preflight OPTIONS requests
+        @options method OPTIONS
+        respond @options 204
+
+        reverse_proxy http://host.docker.internal:54321 {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
+            # WebSocket support for Supabase Realtime
+            header_up Connection {header.Connection}
+            header_up Upgrade {header.Upgrade}
         }
     }
 

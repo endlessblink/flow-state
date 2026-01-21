@@ -133,113 +133,69 @@
       </div>
     </template>
 
-    <!-- TASK-340: Teleported Layout Panel (Icon Grid - Industry Standard) -->
+    <!-- Teleported Layout Submenu (escapes overflow clipping) -->
     <Teleport to="body">
       <div
         v-if="showLayoutSubmenu && selectedCount >= 2"
         ref="submenuRef"
-        class="layout-panel"
+        class="submenu submenu-teleported"
         :style="submenuStyle"
         @mouseenter="handleLayoutSubmenuEnter"
         @mouseleave="handleLayoutSubmenuLeave"
       >
-        <!-- Align Section -->
-        <div class="panel-section">
-          <div class="panel-section-label">Align</div>
-          <div class="icon-grid align-grid">
-            <button
-              class="icon-btn"
-              title="Align Left"
-              @click="handleAlignLeft"
-            >
-              <AlignHorizontalJustifyStart :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Center Horizontally"
-              @click="handleAlignCenterHorizontal"
-            >
-              <AlignHorizontalJustifyCenter :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Align Right"
-              @click="handleAlignRight"
-            >
-              <AlignHorizontalJustifyEnd :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Align Top"
-              @click="handleAlignTop"
-            >
-              <AlignVerticalJustifyStart :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Center Vertically"
-              @click="handleAlignCenterVertical"
-            >
-              <AlignVerticalJustifyCenter :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Align Bottom"
-              @click="handleAlignBottom"
-            >
-              <AlignVerticalJustifyEnd :size="18" :stroke-width="1.5" />
-            </button>
-          </div>
-        </div>
+        <!-- Align Options -->
+        <button class="menu-item" @click="handleAlignLeft">
+          <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Left</span>
+        </button>
+        <button class="menu-item" @click="handleAlignRight">
+          <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Right</span>
+        </button>
+        <button class="menu-item" @click="handleAlignTop">
+          <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Top</span>
+        </button>
+        <button class="menu-item" @click="handleAlignBottom">
+          <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Align Bottom</span>
+        </button>
+        <button class="menu-item" @click="handleAlignCenterHorizontal">
+          <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Center Horizontally</span>
+        </button>
+        <button class="menu-item" @click="handleAlignCenterVertical">
+          <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Center Vertically</span>
+        </button>
 
-        <!-- Distribute Section (3+ tasks) -->
-        <div v-if="selectedCount >= 3" class="panel-section">
-          <div class="panel-section-label">Distribute</div>
-          <div class="icon-grid distribute-grid">
-            <button
-              class="icon-btn"
-              title="Distribute Horizontally"
-              @click="handleDistributeHorizontal"
-            >
-              <ArrowLeftRight :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Distribute Vertically"
-              @click="handleDistributeVertical"
-            >
-              <ArrowUpDown :size="18" :stroke-width="1.5" />
-            </button>
-          </div>
-        </div>
+        <!-- Distribute Options (3+ tasks) -->
+        <template v-if="selectedCount >= 3">
+          <div class="menu-divider" />
+          <button class="menu-item" @click="handleDistributeHorizontal">
+            <ArrowLeftRight :size="16" :stroke-width="1.5" class="menu-icon" />
+            <span class="menu-text">Distribute Horizontally</span>
+          </button>
+          <button class="menu-item" @click="handleDistributeVertical">
+            <ArrowUpDown :size="16" :stroke-width="1.5" class="menu-icon" />
+            <span class="menu-text">Distribute Vertically</span>
+          </button>
+        </template>
 
-        <!-- Arrange Section -->
-        <div class="panel-section">
-          <div class="panel-section-label">Arrange</div>
-          <div class="icon-grid arrange-grid">
-            <button
-              class="icon-btn"
-              title="Arrange in Row"
-              @click="handleArrangeInRow"
-            >
-              <Rows :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Arrange in Column"
-              @click="handleArrangeInColumn"
-            >
-              <LayoutList :size="18" :stroke-width="1.5" />
-            </button>
-            <button
-              class="icon-btn"
-              title="Arrange in Grid"
-              @click="handleArrangeInGrid"
-            >
-              <Grid3x3 :size="18" :stroke-width="1.5" />
-            </button>
-          </div>
-        </div>
+        <!-- Arrange Options -->
+        <div class="menu-divider" />
+        <button class="menu-item" @click="handleArrangeInRow">
+          <Rows :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Arrange in a row</span>
+        </button>
+        <button class="menu-item" @click="handleArrangeInColumn">
+          <LayoutList :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Arrange in a column</span>
+        </button>
+        <button class="menu-item" @click="handleArrangeInGrid">
+          <Grid3x3 :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Arrange in a grid</span>
+        </button>
       </div>
     </Teleport>
   </div>
@@ -737,105 +693,74 @@ const handleArrangeInGrid = () => {
 }
 </style>
 
-<!-- TASK-340: Global styles for teleported layout panel (escapes scoped styles) -->
+<!-- Global styles for teleported submenu (escapes scoped styles) -->
 <style>
-/* Icon Grid Layout Panel - Industry standard pattern (Figma/Adobe style) */
-.layout-panel {
-  /* Glass morphism styling */
-  background: rgba(30, 30, 40, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+.submenu-teleported {
+  /* Glass morphism styling - more transparent with blur */
+  background: rgba(30, 30, 40, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-lg, 12px);
+  border-radius: var(--radius-md, 8px);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-  padding: var(--space-3, 12px);
-  min-width: 160px;
-  max-width: 200px;
+  padding: var(--space-2, 8px) 0;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
   pointer-events: auto;
-  animation: layoutPanelSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: teleportedSubmenuSlideIn 150ms ease-out;
+  /* Ensure backdrop-filter works */
   isolation: isolate;
 }
 
-@keyframes layoutPanelSlideIn {
+.submenu-teleported .menu-item {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  color: var(--text-primary, #e5e5e5);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-size: var(--text-sm, 14px);
+  font-weight: var(--font-normal, 400);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  transition: all var(--duration-normal) var(--spring-smooth);
+  min-height: 40px;
+}
+
+.submenu-teleported .menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.submenu-teleported .menu-icon {
+  flex-shrink: 0;
+}
+
+.submenu-teleported .menu-text {
+  flex: 1;
+  font-weight: var(--font-normal, 400);
+}
+
+.submenu-teleported .menu-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: var(--space-2, 8px) 0;
+}
+
+@keyframes teleportedSubmenuSlideIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateX(-4px);
+    transform: translateX(-8px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateX(0);
+    transform: translateX(0);
   }
-}
-
-/* Panel Sections */
-.layout-panel .panel-section {
-  margin-bottom: var(--space-3, 12px);
-}
-
-.layout-panel .panel-section:last-child {
-  margin-bottom: 0;
-}
-
-.layout-panel .panel-section-label {
-  font-size: var(--text-xs, 11px);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-muted, #888);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--space-2, 8px);
-  padding-left: var(--space-1, 4px);
-}
-
-/* Icon Grid */
-.layout-panel .icon-grid {
-  display: grid;
-  gap: var(--space-1, 4px);
-}
-
-.layout-panel .align-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.layout-panel .distribute-grid {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.layout-panel .arrange-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-/* Icon Buttons */
-.layout-panel .icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  aspect-ratio: 1;
-  min-height: 36px;
-  background: var(--glass-bg-tint, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md, 8px);
-  color: var(--text-secondary, #aaa);
-  cursor: pointer;
-  transition: all 150ms ease;
-}
-
-.layout-panel .icon-btn:hover {
-  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
-  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.15));
-  color: var(--text-primary, #e5e5e5);
-  transform: scale(1.05);
-}
-
-.layout-panel .icon-btn:active {
-  transform: scale(0.95);
-  background: var(--surface-active, rgba(255, 255, 255, 0.15));
-}
-
-/* Tooltip styling (uses native title, but can be enhanced) */
-.layout-panel .icon-btn[title] {
-  position: relative;
 }
 </style>

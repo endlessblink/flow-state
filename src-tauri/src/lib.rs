@@ -88,8 +88,40 @@ async fn start_docker_desktop(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 /// Check if Supabase local is running
+/// Uses direct API health check (more reliable than CLI which requires project directory)
 #[tauri::command]
 async fn check_supabase_status(app: tauri::AppHandle) -> Result<String, String> {
+    // First try direct health check - works regardless of working directory
+    let health_check = app
+        .shell()
+        .command("curl")
+        .args(["-s", "-o", "/dev/null", "-w", "%{http_code}", "http://127.0.0.1:54321/rest/v1/", "--max-time", "2"])
+        .output()
+        .await;
+
+    if let Ok(output) = health_check {
+        let status_code = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if status_code == "200" {
+            // Supabase is responding, try to get full config
+            let config = app
+                .shell()
+                .command("supabase")
+                .args(["status", "-o", "json"])
+                .output()
+                .await;
+
+            if let Ok(c) = config {
+                if c.status.success() {
+                    let stdout = String::from_utf8_lossy(&c.stdout).to_string();
+                    return Ok(format!("running:{}", stdout));
+                }
+            }
+            // API is up but can't get config (wrong directory) - still running
+            return Ok("running:{}".to_string());
+        }
+    }
+
+    // Fallback to CLI check
     let output = app
         .shell()
         .command("supabase")
@@ -109,7 +141,23 @@ async fn check_supabase_status(app: tauri::AppHandle) -> Result<String, String> 
 /// Start Supabase local development stack
 #[tauri::command]
 async fn start_supabase(app: tauri::AppHandle) -> Result<String, String> {
-    // First check if already running to avoid port conflicts
+    // First check if already running via direct health check (more reliable)
+    let health_check = app
+        .shell()
+        .command("curl")
+        .args(["-s", "-o", "/dev/null", "-w", "%{http_code}", "http://127.0.0.1:54321/rest/v1/", "--max-time", "2"])
+        .output()
+        .await;
+
+    if let Ok(output) = health_check {
+        let status_code = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if status_code == "200" {
+            // Already running - don't try to start again
+            return Ok("already_running".to_string());
+        }
+    }
+
+    // Fallback check via CLI
     let status = app
         .shell()
         .command("supabase")

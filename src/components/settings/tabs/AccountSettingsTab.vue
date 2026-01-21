@@ -22,12 +22,11 @@ const isAuthReady = computed(() =>
   authStore.isInitialized && authStore.isAuthenticated && supabase !== null
 )
 
-// OAuth detection - only show password change for email users
-const canChangePassword = computed(() => {
-  const providers = authStore.user?.app_metadata?.providers as string[] | undefined
-  // Users can change password if they signed up with email (have 'email' provider)
-  return providers?.includes('email') ?? false
-})
+// TASK-337 FIX: Always allow password change attempt for authenticated users
+// Reason: app_metadata.providers is unreliable (doesn't update after OAuth users set password)
+// The Supabase API will return an appropriate error if password change isn't supported
+// See: https://github.com/supabase/auth/issues/1605
+const canChangePassword = computed(() => true)
 
 const handleSignOut = async () => {
   await authStore.signOut()
@@ -62,7 +61,12 @@ const handleChangePassword = async () => {
     })
 
     if (error) {
-      passwordError.value = error.message
+      // Provide user-friendly error messages
+      if (error.message.includes('identity') || error.message.includes('provider')) {
+        passwordError.value = 'Password change not available for accounts using Google/OAuth sign-in'
+      } else {
+        passwordError.value = error.message
+      }
     } else {
       // TASK-337: Refresh session after password change
       await supabase.auth.refreshSession()

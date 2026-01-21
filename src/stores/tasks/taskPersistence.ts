@@ -56,8 +56,26 @@ export function useTaskPersistence(
             const stored = localStorage.getItem(GUEST_TASKS_KEY)
             if (stored) {
                 const tasks = JSON.parse(stored) as Task[]
-                console.log(`📦 [GUEST-MODE] Loaded ${tasks.length} tasks from localStorage`)
-                return tasks
+
+                // BUG-339: Deduplicate by ID to prevent guest mode congestion
+                const seenIds = new Set<string>()
+                const uniqueTasks = tasks.filter(task => {
+                    if (seenIds.has(task.id)) {
+                        console.warn(`🔄 [GUEST-MODE] Removing duplicate task: ${task.id}`)
+                        return false
+                    }
+                    seenIds.add(task.id)
+                    return true
+                })
+
+                if (uniqueTasks.length < tasks.length) {
+                    console.log(`🧹 [GUEST-MODE] Removed ${tasks.length - uniqueTasks.length} duplicate tasks`)
+                    // Save cleaned data back
+                    localStorage.setItem(GUEST_TASKS_KEY, JSON.stringify(uniqueTasks))
+                }
+
+                console.log(`📦 [GUEST-MODE] Loaded ${uniqueTasks.length} tasks from localStorage`)
+                return uniqueTasks
             }
         } catch (e) {
             console.error('❌ [GUEST-MODE] Failed to load tasks from localStorage:', e)

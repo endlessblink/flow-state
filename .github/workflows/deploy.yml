@@ -2,28 +2,48 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - uses: actions/checkout@v4
+
+      # Build the app to check for errors before deploying
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-              cd /opt/flow-state
-              
-              # Pull the latest changes
-              git pull origin main
-              
-              # Rebuild/Restart containers
-              docker compose -f docker-compose.prod.yml down
-              docker compose -f docker-compose.prod.yml up -d --build
-              
-              # Prune unused images to save space
-              docker image prune -f
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build Application
+        run: npm run build
+
+      # Setup SSH
+      - name: Prepare SSH Key
+        run: |
+            mkdir -p ~/.ssh/
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # Sync files to VPS (Mirroring deploy-to-vps.sh)
+      - name: Sync Files to VPS
+        run: |
+            rsync -avz --delete \
+              --exclude 'node_modules' \
+              --exclude '.git' \
+              --exclude '.env' \
+              --exclude '.env.*' \
+              --exclude 'src-tauri/target' \
+              ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}/
+
+      # Restart Docker
+      - name: Restart Application
+        run: |
+            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cd ${{ secrets.VPS_TARGET_DIR }} && docker compose down && docker compose up -d --build"

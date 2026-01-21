@@ -56,17 +56,34 @@
           <Eye v-else :size="14" />
         </button>
       </div>
+
+      <!-- Separator -->
+      <div class="toolbar-separator" />
+
+      <!-- Organize Actions Group -->
+      <div class="toolbar-group">
+        <!-- Arrange Done Tasks in Grid -->
+        <button
+          class="toolbar-btn"
+          title="Arrange done tasks in grid"
+          aria-label="Arrange done tasks in grid at bottom-left of canvas"
+          @click="$emit('arrangeDoneTasks')"
+        >
+          <LayoutGrid :size="14" />
+        </button>
+      </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, Eye, EyeOff } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX, Eye, EyeOff, LayoutGrid } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{
   (e: 'addTask'): void
   (e: 'createGroup', event: MouseEvent): void
+  (e: 'arrangeDoneTasks'): void
 }>()
 
 const taskStore = useTaskStore()

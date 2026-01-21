@@ -178,6 +178,7 @@ export function useCanvasActions(
         deleteSelectedTasks: taskActions.deleteSelectedTasks,
         confirmBulkDelete: taskActions.confirmBulkDelete,
         cancelBulkDelete: taskActions.cancelBulkDelete,
+        arrangeDoneTasksInGrid: taskActions.arrangeDoneTasksInGrid,
 
         isQuickTaskCreateOpen: taskActions.isQuickTaskCreateOpen,
         quickTaskPosition: taskActions.quickTaskPosition,

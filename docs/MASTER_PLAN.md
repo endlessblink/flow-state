@@ -144,6 +144,8 @@
 | **TASK-346**             | **Mobile-Specific UI: Feature Subset & Touch Navigation**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Designing a mobile-first dashboard and navigation that serves only the necessary "on-the-go" features.                                                                                                           |                                                        |
 | **BUG-347**              | **Fix FK Constraint Violation on parent_task_id**                      | **P1**                                              | 👀 **REVIEW**                                                                                                                   | Sync errors when parent task deleted. Fix: Catch-and-retry clears orphaned parent refs. [See Details](#bug-347-fix-fk-constraint-violation-on-parent_task_id-review)                                              |                                                        |
 | ~~**TASK-348**~~         | ✅ **DONE** **Tauri Startup Guide & Shadow Mirror Fix**                | **P2**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | [SOP-015](./sop/SOP-015-tauri-startup-guide.md) - Fixed shadow-mirror.cjs relative URL detection, documented startup methods                                                                                      |                                                        |
+| **BUG-352**              | **Mobile PWA "Failed to Fetch"**                       | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-352-mobile-pwa-failed-to-fetch-persistent-cache) - Likely SW cache issue                                                                                                                                     |                                                        |
+| **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |                                                        |
 
 ---
 
@@ -160,6 +162,16 @@
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+### BUG-352: Mobile PWA "Failed to Fetch" (Persistent Cache)
+**Priority**: P0-CRITICAL
+**Status**: 📋 PLANNED (for Tomorrow)
+User reports mobile device still fails to fetch, likely due to aggressive Service Worker caching of the old configuration (localhost authentication). Needs hard cache reset strategy or cache-busting deployment.
+
+### TASK-351: Secure Secrets Management (Doppler)
+**Priority**: P1
+**Status**: 📋 PLANNED (for Tomorrow)
+Migrate from `.env` files to Doppler for secure secret injection in CI/CD and VPS.
 
 ### BUG-342: Canvas Multi-Drag Bug - Unselected Tasks Move Together (🔄 IN PROGRESS)
 

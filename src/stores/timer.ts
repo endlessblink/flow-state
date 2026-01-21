@@ -502,17 +502,17 @@ export const useTimerStore = defineStore('timer', () => {
       }
 
       // Check if we should take over leadership
-      const lastSeen = saved.deviceLeaderLastSeen || 0
-      const timeSinceLastSeen = Date.now() - lastSeen
+      const leaderLastSeen = saved.deviceLeaderLastSeen || 0
+      const timeSinceLeaderSeen = Date.now() - leaderLastSeen
       const shouldTakeOverLeadership = saved.deviceLeaderId === deviceId ||
-        timeSinceLastSeen >= DEVICE_LEADER_TIMEOUT_MS ||
+        timeSinceLeaderSeen >= DEVICE_LEADER_TIMEOUT_MS ||
         !saved.deviceLeaderId
 
       if (shouldTakeOverLeadership) {
         console.log('🍅 [TIMER] Taking over leadership', {
           reason: saved.deviceLeaderId === deviceId ? 'same device' :
             !saved.deviceLeaderId ? 'no previous leader' :
-              `previous leader timed out (${Math.round(timeSinceLastSeen / 1000)}s ago)`,
+              `previous leader timed out (${Math.round(timeSinceLeaderSeen / 1000)}s ago)`,
           newLeaderId: deviceId
         })
         isDeviceLeader.value = true

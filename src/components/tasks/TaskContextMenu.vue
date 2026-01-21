@@ -110,7 +110,7 @@
       :current-status="currentTask?.status"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('status')"
-      @select="(s: any) => setStatus(s)"
+      @select="(s: 'planned' | 'in_progress' | 'done') => setStatus(s)"
     />
 
     <DurationSubmenu

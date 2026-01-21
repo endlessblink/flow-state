@@ -264,6 +264,7 @@ import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '../assets/vue-flow-overrides.css'
+import '../assets/canvas-view-overrides.css'
 import { useEventListener } from '@vueuse/core'
 
 import { useTaskStore } from '../stores/tasks'
@@ -420,5 +421,3 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
 </script>
 
 <style scoped src="@/assets/canvas-view-layout.css"></style>
-
-<style src="@/assets/canvas-view-overrides.css"></style>

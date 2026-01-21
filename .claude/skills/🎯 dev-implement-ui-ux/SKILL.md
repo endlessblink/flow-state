@@ -985,7 +985,140 @@ grep -rn "background.*white\|background.*#fff" src/components --include="*.vue"
 
 ---
 
-**Skill Keywords:** UI design, UX, color theory, typography, spacing, layout, grid, accessibility, WCAG 2.2, animation, design tokens, visual hierarchy, Gestalt
+# PART 11: APP ICON GENERATION (Tauri/Desktop/PWA)
+
+## 11.1 Icon Size Requirements
+
+| Platform | Sizes Required |
+|----------|----------------|
+| **Tauri/Desktop** | 32x32, 128x128, 256x256 (128x128@2x), 512x512 |
+| **Windows ICO** | 16, 32, 48, 64, 128, 256 (multi-size) |
+| **macOS ICNS** | 512x512 source |
+| **Windows Store** | 44, 71, 89, 107, 142, 150, 284, 310 |
+| **PWA/Web** | 180x180 (apple-touch-icon), favicon.ico |
+
+## 11.2 ImageMagick Icon Pipeline
+
+### CRITICAL: Scaling Without Cropping
+
+When source image has different aspect ratio than target (e.g., wide 1312x736 → square 512x512):
+
+```bash
+# ❌ WRONG - Scales by height, crops width
+magick convert source.png -resize x420 -gravity center -extent 512x512 icon.png
+
+# ✅ CORRECT - Scales to FIT within bounds, centers with padding
+magick convert source.png \
+  -trim +repage \
+  -resize 500x500 \
+  -gravity center \
+  -background none \
+  -extent 512x512 \
+  icon.png
+```
+
+**Key insight:** `-resize 500x500` scales proportionally until the LARGER dimension hits 500px. For a wide image, width becomes 500px, height scales proportionally (e.g., ~280px). Then `-extent 512x512` centers it with transparent padding.
+
+### Complete Icon Generation Script
+
+```bash
+#!/bin/bash
+# Generate all Tauri app icons from a 512x512 source
+
+cd src-tauri/icons
+
+# PNG sizes for Linux/Windows
+magick convert icon.png -resize 32x32 32x32.png
+magick convert icon.png -resize 128x128 128x128.png
+magick convert icon.png -resize 256x256 128x128@2x.png
+
+# Windows ICO (multi-size)
+magick convert icon.png -define icon:auto-resize=256,128,64,48,32,16 icon.ico
+
+# macOS ICNS
+png2icns icon.icns icon.png 2>/dev/null || \
+  magick convert icon.png -resize 512x512 icon.icns
+
+# Windows Store logos
+for size in 44 71 89 107 142 150 284 310; do
+  magick convert icon.png -resize ${size}x${size} Square${size}x${size}Logo.png
+done
+magick convert icon.png -resize 50x50 StoreLogo.png
+
+# PWA/Web icons
+cd ../../public
+magick convert ../src-tauri/icons/icon.png -resize 180x180 apple-touch-icon.png
+magick convert ../src-tauri/icons/icon.png -define icon:auto-resize=48,32,16 favicon.ico
+
+echo "All icons generated!"
+```
+
+## 11.3 Image Processing for Icons
+
+### Remove Background (Flood Fill)
+
+```bash
+# Replace white/near-white background with transparency
+magick convert input.png \
+  -fuzz 10% \
+  -transparent white \
+  -trim +repage \
+  output.png
+```
+
+### Prepare Wide Image for Square Icon
+
+```bash
+# For images wider than tall (e.g., 1312x736)
+magick convert wide-source.png \
+  -trim +repage \              # Remove whitespace
+  -resize 500x500 \            # Fit within 500x500 (maintains aspect)
+  -gravity center \            # Center the result
+  -background none \           # Transparent background
+  -extent 512x512 \            # Pad to exact 512x512
+  icon.png
+```
+
+## 11.4 Verification
+
+```bash
+# Check dimensions
+magick identify icon.png
+# Expected: icon.png PNG 512x512 512x512+0+0 ...
+
+# Check ICO contains all sizes
+magick identify icon.ico
+# Expected: Multiple lines showing 256x256, 128x128, 64x64, etc.
+```
+
+## 11.5 Tauri Icon Files
+
+```
+src-tauri/icons/
+├── icon.png          # 512x512 master (REQUIRED)
+├── icon.ico          # Windows (multi-size)
+├── icon.icns         # macOS
+├── 32x32.png         # Small
+├── 128x128.png       # Medium
+├── 128x128@2x.png    # Retina (256x256)
+├── Square*.png       # Windows Store
+└── StoreLogo.png     # Windows Store
+```
+
+## 11.6 Reinstall & Refresh (Linux/KDE)
+
+After regenerating icons, rebuild and reinstall:
+
+```bash
+npm run tauri build
+sudo dpkg -i src-tauri/target/release/bundle/deb/AppName_*.deb
+kbuildsycoca6 --noincremental  # Rebuild KDE cache
+kquitapp6 plasmashell && sleep 1 && kstart plasmashell &  # Restart panel
+```
+
+---
+
+**Skill Keywords:** UI design, UX, color theory, typography, spacing, layout, grid, accessibility, WCAG 2.2, animation, design tokens, visual hierarchy, Gestalt, app icons, ImageMagick, Tauri
 
 **Standards:** WCAG 2.2 (June 2024), Material Design 3, Apple HIG
 

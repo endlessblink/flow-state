@@ -1,3 +1,8 @@
+---
+name: tauri-debugger
+description: Debug Tauri 2.x desktop app issues including dialogs, CSP, plugins, and Vite integration. Triggers on Tauri dialog not opening, file save dialog doesn't work, CSP errors, virtual:pwa-register errors, click handlers not working in Tauri, XDG Portal issues on Linux.
+---
+
 # Tauri Debugger Skill
 
 Debug Tauri 2.x desktop app issues including dialogs, CSP, plugins, and Vite integration.

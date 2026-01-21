@@ -3,11 +3,30 @@ import { createClient } from '@supabase/supabase-js'
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
 // The app should handle missing config gracefully (Guest Mode)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-
 // BUG-339: Detect if running in Tauri context
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+
+// FIX-MOBILE-PWA & TAURI COMPATIBILITY:
+// - Browser/PWA: Use relative path '/supabase' (from .env) to work via Tunnel/Caddy
+// - Tauri: Must use full URL 'http://127.0.0.1:54321' because relative paths fail in WebView
+const envUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+// Supabase JS client requires full URL (not relative path)
+// If envUrl is relative (starts with /), prepend current origin
+function resolveSupabaseUrl(): string {
+    if (isTauri) {
+        return 'http://127.0.0.1:54321'
+    }
+    if (envUrl.startsWith('/') && typeof window !== 'undefined') {
+        // Convert relative path to full URL using current page origin
+        // e.g., '/supabase' becomes 'https://xxx.trycloudflare.com/supabase'
+        return `${window.location.origin}${envUrl}`
+    }
+    return envUrl
+}
+
+const supabaseUrl = resolveSupabaseUrl()
 
 /**
  * BUG-339 UPDATE: Using localStorage for auth persistence

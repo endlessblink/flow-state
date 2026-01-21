@@ -4,25 +4,90 @@
       <InboxIcon />
       <span>Inbox</span>
     </router-link>
-    
-    <router-link to="/calendar" class="nav-item" active-class="active">
-      <CalendarIcon />
-      <span>Calendar</span>
+
+    <router-link to="/timer" class="nav-item" active-class="active">
+      <TimerIcon />
+      <span>Timer</span>
     </router-link>
     
-    <div class="nav-item" @click="handleMore">
+    <router-link to="/today" class="nav-item" active-class="active">
+      <CalendarCheck />
+      <span>Today</span>
+    </router-link>
+    
+    <div class="nav-item" @click="toggleMenu">
         <MenuIcon />
         <span>Menu</span>
     </div>
+
+    <!-- Mobile Menu Overlay -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showMenu" class="mobile-menu-overlay" @click="closeMenu">
+          <div class="mobile-menu-content" @click.stop>
+            <div class="menu-header">
+              <h3>Menu</h3>
+              <button class="close-btn" @click="closeMenu">
+                <X :size="20" />
+              </button>
+            </div>
+            
+            <div class="menu-items">
+              <!-- Auth Actions -->
+              <div v-if="!authStore.isAuthenticated" class="menu-item" @click="handleSignIn">
+                <LogIn :size="20" />
+                <span>Sign In</span>
+              </div>
+              <div v-else class="menu-item" @click="handleSignOut">
+                <LogOut :size="20" />
+                <span>Sign Out ({{ authStore.user?.email }})</span>
+              </div>
+
+              <!-- Other Actions -->
+              <div class="menu-item" @click="handleSettings">
+                <Settings :size="20" />
+                <span>Settings</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { Inbox as InboxIcon, Calendar as CalendarIcon, Menu as MenuIcon } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { Inbox as InboxIcon, CalendarCheck, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon } from 'lucide-vue-next'
+import { useUIStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 
-const handleMore = () => {
-    // Todo: Open mobile sidebar or settings
-    console.log('Open more menu')
+const uiStore = useUIStore()
+const authStore = useAuthStore()
+
+const showMenu = ref(false)
+
+const toggleMenu = () => {
+  showMenu.value = !showMenu.value
+}
+
+const closeMenu = () => {
+  showMenu.value = false
+}
+
+const handleSignIn = () => {
+  closeMenu()
+  uiStore.openAuthModal('login')
+}
+
+const handleSignOut = async () => {
+  closeMenu()
+  await authStore.signOut()
+}
+
+const handleSettings = () => {
+  closeMenu()
+  uiStore.openSettingsModal()
 }
 </script>
 
@@ -66,5 +131,87 @@ const handleMore = () => {
   width: 24px;
   height: 24px;
   stroke-width: 2px;
+}
+
+/* Menu Overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+.mobile-menu-content {
+  background: var(--surface-primary);
+  width: 100%;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.menu-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-secondary);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.menu-item:active {
+  background: var(--surface-tertiary);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 </style>

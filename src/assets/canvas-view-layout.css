@@ -190,9 +190,9 @@
     animation: spin 1s linear infinite;
 }
 
-/* InboxPanel positioning - overlays on left side of canvas */
+/* InboxPanel positioning - overlays on left side of canvas (default) */
 :deep(.inbox-panel),
-:deep(.unified-inbox-panel) {
+:deep(.unified-inbox-panel:not(.is-right-side)) {
     position: absolute;
     left: 1rem;
     top: 1rem;
@@ -202,6 +202,17 @@
     max-height: calc(100vh - 3rem);
     /* Fallback constraint with extra padding */
     /* InboxPanel has its own sizing: 320px expanded, 3rem collapsed */
+}
+
+/* InboxPanel in Canvas view - positioned on LEFT side */
+:deep(.unified-inbox-panel.is-right-side) {
+    position: absolute;
+    left: 0.5rem;
+    right: auto;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 50;
+    max-height: calc(100vh - 1rem);
 }
 
 /* Vue Flow container dimensions fix */

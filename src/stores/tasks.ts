@@ -318,6 +318,11 @@ export const useTaskStore = defineStore('tasks', () => {
     getTaskInstances,
     importTasks, // Exposed for Markdown Import (TASK-087)
 
+    // Clear all tasks (used on sign-out to reset to guest mode)
+    clearAll: () => {
+      _rawTasks.value = []
+    },
+
     // Undo/Redo enabled actions
     ...undoRedoEnabledActions(),
 

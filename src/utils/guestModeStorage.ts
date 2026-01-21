@@ -6,9 +6,8 @@
  */
 
 // Keys that should NOT persist in guest mode (user data)
-// NOTE: flowstate-guest-tasks is INTENTIONALLY NOT included here!
-// Guest tasks must persist across refreshes so users can sign in and migrate them.
-// They are cleared only AFTER successful migration in auth.ts migrateGuestData().
+// Guest mode is fully ephemeral - tasks are cleared on app restart.
+// Same-session sign-in can still migrate tasks before any restart.
 //
 // BUG-339: Historical keys that may still exist from older versions
 const LEGACY_GUEST_KEYS = [
@@ -17,6 +16,9 @@ const LEGACY_GUEST_KEYS = [
 ]
 
 const GUEST_EPHEMERAL_KEYS = [
+  // Tasks (ephemeral in guest mode - sign in to persist)
+  'flowstate-guest-tasks',
+
   // Canvas
   'flowstate-guest-groups',
   'canvas-viewport',

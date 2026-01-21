@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
+import { clearGuestData } from '@/utils/guestModeStorage'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
@@ -107,7 +108,14 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   // TASK-337: Check if user has email/password auth (vs OAuth-only)
+  // Note: This is a best-effort check. app_metadata.providers can be unreliable
+  // (doesn't update when OAuth users set password via updateUser)
+  // For UI decisions, prefer showing options and handling API errors gracefully
   const hasPasswordAuth = computed(() => {
+    // Check identities array first (more reliable)
+    const identities = user.value?.identities as Array<{provider: string}> | undefined
+    if (identities?.some(i => i.provider === 'email')) return true
+    // Fallback to app_metadata.providers
     const providers = user.value?.app_metadata?.providers as string[] | undefined
     return providers?.includes('email') ?? false
   })
@@ -230,8 +238,17 @@ export const useAuthStore = defineStore('auth', () => {
       const allGuestTasks = guestTasksJson ? JSON.parse(guestTasksJson) : []
 
       if (allGuestTasks.length === 0) {
-        console.log('[AUTH] No guest tasks to migrate')
+        console.log('[AUTH] No guest tasks to migrate, loading user data from database...')
         localStorage.setItem(migrationKey, new Date().toISOString())
+        // Still need to load user's existing tasks and groups from Supabase
+        const { useTaskStore } = await import('@/stores/tasks')
+        const { useCanvasStore } = await import('@/stores/canvas')
+        const taskStore = useTaskStore()
+        const canvasStore = useCanvasStore()
+        await Promise.all([
+          taskStore.loadFromDatabase(),
+          canvasStore.loadFromDatabase()
+        ])
         return
       }
 
@@ -302,10 +319,15 @@ export const useAuthStore = defineStore('auth', () => {
       // 6. Mark migration complete
       localStorage.setItem(migrationKey, new Date().toISOString())
 
-      // 7. BUG-339 FIX: Reload tasks from database to replace in-memory guest tasks
+      // 7. BUG-339 FIX: Reload tasks and groups from database to replace in-memory guest data
       // Without this, _rawTasks would have BOTH old guest tasks AND new migrated tasks
-      console.log('[AUTH] Reloading tasks from database after migration...')
-      await taskStore.loadFromDatabase()
+      console.log('[AUTH] Reloading data from database after migration...')
+      const { useCanvasStore } = await import('@/stores/canvas')
+      const canvasStore = useCanvasStore()
+      await Promise.all([
+        taskStore.loadFromDatabase(),
+        canvasStore.loadFromDatabase()
+      ])
 
       console.log('[AUTH] Guest data migration complete')
     } catch (e) {
@@ -391,9 +413,24 @@ export const useAuthStore = defineStore('auth', () => {
       const { error: signOutError } = await supabase.auth.signOut()
       if (signOutError) throw signOutError
 
-      // Clear state
+      // Clear auth state
       user.value = null
       session.value = null
+
+      // Clear task store to prevent showing authenticated user's data in guest mode
+      const { useTaskStore } = await import('@/stores/tasks')
+      const taskStore = useTaskStore()
+      taskStore.clearAll()
+
+      // Clear canvas store (groups, nodes, edges)
+      const { useCanvasStore } = await import('@/stores/canvas')
+      const canvasStore = useCanvasStore()
+      canvasStore.clearAll()
+
+      // Clear guest ephemeral data for fresh guest experience
+      clearGuestData()
+
+      console.log('[AUTH] Signed out, cleared task store and guest data')
     } catch (e: unknown) {
       error.value = e as AuthError
       console.error('Sign out failed:', e)

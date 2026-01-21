@@ -357,6 +357,12 @@ export const useCanvasStore = defineStore('canvas', () => {
         const groupAbsolutePos = getGroupAbsolutePosition(groupId, groupsModule._rawGroups.value)
         return isNodeCompletelyInside({ position: t.canvasPosition }, { position: groupAbsolutePos, width: g.position.width, height: g.position.height })
       }).length
+    },
+    // Clear all canvas data (used on sign-out to reset to guest mode)
+    clearAll: () => {
+      groupsModule._rawGroups.value = []
+      nodes.value = []
+      edges.value = []
     }
   }
 })

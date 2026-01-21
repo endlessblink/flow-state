@@ -438,11 +438,36 @@ export const useTimerStore = defineStore('timer', () => {
     } : 'null')
 
     if (saved && saved.isActive) {
+      // Check for very stale sessions (last heartbeat > 1 hour ago)
+      // These are abandoned sessions that should be cleared, not completed
+      const STALE_SESSION_THRESHOLD_MS = 60 * 60 * 1000 // 1 hour
+      const lastSeen = saved.deviceLeaderLastSeen || 0
+      const timeSinceLastSeen = Date.now() - lastSeen
+
+      if (timeSinceLastSeen > STALE_SESSION_THRESHOLD_MS) {
+        console.log('🍅 [TIMER] Clearing stale/abandoned session (no activity for 1+ hour)', {
+          sessionId: saved.id,
+          lastSeen: new Date(lastSeen).toISOString(),
+          staleFor: Math.round(timeSinceLastSeen / 1000 / 60) + ' minutes'
+        })
+        // Clear abandoned session from DB
+        try {
+          const { supabase } = await import('@/services/auth/supabase')
+          await supabase
+            .from('timer_sessions')
+            .update({ is_active: false })
+            .eq('id', saved.id)
+        } catch (e) {
+          console.warn('🍅 [TIMER] Failed to clear stale session:', e)
+        }
+        currentSession.value = null
+        return // Don't restore abandoned sessions
+      }
+
       // Apply drift correction for time elapsed since last update
       let adjustedRemainingTime = saved.remainingTime
       if (saved.deviceLeaderLastSeen && !saved.isPaused) {
-        const lastSeen = saved.deviceLeaderLastSeen
-        const driftSeconds = Math.floor((Date.now() - lastSeen) / 1000)
+        const driftSeconds = Math.floor(timeSinceLastSeen / 1000)
         if (driftSeconds > 0) {
           adjustedRemainingTime = Math.max(0, saved.remainingTime - driftSeconds)
           console.log('🍅 [TIMER] Applied drift correction:', driftSeconds, 'seconds, new remaining:', adjustedRemainingTime)

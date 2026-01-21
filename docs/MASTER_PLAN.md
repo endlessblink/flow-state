@@ -1,5 +1,5 @@
-**Last Updated**: January 20, 2026 (TASK-329-332 Data Crisis & Stabilization)
-**Version**: 5.49 (Data Crisis & System Stabilization)
+**Last Updated**: January 21, 2026 (TASK-348 Tauri Startup Guide)
+**Version**: 5.51 (Tauri Startup Guide & Shadow Mirror Fix)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -126,7 +126,7 @@
 | ~~**TASK-324**~~         | ✅ **DONE** **PWA Install Prompt Component**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/62e1538b-8b24-4393-965e-f11ae95f2523/walkthrough.md)                                                                                          |                                                        |
 | ~~**TASK-325**~~         | ✅ **DONE** **VPS Deployment Configuration**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-VPS](./sop/deployment/VPS-DEPLOYMENT.md)                                                                                                                                                                  |                                                        |
 | ~~**TASK-326**~~         | ✅ **DONE** **PWA Cross-Device Testing**                                           | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Verified SW & Manifest via Lighthouse                                                                                                                                                                          |                                                        |
-| **TASK-327**             | ✅ **DONE** **Create Custom Tauri App Icon**                      | **P1**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Design and generate app icon for all platforms (ICO, ICNS, PNG, favicon)                                                                                                                                        |                                                        |
+| ~~**TASK-327**~~         | ✅ **DONE** **Create Custom Tauri App Icon**                      | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | Cyberpunk glitch tomato icon. Fixed cropping issue (resize to fit 500x500, center in 512x512). Generated all sizes: ICO, ICNS, PNG, favicon.                                                                    |                                                        |
 | ~~**TASK-329**~~         | ✅ **DONE** **Auth & Data Persistence Hardening**                       | **P0**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md) - Fixed seed.sql, NULL columns, password change UI                                                                                            |                                                        |
 | **TASK-330**             | **Shadow-Mirror Reliability & Automation**                             | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Automatic runs & monitoring                                                                                                                 |                                                        |
 | **TASK-331**             | **Tauri Multi-App Migration (LocalStorage)**                          | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Migrate from com.pomoflow.desktop to com.flowstate.app                                                                                     |                                                        |
@@ -142,6 +142,8 @@
 | **BUG-342**              | **Canvas Multi-Drag Bug: Unselected Tasks Move Together**              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Dragging one task causes another unselected task to move with it                                                                                                                                                  |                                                        |
 | **TASK-345**             | **PWA Infrastructure: Docker & Reliable HTTPS Tunnel**                 | **P2**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Set up Dockerized stack, Caddy proxy, and Cloudflare Tunnel for stable remote testing.                                                                                                                            |                                                        |
 | **TASK-346**             | **Mobile-Specific UI: Feature Subset & Touch Navigation**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Designing a mobile-first dashboard and navigation that serves only the necessary "on-the-go" features.                                                                                                           |                                                        |
+| **BUG-347**              | **Fix FK Constraint Violation on parent_task_id**                      | **P1**                                              | 👀 **REVIEW**                                                                                                                   | Sync errors when parent task deleted. Fix: Catch-and-retry clears orphaned parent refs. [See Details](#bug-347-fix-fk-constraint-violation-on-parent_task_id-review)                                              |                                                        |
+| ~~**TASK-348**~~         | ✅ **DONE** **Tauri Startup Guide & Shadow Mirror Fix**                | **P2**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | [SOP-015](./sop/SOP-015-tauri-startup-guide.md) - Fixed shadow-mirror.cjs relative URL detection, documented startup methods                                                                                      |                                                        |
 
 ---
 
@@ -183,6 +185,36 @@ When dragging a single task on the canvas, another unselected task moves along w
 
 ---
 
+### BUG-347: Fix FK Constraint Violation on parent_task_id (👀 REVIEW)
+
+**Priority**: P1
+**Status**: 👀 REVIEW (2026-01-21)
+
+Sync errors when saving tasks with deleted parent: `insert or update on table "tasks" violates foreign key constraint "tasks_parent_task_id_fkey"`
+
+**Root Cause**:
+1. Tasks saved with `parent_task_id` references to tasks that no longer exist (deleted)
+2. No existence validation - `sanitizeUUID()` validates format but not that parent exists
+3. Race conditions in batch upserts don't guarantee parent-before-child order
+
+**Solution Implemented**: Catch-and-Retry (Zero False Positives)
+- Try upsert normally
+- If FK error code `23503` with `parent_task_id`, clear parent references and retry once
+- Single retry limit prevents infinite loops
+
+**Files Changed**:
+- `src/composables/useSupabaseDatabase.ts`
+  - `saveTask()` - Added FK-aware retry logic
+  - `saveTasks()` - Added FK-aware retry logic for batch operations
+
+**Verification**:
+- [x] Build passes (`npm run build`)
+- [x] Lint passes (warnings only, no errors)
+- [ ] Manual test: Create task with parent, delete parent, trigger sync
+- [ ] Console shows: `⚠️ [saveTasks] FK violation on parent_task_id, clearing orphaned references and retrying`
+
+---
+
 ### BUG-339: Auth Reliability - Tauri Signouts & Password Failures (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL
@@ -199,16 +231,67 @@ Multiple auth reliability issues: random Tauri signouts, password login failures
 - [x] `seed.sql`: Changed to `extensions.crypt(password, extensions.gen_salt('bf', 10))` for GoTrue compatibility
 - [x] `tauri.conf.json`: Added `ipc:` and `connect-src` directive for IPC protocol
 - [x] `supabase.ts`: Added explicit auth config with custom storage key and Tauri-aware settings
+- [x] `taskPersistence.ts`: Only save to guest localStorage when NOT authenticated (prevents Supabase data leaking to guest storage)
+- [x] `taskPersistence.ts`: Added ID-based deduplication on guest mode load (prevents task congestion)
+- [x] `auth.ts`: Migration now uses `safeCreateTask()` to preserve task IDs and respect TASK-344 Immutable ID System
+- [x] `auth.ts`: Added Task type import for TypeScript compliance
+- [x] `auth.ts`: Added proactive token refresh (5 min before expiry) to prevent session expiration
+- [x] `guestModeStorage.ts`: Added `clearStaleGuestTasks()` to clear legacy keys (`pomoflow-guest-tasks`)
+- [x] `useAppInitialization.ts`: Call `clearStaleGuestTasks()` when authenticated to prevent localStorage contamination
+- [x] Database: Cleared 141 duplicate tasks (set `is_deleted = true`)
 
 **Files Changed**:
 - `supabase/seed.sql` - Fixed password hashing
 - `src-tauri/tauri.conf.json` - Fixed CSP for IPC
 - `src/services/auth/supabase.ts` - Enhanced auth client config
+- `src/stores/tasks/taskPersistence.ts` - Guest localStorage isolation + deduplication
+- `src/stores/auth.ts` - Migration with safeCreateTask, proactive token refresh
+- `src/utils/guestModeStorage.ts` - Legacy key clearing
+- `src/composables/app/useAppInitialization.ts` - Clear stale guest tasks on auth
 
 **Verification**:
 - [x] Auth API test passes: `curl POST /auth/v1/token` returns valid JWT
+- [x] Database verified: 64 unique tasks, 0 content duplicates
+- [x] Guest mode deduplication: Removes duplicates on load
 - [ ] Tauri app login tested by user
 - [ ] No random signouts after extended use
+
+**SOP**: See `docs/sop/active/SOP-AUTH-reliability.md`
+
+---
+
+### ~~TASK-349~~: Make Guest Mode Ephemeral (Clean on Restart) (✅ DONE)
+
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-21)
+
+**Problem**: Guest tasks persisted in localStorage across page refreshes/restarts, causing confusion when users expected a fresh start.
+
+**Requested Behavior**:
+- Guest mode starts fresh on every app restart
+- Authenticated users keep all their tasks (from Supabase)
+- Same-session sign-in still migrates tasks (before any restart)
+
+**Changes Made**:
+
+1. **`src/utils/guestModeStorage.ts`**
+   - Added `flowstate-guest-tasks` to `GUEST_EPHEMERAL_KEYS` array
+   - Guest tasks now cleared on app startup like other ephemeral data
+
+2. **`src/stores/auth.ts`**
+   - Fixed `signOut()` to clear task store and canvas store on logout
+   - Fixed `migrateGuestData()` to load from Supabase even when no guest tasks exist
+   - Added canvas store reload after migration
+
+3. **`src/stores/tasks.ts`** / **`src/stores/canvas.ts`**
+   - Added `clearAll()` methods to reset store state on sign-out
+
+4. **`src/assets/canvas-view-layout.css`**
+   - Fixed inbox panel CSS specificity conflict for proper positioning
+
+**Bug Found & Fixed**: `migrateGuestData()` returned early without loading user data when no guest tasks existed. This caused sign-in to show empty canvas until page refresh.
+
+**SOP**: See `docs/sop/active/SOP-016-guest-mode-auth-flow.md`
 
 ---
 

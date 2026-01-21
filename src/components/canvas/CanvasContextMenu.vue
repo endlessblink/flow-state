@@ -138,64 +138,75 @@
       <div
         v-if="showLayoutSubmenu && selectedCount >= 2"
         ref="submenuRef"
-        class="submenu submenu-teleported"
+        class="submenu submenu-teleported layout-grid-mode"
         :style="submenuStyle"
         @mouseenter="handleLayoutSubmenuEnter"
         @mouseleave="handleLayoutSubmenuLeave"
       >
-        <!-- Align Options -->
-        <button class="menu-item" @click="handleAlignLeft">
-          <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Align Left</span>
-        </button>
-        <button class="menu-item" @click="handleAlignRight">
-          <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Align Right</span>
-        </button>
-        <button class="menu-item" @click="handleAlignTop">
-          <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Align Top</span>
-        </button>
-        <button class="menu-item" @click="handleAlignBottom">
-          <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Align Bottom</span>
-        </button>
-        <button class="menu-item" @click="handleAlignCenterHorizontal">
-          <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Center Horizontally</span>
-        </button>
-        <button class="menu-item" @click="handleAlignCenterVertical">
-          <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Center Vertically</span>
-        </button>
+        <!-- Section: Align -->
+        <div class="layout-section">
+          <div class="layout-section-label">Align</div>
+          <div class="layout-icon-row">
+            <button class="menu-item menu-item-icon" @click="handleAlignLeft" title="Align Left">
+              <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" />
+            </button>
+            <button class="menu-item menu-item-icon" @click="handleAlignCenterHorizontal" title="Center Horizontally">
+              <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" />
+            </button>
+            <button class="menu-item menu-item-icon" @click="handleAlignRight" title="Align Right">
+              <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" />
+            </button>
+          </div>
+          <div class="layout-icon-row">
+            <button class="menu-item menu-item-icon" @click="handleAlignTop" title="Align Top">
+              <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" />
+            </button>
+            <button class="menu-item menu-item-icon" @click="handleAlignCenterVertical" title="Center Vertically">
+              <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" />
+            </button>
+            <button class="menu-item menu-item-icon" @click="handleAlignBottom" title="Align Bottom">
+              <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" />
+            </button>
+          </div>
+        </div>
 
-        <!-- Distribute Options (3+ tasks) -->
+        <!-- Section: Distribute (3+ tasks) -->
         <template v-if="selectedCount >= 3">
           <div class="menu-divider" />
-          <button class="menu-item" @click="handleDistributeHorizontal">
-            <ArrowLeftRight :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Distribute Horizontally</span>
-          </button>
-          <button class="menu-item" @click="handleDistributeVertical">
-            <ArrowUpDown :size="16" :stroke-width="1.5" class="menu-icon" />
-            <span class="menu-text">Distribute Vertically</span>
-          </button>
+          <div class="layout-section">
+            <div class="layout-section-label">Distribute</div>
+            <div class="layout-icon-row">
+              <button class="menu-item menu-item-icon-wide" @click="handleDistributeHorizontal" title="Distribute Horizontally">
+                <ArrowLeftRight :size="16" :stroke-width="1.5" />
+                <span>Horiz</span>
+              </button>
+              <button class="menu-item menu-item-icon-wide" @click="handleDistributeVertical" title="Distribute Vertically">
+                <ArrowUpDown :size="16" :stroke-width="1.5" />
+                <span>Vert</span>
+              </button>
+            </div>
+          </div>
         </template>
 
-        <!-- Arrange Options -->
+        <!-- Section: Arrange -->
         <div class="menu-divider" />
-        <button class="menu-item" @click="handleArrangeInRow">
-          <Rows :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Arrange in a row</span>
-        </button>
-        <button class="menu-item" @click="handleArrangeInColumn">
-          <LayoutList :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Arrange in a column</span>
-        </button>
-        <button class="menu-item" @click="handleArrangeInGrid">
-          <Grid3x3 :size="16" :stroke-width="1.5" class="menu-icon" />
-          <span class="menu-text">Arrange in a grid</span>
-        </button>
+        <div class="layout-section">
+          <div class="layout-section-label">Arrange</div>
+          <div class="layout-icon-row">
+            <button class="menu-item menu-item-icon-wide" @click="handleArrangeInRow" title="Arrange in Row">
+              <Rows :size="16" :stroke-width="1.5" />
+              <span>Row</span>
+            </button>
+            <button class="menu-item menu-item-icon-wide" @click="handleArrangeInColumn" title="Arrange in Column">
+              <LayoutList :size="16" :stroke-width="1.5" />
+              <span>Column</span>
+            </button>
+            <button class="menu-item menu-item-icon-wide" @click="handleArrangeInGrid" title="Arrange in Grid">
+              <Grid3x3 :size="16" :stroke-width="1.5" />
+              <span>Grid</span>
+            </button>
+          </div>
+        </div>
       </div>
     </Teleport>
   </div>
@@ -762,5 +773,73 @@ const handleArrangeInGrid = () => {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* ====== LAYOUT GRID MODE (extends submenu-teleported) ====== */
+/* Uses working .submenu-teleported base styles, just adds grid layout */
+
+.submenu-teleported.layout-grid-mode {
+  padding: var(--space-3, 12px);
+  min-width: 220px;
+  max-width: 240px;
+}
+
+.submenu-teleported .layout-section {
+  padding: 0;
+  margin-bottom: var(--space-3, 12px);
+}
+
+.submenu-teleported .layout-section:last-child {
+  margin-bottom: 0;
+}
+
+.submenu-teleported .layout-section-label {
+  font-size: var(--text-xs, 11px);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2, 8px);
+  padding: 0;
+}
+
+.submenu-teleported .layout-icon-row {
+  display: flex;
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-2, 8px);
+}
+
+.submenu-teleported .layout-icon-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Icon-only buttons (alignment) - keep menu-item for click handling */
+.submenu-teleported .menu-item.menu-item-icon {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+  flex: 0 0 40px;
+}
+
+/* Icon + label buttons (distribute, arrange) */
+.submenu-teleported .menu-item.menu-item-icon-wide {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2, 8px) var(--space-1, 4px);
+  min-height: 52px;
+  flex: 1;
+  gap: var(--space-1, 4px);
+}
+
+.submenu-teleported .menu-item.menu-item-icon-wide span {
+  font-size: var(--text-xs, 10px);
+  font-weight: var(--font-medium, 500);
+  line-height: 1;
 }
 </style>

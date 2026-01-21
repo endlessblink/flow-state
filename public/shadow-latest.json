@@ -500,6 +500,45 @@
       "position_version": 1
     },
     {
+      "id": "2fd112c2-ef92-47c7-90e0-897135118835",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": "650a1e2d-e5e9-457f-b5b4-293b7e4d16a9",
+      "title": "למצוא חנות סלולר לשאול לגבי החלפת מסך +רכישת מסך מעלי אקספרס",
+      "description": "",
+      "status": "planned",
+      "priority": "low",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-21T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": -2160,
+        "y": 736,
+        "format": "absolute"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-12T22:13:42.057+00:00",
+      "updated_at": "2026-01-21T17:55:05.982972+00:00",
+      "position_version": 42
+    },
+    {
       "id": "ea96282f-bdc1-453d-b944-821733069820",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
@@ -583,46 +622,6 @@
       "created_at": "2026-01-20T17:29:02.755+00:00",
       "updated_at": "2026-01-20T20:00:49.594497+00:00",
       "position_version": 1
-    },
-    {
-      "id": "2fd112c2-ef92-47c7-90e0-897135118835",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "650a1e2d-e5e9-457f-b5b4-293b7e4d16a9",
-      "title": "למצוא חנות סלולר לשאול לגבי החלפת מסך +רכישת מסך מעלי אקספרס",
-      "description": "",
-      "status": "planned",
-      "priority": "low",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-20T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": -544,
-        "y": 2880,
-        "format": "absolute",
-        "parentId": null
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-12T22:13:42.057+00:00",
-      "updated_at": "2026-01-20T16:15:12.989817+00:00",
-      "position_version": 26
     },
     {
       "id": "fa48efff-47f8-43d7-a06e-ed5f95eb78a5",
@@ -1708,7 +1707,7 @@
       "total_pomodoros": 0,
       "estimated_pomodoros": 1,
       "completed_pomodoros": 0,
-      "due_date": "2026-01-20T00:00:00+00:00",
+      "due_date": "2026-01-21T00:00:00+00:00",
       "due_time": null,
       "estimated_duration": null,
       "subtasks": [],
@@ -1716,10 +1715,9 @@
       "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -696.8888888888889,
-        "y": 1936,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
+        "x": -2160,
+        "y": 864,
+        "format": "absolute"
       },
       "instances": [],
       "connection_types": null,
@@ -1733,8 +1731,8 @@
       "deleted_at": null,
       "completed_at": null,
       "created_at": "2026-01-20T09:58:40.624+00:00",
-      "updated_at": "2026-01-21T17:07:04.982048+00:00",
-      "position_version": 15
+      "updated_at": "2026-01-21T17:55:06.055324+00:00",
+      "position_version": 33
     },
     {
       "id": "07228f20-3311-4fe0-b14b-87625b358e05",
@@ -2744,6 +2742,45 @@
       "position_version": 1
     },
     {
+      "id": "771cb75a-9b81-4e7f-a8e8-23412b835378",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": null,
+      "title": "לפרסם היום את הכנס של נטלי",
+      "description": "",
+      "status": "planned",
+      "priority": "medium",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-21T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": -2160,
+        "y": 1408,
+        "format": "absolute"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-20T08:51:59.722+00:00",
+      "updated_at": "2026-01-21T17:55:06.468369+00:00",
+      "position_version": 45
+    },
+    {
       "id": "03ca9425-a5d6-4596-9f05-7c478a8c4dde",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": null,
@@ -2901,6 +2938,45 @@
       "position_version": 12
     },
     {
+      "id": "e16ae835-7501-4bf7-9af3-ec55c0434570",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": null,
+      "title": "לפרק את מה שאני צריך למצגת לכנס",
+      "description": "",
+      "status": "planned",
+      "priority": "medium",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-21T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": -2160,
+        "y": 1008,
+        "format": "absolute"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-20T08:52:00.783+00:00",
+      "updated_at": "2026-01-21T17:55:06.535141+00:00",
+      "position_version": 46
+    },
+    {
       "id": "8a6bf6e6-15b1-4576-827e-9237e2cf4ce4",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": null,
@@ -2920,10 +2996,10 @@
       "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -696.8888888888889,
-        "y": 1488,
+        "x": -2160,
+        "y": 1280,
         "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
+        "parentId": null
       },
       "instances": [],
       "connection_types": null,
@@ -2937,88 +3013,8 @@
       "deleted_at": null,
       "completed_at": null,
       "created_at": "2026-01-20T17:29:02.356+00:00",
-      "updated_at": "2026-01-21T17:07:04.984417+00:00",
-      "position_version": 7
-    },
-    {
-      "id": "771cb75a-9b81-4e7f-a8e8-23412b835378",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": null,
-      "title": "לפרסם היום את הכנס של נטלי",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-20T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": -696.8888888888889,
-        "y": 2432,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-20T08:51:59.722+00:00",
-      "updated_at": "2026-01-21T17:07:04.984464+00:00",
-      "position_version": 27
-    },
-    {
-      "id": "e16ae835-7501-4bf7-9af3-ec55c0434570",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": null,
-      "title": "לפרק את מה שאני צריך למצגת לכנס",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-20T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": -696.8888888888889,
-        "y": 2112,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-20T08:52:00.783+00:00",
-      "updated_at": "2026-01-21T17:07:04.984427+00:00",
-      "position_version": 28
+      "updated_at": "2026-01-21T17:55:06.407505+00:00",
+      "position_version": 25
     },
     {
       "id": "a7c490e2-4578-4e8c-bc93-14ffe86e1908",
@@ -3223,10 +3219,10 @@
       "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -696.8888888888889,
-        "y": 1744,
+        "x": -2160,
+        "y": 1536,
         "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
+        "parentId": null
       },
       "instances": [],
       "connection_types": null,
@@ -3240,8 +3236,8 @@
       "deleted_at": null,
       "completed_at": null,
       "created_at": "2026-01-20T17:29:02.694+00:00",
-      "updated_at": "2026-01-21T17:07:04.985243+00:00",
-      "position_version": 7
+      "updated_at": "2026-01-21T17:55:06.595485+00:00",
+      "position_version": 27
     },
     {
       "id": "bab3a0ac-adde-473e-b0dd-197671e24bc4",
@@ -3785,7 +3781,7 @@
       "total_pomodoros": 0,
       "estimated_pomodoros": 1,
       "completed_pomodoros": 0,
-      "due_date": "2026-01-20T00:00:00+00:00",
+      "due_date": "2026-01-21T00:00:00+00:00",
       "due_time": null,
       "estimated_duration": null,
       "subtasks": [],
@@ -3793,10 +3789,9 @@
       "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -696.8888888888889,
-        "y": 2320,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
+        "x": -2160,
+        "y": 1664,
+        "format": "absolute"
       },
       "instances": [],
       "connection_types": null,
@@ -3810,8 +3805,8 @@
       "deleted_at": null,
       "completed_at": null,
       "created_at": "2026-01-20T17:29:03.273+00:00",
-      "updated_at": "2026-01-21T17:07:04.990043+00:00",
-      "position_version": 5
+      "updated_at": "2026-01-21T17:55:06.804986+00:00",
+      "position_version": 25
     },
     {
       "id": "7c57b02b-2b44-4082-a0a4-e9ea27cf9b82",
@@ -3825,7 +3820,7 @@
       "total_pomodoros": 0,
       "estimated_pomodoros": 1,
       "completed_pomodoros": 0,
-      "due_date": "2026-01-20T00:00:00+00:00",
+      "due_date": "2026-01-21T00:00:00+00:00",
       "due_time": null,
       "estimated_duration": 30,
       "subtasks": [],
@@ -3833,10 +3828,9 @@
       "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -696.8888888888889,
-        "y": 1712,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
+        "x": -2160,
+        "y": 1136,
+        "format": "absolute"
       },
       "instances": [],
       "connection_types": null,
@@ -3850,8 +3844,8 @@
       "deleted_at": null,
       "completed_at": null,
       "created_at": "2026-01-20T17:29:02.848+00:00",
-      "updated_at": "2026-01-21T17:07:04.99462+00:00",
-      "position_version": 6
+      "updated_at": "2026-01-21T17:55:06.85845+00:00",
+      "position_version": 25
     },
     {
       "id": "2b535bc6-1958-4d3d-aa6d-c79116e40c37",
@@ -4667,46 +4661,6 @@
       "position_version": 1
     },
     {
-      "id": "0062ed01-8725-4487-a060-116aa642bae9",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
-      "title": "לבחון את אפליקציית הסרטונים",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-21T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": "e9f9d6e0-d825-43c5-b10b-480e3ac3b816",
-      "depends_on": null,
-      "position": {
-        "x": -176,
-        "y": 848,
-        "format": "absolute",
-        "parentId": "group-1768240525319-4b92rpv"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-18T10:51:28.871+00:00",
-      "updated_at": "2026-01-20T16:15:12.989817+00:00",
-      "position_version": 1
-    },
-    {
       "id": "43b75e83-59f0-4eaf-ae51-de7f4a1d2a77",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
@@ -4743,46 +4697,6 @@
       "deleted_at": null,
       "completed_at": "2026-01-20T15:50:56.977+00:00",
       "created_at": "2026-01-18T07:22:02.795+00:00",
-      "updated_at": "2026-01-20T16:15:12.989817+00:00",
-      "position_version": 1
-    },
-    {
-      "id": "d0404fba-9e69-4f35-9433-893403c3f026",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "85accc3c-26ff-4a2c-ba07-0212ee9f14d8",
-      "title": "להכין מחירון - API's",
-      "description": "",
-      "status": "planned",
-      "priority": "medium",
-      "progress": 0,
-      "total_pomodoros": 0,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 0,
-      "due_date": "2026-01-21T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": null,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": -144,
-        "y": 560,
-        "format": "absolute",
-        "parentId": "group-1768240525319-4b92rpv"
-      },
-      "instances": [],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-18T12:45:28.87+00:00",
       "updated_at": "2026-01-20T16:15:12.989817+00:00",
       "position_version": 1
     },
@@ -5395,10 +5309,9 @@
       "parent_task_id": null,
       "depends_on": null,
       "position": {
-        "x": -696.8888888888889,
-        "y": 1232,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
+        "x": -2144,
+        "y": 592,
+        "format": "absolute"
       },
       "instances": [],
       "connection_types": null,
@@ -5412,8 +5325,48 @@
       "deleted_at": null,
       "completed_at": null,
       "created_at": "2026-01-18T10:18:54.346+00:00",
-      "updated_at": "2026-01-21T17:07:04.991315+00:00",
-      "position_version": 10
+      "updated_at": "2026-01-21T17:55:06.88186+00:00",
+      "position_version": 12
+    },
+    {
+      "id": "d0404fba-9e69-4f35-9433-893403c3f026",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": "85accc3c-26ff-4a2c-ba07-0212ee9f14d8",
+      "title": "להכין מחירון - API's",
+      "description": "",
+      "status": "done",
+      "priority": "medium",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-21T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": -144,
+        "y": 560,
+        "format": "absolute",
+        "parentId": "group-1768240525319-4b92rpv"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": "2026-01-21T17:55:08.447+00:00",
+      "created_at": "2026-01-18T12:45:28.87+00:00",
+      "updated_at": "2026-01-21T17:55:08.549287+00:00",
+      "position_version": 1
     },
     {
       "id": "dc29ac0e-b28b-465a-826b-3af4749556db",
@@ -5453,6 +5406,46 @@
       "completed_at": "2026-01-20T15:51:34.003+00:00",
       "created_at": "2026-01-20T08:51:57.397+00:00",
       "updated_at": "2026-01-20T16:15:12.989817+00:00",
+      "position_version": 2
+    },
+    {
+      "id": "0062ed01-8725-4487-a060-116aa642bae9",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
+      "title": "לבחון את אפליקציית הסרטונים",
+      "description": "",
+      "status": "planned",
+      "priority": "medium",
+      "progress": 0,
+      "total_pomodoros": 0,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 0,
+      "due_date": "2026-01-22T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": null,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": "e9f9d6e0-d825-43c5-b10b-480e3ac3b816",
+      "depends_on": null,
+      "position": {
+        "x": -160,
+        "y": 832,
+        "format": "absolute",
+        "parentId": "group-1768240525319-4b92rpv"
+      },
+      "instances": [],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-18T10:51:28.871+00:00",
+      "updated_at": "2026-01-21T17:56:25.087183+00:00",
       "position_version": 2
     },
     {
@@ -6764,53 +6757,6 @@
       "position_version": 28
     },
     {
-      "id": "d2defa6f-f8af-424f-b7bb-63c5b85caea7",
-      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
-      "project_id": "85accc3c-26ff-4a2c-ba07-0212ee9f14d8",
-      "title": "להכין תוכן לשיעור של ענבר1",
-      "description": "",
-      "status": "in_progress",
-      "priority": "high",
-      "progress": 100,
-      "total_pomodoros": 1,
-      "estimated_pomodoros": 1,
-      "completed_pomodoros": 1,
-      "due_date": "2026-01-21T00:00:00+00:00",
-      "due_time": null,
-      "estimated_duration": 60,
-      "subtasks": [],
-      "tags": [],
-      "parent_task_id": null,
-      "depends_on": null,
-      "position": {
-        "x": -696.8888888888889,
-        "y": 976,
-        "format": "absolute",
-        "parentId": "group-1768138473081-54fxz7t"
-      },
-      "instances": [
-        {
-          "id": "instance-d2defa6f-f8af-424f-b7bb-63c5b85caea7-1768925249745",
-          "duration": 60,
-          "scheduledDate": "2026-01-20",
-          "scheduledTime": "18:00"
-        }
-      ],
-      "connection_types": null,
-      "recurring_instances": [],
-      "recurrence": null,
-      "notification_prefs": null,
-      "is_in_inbox": false,
-      "order": 0,
-      "column_id": null,
-      "is_deleted": false,
-      "deleted_at": null,
-      "completed_at": null,
-      "created_at": "2026-01-15T08:43:16.609+00:00",
-      "updated_at": "2026-01-21T17:07:04.994712+00:00",
-      "position_version": 18
-    },
-    {
       "id": "a7c0c89d-b5b9-4549-897a-db364f39a91b",
       "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
       "project_id": "a737226b-8181-4036-ab90-ee68ab751622",
@@ -7437,6 +7383,53 @@
       "created_at": "2026-01-20T15:37:50.728+00:00",
       "updated_at": "2026-01-20T20:00:49.594497+00:00",
       "position_version": 8
+    },
+    {
+      "id": "d2defa6f-f8af-424f-b7bb-63c5b85caea7",
+      "user_id": "717f5209-42d8-4bb9-8781-740107a384e5",
+      "project_id": "85accc3c-26ff-4a2c-ba07-0212ee9f14d8",
+      "title": "להכין תוכן לשיעור של ענבר1",
+      "description": "",
+      "status": "in_progress",
+      "priority": "high",
+      "progress": 100,
+      "total_pomodoros": 1,
+      "estimated_pomodoros": 1,
+      "completed_pomodoros": 1,
+      "due_date": "2026-01-22T00:00:00+00:00",
+      "due_time": null,
+      "estimated_duration": 60,
+      "subtasks": [],
+      "tags": [],
+      "parent_task_id": null,
+      "depends_on": null,
+      "position": {
+        "x": -128,
+        "y": 1120,
+        "format": "absolute",
+        "parentId": "group-1768240525319-4b92rpv"
+      },
+      "instances": [
+        {
+          "id": "instance-d2defa6f-f8af-424f-b7bb-63c5b85caea7-1768925249745",
+          "duration": 60,
+          "scheduledDate": "2026-01-20",
+          "scheduledTime": "18:00"
+        }
+      ],
+      "connection_types": null,
+      "recurring_instances": [],
+      "recurrence": null,
+      "notification_prefs": null,
+      "is_in_inbox": false,
+      "order": 0,
+      "column_id": null,
+      "is_deleted": false,
+      "deleted_at": null,
+      "completed_at": null,
+      "created_at": "2026-01-15T08:43:16.609+00:00",
+      "updated_at": "2026-01-21T17:52:11.491788+00:00",
+      "position_version": 19
     },
     {
       "id": "00cf0bd2-d391-4741-9ea6-2777b474ca8b",
@@ -8339,7 +8332,7 @@
       "is_deleted": false,
       "deleted_at": null,
       "created_at": "2026-01-12T12:18:08.71+00:00",
-      "updated_at": "2026-01-21T17:05:59.198759+00:00"
+      "updated_at": "2026-01-21T17:25:31.822822+00:00"
     },
     {
       "id": "a737226b-8181-4036-ab90-ee68ab751622",
@@ -8353,7 +8346,7 @@
       "is_deleted": false,
       "deleted_at": null,
       "created_at": "2026-01-12T12:18:29.078+00:00",
-      "updated_at": "2026-01-21T17:05:59.198759+00:00"
+      "updated_at": "2026-01-21T17:25:31.822822+00:00"
     },
     {
       "id": "650a1e2d-e5e9-457f-b5b4-293b7e4d16a9",
@@ -8367,7 +8360,7 @@
       "is_deleted": false,
       "deleted_at": null,
       "created_at": "2026-01-12T12:18:48.294+00:00",
-      "updated_at": "2026-01-21T17:05:59.198759+00:00"
+      "updated_at": "2026-01-21T17:25:31.822822+00:00"
     }
   ],
   "authUsers": [
@@ -8413,17 +8406,17 @@
       "is_paused": false,
       "is_break": true,
       "completed_at": null,
-      "device_leader_id": "916f3f05-056c-4e2f-bf2b-8be2ed9dcc61",
-      "device_leader_last_seen": "2026-01-21T17:12:02.974+00:00",
+      "device_leader_id": "2a7d18c3-a986-4166-b735-ec90d3a286a2",
+      "device_leader_last_seen": "2026-01-21T17:25:30.746+00:00",
       "created_at": "2026-01-20T22:04:05.025218+00:00",
-      "updated_at": "2026-01-21T17:12:03.040795+00:00"
+      "updated_at": "2026-01-21T17:25:30.793133+00:00"
     }
   ],
   "meta": {
-    "timestamp": 1769016008243,
+    "timestamp": 1769018185705,
     "schema_version": "3.1.0",
     "connection_healthy": true,
-    "latency_ms": 27,
+    "latency_ms": 17,
     "counts": {
       "tasks": 207,
       "groups": 8,
@@ -8433,6 +8426,6 @@
       "timerSessions": 2
     }
   },
-  "timestamp": 1769016008243,
-  "checksum": "5bdaf0c3f040580f"
+  "timestamp": 1769018185705,
+  "checksum": "9864e1b09a6f9ae9"
 }

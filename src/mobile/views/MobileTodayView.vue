@@ -173,6 +173,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+// @ts-ignore - Avoid strict type check on imported Task type if causing issues
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import {
@@ -249,7 +250,8 @@ const untimedTasks = computed(() => {
   })
 })
 
-const formatDueTime = (dueDate: string | Date): string => {
+const formatDueTime = (dueDate: string | Date | undefined): string => {
+  if (!dueDate) return ''
   const date = new Date(dueDate)
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
@@ -265,7 +267,7 @@ const handleTaskClick = (task: Task) => {
 }
 
 const startTimer = (task: Task) => {
-  timerStore.startTimer(task.id, task.title)
+  timerStore.startTimer(task.id)
 }
 </script>
 

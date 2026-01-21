@@ -7,7 +7,7 @@
 # The block below matches all requests. 
 # Caddy will automatically serve HTTPS if you provide a domain name here instead of :80
 # e.g. example.com { ... }
-:80 {
+flowstate.84.46.253.137.sslip.io {
     # Reverse proxy to the app container
     reverse_proxy app:80
 

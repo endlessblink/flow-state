@@ -1,9 +1,9 @@
 ---
 name: codebase-health-auditor
-description: Unified dead code detection and cleanup tool combining Legacy Tech Remover + Comprehensive Auditor with Knip, depcheck, TypeScript, Vue-specific analysis, and file size/token limit detection for AI editing compatibility.
-keywords: dead code, unused files, unused exports, unused dependencies, legacy removal, code cleanup, codebase audit, file size, token limit, large files, refactoring
+description: Unified dead code detection, AST-based duplicate detection, and cleanup tool combining Legacy Tech Remover + Comprehensive Auditor + Architectural Cleanup with Knip, depcheck, TypeScript, Vue-specific analysis, file size/token limit detection, and AST-powered refactoring suggestions. Use for dead code, duplicates, oversized files, and architectural issues.
+keywords: dead code, unused files, unused exports, unused dependencies, legacy removal, code cleanup, codebase audit, file size, token limit, large files, refactoring, duplicate code, AST analysis, architectural cleanup, pattern detection
 category: code-maintenance
-triggers: dead code detection, unused code removal, codebase cleanup, legacy tech audit, dependency cleanup, file too large, token limit exceeded, oversized files, refactoring suggestion
+triggers: dead code detection, unused code removal, codebase cleanup, legacy tech audit, dependency cleanup, file too large, token limit exceeded, oversized files, refactoring suggestion, duplicate detection, AST analysis, architectural issues, code quality
 ---
 
 # Codebase Health Auditor

@@ -1,6 +1,7 @@
 import { type Ref } from 'vue'
 import { useTaskStore, type Task, type Subtask } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { generateRecurringInstances } from '@/utils/recurrenceUtils'
 import { getUndoSystem } from '@/composables/undoSingleton'
 
@@ -20,6 +21,7 @@ export function useTaskEditActions(
 ) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
+    const canvasUiStore = useCanvasUiStore()
 
 
     // --- Subtask Management ---
@@ -214,6 +216,10 @@ export function useTaskEditActions(
             console.time('⚡ [BUG-291] Task update')
             taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
             console.timeEnd('⚡ [BUG-291] Task update')
+
+            // BUG-357 FIX: Force canvas sync to update Vue Flow nodes with fresh data
+            // This fixes Tauri/WebKitGTK reactivity issue where computed doesn't re-evaluate
+            canvasUiStore.requestSync('user:manual')
 
             // CRITICAL: Close modal IMMEDIATELY after Pinia update
             // Instance/subtask ops happen in background below

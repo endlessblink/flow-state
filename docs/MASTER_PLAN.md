@@ -297,7 +297,7 @@ Sync errors when saving tasks with deleted parent: `insert or update on table "t
 
 ---
 
-### BUG-339: Auth Reliability - Tauri Signouts & Password Failures (🔄 IN PROGRESS)
+### BUG-339: Auth Reliability - Tauri Signouts & Password Failures (👀 REVIEW)
 
 **Priority**: P0-CRITICAL
 **Status**: IN PROGRESS (2026-01-20)

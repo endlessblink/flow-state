@@ -76,6 +76,13 @@ export function useAppShortcuts() {
             }
         }
 
+        // Ctrl+. (period) to open Quick Capture modal
+        // Note: Ctrl+Shift+N conflicts with browser incognito shortcut
+        if ((event.ctrlKey || event.metaKey) && event.key === '.') {
+            event.preventDefault()
+            window.dispatchEvent(new CustomEvent('open-quick-capture'))
+        }
+
         // Shift+1-5 for view switching
         if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
             const key = event.key

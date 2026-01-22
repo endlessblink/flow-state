@@ -4,10 +4,18 @@
  *
  * Full-screen overlay that shows during app initialization.
  * Manages Docker and Supabase startup sequence.
+ *
+ * Includes a failsafe timeout to prevent permanently blocking the UI
+ * if the startup sequence hangs.
  */
 
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useTauriStartup, isTauri } from '@/composables/useTauriStartup'
+
+const DEBUG_PREFIX = '[TauriStartupScreen]'
+
+// Failsafe timeout in milliseconds (30 seconds)
+const FAILSAFE_TIMEOUT_MS = 30000
 
 const emit = defineEmits<{
   ready: []
@@ -25,24 +33,92 @@ const {
   registerCloseHandler
 } = useTauriStartup()
 
+// Track if we've already emitted ready
+const hasEmittedReady = ref(false)
+
+// Failsafe timeout handle
+let failsafeTimeoutHandle: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Emit ready event (only once)
+ */
+function emitReady(reason: string) {
+  if (hasEmittedReady.value) {
+    console.log(`${DEBUG_PREFIX} ready already emitted, skipping (${reason})`)
+    return
+  }
+  hasEmittedReady.value = true
+  console.log(`${DEBUG_PREFIX} ✅ Emitting ready event (${reason})`)
+  emit('ready')
+}
+
+/**
+ * Start the failsafe timeout
+ */
+function startFailsafeTimeout() {
+  if (failsafeTimeoutHandle) {
+    clearTimeout(failsafeTimeoutHandle)
+  }
+  console.log(`${DEBUG_PREFIX} Starting failsafe timeout (${FAILSAFE_TIMEOUT_MS}ms)`)
+  failsafeTimeoutHandle = setTimeout(() => {
+    if (!hasEmittedReady.value) {
+      console.warn(`${DEBUG_PREFIX} ⚠️ Failsafe timeout triggered! Forcing ready state.`)
+      console.warn(`${DEBUG_PREFIX} Current step: ${state.value.step}, progress: ${state.value.progress}%`)
+      emitReady('failsafe timeout')
+    }
+  }, FAILSAFE_TIMEOUT_MS)
+}
+
+/**
+ * Clear the failsafe timeout
+ */
+function clearFailsafeTimeout() {
+  if (failsafeTimeoutHandle) {
+    clearTimeout(failsafeTimeoutHandle)
+    failsafeTimeoutHandle = null
+  }
+}
+
 // Watch for ready state and emit event
 watch(isReady, async (ready) => {
+  console.log(`${DEBUG_PREFIX} isReady changed to: ${ready}`)
   if (ready) {
+    clearFailsafeTimeout()
     // Register cleanup handler for graceful shutdown
     // Set to false to keep Supabase running for quick restart
     await registerCloseHandler(false)
-    emit('ready')
+    emitReady('startup completed')
+  }
+})
+
+// Also watch for error state - don't force ready on error, let user retry
+watch(hasError, (error) => {
+  console.log(`${DEBUG_PREFIX} hasError changed to: ${error}`)
+  if (error) {
+    // Don't clear failsafe timeout on error - if user doesn't act,
+    // we'll still eventually unlock the UI
+    console.log(`${DEBUG_PREFIX} Error state detected, failsafe will still trigger in ${FAILSAFE_TIMEOUT_MS}ms if not resolved`)
   }
 })
 
 onMounted(async () => {
+  console.log(`${DEBUG_PREFIX} Component mounted, isTauri: ${isTauri()}`)
+
   // Only run startup sequence in Tauri environment
   if (isTauri()) {
+    // Start failsafe timeout before running startup sequence
+    startFailsafeTimeout()
     await runStartupSequence()
   } else {
     // In browser mode, skip startup
+    console.log(`${DEBUG_PREFIX} Browser mode, skipping startup`)
     skipStartup()
   }
+})
+
+onUnmounted(() => {
+  console.log(`${DEBUG_PREFIX} Component unmounting`)
+  clearFailsafeTimeout()
 })
 
 function openDockerDownload() {

@@ -30,7 +30,7 @@ import '@/assets/design-tokens.css'
 import '@/assets/global-overrides.css'
 
 import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme } from 'naive-ui'
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useAppInitialization } from '@/composables/app/useAppInitialization'
 import { useAppShortcuts } from '@/composables/app/useAppShortcuts'
 import MainLayout from '@/layouts/MainLayout.vue'
@@ -64,8 +64,22 @@ const appReady = computed(() => !initialized.value || startupComplete.value || !
 
 // Handle startup completion
 const onStartupReady = () => {
+  console.log('[App] onStartupReady called - setting startupComplete = true')
   startupComplete.value = true
 }
+
+// Debug: Watch for state changes
+watch(showStartupScreen, (show) => {
+  console.log('[App] showStartupScreen changed to:', show)
+})
+
+watch(appReady, (ready) => {
+  console.log('[App] appReady changed to:', ready)
+})
+
+watch(startupComplete, (complete) => {
+  console.log('[App] startupComplete changed to:', complete)
+})
 
 // Initialize App Logic
 useAppInitialization()
@@ -83,7 +97,12 @@ onMounted(() => {
   initialized.value = true
 
   // Log for debugging
-  console.log('[App] Tauri detected:', isTauriApp.value)
+  console.log('[App] Mounted - Initial state:')
+  console.log('[App]   isTauriApp:', isTauriApp.value)
+  console.log('[App]   initialized:', initialized.value)
+  console.log('[App]   startupComplete:', startupComplete.value)
+  console.log('[App]   showStartupScreen:', showStartupScreen.value)
+  console.log('[App]   appReady:', appReady.value)
 
   window.addEventListener('global-new-task', handleGlobalNewTask)
   window.addEventListener('keydown', handleKeydown)

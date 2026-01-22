@@ -479,7 +479,57 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 **Skill Boundaries:** `smart-doc-manager` → docs/, MASTER_PLAN.md | `skill-creator-doctor` → .claude/skills/
 
+## Skill Usage Telemetry (IMPORTANT)
+
+**Skill invocations are tracked** via a global `PostToolUse` hook in `~/.claude/settings.json`. This data is stored in SQLite, NOT in `skills.json`.
+
+| Data Location | What It Contains |
+|---------------|------------------|
+| `.claude/config/skills.json` | Skill metadata only (`activation_count` is always 0 - NOT updated) |
+| `/tmp/claude-of-war/state.db` | **Actual usage data** - all tool calls including Skills |
+
+**To query actual skill usage:**
+```bash
+# List all skill invocations with details
+sqlite3 /tmp/claude-of-war/state.db "
+SELECT
+  json_extract(tool_input, '$.skill') as skill_name,
+  COUNT(*) as invocations,
+  MAX(datetime(timestamp/1000, 'unixepoch', 'localtime')) as last_used
+FROM events
+WHERE tool_name = 'Skill'
+GROUP BY skill_name
+ORDER BY invocations DESC;
+"
+
+# All tool usage stats
+sqlite3 /tmp/claude-of-war/state.db "
+SELECT tool_name, COUNT(*) as count
+FROM events
+WHERE tool_name IS NOT NULL
+GROUP BY tool_name
+ORDER BY count DESC;
+"
+```
+
+**Hook Configuration** (in `~/.claude/settings.json`):
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": ".*",
+      "hooks": [{
+        "type": "command",
+        "command": "python3 /path/to/activity-reporter.py post"
+      }]
+    }]
+  }
+}
+```
+
+**Key Insight:** When auditing skills, query the SQLite database for real usage - don't rely on `activation_count` in skills.json.
+
 ---
 
-**Last Updated**: January 20, 2026
+**Last Updated**: January 22, 2026
 **Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase

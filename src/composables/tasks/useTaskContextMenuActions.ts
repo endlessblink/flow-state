@@ -25,7 +25,7 @@ export function useTaskContextMenuActions(
         emit('close')
     }
 
-    const setDueDate = async (dateType: string) => {
+    const setDueDate = async (dateType: string, customDate?: string) => {
         if (!currentTask.value) return
 
         if (isBatchOperation.value) {
@@ -57,12 +57,26 @@ export function useTaskContextMenuActions(
                 dueDate.setDate(today.getDate() + daysUntilNextMonday)
                 break
             }
+            case 'nextmonth': {
+                dueDate = new Date(today)
+                dueDate.setMonth(today.getMonth() + 1)
+                break
+            }
+            case 'twomonths': {
+                dueDate = new Date(today)
+                dueDate.setMonth(today.getMonth() + 2)
+                break
+            }
+            case 'nextquarter': {
+                dueDate = new Date(today)
+                dueDate.setMonth(today.getMonth() + 3)
+                break
+            }
             case 'custom': {
-                const currentDate = currentTask.value.dueDate
-                const newDate = prompt('Set due date (MM/DD/YYYY):', currentDate)
-                if (newDate && newDate !== currentDate) {
+                // Custom date provided from date picker
+                if (customDate) {
                     try {
-                        await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: newDate })
+                        await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: customDate })
                         canvasStore.requestSync('user:context-menu')
                     } catch (error) {
                         console.error('Error updating task due date:', error)

@@ -86,13 +86,27 @@ export function isPointInBounds(
  * @param node - The node to check
  * @param allGroups - All available groups
  * @param excludeId - Optional group ID to exclude (e.g., the node's own ID if it's a group)
+ * @param options - Optional settings for containment detection
  * @returns Array of containing groups
  */
 export function findContainingGroups(
     node: SpatialNode,
     allGroups: CanvasSection[],
-    excludeId?: string
+    excludeId?: string,
+    options?: { minAreaRatio?: number }
 ): CanvasSection[] {
+    // BUG FIX: For groups (identified by having width/height > task size), require
+    // the potential parent to be significantly larger to prevent accidental nesting
+    // of similar-sized groups placed near each other.
+    const nodeWidth = node.width || DEFAULT_TASK_WIDTH
+    const nodeHeight = node.height || DEFAULT_TASK_HEIGHT
+    const nodeArea = nodeWidth * nodeHeight
+    const isNodeLikelyGroup = nodeWidth > DEFAULT_TASK_WIDTH * 1.5 || nodeHeight > DEFAULT_TASK_HEIGHT * 1.5
+
+    // Groups must be at least 2x the area to be valid parents (prevents sibling groups from nesting)
+    // Tasks can nest into any containing group (no area requirement)
+    const minAreaRatio = options?.minAreaRatio ?? (isNodeLikelyGroup ? 2.0 : 1.0)
+
     return allGroups.filter(group => {
         // Don't check self
         if (excludeId && group.id === excludeId) return false
@@ -109,7 +123,21 @@ export function findContainingGroups(
             height: group.position.height
         }
 
-        return isNodeCompletelyInside(node, containerBounds)
+        // Check if center is inside
+        if (!isNodeCompletelyInside(node, containerBounds)) {
+            return false
+        }
+
+        // For groups: require parent to be significantly larger to prevent accidental nesting
+        if (minAreaRatio > 1.0) {
+            const groupArea = group.position.width * group.position.height
+            if (groupArea < nodeArea * minAreaRatio) {
+                // Parent too small - would be accidental nesting of similar-sized groups
+                return false
+            }
+        }
+
+        return true
     })
 }
 
@@ -120,17 +148,22 @@ export function findContainingGroups(
  * CRITICAL: Both node.position and all group positions must be ABSOLUTE world coordinates.
  * The containment check uses the node's CENTER point against group bounds.
  *
+ * BUG FIX: For groups (nodes with dimensions > task size), requires potential parent
+ * to be at least 2x the area to prevent accidental nesting of similar-sized groups.
+ *
  * @param node - The node to check (with ABSOLUTE position)
  * @param allGroups - All available groups (with ABSOLUTE positions from store)
  * @param excludeId - Optional group ID to exclude (e.g., the node's own ID if it's a group)
+ * @param options - Optional settings for containment detection
  * @returns The deepest containing group, or null if not in any group
  */
 export function getDeepestContainingGroup(
     node: SpatialNode,
     allGroups: CanvasSection[],
-    excludeId?: string
+    excludeId?: string,
+    options?: { minAreaRatio?: number }
 ): CanvasSection | null {
-    const containingGroups = findContainingGroups(node, allGroups, excludeId)
+    const containingGroups = findContainingGroups(node, allGroups, excludeId, options)
 
     if (containingGroups.length === 0) return null
 

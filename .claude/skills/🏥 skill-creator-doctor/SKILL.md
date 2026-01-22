@@ -22,6 +22,41 @@ This skill provides comprehensive skill lifecycle management: creation, repair, 
 
 ---
 
+## Skill Usage Telemetry (CRITICAL - Read First!)
+
+**IMPORTANT:** The `activation_count` field in `skills.json` is **NOT updated** - it's always 0. Real skill usage is tracked via a global `PostToolUse` hook.
+
+| Data Location | What It Contains | Reliability |
+|---------------|------------------|-------------|
+| `.claude/config/skills.json` | Skill metadata, `activation_count: 0` | ❌ Not tracked |
+| `/tmp/claude-of-war/state.db` | All tool calls including Skill invocations | ✅ Accurate |
+
+**To get REAL skill usage data:**
+```bash
+# Skill usage with invocation counts
+sqlite3 /tmp/claude-of-war/state.db "
+SELECT
+  json_extract(tool_input, '$.skill') as skill_name,
+  COUNT(*) as invocations,
+  MAX(datetime(timestamp/1000, 'unixepoch', 'localtime')) as last_used
+FROM events
+WHERE tool_name = 'Skill'
+GROUP BY skill_name
+ORDER BY invocations DESC;
+"
+```
+
+**When auditing skills for redundancy/necessity:**
+1. Query the SQLite database for actual usage - NOT `skills.json`
+2. The `activation_count` in skills.json is decorative only
+3. Consider database time range when interpreting results
+
+**Hook Configuration** (in `~/.claude/settings.json`):
+- `PreToolUse` and `PostToolUse` hooks with `matcher: ".*"` capture all tool calls
+- Data includes `tool_name`, `tool_input` (with skill name for Skill calls), and timestamps
+
+---
+
 ## About Skills
 
 Skills are modular, self-contained packages that extend Claude's capabilities by providing

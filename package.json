@@ -147,6 +147,9 @@
     "test:backup": "node scripts/verify-backup-system.cjs",
     "test:backup:create": "node scripts/verify-backup-system.cjs --create",
     "test:backup:restore": "node scripts/verify-backup-system.cjs --restore",
+    "test:restore": "node scripts/verify-restore.cjs",
+    "test:restore:full": "node scripts/verify-restore.cjs --full",
+    "test:restore:e2e": "npx playwright test tests/stress/restore-verification.spec.ts --config=tests/stress/playwright.stress.config.ts",
     "test:security": "npm audit --audit-level=high && echo '✅ npm audit passed'",
     "test:db": "npx supabase test db",
     "db:stop": "bash scripts/db-stop.sh"

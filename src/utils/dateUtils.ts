@@ -1,5 +1,5 @@
 /**
- * Centralized date utility functions for Pomo-Flow
+ * Centralized date utility functions for FlowState
  */
 
 /**

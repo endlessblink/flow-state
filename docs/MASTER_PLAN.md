@@ -1,5 +1,5 @@
-**Last Updated**: January 21, 2026 (TASK-353 Mobile PWA UI Phase 1)
-**Version**: 5.52 (Mobile PWA UI: Today View, Filter Chips, Quick-Add Bar)
+**Last Updated**: January 22, 2026 (BUG-360 Ctrl+Z Undo Not Working in Quick Sort)
+**Version**: 5.53 (Canvas Group Nesting Safeguards)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -138,7 +138,7 @@
 | ~~**TASK-337**~~         | ✅ **DONE** **Reliable Password Change Feature**                       | **P0**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed template logic, null checks, session refresh. Tested: user signup, password change, logout, re-login with new password.                                                                                    |                                                        |
 | **TASK-338**             | **Comprehensive Stress Testing Agent/Skill**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-338-comprehensive-stress-testing-agentskill-in-progress) - Reliability, backup, container stability, redundancy assessment                                                                   |                                                        |
 | **BUG-339**              | **Tauri App Auto-Signout + Data Loss Concern**                         | **P0**                                              | 👀 **REVIEW**                                                                                                                   | Auth protections verified: proactive refresh, retry with backoff, session persistence. [See Details](#bug-339-auth-reliability---tauri-signouts--password-failures-review)                                        |                                                        |
-| ~~**BUG-340**~~          | ✅ **DONE** **Tauri Modal Not Closing After Sign-In**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed: Added `nextTick()` + `flush: 'post'` to AuthModal watcher for Tauri WebView reactivity. File: `AuthModal.vue`                                                                                               |                                                        |
+| ~~**BUG-340**~~          | ✅ **DONE** **Tauri Modal Not Closing After Sign-In**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed: Added `nextTick()` + `flush: 'post'` to AuthModal watcher for Tauri WebView reactivity. **User verified.** File: `AuthModal.vue`                                                                             |                                                        |
 | **BUG-341**              | **Tauri App Freezing - Add Comprehensive Logging**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add logging/diagnostics to debug Tauri app freezing/crash issues. Research solutions online.                                                                                                                      |                                                        |
 | **BUG-342**              | **Canvas Multi-Drag Bug: Unselected Tasks Move Together**              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Dragging one task causes another unselected task to move with it                                                                                                                                                  |                                                        |
 | **TASK-345**             | **PWA Infrastructure: Docker & Reliable HTTPS Tunnel**                 | **P2**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Set up Dockerized stack, Caddy proxy, and Cloudflare Tunnel for stable remote testing.                                                                                                                            |                                                        |
@@ -150,6 +150,10 @@
 | ~~**TASK-353**~~         | ✅ **DONE** **Mobile PWA UI Phase 1**                  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView (daily schedule), MobileInboxView (filter chips, sort, quick-add bar), MobileNav (4 tabs), Mobile PWA design skill                                                                                |                                                        |
 | ~~**TASK-354**~~         | ✅ **DONE** **Canvas CSS Import Fix**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed canvas not rendering after CSS import change. Reverted ES import to `<style src="">` for global Vue Flow overrides.                                                                                          |                                                        |
 | ~~**BUG-355**~~          | ✅ **DONE** **Timer Beep/Reset on Reload**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed timer beeping on reload when no timer was active. Added stale session detection (>1hr) and silent completion for expired sessions.                                                                           |                                                        |
+| ~~**BUG-356**~~          | ✅ **DONE** **Groups Moving Together (Accidental Nesting)**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed groups incorrectly moving together when dragging. Root cause: corrupted parentGroupId relationships. Added: (1) 2x area ratio requirement for group nesting, (2) invalid parent cleanup on load, (3) `resetGroupsToRoot()` emergency fix. [SOP-018](./sop/SOP-018-canvas-group-nesting.md)                                                                           |                                                        |
+| **BUG-357**              | **Tauri Edit Modal Shows Wrong Task**                                   | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-357-tauri-edit-modal-shows-wrong-task-in-progress) - Fixed stale Vue Flow node data issue                                                                                                      |                                                        |
+| **BUG-359**              | **Task List Checkbox Clipped in Edit Modal**                            | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TipTap task list checkbox not visible/cut off on right side of description editor                                                                                                                                 |                                                        |
+| **BUG-360**              | **Ctrl+Z Undo Not Working in Quick Sort View**                          | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Undo (Ctrl+Z) not functioning correctly in the Quick Sort view                                                                                                                                                    |                                                        |
 
 ---
 
@@ -176,22 +180,84 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 2.  **Mobile-Specific Code Path**: Does the mobile layout have a hardcoded `localhost` fetch somewhere that the desktop layout doesn't use?
 3.  **CORS**: Mobile browser enforcing stricter CORS?
 
-### TASK-356: Fix Tauri App Migration Error (🔄 IN PROGRESS)
+### ~~TASK-356~~: Fix Tauri App Migration Error (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS (2026-01-22)
+**Status**: ✅ DONE (2026-01-22)
 
-Tauri app fails on startup with "Remote migration versions not found in local migrations directory" because it tries to run `supabase db push --local` from arbitrary working directory.
+Tauri app failed on startup with "Remote migration versions not found in local migrations directory" because it tried to run `supabase db push --local` from arbitrary working directory.
 
-**Solution**: Changed `run_supabase_migrations()` in `lib.rs` to verify DB health via REST API instead of pushing migrations.
+**Root Cause**: Tauri apps run from `/usr/bin/` or user's home directory, not the project directory. The Supabase CLI needs to be in a directory with `supabase/migrations/` to push migrations.
+
+**Solution**: Changed `run_supabase_migrations()` in `lib.rs` to verify DB health via REST API instead of pushing migrations. This works regardless of working directory.
+
+**Prevention (Architectural Rule)**:
+- Migrations should be applied during **development setup**, not at app runtime
+- Runtime should only **verify** the database is ready, not modify it
+- Use REST API health checks which are directory-independent
+- Added to Tauri SOP: "Never run Supabase CLI commands that require project directory context"
 
 **Files Changed**:
 - `src-tauri/src/lib.rs` - `run_supabase_migrations()` now uses curl to check `/rest/v1/tasks` endpoint
 
 **Verification**:
-- [ ] Rebuild Tauri app (`npm run tauri dev`)
-- [ ] App launches without migration error
-- [ ] Database operations work normally
+- [x] Rebuild Tauri app (`npm run tauri build`)
+- [x] App launches without migration error
+- [x] Database operations work normally
+- [x] User confirmed fix works (2026-01-22)
+
+---
+
+### TASK-359: Quick Add + Sort Feature (👀 REVIEW)
+
+**Priority**: P2
+**Status**: 👀 REVIEW (awaiting user verification)
+
+Implemented batch capture mode: rapidly add multiple tasks first, then sort them via QuickSort-style UI.
+
+**UX Flow**:
+1. `Ctrl+.` opens Quick Capture modal
+2. Type task titles + Enter to add to pending list
+3. Tab to start sorting phase
+4. 1-9 assigns to project, S skips (uncategorized)
+5. Done phase shows summary
+
+**Files Created**:
+- `src/composables/useQuickCapture.ts` - Capture/sort state management
+- `src/components/quicksort/QuickCaptureModal.vue` - Modal UI with 3 phases
+
+**Files Modified**:
+- `src/composables/app/useAppShortcuts.ts` - Added Ctrl+. shortcut
+- `src/layouts/ModalManager.vue` - Registered modal + event listener
+
+**Notes**:
+- Tasks assigned via "Skip" (no project) appear in QuickSort counter
+- Tasks assigned to projects do NOT appear in QuickSort (expected behavior)
+- Integrates with quickSortStore for session tracking
+
+---
+
+### BUG-357: Tauri Edit Modal Shows Wrong Task (🔄 IN PROGRESS)
+
+**Priority**: P1
+**Status**: 🔄 IN PROGRESS (awaiting user verification)
+
+**Symptom**: In Tauri app, double-clicking a task on canvas opens the edit modal showing a DIFFERENT task's data.
+
+**Root Cause**: `useTaskNodeActions.triggerEdit()` was passing `props.task` (stale Vue Flow node data) instead of fetching fresh task from the store. Vue Flow creates shallow clones of tasks during sync (`{ ...task }`), which can become stale if the task is updated elsewhere.
+
+**Solution**: Modified `triggerEdit()` to always fetch the fresh task from the store before opening the edit modal:
+```typescript
+const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
+```
+
+**Files Changed**:
+- `src/composables/canvas/node/useTaskNodeActions.ts` - `triggerEdit()` now looks up fresh task
+
+**Verification**:
+- [x] Code change implemented
+- [x] Build passes
+- [ ] User confirms fix works in Tauri app
 
 ---
 

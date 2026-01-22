@@ -798,6 +798,20 @@
       "last_used": null,
       "related_skills": [],
       "description": "COMPREHENSIVE architectural cleanup using AST analysis to detect duplicates,"
+    },
+    "vps-deployment-specialist": {
+      "name": "vps-deployment-specialist",
+      "category": "implement",
+      "triggers": [],
+      "keywords": [
+        "vps",
+        "deployment",
+        "specialist"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "|"
     }
   },
   "categories": {

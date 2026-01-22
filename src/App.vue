@@ -1,4 +1,5 @@
 <template>
+  <!-- TEST: Deferred execution test -->
   <NConfigProvider :theme="darkTheme">
     <NGlobalStyle />
     <NMessageProvider>

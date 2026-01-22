@@ -28,17 +28,37 @@ export const logGroupIdHistogram = (label: string, groups: CanvasGroup[]) => {
 }
 
 /**
- * CYCLE CLEANUP: Break any parent cycles in groups
+ * CYCLE & INVALID PARENT CLEANUP: Break cycles and clear invalid parentGroupId references
+ *
+ * This function runs on load to fix data integrity issues:
+ * 1. Breaks parent cycles (A → B → A)
+ * 2. Clears references to non-existent groups
+ * 3. Clears references to task IDs (groups can only have group parents)
  */
 export function breakGroupCycles(groups: CanvasGroup[]): CanvasGroup[] {
     console.log('[GROUPS] breakGroupCycles called with', groups.length, 'groups')
 
     const byId = new Map(groups.map(g => [g.id, g]))
+    const validGroupIds = new Set(groups.map(g => g.id))
     let cyclesBroken = 0
+    let invalidParentsCleared = 0
 
     for (const g of groups) {
         if (!g.parentGroupId || g.parentGroupId === 'NONE') continue
 
+        // CHECK 1: Parent must be a valid group ID (not a task ID, not non-existent)
+        if (!validGroupIds.has(g.parentGroupId)) {
+            console.warn('[GROUPS] Clearing invalid parentGroupId (not a valid group)', {
+                groupId: g.id,
+                groupName: g.name,
+                invalidParentGroupId: g.parentGroupId,
+            })
+            g.parentGroupId = null
+            invalidParentsCleared++
+            continue
+        }
+
+        // CHECK 2: No cycles
         const visited = new Set<string>()
         let current: CanvasGroup | undefined = g
         let hasCycle = false
@@ -67,8 +87,36 @@ export function breakGroupCycles(groups: CanvasGroup[]): CanvasGroup[] {
         }
     }
 
-    if (cyclesBroken > 0) {
-        console.log(`[GROUPS] Broke ${cyclesBroken} parent cycle(s)`)
+    if (cyclesBroken > 0 || invalidParentsCleared > 0) {
+        console.log(`[GROUPS] Fixed ${cyclesBroken} cycle(s), ${invalidParentsCleared} invalid parent(s)`)
+    }
+
+    return groups
+}
+
+/**
+ * EMERGENCY FIX: Reset all groups to root level (clears all parentGroupId)
+ *
+ * Use this when groups are incorrectly moving together due to corrupted parent relationships.
+ * This makes all groups independent (root level) so they move independently.
+ */
+export function resetAllGroupsToRoot(groups: CanvasGroup[]): CanvasGroup[] {
+    let clearedCount = 0
+
+    for (const g of groups) {
+        if (g.parentGroupId && g.parentGroupId !== 'NONE') {
+            console.log('[GROUPS] Resetting to root:', {
+                groupId: g.id,
+                groupName: g.name,
+                wasParent: g.parentGroupId,
+            })
+            g.parentGroupId = null
+            clearedCount++
+        }
+    }
+
+    if (clearedCount > 0) {
+        console.log(`[GROUPS] Reset ${clearedCount} group(s) to root level`)
     }
 
     return groups

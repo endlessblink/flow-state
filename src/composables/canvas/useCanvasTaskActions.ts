@@ -320,11 +320,11 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
     }
 
     /**
-     * GEOMETRY WRITER: Arranges all done tasks in a grid at bottom-left of canvas (TASK-255)
+     * GEOMETRY WRITER: Arranges all done tasks in a grid at FAR LEFT of canvas (TASK-255)
      * This is an ALLOWED geometry write as it's an explicit user action.
      *
      * Grid layout:
-     * - Starting position: x=100, y=2000 (bottom-left area)
+     * - Starting position: x=-1500, y=100 (far left, avoids overlap with main content)
      * - Task card size: ~200x80
      * - Gap: 16px
      * - Columns: 5 tasks per row
@@ -342,9 +342,9 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         console.log(`[ARRANGE-DONE] Arranging ${doneTasks.length} done tasks in grid`)
 
-        // Grid configuration
-        const startX = 100
-        const startY = 2000
+        // Grid configuration - place FAR LEFT of canvas to avoid overlap
+        const startX = -1500  // Negative X = left side of canvas
+        const startY = 100    // Near top
         const cardWidth = 200
         const cardHeight = 80
         const gap = 16

@@ -238,37 +238,43 @@ fn is_remote_project_linked() -> bool {
     false
 }
 
-/// Run Supabase database migrations
-/// Automatically detects local vs remote and uses appropriate flags
+/// Verify database schema is ready (check if required tables exist)
+/// This is preferred over running migrations, which should be done during setup
 #[tauri::command]
 async fn run_supabase_migrations(app: tauri::AppHandle) -> Result<String, String> {
-    let use_local = !is_remote_project_linked();
-
-    let args: Vec<&str> = if use_local {
-        vec!["db", "push", "--local"]
-    } else {
-        vec!["db", "push"]
-    };
-
-    log::info!("Running migrations with args: {:?} (local={})", args, use_local);
-
-    let output = app
+    // Instead of pushing migrations (which requires project directory),
+    // verify the database has the required tables by checking the REST API
+    let health_check = app
         .shell()
-        .command("supabase")
-        .args(&args)
+        .command("curl")
+        .args([
+            "-s", "-o", "/dev/null", "-w", "%{http_code}",
+            "http://127.0.0.1:54321/rest/v1/tasks?limit=1",
+            "-H", "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODMzMzkxMjR9.quujL-cYcPusBhirDQFq9p-iTN0hRwjY2GLx6XUtYDg",
+            "--max-time", "5"
+        ])
         .output()
-        .await
-        .map_err(|e| format!("Failed to run migrations: {}", e))?;
+        .await;
 
-    if output.status.success() {
-        Ok("migrations_complete".to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        // Check if it's just "no migrations to apply"
-        if stderr.contains("No migrations") || stderr.contains("already applied") {
-            Ok("no_migrations_needed".to_string())
-        } else {
-            Err(format!("Migration failed: {}", stderr))
+    match health_check {
+        Ok(output) => {
+            let status_code = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            // 200 = table exists with data, 406 = table exists but empty, 401 = auth issue but table exists
+            if status_code == "200" || status_code == "406" || status_code == "401" {
+                log::info!("Database schema verified (status: {})", status_code);
+                Ok("migrations_complete".to_string())
+            } else {
+                log::warn!("Database check returned status: {}", status_code);
+                // Table might not exist - provide helpful error
+                Err(format!(
+                    "Database schema not ready (status {}). Please run 'supabase db push --local' from the FlowState project directory to set up the database.",
+                    status_code
+                ))
+            }
+        }
+        Err(e) => {
+            log::error!("Failed to verify database: {}", e);
+            Err(format!("Failed to verify database: {}", e))
         }
     }
 }

@@ -151,7 +151,7 @@
 | ~~**TASK-354**~~         | ✅ **DONE** **Canvas CSS Import Fix**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed canvas not rendering after CSS import change. Reverted ES import to `<style src="">` for global Vue Flow overrides.                                                                                          |                                                        |
 | ~~**BUG-355**~~          | ✅ **DONE** **Timer Beep/Reset on Reload**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed timer beeping on reload when no timer was active. Added stale session detection (>1hr) and silent completion for expired sessions.                                                                           |                                                        |
 | ~~**BUG-356**~~          | ✅ **DONE** **Groups Moving Together (Accidental Nesting)**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed groups incorrectly moving together when dragging. Root cause: corrupted parentGroupId relationships. Added: (1) 2x area ratio requirement for group nesting, (2) invalid parent cleanup on load, (3) `resetGroupsToRoot()` emergency fix. [SOP-018](./sop/SOP-018-canvas-group-nesting.md)                                                                           |                                                        |
-| **BUG-357**              | **Tauri Edit Modal Shows Wrong Task**                                   | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-357-tauri-edit-modal-shows-wrong-task-in-progress) - Fixed stale Vue Flow node data issue                                                                                                      |                                                        |
+| ~~**BUG-357**~~          | ✅ **DONE** **Tauri Edit Modal Shows Wrong Task**                       | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed stale Vue Flow node data + missing canvas sync after edit. [SOP-019](./sop/SOP-019-tauri-vue-flow-reactivity.md)                                                                                            |                                                        |
 | **BUG-359**              | **Task List Checkbox Clipped in Edit Modal**                            | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TipTap task list checkbox not visible/cut off on right side of description editor                                                                                                                                 |                                                        |
 | **BUG-360**              | **Ctrl+Z Undo Not Working in Quick Sort View**                          | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Undo (Ctrl+Z) not functioning correctly in the Quick Sort view                                                                                                                                                    |                                                        |
 | **TASK-361**             | **Stress Test: Container Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Docker/Supabase restart resilience tests                                                                                                                                                                          | TASK-338                                               |
@@ -246,27 +246,33 @@ Implemented batch capture mode: rapidly add multiple tasks first, then sort them
 
 ---
 
-### BUG-357: Tauri Edit Modal Shows Wrong Task (🔄 IN PROGRESS)
+### ~~BUG-357~~: Tauri Edit Modal Shows Wrong Task + Edits Don't Update (✅ DONE)
 
 **Priority**: P1
-**Status**: 🔄 IN PROGRESS (awaiting user verification)
+**Status**: ✅ DONE (2026-01-22)
 
-**Symptom**: In Tauri app, double-clicking a task on canvas opens the edit modal showing a DIFFERENT task's data.
+**Symptoms**:
+1. Double-clicking a task on canvas opens edit modal showing DIFFERENT task's data
+2. After saving edits, the task card on canvas doesn't reflect the changes
 
-**Root Cause**: `useTaskNodeActions.triggerEdit()` was passing `props.task` (stale Vue Flow node data) instead of fetching fresh task from the store. Vue Flow creates shallow clones of tasks during sync (`{ ...task }`), which can become stale if the task is updated elsewhere.
+**Root Cause**:
+1. `useTaskNodeActions.triggerEdit()` was passing stale Vue Flow node data instead of fresh store data
+2. Tauri/WebKitGTK has reactivity issues where Vue's computed properties don't properly track Pinia store changes
 
-**Solution**: Modified `triggerEdit()` to always fetch the fresh task from the store before opening the edit modal:
-```typescript
-const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
-```
+**Solution**:
+1. Modified `triggerEdit()` to fetch fresh task from store before opening modal
+2. Added `canvasUiStore.requestSync('user:manual')` after saving to force Vue Flow node refresh
 
 **Files Changed**:
 - `src/composables/canvas/node/useTaskNodeActions.ts` - `triggerEdit()` now looks up fresh task
+- `src/composables/tasks/useTaskEditActions.ts` - `saveTask()` now triggers canvas sync
+
+**SOP**: [SOP-019-tauri-vue-flow-reactivity.md](./sop/SOP-019-tauri-vue-flow-reactivity.md)
 
 **Verification**:
 - [x] Code change implemented
 - [x] Build passes
-- [ ] User confirms fix works in Tauri app
+- [x] User confirmed fix works in Tauri app (2026-01-22)
 
 ---
 

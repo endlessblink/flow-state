@@ -1,6 +1,6 @@
 {
   "project": "FlowState",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "last_updated": "2026-01-22",
   "skills": {
     "dev-maestro": {
@@ -32,30 +32,6 @@
       ],
       "description": "Start and manage Dev Maestro - the AI agent orchestration platform for Kanban task management. Use when user says 'start maestro', 'open kanban', 'show tasks', or needs to manage MASTER_PLAN.md tasks visually."
     },
-    "dev-frontend-master": {
-      "name": "Frontend Master",
-      "category": "create",
-      "triggers": [
-        "vue",
-        "component",
-        "frontend",
-        "ui",
-        "ux",
-        "pinia",
-        "reactivity"
-      ],
-      "keywords": [
-        "vue",
-        "frontend",
-        "ui"
-      ],
-      "activation_count": 0,
-      "last_used": null,
-      "related_skills": [
-        "dev-debugging"
-      ],
-      "description": "Master skill for Frontend Vue 3 development. Components, State, UI/UX."
-    },
     "vue-flow-debug": {
       "name": "Vue Flow Nested Debugger",
       "category": "debug",
@@ -73,54 +49,9 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "dev-frontend-master"
+        "dev-vue"
       ],
       "description": "Expert skill for debugging Vue Flow parent-child relationships and coordinates."
-    },
-    "dev-backend-master": {
-      "name": "Backend Master",
-      "category": "implement",
-      "triggers": [
-        "backend",
-        "supabase",
-        "api",
-        "database",
-        "auth"
-      ],
-      "keywords": [
-        "backend",
-        "supabase",
-        "db"
-      ],
-      "activation_count": 0,
-      "last_used": null,
-      "related_skills": [
-        "dev-frontend-master"
-      ],
-      "description": "Master skill for Backend, Supabase, and API integration."
-    },
-    "qa-master": {
-      "name": "QA Master",
-      "category": "test",
-      "triggers": [
-        "test",
-        "verify",
-        "audit",
-        "check",
-        "quality"
-      ],
-      "keywords": [
-        "test",
-        "qa",
-        "verify"
-      ],
-      "activation_count": 0,
-      "last_used": null,
-      "related_skills": [
-        "dev-debugging",
-        "qa-testing"
-      ],
-      "description": "Master skill for Testing, Verification (E2E/Unit), and Audits."
     },
     "qa-testing": {
       "name": "QA Testing for Personal Productivity App",
@@ -157,32 +88,11 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "qa-master",
         "vue-flow-debug",
         "dev-debugging",
         "codebase-health-auditor"
       ],
       "description": "Comprehensive QA testing skill including canvas geometry invariants (TASK-256). Covers data integrity, memory testing, offline sync, and geometry stability tests."
-    },
-    "arch-architect": {
-      "name": "Architect Master",
-      "category": "design",
-      "triggers": [
-        "plan",
-        "architecture",
-        "refactor",
-        "design"
-      ],
-      "keywords": [
-        "architect",
-        "plan"
-      ],
-      "activation_count": 0,
-      "last_used": null,
-      "related_skills": [
-        "chief-architect"
-      ],
-      "description": "Master skill for Architecture, Planning, and Repo organization."
     },
     "codebase-health-auditor": {
       "name": "Codebase Health Auditor",
@@ -216,8 +126,8 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "qa-master",
-        "arch-architect"
+        "qa-testing",
+        "chief-architect"
       ],
       "description": "Unified dead code detection, AST-based duplicate detection, and cleanup tool combining Legacy Tech Remover + Comprehensive Auditor + Architectural Cleanup with Knip, depcheck, TypeScript, Vue-specific analysis, file size/token limit detection, and AST-powered refactoring suggestions. Use for dead code, duplicates, oversized files, and architectural issues."
     },
@@ -260,9 +170,7 @@
       ],
       "activation_count": 0,
       "last_used": null,
-      "related_skills": [
-        "dev-backend-master"
-      ],
+      "related_skills": [],
       "description": "This skill should be used when debugging, monitoring, or optimizing Supabase applications. Triggers on Supabase connection issues, RLS policy problems, authentication failures, slow queries, realtime subscription bugs, memory leaks, and database schema validation. Provides real-time inspection, error tracking, performance analysis, and systematic debugging workflows for local and cloud Supabase environments."
     },
     "tauri-debugger": {
@@ -359,8 +267,7 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "smart-doc-manager",
-        "arch-architect"
+        "smart-doc-manager"
       ],
       "description": "UNIFIED ARCHITECT - Strategic development orchestrator AND systematic project planner for personal productivity applications. Use for architecture decisions, feature planning, task breakdown, implementation strategy, roadmaps. Triggers on \"plan\", \"break down\", \"how should I implement\", \"architecture\", \"strategy\", \"roadmap\", \"design pattern\"."
     },
@@ -386,7 +293,7 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "dev-frontend-master"
+        "dev-vue"
       ],
       "description": "Comprehensive UI/UX design and implementation skill covering visual design principles, color theory, typography, spacing systems, layout composition, accessibility (WCAG 2.2), animation, and systematic implementation workflows"
     },
@@ -570,7 +477,6 @@
       "activation_count": 0,
       "last_used": null,
       "related_skills": [
-        "dev-frontend-master",
         "dev-debugging"
       ],
       "description": "COMPREHENSIVE Vue 3 development with Composition API, TypeScript, advanced reactivity debugging, and filter management. Create reactive components, handle props/events, implement lifecycle hooks, integrate with Pinia state management, debug reactivity issues, optimize component performance, and manage cross-view filter consistency. CRITICAL: All component changes MUST be tested with Playwright before claiming success."

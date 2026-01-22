@@ -1,5 +1,5 @@
-**Last Updated**: January 22, 2026 (BUG-356 Groups Moving Together Fix)
-**Version**: 5.54 (Canvas Group Nesting Safeguards)
+**Last Updated**: January 22, 2026 (TASK-369 Quick Capture Tab Feature)
+**Version**: 5.55 (Quick Capture Tab)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -162,6 +162,7 @@
 | **TASK-366**             | **Stress Test: Redundancy Assessment**                                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Single-point-of-failure detection and mitigation                                                                                                                                                                  | TASK-338                                               |
 | ~~**BUG-367**~~          | ✅ **DONE** **Inbox Filter Excludes Overdue Tasks**                     | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed "This Week"/"This Month" filters to include overdue tasks. [SOP-020](./sop/SOP-020-inbox-filter-date-logic.md)                                                                                               |                                                        |
 | ~~**TASK-368**~~         | ✅ **DONE** **Date Picker Popup Improvements**                          | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Added +1mo/+2mo/+3mo shortcuts and "Now" button to calendar popup. Dark theme styling applied.                                                                                                                      |                                                        |
+| ~~**TASK-369**~~         | ✅ **DONE** **Quick Capture Tab Feature**                               | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Rich task capture integrated into QuickSort view with Ctrl+Shift+T shortcut. [SOP-021](./sop/SOP-021-quick-capture-tab.md)                                                                                          |                                                        |
 
 ---
 

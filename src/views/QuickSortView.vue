@@ -8,7 +8,7 @@
           Quick Sort
         </h1>
         <p class="view-subtitle">
-          Rapidly categorize your uncategorized tasks
+          {{ activeTab === 'capture' ? 'Capture tasks quickly, then sort them all at once' : 'Rapidly categorize your uncategorized tasks' }}
         </p>
       </div>
 
@@ -17,108 +17,143 @@
       </button>
     </header>
 
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'sort' }"
+        @click="activeTab = 'sort'"
+      >
+        <Zap :size="18" />
+        <span>Sort</span>
+        <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'capture' }"
+        @click="activeTab = 'capture'"
+      >
+        <Plus :size="18" />
+        <span>Capture</span>
+        <span v-if="pendingCount > 0" class="tab-badge pending">{{ pendingCount }}</span>
+      </button>
+    </div>
+
     <!-- Main Content -->
     <div class="quick-sort-content">
-      <!-- Progress Indicator -->
-      <SortProgress
-        v-if="!isComplete"
-        :current="progress.current"
-        :total="progress.total"
-        :message="motivationalMessage"
-        :streak="currentStreak"
-      />
+      <!-- CAPTURE TAB -->
+      <Transition name="tab-fade" mode="out-in">
+        <QuickCaptureTab
+          v-if="activeTab === 'capture'"
+          key="capture"
+          ref="captureTabRef"
+          @switch-to-sort="handleSwitchToSort"
+        />
 
-      <!-- Task Card or Completion -->
-      <div class="card-container">
-        <!-- Active Task Card -->
-        <Transition name="card-slide" mode="out-in">
-          <QuickSortCard
-            v-if="currentTask && !isComplete"
-            :key="currentTask.id"
-            :task="currentTask"
-            @update-task="handleTaskUpdate"
-            @mark-done="handleMarkDone"
-            @edit-task="handleEditTask"
-            @mark-done-and-delete="handleMarkDoneAndDelete"
+        <!-- SORT TAB -->
+        <div v-else key="sort" class="sort-tab-content">
+          <!-- Progress Indicator -->
+          <SortProgress
+            v-if="!isComplete"
+            :current="progress.current"
+            :total="progress.total"
+            :message="motivationalMessage"
+            :streak="currentStreak"
           />
 
-          <!-- Empty State -->
-          <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
-            <CheckCircle :size="64" />
-            <h2>All Caught Up!</h2>
-            <p>You have no uncategorized tasks.</p>
-            <button class="primary-button" @click="handleExit">
-              Return to Tasks
-            </button>
+          <!-- Task Card or Completion -->
+          <div class="card-container">
+            <!-- Active Task Card -->
+            <Transition name="card-slide" mode="out-in">
+              <QuickSortCard
+                v-if="currentTask && !isComplete"
+                :key="currentTask.id"
+                :task="currentTask"
+                @update-task="handleTaskUpdate"
+                @mark-done="handleMarkDone"
+                @edit-task="handleEditTask"
+                @mark-done-and-delete="handleMarkDoneAndDelete"
+              />
+
+              <!-- Empty State -->
+              <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
+                <CheckCircle :size="64" />
+                <h2>All Caught Up!</h2>
+                <p>You have no uncategorized tasks.</p>
+                <button class="primary-button" @click="handleExit">
+                  Return to Tasks
+                </button>
+              </div>
+
+              <!-- Completion State -->
+              <div v-else-if="isComplete" class="completion-state">
+                <div class="celebration-icon">
+                  🎉
+                </div>
+                <h2>Amazing Work!</h2>
+                <p class="completion-message">
+                  You've sorted all your tasks!
+                </p>
+
+                <div v-if="sessionSummary" class="session-stats">
+                  <div class="stat-card">
+                    <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
+                    <span class="stat-label">Tasks Sorted</span>
+                  </div>
+
+                  <div class="stat-card">
+                    <span class="stat-value">{{ formatTime(sessionSummary.timeSpent) }}</span>
+                    <span class="stat-label">Time Taken</span>
+                  </div>
+
+                  <div class="stat-card">
+                    <span class="stat-value">{{ sessionSummary.efficiency.toFixed(1) }}</span>
+                    <span class="stat-label">Tasks/Min</span>
+                  </div>
+
+                  <div v-if="sessionSummary.streakDays > 0" class="stat-card streak-card">
+                    <span class="stat-value">🔥 {{ sessionSummary.streakDays }}</span>
+                    <span class="stat-label">Day Streak</span>
+                  </div>
+                </div>
+
+                <button class="primary-button" @click="handleExit">
+                  <CheckCircle :size="20" />
+                  Done
+                </button>
+              </div>
+            </Transition>
           </div>
 
-          <!-- Completion State -->
-          <div v-else-if="isComplete" class="completion-state">
-            <div class="celebration-icon">
-              🎉
-            </div>
-            <h2>Amazing Work!</h2>
-            <p class="completion-message">
-              You've sorted all your tasks!
-            </p>
+          <!-- Category Selector -->
+          <CategorySelector
+            v-if="!isComplete && currentTask"
+            @select="handleCategorize"
+            @skip="handleSkip"
+            @create-new="showProjectModal = true"
+          />
 
-            <div v-if="sessionSummary" class="session-stats">
-              <div class="stat-card">
-                <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
-                <span class="stat-label">Tasks Sorted</span>
-              </div>
+          <!-- Action Buttons -->
+          <div v-if="!isComplete && currentTask" class="action-buttons">
+            <button
+              class="action-button"
+              :disabled="!canUndo"
+              aria-label="Undo last categorization"
+              @click="handleUndo"
+            >
+              <Undo2 :size="20" />
+              Undo
+              <kbd v-if="canUndo">Ctrl+Z</kbd>
+            </button>
 
-              <div class="stat-card">
-                <span class="stat-value">{{ formatTime(sessionSummary.timeSpent) }}</span>
-                <span class="stat-label">Time Taken</span>
-              </div>
-
-              <div class="stat-card">
-                <span class="stat-value">{{ sessionSummary.efficiency.toFixed(1) }}</span>
-                <span class="stat-label">Tasks/Min</span>
-              </div>
-
-              <div v-if="sessionSummary.streakDays > 0" class="stat-card streak-card">
-                <span class="stat-value">🔥 {{ sessionSummary.streakDays }}</span>
-                <span class="stat-label">Day Streak</span>
-              </div>
-            </div>
-
-            <button class="primary-button" @click="handleExit">
-              <CheckCircle :size="20" />
-              Done
+            <button class="action-button" aria-label="Skip this task" @click="handleSkip">
+              <SkipForward :size="20" />
+              Skip
+              <kbd>Space</kbd>
             </button>
           </div>
-        </Transition>
-      </div>
-
-      <!-- Category Selector -->
-      <CategorySelector
-        v-if="!isComplete && currentTask"
-        @select="handleCategorize"
-        @skip="handleSkip"
-        @create-new="showProjectModal = true"
-      />
-
-      <!-- Action Buttons -->
-      <div v-if="!isComplete && currentTask" class="action-buttons">
-        <button
-          class="action-button"
-          :disabled="!canUndo"
-          aria-label="Undo last categorization"
-          @click="handleUndo"
-        >
-          <Undo2 :size="20" />
-          Undo
-          <kbd v-if="canUndo">Ctrl+Z</kbd>
-        </button>
-
-        <button class="action-button" aria-label="Skip this task" @click="handleSkip">
-          <SkipForward :size="20" />
-          Skip
-          <kbd>Space</kbd>
-        </button>
-      </div>
+        </div>
+      </Transition>
     </div>
 
     <!-- Celebration Animation -->
@@ -141,12 +176,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
+import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
 import QuickSortCard from '@/components/QuickSortCard.vue'
+import QuickCaptureTab from '@/components/quicksort/QuickCaptureTab.vue'
 import CategorySelector from '@/components/layout/CategorySelector.vue'
 import SortProgress from '@/components/tasks/SortProgress.vue'
 import ProjectModal from '@/components/projects/ProjectModal.vue'
@@ -154,13 +191,41 @@ import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 
 const router = useRouter()
+const route = useRoute()
 const taskStore = useTaskStore()
+const quickCapture = useQuickCapture()
+
+// Tab state
+const activeTab = ref<'sort' | 'capture'>('sort')
+const captureTabRef = ref<InstanceType<typeof QuickCaptureTab> | null>(null)
+
+// Tab badge counts
+const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
+const pendingCount = computed(() => quickCapture.pendingTasks.value.length)
 
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
 const showCelebration = ref(false)
 const sessionSummary = ref<SessionSummary | null>(null)
 const taskToEdit = ref<Task | null>(null)
+
+// Handle tab query parameter
+watch(() => route.query.tab, (tab) => {
+  if (tab === 'capture') {
+    activeTab.value = 'capture'
+  }
+}, { immediate: true })
+
+// Handle default tab from quick capture
+watch(() => quickCapture.defaultTabOnOpen.value, (defaultTab) => {
+  if (defaultTab === 'capture' && route.name === 'quick-sort') {
+    activeTab.value = 'capture'
+  }
+}, { immediate: true })
+
+function handleSwitchToSort() {
+  activeTab.value = 'sort'
+}
 
 const {
   currentTask,
@@ -297,20 +362,20 @@ function handleGlobalKeydown(event: KeyboardEvent) {
     handleUndo()
   }
 
-  // D key to mark as done
-  if (event.key === 'd' || event.key === 'D') {
+  // D key to mark as done (only in sort tab)
+  if (activeTab.value === 'sort' && (event.key === 'd' || event.key === 'D')) {
     event.preventDefault()
     handleMarkDone()
   }
 
-  // E key to edit task
-  if (event.key === 'e' || event.key === 'E') {
+  // E key to edit task (only in sort tab)
+  if (activeTab.value === 'sort' && (event.key === 'e' || event.key === 'E')) {
     event.preventDefault()
     handleEditTask()
   }
 
-  // Delete key to mark done and delete
-  if (event.key === 'Delete') {
+  // Delete key to mark done and delete (only in sort tab)
+  if (activeTab.value === 'sort' && event.key === 'Delete') {
     event.preventDefault()
     handleMarkDoneAndDelete()
   }
@@ -336,7 +401,7 @@ function formatTime(milliseconds: number): string {
   padding: var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-6);
   overflow-y: auto; /* Enable scrolling if content exceeds */
   position: relative; /* Establish positioning context for celebration overlay */
 }
@@ -386,6 +451,99 @@ function formatTime(milliseconds: number): string {
   background: var(--glass-bg-heavy);
   border-color: var(--glass-border-hover);
   transform: scale(1.05);
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-5);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.tab-btn:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background: var(--brand-gradient);
+  border-color: var(--brand-primary);
+  color: var(--bg-primary);
+  font-weight: var(--font-semibold);
+  box-shadow: 0 2px 8px var(--brand-primary-alpha-20);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1_5);
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.tab-btn.active .tab-badge {
+  background: var(--overlay-light);
+  color: var(--bg-primary);
+}
+
+.tab-badge.pending {
+  background: var(--warning);
+  color: var(--bg-primary);
+}
+
+.tab-btn.active .tab-badge.pending {
+  background: var(--overlay-light);
+  color: var(--bg-primary);
+}
+
+/* Sort Tab Content */
+.sort-tab-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* Tab Fade Transition */
+.tab-fade-enter-active,
+.tab-fade-leave-active {
+  transition: all 0.25s var(--spring-smooth);
+}
+
+.tab-fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.tab-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 
 .quick-sort-content {
@@ -652,6 +810,16 @@ function formatTime(milliseconds: number): string {
 
   .session-stats {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .tab-navigation {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tab-btn {
+    flex: 1;
+    justify-content: center;
   }
 }
 </style>

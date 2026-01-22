@@ -50,17 +50,20 @@
             </button>
           </template>
           <div class="date-picker-popover">
-            <div class="date-picker-shortcuts">
-              <button class="shortcut-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1 Month</button>
-              <button class="shortcut-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2 Months</button>
-              <button class="shortcut-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3 Months</button>
-            </div>
             <NDatePicker
               panel
               type="date"
               :value="currentDueDateTimestamp"
               @update:value="handleDatePickerSelect"
-            />
+            >
+              <template #footer>
+                <div class="date-picker-footer">
+                  <button class="footer-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1mo</button>
+                  <button class="footer-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2mo</button>
+                  <button class="footer-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3mo</button>
+                </div>
+              </template>
+            </NDatePicker>
           </div>
         </NPopover>
       </div>
@@ -649,32 +652,29 @@ onUnmounted(() => {
 .date-picker-popover {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
-.date-picker-shortcuts {
+.date-picker-footer {
   display: flex;
   gap: var(--space-1);
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--glass-border);
+  justify-content: flex-start;
 }
 
-.shortcut-btn {
-  flex: 1;
-  padding: var(--space-1_5) var(--space-2);
-  background: var(--glass-bg-medium);
+.footer-btn {
+  padding: 0 var(--space-2);
+  height: 28px;
+  background: transparent;
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-weight: 500;
   cursor: pointer;
   transition: all var(--duration-fast);
-  white-space: nowrap;
 }
 
-.shortcut-btn:hover {
-  background: var(--glass-bg-heavy);
+.footer-btn:hover {
+  background: var(--glass-bg-medium);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
 }

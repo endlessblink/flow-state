@@ -17,6 +17,9 @@ export type QuickCapturePhase = 'capture' | 'sort' | 'done'
 export interface PendingTask {
   id: string
   title: string
+  description?: string
+  priority?: 'low' | 'medium' | 'high'
+  dueDate?: string
   projectId?: string
 }
 
@@ -31,6 +34,8 @@ const pendingTasks = ref<PendingTask[]>([])
 const currentSortIndex = ref(0)
 const sortSummary = ref<SortSummary>({ total: 0, byProject: new Map() })
 const isModalOpen = ref(false)
+// New: Track which tab should be active in QuickSort view
+const defaultTabOnOpen = ref<'sort' | 'capture'>('sort')
 
 export function useQuickCapture() {
   const taskStore = useTaskStore()
@@ -72,12 +77,17 @@ export function useQuickCapture() {
     sortSummary.value = { total: 0, byProject: new Map() }
   }
 
-  function addTask(title: string) {
-    if (!title.trim()) return false
+  function addTask(taskData: Omit<PendingTask, 'id'> | string) {
+    // Support both string (title only) and full task data
+    const data = typeof taskData === 'string' ? { title: taskData } : taskData
+    if (!data.title?.trim()) return false
 
     const task: PendingTask = {
       id: `pending_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-      title: title.trim()
+      title: data.title.trim(),
+      description: data.description?.trim(),
+      priority: data.priority,
+      dueDate: data.dueDate
     }
 
     pendingTasks.value.push(task)
@@ -89,6 +99,20 @@ export function useQuickCapture() {
     if (index !== -1) {
       pendingTasks.value.splice(index, 1)
     }
+  }
+
+  function updatePendingTask(taskId: string, updates: Partial<Omit<PendingTask, 'id'>>) {
+    const task = pendingTasks.value.find(t => t.id === taskId)
+    if (task) {
+      if (updates.title !== undefined) task.title = updates.title
+      if (updates.description !== undefined) task.description = updates.description
+      if (updates.priority !== undefined) task.priority = updates.priority
+      if (updates.dueDate !== undefined) task.dueDate = updates.dueDate
+    }
+  }
+
+  function setDefaultTab(tab: 'sort' | 'capture') {
+    defaultTabOnOpen.value = tab
   }
 
   function removeLastTask() {
@@ -114,9 +138,12 @@ export function useQuickCapture() {
     if (!task) return false
 
     try {
-      // Create the task with the assigned project
+      // Create the task with the assigned project and all captured data
       await taskStore.createTaskWithUndo({
         title: task.title,
+        description: task.description,
+        priority: task.priority,
+        dueDate: task.dueDate,
         projectId: projectId,
         status: 'planned'
       })
@@ -202,6 +229,7 @@ export function useQuickCapture() {
     currentSortIndex: readonly(currentSortIndex),
     sortSummary: readonly(sortSummary),
     isModalOpen: readonly(isModalOpen),
+    defaultTabOnOpen: readonly(defaultTabOnOpen),
 
     // Computed
     currentTask,
@@ -216,6 +244,7 @@ export function useQuickCapture() {
     reset,
     addTask,
     removeTask,
+    updatePendingTask,
     removeLastTask,
     startSorting,
     assignProject,
@@ -223,6 +252,7 @@ export function useQuickCapture() {
     finishSorting,
     cancelSort,
     addMoreTasks,
-    getProjectName
+    getProjectName,
+    setDefaultTab
   }
 }

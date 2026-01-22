@@ -76,11 +76,10 @@ export function useAppShortcuts() {
             }
         }
 
-        // Ctrl+. (period) to open Quick Capture modal
-        // Note: Ctrl+Shift+N conflicts with browser incognito shortcut
-        if ((event.ctrlKey || event.metaKey) && event.key === '.') {
+        // Ctrl+Shift+T to open Quick Capture tab
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'T') {
             event.preventDefault()
-            window.dispatchEvent(new CustomEvent('open-quick-capture'))
+            router.push({ path: '/quick-sort', query: { tab: 'capture' } })
         }
 
         // Shift+1-5 for view switching

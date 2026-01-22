@@ -83,9 +83,6 @@
     <!-- COMMAND PALETTE -->
     <CommandPalette ref="commandPaletteRef" />
 
-    <!-- QUICK CAPTURE MODAL -->
-    <QuickCaptureModal />
-
     <!-- SECTION SELECTION MODAL -->
     <SectionSelectionModal
       :is-open="showSectionSelectionModal"
@@ -117,11 +114,9 @@ import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/layout/SearchModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import SectionSelectionModal from '@/components/canvas/SectionSelectionModal.vue'
-import QuickCaptureModal from '@/components/quicksort/QuickCaptureModal.vue'
 const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
 import { useSettingsStore } from '@/stores/settings'
-import { useQuickCapture } from '@/composables/useQuickCapture'
 
 // Stores
 const uiStore = useUIStore()
@@ -129,7 +124,6 @@ const settingsStore = useSettingsStore()
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const sidebar = useSidebarManagement()
-const quickCapture = useQuickCapture()
 
 // State
 const showTaskEditModal = ref(false)
@@ -410,7 +404,6 @@ onMounted(() => {
   window.addEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.addEventListener('open-search', () => { showSearchModal.value = true })
   window.addEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
-  window.addEventListener('open-quick-capture', () => { quickCapture.openModal() })
 })
 
 onUnmounted(() => {
@@ -420,7 +413,6 @@ onUnmounted(() => {
   window.removeEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.removeEventListener('open-search', () => { showSearchModal.value = true })
   window.removeEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
-  window.removeEventListener('open-quick-capture', () => { quickCapture.openModal() })
 })
 
 // Expose methods for App.vue or parent triggers
@@ -428,7 +420,6 @@ defineExpose({
   openEditTask,
   openSearch: () => { showSearchModal.value = true },
   openQuickTask: () => { showQuickTaskCreate.value = true },
-  openQuickCapture: () => { quickCapture.openModal() },
   openCommandPalette: () => { commandPaletteRef.value?.open() },
   openConfirmationModal: (title: string, message: string, action: () => void, details: string[] = []) => {
     confirmMessage.value = message

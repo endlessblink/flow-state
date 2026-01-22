@@ -8,7 +8,7 @@
           Quick Sort
         </h1>
         <p class="view-subtitle">
-          Rapidly categorize your uncategorized tasks
+          {{ activeTab === 'capture' ? 'Capture tasks quickly, then sort them all at once' : 'Rapidly categorize your uncategorized tasks' }}
         </p>
       </div>
 
@@ -17,8 +17,41 @@
       </button>
     </header>
 
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'sort' }"
+        @click="activeTab = 'sort'"
+      >
+        <Zap :size="18" />
+        <span>Sort</span>
+        <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'capture' }"
+        @click="activeTab = 'capture'"
+      >
+        <Plus :size="18" />
+        <span>Capture</span>
+        <span v-if="pendingCount > 0" class="tab-badge pending">{{ pendingCount }}</span>
+      </button>
+    </div>
+
     <!-- Main Content -->
     <div class="quick-sort-content">
+      <!-- CAPTURE TAB -->
+      <Transition name="tab-fade" mode="out-in">
+        <QuickCaptureTab
+          v-if="activeTab === 'capture'"
+          key="capture"
+          ref="captureTabRef"
+          @switch-to-sort="handleSwitchToSort"
+        />
+
+        <!-- SORT TAB -->
+        <div v-else key="sort" class="sort-tab-content">
       <!-- Progress Indicator -->
       <SortProgress
         v-if="!isComplete"
@@ -119,6 +152,8 @@
           <kbd>Space</kbd>
         </button>
       </div>
+        </div>
+      </Transition>
     </div>
 
     <!-- Celebration Animation -->
@@ -141,12 +176,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
+import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
 import QuickSortCard from '@/components/QuickSortCard.vue'
+import QuickCaptureTab from '@/components/quicksort/QuickCaptureTab.vue'
 import CategorySelector from '@/components/layout/CategorySelector.vue'
 import SortProgress from '@/components/tasks/SortProgress.vue'
 import ProjectModal from '@/components/projects/ProjectModal.vue'
@@ -154,13 +191,41 @@ import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 
 const router = useRouter()
+const route = useRoute()
 const taskStore = useTaskStore()
+const quickCapture = useQuickCapture()
+
+// Tab state
+const activeTab = ref<'sort' | 'capture'>('sort')
+const captureTabRef = ref<InstanceType<typeof QuickCaptureTab> | null>(null)
+
+// Tab badge counts
+const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
+const pendingCount = computed(() => quickCapture.pendingTasks.value.length)
 
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
 const showCelebration = ref(false)
 const sessionSummary = ref<SessionSummary | null>(null)
 const taskToEdit = ref<Task | null>(null)
+
+// Handle tab query parameter
+watch(() => route.query.tab, (tab) => {
+  if (tab === 'capture') {
+    activeTab.value = 'capture'
+  }
+}, { immediate: true })
+
+// Handle default tab from quick capture
+watch(() => quickCapture.defaultTabOnOpen.value, (defaultTab) => {
+  if (defaultTab === 'capture' && route.name === 'quick-sort') {
+    activeTab.value = 'capture'
+  }
+}, { immediate: true })
+
+function handleSwitchToSort() {
+  activeTab.value = 'sort'
+}
 
 const {
   currentTask,
@@ -386,6 +451,99 @@ function formatTime(milliseconds: number): string {
   background: var(--glass-bg-heavy);
   border-color: var(--glass-border-hover);
   transform: scale(1.05);
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-5);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.tab-btn:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background: var(--brand-gradient);
+  border-color: var(--brand-primary);
+  color: var(--bg-primary);
+  font-weight: var(--font-semibold);
+  box-shadow: 0 2px 8px var(--brand-primary-alpha-20);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1_5);
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.tab-btn.active .tab-badge {
+  background: var(--overlay-light);
+  color: var(--bg-primary);
+}
+
+.tab-badge.pending {
+  background: var(--warning);
+  color: var(--bg-primary);
+}
+
+.tab-btn.active .tab-badge.pending {
+  background: var(--overlay-light);
+  color: var(--bg-primary);
+}
+
+/* Sort Tab Content */
+.sort-tab-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* Tab Fade Transition */
+.tab-fade-enter-active,
+.tab-fade-leave-active {
+  transition: all 0.25s var(--spring-smooth);
+}
+
+.tab-fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.tab-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 
 .quick-sort-content {

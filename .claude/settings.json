@@ -16,10 +16,23 @@
       }
     ],
     "SessionEnd": [],
-    "PreToolUse": [],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/task-lock-enforcer.sh"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/deferred-reminder.sh"
+          },
           {
             "type": "command",
             "command": ".claude/hooks/skill-router-hook.sh"

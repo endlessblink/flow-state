@@ -86,13 +86,17 @@ export function useTaskNodeActions(
     }
 
     // TASK-279: Helper to call edit - uses callback prop if available, falls back to emit
+    // BUG-357 FIX: Always get fresh task from store instead of using potentially stale props.task
     const triggerEdit = (task: Task) => {
+        // Get fresh task from store (source of truth) instead of stale node data
+        const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
+
         if (props.editCallback) {
             // Use callback prop (works in Vue Flow custom nodes)
-            props.editCallback(task)
+            props.editCallback(freshTask)
         } else {
             // Fallback to emit (works outside Vue Flow)
-            emit('edit', task)
+            emit('edit', freshTask)
         }
     }
 

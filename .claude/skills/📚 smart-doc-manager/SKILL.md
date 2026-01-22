@@ -1,6 +1,6 @@
 ---
 name: smart-doc-manager
-description: Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, and validation. Triggers on "master-plan", "plan update", "documentation", "consolidate docs", "audit docs".
+description: Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, validation, task creation (/task), and idea/issue processing. Triggers on "master-plan", "plan update", "documentation", "consolidate docs", "audit docs", "add task", "new task", "process ideas", "check inbox".
 ---
 
 # Smart Documentation Manager (SDM)
@@ -38,6 +38,8 @@ Use this skill when you need to:
 - **Reorganize documentation structure** - Create logical organization with validation
 - **Archive obsolete documentation** - Safely remove outdated docs with rollback
 - **Find undocumented features** - Identify code that lacks documentation
+- **Add tasks to MASTER_PLAN.md** - Create new tasks with auto-generated IDs (see `references/add-task-workflow.md`)
+- **Process ideas inbox** - Transform bullet points into prioritized items (see `references/idea-processing-workflow.md`)
 - **Clean up documentation mess** - Transform scattered docs into organized structure
 
 **Critical:** This skill prioritizes safety over automation. It will never delete or move files without verification and user confirmation.

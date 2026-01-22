@@ -193,27 +193,56 @@ TASK_STATUS=$(echo "$TASK_INFO" | cut -d'|' -f2)
 LOCK_INFO=$(check_lock "$TASK_ID" || echo "")
 
 if [[ -n "$LOCK_INFO" ]]; then
-  # Task is locked by another session - BLOCK
+  # Task is locked by another session - DEFER AND WORK ON OTHER TASKS
   LOCKED_BY=$(echo "$LOCK_INFO" | cut -d'|' -f1)
   LOCKED_AT=$(echo "$LOCK_INFO" | cut -d'|' -f2)
+  LOCK_FILE="$LOCKS_DIR/${TASK_ID}.lock"
 
-  # Output error to stderr (will be shown to Claude)
+  # Configuration
+  DEFERRED_QUEUE_DIR="${CLAUDE_PROJECT_DIR}/.claude/deferred-queue"
+
+  # Create deferred queue directory if needed
+  mkdir -p "$DEFERRED_QUEUE_DIR"
+
+  # Save deferred edit to queue
+  QUEUE_FILE="$DEFERRED_QUEUE_DIR/${SESSION_ID}.json"
+  CURRENT_TIME=$(date +%s)
+  TOOL_INPUT_JSON=$(echo "$INPUT" | jq -c '.tool_input // {}')
+
+  # Initialize queue file if it doesn't exist
+  if [[ ! -f "$QUEUE_FILE" ]]; then
+    echo '{"session_id":"'"$SESSION_ID"'","deferred_edits":[]}' > "$QUEUE_FILE"
+  fi
+
+  # Append this deferred edit to the queue
+  jq --arg file "$FILE_PATH" \
+     --arg task "$TASK_ID" \
+     --arg blocked_session "$LOCKED_BY" \
+     --argjson input "$TOOL_INPUT_JSON" \
+     --argjson ts "$CURRENT_TIME" \
+     '.deferred_edits += [{
+       file: $file,
+       blocked_by_task: $task,
+       blocked_by_session: $blocked_session,
+       tool_input: $input,
+       timestamp: $ts
+     }]' "$QUEUE_FILE" > "${QUEUE_FILE}.tmp" && mv "${QUEUE_FILE}.tmp" "$QUEUE_FILE"
+
+  # Exit with guidance message - DO NOT WAIT
   cat >&2 << EOF
-TASK CONFLICT BLOCKED: Cannot edit $FILENAME
+📋 DEFERRED: Edit to $FILENAME queued (blocked by $TASK_ID)
 
-$TASK_ID is currently locked by another Claude Code session.
-  - Locked by session: ${LOCKED_BY:0:8}...
-  - Locked at: $LOCKED_AT
+The file is currently locked by session ${LOCKED_BY:0:8}... (since $LOCKED_AT).
+Your edit has been saved to the deferred queue.
 
-To resolve:
-1. Wait for the other session to complete
-2. Or manually delete: .claude/locks/${TASK_ID}.lock
-3. Check docs/MASTER_PLAN.md for task status
+NEXT STEPS:
+1. Work on other available tasks: \`bd ready\`
+2. You'll be notified when $TASK_ID completes
+3. Then retry your edit to $FILENAME
 
-Suggest working on a different task that doesn't conflict.
+Deferred edit saved to: .claude/deferred-queue/${SESSION_ID}.json
 EOF
 
-  # Exit 2 blocks the tool call
   exit 2
 fi
 

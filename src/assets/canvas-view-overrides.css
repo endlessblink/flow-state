@@ -770,8 +770,9 @@ body.dragging-active .vue-flow__background {
 }
 
 /* Vue Flow fade-in transition - fixes initialization deadlock */
+/* DEBUG: Temporarily force visibility to diagnose rendering issue */
 .vue-flow {
-    opacity: 0;
+    opacity: 1 !important; /* DEBUG: Force visible */
     transition: opacity var(--duration-slow) var(--ease-out);
 }
 

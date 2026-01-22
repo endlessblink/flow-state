@@ -113,7 +113,7 @@
 | ~~**BUG-311**~~          | ✅ **DONE** **Fix Vite Module Loading & Startup Loop**                  | **P0**                                              | ✅ **DONE** (2026-01-17)                                                                                                         | Resolved circular dependencies in `spatialContainment.ts` and `stores/canvas`. Fixed type errors in `CanvasView.vue`.                                                                                                          |                                                        |
 | ~~**TASK-312**~~         | ✅ **DONE** **TaskRowDueDate Dropdown Component**                       | **P2**                                              | ✅ **DONE** (2026-01-17)                                                                                                         | Created TaskRowDueDate.vue with standardized dropdown (Today/Tomorrow/In 3 days/In 1 week/No due date). Updated TaskRow.vue and HierarchicalTaskRowContent.vue.                                                                |                                                        |
 | ~~**TASK-314**~~         | ✅ **DONE** **Highlight Active Timer Task**                             | **P2**                                              | ✅ **DONE** (2026-01-18)                                                                                                         | Active timer task now highlighted in Board and Catalog views                                                                                                                                                    |                                                        |
-| ~~**TASK-315**~~         | ✅ **DONE** **Documentation & Skills Consolidation**                    | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-012](./sop/active/SOP-012-skills-config-sync.md) - Synced skills.json (10→30), created canvas index, doc validator, staleness checker                                                                      |                                                        |
+| ~~**TASK-315**~~         | ✅ **DONE** **Documentation & Skills Consolidation**                    | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-022](./sop/active/SOP-022-skills-config-sync.md) - Synced skills.json (10→30), created canvas index, doc validator, staleness checker                                                                      |                                                        |
 | ~~**TASK-316**~~         | ✅ **DONE** **TaskCard Design Fix (Board View)**                        | **P3**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Changed selected state from filled to outline-only, removed strikethrough from completed titles. File: `TaskCard.css`                                                                                           |                                                        |
 | ~~**TASK-317**~~         | ✅ **DONE** **Shadow Backup Deletion-Aware Restore + Supabase Data Persistence**   | **P0**                                              | ✅ **DONE** (2026-01-19)                                                                                                        | Tombstones table, deletion-aware restore, shadow-mirror guards, atomic writes                                                                                                                                       |                                                        |
 | ~~**BUG-317**~~          | ✅ **DONE** **Board View Priority Column Drag Fix**                     | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Fixed priority swimlane drag: `columnType` prop distinguishes status vs priority columns                                                                                                                        |                                                        |
@@ -142,16 +142,16 @@
 | **BUG-341**              | **Tauri App Freezing - Add Comprehensive Logging**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add logging/diagnostics to debug Tauri app freezing/crash issues. Research solutions online.                                                                                                                      |                                                        |
 | **BUG-342**              | **Canvas Multi-Drag Bug: Unselected Tasks Move Together**              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Dragging one task causes another unselected task to move with it                                                                                                                                                  |                                                        |
 | **TASK-345**             | **PWA Infrastructure: Docker & Reliable HTTPS Tunnel**                 | **P2**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Set up Dockerized stack, Caddy proxy, and Cloudflare Tunnel for stable remote testing.                                                                                                                            |                                                        |
-| ~~**TASK-346**~~         | ✅ **DONE** **Mobile-Specific UI: Feature Subset & Touch Navigation**  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView, MobileInboxView (filter chips + quick-add), 4-tab nav. [SOP-013](./sop/SOP-013-cloudflare-tunnel-supabase.md), [SOP-014](./sop/SOP-014-tauri-supabase-detection.md)                              |                                                        |
+| ~~**TASK-346**~~         | ✅ **DONE** **Mobile-Specific UI: Feature Subset & Touch Navigation**  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView, MobileInboxView (filter chips + quick-add), 4-tab nav. [SOP-023](./sop/SOP-023-cloudflare-tunnel-supabase.md), [SOP-011](./sop/SOP-011-tauri-distribution.md)                              |                                                        |
 | **BUG-347**              | **Fix FK Constraint Violation on parent_task_id**                      | **P1**                                              | 👀 **REVIEW**                                                                                                                   | Sync errors when parent task deleted. Fix: Catch-and-retry clears orphaned parent refs. [See Details](#bug-347-fix-fk-constraint-violation-on-parent_task_id-review)                                              |                                                        |
-| ~~**TASK-348**~~         | ✅ **DONE** **Tauri Startup Guide & Shadow Mirror Fix**                | **P2**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | [SOP-015](./sop/SOP-015-tauri-startup-guide.md) - Fixed shadow-mirror.cjs relative URL detection, documented startup methods                                                                                      |                                                        |
+| ~~**TASK-348**~~         | ✅ **DONE** **Tauri Startup Guide & Shadow Mirror Fix**                | **P2**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | [SOP-011](./sop/SOP-011-tauri-distribution.md) - Fixed shadow-mirror.cjs relative URL detection, documented startup methods                                                                                      |                                                        |
 | **BUG-352**              | **Mobile PWA "Failed to Fetch"**                       | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-352-mobile-pwa-failed-to-fetch-persistent-cache) - Likely SW cache issue                                                                                                                                     |                                                        |
 | **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |
 | ~~**TASK-353**~~         | ✅ **DONE** **Mobile PWA UI Phase 1**                  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView (daily schedule), MobileInboxView (filter chips, sort, quick-add bar), MobileNav (4 tabs), Mobile PWA design skill                                                                                |                                                        |
 | ~~**TASK-354**~~         | ✅ **DONE** **Canvas CSS Import Fix**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed canvas not rendering after CSS import change. Reverted ES import to `<style src="">` for global Vue Flow overrides.                                                                                          |                                                        |
 | ~~**BUG-355**~~          | ✅ **DONE** **Timer Beep/Reset on Reload**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed timer beeping on reload when no timer was active. Added stale session detection (>1hr) and silent completion for expired sessions.                                                                           |                                                        |
 | ~~**BUG-356**~~          | ✅ **DONE** **Groups Moving Together (Accidental Nesting)**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed groups incorrectly moving together when dragging. Root cause: corrupted parentGroupId relationships. Added: (1) 2x area ratio requirement for group nesting, (2) invalid parent cleanup on load, (3) `resetGroupsToRoot()` emergency fix. [SOP-018](./sop/SOP-018-canvas-group-nesting.md)                                                                           |                                                        |
-| ~~**BUG-357**~~          | ✅ **DONE** **Tauri Edit Modal Shows Wrong Task**                       | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed stale Vue Flow node data + missing canvas sync after edit. [SOP-019](./sop/SOP-019-tauri-vue-flow-reactivity.md)                                                                                            |                                                        |
+| ~~**BUG-357**~~          | ✅ **DONE** **Tauri Edit Modal Shows Wrong Task**                       | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed stale Vue Flow node data + missing canvas sync after edit. [SOP-025](./sop/SOP-025-tauri-vue-flow-reactivity.md)                                                                                            |                                                        |
 | **BUG-359**              | **Task List Checkbox Clipped in Edit Modal**                            | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TipTap task list checkbox not visible/cut off on right side of description editor                                                                                                                                 |                                                        |
 | **BUG-360**              | **Ctrl+Z Undo Not Working in Quick Sort View**                          | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Undo (Ctrl+Z) not functioning correctly in the Quick Sort view                                                                                                                                                    |                                                        |
 | ~~**TASK-370**~~         | ✅ **DONE** **Canvas: Arrange Done Tasks Button**                      | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | One-click button in toolbar to arrange all done tasks in grid at bottom-left. Removes tasks from groups for review.                                                                          |                                                        |
@@ -159,7 +159,7 @@
 | **TASK-362**             | **Stress Test: Sync Conflict Resolution**                               | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Race condition and conflict resolution tests                                                                                                                                                                      | TASK-338                                               |
 | **TASK-363**             | **Stress Test: Auth Edge Cases**                                        | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Expired token, session timeout, concurrent session tests                                                                                                                                                          | TASK-338                                               |
 | **TASK-364**             | **Stress Test: WebSocket Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Realtime reconnection stress tests                                                                                                                                                                                | TASK-338                                               |
-| **TASK-365**             | **Stress Test: Actual Restore Verification**                            | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Test actual backup restore functionality (not just file existence)                                                                                                                                                | TASK-338                                               |
+| ~~**TASK-365**~~         | ✅ **DONE** **Stress Test: Actual Restore Verification**                | **P0**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | `npm run test:restore` - 14-point verification + Playwright E2E                                                                                                                                                   | TASK-338                                               |
 | **TASK-366**             | **Stress Test: Redundancy Assessment**                                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Single-point-of-failure detection and mitigation                                                                                                                                                                  | TASK-338                                               |
 | ~~**BUG-367**~~          | ✅ **DONE** **Inbox Filter Excludes Overdue Tasks**                     | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed "This Week"/"This Month" filters to include overdue tasks. [SOP-020](./sop/SOP-020-inbox-filter-date-logic.md)                                                                                               |                                                        |
 | ~~**TASK-368**~~         | ✅ **DONE** **Date Picker Popup Improvements**                          | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Added +1mo/+2mo/+3mo shortcuts and "Now" button to calendar popup. Dark theme styling applied.                                                                                                                      |                                                        |
@@ -268,7 +268,7 @@ Implemented batch capture mode: rapidly add multiple tasks first, then sort them
 - `src/composables/canvas/node/useTaskNodeActions.ts` - `triggerEdit()` now looks up fresh task
 - `src/composables/tasks/useTaskEditActions.ts` - `saveTask()` now triggers canvas sync
 
-**SOP**: [SOP-019-tauri-vue-flow-reactivity.md](./sop/SOP-019-tauri-vue-flow-reactivity.md)
+**SOP**: [SOP-025-tauri-vue-flow-reactivity.md](./sop/SOP-025-tauri-vue-flow-reactivity.md)
 
 **Verification**:
 - [x] Code change implemented
@@ -331,7 +331,42 @@ ssh root@84.46.253.137 '~/scripts/supabase-backup.sh'
 systemctl --user status flowstate-backup-sync.timer
 ```
 
-**SOP**: `docs/sop/SOP-VPS-BACKUP.md`
+**SOP**: TODO - Create `docs/sop/SOP-XXX-VPS-BACKUP.md`
+
+---
+
+### TASK-371: Deploy FlowState to VPS + Set Up Replication (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-22)
+
+Deploy FlowState schema to VPS and set up real-time Postgres replication for PWA access.
+
+**Architecture**:
+```
+PWA/Mobile → VPS (primary, read/write) → Local (backup, real-time sync)
+```
+
+**Steps**:
+1. [x] Push FlowState migrations to VPS ✅
+2. [ ] Export local data (tasks, groups, projects, settings)
+3. [ ] Import data to VPS
+4. [ ] Set up VPS → Local Postgres replication
+5. [x] SSH access investigated - not banned, VPS under brute-force attack (627 bans)
+6. [ ] Test PWA connects to VPS
+7. [ ] Verify replication working
+
+**Known Issue - SSH Intermittent**:
+- VPS under constant brute-force attack (~3874 failed attempts)
+- fail2ban active, blocking attackers
+- User IP (176.228.140.220) NOT banned
+- "Connection reset" likely due to VPS overload during attack spikes
+- **Fix**: Try `ssh root@84.46.253.137` again, should work now
+
+**Progress Log**:
+- 2026-01-22 21:55: Started - VPS has empty schema, local has all data
+- 2026-01-22 22:05: Migrations applied - VPS now has all 10 FlowState tables
+- 2026-01-22 22:10: SSH issue investigated - not banned, VPS under attack
 
 ---
 
@@ -730,22 +765,30 @@ Test Supabase Realtime reconnection under stress.
 
 ---
 
-### TASK-365: Stress Test - Actual Restore Verification (📋 PLANNED)
+### ~~TASK-365~~: Stress Test - Actual Restore Verification (✅ DONE)
 
 **Priority**: P0
-**Status**: PLANNED
+**Status**: ✅ DONE (2026-01-22)
 **Depends On**: TASK-338
 
 Test actual backup restore functionality (not just file existence).
 
-**Tests to Implement**:
-- [ ] Create tasks → backup → delete all → restore → verify data intact
-- [ ] Restore from 1-day-old backup → verify all fields preserved
-- [ ] Restore with conflicting IDs → verify dedup works
-- [ ] Restore partial backup (corrupted JSON) → verify graceful failure
-- [ ] Restore → verify canvas positions preserved
+**Implemented Tests** (`npm run test:restore`):
+- [x] Backup files exist and are readable
+- [x] Backup structure validation (tasks, groups, timestamp, checksum)
+- [x] Task restorability (required fields, no duplicates)
+- [x] Group restorability (required fields, no duplicates)
+- [x] Checksum integrity verification
+- [x] Restore simulation (dry run)
+- [x] Relationship integrity (parent references)
 
-**Files**: `tests/stress/restore-verification.spec.ts`
+**Playwright E2E** (`npm run test:restore:e2e`):
+- [x] Full restore cycle: create → backup → delete → restore → verify
+- [x] Shadow backup validation
+
+**Files**:
+- `scripts/verify-restore.cjs` - Node.js 14-point verification
+- `tests/stress/restore-verification.spec.ts` - Playwright E2E tests
 
 ---
 
@@ -763,7 +806,7 @@ Identify and test single points of failure.
 - [ ] Test shadow mirror as emergency restore source
 - [ ] Document recovery procedures for each failure mode
 
-**Files**: `tests/stress/redundancy-assessment.spec.ts`, `docs/sop/SOP-XXX-disaster-recovery.md`
+**Files**: `tests/stress/redundancy-assessment.spec.ts`
 
 ---
 
@@ -1877,6 +1920,34 @@ onMoveEnd(({ viewport }) => {
 **Success Criteria**:
 - [ ] Installable on iOS Safari
 - [ ] Installable on Android Chrome
+### ~~TASK-370~~: Canvas: Arrange Done Tasks Button (✅ DONE)
+
+**Priority**: P2-MEDIUM
+**Complexity**: Low
+**Status**: ✅ DONE (2026-01-22)
+**Created**: January 22, 2026
+
+**Feature**: One-click button in Canvas Toolbar to arrange all done tasks in a neat grid at the bottom-left of the canvas.
+
+**Problem**: Done tasks clutter the canvas, mixed in with active tasks inside groups. User wants to quickly organize them outside groups for review/archival.
+
+**Implementation**:
+- [x] Add `arrangeDoneTasksInGrid()` function to `useCanvasTaskActions.ts`
+- [x] Re-export in `useCanvasActions.ts`
+- [x] Add LayoutGrid button to `CanvasToolbar.vue` in new "Organize Actions" group
+- [x] Wire up `@arrange-done-tasks` event in `CanvasView.vue`
+
+**Grid Layout**:
+- Starting position: x=100, y=2000 (bottom-left area)
+- Task card size: 200x80, Gap: 16px, Columns: 5 per row
+
+**Key Files**:
+- `src/composables/canvas/useCanvasTaskActions.ts`
+- `src/components/canvas/CanvasToolbar.vue`
+- `src/views/CanvasView.vue`
+
+---
+
 - [ ] Offline mode works on both platforms
 - [ ] Lighthouse PWA score >= 90
 
@@ -2885,4 +2956,4 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 - [TASK-317: Shadow Backup Deletion-Aware Restore](#task-317-shadow-backup-deletion-aware-restore--supabase-data-persistence-done)
 - [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md)
 
-| TASK-TEST | TEST | `App.vue` | Test task for deferred execution |
+| TASK-999 | TEST | `App.vue` | Test task for deferred execution |

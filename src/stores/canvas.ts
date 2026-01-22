@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
-import { breakGroupCycles } from '@/utils/canvas/storeHelpers'
+import { breakGroupCycles, resetAllGroupsToRoot } from '@/utils/canvas/storeHelpers'
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
 import { type Node, type Edge } from '@vue-flow/core'
@@ -363,6 +363,21 @@ export const useCanvasStore = defineStore('canvas', () => {
       groupsModule._rawGroups.value = []
       nodes.value = []
       edges.value = []
+    },
+    // Emergency fix: Reset all groups to root level (clears parent relationships)
+    // Call this from browser console: useCanvasStore().resetGroupsToRoot()
+    resetGroupsToRoot: async () => {
+      const groups = groupsModule._rawGroups.value
+      resetAllGroupsToRoot(groups)
+      // Trigger reactivity and save
+      groupsModule._rawGroups.value = [...groups]
+      // Save each group to persist the fix
+      for (const g of groups) {
+        await persistence.saveGroupToStorage(g)
+      }
+      // Trigger sync
+      groupsModule.syncTrigger.value++
+      console.log('✅ All groups reset to root level. Refresh the page to see changes.')
     }
   }
 })

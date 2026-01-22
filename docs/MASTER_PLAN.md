@@ -1,5 +1,5 @@
-**Last Updated**: January 22, 2026 (BUG-360 Ctrl+Z Undo Not Working in Quick Sort)
-**Version**: 5.53 (Canvas Group Nesting Safeguards)
+**Last Updated**: January 22, 2026 (BUG-356 Groups Moving Together Fix)
+**Version**: 5.54 (Canvas Group Nesting Safeguards)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---

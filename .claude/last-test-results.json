@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-01-22T22:02:27+02:00",
-  "triggeredBy": "src/App.vue",
-  "tool": "Edit",
-  "exitCode": 0,
+  "timestamp": "2026-01-22T22:10:00+02:00",
+  "triggeredBy": "manual-test-run",
+  "tool": "Bash",
+  "exitCode": 1,
   "passed": false,
-  "summary": "Tests failed: 3 failed"
+  "summary": "Tests failed: 6 failed"
 }

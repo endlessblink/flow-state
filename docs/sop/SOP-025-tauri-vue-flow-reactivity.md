@@ -1,4 +1,6 @@
-# SOP-019: Tauri/WebKitGTK Vue Flow Reactivity
+# SOP-025: Tauri/WebKitGTK Vue Flow Reactivity
+
+> **Note**: Renumbered from SOP-019 to SOP-025 to resolve ID conflict with SOP-019-multi-agent-file-locking.md
 
 **Created**: 2026-01-22
 **Status**: Active

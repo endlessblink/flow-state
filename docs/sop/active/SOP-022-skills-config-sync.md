@@ -1,4 +1,6 @@
-# SOP-012: Skills Configuration Auto-Sync System
+# SOP-022: Skills Configuration Auto-Sync System
+
+> **Note**: Renumbered from SOP-012 to SOP-022 to resolve ID conflict with SOP-012-timer-active-highlight.md
 
 **Category**: Skills
 **Status**: Active

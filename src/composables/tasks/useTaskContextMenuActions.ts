@@ -25,11 +25,23 @@ export function useTaskContextMenuActions(
         emit('close')
     }
 
-    const setDueDate = async (dateType: string) => {
+    const setDueDate = async (dateType: string, customDate?: string) => {
         if (!currentTask.value) return
 
         if (isBatchOperation.value) {
             emit('setDueDate', dateType as any)
+            emit('close')
+            return
+        }
+
+        // Handle custom date from date picker
+        if (dateType === 'custom' && customDate) {
+            try {
+                await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: customDate })
+                canvasStore.requestSync('user:context-menu')
+            } catch (error) {
+                console.error('Error updating task due date:', error)
+            }
             emit('close')
             return
         }

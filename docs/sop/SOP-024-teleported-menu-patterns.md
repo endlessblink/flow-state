@@ -1,4 +1,6 @@
-# SOP-013: Teleported Menu Patterns for Tauri Compatibility
+# SOP-024: Teleported Menu Patterns for Tauri Compatibility
+
+> **Note**: Renumbered from SOP-013 to SOP-024 to resolve ID conflict with SOP-013-immutable-task-ids.md
 
 **Status**: Active
 **Created**: 2026-01-21

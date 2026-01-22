@@ -1,5 +1,5 @@
-**Last Updated**: January 21, 2026 (TASK-348 Tauri Startup Guide)
-**Version**: 5.51 (Tauri Startup Guide & Shadow Mirror Fix)
+**Last Updated**: January 21, 2026 (TASK-353 Mobile PWA UI Phase 1)
+**Version**: 5.52 (Mobile PWA UI: Today View, Filter Chips, Quick-Add Bar)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -141,11 +141,12 @@
 | **BUG-341**              | **Tauri App Freezing - Add Comprehensive Logging**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add logging/diagnostics to debug Tauri app freezing/crash issues. Research solutions online.                                                                                                                      |                                                        |
 | **BUG-342**              | **Canvas Multi-Drag Bug: Unselected Tasks Move Together**              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Dragging one task causes another unselected task to move with it                                                                                                                                                  |                                                        |
 | **TASK-345**             | **PWA Infrastructure: Docker & Reliable HTTPS Tunnel**                 | **P2**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | Set up Dockerized stack, Caddy proxy, and Cloudflare Tunnel for stable remote testing.                                                                                                                            |                                                        |
-| **TASK-346**             | **Mobile-Specific UI: Feature Subset & Touch Navigation**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Designing a mobile-first dashboard and navigation that serves only the necessary "on-the-go" features.                                                                                                           |                                                        |
+| ~~**TASK-346**~~         | ✅ **DONE** **Mobile-Specific UI: Feature Subset & Touch Navigation**  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView, MobileInboxView (filter chips + quick-add), 4-tab nav. [SOP-013](./sop/SOP-013-cloudflare-tunnel-supabase.md), [SOP-014](./sop/SOP-014-tauri-supabase-detection.md)                              |                                                        |
 | **BUG-347**              | **Fix FK Constraint Violation on parent_task_id**                      | **P1**                                              | 👀 **REVIEW**                                                                                                                   | Sync errors when parent task deleted. Fix: Catch-and-retry clears orphaned parent refs. [See Details](#bug-347-fix-fk-constraint-violation-on-parent_task_id-review)                                              |                                                        |
 | ~~**TASK-348**~~         | ✅ **DONE** **Tauri Startup Guide & Shadow Mirror Fix**                | **P2**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | [SOP-015](./sop/SOP-015-tauri-startup-guide.md) - Fixed shadow-mirror.cjs relative URL detection, documented startup methods                                                                                      |                                                        |
 | **BUG-352**              | **Mobile PWA "Failed to Fetch"**                       | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-352-mobile-pwa-failed-to-fetch-persistent-cache) - Likely SW cache issue                                                                                                                                     |                                                        |
-| **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |                                                        |
+| **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |
+| ~~**TASK-353**~~         | ✅ **DONE** **Mobile PWA UI Phase 1**                  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView (daily schedule), MobileInboxView (filter chips, sort, quick-add bar), MobileNav (4 tabs), Mobile PWA design skill                                                                                |                                                        |
 
 ---
 
@@ -163,10 +164,14 @@
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
 
-### BUG-352: Mobile PWA "Failed to Fetch" (Persistent Cache)
+### BUG-352: Mobile PWA "Failed to Fetch" (Network/Cert Issue)
 **Priority**: P0-CRITICAL
 **Status**: 📋 PLANNED (for Tomorrow)
-User reports mobile device still fails to fetch, likely due to aggressive Service Worker caching of the old configuration (localhost authentication). Needs hard cache reset strategy or cache-busting deployment.
+User reports mobile device fails to fetch even on fresh browser. This rules out simple caching.
+**Potential Causes**:
+1.  **SSL/Cert Issue**: Android/iOS might reject the `sslip.io` cert if the chain isn't perfect (Caddy usually handles this, but maybe an intermediate is missing).
+2.  **Mobile-Specific Code Path**: Does the mobile layout have a hardcoded `localhost` fetch somewhere that the desktop layout doesn't use?
+3.  **CORS**: Mobile browser enforcing stricter CORS?
 
 ### TASK-351: Secure Secrets Management (Doppler)
 **Priority**: P1
@@ -307,6 +312,32 @@ Multiple auth reliability issues: random Tauri signouts, password login failures
 
 ---
 
+### TASK-353: Design Better Canvas Empty State (📋 BACKLOG)
+
+**Priority**: P3
+**Status**: 📋 BACKLOG
+
+**Context**: The current canvas empty state is minimal - just text and two buttons. A better empty state would help new users understand the canvas capabilities.
+
+**Requested Improvements**:
+- Visual illustration showing the canvas concept (workflow, visual organization)
+- More engaging messaging (inviting rather than just "it's empty")
+- Feature highlights showing what's possible (groups, visual layout, drag-drop)
+- Guest mode awareness (prompt to sign in to save work)
+- Keyboard shortcut hints
+
+**Current Component**: `src/components/canvas/CanvasEmptyState.vue`
+
+**Tasks**:
+- [ ] Design new empty state mockup
+- [ ] Add visual illustration (CSS/SVG based)
+- [ ] Improve messaging copy
+- [ ] Add feature highlights
+- [ ] Add guest mode sign-in prompt
+- [ ] Test with new users
+
+---
+
 ### ~~BUG-336~~: Fix Backup Download in Tauri App (✅ DONE)
 
 **Priority**: P0-CRITICAL
@@ -427,9 +458,11 @@ Create a specialized stress testing agent/skill that rigorously tests all comple
 - [x] Design skill architecture based on research findings
 - [x] Create skill file structure (`.claude/skills/stress-tester/`)
 - [x] Add to skills.json configuration
+- [x] Implement backup/restore verification tests (`npm run test:backup`)
+- [x] **FIX**: Shadow mirror JSON structure - added `timestamp` and `checksum` at root level (2026-01-22)
+- [x] **FIX**: Checksum algorithm mismatch - aligned SHA256 algorithm between mirror and verifier (2026-01-22)
 - [ ] Create test matrix covering all completed TASK-* items
 - [ ] Implement reliability test suite
-- [ ] Implement backup/restore verification tests
 - [ ] Implement container stability checks
 - [ ] Implement security audit checks
 - [ ] Create comprehensive report generation

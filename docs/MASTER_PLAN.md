@@ -388,10 +388,80 @@ PWA/Mobile → VPS (primary, read/write) → Local (backup, real-time sync)
 
 ---
 
-### TASK-351: Secure Secrets Management (Doppler)
+### ~~TASK-1001~~: Configure Custom Domain (in-theflow.com) with Caddy SSL (✅ DONE)
+
 **Priority**: P1
-**Status**: 📋 PLANNED (for Tomorrow)
+**Status**: ✅ DONE (2026-01-23)
+
+Set up custom domain for FlowState VPS with automatic HTTPS via Caddy and deploy PWA.
+
+**Domain**: `in-theflow.com`
+**VPS IP**: `84.46.253.137`
+
+**DNS Records** (Cloudflare - proxied):
+| Type  | Name | Value          |
+|-------|------|----------------|
+| A     | @    | 84.46.253.137  |
+| A     | api  | 84.46.253.137  |
+| CNAME | www  | in-theflow.com |
+
+**Steps**:
+1. [x] Configure DNS records at Cloudflare ✅
+2. [x] Install Caddy on VPS ✅
+3. [x] Create Cloudflare Origin Certificate (15-year, expires 2041) ✅
+4. [x] Configure Caddy with origin cert for Full SSL ✅
+5. [x] Test HTTPS endpoints working ✅
+6. [x] Create `.env.production` with api.in-theflow.com ✅
+7. [x] Build PWA for production ✅
+8. [x] Deploy PWA dist/ to VPS (`/var/www/flowstate/`) ✅
+9. [x] Configure Caddy to serve PWA with SPA fallback ✅
+10. [x] Test full flow (site, API, manifest, SW) ✅
+
+**Certificates Backup**: `~/secrets/in-theflow.com/`
+
+**Live Endpoints**:
+- `https://in-theflow.com` → PWA frontend ✅
+- `https://api.in-theflow.com` → Supabase API ✅
+
+**SOP**: [SOP-026-custom-domain-deployment.md](./sop/SOP-026-custom-domain-deployment.md)
+
+---
+
+### TASK-351: Secure Secrets Management (Doppler) (📋 NEXT)
+
+**Priority**: P1
+**Status**: 📋 NEXT (2026-01-24)
+
 Migrate from `.env` files to Doppler for secure secret injection in CI/CD and VPS.
+
+**Steps**:
+1. [ ] Create Doppler project for FlowState
+2. [ ] Add all secrets (Supabase keys, JWT secrets, etc.)
+3. [ ] Update CI/CD to pull from Doppler
+4. [ ] Update VPS deployment to use Doppler CLI
+5. [ ] Remove `.env` files from deployment
+
+---
+
+### TASK-1002: Voice Transcription to Task (📋 NEXT)
+
+**Priority**: P1
+**Status**: 📋 NEXT (2026-01-24)
+
+Implement voice recording → transcription → task creation using an API (Whisper/Deepgram/AssemblyAI).
+
+**Requirements**:
+- Record audio in PWA (MediaRecorder API)
+- Send to transcription API
+- Create task from transcribed text
+- Mobile-first UX (hold-to-record button)
+
+**Steps**:
+1. [ ] Research transcription APIs (cost, accuracy, latency)
+2. [ ] Implement audio recording in PWA
+3. [ ] Create transcription service
+4. [ ] Add "voice task" button to quick add
+5. [ ] Test on mobile
 
 ### BUG-342: Canvas Multi-Drag Bug - Unselected Tasks Move Together (🔄 IN PROGRESS)
 

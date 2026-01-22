@@ -1,28 +1,28 @@
 # FlowState Standard Operating Procedures (SOPs)
 
 **Last Updated**: January 22, 2026
-**Total Documents**: 33 active (17 root + 12 active/ + 4 canvas/), 45 archived
+**Total Documents**: 38 active, 45 archived (83 total)
 
 ---
 
 ## Quick Navigation
 
-| Category | Prefix | Description |
-|----------|--------|-------------|
-| Canvas | `CANVAS-`, `SOP-018` | Vue Flow canvas view fixes |
-| Calendar | `CALENDAR-` | Calendar drag, resize, scheduling |
-| Distribution | `SOP-011` | Tauri desktop builds, releases, startup |
-| Cloudflare | `SOP-023` | Cloudflare tunnel configuration |
-| Menu Patterns | `SOP-024` | Teleported menu patterns for Tauri |
-| Vue Flow | `SOP-025` | Tauri WebKitGTK reactivity issues |
-| Migration | `MIGRATION-` | Database migration procedures |
-| Sync | `SYNC-` | Supabase sync, conflicts |
-| Styling | `STYLING-` | CSS, glassmorphism, design tokens |
-| Tasks | `SOP-013`, `SOP-019` | Task IDs, multi-agent locking |
-| Timer | `TIMER-`, `SOP-012` | Pomodoro timer sync, highlighting |
-| UI | `UI-` | General UI components |
-| Undo | `UNDO-` | Undo/redo system architecture |
-| Skills | `SOP-022` | Skills configuration auto-sync |
+| Category | Location | Description |
+|----------|----------|-------------|
+| Canvas | `canvas/`, root `SOP-018` | Vue Flow canvas system |
+| Calendar | `active/CALENDAR-*` | Calendar drag, resize |
+| Distribution | root `SOP-011` | Tauri builds, startup, releases |
+| Cloudflare | root `SOP-023` | Tunnel configuration |
+| Menu Patterns | root `SOP-024` | Teleported menus for Tauri |
+| Vue Flow | root `SOP-025` | Tauri WebKitGTK reactivity |
+| Migration | `active/MIGRATION-*` | Database migrations |
+| Sync | `active/SYNC-*` | Supabase sync, conflicts |
+| Styling | `active/STYLING-*` | CSS, glassmorphism |
+| Tasks | root `SOP-013`, `SOP-019` | Task IDs, multi-agent locking |
+| Timer | root `SOP-012`, `active/TIMER-*` | Pomodoro sync, highlighting |
+| Undo | `active/UNDO-*` | Undo/redo architecture |
+| Skills | `active/SOP-022` | Skills config auto-sync |
+| Reference | `reference/` | Implementation guides |
 
 ---
 
@@ -30,228 +30,118 @@
 
 ```
 docs/sop/
-├── active/      # Current, actively-referenced SOPs
-├── canvas/      # Canvas system documentation (Vue Flow)
-├── reference/   # Comprehensive guides (not bug-fixes)
-└── archived/    # Completed fixes (historical reference)
+├── *.md           # Numbered SOPs (SOP-001 to SOP-025)
+├── active/        # Category-prefixed active SOPs (12 files)
+├── canvas/        # Canvas system documentation (4 files)
+├── reference/     # Implementation guides (3 files)
+├── deployment/    # PWA/VPS deployment guides (2 files)
+└── archived/      # Historical fixes (45 files)
 ```
 
 ---
 
-## Active SOPs
+## Active SOPs by Location
 
-### Canvas (CANVAS-*, SOP-018)
-
-> **See Also:** [Canvas System Index](./canvas/README.md) for architecture documentation
+### Root Directory (16 files)
 
 | File | Description |
 |------|-------------|
-| `canvas/README.md` | **Index**: Canvas architecture and composable reference |
-| `canvas/CANVAS-POSITION-SYSTEM.md` | Position/coordinate system, geometry invariants |
-| `canvas/CANVAS-DRAG-DROP.md` | Drag, drop, and selection behavior |
-| `canvas/CANVAS-DEBUGGING.md` | Debugging tools and troubleshooting |
-| `SOP-018-canvas-group-nesting.md` | Group nesting validation and fixes |
-
-### Calendar (CALENDAR-*)
-
-| File | Description |
-|------|-------------|
-| `CALENDAR-drag-drop-reference.md` | **Consolidated**: All drag/drop patterns |
-
-### Distribution & Tauri (SOP-011, SOP-024, SOP-025)
-
-| File | Description |
-|------|-------------|
-| `SOP-011-tauri-distribution.md` | **Complete Guide**: Builds, startup, Supabase detection, signing, releases |
-| `SOP-024-teleported-menu-patterns.md` | Teleported menu patterns for Tauri WebView compatibility |
-| `SOP-025-tauri-vue-flow-reactivity.md` | Vue Flow reactivity issues in Tauri/WebKitGTK |
-
-> **Note**: SOP-011 consolidates former SOP-014 (Supabase detection) and SOP-015 (startup guide)
-
-### Sync (SYNC-*)
-
-| File | Description |
-|------|-------------|
-| `SYNC-loop-fix.md` | Infinite sync loop prevention |
-| `SYNC-conflict-resolution.md` | Conflict detection and resolution |
-| `SYNC-cross-browser.md` | Cross-browser sync compatibility |
-| `SYNC-backup-false-positive.md` | Backup system false positive fix |
-| `SYNC-system-consolidation.md` | **Consolidated**: Duplicate system removal |
-| `SYNC-supabase-circular-loop-fix.md` | Supabase realtime circular loop fix |
-
-### Styling (STYLING-*)
-
-| File | Description |
-|------|-------------|
-| `STYLING-glassmorphism-guide.md` | **Consolidated**: All glass/CSS debugging |
-| `STYLING-dark-theme-fix.md` | Dark theme visibility issues |
-
-### Migration (MIGRATION-*)
-
-| File | Description |
-|------|-------------|
-| `MIGRATION-pouchdb-to-sqlite.md` | PouchDB to SQLite migration fixes (BUG-087) |
-
-### Tasks & Locking (SOP-013, SOP-019)
-
-| File | Description |
-|------|-------------|
+| `SOP-004-css-shadow-overflow-clipping.md` | CSS shadow/glow overflow |
+| `SOP-006-canvas-resize-handle-visibility.md` | Resize handle visibility |
+| `SOP-007-task-node-selection-indicators.md` | Task selection indicators |
+| `SOP-008-canvas-connection-ux.md` | Canvas connection UX |
+| `SOP-009-reactive-task-nodes.md` | Reactive task nodes |
+| `SOP-010-dev-manager-orchestrator.md` | Dev manager orchestrator |
+| `SOP-011-tauri-distribution.md` | **Tauri Complete Guide** (builds, startup, Supabase) |
+| `SOP-012-timer-active-highlight.md` | Active timer task highlighting |
 | `SOP-013-immutable-task-ids.md` | Immutable task ID system |
-| `SOP-019-multi-agent-file-locking.md` | Multi-agent file locking with deferred execution |
+| `SOP-018-canvas-group-nesting.md` | Group nesting validation |
+| `SOP-019-multi-agent-file-locking.md` | Multi-agent file locking |
+| `SOP-020-inbox-filter-date-logic.md` | Inbox filter date logic |
+| `SOP-021-quick-capture-tab.md` | Quick capture tab feature |
+| `SOP-023-cloudflare-tunnel-supabase.md` | Cloudflare tunnel setup |
+| `SOP-024-teleported-menu-patterns.md` | Teleported menu patterns |
+| `SOP-025-tauri-vue-flow-reactivity.md` | Tauri Vue Flow reactivity |
+| `SOP-026-custom-domain-deployment.md` | Custom domain (in-theflow.com) setup |
 
-### Cloudflare (SOP-023)
-
-| File | Description |
-|------|-------------|
-| `SOP-023-cloudflare-tunnel-supabase.md` | Cloudflare tunnel with local Supabase |
-
-### UI (UI-*)
-
-| File | Description |
-|------|-------------|
-| `UI-filter-highlighting.md` | Filter highlighting system |
-| `UI-sidebar-categories.md` | Sidebar category counts fix |
-
-### Undo (UNDO-*)
+### Active Directory (12 files)
 
 | File | Description |
 |------|-------------|
-| `active/UNDO-system-architecture.md` | Undo/redo system architecture & troubleshooting |
+| `CALENDAR-drag-drop-reference.md` | Calendar drag/drop patterns |
+| `MIGRATION-pouchdb-to-sqlite.md` | PouchDB to SQLite migration |
+| `SOP-016-guest-mode-auth-flow.md` | Guest mode authentication |
+| `SOP-022-skills-config-sync.md` | Skills configuration auto-sync |
+| `SOP-AUTH-reliability.md` | Auth reliability patterns |
+| `STYLING-glassmorphism-guide.md` | Glassmorphism CSS guide |
+| `SYNC-conflict-resolution.md` | Conflict detection/resolution |
+| `SYNC-system-consolidation.md` | Sync system consolidation |
+| `TASKS-raw-safety-pattern.md` | `_raw*` prefix pattern |
+| `TASKS-store-patterns.md` | Store refactoring patterns |
+| `TIMER-sync-architecture.md` | Cross-device timer sync |
+| `UNDO-system-architecture.md` | Undo/redo architecture |
 
-### Timer (TIMER-*, SOP-012)
+### Canvas Directory (4 files)
 
 | File | Description |
 |------|-------------|
-| `active/TIMER-sync-architecture.md` | Cross-device timer sync (Vue app + KDE widget) |
-| `SOP-012-timer-active-highlight.md` | Active timer task highlighting across views |
+| `README.md` | Canvas architecture index |
+| `CANVAS-POSITION-SYSTEM.md` | Position/coordinate system |
+| `CANVAS-DRAG-DROP.md` | Drag, drop, selection |
+| `CANVAS-DEBUGGING.md` | Debugging tools |
 
-### Skills (SOP-022)
+### Reference Directory (3 files)
 
 | File | Description |
 |------|-------------|
-| `active/SOP-022-skills-config-sync.md` | Skills configuration auto-sync system |
+| `canvas-implementation-guide.md` | Canvas architecture reference |
+| `data-safety-audit.md` | Data safety checklist |
+| `calendar-consolidation-initiative.md` | Calendar consolidation roadmap |
 
 ---
 
-## Reference Guides
+## Archived SOPs (45 files)
 
-| File | Description |
-|------|-------------|
-| `canvas-implementation-guide.md` | Complete canvas architecture reference |
-| `canvas-safety-guidelines.md` | Anti-patterns and safe development |
-| `data-safety-audit.md` | Data safety verification checklist |
-| `calendar-consolidation-initiative.md` | Calendar system consolidation roadmap |
-
----
-
-## Archived SOPs
-
-Historical fixes no longer actively referenced (45 files in `archived/`):
+Historical fixes in `archived/`. Notable entries:
 
 | File | Original Issue |
 |------|----------------|
-| `BUG-037-implementation-plan.md` | Zombie task fix plan |
-| `bundle-size-cleanup-2025-12-27.md` | One-time cleanup |
-| `deleted-tasks-recreation-fix.md` | Task deletion persistence |
-| `inbox-shift-click-fix.md` | Shift-click selection |
-| `timer-cross-device-sync-fix.md` | Timer sync issue |
-| `tasknode-priority-indicator-fix.md` | Priority badge styling |
-| `calendar-ui-element-leakage-fix.md` | Calendar UI cleanup |
-| `SOP-VUE-FLOW-PARENT-CHILD.md` | Vue Flow parent-child refactoring (completed) |
-| `POWERSYNC-DEPLOYMENT.md` | PowerSync deployment notes |
-| `lint-watcher-setup-guide.md` | Lint watcher setup |
-| `SOP-localStorage-fallback-fixes.md` | LocalStorage fallback fixes |
-| `SOP_RECENT_CHANGES.md` | Recent changes log |
-| ... and 33 more |
+| `SYNC-loop-fix.md` | Infinite sync loop prevention |
+| `SYNC-supabase-circular-loop-fix.md` | Supabase realtime loop |
+| `STYLING-dark-theme-fix.md` | Dark theme visibility |
+| `UI-filter-highlighting.md` | Filter highlighting |
+| `UI-sidebar-categories.md` | Sidebar category counts |
+| `SOP-VUE-FLOW-PARENT-CHILD.md` | Vue Flow parent-child refactoring |
+| `CANVAS-*.md` | Various canvas fixes (10+ files) |
+| `BUG-*.md` | Bug fix documentation |
 
 ---
 
-## Using SOPs with Claude Code
-
-### Finding Relevant SOPs
-
-```bash
-# By category
-ls docs/sop/CANVAS-*
-ls docs/sop/active/SYNC-*
-
-# By keyword
-grep -l "reactivity" docs/sop/*.md docs/sop/active/*.md
-grep -l "drag" docs/sop/canvas/*.md
-```
-
-### SOP Document Structure
-
-Each SOP follows a consistent format:
-
-1. **Header**: Category, Status, Last Updated, Merged From
-2. **Overview**: Problem summary
-3. **Root Cause**: Technical analysis
-4. **Solution**: Code changes with examples
-5. **Verification**: Testing checklist
-6. **Related Files**: Affected source files
-
----
-
-## Maintenance Guidelines
-
-### When to Create a New SOP
-
-- After fixing a production bug
-- When implementing complex system changes
-- For rollback procedures
-
-### Naming Convention
-
-```
-SOP-{NNN}-{description}.md   # Numbered SOPs
-{CATEGORY}-{description}.md  # Category-prefixed SOPs
-
-Examples:
-SOP-026-new-feature.md
-CANVAS-viewport-persistence.md
-SYNC-offline-queue-fix.md
-```
-
-### ID Assignments
+## ID Assignments
 
 | Range | Usage |
 |-------|-------|
-| SOP-001 to SOP-010 | Archived/legacy |
-| SOP-011 to SOP-021 | Core SOPs (Jan 2026) |
-| SOP-022+ | New SOPs (post-consolidation) |
-
-### Consolidation Rules
-
-Merge SOPs when:
-- They cover the same component/feature
-- One supersedes another
-- Combined context is more useful
+| SOP-001 to SOP-010 | Legacy/archived |
+| SOP-011 to SOP-021 | Core active SOPs |
+| SOP-022 to SOP-025 | Post-consolidation SOPs |
+| SOP-026+ | Future SOPs |
 
 ---
 
-## Migration Notes
+## Consolidation Notes (January 22, 2026)
 
-**January 22, 2026 Consolidation**:
-- Deleted superseded `TASKS-multi-instance-locking.md` (replaced by SOP-019)
-- Merged Tauri SOPs: SOP-014, SOP-015 into SOP-011
-- Resolved ID conflicts by renumbering:
-  - SOP-012 (skills) -> SOP-022
-  - SOP-013 (cloudflare) -> SOP-023
-  - SOP-013 (teleported) -> SOP-024
-  - SOP-019 (tauri-vue-flow) -> SOP-025
-- Archived: SOP-VUE-FLOW-PARENT-CHILD, POWERSYNC-DEPLOYMENT, lint-watcher-setup-guide, SOP-localStorage-fallback-fixes
-
-**January 2026 Reorganization**:
-- Consolidated 44 files to 33 active (~25% reduction)
-- Created 4 merged documents from 12 overlapping SOPs
-- Established prefix naming for AI retrieval optimization
-- Separated active/reference/archived for clarity
+- Merged SOP-014, SOP-015 into SOP-011 (Tauri guide)
+- Deleted `TASKS-multi-instance-locking.md` (superseded by SOP-019)
+- Renumbered to resolve ID conflicts:
+  - SOP-012 (skills) → SOP-022
+  - SOP-013 (cloudflare) → SOP-023
+  - SOP-013 (teleported) → SOP-024
+  - SOP-019 (tauri-vue-flow) → SOP-025
+- Archived 5 miscellaneous files
 
 ---
 
 ## Related Documentation
 
 - `CLAUDE.md` - Project development guidelines
-- `docs/MASTER_PLAN.md` - Project roadmap and task tracking
-- `docs/conflict-systems-resolution/` - Conflict resolution architecture
+- `docs/MASTER_PLAN.md` - Project roadmap

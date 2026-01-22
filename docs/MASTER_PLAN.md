@@ -1,4 +1,4 @@
-**Last Updated**: January 22, 2026 (TASK-371 Skill Consolidation Phase 3)
+**Last Updated**: January 22, 2026 (TASK-1000 Verify Skill Logging System)
 **Version**: 5.56 (Skill Consolidation 30→18)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -165,6 +165,7 @@
 | ~~**TASK-368**~~         | ✅ **DONE** **Date Picker Popup Improvements**                          | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Added +1mo/+2mo/+3mo shortcuts and "Now" button to calendar popup. Dark theme styling applied.                                                                                                                      |                                                        |
 | ~~**TASK-369**~~         | ✅ **DONE** **Quick Capture Tab Feature**                               | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Rich task capture integrated into QuickSort view with Ctrl+Shift+T shortcut. [SOP-021](./sop/SOP-021-quick-capture-tab.md)                                                                                          |                                                        |
 | ~~**TASK-371**~~         | ✅ **DONE** **Skill Consolidation Phase 3 (30→18)**                     | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Deleted 6 broken skills, merged 8 duplicates, validated all 18 remaining skills E2E. Registry v2.2.0. 40% reduction.                                                                                                 | TASK-304                                               |
+| **TASK-1000**            | **Verify Skill Logging System**                                         | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Check if skill invocation logging (PostToolUse hook → SQLite) is working properly                                                                                                                                  |                                                        |
 
 ---
 
@@ -2957,4 +2958,3 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 - [TASK-317: Shadow Backup Deletion-Aware Restore](#task-317-shadow-backup-deletion-aware-restore--supabase-data-persistence-done)
 - [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md)
 
-| TASK-999 | TEST | `App.vue` | Test task for deferred execution |

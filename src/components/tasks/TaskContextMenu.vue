@@ -337,13 +337,25 @@ const currentDueDateTimestamp = computed(() => {
 })
 
 // Handle date selection from picker
-const handleDatePickerSelect = (timestamp: number | null) => {
-  showDatePicker.value = false
-  if (timestamp && currentTask.value) {
-    const date = new Date(timestamp)
-    const formattedDate = date.toISOString().split('T')[0]
-    setDueDate('custom', formattedDate)
+const handleDatePickerSelect = async (timestamp: number | null) => {
+  console.log('[DatePicker] Selected timestamp:', timestamp)
+  console.log('[DatePicker] Current task:', currentTask.value?.id)
+
+  if (!timestamp || !currentTask.value) {
+    console.log('[DatePicker] Missing timestamp or task, aborting')
+    return
   }
+
+  const date = new Date(timestamp)
+  const formattedDate = date.toISOString().split('T')[0]
+  console.log('[DatePicker] Formatted date:', formattedDate)
+
+  // Close the popover first
+  showDatePicker.value = false
+
+  // Update the task
+  await setDueDate('custom', formattedDate)
+  console.log('[DatePicker] setDueDate called')
 }
 
 // Menu positioning

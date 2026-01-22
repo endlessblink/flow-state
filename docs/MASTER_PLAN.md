@@ -154,6 +154,12 @@
 | **BUG-357**              | **Tauri Edit Modal Shows Wrong Task**                                   | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-357-tauri-edit-modal-shows-wrong-task-in-progress) - Fixed stale Vue Flow node data issue                                                                                                      |                                                        |
 | **BUG-359**              | **Task List Checkbox Clipped in Edit Modal**                            | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TipTap task list checkbox not visible/cut off on right side of description editor                                                                                                                                 |                                                        |
 | **BUG-360**              | **Ctrl+Z Undo Not Working in Quick Sort View**                          | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Undo (Ctrl+Z) not functioning correctly in the Quick Sort view                                                                                                                                                    |                                                        |
+| **TASK-361**             | **Stress Test: Container Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Docker/Supabase restart resilience tests                                                                                                                                                                          | TASK-338                                               |
+| **TASK-362**             | **Stress Test: Sync Conflict Resolution**                               | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Race condition and conflict resolution tests                                                                                                                                                                      | TASK-338                                               |
+| **TASK-363**             | **Stress Test: Auth Edge Cases**                                        | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Expired token, session timeout, concurrent session tests                                                                                                                                                          | TASK-338                                               |
+| **TASK-364**             | **Stress Test: WebSocket Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Realtime reconnection stress tests                                                                                                                                                                                | TASK-338                                               |
+| **TASK-365**             | **Stress Test: Actual Restore Verification**                            | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Test actual backup restore functionality (not just file existence)                                                                                                                                                | TASK-338                                               |
+| **TASK-366**             | **Stress Test: Redundancy Assessment**                                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Single-point-of-failure detection and mitigation                                                                                                                                                                  | TASK-338                                               |
 
 ---
 
@@ -614,6 +620,125 @@ Create a specialized stress testing agent/skill that rigorously tests all comple
 - Verifies backup system works under all conditions
 - Validates container orchestration reliability
 - Zero false positives in security audit
+
+**Sub-Tasks** (Created 2026-01-22):
+- TASK-361: Container Stability Tests
+- TASK-362: Sync Conflict Resolution Tests
+- TASK-363: Auth Edge Case Tests
+- TASK-364: WebSocket Stability Tests
+- TASK-365: Actual Restore Verification
+- TASK-366: Redundancy Assessment
+
+---
+
+### TASK-361: Stress Test - Container Stability (📋 PLANNED)
+
+**Priority**: P1
+**Status**: PLANNED
+**Depends On**: TASK-338
+
+Test Docker/Supabase container restart resilience.
+
+**Tests to Implement**:
+- [ ] `docker restart supabase_db_flow-state` → verify app auto-reconnects
+- [ ] Kill Supabase container → verify graceful error handling
+- [ ] Restart entire Docker stack → verify session persistence
+- [ ] Simulate container OOM → verify recovery
+
+**Files**: `tests/stress/container-stability.spec.ts`
+
+---
+
+### TASK-362: Stress Test - Sync Conflict Resolution (📋 PLANNED)
+
+**Priority**: P1
+**Status**: PLANNED
+**Depends On**: TASK-338
+
+Test race conditions and conflict resolution.
+
+**Tests to Implement**:
+- [ ] Two tabs editing same task simultaneously
+- [ ] Offline edit + online edit conflict
+- [ ] Rapid create/delete cycles (timing attacks)
+- [ ] Parent-child relationship race conditions
+
+**Files**: `tests/stress/sync-conflicts.spec.ts`
+
+---
+
+### TASK-363: Stress Test - Auth Edge Cases (📋 PLANNED)
+
+**Priority**: P1
+**Status**: PLANNED
+**Depends On**: TASK-338
+
+Test authentication boundary conditions.
+
+**Tests to Implement**:
+- [ ] Expired JWT token → verify silent refresh
+- [ ] Session timeout (1hr+) → verify re-auth flow
+- [ ] Concurrent sessions (multiple devices) → verify sync
+- [ ] Invalid token injection → verify rejection
+- [ ] Logout during active sync → verify no data loss
+
+**Files**: `tests/stress/auth-edge-cases.spec.ts`
+
+---
+
+### TASK-364: Stress Test - WebSocket Stability (📋 PLANNED)
+
+**Priority**: P1
+**Status**: PLANNED
+**Depends On**: TASK-338
+
+Test Supabase Realtime reconnection under stress.
+
+**Tests to Implement**:
+- [ ] Network disconnect → verify auto-reconnect
+- [ ] Server-side channel close → verify re-subscribe
+- [ ] 100+ rapid subscribe/unsubscribe cycles
+- [ ] WebSocket message flood (rate limiting)
+- [ ] Connection during heavy DB load
+
+**Files**: `tests/stress/websocket-stability.spec.ts`
+
+---
+
+### TASK-365: Stress Test - Actual Restore Verification (📋 PLANNED)
+
+**Priority**: P0
+**Status**: PLANNED
+**Depends On**: TASK-338
+
+Test actual backup restore functionality (not just file existence).
+
+**Tests to Implement**:
+- [ ] Create tasks → backup → delete all → restore → verify data intact
+- [ ] Restore from 1-day-old backup → verify all fields preserved
+- [ ] Restore with conflicting IDs → verify dedup works
+- [ ] Restore partial backup (corrupted JSON) → verify graceful failure
+- [ ] Restore → verify canvas positions preserved
+
+**Files**: `tests/stress/restore-verification.spec.ts`
+
+---
+
+### TASK-366: Stress Test - Redundancy Assessment (📋 PLANNED)
+
+**Priority**: P2
+**Status**: PLANNED
+**Depends On**: TASK-338
+
+Identify and test single points of failure.
+
+**Tests to Implement**:
+- [ ] Map all SPOF (Supabase, Docker, localStorage, etc.)
+- [ ] Test fallback when Supabase unreachable → localStorage mode
+- [ ] Test shadow mirror as emergency restore source
+- [ ] Document recovery procedures for each failure mode
+
+**Files**: `tests/stress/redundancy-assessment.spec.ts`, `docs/sop/SOP-XXX-disaster-recovery.md`
 
 ---
 

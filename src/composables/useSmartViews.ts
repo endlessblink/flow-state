@@ -129,7 +129,8 @@ export const useSmartViews = () => {
   }
 
   /**
-   * Check if a task is due this week (Sunday-Saturday)
+   * Check if a task is due this week (including overdue tasks)
+   * Includes: overdue tasks + tasks due from today through end of week (Sunday)
    */
   const isWeekTask = (task: Task): boolean => {
     if (task.status === 'done') return false
@@ -145,11 +146,12 @@ export const useSmartViews = () => {
     weekEnd.setDate(today.getDate() + daysUntilSunday)
     const weekEndStr = getLocalDateString(weekEnd)
 
-    // Include tasks due within the current week (today through Sunday)
+    // Include tasks due within the current week OR overdue (before today)
     if (task.dueDate) {
       try {
         const normalizedDueDate = normalizeDateString(task.dueDate)
-        if (normalizedDueDate && normalizedDueDate >= todayStr && normalizedDueDate <= weekEndStr) {
+        // Include overdue tasks (< today) OR tasks due this week (<= weekEnd)
+        if (normalizedDueDate && normalizedDueDate <= weekEndStr) {
           return true
         }
       } catch (error) {
@@ -157,13 +159,14 @@ export const useSmartViews = () => {
       }
     }
 
-    // Check if task has instances scheduled within the week
+    // Check if task has instances scheduled within the week or overdue
     if (task.instances && task.instances.length > 0) {
       try {
         if (task.instances.some(inst => {
           if (!inst || !inst.scheduledDate) return false
           const normalizedInstDate = normalizeDateString(inst.scheduledDate)
-          return normalizedInstDate && normalizedInstDate >= todayStr && normalizedInstDate <= weekEndStr
+          // Include overdue instances OR instances due this week
+          return normalizedInstDate && normalizedInstDate <= weekEndStr
         })) {
           return true
         }
@@ -172,11 +175,12 @@ export const useSmartViews = () => {
       }
     }
 
-    // Check legacy scheduled dates within the week
+    // Check legacy scheduled dates within the week or overdue
     if (task.scheduledDate) {
       try {
         const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
-        if (normalizedScheduledDate && normalizedScheduledDate >= todayStr && normalizedScheduledDate <= weekEndStr) {
+        // Include overdue OR due this week
+        if (normalizedScheduledDate && normalizedScheduledDate <= weekEndStr) {
           return true
         }
       } catch (error) {
@@ -205,42 +209,45 @@ export const useSmartViews = () => {
   }
 
   /**
-   * Check if a task is due this month (from today to end of current month)
+   * Check if a task is due this month (including overdue tasks)
+   * Includes: overdue tasks + tasks due from today to end of current month
    */
   const isThisMonthTask = (task: Task): boolean => {
     if (task.status === 'done') return false
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todayStr = getLocalDateString(today)
 
     // End of current month
     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0)
     const monthEndStr = getLocalDateString(monthEnd)
 
-    // Check dueDate within this month
+    // Check dueDate within this month OR overdue
     if (task.dueDate) {
       const normalizedDueDate = normalizeDateString(task.dueDate)
-      if (normalizedDueDate && normalizedDueDate >= todayStr && normalizedDueDate <= monthEndStr) {
+      // Include overdue tasks (< today) OR tasks due this month (<= monthEnd)
+      if (normalizedDueDate && normalizedDueDate <= monthEndStr) {
         return true
       }
     }
 
-    // Check instances within this month
+    // Check instances within this month or overdue
     if (task.instances && task.instances.length > 0) {
       if (task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
         const normalizedInstDate = normalizeDateString(inst.scheduledDate)
-        return normalizedInstDate && normalizedInstDate >= todayStr && normalizedInstDate <= monthEndStr
+        // Include overdue OR due this month
+        return normalizedInstDate && normalizedInstDate <= monthEndStr
       })) {
         return true
       }
     }
 
-    // Check legacy scheduled dates within this month
+    // Check legacy scheduled dates within this month or overdue
     if (task.scheduledDate) {
       const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
-      if (normalizedScheduledDate && normalizedScheduledDate >= todayStr && normalizedScheduledDate <= monthEndStr) {
+      // Include overdue OR due this month
+      if (normalizedScheduledDate && normalizedScheduledDate <= monthEndStr) {
         return true
       }
     }

@@ -246,7 +246,41 @@ git tag -a v0.2.0 -m "Release v0.2.0"
 git push origin master --tags
 ```
 
+## Important Rules (TASK-356)
+
+### Never Run Supabase CLI Commands That Require Project Directory
+
+**Problem**: Tauri apps run from `/usr/bin/` or user's home directory, NOT the project directory. Supabase CLI commands like `supabase db push` require being in a directory with `supabase/migrations/`.
+
+**Rule**: In `lib.rs` Tauri commands:
+- ❌ DO NOT run: `supabase db push`, `supabase migration`, `supabase db reset`
+- ✅ DO use: REST API health checks, direct curl to `http://127.0.0.1:54321/rest/v1/`
+
+**Pattern**:
+```rust
+// ❌ WRONG - Requires project directory
+app.shell().command("supabase").args(["db", "push", "--local"])
+
+// ✅ CORRECT - Works from any directory
+app.shell().command("curl").args([
+    "-s", "-o", "/dev/null", "-w", "%{http_code}",
+    "http://127.0.0.1:54321/rest/v1/tasks?limit=1",
+    "-H", "apikey: <anon-key>",
+    "--max-time", "5"
+])
+```
+
+**Architectural Decision**:
+- Migrations should be applied during **development setup** (by developer running `supabase db push`)
+- Runtime should only **verify** the database is ready, not modify it
+
+---
+
 ## Troubleshooting
+
+### Migration Error: "Remote migration versions not found"
+**Cause**: Code in `lib.rs` tried to run `supabase db push --local` from wrong working directory.
+**Fix**: Changed `run_supabase_migrations()` to use REST API health check instead (TASK-356).
 
 ### Build Fails on Ubuntu
 ```bash

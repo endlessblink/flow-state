@@ -35,24 +35,25 @@ mkdir -p "$(dirname "$RESULTS_FILE")"
 # Run tests and capture results (async, don't block)
 cd "$CLAUDE_PROJECT_DIR" 2>/dev/null || exit 0
 
-# Run npm test with timeout and capture output
-TEST_OUTPUT=$(timeout 60 npm run test --silent 2>&1 || echo "TESTS_FAILED")
-TEST_EXIT=$?
-TIMESTAMP=$(date -Iseconds)
+# Run tests in background (non-blocking)
+(
+  TEST_OUTPUT=$(timeout 60 npm run test --silent 2>&1 || echo "TESTS_FAILED")
+  TEST_EXIT=$?
+  TIMESTAMP=$(date -Iseconds)
 
-# Determine if tests passed
-if [[ $TEST_EXIT -eq 0 && ! "$TEST_OUTPUT" =~ "FAIL" && ! "$TEST_OUTPUT" =~ "Error" ]]; then
+  # Determine if tests passed
+  if [[ $TEST_EXIT -eq 0 && ! "$TEST_OUTPUT" =~ "FAIL" && ! "$TEST_OUTPUT" =~ "Error" ]]; then
     PASSED="true"
     SUMMARY="All tests passed"
-else
+  else
     PASSED="false"
     # Extract failure count if available
     FAIL_COUNT=$(echo "$TEST_OUTPUT" | grep -oE '[0-9]+ failed' | head -1 || echo "unknown failures")
     SUMMARY="Tests failed: $FAIL_COUNT"
-fi
+  fi
 
-# Write results JSON
-cat > "$RESULTS_FILE" << EOF
+  # Write results JSON
+  cat > "$RESULTS_FILE" << EOF
 {
   "timestamp": "$TIMESTAMP",
   "triggeredBy": "$FILE_PATH",
@@ -62,24 +63,9 @@ cat > "$RESULTS_FILE" << EOF
   "summary": "$SUMMARY"
 }
 EOF
+) &
+disown
 
-# Output reminder to Claude
-if [[ "$PASSED" == "false" ]]; then
-    cat << EOF
-<post-tool-use-hook>
-⚠️ TESTS FAILED after editing $FILE_PATH
-Summary: $SUMMARY
-Before claiming "done", fix the failing tests.
-Test results saved to: .claude/last-test-results.json
-</post-tool-use-hook>
-EOF
-else
-    cat << EOF
-<post-tool-use-hook>
-✓ Tests passed after editing $FILE_PATH
-Test results saved to: .claude/last-test-results.json
-</post-tool-use-hook>
-EOF
-fi
-
+# Output immediate feedback (non-blocking)
+echo "<post-tool-use-hook>🔄 Tests running in background for $FILE_PATH</post-tool-use-hook>"
 exit 0

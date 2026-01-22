@@ -38,9 +38,31 @@
         <button class="pill-btn pill-btn--sm" @click="setDueDate('nextweek')">
           +1wk
         </button>
-        <button class="pill-btn pill-btn--sm pill-btn--icon" title="Pick date" @click="setDueDate('custom')">
-          <CalendarPlus :size="12" />
-        </button>
+        <NPopover
+          trigger="click"
+          placement="right-start"
+          :show="showDatePicker"
+          @update:show="showDatePicker = $event"
+        >
+          <template #trigger>
+            <button class="pill-btn pill-btn--sm pill-btn--icon" title="Pick date">
+              <CalendarPlus :size="12" />
+            </button>
+          </template>
+          <div class="date-picker-popover">
+            <div class="date-picker-shortcuts">
+              <button class="shortcut-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1 Month</button>
+              <button class="shortcut-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2 Months</button>
+              <button class="shortcut-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3 Months</button>
+            </div>
+            <NDatePicker
+              panel
+              type="date"
+              :value="currentDueDateTimestamp"
+              @update:value="handleDatePickerSelect"
+            />
+          </div>
+        </NPopover>
       </div>
     </div>
 
@@ -197,6 +219,7 @@ import {
   Trash2,
   MoreHorizontal
 } from 'lucide-vue-next'
+import { NPopover, NDatePicker } from 'naive-ui'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 import type { Task } from '@/stores/tasks'
@@ -255,6 +278,7 @@ const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusModeFn = focusModeState?.enterFocusMode || null
 
 const menuRef = ref<HTMLElement | null>(null)
+const showDatePicker = ref(false)
 
 // Submenu state
 const showStatusSubmenu = ref(false)
@@ -301,6 +325,24 @@ const deleteText = computed(() => {
   const task = currentTask.value
   return (task && 'isCalendarEvent' in task && (task as any).isCalendarEvent) ? 'Remove' : 'Delete'
 })
+
+// Date picker value (timestamp in milliseconds for Naive UI)
+const currentDueDateTimestamp = computed(() => {
+  const dueDate = currentTask.value?.dueDate
+  if (!dueDate) return null
+  const date = new Date(dueDate)
+  return isNaN(date.getTime()) ? null : date.getTime()
+})
+
+// Handle date selection from picker
+const handleDatePickerSelect = (timestamp: number | null) => {
+  showDatePicker.value = false
+  if (timestamp && currentTask.value) {
+    const date = new Date(timestamp)
+    const formattedDate = date.toISOString().split('T')[0] // YYYY-MM-DD format
+    setDueDate('custom', formattedDate)
+  }
+}
 
 // Menu positioning
 const menuPosition = computed(() => {
@@ -528,6 +570,13 @@ onUnmounted(() => {
   flex-wrap: nowrap;
 }
 
+/* Pill Grid - for date shortcuts */
+.pill-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-1);
+}
+
 .pill-btn {
   padding: var(--space-1) var(--space-2_5);
   border-radius: var(--radius-xl);
@@ -595,6 +644,40 @@ onUnmounted(() => {
 .priority-dot.high { background: var(--color-priority-high); }
 .priority-dot.medium { background: var(--color-priority-medium); }
 .priority-dot.low { background: var(--color-priority-low); }
+
+/* Date Picker Popover */
+.date-picker-popover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.date-picker-shortcuts {
+  display: flex;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.shortcut-btn {
+  flex: 1;
+  padding: var(--space-1_5) var(--space-2);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  white-space: nowrap;
+}
+
+.shortcut-btn:hover {
+  background: var(--glass-bg-heavy);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
 
 /* Inline Row for Status/Duration */
 .inline-row {
@@ -676,4 +759,38 @@ onUnmounted(() => {
 /* Submenu */
 .has-submenu { position: relative; }
 .submenu-arrow { color: var(--text-muted); margin-left: auto; }
+
+/* Date Picker Popover - Dark Theme */
+.date-picker-popover {
+  background: var(--overlay-component-bg);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.date-picker-shortcuts {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-bg-medium);
+}
+
+.shortcut-btn {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.shortcut-btn:hover {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
 </style>

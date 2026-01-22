@@ -1,0 +1,8 @@
+[Unit]
+Description=Sync FlowState VPS backups to local machine
+
+[Service]
+Type=oneshot
+ExecStart=%h/scripts/sync-vps-backups.sh
+StandardOutput=journal
+StandardError=journal

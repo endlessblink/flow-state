@@ -338,38 +338,53 @@ systemctl --user status flowstate-backup-sync.timer
 
 ---
 
-### TASK-371: Deploy FlowState to VPS + Set Up Replication (🔄 IN PROGRESS)
+### ~~TASK-371~~: Deploy FlowState to VPS + Set Up Replication (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS (2026-01-22)
+**Status**: ✅ DONE (2026-01-22)
 
 Deploy FlowState schema to VPS and set up real-time Postgres replication for PWA access.
 
 **Architecture**:
 ```
 PWA/Mobile → VPS (primary, read/write) → Local (backup, real-time sync)
+          │                                    ▲
+          │                                    │
+          └───────── Postgres Logical ─────────┘
+                     Replication
 ```
 
 **Steps**:
 1. [x] Push FlowState migrations to VPS ✅
-2. [ ] Export local data (tasks, groups, projects, settings)
-3. [ ] Import data to VPS
-4. [ ] Set up VPS → Local Postgres replication
-5. [x] SSH access investigated - not banned, VPS under brute-force attack (627 bans)
-6. [ ] Test PWA connects to VPS
-7. [ ] Verify replication working
+2. [x] Export local data (225 tasks, 9 groups, 3 projects, 5 timer_sessions) ✅
+3. [x] Import data to VPS ✅
+4. [x] Set up VPS → Local Postgres replication ✅
+5. [x] SSH access investigated - not banned, VPS under brute-force attack (627 bans) ✅
+6. [x] Test PWA connects to VPS ✅
+7. [x] Verify replication working ✅
 
-**Known Issue - SSH Intermittent**:
-- VPS under constant brute-force attack (~3874 failed attempts)
-- fail2ban active, blocking attackers
-- User IP (176.228.140.220) NOT banned
-- "Connection reset" likely due to VPS overload during attack spikes
-- **Fix**: Try `ssh root@84.46.253.137` again, should work now
+**Implementation Details**:
+
+| Component | Configuration |
+|-----------|---------------|
+| VPS Postgres Port | 5433 (via socat proxy to supabase-db) |
+| VPS Publication | `flowstate_to_local` (10 tables) |
+| Local Subscription | `sub_from_vps` |
+| Replication Slot | `local_sub_slot` (active) |
+| Service | `/etc/systemd/system/socat-postgres.service` |
+
+**VPS Supabase Credentials**:
+- URL: `http://84.46.253.137:8000`
+- Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE`
+
+**Replication Verified**: Changes on VPS appear on Local within seconds
 
 **Progress Log**:
 - 2026-01-22 21:55: Started - VPS has empty schema, local has all data
 - 2026-01-22 22:05: Migrations applied - VPS now has all 10 FlowState tables
 - 2026-01-22 22:10: SSH issue investigated - not banned, VPS under attack
+- 2026-01-22 23:00: Data exported from local and imported to VPS
+- 2026-01-22 23:02: Postgres logical replication configured and verified working
 
 ---
 

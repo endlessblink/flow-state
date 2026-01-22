@@ -1,6 +1,5 @@
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
-import { getUndoSystem } from '@/composables/undoSingleton'
 
 export function useAppShortcuts() {
     const router = useRouter()

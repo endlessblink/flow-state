@@ -54,16 +54,15 @@
               panel
               type="date"
               :value="currentDueDateTimestamp"
+              :actions="null"
               @update:value="handleDatePickerSelect"
-            >
-              <template #footer>
-                <div class="date-picker-footer">
-                  <button class="footer-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1mo</button>
-                  <button class="footer-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2mo</button>
-                  <button class="footer-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3mo</button>
-                </div>
-              </template>
-            </NDatePicker>
+            />
+            <div class="date-picker-footer">
+              <button class="footer-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1mo</button>
+              <button class="footer-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2mo</button>
+              <button class="footer-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3mo</button>
+              <button class="footer-btn footer-btn--now" @click="setDueDate('today'); showDatePicker = false">Now</button>
+            </div>
           </div>
         </NPopover>
       </div>
@@ -652,12 +651,15 @@ onUnmounted(() => {
 .date-picker-popover {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
 }
 
 .date-picker-footer {
   display: flex;
   gap: var(--space-1);
-  justify-content: flex-start;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--glass-border);
 }
 
 .footer-btn {
@@ -677,6 +679,18 @@ onUnmounted(() => {
   background: var(--glass-bg-medium);
   border-color: var(--brand-primary);
   color: var(--brand-primary);
+}
+
+.footer-btn--now {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: white;
+}
+
+.footer-btn--now:hover {
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+  color: white;
 }
 
 /* Inline Row for Status/Duration */

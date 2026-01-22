@@ -179,15 +179,19 @@
         <div class="empty-icon">
           <Inbox :size="48" />
         </div>
-        <p class="empty-text">No tasks captured yet</p>
-        <p class="empty-hint">Type a task title above and press Enter to add</p>
+        <p class="empty-text">
+          No tasks captured yet
+        </p>
+        <p class="empty-hint">
+          Type a task title above and press Enter to add
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, computed, nextTick, onMounted, reactive } from 'vue'
 import { X, Plus, Inbox, Flag, Calendar, Zap } from 'lucide-vue-next'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
@@ -315,11 +319,12 @@ function setDueDate(preset: 'today' | 'tomorrow' | 'weekend') {
     case 'tomorrow':
       date.setDate(date.getDate() + 1)
       break
-    case 'weekend':
+    case 'weekend': {
       const dayOfWeek = date.getDay()
       const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
       date.setDate(date.getDate() + daysUntilSaturday)
       break
+    }
   }
 
   newTask.dueDate = date.toISOString()

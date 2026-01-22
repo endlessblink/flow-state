@@ -52,106 +52,106 @@
 
         <!-- SORT TAB -->
         <div v-else key="sort" class="sort-tab-content">
-      <!-- Progress Indicator -->
-      <SortProgress
-        v-if="!isComplete"
-        :current="progress.current"
-        :total="progress.total"
-        :message="motivationalMessage"
-        :streak="currentStreak"
-      />
-
-      <!-- Task Card or Completion -->
-      <div class="card-container">
-        <!-- Active Task Card -->
-        <Transition name="card-slide" mode="out-in">
-          <QuickSortCard
-            v-if="currentTask && !isComplete"
-            :key="currentTask.id"
-            :task="currentTask"
-            @update-task="handleTaskUpdate"
-            @mark-done="handleMarkDone"
-            @edit-task="handleEditTask"
-            @mark-done-and-delete="handleMarkDoneAndDelete"
+          <!-- Progress Indicator -->
+          <SortProgress
+            v-if="!isComplete"
+            :current="progress.current"
+            :total="progress.total"
+            :message="motivationalMessage"
+            :streak="currentStreak"
           />
 
-          <!-- Empty State -->
-          <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
-            <CheckCircle :size="64" />
-            <h2>All Caught Up!</h2>
-            <p>You have no uncategorized tasks.</p>
-            <button class="primary-button" @click="handleExit">
-              Return to Tasks
-            </button>
+          <!-- Task Card or Completion -->
+          <div class="card-container">
+            <!-- Active Task Card -->
+            <Transition name="card-slide" mode="out-in">
+              <QuickSortCard
+                v-if="currentTask && !isComplete"
+                :key="currentTask.id"
+                :task="currentTask"
+                @update-task="handleTaskUpdate"
+                @mark-done="handleMarkDone"
+                @edit-task="handleEditTask"
+                @mark-done-and-delete="handleMarkDoneAndDelete"
+              />
+
+              <!-- Empty State -->
+              <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
+                <CheckCircle :size="64" />
+                <h2>All Caught Up!</h2>
+                <p>You have no uncategorized tasks.</p>
+                <button class="primary-button" @click="handleExit">
+                  Return to Tasks
+                </button>
+              </div>
+
+              <!-- Completion State -->
+              <div v-else-if="isComplete" class="completion-state">
+                <div class="celebration-icon">
+                  🎉
+                </div>
+                <h2>Amazing Work!</h2>
+                <p class="completion-message">
+                  You've sorted all your tasks!
+                </p>
+
+                <div v-if="sessionSummary" class="session-stats">
+                  <div class="stat-card">
+                    <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
+                    <span class="stat-label">Tasks Sorted</span>
+                  </div>
+
+                  <div class="stat-card">
+                    <span class="stat-value">{{ formatTime(sessionSummary.timeSpent) }}</span>
+                    <span class="stat-label">Time Taken</span>
+                  </div>
+
+                  <div class="stat-card">
+                    <span class="stat-value">{{ sessionSummary.efficiency.toFixed(1) }}</span>
+                    <span class="stat-label">Tasks/Min</span>
+                  </div>
+
+                  <div v-if="sessionSummary.streakDays > 0" class="stat-card streak-card">
+                    <span class="stat-value">🔥 {{ sessionSummary.streakDays }}</span>
+                    <span class="stat-label">Day Streak</span>
+                  </div>
+                </div>
+
+                <button class="primary-button" @click="handleExit">
+                  <CheckCircle :size="20" />
+                  Done
+                </button>
+              </div>
+            </Transition>
           </div>
 
-          <!-- Completion State -->
-          <div v-else-if="isComplete" class="completion-state">
-            <div class="celebration-icon">
-              🎉
-            </div>
-            <h2>Amazing Work!</h2>
-            <p class="completion-message">
-              You've sorted all your tasks!
-            </p>
+          <!-- Category Selector -->
+          <CategorySelector
+            v-if="!isComplete && currentTask"
+            @select="handleCategorize"
+            @skip="handleSkip"
+            @create-new="showProjectModal = true"
+          />
 
-            <div v-if="sessionSummary" class="session-stats">
-              <div class="stat-card">
-                <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
-                <span class="stat-label">Tasks Sorted</span>
-              </div>
+          <!-- Action Buttons -->
+          <div v-if="!isComplete && currentTask" class="action-buttons">
+            <button
+              class="action-button"
+              :disabled="!canUndo"
+              aria-label="Undo last categorization"
+              @click="handleUndo"
+            >
+              <Undo2 :size="20" />
+              Undo
+              <kbd v-if="canUndo">Ctrl+Z</kbd>
+            </button>
 
-              <div class="stat-card">
-                <span class="stat-value">{{ formatTime(sessionSummary.timeSpent) }}</span>
-                <span class="stat-label">Time Taken</span>
-              </div>
-
-              <div class="stat-card">
-                <span class="stat-value">{{ sessionSummary.efficiency.toFixed(1) }}</span>
-                <span class="stat-label">Tasks/Min</span>
-              </div>
-
-              <div v-if="sessionSummary.streakDays > 0" class="stat-card streak-card">
-                <span class="stat-value">🔥 {{ sessionSummary.streakDays }}</span>
-                <span class="stat-label">Day Streak</span>
-              </div>
-            </div>
-
-            <button class="primary-button" @click="handleExit">
-              <CheckCircle :size="20" />
-              Done
+            <button class="action-button" aria-label="Skip this task" @click="handleSkip">
+              <SkipForward :size="20" />
+              Skip
+              <kbd>Space</kbd>
             </button>
           </div>
-        </Transition>
-      </div>
-
-      <!-- Category Selector -->
-      <CategorySelector
-        v-if="!isComplete && currentTask"
-        @select="handleCategorize"
-        @skip="handleSkip"
-        @create-new="showProjectModal = true"
-      />
-
-      <!-- Action Buttons -->
-      <div v-if="!isComplete && currentTask" class="action-buttons">
-        <button
-          class="action-button"
-          :disabled="!canUndo"
-          aria-label="Undo last categorization"
-          @click="handleUndo"
-        >
-          <Undo2 :size="20" />
-          Undo
-          <kbd v-if="canUndo">Ctrl+Z</kbd>
-        </button>
-
-        <button class="action-button" aria-label="Skip this task" @click="handleSkip">
-          <SkipForward :size="20" />
-          Skip
-          <kbd>Space</kbd>
-        </button>
-      </div>
         </div>
       </Transition>
     </div>

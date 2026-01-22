@@ -9106,10 +9106,10 @@
     }
   ],
   "meta": {
-    "timestamp": 1769108235415,
+    "timestamp": 1769108835441,
     "schema_version": "3.1.0",
     "connection_healthy": true,
-    "latency_ms": 20,
+    "latency_ms": 18,
     "counts": {
       "tasks": 223,
       "groups": 9,
@@ -9119,6 +9119,6 @@
       "timerSessions": 5
     }
   },
-  "timestamp": 1769108235415,
+  "timestamp": 1769108835441,
   "checksum": "1b44ae87d68fc5f1"
 }

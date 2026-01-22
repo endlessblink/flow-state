@@ -175,6 +175,68 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 2.  **Mobile-Specific Code Path**: Does the mobile layout have a hardcoded `localhost` fetch somewhere that the desktop layout doesn't use?
 3.  **CORS**: Mobile browser enforcing stricter CORS?
 
+### TASK-356: Fix Tauri App Migration Error (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-22)
+
+Tauri app fails on startup with "Remote migration versions not found in local migrations directory" because it tries to run `supabase db push --local` from arbitrary working directory.
+
+**Solution**: Changed `run_supabase_migrations()` in `lib.rs` to verify DB health via REST API instead of pushing migrations.
+
+**Files Changed**:
+- `src-tauri/src/lib.rs` - `run_supabase_migrations()` now uses curl to check `/rest/v1/tasks` endpoint
+
+**Verification**:
+- [ ] Rebuild Tauri app (`npm run tauri dev`)
+- [ ] App launches without migration error
+- [ ] Database operations work normally
+
+---
+
+### TASK-357: Set Up VPS → Local Postgres Replication (📋 PLANNED)
+
+**Priority**: P2
+**Status**: 📋 PLANNED
+
+Set up one-way Postgres logical replication from VPS to local for backup/redundancy.
+
+**Architecture**:
+- VPS Supabase = Primary (source of truth)
+- Local Supabase = Backup (subscribes to VPS changes)
+- One-way sync: VPS publishes, Local subscribes
+
+**Steps**:
+1. [ ] Check VPS Postgres `wal_level` is `logical`
+2. [ ] Expose VPS Postgres port 5432 (IP-restricted)
+3. [ ] Create replicator user on both sides
+4. [ ] Create publication on VPS for key tables
+5. [ ] Create subscription on Local
+6. [ ] Verify sync is working
+
+**Tables to Sync**: `tasks`, `groups`, `projects`, `timer_sessions`, `user_settings`, `notifications`
+
+---
+
+### TASK-358: Create VPS Backup System (📋 PLANNED)
+
+**Priority**: P1
+**Status**: 📋 PLANNED
+
+Create automated backup scripts for VPS Supabase data.
+
+**Components**:
+1. [ ] `pg_dump` script with timestamp
+2. [ ] Backup rotation (keep last 7 days, 4 weeks, 12 months)
+3. [ ] Cron job for daily backups
+4. [ ] Off-site backup copy (local machine, cloud storage)
+5. [ ] Backup verification script
+6. [ ] Alert on backup failure
+
+**Backup Location**: `/var/backups/supabase/` on VPS + synced to local
+
+---
+
 ### TASK-351: Secure Secrets Management (Doppler)
 **Priority**: P1
 **Status**: 📋 PLANNED (for Tomorrow)
@@ -737,7 +799,8 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 ### TASK-334: AI "Done" Claim Verification System (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH
-**Status**: In Progress
+**Status**: Complete
+**Completed**: January 22, 2026
 **Created**: January 20, 2026
 **Plan File**: `/home/endlessblink/.claude/plans/bubbly-stargazing-galaxy.md`
 
@@ -791,7 +854,8 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 ### TASK-335: Judge Agent Integration in Dev-Maestro (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH
-**Status**: In Progress
+**Status**: Complete
+**Completed**: January 22, 2026
 **Created**: January 20, 2026
 **Depends On**: TASK-334
 
@@ -846,10 +910,11 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 
 ---
 
-### BUG-336: Ctrl+Z Not Working After Shift+Delete (🔄 IN PROGRESS)
+### ~~BUG-336~~: Ctrl+Z Not Working After Shift+Delete (✅ DONE)
 
 **Priority**: P2-MEDIUM
-**Status**: In Progress
+**Status**: Complete
+**Completed**: January 22, 2026
 **Created**: January 20, 2026
 
 **Problem**: When using Shift+Delete to permanently delete a task from the canvas, Ctrl+Z (undo) doesn't restore it. Regular Delete (moves to inbox) works fine with undo.

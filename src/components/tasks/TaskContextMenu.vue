@@ -38,9 +38,33 @@
         <button class="pill-btn pill-btn--sm" @click="setDueDate('nextweek')">
           +1wk
         </button>
-        <button class="pill-btn pill-btn--sm pill-btn--icon" title="Pick date" @click="setDueDate('custom')">
-          <CalendarPlus :size="12" />
-        </button>
+        <NPopover
+          trigger="click"
+          placement="right-start"
+          :show="showDatePicker"
+          @update:show="showDatePicker = $event"
+        >
+          <template #trigger>
+            <button class="pill-btn pill-btn--sm pill-btn--icon" title="Pick date">
+              <CalendarPlus :size="12" />
+            </button>
+          </template>
+          <div class="date-picker-popover" @click.stop>
+            <NDatePicker
+              panel
+              type="date"
+              :value="currentDueDateTimestamp"
+              :actions="null"
+              @update:value="handleDatePickerSelect"
+            />
+            <div class="date-picker-footer">
+              <button class="footer-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1mo</button>
+              <button class="footer-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2mo</button>
+              <button class="footer-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3mo</button>
+              <button class="footer-btn footer-btn--now" @click="setDueDate('today'); showDatePicker = false">Now</button>
+            </div>
+          </div>
+        </NPopover>
       </div>
     </div>
 
@@ -197,6 +221,7 @@ import {
   Trash2,
   MoreHorizontal
 } from 'lucide-vue-next'
+import { NPopover, NDatePicker } from 'naive-ui'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 import type { Task } from '@/stores/tasks'
@@ -255,6 +280,7 @@ const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusModeFn = focusModeState?.enterFocusMode || null
 
 const menuRef = ref<HTMLElement | null>(null)
+const showDatePicker = ref(false)
 
 // Submenu state
 const showStatusSubmenu = ref(false)
@@ -301,6 +327,24 @@ const deleteText = computed(() => {
   const task = currentTask.value
   return (task && 'isCalendarEvent' in task && (task as any).isCalendarEvent) ? 'Remove' : 'Delete'
 })
+
+// Date picker value (timestamp in milliseconds for Naive UI)
+const currentDueDateTimestamp = computed(() => {
+  const dueDate = currentTask.value?.dueDate
+  if (!dueDate) return null
+  const date = new Date(dueDate)
+  return isNaN(date.getTime()) ? null : date.getTime()
+})
+
+// Handle date selection from picker
+const handleDatePickerSelect = (timestamp: number | null) => {
+  showDatePicker.value = false
+  if (timestamp && currentTask.value) {
+    const date = new Date(timestamp)
+    const formattedDate = date.toISOString().split('T')[0]
+    setDueDate('custom', formattedDate)
+  }
+}
 
 // Menu positioning
 const menuPosition = computed(() => {
@@ -595,6 +639,50 @@ onUnmounted(() => {
 .priority-dot.high { background: var(--color-priority-high); }
 .priority-dot.medium { background: var(--color-priority-medium); }
 .priority-dot.low { background: var(--color-priority-low); }
+
+/* Date Picker Popover */
+.date-picker-popover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.date-picker-footer {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--glass-border);
+}
+
+.footer-btn {
+  padding: 0 var(--space-2);
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.footer-btn:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.footer-btn--now {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: white;
+}
+
+.footer-btn--now:hover {
+  background: var(--brand-primary-hover, var(--brand-primary));
+}
 
 /* Inline Row for Status/Duration */
 .inline-row {

@@ -160,6 +160,8 @@
 | **TASK-364**             | **Stress Test: WebSocket Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Realtime reconnection stress tests                                                                                                                                                                                | TASK-338                                               |
 | **TASK-365**             | **Stress Test: Actual Restore Verification**                            | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Test actual backup restore functionality (not just file existence)                                                                                                                                                | TASK-338                                               |
 | **TASK-366**             | **Stress Test: Redundancy Assessment**                                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Single-point-of-failure detection and mitigation                                                                                                                                                                  | TASK-338                                               |
+| ~~**BUG-367**~~          | ✅ **DONE** **Inbox Filter Excludes Overdue Tasks**                     | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed "This Week"/"This Month" filters to include overdue tasks. [SOP-020](./sop/SOP-020-inbox-filter-date-logic.md)                                                                                               |                                                        |
+| ~~**TASK-368**~~         | ✅ **DONE** **Date Picker Popup Improvements**                          | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Added +1mo/+2mo/+3mo shortcuts and "Now" button to calendar popup. Dark theme styling applied.                                                                                                                      |                                                        |
 
 ---
 
@@ -291,22 +293,37 @@ Set up one-way Postgres logical replication from VPS to local for backup/redunda
 
 ---
 
-### TASK-358: Create VPS Backup System (📋 PLANNED)
+### ~~TASK-358~~: Create VPS Backup System (✅ DONE)
 
 **Priority**: P1
-**Status**: 📋 PLANNED
+**Status**: ✅ DONE (2026-01-22)
 
-Create automated backup scripts for VPS Supabase data.
+Automated backup system for VPS Supabase data with local replication.
 
-**Components**:
-1. [ ] `pg_dump` script with timestamp
-2. [ ] Backup rotation (keep last 7 days, 4 weeks, 12 months)
-3. [ ] Cron job for daily backups
-4. [ ] Off-site backup copy (local machine, cloud storage)
-5. [ ] Backup verification script
-6. [ ] Alert on backup failure
+**Implemented**:
+1. [x] `pg_dump` script with timestamp (`/root/scripts/supabase-backup.sh`)
+2. [x] Backup rotation (7 daily, 4 weekly, 12 monthly)
+3. [x] Cron job for daily backups (3 AM UTC)
+4. [x] Local sync via rsync (`~/scripts/sync-vps-backups.sh`)
+5. [x] Systemd timer for 6-hourly local sync
 
-**Backup Location**: `/var/backups/supabase/` on VPS + synced to local
+**Backup Locations**:
+- VPS: `/var/backups/supabase/{daily,weekly,monthly}`
+- Local: `~/backups/flowstate-vps/`
+
+**Commands**:
+```bash
+# Manual VPS backup
+ssh root@84.46.253.137 '~/scripts/supabase-backup.sh'
+
+# Manual local sync
+~/scripts/sync-vps-backups.sh
+
+# Check timer status
+systemctl --user status flowstate-backup-sync.timer
+```
+
+**SOP**: `docs/sop/SOP-VPS-BACKUP.md`
 
 ---
 

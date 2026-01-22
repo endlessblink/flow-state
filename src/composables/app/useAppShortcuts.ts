@@ -1,6 +1,5 @@
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
-import { getUndoSystem } from '@/composables/undoSingleton'
 
 export function useAppShortcuts() {
     const router = useRouter()
@@ -74,6 +73,12 @@ export function useAppShortcuts() {
                     detail: { taskId: taskStore.selectedTaskIds[0] }
                 }))
             }
+        }
+
+        // Ctrl+Shift+T to open Quick Capture tab
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'T') {
+            event.preventDefault()
+            router.push({ path: '/quick-sort', query: { tab: 'capture' } })
         }
 
         // Shift+1-5 for view switching

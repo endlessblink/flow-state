@@ -465,7 +465,7 @@ Detailed docs available in `docs/claude-md-extension/`:
 | [`SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md) | Tauri builds, signing, GitHub Actions releases |
 | [`active/UNDO-system-architecture.md`](docs/sop/active/UNDO-system-architecture.md) | Undo/redo system with operation-scoped selective restoration (BUG-309-B) |
 | [`active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md) | Cross-device timer sync (Vue app + KDE widget) |
-| [`active/SOP-012-skills-config-sync.md`](docs/sop/active/SOP-012-skills-config-sync.md) | Skills config auto-sync and maintenance |
+| [`active/SOP-022-skills-config-sync.md`](docs/sop/active/SOP-022-skills-config-sync.md) | Skills config auto-sync and maintenance |
 | [`canvas/README.md`](docs/sop/canvas/README.md) | Canvas system documentation index |
 | [`canvas/CANVAS-POSITION-SYSTEM.md`](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md) | Canvas position/coordinate system, geometry invariants |
 

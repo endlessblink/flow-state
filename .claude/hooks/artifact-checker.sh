@@ -57,18 +57,13 @@ else
     ARTIFACT_WARNING="⚠️ No test results found. Run 'npm run test' before claiming completion."
 fi
 
-# Output warning if artifacts are missing/stale
+# Output warning if artifacts are missing/stale/failed
+# Show on EVERY prompt (not just specific patterns) so user always sees test status
 if [ -n "$ARTIFACT_WARNING" ]; then
     cat << EOF
 <user-prompt-submit-hook>
-ARTIFACT CHECK (Layer 1 - TASK-334):
+⚠️ LAYER 1 - ARTIFACT CHECK:
 $ARTIFACT_WARNING
-
-Before claiming "done", ensure:
-1. Tests pass (npm run test)
-2. Git diff shows changes
-3. Verification instructions provided
-4. Ask user: "Can you test this and confirm it works?"
 </user-prompt-submit-hook>
 EOF
 fi

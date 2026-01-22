@@ -1,7 +1,10 @@
+> **ARCHIVED**: This refactoring plan from Jan 9, 2026 has been completed.
+> Current architecture is documented in [CANVAS-POSITION-SYSTEM.md](../canvas/CANVAS-POSITION-SYSTEM.md)
+
 # SOP: Vue Flow Parent-Child Refactoring (BUG-153)
 
 **Created**: January 9, 2026
-**Status**: 🔄 IN PROGRESS
+**Status**: ✅ ARCHIVED (Completed)
 **Related**: BUG-153, TASK-072, TASK-131, TASK-142
 
 ---

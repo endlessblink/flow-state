@@ -206,6 +206,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted, watch, inject } from 'vue'
+import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import {
   Calendar,
   CalendarPlus,
@@ -279,6 +281,10 @@ const {
 const focusModeState = inject<FocusModeState | null>(FOCUS_MODE_KEY, null)
 const enterFocusModeFn = focusModeState?.enterFocusMode || null
 
+// Direct store access for custom date handling
+const taskStore = useTaskStore()
+const canvasStore = useCanvasStore()
+
 const menuRef = ref<HTMLElement | null>(null)
 const showDatePicker = ref(false)
 
@@ -336,26 +342,33 @@ const currentDueDateTimestamp = computed(() => {
   return isNaN(date.getTime()) ? null : date.getTime()
 })
 
-// Handle date selection from picker
+// Handle date selection from picker - directly update task store
 const handleDatePickerSelect = async (timestamp: number | null) => {
-  console.log('[DatePicker] Selected timestamp:', timestamp)
-  console.log('[DatePicker] Current task:', currentTask.value?.id)
+  console.log('🗓️ [DATE-PICKER] handleDatePickerSelect called:', { timestamp, taskId: currentTask.value?.id })
 
   if (!timestamp || !currentTask.value) {
-    console.log('[DatePicker] Missing timestamp or task, aborting')
+    console.log('🗓️ [DATE-PICKER] Aborting - no timestamp or task')
     return
   }
 
   const date = new Date(timestamp)
   const formattedDate = date.toISOString().split('T')[0]
-  console.log('[DatePicker] Formatted date:', formattedDate)
+  console.log('🗓️ [DATE-PICKER] Formatted date:', formattedDate)
 
   // Close the popover first
   showDatePicker.value = false
 
-  // Update the task
-  await setDueDate('custom', formattedDate)
-  console.log('[DatePicker] setDueDate called')
+  // Update the task directly via task store
+  console.log('🗓️ [DATE-PICKER] Calling taskStore.updateTaskWithUndo...')
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
+    console.log('🗓️ [DATE-PICKER] Task update SUCCESS')
+    canvasStore.requestSync('user:context-menu')
+  } catch (error) {
+    console.error('🗓️ [DATE-PICKER] Task update FAILED:', error)
+  }
+
+  emit('close')
 }
 
 // Menu positioning

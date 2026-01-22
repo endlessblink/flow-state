@@ -1,4 +1,6 @@
-# SOP-013: Cloudflare Tunnel with Local Supabase
+# SOP-023: Cloudflare Tunnel with Local Supabase
+
+> **Note**: Renumbered from SOP-013 to SOP-023 to resolve ID conflict with SOP-013-immutable-task-ids.md
 
 ## Problem Summary
 
@@ -161,7 +163,7 @@ docker run --rm --network=bridge alpine/curl \
 
 ## Related
 
-- **SOP-014**: Tauri Port Conflict Fix
+- **SOP-011**: Tauri Distribution (includes Supabase detection fix, formerly SOP-014)
 - **CLAUDE.md**: Supabase Architecture section
 
 ---

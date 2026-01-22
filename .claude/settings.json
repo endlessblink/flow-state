@@ -31,19 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/deferred-reminder.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/skill-router-hook.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/artifact-checker.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/require-user-confirmation.sh"
+            "command": ".claude/hooks/user-prompt-handler.sh"
           }
         ]
       }

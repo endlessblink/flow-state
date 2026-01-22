@@ -51,34 +51,42 @@ done < <(jq -c '.deferred_edits[]' "$QUEUE_FILE" 2>/dev/null || echo "")
 
 # Update queue file to remove ready edits
 if [[ ${#READY_EDITS[@]} -gt 0 ]]; then
-  # Create a temporary file with only still-blocked edits
-  TMP_FILE="${QUEUE_FILE}.tmp"
-  jq --arg locks_dir "$LOCKS_DIR" '
-    .deferred_edits |= map(
-      select(
-        # Keep only edits where lock file still exists
-        .blocked_by_task as $task |
-        (($locks_dir + "/" + $task + ".lock") | test(".*"))
-      )
-    )
-  ' "$QUEUE_FILE" 2>/dev/null > "$TMP_FILE" || true
+  # Rebuild queue with only still-blocked edits
+  if [[ ${#STILL_BLOCKED[@]} -eq 0 ]]; then
+    # All edits are ready - remove the queue file
+    rm -f "$QUEUE_FILE"
+  else
+    # Keep only still-blocked edits by filtering on task
+    TMP_FILE="${QUEUE_FILE}.tmp"
+    # Build a jq filter for tasks that are still blocked
+    BLOCKED_TASKS=""
+    while IFS= read -r edit; do
+      task=$(echo "$edit" | jq -r '.blocked_by_task')
+      lock_file="$LOCKS_DIR/${task}.lock"
+      if [[ -f "$lock_file" ]]; then
+        if [[ -n "$BLOCKED_TASKS" ]]; then
+          BLOCKED_TASKS="$BLOCKED_TASKS, \"$task\""
+        else
+          BLOCKED_TASKS="\"$task\""
+        fi
+      fi
+    done < <(jq -c '.deferred_edits[]' "$QUEUE_FILE" 2>/dev/null)
 
-  # If we couldn't filter properly, just clear the ready ones manually
-  if [[ ! -s "$TMP_FILE" ]]; then
-    # Rebuild keeping only still-blocked items
-    BLOCKED_JSON='[]'
-    for file in "${STILL_BLOCKED[@]}"; do
-      BLOCKED_JSON=$(echo "$BLOCKED_JSON" | jq --arg f "$file" '. += [{"file": $f, "still_blocked": true}]')
-    done
-    echo "{\"session_id\":\"$SESSION_ID\",\"deferred_edits\":[]}" > "$TMP_FILE"
+    if [[ -n "$BLOCKED_TASKS" ]]; then
+      jq --argjson tasks "[$BLOCKED_TASKS]" '
+        .deferred_edits |= map(select(.blocked_by_task as $t | $tasks | index($t)))
+      ' "$QUEUE_FILE" > "$TMP_FILE" 2>/dev/null && mv "$TMP_FILE" "$QUEUE_FILE"
+    else
+      rm -f "$QUEUE_FILE"
+    fi
   fi
 
-  mv "$TMP_FILE" "$QUEUE_FILE" 2>/dev/null || true
-
-  # Remove queue file if empty
-  REMAINING=$(jq '.deferred_edits | length' "$QUEUE_FILE" 2>/dev/null || echo "0")
-  if [[ "$REMAINING" == "0" ]]; then
-    rm -f "$QUEUE_FILE"
+  # Check if queue file still exists and is empty
+  if [[ -f "$QUEUE_FILE" ]]; then
+    REMAINING=$(jq '.deferred_edits | length' "$QUEUE_FILE" 2>/dev/null || echo "0")
+    if [[ "$REMAINING" == "0" ]]; then
+      rm -f "$QUEUE_FILE"
+    fi
   fi
 fi
 

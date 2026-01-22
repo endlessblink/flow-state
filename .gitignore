@@ -83,3 +83,4 @@ token-migration-report.json
 
 # External widget
 kde-widget/
+backups/shadow.db

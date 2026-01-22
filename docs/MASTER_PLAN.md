@@ -238,22 +238,33 @@ Implemented batch capture mode: rapidly add multiple tasks first, then sort them
 
 ---
 
-### BUG-357: Tauri Edit Modal Shows Wrong Task (🔄 IN PROGRESS)
+### BUG-357: Tauri Edit Modal Shows Wrong Task + Edits Don't Update (🔄 IN PROGRESS)
 
 **Priority**: P1
 **Status**: 🔄 IN PROGRESS (awaiting user verification)
 
-**Symptom**: In Tauri app, double-clicking a task on canvas opens the edit modal showing a DIFFERENT task's data.
+**Symptoms**:
+1. Double-clicking a task on canvas opens edit modal showing DIFFERENT task's data
+2. After saving edits, the task card on canvas doesn't reflect the changes
 
-**Root Cause**: `useTaskNodeActions.triggerEdit()` was passing `props.task` (stale Vue Flow node data) instead of fetching fresh task from the store. Vue Flow creates shallow clones of tasks during sync (`{ ...task }`), which can become stale if the task is updated elsewhere.
+**Root Cause**:
+1. `useTaskNodeActions.triggerEdit()` was passing stale Vue Flow node data instead of fresh store data
+2. Tauri/WebKitGTK has reactivity issues where Vue's computed properties don't properly track Pinia store changes, so Vue Flow nodes don't auto-update
 
-**Solution**: Modified `triggerEdit()` to always fetch the fresh task from the store before opening the edit modal:
+**Solution (Part 1)**: Modified `triggerEdit()` to fetch fresh task from store:
 ```typescript
 const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
 ```
 
+**Solution (Part 2)**: Added canvas sync trigger after saving edits:
+```typescript
+// In useTaskEditActions.saveTask()
+canvasUiStore.requestSync('user:manual')
+```
+
 **Files Changed**:
 - `src/composables/canvas/node/useTaskNodeActions.ts` - `triggerEdit()` now looks up fresh task
+- `src/composables/tasks/useTaskEditActions.ts` - `saveTask()` now triggers canvas sync after update
 
 **Verification**:
 - [x] Code change implemented

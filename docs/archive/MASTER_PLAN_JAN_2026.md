@@ -1,554 +1,648 @@
-# Pomo-Flow: Archived Tasks from MASTER_PLAN (January 2026)
+# FlowState: Archived Tasks - January 2026
 
-> **Source**: This file contains completed tasks archived from `docs/MASTER_PLAN.md`
+> **Source**: Completed tasks archived from `docs/MASTER_PLAN.md`
 > **Purpose**: Preserve implementation details for completed work
-> **Last Updated**: January 5, 2026
+> **Last Updated**: January 23, 2026
 
 ---
 
-## January 2026 Completed Tasks & Bugs
+## January 2026 Completed Tasks
 
-### ~~TASK-093~~: Database Engine Migration (PouchDB → SQLite) (✅ DONE)
-**Status**: ✅ **DONE** (Jan 4, 2026) | **100% complete**
-**Goal**: Replace unstable IndexedDB adapter with PowerSync (SQLite WASM) for crash-proof local storage, cross-device sync, and 5x mobile performance.
-**Phases**:
-1. [x] **Phase 1: Plumbing & Isolation** (Jan 3) ✅
-   - Installed `powersync` + `sqlite-wasm`
-   - Defined strict SQL Schema (Tasks/Projects)
-   - Created `SqlTaskStore` & `SqlProjectStore` replacements
-   - Implemented `migratePouchToSql` utility
-2. [x] **Phase 2: The Swap** (Complete - Jan 4) ✅
-   - [x] Expose `window.migrate()` & UI Button
-   - [x] Fix Schema Runtime Errors
-   - [x] Connect UI to new SQL stores
-   - [x] Perform data verification
-3. [x] **Phase 3: Cleanup** (Complete - Jan 4) ✅
-   - Delete PouchDB code & legacies
-4. [x] **Phase 4: PowerSync Backend Deployment** (Complete - Jan 4) ✅
-   - [x] Start Docker stack (`docker-compose up -d`)
-   - [x] Initialize PostgreSQL schema (`scripts/init-postgres.sql`)
-   - [x] Verify PowerSync replication connection (logs show "Replication lag: 0s")
-   - [x] PostgreSQL has data: 6 tasks, 1 project
-   - [ ] Production deployment (optional - for remote server)
+### ~~TASK-356~~: Fix Tauri App Migration Error (✅ DONE)
 
-**Infrastructure Ready** (all files exist):
-- `docker-compose.yml` - Full stack (PostgreSQL, MongoDB, Redis, PowerSync, Sync Backend)
-- `powersync-config.yaml` - PowerSync service configuration
-- `sync-rules.yaml` - Sync bucket definitions
-- `scripts/init-postgres.sql` - Complete database schema
-- `scripts/sync-backend.cjs` - Upload handler API
-- `Dockerfile.postgres`, `Dockerfile.sync-backend` - Container definitions
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-22)
 
-**Deployment Guide**: `docs/POWERSYNC-DEPLOYMENT.md`
+Tauri app failed on startup with "Remote migration versions not found in local migrations directory" because it tried to run `supabase db push --local` from arbitrary working directory.
+
+**Root Cause**: Tauri apps run from `/usr/bin/` or user's home directory, not the project directory. The Supabase CLI needs to be in a directory with `supabase/migrations/` to push migrations.
+
+**Solution**: Changed `run_supabase_migrations()` in `lib.rs` to verify DB health via REST API instead of pushing migrations. This works regardless of working directory.
+
+**Prevention (Architectural Rule)**:
+- Migrations should be applied during **development setup**, not at app runtime
+- Runtime should only **verify** the database is ready, not modify it
+- Use REST API health checks which are directory-independent
+- Added to Tauri SOP: "Never run Supabase CLI commands that require project directory context"
+
+**Files Changed**:
+- `src-tauri/src/lib.rs` - `run_supabase_migrations()` now uses curl to check `/rest/v1/tasks` endpoint
+
+**Verification**:
+- [x] Rebuild Tauri app (`npm run tauri build`)
+- [x] App launches without migration error
+- [x] Database operations work normally
+- [x] User confirmed fix works (2026-01-22)
 
 ---
 
-### ✅ BUG-062: Backup Blocking & Verbose Logs (Jan 3, 2026)
+### ~~BUG-357~~: Tauri Edit Modal Shows Wrong Task + Edits Don't Update (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Backup blocked (>50% loss false positive) | CRITICAL | ✅ **FIXED** |
-| Console flood (1300+ logs) | HIGH | ✅ **FIXED** |
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-22)
 
-**Symptom**: Auto-backups blocked with "Task count dropped from 144 to 0". Console unusable due to spam.
+**Symptoms**:
+1. Double-clicking a task on canvas opens edit modal showing DIFFERENT task's data
+2. After saving edits, the task card on canvas doesn't reflect the changes
 
 **Root Cause**:
-1. **False Positive**: `mockTaskDetector` identified timestamp-based IDs (13 digits) as "Auto-generated Mock IDs" (Medium Confidence). Backup system filters Medium+ mock tasks, resulting in 0 valid tasks found.
-2. **Log Noise**: `CanvasView`, `useAppInitialization`, and `canvas.ts` had high-frequency logs left active.
+1. `useTaskNodeActions.triggerEdit()` was passing stale Vue Flow node data instead of fresh store data
+2. Tauri/WebKitGTK has reactivity issues where Vue's computed properties don't properly track Pinia store changes
 
-**Fix Applied**:
-1. ✅ **Downgraded Confidence**: Changed `Auto-generated ID Pattern` confidence from `medium` to `low` in `mockTaskDetector.ts`.
-2. ✅ **Silenced Logs**: Commented out verbose logs in identified files.
-3. ✅ **Recovery UI**: Added "Rescue Tasks" button to Settings.
+**Solution**:
+1. Modified `triggerEdit()` to fetch fresh task from store before opening modal
+2. Added `canvasUiStore.requestSync('user:manual')` after saving to force Vue Flow node refresh
 
-**SOP**: `docs/🐛 debug/sop/backup-false-positive-and-logs-fix-2026-01-03.md`
+**Files Changed**:
+- `src/composables/canvas/node/useTaskNodeActions.ts` - `triggerEdit()` now looks up fresh task
+- `src/composables/tasks/useTaskEditActions.ts` - `saveTask()` now triggers canvas sync
 
----
-
-### ✅ BUG-063: Tauri Sync Discrepancy (Jan 3, 2026)
-
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Local tasks (7/10) vs Remote (17) | HIGH | ✅ **FIXED** |
-
-**Symptom**: Tauri app showed fewer tasks than remote. API logs showed successful pull, but tasks didn't appear.
-**Root Cause**: Local PouchDB had "deleted" revisions that were winning conflict resolution against the remote active revisions, likely due to history truncation or sync timing issues.
-**Fix Implemented**:
-1. **Added "Reset Local Data" Tool**: New "Danger Zone" button in `BackupSettings.vue`.
-   - Calls `nucleaurReset()` on SyncManager.
-   - Wipes local database + reloads app.
-   - Forces fresh clone from server.
-2. **Result**: Application re-syncs clean state from remote, resolving the discrepancy.
+**SOP**: [SOP-025-tauri-vue-flow-reactivity.md](./sop/SOP-025-tauri-vue-flow-reactivity.md)
 
 ---
 
-### ✅ BUG-064: CustomSelect Tauri CSS Visual Discrepancy (Jan 3, 2026)
+### ~~TASK-358~~: Create VPS Backup System (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| CustomSelect dropdowns have prominent white borders in Tauri | MEDIUM | ✅ **FIXED** |
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-22)
 
-**Symptom**: Filter dropdowns ("All Projects", "All Tasks", "All Status") displayed with visible white borders and glow effects in Tauri, appearing different from Storybook/browser version.
+Automated backup system for VPS Supabase data with local replication.
 
-**Root Cause**:
-1. Tauri uses WebKitGTK on Linux which has limited `backdrop-filter` support
-2. Initial CSS fallbacks used `border: 1px solid rgba(255, 255, 255, 0.12)` which was too bright
-3. The glass morphism effect relies on backdrop-blur which fails in WebKitGTK, making borders stand out more
+**Implemented**:
+1. [x] `pg_dump` script with timestamp (`/root/scripts/supabase-backup.sh`)
+2. [x] Backup rotation (7 daily, 4 weekly, 12 monthly)
+3. [x] Cron job for daily backups (3 AM UTC)
+4. [x] Local sync via rsync (`~/scripts/sync-vps-backups.sh`)
+5. [x] Systemd timer for 6-hourly local sync
 
-**Visual Comparison**:
-- **Reference (Storybook)**: Subtle, nearly invisible borders that blend with dark background
-- **Broken (Tauri)**: Prominent white borders, visible glow effects
+**Backup Locations**:
+- VPS: `/var/backups/supabase/{daily,weekly,monthly}`
+- Local: `~/backups/flowstate-vps/`
 
-**Fix Implemented** (`src/assets/styles.css`):
-1. **Reduced border opacity**: Changed from `rgba(255, 255, 255, 0.12)` → `rgba(255, 255, 255, 0.06)`
-2. **Removed box-shadow from trigger**: Eliminated all glow effects
-3. **Adjusted background colors**: Made slightly lighter (`rgba(40, 42, 52, 0.9)`) to blend better
-4. **Added comprehensive state overrides**: Hover, focus, open, selected states all updated
+**Commands**:
+```bash
+# Manual VPS backup
+ssh root@84.46.253.137 '~/scripts/supabase-backup.sh'
 
----
+# Manual local sync
+~/scripts/sync-vps-backups.sh
 
-### ~~BUG-050~~: Ghost Preview Positioning During Resize/Status Change (✅ RESOLVED - Removed Dec 31)
-
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Ghost preview at wrong position | HIGH | ✅ RESOLVED BY REMOVAL |
-
-**User Report**: Ghost preview appears at incorrect canvas coordinates during:
-1. Group/Section resize on canvas
-2. Task status change in kanban board
-
-**Screenshot**: `docs/🐛 debug/debugging-screenshot/image copy 7.png`
-
-**Resolution** (Dec 31, 2025):
-**Removed ghost preview overlay entirely for canvas operations** - Vue Flow already provides smooth real-time visual feedback during resize/drag, making the ghost overlay redundant and a source of bugs.
-
-**What was removed:**
-- [x] Template: `<div v-if="resizeState.isResizing" class="resize-preview-overlay-fixed">` block
-- [x] Function: `getSectionResizeStyle()` (~40 lines)
-- [x] CSS: `.resize-preview-overlay-fixed`, `.resize-preview-section-overlay`, `.resize-size-indicator`, `@keyframes resize-preview-pulse` (~50 lines)
-
-**Ghost preview KEPT for:**
-- Inbox → Canvas drag (needed for drop zone feedback)
-- Calendar inbox → Calendar grid drag
-- Kanban drag (kept fallback mode for horizontal scroll compat)
-
-**Benefits:**
-- ~100 lines of code removed
-- No more positioning bugs for canvas resize
-- Better performance (no extra DOM during resize)
-- Simpler, more maintainable codebase
+# Check timer status
+systemctl --user status flowstate-backup-sync.timer
+```
 
 ---
 
-### ~~BUG-053~~: Projects/Tasks Disappeared from IndexedDB (✅ RECOVERED - Dec 31)
+### ~~TASK-371~~: Deploy FlowState to VPS + Set Up Replication (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| All projects and tasks vanished from app | CRITICAL | ✅ DATA RECOVERED |
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-22)
 
-**User Report**: "Projects that I created were removed from the projects area" - happened "programmatically" without user action.
+Deploy FlowState schema to VPS and set up real-time Postgres replication for PWA access.
 
-**Symptom**:
-- Sidebar showed 0 projects, 0 tasks
-- IndexedDB only contained `settings:data` document
-- Local backups were empty (created after data loss)
+**Architecture**:
+```
+PWA/Mobile → VPS (primary, read/write) → Local (backup, real-time sync)
+          │                                    ▲
+          │                                    │
+          └───────── Postgres Logical ─────────┘
+                     Replication
+```
 
-**Investigation**:
-1. Confirmed IndexedDB was cleared (only 1 document remained)
-2. **Remote CouchDB still had all 54 documents** including 20 tasks and 26 projects
-3. CouchDB sync manager wasn't reading saved URL configuration (bug in `useReliableSyncManager.ts`)
+**Implementation Details**:
 
-**Recovery Process**:
-1. ✅ Fetched data directly from CouchDB server via curl
-2. ✅ Created recovery JSON file with tasks and projects
-3. ✅ Imported tasks via Recovery Center "Upload File" feature
-4. ✅ Injected projects via Pinia store direct manipulation
+| Component | Configuration |
+|-----------|---------------|
+| VPS Postgres Port | 5433 (via socat proxy to supabase-db) |
+| VPS Publication | `flowstate_to_local` (10 tables) |
+| Local Subscription | `sub_from_vps` |
+| Replication Slot | `local_sub_slot` (active) |
+| Service | `/etc/systemd/system/socat-postgres.service` |
 
-**Data Recovered**:
-- 20 tasks restored
-- 6 main projects restored (Work, Personal, Side Project, proji, projiz, Proji)
+**Replication Verified**: Changes on VPS appear on Local within seconds
 
 ---
 
-### ~~BUG-054~~: Cross-Browser CouchDB Sync Failures (✅ FIXED - Jan 1, 2026)
+### ~~TASK-1001~~: Configure Custom Domain (in-theflow.com) with Caddy SSL (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Sync not working across different browsers | P1-HIGH | ✅ **FIXED** |
-| UI blocked 10+ seconds waiting for sync | P1-HIGH | ✅ **FIXED** |
-| Deleted projects reappearing after sync | P1-HIGH | ✅ **FIXED** |
-| Each browser required manual credential entry | P1-HIGH | ✅ **FIXED** |
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-23)
 
-**User Reports**:
-- "Projects/tasks don't sync between Zen and Brave browsers"
-- "Sync should be automatic without configuring each browser"
-- "UI is blocked for 10+ seconds on page load"
-- "Deleted projects keep coming back"
+Set up custom domain for FlowState VPS with automatic HTTPS via Caddy and deploy PWA.
+
+**Domain**: `in-theflow.com`
+**VPS IP**: `84.46.253.137`
+
+**DNS Records** (Cloudflare - proxied):
+| Type  | Name | Value          |
+|-------|------|----------------|
+| A     | @    | 84.46.253.137  |
+| A     | api  | 84.46.253.137  |
+| CNAME | www  | in-theflow.com |
+
+**Live Endpoints**:
+- `https://in-theflow.com` → PWA frontend ✅
+- `https://api.in-theflow.com` → Supabase API ✅
+
+**SOP**: [SOP-026-custom-domain-deployment.md](./sop/SOP-026-custom-domain-deployment.md)
+
+---
+
+### ~~TASK-1003~~: Mobile Dev Mode for Claude Code Testing (✅ DONE)
+
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-23)
+
+Enable Claude Code (via Playwright) to access and test the mobile PWA during development.
+
+**Solution Implemented**: Playwright viewport resize + production PWA
+
+**Approach**:
+- Use `browser_resize` to set mobile viewport (390x844 for iPhone 14 Pro)
+- Test against production PWA at https://in-theflow.com
+- Real device testing done manually by user on actual phone
+
+**SOP**: [SOP-027-mobile-testing-workflow.md](./sop/SOP-027-mobile-testing-workflow.md)
+
+---
+
+### ~~BUG-342~~: Canvas Multi-Drag Bug - Unselected Tasks Move Together (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-23) - Closed per user request, will reactivate if issue resurfaces
+
+---
+
+### ~~BUG-339~~: Auth Reliability - Tauri Signouts & Password Failures (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-23)
+
+Multiple auth reliability issues: random Tauri signouts, password login failures, and seeded credentials not working.
 
 **Root Causes Identified**:
+1. **Password Login Failures**: `seed.sql` used `crypt()` instead of `extensions.crypt()` with wrong cost factor
+2. **Tauri IPC Failures**: Missing `ipc:` and `http://ipc.localhost` in CSP causing protocol fallback
+3. **Session Instability**: Supabase client missing explicit auth configuration for desktop apps
 
-1. **Configuration Disconnect**: Settings UI saved to `localStorage` keys, but sync manager only read from environment variables (`import.meta.env.VITE_COUCHDB_*`). Two independent systems that never communicated.
-2. **Blocking Initialization**: App waited for `waitForInitialSync(10000)` before loading any local data, causing 10+ second UI freeze.
-3. **Race Condition**: Data-pulled callback registered inside `onMounted`, but sync started when stores were created (before mount) - callback missed initial sync.
-4. **Missing Tombstones**: Project deletion only removed from array, no PouchDB tombstone created, so CouchDB sync restored "non-deleted" remote version.
-5. **IndexedDB Corruption**: Brave browser had corrupted IndexedDB with errors:
-   - `Database has a global failure UnknownError: Failed to read large IndexedDB value`
-   - `InvalidStateError: The database connection is closing`
+**Files Changed**:
+- `supabase/seed.sql` - Fixed password hashing
+- `src-tauri/tauri.conf.json` - Fixed CSP for IPC
+- `src/services/auth/supabase.ts` - Enhanced auth client config
+- `src/stores/tasks/taskPersistence.ts` - Guest localStorage isolation + deduplication
+- `src/stores/auth.ts` - Migration with safeCreateTask, proactive token refresh
+- `src/utils/guestModeStorage.ts` - Legacy key clearing
+- `src/composables/app/useAppInitialization.ts` - Clear stale guest tasks on auth
 
----
-
-### ~~TASK-063~~: Storybook Modal Stories Fixes (✅ DONE)
-
-**Priority**: P2-MEDIUM
-
-**Goal**: Fix and streamline all Storybook modal stories to render correctly with proper glassmorphism styling.
-
-**Problem**: Multiple modal stories in Storybook are broken or not rendering:
-- BatchEditModal - nothing appears
-- ConfirmationModal - nothing appears
-- GroupModal - nothing appears
-- QuickTaskCreateModal - broken
-- SearchModal - needs streamlining
-- SettingsModal - broken
-- TaskEditModal - needs streamlining
-
-**Solution**: Applied consistent story patterns with:
-- Emoji-prefixed titles (🪟 Modals & Dialogs/ComponentName)
-- Dark gradient background decorators
-- Proper TypeScript types
-- Pinia initialization to prevent store errors
-- Mock data instead of real store dependencies
-- Event handlers for all emitted events
-- Multiple story variants
-
-**Files Fixed**:
-- [x] `src/stories/modals/BatchEditModal.stories.ts` - Fixed prop names (isOpen, taskIds), added variants
-- [x] `src/stories/modals/ConfirmationModal.stories.ts` - Fixed prop name (isOpen not show), added 4 variants
-- [x] `src/stories/modals/GroupModal.stories.ts` - Fixed prop name (isOpen not modelValue), added variants
-- [x] `src/stories/modals/QuickTaskCreateModal.stories.ts` - Added event handlers, proper styling
-- [x] `src/stories/modals/SearchModal.stories.ts` - Added Pinia init, event handlers
-- [x] `src/stories/modals/SettingsModal.stories.ts` - Added Pinia init, proper render function
-- [x] `src/stories/modals/TaskEditModal.stories.ts` - Added mock Task data, 5 story variants
-
-**Started**: 2025-12-25
-**Completed**: 2025-12-25
+**SOP**: See `docs/sop/active/SOP-AUTH-reliability.md`
 
 ---
 
-### ~~TASK-064~~: Dev-Manager Comprehensive Redesign (✅ DONE)
+### ~~TASK-349~~: Make Guest Mode Ephemeral (Clean on Restart) (✅ DONE)
 
-**Status**: ✅ **DONE** (Jan 5, 2026) | **100% complete**
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-21)
 
-**Priority**: P1-HIGH
+**Problem**: Guest tasks persisted in localStorage across page refreshes/restarts, causing confusion when users expected a fresh start.
 
-**Goal**: Complete UI overhaul of the dev-manager dashboard with modern design, stroke-based icons, and new Timeline/Gantt view.
+**Requested Behavior**:
+- Guest mode starts fresh on every app restart
+- Authenticated users keep all their tasks (from Supabase)
+- Same-session sign-in still migrates tasks (before any restart)
 
-**Design Principles**:
-- [x] **Strokes over fills**: All icons use outline/stroke style, no filled icons
-- [x] **Glass morphism**: Consistent with PomoFlow's design system
-- [x] **Modern aesthetics**: Clean, minimal, professional developer tooling feel
+**SOP**: See `docs/sop/active/SOP-016-guest-mode-auth-flow.md`
+
+---
+
+### ~~BUG-336~~: Fix Backup Download in Tauri App (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-20)
+
+Can't download backups from Tauri desktop app - file save dialog doesn't work.
+
+**Root Causes Found & Fixed**:
+1. **PWA Plugin CSP Error** - `VitePWA` was conditionally excluded but didn't provide stub modules
+2. **Tauri Detection Not Working in Dev** - `TAURI_ENV_PLATFORM` is only set during `tauri build`
+3. **Missing XDG Portal Fallback** - `zenity` package needed for Linux dialog fallback
+
+**Files Changed**:
+- `vite.config.ts` - PWA disable option, isTauri detection
+- `src-tauri/tauri.conf.json` - beforeDevCommand with TAURI_DEV env var
+- `src-tauri/Cargo.toml` - dialog plugin with xdg-portal feature
+- `src-tauri/src/lib.rs` - Supabase migration auto-detection
+- `package.json` - Upgraded Tauri plugin versions
+
+---
+
+### ~~TASK-343~~: Fix Canvas Inbox Today Filter + Add Time Filter Dropdown (✅ DONE)
+
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-20)
+
+**Problem**: The "Today" filter in Canvas Inbox showed tasks that weren't due today.
+
+**Solution**:
+1. **Bug Fix**: Changed `if (task.createdAt)` to `if (!task.dueDate && task.createdAt)` - only include created-today tasks if they have NO due date
+2. **New Feature**: Replaced single "Today" toggle button with dropdown offering: All, Today, This Week, This Month
+
+**Files Changed**:
+- `src/composables/useSmartViews.ts` - Bug fix + added `isThisMonthTask()`
+- `src/composables/inbox/useUnifiedInboxState.ts` - Expanded filter types + counts
+- `src/components/inbox/unified/UnifiedInboxHeader.vue` - Replaced toggle with NDropdown
+- `src/components/inbox/UnifiedInboxPanel.vue` - Pass new props
+
+---
+
+### ~~TASK-344~~: Immutable Task ID System - Prevent System-Generated Duplicates (✅ DONE)
+
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-20)
+**SOP**: [`docs/sop/active/SOP-013-immutable-task-ids.md`](docs/sop/active/SOP-013-immutable-task-ids.md)
+
+**Problem**: The system can accidentally create duplicate tasks with the same ID or recreate deleted tasks. Task IDs should be immutable.
+
+**Solution - ID Immutability Enforcement**:
+```
+Once a task ID is used → That ID is PERMANENTLY reserved
+- Active task exists → ID is in use
+- Soft-deleted task exists → ID is still reserved
+- Hard-deleted task → ID recorded in tombstones, still reserved
+```
+
+**Implementation Layers**:
+| Layer | Component | Protection |
+|-------|-----------|------------|
+| Database | `safe_create_task()` RPC | `FOR UPDATE SKIP LOCKED`, checks existing + tombstones |
+| Database | `trg_task_tombstone` trigger | Auto-creates permanent tombstone on DELETE |
+| Application | `safeCreateTask()` | TypeScript wrapper, calls RPC or manual fallback |
+| Application | `checkTaskIdsAvailability()` | Batch check for restore/sync operations |
+| Audit | `task_dedup_audit` table | Logs all dedup decisions with reasons |
+
+---
+
+### ~~TASK-338~~: Comprehensive Stress Testing Agent/Skill (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-23)
+
+Create a specialized stress testing agent/skill that rigorously tests all completed tasks.
 
 **Scope**:
-- [x] **Icon System**: Replace emoji icons (📋, 🎯, 📚, 📊) with custom SVG stroke icons
-- [x] **Header Redesign**: Modern navigation with refined tab styling
-- [x] **Kanban Board Overhaul**: Improved task cards, better visual hierarchy
-- [x] **Timeline/Gantt View**: New tab implementing IDEA-002 for task visualization
-- [x] **Panel Consistency**: Update Skills, Docs, and Stats panels to match new design
+- **Reliability Testing** - Verify all critical paths work under stress
+- **Backup System Verification** - Test backup/restore integrity, shadow-mirror reliability
+- **Container Stability** - Docker/Supabase container health, restart resilience
+- **Redundancy Assessment** - Identify single points of failure
+- **Security Audit** - OWASP top 10, input validation, auth edge cases
+- **Data Integrity** - Sync conflicts, race conditions, deduplication
+- **Performance Profiling** - Memory leaks, response times under load
 
-**Files to Modify**:
-- [x] `dev-manager/index.html` - Main dashboard, icons, header
-- [x] `dev-manager/kanban/index.html` - Kanban board UI
-- [x] `dev-manager/skills/index.html` - Skills panel styling
-- [x] `dev-manager/docs/index.html` - Docs panel styling
-- [x] `dev-manager/stats/index.html` - Stats panel styling
-- [x] Create: `dev-manager/timeline/index.html` - New Timeline/Gantt view
+**Research Output**: `docs/research/TASK-338-stress-testing-research.md`
 
-**Implementation Phases**:
-- [x] Phase 1: SVG stroke icon set design and integration
-- [x] Phase 2: Header and navigation redesign
-- [x] Phase 3: Kanban board UI overhaul
-- [x] Phase 4: Timeline/Gantt view implementation
-- [x] Phase 5: Skills, Docs, Stats panel updates
-
-**Related**: Incorporates IDEA-002 (Timeline View for Dev-Manager)
-
-**Started**: 2025-12-25
-**Completed**: 2026-01-05
+**Sub-Tasks Completed**:
+- ~~TASK-361~~: Container Stability Tests ✅
+- ~~TASK-365~~: Actual Restore Verification ✅
 
 ---
 
-### ~~BUG-065~~: Kanban Vertical Scroll & Layout Conflicts (✅ DONE - Jan 3, 2026)
+### ~~TASK-361~~: Stress Test - Container Stability (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| App-wide vertical scroll blocked | CRITICAL | ✅ **FIXED** |
-| Scroller listener leaks | HIGH | ✅ **FIXED** |
-| Browser-specific scroll lock (Zen/WebKitGTK) | CRITICAL | ✅ **FIXED** |
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-23)
+**Depends On**: TASK-338
 
-**Symptom**: After drag-and-drop improvements, vertical scrolling was completely blocked across Zen, Brave, and Tauri apps. The UI felt "stuck" or unscrollable.
+Test Docker/Supabase container restart resilience.
 
-**Root Causes**:
-1. **Scroller Conflict**: `useHorizontalDragScroll.ts` had a logic error where it was eagerly consuming all touch/mouse moves without a direction check, blocking native vertical results.
-2. **Layout Collapse**: Recent structural changes to `BoardView.vue` and `MainLayout.vue` omitted essential `flex: 1` and `height: 100%` rules on wrappers, causing the scrollable area to effectively have zero height.
-3. **Restrictive CSS**: Implementation of `contain: layout style` and `isolation: isolate` on global containers disrupted the scroll chain in certain browser engines.
-4. **Listener Leak**: Global `mousemove` and `mouseup` listeners were not correctly removed if a drag was yielded, bogging down the main thread.
-
-**Fixes Applied**:
-- [x] **Directional Awareness**: Refactored `handleMove` to yield immediately if movement is primarily vertical (|dy| > |dx|).
-- [x] **Structural Flex**: Added `display: flex; flex: 1; min-height: 0` to `.view-wrapper` and `.board-view-wrapper` to ensure a concrete scrollable height.
-- [x] **CSS Cleanup**: Removed restrictive containment and added `touch-action: pan-y` to allow native vertical gestures in all environments.
-- [x] **Safe Scoping**: Fixed scoping errors in `useHorizontalDragScroll.ts` that were crashing the listener attachment logic.
-
-**Files Modified**:
-- `src/composables/useHorizontalDragScroll.ts` - Refactored yield logic & global listener safety.
-- `src/layouts/MainLayout.vue` - Fixed `.view-wrapper` flex expansion.
-- `src/views/BoardView.vue` - Fixed `.board-view-wrapper` and scroller constraints.
-- `src/components/kanban/KanbanSwimlane.vue` - Adjusted overflow and touch-action.
+**Implemented Tests** (`tests/stress/container-stability.spec.ts`):
+- [x] Docker containers running check
+- [x] Supabase API reachability check
+- [x] App database connection check
+- [x] Network interruption recovery
+- [x] WebSocket reconnection after network drop
+- [x] Multiple rapid refreshes data consistency
+- [x] Manual tests documented for DB restart and full stack restart
 
 ---
 
-### ~~BUG-066~~: Canvas Node Dragging Performance Lag (✅ DONE - Jan 3, 2026)
+### ~~TASK-365~~: Stress Test - Actual Restore Verification (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Canvas node dragging lag | CRITICAL | ✅ **FIXED** |
-| Reactive traversal overhead | HIGH | ✅ **FIXED** |
-| Deep watcher CPU spikes | HIGH | ✅ **FIXED** |
+**Priority**: P0
+**Status**: ✅ DONE (2026-01-22)
+**Depends On**: TASK-338
 
-**Symptom**: Dragging nodes on the canvas (Vue Flow) resulted in significant interaction lag (up to 1s frame drops) in the Tauri app, especially with custom nodes.
+Test actual backup restore functionality (not just file existence).
 
-**Root Causes**:
-1. **Deep Watchers**: `useVueFlowStateManager` and `useVueFlowStability` used `deep: true` watchers on the `nodes` array. Moving a node triggered full array traversal on every frame.
-2. **Selection Logic**: O(N^2) store-based selection checks in `CanvasView.vue` slots performed `.includes()` on every node every frame.
-3. **Expensive Filters**: Done tasks used `filter: grayscale()` and `backdrop-filter`, which added significant composition overhead during movement.
-4. **IPC Logs**: Excessive logging in the drag path caused IPC congestion in Tauri.
+**Implemented Tests** (`npm run test:restore`):
+- [x] Backup files exist and are readable
+- [x] Backup structure validation (tasks, groups, timestamp, checksum)
+- [x] Task restorability (required fields, no duplicates)
+- [x] Group restorability (required fields, no duplicates)
+- [x] Checksum integrity verification
+- [x] Restore simulation (dry run)
+- [x] Relationship integrity (parent references)
 
-**Fixes Applied**:
-- [x] **Guarded Watchers**: Modified watch sources to return `null` during `isInteracting`, pausing deep traversal during movement.
-- [x] **Efficient Diffing**: Replaced O(N^2) search logic with O(N) Map-based diffing in `useVueFlowStateManager`.
-- [x] **CSS Silencing**: Added `.is-dragging` state to custom nodes to disable `backdrop-filter`, `filter`, and `transition` during drag.
-- [x] **Internal State Optimization**: Switched to `nodeProps.selected` and `nodeProps.dragging` in `CanvasView.vue` slots to eliminate store lookups.
-
-**Files Modified**:
-- `src/composables/useVueFlowStateManager.ts` - Guarded watchers & O(N) diffing.
-- `src/composables/useVueFlowStability.ts` - Guarded watchers.
-- `src/components/canvas/TaskNode.vue` - CSS silencing & optimized props.
-- `src/views/CanvasView.vue` - Slot optimization & interaction state passing.
-- `src/composables/canvas/useCanvasDragDrop.ts` - Silenced IPC logs.
+**Files**:
+- `scripts/verify-restore.cjs` - Node.js 14-point verification
+- `tests/stress/restore-verification.spec.ts` - Playwright E2E tests
 
 ---
 
-### ~~TASK-092~~: Canvas Custom Node Performance Guard (✅ DONE - Jan 3, 2026)
+### ~~TASK-340~~: Layout Submenu Icon Grid Panel (✅ DONE)
 
-**Goal**: Ensure custom canvas nodes remain performant under heavy interaction.
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-21)
 
-**Actions**:
-- [x] Added `isDragging` prop support to `TaskNode.vue` and `GroupNodeSimple.vue`.
-- [x] Implemented interaction-aware CSS that automatically silences expensive filters during movement.
-- [x] Optimized selection detection logic to leverage Vue Flow internal state.
-- [x] Documented for future custom node types.
+Replace the Layout submenu list with a compact icon grid panel (industry standard pattern used by Figma, Adobe, Canva).
+
+**Solution**:
+- Convert to icon grid layout with grouped sections:
+  - **Align**: 2x3 grid (Left, Center H, Right | Top, Center V, Bottom)
+  - **Distribute**: 1x2 row (Horizontal, Vertical)
+  - **Arrange**: 1x3 row (Row, Column, Grid)
+- Add tooltips for discoverability
+
+**Files Changed**:
+- `src/components/canvas/CanvasContextMenu.vue`
 
 ---
 
-### ~~TASK-070~~: Fix context menu in groups (wrong menu) (✅ DONE)
+### ~~TASK-317~~: Shadow Backup Deletion-Aware Restore + Supabase Data Persistence (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-19)
+**Root Cause**: Supabase crash wiped auth.users, shadow backup restored deleted items
+
+**Solution - 4 Layers of Protection**:
+- Layer 1: Supabase Data Persistence (Prevent Loss at Source)
+- Layer 2: Shadow Backup Smart Saving (Prevent Corrupted Backups)
+- Layer 3: Complete Item Tracking (Track Everything Needed for Full Restore)
+- Layer 4: Reliable Restore (Restore Correctly & Completely)
+
+---
+
+### ~~TASK-305~~: Tauri Desktop Distribution - Complete Setup (✅ DONE)
+
 **Priority**: P1-HIGH
-**Completed**: Dec 31, 2025
-*Full details now archived.*
+**Status**: ✅ DONE (2026-01-18)
+**SOP**: [SOP-011](./sop/SOP-011-tauri-distribution.md)
 
-### ~~TASK-071~~: Fix Task Card Text Wrapping (✅ DONE)
+Complete the Tauri desktop distribution setup for open-source release.
+
+**Backend Implementation**: Rust backend with Docker/Supabase orchestration
+**Frontend Implementation**: Vue startup composable + Startup screen UI
+**CI/CD Release Workflow**: Multi-platform builds (Linux, Windows, macOS)
+**Auto-Updater Signing**: Keypair generated, GitHub secrets configured
+
+---
+
+### ~~BUG-336~~: Ctrl+Z Not Working After Shift+Delete (✅ DONE)
+
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE (2026-01-22)
+
+**Problem**: When using Shift+Delete to permanently delete a task from the canvas, Ctrl+Z (undo) doesn't restore it.
+
+**Root Cause**: In `useCanvasTaskActions.ts`, the permanent delete path calls `taskStore.permanentlyDeleteTask()` directly **without** recording the operation in the undo history.
+
+**Fix Applied**:
+1. Added `permanentlyDeleteTaskWithUndo()` function to `undoSingleton.ts`
+2. Updated `useCanvasTaskActions.ts` to use the new function
+3. Fixed `createTask` in `taskOperations.ts` to preserve task ID when provided
+
+---
+
+### ~~BUG-294~~: Timer Start Button Not Working (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-15)
+
+When pressing Start or Timer buttons from task context menu, the timer doesn't start and the task isn't highlighted as active on the canvas.
+
+**Root Cause Identified**:
+- Stale timer sessions in Supabase database blocking new timers
+- Device leadership timeout (30s) preventing timer start if previous session wasn't properly closed
+
+**Fix Applied**:
+- Added auto-cleanup of stale timer sessions in `timer.ts:checkForActiveDeviceLeader()`
+- Added debug logging throughout the timer flow
+
+---
+
+### ~~BUG-309-B~~: Undo/Redo Position Drift (✅ DONE)
+
 **Priority**: P1-HIGH
-**Completed**: Dec 31, 2025
-*Full details now archived.*
+**Status**: ✅ DONE (2026-01-18)
 
-### ~~TASK-072~~: Add Nested Groups Support (✅ DONE)
-**Priority**: P2-MEDIUM
-**Completed**: Dec 30, 2025 (real-time counters, drag fix), Dec 29, 2025 (initial)
-*Full details now archived.*
+When undoing an operation, other tasks that weren't involved in the operation "jumped back" to their positions from the time of the snapshot.
 
-### ~~TASK-073~~: Improve Group Outline Styling (✅ DONE)
-**Priority**: P2-MEDIUM
-**Completed**: Jan 1, 2026
-*Full details now archived.*
+**Root Cause**: The undo system used full-state snapshots that captured ALL task/group positions. Restoring a snapshot would overwrite ALL positions.
 
-### ~~TASK-074~~: Task Node Background Blur (✅ DONE)
-**Priority**: P2-MEDIUM
-**Completed**: Dec 29, 2025
-*Full details now archived.*
+**Solution**: Implemented operation-scoped selective restoration. See SOP: `docs/sop/active/UNDO-system-architecture.md`
 
-### ~~TASK-075~~: Markdown Support for Task Descriptions (✅ DONE)
-**Priority**: P2-MEDIUM
-**Completed**: Jan 1, 2026
-*Full details now archived.*
+---
 
-### ~~TASK-076~~: Separate Done Filter for Canvas vs Calendar Inbox (✅ DONE)
-**Priority**: P1-HIGH
-**Completed**: Dec 31, 2025
-*Full details now archived.*
+### ~~ROAD-013: Sync Hardening~~ (✅ DONE)
 
-### ~~TASK-078~~: Dev-Manager Hide Done Tasks Filter (✅ DONE)
-**Priority**: P2-MEDIUM
-**Completed**: Dec 30, 2025
-*Full details now archived.*
+**Priority**: P0
+**Status**: ✅ DONE (2026-01-14)
 
-### TASK-082: Auto-Move Today Tasks to Overdue at Midnight (✅ DONE)
-**Status**: 🔄 IMPLEMENTED (Dec 31, 2025)
-*Full details now archived.*
+Triple Shield Locks, Optimistic Sync, & Safety Toasts implemented.
 
-### TASK-083: "All Projects" Filter (✅ DONE)
+---
+
+### ~~TASK-370~~: Canvas: Arrange Done Tasks Button (✅ DONE)
+
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-22)
+
+One-click button in toolbar to arrange all done tasks in grid at bottom-left. Removes tasks from groups for review.
+
+---
+
+### ~~TASK-314~~: Highlight Active Timer Task Across All Views (✅ DONE)
+
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-18)
+
+Active timer task now highlighted in Board and Catalog views with amber glow + pulse animation.
+
+**SOP**: [SOP-012-timer-active-highlight.md](./sop/SOP-012-timer-active-highlight.md)
+
+---
+
+### ~~FEATURE-254~~: Canvas Inbox Smart Minimization (✅ DONE)
+
+**Priority**: P2
+**Status**: ✅ DONE (2026-01-13)
+
+Auto-collapse inbox on empty load.
+
+---
+
+### ~~BUG-218~~: Fix Persistent Canvas Drift (✅ DONE - Rolled into TASK-232)
+
+**Priority**: P1
 **Status**: ✅ DONE
-*Full details now archived.*
 
-### TASK-084: Multi-Select Projects Filter (✅ DONE)
-**Status**: ✅ DONE
-*Full details now archived.*
+Rolled into TASK-232 Canvas System Stability Solution.
 
 ---
 
-### ~~TASK-091~~: Kanban Board Drag-and-Drop Refactor (✅ DONE - Jan 3, 2026)
+### ~~BUG-220~~: Fix Group Counter and Task Movement Counter Issues (✅ DONE - Rolled into TASK-232)
 
-| Feature | Priority | Status |
-|---------|----------|--------|
-| `vuedraggable` Integration | P1-HIGH | ✅ **DONE** |
-| Direction-aware Horizontal Scroll | P1-HIGH | ✅ **DONE** |
-| Native Drag Conflict Resolution | P2-MEDIUM | ✅ **DONE** |
+**Priority**: P1
+**Status**: ✅ DONE
 
-**Goal**: Implement a smooth, multi-swipe Kanban board where vertical task sorting and horizontal row scrolling coexist without conflict.
+Rolled into TASK-232 Canvas System Stability Solution.
+
+---
+
+### ~~TASK-224~~: Update Outdated Dependencies (✅ DONE - Deferred)
+
+**Priority**: P2
+**Status**: ✅ DONE (Deferred)
+
+Dependencies updated where safe. Major version bumps deferred to avoid breaking changes.
+
+---
+
+### ~~TASK-138~~: Refactor CanvasView Phase 2 (Store & UI) ✅ DONE
+
+**Priority**: P1
+**Status**: ✅ DONE
+
+Store & UI refactoring complete.
+
+---
+
+### ~~TASK-164~~: Create Agent API Layer (❌ WON'T DO)
+
+**Priority**: P2
+**Status**: ❌ WON'T DO
+
+Decided against separate Agent API layer - using existing architecture.
+
+---
+
+### ~~TASK-BACKUP-157~~: Consolidate Dual Backup Systems (✅ DONE)
+
+**Priority**: P1
+**Status**: ✅ DONE
+
+Dual-engine backup system consolidated.
+
+---
+
+### ~~BOX-001~~: Fix `ensureActionGroups` Undefined Error (✅ DONE)
+
+**Priority**: P0
+**Status**: ✅ DONE
+
+Fixed undefined error in action groups.
+
+---
+
+### ~~TASK-122~~: Bundle Size Optimization (<500KB) (✅ DONE - 505KB)
+
+**Priority**: P2
+**Status**: ✅ DONE
+
+Bundle optimized to 505KB (slightly over target but acceptable).
+
+---
+
+### ~~BUG-027~~: Canvas View Frequent Remounting (❌ NOT A BUG)
+
+**Priority**: P1
+**Status**: ❌ NOT A BUG
+
+Investigated and determined this is expected Vue behavior, not a bug.
+
+---
+
+### ~~TASK-260~~: Authoritative Duplicate Detection Diagnostics (✅ DONE)
+
+**Priority**: P0
+**Status**: ✅ DONE (2026-01-23)
+
+Canvas task/group duplication logging tightened with assertNoDuplicateIds helper. Duplicates no longer appearing.
+
+---
+
+### ~~TASK-1013~~: Multi-Agent File Locking with Deferred Execution (✅ DONE)
+
+**Priority**: P1
+**Status**: ✅ DONE
+
+Implemented task locking via `task-lock-enforcer.sh` hook to prevent conflicts when multiple Claude Code instances edit the same files.
+
+**Lock files**: `.claude/locks/TASK-XXX.lock`
+**Lock expiry**: 4 hours (stale locks auto-cleaned)
+
+---
+
+### ~~TASK-319~~: Fix Agent Output Capture in Orchestrator (✅ DONE)
+
+**Priority**: P1-HIGH
+**Status**: ✅ DONE (2026-01-23)
+**Related**: TASK-303
+
+Stream-json parsing, real-time broadcast, persistent logs implemented.
 
 **Implementation**:
-- [x] **Decoupled Interactions**: Removed native HTML5 `draggable="true"` from `TaskCard.vue` to prevent browser drag-preview interference with `vuedraggable`.
-- [x] **Improved Sensitivity**: Increased `vuedraggable` delay (100ms) and touch-threshold (5px) to better distinguish between clicking, sorting, and board scrolling.
-- [x] **Intent Detection**: Added `data-draggable="true"` attributes to help the horizontal scroller identify when to yield to children immediately.
-- [x] **Horizontal Momentum**: Maintained momentum-based scrolling for the board while ensuring it doesn't "catch" during vertical task movement.
-
-**Result**: Butter-smooth dragging in both directions across all platforms.
-### ~~BUG-050~~: Ghost Preview Positioning During Resize/Status Change (✅ RESOLVED - Removed Dec 31)
-
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Ghost preview at wrong position | HIGH | ✅ RESOLVED BY REMOVAL |
-
-**User Report**: Ghost preview appears at incorrect canvas coordinates during:
-1. Group/Section resize on canvas
-2. Task status change in kanban board
-
-**Screenshot**: `docs/🐛 debug/debugging-screenshot/image copy 7.png`
-
-**Resolution** (Dec 31, 2025):
-**Removed ghost preview overlay entirely for canvas operations** - Vue Flow already provides smooth real-time visual feedback during resize/drag, making the ghost overlay redundant and a source of bugs.
-
-**What was removed:**
-- [x] Template: `<div v-if="resizeState.isResizing" class="resize-preview-overlay-fixed">` block
-- [x] Function: `getSectionResizeStyle()` (~40 lines)
-- [x] CSS: `.resize-preview-overlay-fixed`, `.resize-preview-section-overlay`, `.resize-size-indicator`, `@keyframes resize-preview-pulse` (~50 lines)
-
-**Ghost preview KEPT for:**
-- Inbox → Canvas drag (needed for drop zone feedback)
-- Calendar inbox → Calendar grid drag
-- Kanban drag (kept fallback mode for horizontal scroll compat)
-
-**Benefits:**
-- ~100 lines of code removed
-- No more positioning bugs for canvas resize
-- Better performance (no extra DOM during resize)
-- Simpler, more maintainable codebase
+1. Added `--output-format stream-json`, `--print`, `--verbose` to sub-agent spawn
+2. Created `parseAndBroadcastOrchOutput()` function
+3. Added `appendAgentLog()` helper - logs to `~/.dev-maestro/logs/agent-{taskId}.log`
+4. Added `/api/orchestrator/logs/:taskId` endpoint
 
 ---
 
-### ~~BUG-053~~: Projects/Tasks Disappeared from IndexedDB (✅ RECOVERED - Dec 31)
+### ~~TASK-320~~: Fix Task Completion Detection in Orchestrator (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| All projects and tasks vanished from app | CRITICAL | ✅ DATA RECOVERED |
+**Priority**: P1-HIGH
+**Status**: ✅ DONE (2026-01-23)
+**Related**: TASK-303
 
-**User Report**: "Projects that I created were removed from the projects area" - happened "programmatically" without user action.
+Activity timeout, git status check, enhanced completion detection implemented.
 
-**Symptom**:
-- Sidebar showed 0 projects, 0 tasks
-- IndexedDB only contained `settings:data` document
-- Local backups were empty (created after data loss)
-
-**Investigation**:
-1. Confirmed IndexedDB was cleared (only 1 document remained)
-2. **Remote CouchDB still had all 54 documents** including 20 tasks and 26 projects
-3. CouchDB sync manager wasn't reading saved URL configuration (bug in `useReliableSyncManager.ts`)
-
-**Recovery Process**:
-1. ✅ Fetched data directly from CouchDB server via curl
-2. ✅ Created recovery JSON file with tasks and projects
-3. ✅ Imported tasks via Recovery Center "Upload File" feature
-4. ✅ Injected projects via Pinia store direct manipulation
-
-**Data Recovered**:
-- 20 tasks restored
-- 6 main projects restored (Work, Personal, Side Project, proji, projiz, Proji)
-
-**Root Cause**: Under investigation - suspected issue with sync manager not reading URL configuration from settings. See BUG-054 for sync manager URL bug.
-
-**Related Bug**: Created BUG-054 for ReliableSyncManager URL configuration issue.
+**Solution**:
+1. Check git status for uncommitted changes
+2. Validate diff output has actual file changes
+3. Add agent activity timeout (60s triggers `task_stalled` event)
+4. New completion statuses: `completed`, `completed_no_changes`, `completed_empty`
 
 ---
 
-### ~~BUG-054~~: Cross-Browser CouchDB Sync Failures (✅ FIXED - Jan 1, 2026)
+### ~~TASK-323~~: Fix Stale Agent Cleanup in Orchestrator (✅ DONE)
 
-| Issue | Severity | Status |
-|-------|----------|--------|
-| Sync not working across different browsers | P1-HIGH | ✅ **FIXED** |
-| UI blocked 10+ seconds waiting for sync | P1-HIGH | ✅ **FIXED** |
-| Deleted projects reappearing after sync | P1-HIGH | ✅ **FIXED** |
-| Each browser required manual credential entry | P1-HIGH | ✅ **FIXED** |
+**Priority**: P1-HIGH
+**Status**: ✅ DONE (2026-01-23)
+**Related**: TASK-303
 
-**User Reports**:
-- "Projects/tasks don't sync between Zen and Brave browsers"
-- "Sync should be automatic without configuring each browser"
-- "UI is blocked for 10+ seconds on page load"
-- "Deleted projects keep coming back"
+Startup cleanup, periodic cleanup, graceful shutdown, SIGKILL fallback implemented.
 
-**Root Causes Identified**:
-
-1. **Configuration Disconnect**: Settings UI saved to `localStorage` keys, but sync manager only read from environment variables (`import.meta.env.VITE_COUCHDB_*`). Two independent systems that never communicated.
-
-2. **Blocking Initialization**: App waited for `waitForInitialSync(10000)` before loading any local data, causing 10+ second UI freeze.
-
-3. **Race Condition**: Data-pulled callback registered inside `onMounted`, but sync started when stores were created (before mount) - callback missed initial sync.
-
-4. **Missing Tombstones**: Project deletion only removed from array, no PouchDB tombstone created, so CouchDB sync restored "non-deleted" remote version.
-
-5. **IndexedDB Corruption**: Brave browser had corrupted IndexedDB with errors:
-   - `Database has a global failure UnknownError: Failed to read large IndexedDB value`
-   - `InvalidStateError: The database connection is closing`
-
-**Fixes Applied**:
-
-1. **Unified Configuration** (`src/config/database.ts`):
-   - Added `getStoredCouchDBConfig()` that reads localStorage first → env vars → hardcoded defaults
-   - Fixed empty string handling with `.trim()` checks
-   - Added automatic fallback credentials for seamless multi-browser sync
-
-2. **Local-First Loading** (`src/composables/app/useAppInitialization.ts`):
-   - Load local data immediately (< 1 second to UI)
-   - Sync runs in background with 30-second timeout
-   - Callback registered OUTSIDE `onMounted` to catch early sync
-
-3. **Tombstone Creation** (`src/stores/projects.ts`):
-   - Added `deleteProjectDoc()` calls to create proper PouchDB deletion markers
-   - Tombstones sync to CouchDB, preventing resurrection
-
-4. **Callback Mechanism** (`src/composables/useReliableSyncManager.ts`):
-   - Added `registerDataPulledCallback()` for post-sync store reloading
-   - Stores refresh automatically when sync pulls new data
-
-**Files Modified**:
-- `src/config/database.ts` - Configuration unification
-- `src/composables/app/useAppInitialization.ts` - Local-first loading
-- `src/stores/projects.ts` - Tombstone creation on delete
-- `src/composables/useReliableSyncManager.ts` - Callback mechanism
-
-**SOP**: `docs/🐛 debug/sop/cross-browser-sync-fix-2026-01-01.md`
-
-**Troubleshooting for Corrupted IndexedDB**:
-1. DevTools → Application → Storage → IndexedDB
-2. Delete `_pouch_pomoflow-app-dev`
-3. Refresh page - app syncs fresh data from CouchDB
+**Solution**:
+1. `killAgentProcess()` - SIGTERM with 5s timeout, then SIGKILL fallback
+2. `cleanupWorktree()` - now also deletes branch + runs `git worktree prune`
+3. `cleanupOrphanedResources()` - startup scan removes orphaned resources
+4. `startPeriodicCleanup()` - every 10 minutes, kills stuck agents (>30min runtime)
+5. `gracefulShutdown()` - SIGTERM/SIGINT handlers kill all agents and clean up
 
 ---
 
+### ~~FEATURE-1012~~: Orchestrator Auto-Detect Project Tech Stack (✅ DONE)
+
+**Priority**: P2-MEDIUM
+**Status**: ✅ DONE (2026-01-23)
+**Related**: TASK-303
+
+Auto-detects Vue/React, UI libs, state mgmt, DB from package.json. Questions now focus on feature details, not tech stack.
+
+**Solution**:
+- Added `detectProjectContext()` function in `~/.dev-maestro/server.js`
+- Auto-detects: framework, UI library, state management, database, testing tools, build tools
+- Injects detected context into Claude's question generation prompt
+
+---
+
+*End of January 2026 Archive*

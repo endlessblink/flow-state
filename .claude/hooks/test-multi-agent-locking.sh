@@ -63,36 +63,36 @@ echo "  - Agent A: Will try to add comment"
 echo "  - Agent B: Will try to add comment (should be deferred)"
 echo ""
 
-# Step 4: Run both agents in parallel using claude -p (print mode)
-# Agent A
-echo "Starting Agent A..."
+# Step 4: Run agents SEQUENTIALLY - Agent A first, then B while lock exists
+# This ensures Agent B hits the lock, not a race condition
+
+# Agent A - let it complete first to establish the lock
+echo "Starting Agent A (will acquire lock)..."
 (
   cd "$PROJECT_DIR"
   timeout 120 claude -p "$AGENT_A_PROMPT" --allowedTools Edit,Read 2>&1 | tee "$RESULTS_DIR/agent_a.log"
-) &
-AGENT_A_PID=$!
+)
+AGENT_A_EXIT=$?
 
-# Small delay to ensure Agent A starts first and gets the lock
-sleep 2
+echo ""
+echo "Agent A completed. Checking lock..."
+ls -la "$PROJECT_DIR/.claude/locks/" | grep -v gitignore || echo "No locks"
+echo ""
 
-# Agent B
-echo "Starting Agent B..."
+# Agent B - runs after A, should hit the existing lock
+echo "Starting Agent B (should hit lock and be deferred)..."
 (
   cd "$PROJECT_DIR"
   timeout 120 claude -p "$AGENT_B_PROMPT" --allowedTools Edit,Read 2>&1 | tee "$RESULTS_DIR/agent_b.log"
-) &
-AGENT_B_PID=$!
-
-echo ""
-echo "Waiting for agents to complete..."
-echo "(This may take up to 2 minutes)"
-echo ""
-
-# Wait for both to complete
-wait $AGENT_A_PID 2>/dev/null || true
-AGENT_A_EXIT=$?
-wait $AGENT_B_PID 2>/dev/null || true
+)
 AGENT_B_EXIT=$?
+# Fake PIDs for compatibility with rest of script
+AGENT_A_PID=0
+AGENT_B_PID=0
+
+echo ""
+echo "Both agents completed."
+echo ""
 
 echo ""
 echo "=============================================="
@@ -111,8 +111,8 @@ ls -la "$PROJECT_DIR/.claude/deferred-queue/" 2>/dev/null | grep -v "^total" | g
 echo ""
 
 # Check if DEFERRED message appeared in either log
-AGENT_A_DEFERRED=$(grep -c "DEFERRED" "$RESULTS_DIR/agent_a.log" 2>/dev/null || echo "0")
-AGENT_B_DEFERRED=$(grep -c "DEFERRED" "$RESULTS_DIR/agent_b.log" 2>/dev/null || echo "0")
+AGENT_A_DEFERRED=$(grep -c "DEFERRED" "$RESULTS_DIR/agent_a.log" 2>/dev/null) || AGENT_A_DEFERRED=0
+AGENT_B_DEFERRED=$(grep -c "DEFERRED" "$RESULTS_DIR/agent_b.log" 2>/dev/null) || AGENT_B_DEFERRED=0
 
 echo "Agent A output (last 20 lines):"
 echo "---"

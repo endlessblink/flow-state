@@ -472,19 +472,72 @@ button svg {
     color: var(--text-primary, rgba(255, 255, 255, 0.95)) !important;
 }
 
-.n-date-panel-date--current .n-date-panel-date__trigger {
-    border: 1px solid var(--brand-primary, #6366f1) !important;
-    color: var(--brand-primary, #6366f1) !important;
+/* =============================================================================
+   DATE PICKER - Refined Minimal Design (TASK-368)
+
+   Design Philosophy: Stroke-based selection for unobtrusive elegance
+   - Today: White text + subtle bottom border (marks "now" in time)
+   - Selected: Green stroke + green text, NO fill (selection without weight)
+   - Today + Selected: Green text + green stroke + green bottom border
+   - Excluded: Clearly dimmed (other month dates)
+   ============================================================================= */
+
+/* Base date cell - ensure clean slate with explicit reset */
+.n-date-panel .n-date-panel-date .n-date-panel-date__trigger {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 2px solid transparent !important;
+    border-radius: 6px !important;
+    transition: all 0.15s ease !important;
 }
 
-.n-date-panel-date--selected .n-date-panel-date__trigger {
-    background: var(--brand-primary, #6366f1) !important;
-    color: white !important;
+/* Today indicator: white text + dot below */
+.n-date-panel .n-date-panel-date.n-date-panel-date--current:not(.n-date-panel-date--selected) .n-date-panel-date__trigger {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    /* Dot indicator using box-shadow (avoids grid-breaking pseudo-element issues) */
+    box-shadow: 0 6px 0 0 rgba(255, 255, 255, 0.7) !important;
 }
 
-/* Dates outside current month */
-.n-date-panel-date--excluded .n-date-panel-date__trigger {
-    color: var(--text-muted, rgba(255, 255, 255, 0.3)) !important;
+/* Selected date: green stroke + green text, NO fill */
+.n-date-panel .n-date-panel-date.n-date-panel-date--selected .n-date-panel-date__trigger {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 2px solid #10b981 !important;
+    color: #10b981 !important;
+    font-weight: 600 !important;
+}
+
+/* Today + Selected: green stroke + green text + green dot */
+.n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected .n-date-panel-date__trigger {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 2px solid #10b981 !important;
+    color: #10b981 !important;
+    font-weight: 600 !important;
+    /* Green dot indicator */
+    box-shadow: 0 6px 0 0 #10b981 !important;
+}
+
+/* Hover state - subtle highlight */
+.n-date-panel .n-date-panel-date:not(.n-date-panel-date--selected):not(.n-date-panel-date--excluded):hover .n-date-panel-date__trigger {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Dates outside current month - CLEARLY dimmed with multiple approaches */
+.n-date-panel .n-date-panel-date.n-date-panel-date--excluded .n-date-panel-date__trigger,
+.n-date-panel-date--excluded .n-date-panel-date__trigger,
+.n-date-panel-date.n-date-panel-date--excluded > .n-date-panel-date__trigger,
+div.n-date-panel-date--excluded .n-date-panel-date__trigger {
+    color: rgba(255, 255, 255, 0.15) !important;
+    opacity: 0.35 !important;
+    --n-item-text-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Fallback: target all excluded date elements */
+.n-date-panel-date--excluded {
+    opacity: 0.35 !important;
 }
 
 /* Calendar navigation arrows */
@@ -493,6 +546,7 @@ button svg {
 .n-date-panel-header__fast-prev,
 .n-date-panel-header__fast-next {
     color: var(--text-muted, rgba(255, 255, 255, 0.45)) !important;
+    transition: all 0.15s ease !important;
 }
 
 .n-date-panel-header__prev:hover,

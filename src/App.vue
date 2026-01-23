@@ -1,5 +1,5 @@
 <template>
-  <NConfigProvider :theme="darkTheme">
+  <NConfigProvider :theme="darkTheme" :theme-overrides="themeOverrides">
     <NGlobalStyle />
     <NMessageProvider>
       <!-- Tauri Startup Screen (only shows in Tauri mode during initialization) -->
@@ -29,7 +29,22 @@
 import '@/assets/design-tokens.css'
 import '@/assets/global-overrides.css'
 
-import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NGlobalStyle, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
+
+// Date Picker Theme Override - Clean minimal design
+// Today: white text (no special indicator)
+// Selected: green stroke + green text, NO fill
+const themeOverrides: GlobalThemeOverrides = {
+  DatePicker: {
+    itemColorActive: 'transparent', // NO fill on selected
+    itemColorHover: 'rgba(255, 255, 255, 0.08)',
+    itemTextColorActive: '#10b981', // Green text when selected
+    itemBorderRadius: '6px',
+    panelHeaderDividerColor: 'rgba(255, 255, 255, 0.08)',
+    calendarTitleColorHover: 'rgba(255, 255, 255, 0.95)',
+    arrowColor: 'rgba(255, 255, 255, 0.45)',
+  },
+}
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAppInitialization } from '@/composables/app/useAppInitialization'
 import { useAppShortcuts } from '@/composables/app/useAppShortcuts'

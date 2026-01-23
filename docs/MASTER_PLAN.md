@@ -119,7 +119,7 @@
 | ~~**BUG-317**~~          | ✅ **DONE** **Board View Priority Column Drag Fix**                     | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Fixed priority swimlane drag: `columnType` prop distinguishes status vs priority columns                                                                                                                        |                                                        |
 | ~~**TASK-318**~~         | ✅ **DONE** **Tauri Standalone Build Verified**                         | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Built standalone packages: `.deb`, `.rpm`, `.AppImage` for Linux                                                                                                                                                |                                                        |
 | **TASK-319**             | **Fix Agent Output Capture in Orchestrator**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-319-fix-agent-output-capture-in-orchestrator-planned) - TASK-303 subtask                                                                                                                    |                                                        |
-| **TASK-320**             | **Fix Task Completion Detection in Orchestrator**                      | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-320-fix-task-completion-detection-in-orchestrator-planned) - TASK-303 subtask                                                                                                               |                                                        |
+| ~~**TASK-320**~~         | ✅ **DONE** **Fix Task Completion Detection in Orchestrator**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                        | Activity timeout, git status check, enhanced completion detection - TASK-303 subtask                                                                                                                            |                                                        |
 | **TASK-321**             | **Test and Fix Merge/Discard Workflow E2E**                            | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-321-test-and-fix-mergediscard-workflow-end-to-end-planned) - TASK-303 subtask                                                                                                               |                                                        |
 | **TASK-322**             | **Add Automatic Error Recovery for Orchestrator**                      | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-322-add-automatic-error-recovery-for-orchestrator-agents-planned) - TASK-303 subtask                                                                                                        |                                                        |
 | **TASK-323**             | **Fix Stale Agent Cleanup in Orchestrator**                            | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-323-fix-stale-agent-cleanup-in-orchestrator-planned) - TASK-303 subtask                                                                                                                     |                                                        |
@@ -1377,7 +1377,7 @@ User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Di
 
 **Stability Subtasks** (see details below):
 - TASK-319: Fix Agent Output Capture
-- TASK-320: Fix Task Completion Detection
+- ~~TASK-320~~: Fix Task Completion Detection ✅
 - TASK-321: Test Merge/Discard Workflow E2E
 - TASK-322: Add Automatic Error Recovery
 - TASK-323: Fix Stale Agent Cleanup
@@ -1409,39 +1409,45 @@ http://localhost:6010/kanban/index.html?view=orchestrator
 
 The following tasks address stability issues discovered during orchestrator testing. All are subtasks of TASK-303.
 
-#### TASK-319: Fix Agent Output Capture in Orchestrator (📋 PLANNED)
+#### TASK-319: Fix Agent Output Capture in Orchestrator (👀 REVIEW)
 
 **Priority**: P1-HIGH
 **Related**: TASK-303
 **Created**: January 19, 2026
+**Status**: 👀 REVIEW (2026-01-23) - Implemented, needs user testing
 
 **Problem**: Agent stdout isn't reliably captured in logs. The `subAgentData.outputLines` stays at 0 even when agents create files successfully. Progress tracking is blind.
 
-**Root Cause** (server.js:2459-2472):
-- stdout only logged every 10 outputs (batching)
-- `outputLines` counter not incremented properly
-- Output array grows but count doesn't reflect it
+**Root Cause** (server.js:3071-3120):
+- Sub-agents spawned without `--output-format stream-json` flag
+- stdout only broadcasts every 10 outputs (batching)
+- No JSON parsing of Claude's stream output
+- No persistent file logging
 
-**Solution**:
-1. Increment `outputLines` on every stdout chunk
-2. Stream output to a log file per agent (persistent)
-3. Parse JSON from `--output-format stream-json` if needed
+**Implementation** (2026-01-23):
+1. ✅ Added `--output-format stream-json`, `--print`, `--verbose` to sub-agent spawn
+2. ✅ Created `parseAndBroadcastOrchOutput()` function - parses JSON events, broadcasts real-time via `broadcastOrchestration`
+3. ✅ Added `appendAgentLog()` helper - logs to `~/.dev-maestro/logs/agent-{taskId}.log`
+4. ✅ Added `/api/orchestrator/logs/:taskId` endpoint to retrieve logs
+5. ✅ Logs directory auto-created on server start
 
 **Key Files**:
-- `dev-maestro/server.js` (lines 2459-2472, stdout handler)
+- `~/.dev-maestro/server.js` (lines 1716-1812: new helpers, lines 3071-3120: updated spawn)
 
 **Success Criteria**:
-- [ ] Real-time output visible in logs
-- [ ] `outputLines` count matches actual output chunks
-- [ ] Agent logs persisted to `dev-maestro/logs/agent-{taskId}.log`
+- [x] Real-time output broadcast via `agent_output` events
+- [x] `outputLines` count matches actual output chunks
+- [x] Agent logs persisted to `~/.dev-maestro/logs/agent-{taskId}.log`
+- [ ] User verification: Test orchestration and check logs
 
 ---
 
-#### TASK-320: Fix Task Completion Detection in Orchestrator (📋 PLANNED)
+#### ~~TASK-320~~: Fix Task Completion Detection in Orchestrator (✅ DONE)
 
 **Priority**: P1-HIGH
 **Related**: TASK-303
 **Created**: January 19, 2026
+**Completed**: January 23, 2026
 
 **Problem**: Task shows "running" with "outputLines: 0" even after agent created files. Completion detection relies only on exit code.
 
@@ -1450,14 +1456,16 @@ The following tasks address stability issues discovered during orchestrator test
 - No validation that files were actually changed
 - Git diff may be empty if agent didn't commit
 
-**Solution**:
-1. Check git status for uncommitted changes
-2. Validate diff output has actual file changes
-3. Add agent activity timeout (no output for 60s = stuck)
-4. Parse agent's final summary from output
+**Solution Implemented**:
+1. ✅ Check git status for uncommitted changes (`git status --porcelain`)
+2. ✅ Validate diff output has actual file changes (committed and uncommitted)
+3. ✅ Add agent activity timeout (60s of no output triggers `task_stalled` event)
+4. ✅ Parse agent's final summary from output (regex patterns for common completions)
+5. ✅ New completion statuses: `completed`, `completed_no_changes`, `completed_empty`
+6. ✅ Enhanced broadcast payload with `hasUncommittedChanges`, `hasCommittedChanges`, `agentSummary`, `outputLines`
 
 **Key Files**:
-- `dev-maestro/server.js` (lines 2510-2595, close handler)
+- `dev-maestro/server.js` (spawnSubAgent function)
 
 **Success Criteria**:
 - [ ] Task marked complete only when files changed

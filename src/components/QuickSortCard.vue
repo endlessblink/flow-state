@@ -91,7 +91,14 @@
           <label class="edit-label">Due Date:</label>
 
           <!-- Clickable Date Display with Hidden Input -->
-          <div class="date-input-wrapper" @click="openDatePicker">
+          <div
+            class="date-input-wrapper"
+            role="button"
+            tabindex="0"
+            @click="openDatePicker"
+            @keydown.enter.prevent="openDatePicker"
+            @keydown.space.prevent="openDatePicker"
+          >
             <Calendar :size="16" class="date-icon" />
             <span class="date-display">{{ formattedDueDate }}</span>
             <input
@@ -150,6 +157,7 @@
             <button
               class="mark-done-btn action-icon-btn"
               title="Mark Done (D)"
+              aria-label="Mark task as done (D)"
               @click.stop="handleMarkDone"
             >
               <CheckCircle :size="20" />
@@ -158,6 +166,7 @@
             <button
               class="edit-btn action-icon-btn"
               title="Edit Task (E)"
+              aria-label="Edit task (E)"
               @click.stop="handleEditTask"
             >
               <Edit :size="20" />
@@ -166,6 +175,7 @@
             <button
               class="delete-btn action-icon-btn"
               title="Done + Delete (Del)"
+              aria-label="Delete task (Del)"
               @click.stop="handleMarkDoneAndDelete"
             >
               <Trash2 :size="20" />

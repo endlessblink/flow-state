@@ -118,7 +118,7 @@
 | ~~**TASK-317**~~         | ✅ **DONE** **Shadow Backup Deletion-Aware Restore + Supabase Data Persistence**   | **P0**                                              | ✅ **DONE** (2026-01-19)                                                                                                        | Tombstones table, deletion-aware restore, shadow-mirror guards, atomic writes                                                                                                                                       |                                                        |
 | ~~**BUG-317**~~          | ✅ **DONE** **Board View Priority Column Drag Fix**                     | **P1**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Fixed priority swimlane drag: `columnType` prop distinguishes status vs priority columns                                                                                                                        |                                                        |
 | ~~**TASK-318**~~         | ✅ **DONE** **Tauri Standalone Build Verified**                         | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Built standalone packages: `.deb`, `.rpm`, `.AppImage` for Linux                                                                                                                                                |                                                        |
-| **TASK-319**             | **Fix Agent Output Capture in Orchestrator**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-319-fix-agent-output-capture-in-orchestrator-planned) - TASK-303 subtask                                                                                                                    |                                                        |
+| ~~**TASK-319**~~         | ✅ **DONE** **Fix Agent Output Capture in Orchestrator**               | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                        | Stream-json parsing, real-time broadcast, persistent logs - TASK-303 subtask                                                                                                                                    |                                                        |
 | ~~**TASK-320**~~         | ✅ **DONE** **Fix Task Completion Detection in Orchestrator**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                        | Activity timeout, git status check, enhanced completion detection - TASK-303 subtask                                                                                                                            |                                                        |
 | **TASK-321**             | **Test and Fix Merge/Discard Workflow E2E**                            | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-321-test-and-fix-mergediscard-workflow-end-to-end-planned) - TASK-303 subtask                                                                                                               |                                                        |
 | **TASK-322**             | **Add Automatic Error Recovery for Orchestrator**                      | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-322-add-automatic-error-recovery-for-orchestrator-agents-planned) - TASK-303 subtask                                                                                                        |                                                        |
@@ -1376,7 +1376,7 @@ User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Di
 - Plan file: `/home/endlessblink/.claude/plans/crispy-frolicking-honey.md`
 
 **Stability Subtasks** (see details below):
-- TASK-319: Fix Agent Output Capture
+- ~~TASK-319~~: Fix Agent Output Capture ✅
 - ~~TASK-320~~: Fix Task Completion Detection ✅
 - TASK-321: Test Merge/Discard Workflow E2E
 - TASK-322: Add Automatic Error Recovery
@@ -1409,12 +1409,13 @@ http://localhost:6010/kanban/index.html?view=orchestrator
 
 The following tasks address stability issues discovered during orchestrator testing. All are subtasks of TASK-303.
 
-#### TASK-319: Fix Agent Output Capture in Orchestrator (👀 REVIEW)
+#### ~~TASK-319~~: Fix Agent Output Capture in Orchestrator (✅ DONE)
 
 **Priority**: P1-HIGH
 **Related**: TASK-303
 **Created**: January 19, 2026
-**Status**: 👀 REVIEW (2026-01-23) - Implemented, needs user testing
+**Completed**: January 23, 2026
+**Status**: ✅ DONE - Stream-json parsing, real-time broadcast, persistent logs
 
 **Problem**: Agent stdout isn't reliably captured in logs. The `subAgentData.outputLines` stays at 0 even when agents create files successfully. Progress tracking is blind.
 

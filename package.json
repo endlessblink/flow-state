@@ -142,6 +142,8 @@
     "archive:completed": "node scripts/archive-completed-tasks.js",
     "test:stress": "npx playwright test tests/stress/ --config=tests/stress/playwright.stress.config.ts",
     "test:stress:quick": "npx playwright test tests/stress/ --config=tests/stress/playwright.stress.config.ts --grep @quick",
+    "test:stress:full": "bash scripts/run-stress-tests.sh",
+    "test:stress:report": "node scripts/generate-stress-report.cjs",
     "test:bench": "vitest bench --config vitest.bench.config.ts",
     "test:memory": "node tests/memory/run-fuite.mjs",
     "test:backup": "node scripts/verify-backup-system.cjs",

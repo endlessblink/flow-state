@@ -21,7 +21,25 @@ cat > "$HOOKS_DIR/pre-commit" << 'EOF'
 
 echo "Running pre-commit safety checks..."
 
-# 1. Check for TypeScript errors in staged files
+# 1. Stress Tests (TASK-338) - Verify backup system integrity
+echo "🔍 Running backup stress tests..."
+if ! npm run test:backup 2>/dev/null; then
+    echo ""
+    echo "❌ Backup stress tests failed. Commit blocked."
+    echo "To fix: Run 'node scripts/shadow-mirror.cjs' to regenerate backups"
+    echo "To skip: Use 'git commit --no-verify' (not recommended)"
+    exit 1
+fi
+
+if ! npm run test:restore 2>/dev/null; then
+    echo ""
+    echo "❌ Restore verification failed. Commit blocked."
+    echo "To fix: Check backup integrity and regenerate if needed"
+    exit 1
+fi
+echo "✅ Stress tests passed"
+
+# 2. Check for TypeScript errors in staged files
 STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|vue)$' || true)
 
 if [ -n "$STAGED_TS_FILES" ]; then
@@ -32,7 +50,7 @@ if [ -n "$STAGED_TS_FILES" ]; then
     fi
 fi
 
-# 2. Check for conflict resolution system files
+# 3. Check for conflict resolution system files
 CONFLICT_FILES=$(git diff --cached --name-only | grep -E 'conflict|Conflict' || true)
 
 if [ -n "$CONFLICT_FILES" ]; then
@@ -42,7 +60,7 @@ if [ -n "$CONFLICT_FILES" ]; then
     echo "Ensure tests pass before pushing: npm run test:conflict-system"
 fi
 
-# 3. Warn about large changes
+# 4. Warn about large changes
 LINES_CHANGED=$(git diff --cached --numstat | awk '{sum += $1 + $2} END {print sum}')
 
 if [ "${LINES_CHANGED:-0}" -gt 500 ]; then
@@ -50,7 +68,7 @@ if [ "${LINES_CHANGED:-0}" -gt 500 ]; then
     echo "Consider breaking into smaller commits for easier review"
 fi
 
-# 4. Check for debug statements
+# 5. Check for debug statements
 if git diff --cached | grep -E 'console\.log|debugger' >/dev/null 2>&1; then
     echo "WARNING: Debug statements found in staged changes"
 fi

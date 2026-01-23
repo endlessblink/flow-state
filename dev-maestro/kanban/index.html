@@ -5678,6 +5678,11 @@
                   }
                   // Merge notes/title if needed
                   if (!existingTask.notes && item.notes) existingTask.notes = item.notes;
+                  // TASK-323 FIX: Table parsing is authoritative for done status (strikethrough + DONE markers)
+                  if (isDone && existingTask.status !== 'done') {
+                    existingTask.status = 'done';
+                    existingTask.progress = 100;
+                  }
                 } else {
                   data.activeWork.push(item);
                 }

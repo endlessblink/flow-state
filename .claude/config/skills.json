@@ -90,9 +90,42 @@
       "related_skills": [
         "vue-flow-debug",
         "dev-debugging",
-        "codebase-health-auditor"
+        "codebase-health-auditor",
+        "stress-tester"
       ],
       "description": "Comprehensive QA testing skill including canvas geometry invariants (TASK-256). Covers data integrity, memory testing, offline sync, and geometry stability tests."
+    },
+    "stress-tester": {
+      "name": "Stress Testing Suite",
+      "category": "test",
+      "triggers": [
+        "stress test",
+        "run stress tests",
+        "test reliability",
+        "security audit",
+        "container health",
+        "backup verification",
+        "performance test",
+        "before release",
+        "system health check"
+      ],
+      "keywords": [
+        "stress",
+        "reliability",
+        "security",
+        "container",
+        "performance",
+        "backup",
+        "audit"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "qa-testing",
+        "supabase-debugger",
+        "dev-debugging"
+      ],
+      "description": "Comprehensive stress testing skill for FlowState. Runs reliability, backup, container, security, and performance tests. Use before releases, after major refactoring, or when reliability is questioned."
     },
     "codebase-health-auditor": {
       "name": "Codebase Health Auditor",
@@ -389,8 +422,6 @@
         "documentation",
         "consolidate docs",
         "audit docs",
-        "add task",
-        "new task",
         "process ideas",
         "check inbox"
       ],
@@ -398,7 +429,6 @@
         "documentation",
         "master plan",
         "consolidation",
-        "task",
         "ideas",
         "inbox"
       ],
@@ -406,9 +436,35 @@
       "last_used": null,
       "related_skills": [
         "chief-architect",
-        "dev-maestro"
+        "dev-maestro",
+        "task"
       ],
-      "description": "Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, validation, task creation (/task), and idea/issue processing. Triggers on \"master-plan\", \"plan update\", \"documentation\", \"consolidate docs\", \"audit docs\", \"add task\", \"new task\", \"process ideas\", \"check inbox\"."
+      "description": "Universal documentation consolidation skill that verifies system reality before making ANY organizational decisions. Analyzes codebase, detects redundancies, and safely consolidates documentation with preservation of git history and rollback capabilities. Includes specialized MASTER_PLAN.md management with intelligent updates, backup, validation, and idea/issue processing. Triggers on \"master-plan\", \"plan update\", \"documentation\", \"consolidate docs\", \"audit docs\", \"process ideas\", \"check inbox\"."
+    },
+    "task": {
+      "name": "Task Creator",
+      "category": "create",
+      "triggers": [
+        "/task",
+        "add task",
+        "new task",
+        "create task",
+        "track this"
+      ],
+      "keywords": [
+        "task",
+        "master plan",
+        "create",
+        "add",
+        "track"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "smart-doc-manager",
+        "chief-architect"
+      ],
+      "description": "Quick task creation for MASTER_PLAN.md with auto-generated IDs. This skill should be used when the user wants to add a new task, bug, or feature to the project's master plan. Triggers on \"/task\", \"add task\", \"new task\", \"create task\", \"track this\"."
     },
     "dev-vueuse": {
       "name": "dev-vueuse",

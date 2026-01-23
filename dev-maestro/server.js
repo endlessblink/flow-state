@@ -75,6 +75,170 @@ let healthScanInProgress = false;
 // SSE Clients
 let clients = [];
 
+// TASK-323: Global registry for spawned agent processes
+const spawnedAgents = new Map(); // pid -> { taskId, process, startTime }
+
+// TASK-323: Cleanup orphaned worktrees and branches on startup
+function cleanupOrphanedResources() {
+    const projectRoot = path.join(__dirname, '..');
+    const worktreesDir = path.join(projectRoot, '.agent-worktrees');
+
+    console.log('[Cleanup] Scanning for orphaned resources...');
+
+    // 1. Clean orphaned worktrees
+    if (fs.existsSync(worktreesDir)) {
+        try {
+            const worktrees = fs.readdirSync(worktreesDir);
+            for (const wt of worktrees) {
+                const wtPath = path.join(worktreesDir, wt);
+                try {
+                    execSync(`git worktree remove "${wtPath}" --force`, {
+                        cwd: projectRoot,
+                        encoding: 'utf8',
+                        stdio: 'pipe'
+                    });
+                    console.log(`[Cleanup] Removed orphaned worktree: ${wt}`);
+                } catch (err) {
+                    console.log(`[Cleanup] Could not remove worktree ${wt}: ${err.message}`);
+                }
+            }
+        } catch (err) {
+            console.log(`[Cleanup] Error scanning worktrees: ${err.message}`);
+        }
+    }
+
+    // 2. Clean orphaned branches (bd-* and orch-* patterns)
+    try {
+        const branches = execSync('git branch --list "bd-*" "orch-*"', {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe']
+        }).trim();
+
+        if (branches) {
+            const branchList = branches.split('\n').map(b => b.trim().replace(/^\*\s*/, ''));
+            for (const branch of branchList) {
+                if (branch) {
+                    try {
+                        execSync(`git branch -D "${branch}"`, {
+                            cwd: projectRoot,
+                            encoding: 'utf8',
+                            stdio: 'pipe'
+                        });
+                        console.log(`[Cleanup] Removed orphaned branch: ${branch}`);
+                    } catch (err) {
+                        // Branch might be checked out somewhere
+                        console.log(`[Cleanup] Could not remove branch ${branch}: ${err.message}`);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        // No matching branches found
+    }
+
+    // 3. Kill orphaned Claude processes from previous runs
+    try {
+        const psOutput = execSync('pgrep -f "claude.*--dangerously-skip-permissions" 2>/dev/null || true', {
+            encoding: 'utf8'
+        }).trim();
+
+        if (psOutput) {
+            const pids = psOutput.split('\n').filter(p => p.trim());
+            for (const pid of pids) {
+                try {
+                    process.kill(parseInt(pid), 'SIGKILL');
+                    console.log(`[Cleanup] Killed orphaned Claude process: ${pid}`);
+                } catch (err) {
+                    // Process may have already exited
+                }
+            }
+        }
+    } catch (err) {
+        // pgrep not available or no matches
+    }
+
+    console.log('[Cleanup] Orphan cleanup complete');
+}
+
+// TASK-323: Periodic cleanup job (every 10 minutes)
+let cleanupIntervalId = null;
+function startPeriodicCleanup() {
+    cleanupIntervalId = setInterval(() => {
+        console.log('[Cleanup] Running periodic cleanup...');
+
+        // Check for stuck agents (running > 30 minutes with no activity)
+        const now = Date.now();
+        const MAX_AGENT_RUNTIME = 30 * 60 * 1000; // 30 minutes
+
+        for (const [pid, agentInfo] of spawnedAgents.entries()) {
+            const runtime = now - agentInfo.startTime;
+            if (runtime > MAX_AGENT_RUNTIME) {
+                console.log(`[Cleanup] Agent ${agentInfo.taskId} (PID ${pid}) exceeded max runtime, killing...`);
+                killAgentProcess(pid, agentInfo.taskId);
+            }
+        }
+    }, 10 * 60 * 1000); // Every 10 minutes
+}
+
+// TASK-323: Kill agent process with SIGKILL fallback
+function killAgentProcess(pid, taskId) {
+    try {
+        // First try SIGTERM
+        process.kill(pid, 'SIGTERM');
+        console.log(`[Cleanup] Sent SIGTERM to PID ${pid} (task ${taskId})`);
+
+        // Set timeout for SIGKILL fallback
+        setTimeout(() => {
+            try {
+                // Check if process still exists
+                process.kill(pid, 0); // Signal 0 just checks existence
+                // Still alive, use SIGKILL
+                process.kill(pid, 'SIGKILL');
+                console.log(`[Cleanup] Sent SIGKILL to PID ${pid} (task ${taskId})`);
+            } catch (err) {
+                // Process already exited, good
+            }
+            spawnedAgents.delete(pid);
+        }, 5000); // 5 second grace period
+    } catch (err) {
+        // Process doesn't exist
+        spawnedAgents.delete(pid);
+    }
+}
+
+// TASK-323: Graceful shutdown handler
+function gracefulShutdown(signal) {
+    console.log(`\n[Shutdown] Received ${signal}, cleaning up...`);
+
+    // Stop periodic cleanup
+    if (cleanupIntervalId) {
+        clearInterval(cleanupIntervalId);
+    }
+
+    // Kill all spawned agents
+    console.log(`[Shutdown] Killing ${spawnedAgents.size} spawned agents...`);
+    for (const [pid, agentInfo] of spawnedAgents.entries()) {
+        try {
+            process.kill(pid, 'SIGKILL');
+            console.log(`[Shutdown] Killed agent ${agentInfo.taskId} (PID ${pid})`);
+        } catch (err) {
+            // Process may have already exited
+        }
+    }
+    spawnedAgents.clear();
+
+    // Clean up worktrees
+    cleanupOrphanedResources();
+
+    console.log('[Shutdown] Cleanup complete, exiting...');
+    process.exit(0);
+}
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Helper to broadcast logs to SSE clients
 const broadcastLog = (message) => {
     // Send log event
@@ -911,10 +1075,13 @@ function createAgentWorktree(taskId) {
 }
 
 // Helper: Clean up worktree after agent completes
+// TASK-323: Also cleans up the associated branch
 function cleanupWorktree(taskId) {
     const projectRoot = path.join(__dirname, '..');
     const worktreePath = path.join(projectRoot, '.agent-worktrees', taskId);
+    const branchName = `bd-${taskId}`;
 
+    // 1. Remove worktree first
     try {
         if (fs.existsSync(worktreePath)) {
             execSync(`git worktree remove "${worktreePath}" --force`, {
@@ -926,6 +1093,39 @@ function cleanupWorktree(taskId) {
         }
     } catch (err) {
         console.error(`[Agent] Error removing worktree: ${err.message}`);
+        // Try manual removal as fallback
+        try {
+            if (fs.existsSync(worktreePath)) {
+                fs.rmSync(worktreePath, { recursive: true, force: true });
+                console.log(`[Agent] Force-removed worktree directory: ${worktreePath}`);
+            }
+        } catch (rmErr) {
+            console.error(`[Agent] Could not force-remove: ${rmErr.message}`);
+        }
+    }
+
+    // 2. TASK-323: Also delete the branch
+    try {
+        execSync(`git branch -D "${branchName}" 2>/dev/null || true`, {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: 'pipe'
+        });
+        console.log(`[Agent] Removed branch: ${branchName}`);
+    } catch (err) {
+        // Branch may not exist or be checked out elsewhere
+        console.log(`[Agent] Could not remove branch ${branchName}: ${err.message}`);
+    }
+
+    // 3. Prune worktree metadata
+    try {
+        execSync('git worktree prune', {
+            cwd: projectRoot,
+            encoding: 'utf8',
+            stdio: 'pipe'
+        });
+    } catch (err) {
+        // Prune failed, not critical
     }
 }
 
@@ -1057,6 +1257,16 @@ Start working now. Be thorough and complete the task.`;
 
             runningAgents.set(taskId, agentData);
 
+            // TASK-323: Register in global process registry for cleanup tracking
+            if (agentProcess.pid) {
+                spawnedAgents.set(agentProcess.pid, {
+                    taskId: taskId,
+                    process: agentProcess,
+                    startTime: Date.now()
+                });
+                console.log(`[Agent] Registered agent PID ${agentProcess.pid} for task ${taskId}`);
+            }
+
             // Handle stdout - parse stream-json events into conversational format
             let jsonBuffer = '';
 
@@ -1168,6 +1378,12 @@ Start working now. Be thorough and complete the task.`;
                 agentData.status = code === 0 ? 'completed' : 'failed';
                 agentData.exitCode = code;
                 agentData.endTime = Date.now();
+
+                // TASK-323: Unregister from global process registry
+                if (agentProcess.pid && spawnedAgents.has(agentProcess.pid)) {
+                    spawnedAgents.delete(agentProcess.pid);
+                    console.log(`[Agent] Unregistered agent PID ${agentProcess.pid}`);
+                }
 
                 broadcastAgentOutput(taskId, {
                     type: 'exit',
@@ -2415,8 +2631,10 @@ function spawnSubAgent(orch, task) {
         retries: 0,
         output: [],
         startTime: Date.now(),
+        lastActivityTime: Date.now(),  // TASK-320: Track last activity for timeout detection
         worktreePath: worktreePath,
-        branchName: branchName
+        branchName: branchName,
+        activityTimeoutId: null  // TASK-320: Timeout timer reference
     };
 
     orch.subAgents.push(subAgentData);
@@ -2475,9 +2693,45 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
     subAgentData.process = agentProcess;
     subAgentData.stderrBuffer = '';  // Track stderr for debugging
 
+    // TASK-323: Register in global process registry for cleanup tracking
+    if (agentProcess.pid) {
+        spawnedAgents.set(agentProcess.pid, {
+            taskId: task.id,
+            process: agentProcess,
+            startTime: Date.now()
+        });
+        console.log(`[Orchestrator] Registered agent PID ${agentProcess.pid} for task ${task.id}`);
+    }
+
+    // TASK-320: Activity timeout - detect stuck agents (no output for 60s)
+    const ACTIVITY_TIMEOUT_MS = 60000;
+    const resetActivityTimeout = () => {
+        subAgentData.lastActivityTime = Date.now();
+        if (subAgentData.activityTimeoutId) {
+            clearTimeout(subAgentData.activityTimeoutId);
+        }
+        subAgentData.activityTimeoutId = setTimeout(() => {
+            if (subAgentData.status === 'running') {
+                const inactiveSeconds = Math.round((Date.now() - subAgentData.lastActivityTime) / 1000);
+                console.log(`[Orchestrator] Task ${task.id} appears stuck (no activity for ${inactiveSeconds}s)`);
+                broadcastOrchestration(orch.id, {
+                    type: 'task_stalled',
+                    taskId: task.id,
+                    task: task,
+                    inactiveSeconds: inactiveSeconds,
+                    message: `⚠️ ${task.title} may be stuck (no output for ${inactiveSeconds}s)`
+                });
+            }
+        }, ACTIVITY_TIMEOUT_MS);
+    };
+
+    // Start initial activity timeout
+    resetActivityTimeout();
+
     agentProcess.stdout.on('data', (data) => {
         const output = data.toString();
         subAgentData.output.push(output);
+        resetActivityTimeout();  // TASK-320: Reset timeout on activity
         console.log(`[Orchestrator] Task ${task.id} stdout: ${output.slice(0, 200)}...`);
 
         // Send periodic summaries instead of raw output
@@ -2494,6 +2748,7 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
         const error = data.toString();
         subAgentData.output.push(`[ERROR] ${error}`);
         subAgentData.stderrBuffer += error;
+        resetActivityTimeout();  // TASK-320: Reset timeout on activity (even errors count)
         console.log(`[Orchestrator] Task ${task.id} stderr: ${error}`);
     });
 
@@ -2502,36 +2757,115 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
         const stats = getOrchestrationStats(orch);
         const duration = subAgentData.endTime - subAgentData.startTime;
 
+        // TASK-320: Clear activity timeout on close
+        if (subAgentData.activityTimeoutId) {
+            clearTimeout(subAgentData.activityTimeoutId);
+            subAgentData.activityTimeoutId = null;
+        }
+
+        // TASK-323: Unregister from global process registry
+        if (agentProcess.pid && spawnedAgents.has(agentProcess.pid)) {
+            spawnedAgents.delete(agentProcess.pid);
+            console.log(`[Orchestrator] Unregistered agent PID ${agentProcess.pid}`);
+        }
+
         console.log(`[Orchestrator] Task ${task.id} closed with code ${code} after ${duration}ms`);
         if (code !== 0 && subAgentData.stderrBuffer) {
             console.log(`[Orchestrator] Task ${task.id} stderr: ${subAgentData.stderrBuffer}`);
         }
 
-        if (code === 0) {
-            subAgentData.status = 'completed';
+        // TASK-320: Enhanced completion detection
+        let diffSummary = '';
+        let filesChanged = 0;
+        let hasUncommittedChanges = false;
+        let hasCommittedChanges = false;
+        let agentSummary = '';
 
-            // Get diff summary from worktree (don't auto-merge!)
-            let diffSummary = '';
-            let filesChanged = 0;
+        if (subAgentData.worktreePath && subAgentData.branchName) {
             try {
-                if (subAgentData.worktreePath && subAgentData.branchName) {
-                    // Get diff stat against the branch base
+                // TASK-320: Check for uncommitted changes (git status)
+                const gitStatus = execSync('git status --porcelain', {
+                    cwd: subAgentData.worktreePath,
+                    encoding: 'utf8',
+                    stdio: ['pipe', 'pipe', 'pipe']
+                }).trim();
+                hasUncommittedChanges = gitStatus.length > 0;
+                if (hasUncommittedChanges) {
+                    console.log(`[Orchestrator] Task ${task.id} has uncommitted changes:\n${gitStatus}`);
+                }
+
+                // TASK-320: Get diff stat against main branch or HEAD~1
+                try {
                     diffSummary = execSync(`git diff --stat HEAD~1 2>/dev/null || git diff --stat HEAD`, {
                         cwd: subAgentData.worktreePath,
                         encoding: 'utf8',
                         stdio: ['pipe', 'pipe', 'pipe']
                     }).trim();
 
-                    // Count files changed
+                    // Count files changed from committed diff
                     const match = diffSummary.match(/(\d+) files? changed/);
                     filesChanged = match ? parseInt(match[1]) : 0;
+                    hasCommittedChanges = filesChanged > 0;
+                } catch (diffErr) {
+                    console.log(`[Orchestrator] Could not get diff summary: ${diffErr.message}`);
+                }
+
+                // If no committed changes but has uncommitted, count those
+                if (!hasCommittedChanges && hasUncommittedChanges) {
+                    const statusLines = gitStatus.split('\n').filter(l => l.trim());
+                    filesChanged = statusLines.length;
+                    diffSummary = `${filesChanged} uncommitted file(s):\n${gitStatus}`;
                 }
             } catch (err) {
-                console.log(`[Orchestrator] Could not get diff summary: ${err.message}`);
+                console.log(`[Orchestrator] Could not check git status: ${err.message}`);
                 diffSummary = 'Unable to retrieve diff';
             }
+        }
 
-            // Broadcast task_completed with diff info for review
+        // TASK-320: Parse agent's final summary from output (look for patterns)
+        if (subAgentData.output.length > 0) {
+            const fullOutput = subAgentData.output.join('');
+            // Look for common summary patterns
+            const summaryPatterns = [
+                /(?:Summary|Completed|Done|Finished)[:\s]*(.{50,300})/i,
+                /(?:I've|I have) (?:completed|finished|implemented|fixed)(.{20,200})/i,
+                /(?:Changes made|What I did)[:\s]*(.{50,300})/i
+            ];
+            for (const pattern of summaryPatterns) {
+                const match = fullOutput.match(pattern);
+                if (match) {
+                    agentSummary = match[0].slice(0, 300).trim();
+                    break;
+                }
+            }
+            // Fallback: last meaningful output
+            if (!agentSummary && subAgentData.output.length > 0) {
+                const lastOutputs = subAgentData.output.slice(-3).join('').trim();
+                if (lastOutputs.length > 20) {
+                    agentSummary = lastOutputs.slice(0, 200);
+                }
+            }
+        }
+
+        // TASK-320: Determine actual completion status
+        const hasActualChanges = hasCommittedChanges || hasUncommittedChanges;
+        const hasOutput = subAgentData.output.length > 0;
+
+        if (code === 0) {
+            // TASK-320: More nuanced completion status
+            if (hasActualChanges) {
+                subAgentData.status = 'completed';
+            } else if (hasOutput) {
+                // Exit code 0 but no file changes - might be investigation/research task
+                subAgentData.status = 'completed_no_changes';
+                console.log(`[Orchestrator] Task ${task.id} completed with exit code 0 but no file changes`);
+            } else {
+                // Exit code 0, no output, no changes - suspicious
+                subAgentData.status = 'completed_empty';
+                console.log(`[Orchestrator] Task ${task.id} completed but with no output or changes`);
+            }
+
+            // Broadcast task_completed with enhanced info for review
             broadcastOrchestration(orch.id, {
                 type: 'task_completed',
                 taskId: task.id,
@@ -2540,13 +2874,21 @@ You are working in an isolated git worktree. Your changes will be reviewed befor
                 worktree: subAgentData.worktreePath,
                 diffSummary: diffSummary,
                 filesChanged: filesChanged,
+                hasUncommittedChanges: hasUncommittedChanges,
+                hasCommittedChanges: hasCommittedChanges,
+                agentSummary: agentSummary,
+                outputLines: subAgentData.output.length,
                 stats: stats,
                 reviewCommands: {
                     viewDiff: `git diff ${subAgentData.branchName}`,
                     merge: `git merge ${subAgentData.branchName} --no-ff -m "Orchestrator: ${task.title}"`,
                     discard: `git worktree remove ${subAgentData.worktreePath} --force && git branch -D ${subAgentData.branchName}`
                 },
-                message: `✅ Completed: ${task.title} (${filesChanged} files changed)`
+                message: hasActualChanges
+                    ? `✅ Completed: ${task.title} (${filesChanged} files changed)`
+                    : hasOutput
+                        ? `✅ Completed: ${task.title} (no file changes, ${subAgentData.output.length} output lines)`
+                        : `⚠️ Completed: ${task.title} (no changes or output detected)`
             });
         } else {
             // Failed - check retries
@@ -3582,7 +3924,14 @@ app.get('/api/events', (req, res) => {
     });
 });
 
+// TASK-323: Run startup cleanup before listening
+cleanupOrphanedResources();
+
 app.listen(PORT, () => {
     console.log(`Dev Maestro running at http://localhost:${PORT}`);
     console.log(`Serving static files from: ${__dirname}`);
+
+    // TASK-323: Start periodic cleanup job
+    startPeriodicCleanup();
+    console.log('[Cleanup] Periodic cleanup job started (every 10 minutes)');
 });

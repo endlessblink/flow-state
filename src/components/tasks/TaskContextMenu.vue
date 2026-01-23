@@ -344,28 +344,24 @@ const currentDueDateTimestamp = computed(() => {
 
 // Handle date selection from picker - directly update task store
 const handleDatePickerSelect = async (timestamp: number | null) => {
-  console.log('🗓️ [DATE-PICKER] handleDatePickerSelect called:', { timestamp, taskId: currentTask.value?.id })
+  if (!timestamp || !currentTask.value) return
 
-  if (!timestamp || !currentTask.value) {
-    console.log('🗓️ [DATE-PICKER] Aborting - no timestamp or task')
-    return
-  }
-
+  // Use local date components to avoid timezone shift
   const date = new Date(timestamp)
-  const formattedDate = date.toISOString().split('T')[0]
-  console.log('🗓️ [DATE-PICKER] Formatted date:', formattedDate)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const formattedDate = `${year}-${month}-${day}`
 
   // Close the popover first
   showDatePicker.value = false
 
   // Update the task directly via task store
-  console.log('🗓️ [DATE-PICKER] Calling taskStore.updateTaskWithUndo...')
   try {
     await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
-    console.log('🗓️ [DATE-PICKER] Task update SUCCESS')
     canvasStore.requestSync('user:context-menu')
   } catch (error) {
-    console.error('🗓️ [DATE-PICKER] Task update FAILED:', error)
+    console.error('Error updating task due date:', error)
   }
 
   emit('close')

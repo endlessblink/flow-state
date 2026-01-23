@@ -27,7 +27,11 @@ const fs = require('fs')
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') })
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321'
+// Handle relative URLs or missing config
+let SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321'
+if (!SUPABASE_URL.startsWith('http')) {
+  SUPABASE_URL = 'http://127.0.0.1:54321'
+}
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
 
 // Test results

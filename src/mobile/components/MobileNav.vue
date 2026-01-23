@@ -105,27 +105,25 @@ const handleClearCache = async () => {
   closeMenu()
 
   try {
-    // Unregister all service workers
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations()
-      for (const registration of registrations) {
-        await registration.unregister()
-      }
-    }
-
-    // Clear all caches
+    // Clear all caches (but keep SW running so page doesn't die)
     if ('caches' in window) {
       const cacheNames = await caches.keys()
-      for (const cacheName of cacheNames) {
-        await caches.delete(cacheName)
-      }
+      await Promise.all(cacheNames.map(name => caches.delete(name)))
+      console.log('[Cache] Cleared', cacheNames.length, 'caches')
     }
 
-    // Force reload from server
+    // Tell SW to skip waiting and activate new version if available
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' })
+    }
+
+    // Small delay to let cache clearing complete
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    // Reload - the SW will fetch fresh from network
     window.location.reload()
   } catch (error) {
     console.error('Failed to clear cache:', error)
-    // Reload anyway
     window.location.reload()
   }
 }

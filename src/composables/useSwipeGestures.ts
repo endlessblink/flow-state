@@ -216,11 +216,17 @@ export function useSwipeGestures(
     // Reset state
     isSwiping.value = false
     isLocked.value = false
+    // Reset position values to ensure deltaX/deltaY return to 0
+    currentX.value = startX.value
+    currentY.value = startY.value
   }
 
   const handleTouchCancel = () => {
     isSwiping.value = false
     isLocked.value = false
+    // Reset position values to ensure deltaX/deltaY return to 0
+    currentX.value = startX.value
+    currentY.value = startY.value
     onSwipeCancel?.()
   }
 

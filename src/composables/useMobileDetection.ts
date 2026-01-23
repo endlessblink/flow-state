@@ -1,7 +1,19 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
+// Check mobile immediately (SSR-safe)
+function getInitialMobileState(): boolean {
+    if (typeof window === 'undefined') return false
+
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+    const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
+    const isSmallScreen = window.innerWidth <= 768
+
+    return isMobileDevice || isSmallScreen
+}
+
 export function useMobileDetection() {
-    const isMobile = ref(false)
+    // Initialize with correct value immediately (not false)
+    const isMobile = ref(getInitialMobileState())
 
     const checkMobile = () => {
         if (typeof window === 'undefined') return

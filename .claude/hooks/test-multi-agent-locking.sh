@@ -110,9 +110,9 @@ echo "Deferred queue:"
 ls -la "$PROJECT_DIR/.claude/deferred-queue/" 2>/dev/null | grep -v "^total" | grep -v ".gitignore" || echo "  (none)"
 echo ""
 
-# Check if DEFERRED message appeared in either log
-AGENT_A_DEFERRED=$(grep -c "DEFERRED" "$RESULTS_DIR/agent_a.log" 2>/dev/null) || AGENT_A_DEFERRED=0
-AGENT_B_DEFERRED=$(grep -c "DEFERRED" "$RESULTS_DIR/agent_b.log" 2>/dev/null) || AGENT_B_DEFERRED=0
+# Check if DEFERRED/blocked/deferred message appeared in either log (case insensitive)
+AGENT_A_DEFERRED=$(grep -ci "deferred\|blocked.*lock\|saved to.*queue" "$RESULTS_DIR/agent_a.log" 2>/dev/null) || AGENT_A_DEFERRED=0
+AGENT_B_DEFERRED=$(grep -ci "deferred\|blocked.*lock\|saved to.*queue" "$RESULTS_DIR/agent_b.log" 2>/dev/null) || AGENT_B_DEFERRED=0
 
 echo "Agent A output (last 20 lines):"
 echo "---"

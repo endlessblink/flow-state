@@ -1,4 +1,4 @@
-**Last Updated**: January 23, 2026 (TASK-1011 Date Picker Calendar UI & Styling)
+**Last Updated**: January 23, 2026 (FEATURE-1012-1015 Orchestrator Auto-Detection)
 **Version**: 5.56 (Skill Consolidation 30→18)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -175,6 +175,11 @@
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
 | **TASK-1010**            | **Mobile: Quick Sort Redesign with Swipe Gestures**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations. Add to mobile nav.                                    |                                                        |
 | ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |                                                        |
+| **BUG-1012**             | **Dev-Maestro: "Submit Answers & Continue" Button Not Responding**       | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Clicking the button does nothing. Needs code investigation.                                                                                                                                                        |                                                        |
+| **FEATURE-1012**         | **Orchestrator: Auto-Detect Project Tech Stack**                         | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1012-orchestrator-auto-detect-project-tech-stack-planned) - Scan package.json, configs, imports before asking framework questions                                                           | TASK-303                                               |
+| **FEATURE-1013**         | **Orchestrator: Auto-Detect Data Layer**                                 | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1013-orchestrator-auto-detect-data-layer-planned) - Find Pinia stores, Supabase, APIs before asking about data management                                                                   | TASK-303, FEATURE-1012                                 |
+| **FEATURE-1014**         | **Orchestrator: Smart Question System with Pros/Cons**                   | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1014-orchestrator-smart-question-system-planned) - Only ask when uncertain, include pros/cons for each option                                                                               | TASK-303, FEATURE-1013                                 |
+| **FEATURE-1015**         | **Orchestrator: Project Context Caching**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1015-orchestrator-project-context-caching-planned) - Store analyzed project info to avoid re-analysis on each interaction                                                                    | TASK-303, FEATURE-1012                                 |
 
 ---
 
@@ -537,10 +542,10 @@ Sync errors when saving tasks with deleted parent: `insert or update on table "t
 
 ---
 
-### BUG-339: Auth Reliability - Tauri Signouts & Password Failures (👀 REVIEW)
+### ~~BUG-339~~: Auth Reliability - Tauri Signouts & Password Failures (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: IN PROGRESS (2026-01-20)
+**Status**: ✅ DONE (2026-01-23)
 
 Multiple auth reliability issues: random Tauri signouts, password login failures, and seeded credentials not working.
 
@@ -581,7 +586,7 @@ Multiple auth reliability issues: random Tauri signouts, password login failures
   - ✅ **Retry with backoff**: `useSupabaseDatabase.ts` retries 401/403/network errors 3x with exponential backoff
   - ✅ **Session persistence**: Session survives app reload via localStorage
   - ✅ **Emergency auth refresh**: WebSocket 403 triggers refresh attempt, not sign-out
-- [ ] No random signouts after extended Tauri use (needs user monitoring)
+- [x] No random signouts after extended Tauri use (user confirmed stable)
 
 **Risk Assessment**:
 - Web Browser: **LOW** - Auth system is reliable
@@ -1549,6 +1554,163 @@ The following tasks address stability issues discovered during orchestrator test
 - [ ] No orphaned branches (`bd-orch-*`)
 - [ ] No orphaned worktrees (`.agent-worktrees/*`)
 - [ ] Server shutdown cleans up all resources
+
+---
+
+#### FEATURE-1012: Orchestrator Auto-Detect Project Tech Stack (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Related**: TASK-303
+**Created**: January 23, 2026
+
+**Problem**: Orchestrator asks "What framework is your PWA built with?" when it should detect Vue 3 automatically from package.json.
+
+**Current Behavior** (bad):
+- Asks user framework questions
+- Ignores existing codebase signals
+- Wastes user time on known facts
+
+**Expected Behavior** (good):
+- Scans package.json dependencies
+- Checks config files (vite.config, tsconfig, etc.)
+- Analyzes import patterns in src/
+- Only asks if detection confidence < 80%
+
+**Implementation**:
+1. Create `analyzeProjectStack()` function that runs before question phase
+2. Check package.json for: vue, react, angular, svelte, etc.
+3. Check for framework config files: vite.config.ts, vue.config.js, etc.
+4. Return detected stack with confidence scores
+5. Skip framework questions if detected with high confidence
+
+**Key Files**:
+- `dev-maestro/server.js` (orchestrator backend)
+- Create: `dev-maestro/lib/projectAnalyzer.js`
+
+**Success Criteria**:
+- [ ] Auto-detects Vue 3 from FlowState codebase
+- [ ] Auto-detects TypeScript usage
+- [ ] Auto-detects build tool (Vite)
+- [ ] Skips framework questions when confident
+
+---
+
+#### FEATURE-1013: Orchestrator Auto-Detect Data Layer (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Related**: TASK-303, FEATURE-1012
+**Created**: January 23, 2026
+
+**Problem**: Orchestrator asks "Do you have existing task data management?" when it should detect Pinia + Supabase automatically.
+
+**Expected Detection**:
+- Pinia stores in `src/stores/`
+- Supabase client in `src/services/` or composables
+- API patterns in `src/api/` or `src/composables/`
+- Database schemas in `supabase/migrations/`
+
+**Implementation**:
+1. Extend `analyzeProjectStack()` with data layer detection
+2. Glob for common patterns: `**/stores/**`, `**/*Store.ts`, `**/supabase*`
+3. Parse imports to confirm usage (not just file existence)
+4. Build data architecture summary for orchestrator context
+
+**Success Criteria**:
+- [ ] Auto-detects Pinia as state management
+- [ ] Auto-detects Supabase as backend
+- [ ] Identifies key stores (tasks, canvas, timer, etc.)
+- [ ] Skips data management questions when detected
+
+---
+
+#### FEATURE-1014: Orchestrator Smart Question System with Pros/Cons (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Related**: TASK-303, FEATURE-1013
+**Created**: January 23, 2026
+
+**Problem**: When orchestrator DOES need to ask questions (new project or uncertain detection), it should provide pros/cons for each option, not just list choices.
+
+**Current Behavior** (bad):
+```
+What framework is your PWA built with?
+[ ] React [ ] Vue 3 [ ] Angular [ ] Svelte
+```
+
+**Expected Behavior** (good):
+```
+I couldn't detect your framework. What are you using?
+
+- **React**: Largest ecosystem, most jobs, Facebook-backed
+  Pros: Huge community, flexible architecture
+  Cons: More boilerplate, decision fatigue
+
+- **Vue 3**: Progressive framework, Composition API
+  Pros: Gentle learning curve, excellent docs, fast
+  Cons: Smaller ecosystem than React
+
+- **Angular**: Full enterprise framework by Google
+  Pros: Complete solution, strong typing, DI
+  Cons: Steep learning curve, verbose
+```
+
+**Implementation**:
+1. Create `questionMetadata.json` with pros/cons for common choices
+2. Update question generation to include context
+3. Add "Why are you asking?" tooltip explaining what detection failed
+
+**Success Criteria**:
+- [ ] All questions include pros/cons
+- [ ] User understands WHY they're being asked
+- [ ] Options include relevant tradeoffs for their context
+
+---
+
+#### FEATURE-1015: Orchestrator Project Context Caching (📋 PLANNED)
+
+**Priority**: P2-MEDIUM
+**Related**: TASK-303, FEATURE-1012
+**Created**: January 23, 2026
+
+**Problem**: Every orchestration run re-analyzes the entire project from scratch, even when nothing has changed.
+
+**Solution**: Cache project analysis results and invalidate on relevant changes.
+
+**Implementation**:
+1. Store analysis in `dev-maestro/cache/project-context.json`
+2. Include hash of package.json + key config files
+3. On startup, compare hashes - reuse if unchanged
+4. Invalidate specific sections on file changes:
+   - package.json changed → re-analyze dependencies
+   - src/stores/ changed → re-analyze data layer
+5. Cache TTL: 24 hours max, or until hash mismatch
+
+**Cache Structure**:
+```json
+{
+  "version": "1.0",
+  "analyzedAt": "2026-01-23T10:00:00Z",
+  "hashes": {
+    "package.json": "abc123",
+    "tsconfig.json": "def456"
+  },
+  "stack": {
+    "framework": "vue",
+    "version": "3.4.0",
+    "confidence": 100
+  },
+  "dataLayer": {
+    "stateManagement": "pinia",
+    "backend": "supabase",
+    "stores": ["tasks", "canvas", "timer"]
+  }
+}
+```
+
+**Success Criteria**:
+- [ ] Second run uses cached analysis (< 100ms vs 2-3s)
+- [ ] Cache invalidates correctly on package.json change
+- [ ] Manual cache clear available (`/api/orchestrator/cache/clear`)
 
 ---
 

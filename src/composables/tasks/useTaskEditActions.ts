@@ -1,9 +1,10 @@
-import { type Ref } from 'vue'
+import { type Ref, type ComputedRef } from 'vue'
 import { useTaskStore, type Task, type Subtask } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { generateRecurringInstances } from '@/utils/recurrenceUtils'
 import { getUndoSystem } from '@/composables/undoSingleton'
+import { useToast } from '@/composables/useToast'
 
 
 // Helper for cleaning task instances (from existing code)
@@ -13,15 +14,22 @@ const getTaskInstances = (task: Task): any[] => {
     return (task as any).instances || []
 }
 
+export interface TaskEditActionsOptions {
+    isFormValid?: ComputedRef<boolean>
+    isFormDirty?: ComputedRef<boolean>
+}
+
 export function useTaskEditActions(
     props: { task: Task | null },
     emit: (event: 'close') => void,
     editedTask: Ref<Task>,
-    isSaving: Ref<boolean>
+    isSaving: Ref<boolean>,
+    options: TaskEditActionsOptions = {}
 ) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
     const canvasUiStore = useCanvasUiStore()
+    const { showToast } = useToast()
 
 
     // --- Subtask Management ---
@@ -141,6 +149,25 @@ export function useTaskEditActions(
     const saveTask = async () => {
         // Guard: Prevent double-save
         if (isSaving.value || !props.task) return
+
+        // Validate form before saving
+        if (options.isFormValid && !options.isFormValid.value) {
+            // Check specific validation failures
+            if (!editedTask.value.title || editedTask.value.title.trim() === '') {
+                showToast('Task title is required', 'error')
+            } else {
+                showToast('Please fix form errors before saving', 'error')
+            }
+            return
+        }
+
+        // Check if there are actually changes to save
+        if (options.isFormDirty && !options.isFormDirty.value) {
+            // No changes - just close without showing error
+            emit('close')
+            return
+        }
+
         isSaving.value = true
 
         try {
@@ -221,6 +248,9 @@ export function useTaskEditActions(
             // This fixes Tauri/WebKitGTK reactivity issue where computed doesn't re-evaluate
             canvasUiStore.requestSync('user:manual')
 
+            // Show success feedback
+            showToast('Task saved successfully', 'success')
+
             // CRITICAL: Close modal IMMEDIATELY after Pinia update
             // Instance/subtask ops happen in background below
             emit('close')
@@ -293,8 +323,18 @@ export function useTaskEditActions(
             })
 
             // NOTE: emit('close') already called above for instant feedback
-        } finally {
-            // NOTE: isSaving already set to false above for instant feedback
+        } catch (error) {
+            // Handle save errors gracefully
+            console.error('Failed to save task:', error)
+            isSaving.value = false
+
+            // Show user-friendly error message
+            const errorMessage = error instanceof Error
+                ? error.message
+                : 'An unexpected error occurred'
+            showToast(`Failed to save task: ${errorMessage}`, 'error')
+
+            // Don't close the modal on error - let user retry
         }
     }
 

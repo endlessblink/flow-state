@@ -2,6 +2,22 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteLocationNormalized as _RouteLocationNormalized, NavigationGuardNext as _NavigationGuardNext } from 'vue-router' // SECURITY: App is now 100% Supabase standard
 import { useAuthStore } from '@/stores/auth'
 
+// Mobile detection helper (mirrors useMobileDetection.ts logic)
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  const userAgent = navigator.userAgent || navigator.vendor || (window as typeof window & { opera?: string }).opera || ''
+  const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
+  const isSmallScreen = window.matchMedia('(max-width: 768px)').matches
+  return isMobileUA || isSmallScreen
+}
+
+// Mobile route to desktop equivalent mapping
+const mobileToDesktopRedirects: Record<string, string> = {
+  'mobile-quick-sort': 'quick-sort',
+  'mobile-today': 'canvas',
+  'mobile-timer': 'canvas',
+}
+
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -73,6 +89,12 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
+      path: '/mobile-quick-sort',
+      name: 'mobile-quick-sort',
+      component: () => import('@/mobile/views/MobileQuickSortView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/focus/:taskId',
       name: 'focus',
       component: () => import('@/views/FocusView.vue'),
@@ -106,6 +128,15 @@ router.beforeEach(async (to, _from, next) => {
   // Ensure user is initialized
   if (!authStore.isInitialized) {
     await authStore.initialize()
+  }
+
+  // BUG-1014: Redirect desktop users away from mobile-only routes
+  const routeName = to.name as string
+  if (routeName && routeName in mobileToDesktopRedirects && !isMobileDevice()) {
+    const desktopRoute = mobileToDesktopRedirects[routeName]
+    console.log(`🛣️ [BUG-1014] Desktop user on mobile route "${routeName}" - redirecting to "${desktopRoute}"`)
+    next({ name: desktopRoute })
+    return
   }
 
   // Check if route requires authentication

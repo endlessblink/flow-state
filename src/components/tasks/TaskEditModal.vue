@@ -54,31 +54,33 @@
             :child-tasks="childTasks"
           />
 
-          <!-- Action Buttons -->
-          <div class="section-header" style="margin-top: 2rem;">
-            <div class="left-actions">
-              <button
-                v-if="showPomodoros"
-                class="reset-pomodoros-btn-inline"
-                @click="resetPomodoros"
-              >
-                Reset Pomodoros
-              </button>
-            </div>
-            
-            <div class="modal-actions">
-              <button class="btn btn-secondary" @click="$emit('close')">
-                Cancel
-              </button>
-              <button 
-                class="btn btn-primary" 
-                :disabled="isSaving" 
-                @click="saveTask"
-              >
-                {{ isSaving ? 'Saving...' : 'Save Changes' }}
-              </button>
-            </div>
+          <!-- Left Actions (Pomodoro reset, etc.) -->
+          <div v-if="showPomodoros" class="left-actions-section">
+            <button
+              class="reset-pomodoros-btn-inline"
+              @click="resetPomodoros"
+            >
+              Reset Pomodoros
+            </button>
           </div>
+        </div>
+
+        <!-- Sticky Action Buttons -->
+        <div class="modal-actions-sticky">
+          <button class="btn btn-secondary btn-action" @click="$emit('close')">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary btn-action"
+            :class="{ 'btn-loading': isSaving }"
+            :disabled="isSaveDisabled"
+            @click="saveTask"
+          >
+            <span v-if="isSaving" class="btn-spinner" aria-hidden="true"></span>
+            <span :class="{ 'btn-text-hidden': isSaving }">
+              {{ isFormPristine ? 'No Changes' : 'Save Changes' }}
+            </span>
+          </button>
         </div>
         </div>
       </div>
@@ -126,7 +128,12 @@ const {
   isSaving,
   showPomodoros,
   priorityOptions,
-  statusOptions
+  statusOptions,
+  // Form validation & dirty tracking
+  isFormValid,
+  isFormDirty,
+  isFormPristine,
+  isSaveDisabled
 } = useTaskEditState(props, titleInputRef)
 
 // Actions Composable
@@ -138,7 +145,10 @@ const {
   handleScheduledDateChange,
   handleSectionChange,
   saveTask
-} = useTaskEditActions(props, () => emit('close'), editedTask, isSaving)
+} = useTaskEditActions(props, () => emit('close'), editedTask, isSaving, {
+  isFormValid,
+  isFormDirty
+})
 
 // --- Computed Props ---
 
@@ -369,5 +379,106 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 .reset-pomodoros-btn-inline:hover {
   background: var(--danger-bg-subtle);
   border-color: var(--danger-border-hover);
+}
+
+.left-actions-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Sticky Action Buttons - Fixed at bottom of modal */
+.modal-actions-sticky {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--overlay-component-bg) 20%,
+    var(--overlay-component-bg) 100%
+  );
+  border-top: 1px solid var(--border-subtle);
+  margin: 0 calc(-1 * var(--space-5));
+  margin-bottom: calc(-1 * var(--space-4));
+  width: calc(100% + var(--space-5) * 2);
+  z-index: 10;
+}
+
+/* Larger, more prominent action buttons */
+.btn-action {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-base);
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+/* Loading spinner for Save button */
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-loading {
+  pointer-events: none;
+  cursor: wait;
+}
+
+.btn-text-hidden {
+  opacity: 0;
+  position: absolute;
+}
+
+/* Enhanced primary button states */
+.btn-primary.btn-action:not(:disabled):hover {
+  background: var(--brand-primary);
+  color: white;
+  border-color: var(--brand-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(var(--brand-primary-rgb, 78, 205, 196), 0.3);
+}
+
+.btn-primary.btn-action:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(var(--brand-primary-rgb, 78, 205, 196), 0.2);
+}
+
+/* Secondary button hover enhancement */
+.btn-secondary.btn-action:hover {
+  transform: translateY(-1px);
+}
+
+/* Mobile responsiveness for sticky buttons */
+@media (max-width: 640px) {
+  .modal-actions-sticky {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-2);
+  }
+
+  .btn-action {
+    flex: 1;
+    min-width: unset;
+    padding: var(--space-3) var(--space-3);
+  }
 }
 </style>

@@ -31,7 +31,10 @@ export const useThemeStore = defineStore('theme', () => {
       root.style.setProperty(`--${key}`, value)
     })
 
-    // Update dark-theme class for legacy styles
+    // Set data-theme attribute for CSS theme switching
+    root.setAttribute('data-theme', theme.id)
+
+    // Update dark-theme class for legacy styles (backwards compatibility)
     if (theme.id === 'dark') {
       root.classList.add('dark-theme')
     } else {

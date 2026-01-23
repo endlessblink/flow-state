@@ -13,6 +13,7 @@ The canvas view uses Vue Flow for a node-based task visualization system. This d
 | [CANVAS-POSITION-SYSTEM.md](./CANVAS-POSITION-SYSTEM.md) | Position/coordinate architecture, geometry invariants |
 | [CANVAS-DRAG-DROP.md](./CANVAS-DRAG-DROP.md) | Drag, drop, and selection behavior |
 | [CANVAS-DEBUGGING.md](./CANVAS-DEBUGGING.md) | Troubleshooting tools and debugging techniques |
+| [CANVAS-DUPLICATE-DETECTION.md](./CANVAS-DUPLICATE-DETECTION.md) | Duplicate ID diagnostics across data pipeline |
 
 ---
 

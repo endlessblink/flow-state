@@ -63,6 +63,7 @@ docs/sop/
 | `SOP-024-teleported-menu-patterns.md` | Teleported menu patterns |
 | `SOP-025-tauri-vue-flow-reactivity.md` | Tauri Vue Flow reactivity |
 | `SOP-026-custom-domain-deployment.md` | Custom domain (in-theflow.com) setup |
+| `SOP-027-mobile-testing-workflow.md` | Mobile testing via Playwright viewport |
 
 ### Active Directory (12 files)
 

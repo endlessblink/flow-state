@@ -1,4 +1,4 @@
-**Last Updated**: January 22, 2026 (TASK-370 Canvas Arrange Done Tasks)
+**Last Updated**: January 23, 2026 (TASK-1009 Mobile Timer Cross-Device Sync)
 **Version**: 5.56 (Skill Consolidation 30→18)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -167,6 +167,12 @@
 | ~~**TASK-371**~~         | ✅ **DONE** **Skill Consolidation Phase 3 (30→18)**                     | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Deleted 6 broken skills, merged 8 duplicates, validated all 18 remaining skills E2E. Registry v2.2.0. 40% reduction.                                                                                                 | TASK-304                                               |
 | ~~**TASK-370**~~         | ✅ **DONE** **Canvas: Arrange Done Tasks Button**                       | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | One-click toolbar button to arrange all done tasks in grid at canvas bottom-left. Removes from groups for review.                                                                                                    |                                                        |
 | **TASK-1000**            | **Verify Skill Logging System**                                         | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Check if skill invocation logging (PostToolUse hook → SQLite) is working properly                                                                                                                                  |                                                        |
+| **TASK-1004**            | **Mobile: Hide Completed Tasks by Default**                             | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Mobile views should only show non-done tasks. Task counters should also reflect only incomplete tasks.                                                                                                             |                                                        |
+| **TASK-1005**            | **Mobile: Expanded Quick-Add with Due Date & Priority**                 | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Quick-add bar expands to fill more screen on tap. Add due date quick options (Today, Tomorrow, etc.) and priority selector.                                                                                        |                                                        |
+| **TASK-1006**            | **Mobile: Long-Press to Edit Task**                                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Long-click/long-press on a task item opens the Edit Task modal for full task editing.                                                                                                                              |                                                        |
+| **TASK-1007**            | **Mobile: Calendar View**                                               | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add calendar view to mobile nav. Show week/day view with tasks scheduled by date.                                                                                                                                  |                                                        |
+| **TASK-1008**            | **Mobile: Remove Active/Planned Filter Chips**                          | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Remove "Active" and "Planned" filter chips from mobile Inbox. Simplify to use bottom sheet filters instead.                                                                                                        |                                                        |
+| **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
 
 ---
 
@@ -465,29 +471,30 @@ Implement voice recording → transcription → task creation using an API (Whis
 
 ---
 
-### TASK-1003: Mobile Dev Mode for Claude Code Testing (📋 NEXT)
+### ~~TASK-1003~~: Mobile Dev Mode for Claude Code Testing (✅ DONE)
 
 **Priority**: P1
-**Status**: 📋 NEXT (2026-01-24)
+**Status**: ✅ DONE (2026-01-23)
 
 Enable Claude Code (via Playwright) to access and test the mobile PWA during development.
 
-**Problem**: Currently Claude Code can only test desktop views. Need a way to:
-- View mobile app state during development
-- Interact with mobile UI via Playwright
-- Debug mobile-specific issues
+**Solution Implemented**: Playwright viewport resize + production PWA
 
-**Potential Solutions**:
-1. **ngrok/Cloudflare Tunnel** - Expose local dev server to public URL
-2. **VPS Staging** - Auto-deploy dev builds to VPS staging endpoint
-3. **Device Mirroring** - scrcpy + Playwright for real device testing
-4. **Responsive Mode** - Playwright viewport resize (limited)
+**Approach**:
+- Use `browser_resize` to set mobile viewport (390x844 for iPhone 14 Pro)
+- Test against production PWA at https://in-theflow.com
+- Real device testing done manually by user on actual phone
 
-**Steps**:
-1. [ ] Evaluate approaches (ngrok vs VPS staging vs device mirroring)
-2. [ ] Implement chosen solution
-3. [ ] Create dev workflow documentation
-4. [ ] Test Claude Code can interact with mobile UI
+**Why this works**:
+- Covers 90% of mobile testing needs (responsive layouts, mobile UI)
+- Production site always available, no tunnel setup needed
+- User tests on real phone for device-specific issues
+
+**Troubleshooting**:
+- "JWT issued at future" error → Clear localStorage and re-login
+- CORS errors → Check Caddy config on VPS
+
+**SOP**: [SOP-027-mobile-testing-workflow.md](./sop/SOP-027-mobile-testing-workflow.md)
 
 ---
 

@@ -1,4 +1,4 @@
-**Last Updated**: January 23, 2026 (TASK-1010 Mobile Quick Sort Swipe Redesign)
+**Last Updated**: January 23, 2026 (TASK-1011 Date Picker Calendar UI & Styling)
 **Version**: 5.56 (Skill Consolidation 30→18)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -174,6 +174,7 @@
 | **TASK-1008**            | **Mobile: Remove Active/Planned Filter Chips**                          | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Remove "Active" and "Planned" filter chips from mobile Inbox. Simplify to use bottom sheet filters instead.                                                                                                        |                                                        |
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
 | **TASK-1010**            | **Mobile: Quick Sort Redesign with Swipe Gestures**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations. Add to mobile nav.                                    |                                                        |
+| ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |                                                        |
 
 ---
 

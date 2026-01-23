@@ -492,31 +492,63 @@ button svg {
 }
 
 /* Today indicator: white text + dot below */
-.n-date-panel .n-date-panel-date.n-date-panel-date--current:not(.n-date-panel-date--selected) .n-date-panel-date__trigger {
+.n-date-panel .n-date-panel-date.n-date-panel-date--current:not(.n-date-panel-date--selected) {
     color: #ffffff !important;
     font-weight: 600 !important;
-    /* Dot indicator using box-shadow (avoids grid-breaking pseudo-element issues) */
-    box-shadow: 0 6px 0 0 rgba(255, 255, 255, 0.7) !important;
+    position: relative !important;
+}
+
+/* White dot for today (not selected) */
+.n-date-panel .n-date-panel-date.n-date-panel-date--current:not(.n-date-panel-date--selected)::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 3px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 4px !important;
+    height: 4px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
 }
 
 /* Selected date: green stroke + green text, NO fill */
-.n-date-panel .n-date-panel-date.n-date-panel-date--selected .n-date-panel-date__trigger {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: 2px solid #10b981 !important;
+.n-date-panel .n-date-panel-date.n-date-panel-date--selected {
     color: #10b981 !important;
     font-weight: 600 !important;
 }
 
-/* Today + Selected: green stroke + green text + green dot */
-.n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected .n-date-panel-date__trigger {
+.n-date-panel .n-date-panel-date.n-date-panel-date--selected .n-date-panel-date__trigger {
     background: transparent !important;
-    background-color: transparent !important;
     border: 2px solid #10b981 !important;
+}
+
+/* Today + Selected: green stroke + green text + green dot */
+.n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected {
     color: #10b981 !important;
     font-weight: 600 !important;
-    /* Green dot indicator */
-    box-shadow: 0 6px 0 0 #10b981 !important;
+    position: relative !important;
+}
+
+.n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected .n-date-panel-date__trigger {
+    background: transparent !important;
+    border: 2px solid #10b981 !important;
+}
+
+/* Green dot for today + selected */
+.n-date-panel .n-date-panel-date.n-date-panel-date--current.n-date-panel-date--selected::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 3px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 4px !important;
+    height: 4px !important;
+    border-radius: 50% !important;
+    background: #10b981 !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
 }
 
 /* Hover state - subtle highlight */

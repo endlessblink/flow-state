@@ -536,6 +536,34 @@
         "dev-debugging"
       ],
       "description": "COMPREHENSIVE Vue 3 development with Composition API, TypeScript, advanced reactivity debugging, and filter management. Create reactive components, handle props/events, implement lifecycle hooks, integrate with Pinia state management, debug reactivity issues, optimize component performance, and manage cross-view filter consistency. CRITICAL: All component changes MUST be tested with Playwright before claiming success."
+    },
+    "done": {
+      "name": "Task Completion Workflow",
+      "category": "create",
+      "triggers": [
+        "/done",
+        "mark done",
+        "task complete",
+        "finish task",
+        "finalize task"
+      ],
+      "keywords": [
+        "done",
+        "complete",
+        "finish",
+        "commit",
+        "push",
+        "master plan",
+        "sop"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "task",
+        "smart-doc-manager",
+        "qa-testing"
+      ],
+      "description": "Task completion workflow - run tests, commit/push, update MASTER_PLAN.md status, create SOP if needed. This skill should be used when a task is complete and ready to be finalized. Triggers on \"/done\", \"mark done\", \"task complete\", \"finish task\"."
     }
   },
   "categories": {

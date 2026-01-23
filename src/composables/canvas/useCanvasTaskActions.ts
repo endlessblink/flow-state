@@ -320,14 +320,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
     }
 
     /**
-     * GEOMETRY WRITER: Arranges all done tasks in a grid at FAR LEFT of canvas (TASK-255)
+     * GEOMETRY WRITER: Arranges all done tasks in a grid LEFT of all existing content (TASK-255)
      * This is an ALLOWED geometry write as it's an explicit user action.
      *
-     * Grid layout:
-     * - Starting position: x=-1500, y=100 (far left, avoids overlap with main content)
-     * - Task card size: ~200x80
-     * - Gap: 16px
-     * - Columns: 5 tasks per row
+     * Dynamically calculates position based on existing content to avoid overlap.
      */
     const arrangeDoneTasksInGrid = async () => {
         // Find all done tasks that have a canvas position
@@ -342,13 +338,40 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         console.log(`[ARRANGE-DONE] Arranging ${doneTasks.length} done tasks in grid`)
 
-        // Grid configuration - place FAR LEFT of canvas to avoid overlap
-        const startX = -1500  // Negative X = left side of canvas
-        const startY = 100    // Near top
+        // Grid configuration
         const cardWidth = 200
         const cardHeight = 80
         const gap = 16
         const columns = 5
+        const gridWidth = columns * (cardWidth + gap)
+
+        // Find the leftmost X position of all NON-DONE tasks and groups
+        const nonDoneTasks = taskStore.tasks.filter(
+            (t) => t.status !== 'done' && t.canvasPosition
+        )
+        const groups = canvasStore._rawGroups || []
+
+        let minX = 0 // Default if no content exists
+
+        // Check non-done tasks
+        for (const task of nonDoneTasks) {
+            if (task.canvasPosition && task.canvasPosition.x < minX) {
+                minX = task.canvasPosition.x
+            }
+        }
+
+        // Check groups
+        for (const group of groups) {
+            if (group.position && group.position.x < minX) {
+                minX = group.position.x
+            }
+        }
+
+        // Place grid 200px to the LEFT of the leftmost content, minus grid width
+        const startX = minX - gridWidth - 200
+        const startY = 100 // Near top
+
+        console.log(`[ARRANGE-DONE] Calculated startX=${startX} (minX=${minX}, gridWidth=${gridWidth})`)
 
         try {
             for (let i = 0; i < doneTasks.length; i++) {

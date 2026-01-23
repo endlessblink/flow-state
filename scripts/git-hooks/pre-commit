@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# FlowState Pre-Commit Hook (TASK-338)
+# Runs quick stress tests before allowing commits
+# See: docs/sop/SOP-022-stress-testing.md
+#
+# To install: cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+echo "🔍 Running quick stress tests..."
+
+# Run backup verification (fast, no Supabase needed)
+npm run test:backup 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Backup stress tests failed. Commit blocked."
+    echo ""
+    echo "To fix: Run 'node scripts/shadow-mirror.cjs' to regenerate backups"
+    echo "To skip: Use 'git commit --no-verify' (not recommended)"
+    exit 1
+fi
+
+# Run restore verification (fast, no Supabase needed)
+npm run test:restore 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Restore verification failed. Commit blocked."
+    echo ""
+    echo "To fix: Check backup integrity and regenerate if needed"
+    echo "To skip: Use 'git commit --no-verify' (not recommended)"
+    exit 1
+fi
+
+echo "✅ Stress tests passed"
+exit 0

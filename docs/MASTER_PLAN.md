@@ -1,4 +1,4 @@
-**Last Updated**: January 23, 2026 (TASK-1009 Mobile Timer Cross-Device Sync)
+**Last Updated**: January 23, 2026 (TASK-1010 Mobile Quick Sort Swipe Redesign)
 **Version**: 5.56 (Skill Consolidation 30→18)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -155,10 +155,10 @@
 | **BUG-359**              | **Task List Checkbox Clipped in Edit Modal**                            | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TipTap task list checkbox not visible/cut off on right side of description editor                                                                                                                                 |                                                        |
 | **BUG-360**              | **Ctrl+Z Undo Not Working in Quick Sort View**                          | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Undo (Ctrl+Z) not functioning correctly in the Quick Sort view                                                                                                                                                    |                                                        |
 | ~~**TASK-370**~~         | ✅ **DONE** **Canvas: Arrange Done Tasks Button**                      | **P2**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | One-click button in toolbar to arrange all done tasks in grid at bottom-left. Removes tasks from groups for review.                                                                          |                                                        |
-| **TASK-361**             | **Stress Test: Container Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Docker/Supabase restart resilience tests                                                                                                                                                                          | TASK-338                                               |
-| **TASK-362**             | **Stress Test: Sync Conflict Resolution**                               | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Race condition and conflict resolution tests                                                                                                                                                                      | TASK-338                                               |
-| **TASK-363**             | **Stress Test: Auth Edge Cases**                                        | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Expired token, session timeout, concurrent session tests                                                                                                                                                          | TASK-338                                               |
-| **TASK-364**             | **Stress Test: WebSocket Stability**                                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Realtime reconnection stress tests                                                                                                                                                                                | TASK-338                                               |
+| ~~**TASK-361**~~         | ✅ **DONE** **Stress Test: Container Stability**                        | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | `npm run test:container` - 11 tests: Docker health, API endpoints, graceful degradation                                                                                                                          | TASK-338                                               |
+| ~~**TASK-362**~~         | ✅ **DONE** **Stress Test: Sync Conflict Resolution**                   | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | `npm run test:sync` - 3 tests: Concurrent creation, rapid updates, RLS enforcement                                                                                                                               | TASK-338                                               |
+| ~~**TASK-363**~~         | ✅ **DONE** **Stress Test: Auth Edge Cases**                            | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | `npm run test:auth` - 5 tests: Invalid tokens, SQL injection, rate limiting                                                                                                                                       | TASK-338                                               |
+| ~~**TASK-364**~~         | ✅ **DONE** **Stress Test: WebSocket Stability**                        | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | `npm run test:websocket` - 3 tests: Connection, heartbeat, reconnection                                                                                                                                           | TASK-338                                               |
 | ~~**TASK-365**~~         | ✅ **DONE** **Stress Test: Actual Restore Verification**                | **P0**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | `npm run test:restore` - 14-point verification + Playwright E2E                                                                                                                                                   | TASK-338                                               |
 | **TASK-366**             | **Stress Test: Redundancy Assessment**                                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Single-point-of-failure detection and mitigation                                                                                                                                                                  | TASK-338                                               |
 | ~~**BUG-367**~~          | ✅ **DONE** **Inbox Filter Excludes Overdue Tasks**                     | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed "This Week"/"This Month" filters to include overdue tasks. [SOP-020](./sop/SOP-020-inbox-filter-date-logic.md)                                                                                               |                                                        |
@@ -173,6 +173,7 @@
 | **TASK-1007**            | **Mobile: Calendar View**                                               | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add calendar view to mobile nav. Show week/day view with tasks scheduled by date.                                                                                                                                  |                                                        |
 | **TASK-1008**            | **Mobile: Remove Active/Planned Filter Chips**                          | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Remove "Active" and "Planned" filter chips from mobile Inbox. Simplify to use bottom sheet filters instead.                                                                                                        |                                                        |
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
+| **TASK-1010**            | **Mobile: Quick Sort Redesign with Swipe Gestures**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations. Add to mobile nav.                                    |                                                        |
 
 ---
 
@@ -498,27 +499,10 @@ Enable Claude Code (via Playwright) to access and test the mobile PWA during dev
 
 ---
 
-### BUG-342: Canvas Multi-Drag Bug - Unselected Tasks Move Together (🔄 IN PROGRESS)
+### ~~BUG-342~~: Canvas Multi-Drag Bug - Unselected Tasks Move Together (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: IN PROGRESS (2026-01-20)
-
-When dragging a single task on the canvas, another unselected task moves along with it. Both tasks appear to be linked even though only one is selected.
-
-**Observed Behavior**:
-- User drags one task
-- A second, unselected task also moves
-- Tasks are not visually connected or grouped
-
-**Expected Behavior**:
-- Only the selected/dragged task should move
-- Other tasks should remain stationary unless explicitly selected
-
-**Investigation Areas**:
-- [ ] Check Vue Flow selection state
-- [ ] Check canvas drag handlers in `useCanvasInteractions.ts`
-- [ ] Check if tasks share parent or have hidden edge connection
-- [ ] Check multi-select state persistence
+**Status**: ✅ DONE (2026-01-23) - Closed per user request, will reactivate if issue resurfaces
 
 ---
 
@@ -2638,10 +2622,10 @@ Guest Mode:
 - Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
 - Includes: Main logo, Tauri app icon, and favicon.
 
-### TASK-108: Tauri/Web Design Parity (⏸️ PAUSED)
+### TASK-108: Tauri/Web Design Parity (✅ DONE)
 
 **Priority**: P1-HIGH
-**Status**: Paused
+**Status**: ✅ DONE (2026-01-23)
 
 - Ensure the Tauri app design mimics 1-to-1 the web app design.
 
@@ -2887,11 +2871,12 @@ Codebase has 3 competing network status implementations. Adding PWA would create
 
 ---
 
-### TASK-260: Authoritative Duplicate Detection Diagnostics (👀 REVIEW)
+### ~~TASK-260~~: Authoritative Duplicate Detection Diagnostics (✅ DONE)
 
 **Priority**: P0-CRITICAL
 **Created**: January 13, 2026
-**Status**: 👀 REVIEW - Awaiting user verification that diagnostics fire on duplication
+**Completed**: January 23, 2026
+**Status**: ✅ DONE - Diagnostics implemented across all layers. SOP: `docs/sop/canvas/CANVAS-DUPLICATE-DETECTION.md`
 
 ---
 

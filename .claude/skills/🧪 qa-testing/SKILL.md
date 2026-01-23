@@ -807,10 +807,46 @@ Tests       58 passed
 
 ---
 
+---
+
+## Integration with Stress Testing (TASK-338)
+
+For comprehensive stress testing beyond the standard QA checklist, use the `stress-tester` skill:
+
+```bash
+# Full stress test suite
+npm run test:stress:full
+
+# Quick stress tests
+npm run test:stress:quick
+
+# Generate stress test report
+npm run test:stress:report
+```
+
+**When to use stress-tester instead of qa-testing:**
+- Before major releases
+- After significant refactoring
+- When investigating reliability issues
+- Security audits
+- Performance regression testing
+
+**Skill chaining:**
+```
+qa-testing → stress-tester (for deeper testing)
+stress-tester → dev-debugging (for fixes)
+dev-debugging → qa-testing (to verify fix)
+```
+
+See `.claude/skills/stress-tester/SKILL.md` for full documentation.
+
+---
+
 **Version History:**
 - v1.0 (Jan 2026): Original functional testing skill
 - v2.0 (Jan 2026): Enhanced with data integrity, memory testing, offline sync, backup verification, and security testing for personal app use
 - v2.1 (Jan 2026): Added Canvas Geometry Invariant Tests (TASK-256)
+- v2.2 (Jan 2026): Integration with stress-tester skill (TASK-338)
 
 ---
 

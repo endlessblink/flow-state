@@ -8,7 +8,15 @@
 
 1. **Before starting**: Run `./scripts/utils/get-next-task-id.cjs` to get a unique ID, then add task to `docs/MASTER_PLAN.md` with proper ID format (TASK-XXX, BUG-XXX, etc.)
 2. **During work**: Update progress and meaningful steps in MASTER_PLAN.md
-3. **After completion**: Mark as ✅ DONE with strikethrough on ID
+3. **After completion**: Mark as ✅ DONE with strikethrough on ID **IN ALL LOCATIONS**
+
+**CRITICAL - Marking Tasks Done:**
+Tasks appear in **3 places** in MASTER_PLAN.md. Update ALL of them:
+1. **Summary table** (~lines 100-200) - Change `📋 **PLANNED**` to `✅ **DONE**`, add strikethrough to ID
+2. **Subtasks lists** - Add `~~strikethrough~~` and ✅ to bullet point
+3. **Detailed section** - Update `(📋 PLANNED)` to `(✅ DONE)` in the `####` header
+
+**Quick check**: After marking done, run `grep "TASK-XXX" docs/MASTER_PLAN.md` to verify all occurrences are updated.
 
 Never begin implementation until the task is documented in MASTER_PLAN.md.
 

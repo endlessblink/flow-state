@@ -175,8 +175,8 @@
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
 | **TASK-1010**            | **Mobile: Quick Sort Redesign with Swipe Gestures**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations. Add to mobile nav.                                    |                                                        |
 | ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |                                                        |
-| **BUG-1012**             | **Dev-Maestro: "Submit Answers & Continue" Button Not Responding**       | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Clicking the button does nothing. Needs code investigation.                                                                                                                                                        |                                                        |
-| **FEATURE-1012**         | **Orchestrator: Auto-Detect Project Tech Stack**                         | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1012-orchestrator-auto-detect-project-tech-stack-planned) - Scan package.json, configs, imports before asking framework questions                                                           | TASK-303                                               |
+| ~~**BUG-1012**~~         | ✅ **DONE** **Dev-Maestro: "Submit Answers & Continue" Button Fixed**    | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Added debugging, error feedback, validation. Button now works correctly.                                                                                                                                            |                                                        |
+| ~~**FEATURE-1012**~~     | ✅ **DONE** **Orchestrator: Auto-Detect Project Tech Stack**             | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Auto-detects Vue/React, UI libs, state mgmt, DB from package.json. Questions now focus on feature details, not tech stack.                                                                                          | TASK-303                                               |
 | **FEATURE-1013**         | **Orchestrator: Auto-Detect Data Layer**                                 | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1013-orchestrator-auto-detect-data-layer-planned) - Find Pinia stores, Supabase, APIs before asking about data management                                                                   | TASK-303, FEATURE-1012                                 |
 | **FEATURE-1014**         | **Orchestrator: Smart Question System with Pros/Cons**                   | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1014-orchestrator-smart-question-system-planned) - Only ask when uncertain, include pros/cons for each option                                                                               | TASK-303, FEATURE-1013                                 |
 | **FEATURE-1015**         | **Orchestrator: Project Context Caching**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1015-orchestrator-project-context-caching-planned) - Store analyzed project info to avoid re-analysis on each interaction                                                                    | TASK-303, FEATURE-1012                                 |
@@ -1569,34 +1569,31 @@ The following tasks address stability issues discovered during orchestrator test
 
 ---
 
-#### FEATURE-1012: Orchestrator Auto-Detect Project Tech Stack (📋 PLANNED)
+#### ~~FEATURE-1012~~: Orchestrator Auto-Detect Project Tech Stack (✅ DONE)
 
 **Priority**: P2-MEDIUM
 **Related**: TASK-303
-**Created**: January 23, 2026
+**Completed**: January 23, 2026
 
-**Problem**: Orchestrator asks "What framework is your PWA built with?" when it should detect Vue 3 automatically from package.json.
+**Problem**: ~~Orchestrator asks "What framework is your PWA built with?" when it should detect Vue 3 automatically from package.json.~~
 
-**Current Behavior** (bad):
-- Asks user framework questions
-- Ignores existing codebase signals
-- Wastes user time on known facts
+**Solution Implemented**:
+- Added `detectProjectContext()` function in `~/.dev-maestro/server.js`
+- Auto-detects: framework, UI library, state management, database, testing tools, build tools
+- Injects detected context into Claude's question generation prompt
+- Claude instructed to NOT ask about already-detected items
+- Questions now focus on feature-specific details (UX, timing, edge cases)
 
-**Expected Behavior** (good):
-- Scans package.json dependencies
-- Checks config files (vite.config, tsconfig, etc.)
-- Analyzes import patterns in src/
-- Only asks if detection confidence < 80%
-
-**Implementation**:
-1. Create `analyzeProjectStack()` function that runs before question phase
-2. Check package.json for: vue, react, angular, svelte, etc.
-3. Check for framework config files: vite.config.ts, vue.config.js, etc.
-4. Return detected stack with confidence scores
-5. Skip framework questions if detected with high confidence
+**Detected Items**:
+- Framework: Vue 3, React, Svelte, Angular
+- UI Library: Naive UI, MUI, Chakra, Vuetify, Element Plus, Ant Design
+- State: Pinia, Vuex, Redux, Zustand, MobX
+- Database: Supabase, Firebase, Prisma
+- Testing: Vitest, Jest, Playwright, Cypress
+- Components: Vue Flow, TipTap, Tailwind, custom modals
 
 **Key Files**:
-- `dev-maestro/server.js` (orchestrator backend)
+- `~/.dev-maestro/server.js` - `detectProjectContext()` function (lines ~2216-2300)
 - Create: `dev-maestro/lib/projectAnalyzer.js`
 
 **Success Criteria**:

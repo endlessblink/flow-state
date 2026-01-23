@@ -367,11 +367,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             }
         }
 
-        // Place grid 200px to the LEFT of the leftmost content, minus grid width
-        const startX = minX - gridWidth - 200
+        // Place grid FAR LEFT - minimum of calculated position or -5000
+        const calculatedX = minX - gridWidth - 500
+        const startX = Math.min(calculatedX, -5000) // Ensure at least -5000
         const startY = 100 // Near top
 
-        console.log(`[ARRANGE-DONE] Calculated startX=${startX} (minX=${minX}, gridWidth=${gridWidth})`)
+        console.log(`[ARRANGE-DONE] Placing at startX=${startX} (minX=${minX}, calculatedX=${calculatedX})`)
 
         try {
             for (let i = 0; i < doneTasks.length; i++) {

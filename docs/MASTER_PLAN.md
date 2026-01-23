@@ -148,6 +148,7 @@
 | **BUG-352**              | **Mobile PWA "Failed to Fetch"**                       | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-352-mobile-pwa-failed-to-fetch-persistent-cache) - Likely SW cache issue                                                                                                                                     |                                                        |
 | **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |
 | ~~**TASK-353**~~         | ✅ **DONE** **Mobile PWA UI Phase 1**                  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView (daily schedule), MobileInboxView (filter chips, sort, quick-add bar), MobileNav (4 tabs), Mobile PWA design skill                                                                                |                                                        |
+| **BUG-1020**             | **Mobile QuickSort Swipe Overlay Stuck Visible**       | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-1020-mobile-quicksort-swipe-overlay-stuck-visible-in-progress) - deltaX not reset after touch end                                                                                               |                                                        |
 | ~~**TASK-354**~~         | ✅ **DONE** **Canvas CSS Import Fix**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed canvas not rendering after CSS import change. Reverted ES import to `<style src="">` for global Vue Flow overrides.                                                                                          |                                                        |
 | ~~**BUG-355**~~          | ✅ **DONE** **Timer Beep/Reset on Reload**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed timer beeping on reload when no timer was active. Added stale session detection (>1hr) and silent completion for expired sessions.                                                                           |                                                        |
 | ~~**BUG-356**~~          | ✅ **DONE** **Groups Moving Together (Accidental Nesting)**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed groups incorrectly moving together when dragging. Root cause: corrupted parentGroupId relationships. Added: (1) 2x area ratio requirement for group nesting, (2) invalid parent cleanup on load, (3) `resetGroupsToRoot()` emergency fix. [SOP-018](./sop/SOP-018-canvas-group-nesting.md)                                                                           |                                                        |
@@ -348,7 +349,33 @@ Sync errors when saving tasks with deleted parent: `insert or update on table "t
 
 ---
 
----
+### BUG-1020: Mobile QuickSort Swipe Overlay Stuck Visible (🔄 IN PROGRESS)
+
+**Priority**: P2
+**Status**: 🔄 IN PROGRESS (2026-01-23)
+
+**Problem**: In MobileQuickSortView, the swipe overlay (teal "Assign" overlay with + icon) stays permanently visible after a swipe completes. The overlay should only appear during active swiping.
+
+**Root Cause**: In `useSwipeGestures.ts`, the `handleTouchEnd` and `handleTouchCancel` functions reset `isSwiping` and `isLocked` but did NOT reset `currentX`/`currentY`. This caused `deltaX` (computed as `currentX - startX`) to remain at its final swipe value instead of returning to 0. The overlay opacity depends on `deltaX`, so it stayed visible.
+
+**Fix Applied**:
+```typescript
+// In handleTouchEnd and handleTouchCancel:
+isSwiping.value = false
+isLocked.value = false
+// Added: Reset position values to ensure deltaX/deltaY return to 0
+currentX.value = startX.value
+currentY.value = startY.value
+```
+
+**Files Changed**:
+- `src/composables/useSwipeGestures.ts` - Lines 218-220, 225-227
+
+**Testing Required**:
+- [ ] Open MobileQuickSortView on mobile PWA
+- [ ] Swipe right on a task card to trigger "Assign" overlay
+- [ ] After swipe completes (or is cancelled), verify overlay disappears
+- [ ] Verify card content is fully visible again
 
 ---
 
@@ -2202,22 +2229,26 @@ Codebase has 3 competing network status implementations. Adding PWA would create
 
 ---
 
-### TASK-140: Undo/Redo Visual Feedback (📋 PLANNED)
+### ~~TASK-140~~: Undo/Redo Visual Feedback (✅ DONE)
 
 **Priority**: P3-LOW (UX Enhancement)
 **Discovered**: January 8, 2026
+**Completed**: January 23, 2026
 **Related**: Undo/Redo System Review
 
 **Feature**: Show toast/notification when undo or redo is performed.
 
-**Current Behavior**: Undo/redo happens silently with no visual confirmation.
+**Implementation**:
+- Toast notifications via `showUndoRedoToast()` in `undoSingleton.ts`
+- Setting `showUndoRedoToasts` in settings store (default: true)
+- Toggle in Settings > Workflow > Feedback
 
-**Proposed**:
+**Completed**:
 
-- [ ] Show brief toast: "Undone: \[action description]"
-- [ ] Show brief toast: "Redone: \[action description]"
-- [ ] Auto-dismiss after 2-3 seconds
-- [ ] Option to disable in settings
+- [x] Show brief toast: "Undone: [action description]"
+- [x] Show brief toast: "Redone: [action description]"
+- [x] Auto-dismiss after 2.5 seconds
+- [x] Option to disable in settings
 
 ---
 
@@ -2392,7 +2423,7 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 - ~~Update all persistence layers to use the unified app name.~~ N/A
 - **Closed 2026-01-23**: Single-user app, old `com.pomoflow.desktop` directory deleted manually. No migration needed.
 
-##### TASK-332: Backup Reliability & Verification (📋 PLANNED)
+##### TASK-332: Backup Reliability & Verification (🔄 IN PROGRESS)
 - [ ] Fix Tauri native file dialog for "Download Backup" button.
 - [ ] Implement Golden Backup rotation (keep last 3 peak task counts).
 - [ ] Add Automated Backup Verification tests.

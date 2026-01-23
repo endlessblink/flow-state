@@ -22,6 +22,9 @@ export interface AppSettings {
     // Suggestions
     enableDayGroupSuggestions: boolean
 
+    // Feedback
+    showUndoRedoToasts: boolean
+
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
     kanbanSettings?: Record<string, unknown>
@@ -52,6 +55,9 @@ export const useSettingsStore = defineStore('settings', {
 
         // Suggestions defaults
         enableDayGroupSuggestions: true,
+
+        // Feedback defaults
+        showUndoRedoToasts: true,
 
         // Miscellaneous defaults
         sidebarCollapsed: false,

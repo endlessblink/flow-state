@@ -9,6 +9,7 @@ import type { Task } from '../stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import type { CanvasGroup } from '@/types/canvas'
 import { guardTaskCreation } from '../utils/demoContentGuard'
+import { useToast } from './useToast'
 
 interface UndoSystemState {
   canUndo: ComputedRef<boolean> | null
@@ -437,6 +438,38 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
   return true
 }
 
+// =============================================================================
+// TASK-140: Undo/Redo Visual Feedback
+// =============================================================================
+/**
+ * Show toast notification for undo/redo operations
+ * Respects user's showUndoRedoToasts setting
+ */
+const showUndoRedoToast = async (action: 'undo' | 'redo', description: string) => {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { useSettingsStore } = await import('../stores/settings')
+    const settingsStore = useSettingsStore()
+
+    // Check if user wants toast notifications
+    if (!settingsStore.showUndoRedoToasts) {
+      return
+    }
+
+    const { showToast } = useToast()
+    const prefix = action === 'undo' ? 'Undone' : 'Redone'
+
+    // Clean up the description (remove "Delete task: " prefix style for cleaner display)
+    const cleanDescription = description
+      .replace(/^(Delete|Create|Update|Move|Resize|Bulk delete \d+) (task|group): /i, '')
+      .trim()
+
+    showToast(`${prefix}: ${cleanDescription}`, 'info', { duration: 2500 })
+  } catch (error) {
+    console.warn('⚠️ [UNDO] Could not show toast:', error)
+  }
+}
+
 // ✅ FIXED - Functions defined at module level (outside return object)
 // FIX: Made async to properly await restoreState which is an async function
 // UPDATED: Now restores both tasks AND groups (ISSUE-008 fix)
@@ -454,7 +487,14 @@ const performUndo = async () => {
     // The operation stack is the source of truth in operation-aware mode.
     // Calling VueUse undo creates a "ghost" undo that requires double Ctrl+Z.
 
-    return await performSelectiveUndo(operationSnapshot)
+    const result = await performSelectiveUndo(operationSnapshot)
+
+    // TASK-140: Show toast notification for undo
+    if (result) {
+      showUndoRedoToast('undo', operationSnapshot.operation.description)
+    }
+
+    return result
   }
 
   // Fall back to legacy full-state undo
@@ -490,6 +530,9 @@ const performUndo = async () => {
       console.error('❌ [UNDO] Task store restore failed:', err)
     })
 
+    // TASK-140: Show toast notification for legacy undo
+    showUndoRedoToast('undo', 'previous state')
+
     return true
   }
   return false
@@ -507,7 +550,14 @@ const performRedo = async () => {
     // BUG-336 FIX: Don't call refHistoryInstance.redo() here
     // Operation stack is source of truth in operation-aware mode.
 
-    return await performSelectiveRedo(operationSnapshot)
+    const result = await performSelectiveRedo(operationSnapshot)
+
+    // TASK-140: Show toast notification for redo
+    if (result) {
+      showUndoRedoToast('redo', operationSnapshot.operation.description)
+    }
+
+    return result
   }
 
   // Fall back to legacy full-state redo
@@ -541,6 +591,9 @@ const performRedo = async () => {
     }).catch((err: Error) => {
       console.error('❌ [REDO] Task store restore failed:', err)
     })
+
+    // TASK-140: Show toast notification for legacy redo
+    showUndoRedoToast('redo', 'next state')
 
     return true
   }

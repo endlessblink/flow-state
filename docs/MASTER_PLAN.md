@@ -463,6 +463,34 @@ Implement voice recording → transcription → task creation using an API (Whis
 4. [ ] Add "voice task" button to quick add
 5. [ ] Test on mobile
 
+---
+
+### TASK-1003: Mobile Dev Mode for Claude Code Testing (📋 NEXT)
+
+**Priority**: P1
+**Status**: 📋 NEXT (2026-01-24)
+
+Enable Claude Code (via Playwright) to access and test the mobile PWA during development.
+
+**Problem**: Currently Claude Code can only test desktop views. Need a way to:
+- View mobile app state during development
+- Interact with mobile UI via Playwright
+- Debug mobile-specific issues
+
+**Potential Solutions**:
+1. **ngrok/Cloudflare Tunnel** - Expose local dev server to public URL
+2. **VPS Staging** - Auto-deploy dev builds to VPS staging endpoint
+3. **Device Mirroring** - scrcpy + Playwright for real device testing
+4. **Responsive Mode** - Playwright viewport resize (limited)
+
+**Steps**:
+1. [ ] Evaluate approaches (ngrok vs VPS staging vs device mirroring)
+2. [ ] Implement chosen solution
+3. [ ] Create dev workflow documentation
+4. [ ] Test Claude Code can interact with mobile UI
+
+---
+
 ### BUG-342: Canvas Multi-Drag Bug - Unselected Tasks Move Together (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL

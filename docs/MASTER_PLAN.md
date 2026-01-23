@@ -129,10 +129,10 @@
 | ~~**TASK-327**~~         | ✅ **DONE** **Create Custom Tauri App Icon**                      | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | Cyberpunk glitch tomato icon. Fixed cropping issue (resize to fit 500x500, center in 512x512). Generated all sizes: ICO, ICNS, PNG, favicon.                                                                    |                                                        |
 | ~~**TASK-329**~~         | ✅ **DONE** **Auth & Data Persistence Hardening**                       | **P0**                                              | ✅ **DONE** (2026-01-20)                                                                                                         | [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md) - Fixed seed.sql, NULL columns, password change UI                                                                                            |                                                        |
 | **TASK-330**             | **Shadow-Mirror Reliability & Automation**                             | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Automatic runs & monitoring                                                                                                                 |                                                        |
-| **TASK-331**             | **Tauri Multi-App Migration (LocalStorage)**                          | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Migrate from com.pomoflow.desktop to com.flowstate.app                                                                                     |                                                        |
+| ~~**TASK-331**~~         | ~~**Tauri Multi-App Migration (LocalStorage)**~~                      | **P1**                                              | ✅ **OBSOLETE** (2026-01-23)                                                                                                    | Closed: Single-user app, old directory deleted manually. No migration needed.                                                                                                                                    |                                                        |
 | **TASK-332**             | **Backup Reliability & Verification**                                  | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#january-20-2026-data-crisis--system-stabilization) - Golden backup rotation, validation tests, fix Tauri dialog                                                                                  |
 | **BUG-333**              | **Duplicate Tasks After Restore + Login**                              | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md) - 109 tasks, 64 unique titles. Login sync merged localStorage + Supabase without deduplication                                                 |                                                        |
-| **TASK-334**             | **AI "Done" Claim Verification System (5-Layer Defense)**              | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-334-ai-done-claim-verification-system-in-progress) - Hooks + Judge Agent in Dev-Maestro                                                                                                      |                                                        |
+| ~~**TASK-334**~~         | **AI "Done" Claim Verification System (5-Layer Defense)**              | **P1**                                              | ✅ **DONE**                                                                                                              | [SOP-029](docs/sop/SOP-029-ai-verification-hooks.md) - Unified hook architecture                                                                                                      |                                                        |
 | **TASK-335**             | **Judge Agent Integration in Dev-Maestro**                             | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-335-judge-agent-integration-in-dev-maestro-planned) - Layer 5 of TASK-334                                                                                                                    | TASK-334                                               |
 | ~~**BUG-336**~~          | **Fix Backup Download in Tauri App**                                   | **P0**                                              | ✅ **DONE**                                                                                                                     | Fixed: PWA plugin stub modules, TAURI_DEV env var, xdg-portal dialog                                                                                                                                              |                                                        |
 | ~~**TASK-337**~~         | ✅ **DONE** **Reliable Password Change Feature**                       | **P0**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed template logic, null checks, session refresh. Tested: user signup, password change, logout, re-login with new password.                                                                                    |                                                        |
@@ -531,58 +531,55 @@ Target: Create 3 organized files from 12 scattered SOPs
 
 ---
 
-### TASK-334: AI "Done" Claim Verification System (🔄 IN PROGRESS)
+### ~~TASK-334~~: AI "Done" Claim Verification System (✅ DONE)
 
 **Priority**: P1-HIGH
-**Status**: Complete
-**Completed**: January 22, 2026
+**Status**: ✅ DONE
+**Completed**: January 23, 2026
 **Created**: January 20, 2026
-**Plan File**: `/home/endlessblink/.claude/plans/bubbly-stargazing-galaxy.md`
+**SOP**: [`docs/sop/SOP-029-ai-verification-hooks.md`](docs/sop/SOP-029-ai-verification-hooks.md)
 
 **Problem**: Claude claims tasks are "done" without user verification. Self-verification is fundamentally flawed because Claude writes both code AND tests.
 
-**Solution**: 5-Layer Defense System with Judge Agent integrated into Dev-Maestro.
+**Solution**: 5-Layer Defense System with unified hook architecture.
 
-**Layers**:
+**Layers Implemented**:
 
 | Layer | What | Implementation |
 |-------|------|----------------|
-| **1. Artifacts** | Must provide git diff, test output, verification instructions | CLAUDE.md update |
-| **2. Pre-existing tests** | Auto-run `npm test` after edits | PostToolUse hook |
-| **3. Falsifiability** | Define success/failure criteria BEFORE starting | CLAUDE.md update |
-| **4. User confirmation** | Block "done" until user verifies | Stop hook |
-| **5. Judge agent** | Separate agent evaluates claims | Dev-Maestro integration |
+| **1. Artifacts** | Test status warning on every prompt | `skill-router-hook.sh` (unified) |
+| **2. Pre-existing tests** | Auto-run `npm test` after edits | `auto-test-after-edit.sh` (PostToolUse) |
+| **3. Falsifiability** | Define success/failure criteria BEFORE starting | CLAUDE.md protocol |
+| **4. User confirmation** | Completion protocol reminders | `skill-router-hook.sh` (unified) |
+| **5. Judge agent** | Separate agent evaluates claims | Dev-Maestro `/api/judge/evaluate` |
 
-**Dev-Maestro Integration** (Layer 5):
-- Judge agent callable via `/api/judge/evaluate` endpoint
-- Observable in Dev-Maestro UI (new "Judge" tab/panel)
-- Monitored by orchestrator for multi-agent workflows
-- Isolated context (separate from executor agent)
+**Key Finding**: Only first hook in UserPromptSubmit chain receives stdin. Solution: Merged Layer 1 + Layer 4 into `skill-router-hook.sh`.
 
-**Files to Create**:
-- `.claude/hooks/auto-test-after-edit.sh` - Layer 2
-- `.claude/hooks/artifact-checker.sh` - Layer 1
-- `.claude/hooks/require-user-confirmation.sh` - Layer 4
-- `dev-maestro/judge-agent.js` - Layer 5 (Dev-Maestro module)
-- Update `.claude/settings.json` to register hooks
-- Update `CLAUDE.md` with completion protocol
+**What Claude Now Sees** (on every user message):
+```
+[LAYER 1] ⚠️ TESTS FAILED: 16 failed, 438 passed | [SKILL] dev-debugging
+```
 
-**Research Sources**:
-- Multi-agent code verification (72.4% vs 32.8% accuracy)
-- Chain-of-Verification (CoVe) technique
-- NIST AI TEVV Framework
-- FTC evidence requirements (2025)
+**Behavioral Change**: When Layer 1 fires, Claude must run tests FIRST before responding.
+
+**Files Created/Modified**:
+- `.claude/hooks/skill-router-hook.sh` - Unified Layer 1 + 4 + skill suggestions
+- `.claude/hooks/auto-test-after-edit.sh` - Layer 2 (PostToolUse)
+- `.claude/hooks/user-prompt-handler.sh` - Backup unified handler
+- `.claude/last-test-results.json` - Test results storage
+- `dev-maestro/server.js` - Added `/api/judge/evaluate` endpoint
 
 **Progress**:
 - [x] Research completed (6 agents)
 - [x] Plan documented
 - [x] Update CLAUDE.md with protocol
-- [x] Create auto-test hook (Layer 2) - `.claude/hooks/auto-test-after-edit.sh`
-- [x] Create artifact checker hook (Layer 1) - `.claude/hooks/artifact-checker.sh`
-- [x] Create user confirmation hook (Layer 4) - `.claude/hooks/require-user-confirmation.sh`
+- [x] Create auto-test hook (Layer 2)
+- [x] Create unified artifact checker (Layer 1) - merged into skill-router
+- [x] Create unified user confirmation (Layer 4) - merged into skill-router
 - [x] Register hooks in `.claude/settings.json`
-- [ ] Integrate judge agent into Dev-Maestro (Layer 5) → TASK-335
-- [ ] Test full flow
+- [x] Judge endpoint in Dev-Maestro (Layer 5)
+- [x] Test and verify hooks fire correctly
+- [x] Verify behavioral change (Claude runs tests when Layer 1 fires)
 
 ---
 
@@ -2390,9 +2387,10 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 - [x] Add cron-like monitoring to ensure `shadow.db` is updating every 5 minutes.
 - [x] Add `auth.users` export via `docker exec` to `shadow-mirror.cjs` (✅ Done).
 
-##### TASK-331: Tauri Multi-App Migration (LocalStorage) (📋 PLANNED)
-- [ ] Create migration script to copy data from `com.pomoflow.desktop` to `com.flowstate.app`.
-- [ ] Update all persistence layers to use the unified app name.
+##### ~~TASK-331~~: Tauri Multi-App Migration (LocalStorage) (✅ OBSOLETE)
+- ~~Create migration script to copy data from `com.pomoflow.desktop` to `com.flowstate.app`.~~ N/A
+- ~~Update all persistence layers to use the unified app name.~~ N/A
+- **Closed 2026-01-23**: Single-user app, old `com.pomoflow.desktop` directory deleted manually. No migration needed.
 
 ##### TASK-332: Backup Reliability & Verification (📋 PLANNED)
 - [ ] Fix Tauri native file dialog for "Download Backup" button.

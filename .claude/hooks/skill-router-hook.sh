@@ -1,6 +1,7 @@
 #!/bin/bash
 # Skill Router Hook - Automatically suggests appropriate skills based on user prompt
 # This hook parses the user's prompt and outputs a reminder to invoke the matching skill
+# Now includes Layer 1 artifact checking (TASK-334)
 
 # Read user prompt from stdin (with timeout to prevent freeze)
 USER_PROMPT=$(timeout 2 cat 2>/dev/null || echo '')
@@ -108,12 +109,47 @@ for mapping in "${SKILL_MAPPINGS[@]}"; do
   fi
 done
 
-# Output skill suggestion if matched
+# ============================================
+# LAYER 1: ARTIFACT CHECKER - Test Results
+# (Added here since this hook receives stdin)
+# ============================================
+ARTIFACT_WARNING=""
+RESULTS_FILE="$CLAUDE_PROJECT_DIR/.claude/last-test-results.json"
+
+if [ -f "$RESULTS_FILE" ]; then
+    RESULTS_AGE=$(( $(date +%s) - $(stat -c %Y "$RESULTS_FILE" 2>/dev/null || echo 0) ))
+    if [ $RESULTS_AGE -gt 600 ]; then
+        ARTIFACT_WARNING="⚠️ Test results stale (${RESULTS_AGE}s). Run tests before claiming done."
+    else
+        PASSED=$(jq -r '.passed' "$RESULTS_FILE" 2>/dev/null || echo "false")
+        if [ "$PASSED" != "true" ]; then
+            SUMMARY=$(jq -r '.summary' "$RESULTS_FILE" 2>/dev/null || echo "unknown")
+            ARTIFACT_WARNING="⚠️ TESTS FAILED: $SUMMARY"
+        fi
+    fi
+fi
+
+# ============================================
+# OUTPUT (combined)
+# ============================================
+OUTPUT=""
+
+if [ -n "$ARTIFACT_WARNING" ]; then
+    OUTPUT="[LAYER 1] $ARTIFACT_WARNING"
+fi
+
 if [ -n "$MATCHED_SKILL" ]; then
+    if [ -n "$OUTPUT" ]; then
+        OUTPUT="$OUTPUT | [SKILL] $MATCHED_SKILL"
+    else
+        OUTPUT="[SKILL] Consider: $MATCHED_SKILL"
+    fi
+fi
+
+if [ -n "$OUTPUT" ]; then
   cat << EOF
 <user-prompt-submit-hook>
-SKILL MATCH: The '$MATCHED_SKILL' skill is relevant for this request (matched: $MATCH_REASON).
-Consider using: Skill tool with skill="$MATCHED_SKILL"
+$OUTPUT
 </user-prompt-submit-hook>
 EOF
 fi

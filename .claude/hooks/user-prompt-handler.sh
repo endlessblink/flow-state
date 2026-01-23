@@ -3,15 +3,21 @@
 # Combines artifact-checker, skill-router, user-confirmation
 # Reason: Only first hook receives stdin
 
-set -e
+# Debug to stderr
+exec 2>/tmp/hook-debug.log
+echo "=== Hook started at $(date) ===" >&2
 
 # Read stdin
 USER_PROMPT=$(cat 2>/dev/null || echo '')
+echo "USER_PROMPT: '$USER_PROMPT'" >&2
 PROMPT_LOWER=$(echo "$USER_PROMPT" | tr '[:upper:]' '[:lower:]')
+echo "PROMPT_LOWER: '$PROMPT_LOWER'" >&2
 
 if [ -z "$PROMPT_LOWER" ]; then
+    echo "Empty prompt, exiting" >&2
     exit 0
 fi
+echo "Continuing with non-empty prompt" >&2
 
 OUTPUT=""
 

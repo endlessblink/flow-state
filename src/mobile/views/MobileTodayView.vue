@@ -282,10 +282,10 @@ const formattedDate = computed(() => {
 const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
 
-// Filter tasks for today
+// Filter tasks for today (exclude completed tasks - TASK-1004)
 const todayTasks = computed(() => {
   return taskStore.tasks.filter(t => {
-    if (!t.dueDate) return false
+    if (!t.dueDate || t.status === 'done') return false
     const dueDate = new Date(t.dueDate)
     return dueDate >= todayStart && dueDate <= todayEnd
   })

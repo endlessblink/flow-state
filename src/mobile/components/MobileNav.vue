@@ -5,16 +5,21 @@
       <span>Inbox</span>
     </router-link>
 
+    <router-link to="/mobile-quick-sort" class="nav-item" active-class="active">
+      <Zap />
+      <span>Sort</span>
+    </router-link>
+
     <router-link to="/timer" class="nav-item" active-class="active">
       <TimerIcon />
       <span>Timer</span>
     </router-link>
-    
+
     <router-link to="/today" class="nav-item" active-class="active">
       <CalendarCheck />
       <span>Today</span>
     </router-link>
-    
+
     <div class="nav-item" @click="toggleMenu">
         <MenuIcon />
         <span>Menu</span>
@@ -48,6 +53,12 @@
                 <Settings :size="20" />
                 <span>Settings</span>
               </div>
+
+              <!-- Clear Cache -->
+              <div class="menu-item danger" @click="handleClearCache">
+                <RefreshCw :size="20" />
+                <span>Clear Cache & Reload</span>
+              </div>
             </div>
           </div>
         </div>
@@ -58,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Inbox as InboxIcon, CalendarCheck, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon } from 'lucide-vue-next'
+import { Inbox as InboxIcon, CalendarCheck, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 
@@ -88,6 +99,35 @@ const handleSignOut = async () => {
 const handleSettings = () => {
   closeMenu()
   uiStore.openSettingsModal()
+}
+
+const handleClearCache = async () => {
+  closeMenu()
+
+  try {
+    // Unregister all service workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations()
+      for (const registration of registrations) {
+        await registration.unregister()
+      }
+    }
+
+    // Clear all caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys()
+      for (const cacheName of cacheNames) {
+        await caches.delete(cacheName)
+      }
+    }
+
+    // Force reload from server
+    window.location.reload()
+  } catch (error) {
+    console.error('Failed to clear cache:', error)
+    // Reload anyway
+    window.location.reload()
+  }
 }
 </script>
 
@@ -198,6 +238,14 @@ const handleSettings = () => {
 
 .menu-item:active {
   background: var(--surface-tertiary);
+}
+
+.menu-item.danger {
+  color: var(--color-warning);
+}
+
+.menu-item.danger svg {
+  color: var(--color-warning);
 }
 
 .fade-enter-active,

@@ -23,8 +23,22 @@
           <div
             v-for="task in overdueTasks"
             :key="task.id"
-            class="task-item"
+            :class="[
+              'task-item',
+              'long-press-item',
+              { 'long-press-idle': getLongPressState(task.id).state === 'idle' },
+              { 'long-press-pressing': getLongPressState(task.id).state === 'pressing' },
+              { 'long-press-activated': getLongPressState(task.id).state === 'activated' }
+            ]"
+            :style="getLongPressStyles(task.id)"
+            :data-long-press-state="getLongPressState(task.id).state"
+            :data-task-id="task.id"
             @click="handleTaskClick(task)"
+            @touchstart="handleTouchStart(task, $event)"
+            @touchmove="handleTouchMove(task, $event)"
+            @touchend="handleTouchEnd(task)"
+            @touchcancel="handleLongPressCancel(task.id)"
+            @contextmenu="handleContextMenu"
           >
             <div class="task-checkbox" @click.stop="toggleTask(task)">
               <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
@@ -53,8 +67,22 @@
           <div
             v-for="task in morningTasks"
             :key="task.id"
-            class="task-item"
+            :class="[
+              'task-item',
+              'long-press-item',
+              { 'long-press-idle': getLongPressState(task.id).state === 'idle' },
+              { 'long-press-pressing': getLongPressState(task.id).state === 'pressing' },
+              { 'long-press-activated': getLongPressState(task.id).state === 'activated' }
+            ]"
+            :style="getLongPressStyles(task.id)"
+            :data-long-press-state="getLongPressState(task.id).state"
+            :data-task-id="task.id"
             @click="handleTaskClick(task)"
+            @touchstart="handleTouchStart(task, $event)"
+            @touchmove="handleTouchMove(task, $event)"
+            @touchend="handleTouchEnd(task)"
+            @touchcancel="handleLongPressCancel(task.id)"
+            @contextmenu="handleContextMenu"
           >
             <div class="task-checkbox" @click.stop="toggleTask(task)">
               <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
@@ -83,8 +111,22 @@
           <div
             v-for="task in afternoonTasks"
             :key="task.id"
-            class="task-item"
+            :class="[
+              'task-item',
+              'long-press-item',
+              { 'long-press-idle': getLongPressState(task.id).state === 'idle' },
+              { 'long-press-pressing': getLongPressState(task.id).state === 'pressing' },
+              { 'long-press-activated': getLongPressState(task.id).state === 'activated' }
+            ]"
+            :style="getLongPressStyles(task.id)"
+            :data-long-press-state="getLongPressState(task.id).state"
+            :data-task-id="task.id"
             @click="handleTaskClick(task)"
+            @touchstart="handleTouchStart(task, $event)"
+            @touchmove="handleTouchMove(task, $event)"
+            @touchend="handleTouchEnd(task)"
+            @touchcancel="handleLongPressCancel(task.id)"
+            @contextmenu="handleContextMenu"
           >
             <div class="task-checkbox" @click.stop="toggleTask(task)">
               <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
@@ -113,8 +155,22 @@
           <div
             v-for="task in eveningTasks"
             :key="task.id"
-            class="task-item"
+            :class="[
+              'task-item',
+              'long-press-item',
+              { 'long-press-idle': getLongPressState(task.id).state === 'idle' },
+              { 'long-press-pressing': getLongPressState(task.id).state === 'pressing' },
+              { 'long-press-activated': getLongPressState(task.id).state === 'activated' }
+            ]"
+            :style="getLongPressStyles(task.id)"
+            :data-long-press-state="getLongPressState(task.id).state"
+            :data-task-id="task.id"
             @click="handleTaskClick(task)"
+            @touchstart="handleTouchStart(task, $event)"
+            @touchmove="handleTouchMove(task, $event)"
+            @touchend="handleTouchEnd(task)"
+            @touchcancel="handleLongPressCancel(task.id)"
+            @contextmenu="handleContextMenu"
           >
             <div class="task-checkbox" @click.stop="toggleTask(task)">
               <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
@@ -143,8 +199,22 @@
           <div
             v-for="task in untimedTasks"
             :key="task.id"
-            class="task-item"
+            :class="[
+              'task-item',
+              'long-press-item',
+              { 'long-press-idle': getLongPressState(task.id).state === 'idle' },
+              { 'long-press-pressing': getLongPressState(task.id).state === 'pressing' },
+              { 'long-press-activated': getLongPressState(task.id).state === 'activated' }
+            ]"
+            :style="getLongPressStyles(task.id)"
+            :data-long-press-state="getLongPressState(task.id).state"
+            :data-task-id="task.id"
             @click="handleTaskClick(task)"
+            @touchstart="handleTouchStart(task, $event)"
+            @touchmove="handleTouchMove(task, $event)"
+            @touchend="handleTouchEnd(task)"
+            @touchcancel="handleLongPressCancel(task.id)"
+            @contextmenu="handleContextMenu"
           >
             <div class="task-checkbox" @click.stop="toggleTask(task)">
               <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
@@ -168,20 +238,36 @@
         <p>No tasks scheduled. Add one from Inbox.</p>
       </div>
     </div>
+
+    <!-- Task Edit Bottom Sheet -->
+    <TaskEditBottomSheet
+      :is-open="isEditSheetOpen"
+      :task="editingTask"
+      @close="closeEditSheet"
+      @save="handleSaveTask"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 // @ts-ignore - Avoid strict type check on imported Task type if causing issues
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { type LongPressState } from '@/composables/useLongPress'
+import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
 import {
   Check, Play, AlertCircle, Sunrise, Sun, Moon, Calendar, CheckCircle
 } from 'lucide-vue-next'
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+
+// Edit sheet state
+const isEditSheetOpen = ref(false)
+const editingTask = ref<Task | null>(null)
+// Track if long-press was activated (to prevent tap action)
+const wasLongPressActivated = ref(false)
 
 // Date formatting
 const now = new Date()
@@ -262,13 +348,212 @@ const toggleTask = (task: Task) => {
 }
 
 const handleTaskClick = (task: Task) => {
-  console.log('Task clicked', task.id)
-  // Could open task detail modal
+  // Don't trigger click if long-press was just activated
+  if (wasLongPressActivated.value) {
+    wasLongPressActivated.value = false
+    return
+  }
+  // Normal tap - could open task detail or do nothing
+  // For now, we only use long-press to edit
 }
 
 const startTimer = (task: Task) => {
   timerStore.startTimer(task.id)
 }
+
+// ===== Long-press visual feedback system =====
+// Enables "long press to edit" with subtle scale-up, shadow, and haptic feedback
+
+const longPressStates = ref<Map<string, { state: LongPressState; progress: number }>>(new Map())
+const activeLongPressTaskId = ref<string | null>(null)
+
+// Get long-press state for a task
+const getLongPressState = (taskId: string) => {
+  return longPressStates.value.get(taskId) || { state: 'idle' as LongPressState, progress: 0 }
+}
+
+// Get dynamic styles for long-press visual feedback
+const getLongPressStyles = (taskId: string) => {
+  const lpState = getLongPressState(taskId)
+
+  if (lpState.state === 'idle') {
+    return {
+      transform: 'scale(1)',
+      boxShadow: '',
+      transition: 'transform var(--duration-normal) var(--spring-smooth), box-shadow var(--duration-normal) var(--spring-smooth)'
+    }
+  }
+
+  if (lpState.state === 'pressing') {
+    const scale = 1 + (lpState.progress * 0.03)
+    const shadowOpacity = 0.05 + (lpState.progress * 0.2)
+    const shadowBlur = 3 + (lpState.progress * 21)
+    const shadowY = 1 + (lpState.progress * 11)
+
+    return {
+      transform: `scale(${scale.toFixed(4)})`,
+      boxShadow: `0 ${shadowY}px ${shadowBlur}px rgba(0, 0, 0, ${shadowOpacity.toFixed(2)})`,
+      transition: 'none'
+    }
+  }
+
+  return {
+    transform: 'scale(1.03)',
+    boxShadow: '0 12px 24px rgba(0, 0, 0, 0.25), 0 0 0 2px var(--brand-primary, #4ECDC4)',
+    transition: 'transform var(--duration-fast) var(--spring-bounce), box-shadow var(--duration-fast) var(--spring-smooth)'
+  }
+}
+
+// Long-press handlers
+const handleLongPressStart = (taskId: string) => {
+  activeLongPressTaskId.value = taskId
+  longPressStates.value.set(taskId, { state: 'pressing', progress: 0 })
+}
+
+const handleLongPressProgress = (taskId: string, progress: number) => {
+  const current = longPressStates.value.get(taskId)
+  if (current) {
+    longPressStates.value.set(taskId, { ...current, progress })
+  }
+}
+
+const handleLongPressActivated = (task: Task) => {
+  longPressStates.value.set(task.id, { state: 'activated', progress: 1 })
+  wasLongPressActivated.value = true
+
+  // Open edit bottom sheet for the task
+  handleEditTask(task)
+
+  setTimeout(() => resetLongPressState(task.id), 300)
+}
+
+const handleLongPressCancel = (taskId: string) => {
+  resetLongPressState(taskId)
+}
+
+const resetLongPressState = (taskId: string) => {
+  longPressStates.value.set(taskId, { state: 'idle', progress: 0 })
+  if (activeLongPressTaskId.value === taskId) {
+    activeLongPressTaskId.value = null
+  }
+}
+
+// Open edit bottom sheet for task
+const handleEditTask = (task: Task) => {
+  editingTask.value = task
+  isEditSheetOpen.value = true
+}
+
+// Close edit bottom sheet
+const closeEditSheet = () => {
+  isEditSheetOpen.value = false
+  // Delay clearing the task to allow close animation
+  setTimeout(() => {
+    editingTask.value = null
+  }, 300)
+}
+
+// Save task changes from edit sheet
+const handleSaveTask = (taskId: string, updates: Partial<Task>) => {
+  taskStore.updateTask(taskId, updates)
+}
+
+// Prevent context menu during long-press
+const handleContextMenu = (e: Event) => {
+  const target = e.currentTarget as HTMLElement
+  const state = target?.dataset?.longPressState
+  if (state === 'pressing' || state === 'activated') {
+    e.preventDefault()
+  }
+}
+
+// Touch event handlers
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let progressInterval: ReturnType<typeof setInterval> | null = null
+let startTime = 0
+const LONG_PRESS_DURATION = 500
+const MOVEMENT_THRESHOLD = 10
+let startX = 0
+let startY = 0
+
+const handleTouchStart = (task: Task, e: TouchEvent) => {
+  const touch = e.touches[0]
+  startX = touch.clientX
+  startY = touch.clientY
+  startTime = Date.now()
+
+  handleLongPressStart(task.id)
+
+  progressInterval = setInterval(() => {
+    const elapsed = Date.now() - startTime
+    const progress = Math.min(elapsed / LONG_PRESS_DURATION, 1)
+    handleLongPressProgress(task.id, progress)
+
+    if (progress >= 0.25 && progress < 0.26) triggerHaptic(10)
+    if (progress >= 0.5 && progress < 0.51) triggerHaptic(10)
+    if (progress >= 0.75 && progress < 0.76) triggerHaptic(10)
+  }, 16)
+
+  longPressTimer = setTimeout(() => {
+    clearInterval(progressInterval!)
+    progressInterval = null
+    triggerHaptic(50)
+    handleLongPressActivated(task)
+  }, LONG_PRESS_DURATION)
+}
+
+const handleTouchMove = (task: Task, e: TouchEvent) => {
+  if (!activeLongPressTaskId.value || activeLongPressTaskId.value !== task.id) return
+
+  const touch = e.touches[0]
+  const deltaX = Math.abs(touch.clientX - startX)
+  const deltaY = Math.abs(touch.clientY - startY)
+
+  if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+    clearLongPressTimers()
+    handleLongPressCancel(task.id)
+  }
+}
+
+const handleTouchEnd = (task: Task) => {
+  clearLongPressTimers()
+  const lpState = getLongPressState(task.id)
+  if (lpState.state === 'pressing') {
+    handleLongPressCancel(task.id)
+    wasLongPressActivated.value = false
+  }
+
+  // Reset long-press activated flag after a short delay
+  // This prevents the click event from firing right after long-press
+  setTimeout(() => {
+    wasLongPressActivated.value = false
+  }, 100)
+}
+
+const clearLongPressTimers = () => {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+  if (progressInterval) {
+    clearInterval(progressInterval)
+    progressInterval = null
+  }
+}
+
+const triggerHaptic = (duration: number = 50) => {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(duration)
+    } catch {
+      // Vibration API not supported
+    }
+  }
+}
+
+onUnmounted(() => {
+  clearLongPressTimers()
+})
 </script>
 
 <style scoped>
@@ -356,6 +641,28 @@ const startTimer = (task: Task) => {
   background: var(--surface-secondary);
   border-radius: 12px;
   cursor: pointer;
+  /* GPU acceleration for smooth long-press animations */
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+  /* Base transition - overridden during long-press by inline styles */
+  transition:
+    transform var(--duration-normal, 200ms) var(--spring-smooth, cubic-bezier(0.25, 0.46, 0.45, 0.94)),
+    box-shadow var(--duration-normal, 200ms) var(--spring-smooth, cubic-bezier(0.25, 0.46, 0.45, 0.94));
+  /* Prevent text selection during long press */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Disable default active state when long-pressing */
+.task-item.long-press-pressing:active,
+.task-item.long-press-activated:active {
+  transform: none;
+}
+
+/* Only apply press-down on quick taps (idle state) */
+.task-item.long-press-idle:active {
+  transform: scale(0.98);
 }
 
 .task-checkbox {

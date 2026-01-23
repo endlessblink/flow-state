@@ -10,12 +10,18 @@ import router from './router'
 import App from './App.vue'
 import i18n from './i18n'
 
-  // Early Tauri detection - must run BEFORE CSS import for proper fallback application
+  // Early Tauri & PWA detection - must run BEFORE CSS import for proper fallback application
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ; (() => {
     const w = window as any
-    if (('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)) {
+    const isTauri = ('isTauri' in w && w.isTauri) || ('__TAURI__' in w) || ('__TAURI_INTERNALS__' in w)
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
+
+    if (isTauri) {
       document.documentElement.classList.add('tauri-app')
+    }
+    if (isPWA) {
+      document.documentElement.classList.add('pwa-app')
     }
   })()
 
@@ -66,6 +72,10 @@ async function initializeApp() {
     document.documentElement.classList.add('tauri-app')
     document.body?.classList.add('tauri-app')
     console.log('🖥️ [MAIN] Tauri environment detected - applying CSS optimizations')
+  } else if (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone) {
+    document.documentElement.classList.add('pwa-app')
+    document.body?.classList.add('pwa-app')
+    console.log('📱 [MAIN] PWA standalone environment detected - applying CSS optimizations')
   } else {
     console.log('🌐 [MAIN] Browser environment detected')
   }

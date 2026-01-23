@@ -1,0 +1,221 @@
+/**
+ * THEME CSS CUSTOM PROPERTIES
+ * Dark mode toggle support using data-theme attribute
+ *
+ * Usage: Set data-theme="dark" or data-theme="light" on <html> element
+ * Theme preference is persisted to localStorage
+ */
+
+/* ===== THEME TRANSITION ===== */
+/* Smooth 200ms fade for background and text color changes */
+:root {
+  --theme-transition-duration: 200ms;
+  --theme-transition-timing: ease-in-out;
+}
+
+/* Apply transitions to elements that change with theme */
+html,
+body,
+#app,
+#root,
+.app-container,
+main,
+aside,
+nav,
+header,
+footer,
+section,
+article,
+.sidebar,
+.content,
+.modal,
+.card,
+.panel {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* ===== LIGHT THEME (Default) ===== */
+:root,
+[data-theme="light"] {
+  /* Signal light mode preference to browser */
+  color-scheme: light;
+
+  /* Surface colors - Clean, bright backgrounds */
+  --theme-bg-primary: #ffffff;
+  --theme-bg-secondary: hsl(220, 20%, 98%);
+  --theme-bg-tertiary: hsl(220, 14%, 96%);
+  --theme-bg-elevated: hsl(220, 14%, 93%);
+  --theme-bg-hover: rgba(0, 0, 0, 0.02);
+  --theme-bg-active: rgba(0, 0, 0, 0.05);
+
+  /* Text colors - Dark text for readability */
+  --theme-text-primary: hsl(220, 13%, 9%);
+  --theme-text-secondary: hsl(220, 13%, 18%);
+  --theme-text-tertiary: hsl(220, 9%, 35%);
+  --theme-text-muted: hsl(220, 9%, 46%);
+  --theme-text-subtle: hsl(220, 9%, 60%);
+  --theme-text-disabled: hsl(220, 9%, 70%);
+
+  /* Border colors - Subtle definition */
+  --theme-border-subtle: rgba(0, 0, 0, 0.06);
+  --theme-border-light: rgba(0, 0, 0, 0.08);
+  --theme-border-medium: rgba(0, 0, 0, 0.12);
+  --theme-border-strong: rgba(0, 0, 0, 0.18);
+  --theme-border-hover: rgba(0, 0, 0, 0.20);
+
+  /* Accent colors */
+  --theme-accent-primary: hsl(174, 62%, 48%);
+  --theme-accent-primary-hover: hsl(174, 62%, 42%);
+  --theme-accent-secondary: hsl(217, 91%, 60%);
+
+  /* Glass/overlay effects - Light mode */
+  --theme-glass-bg: rgba(255, 255, 255, 0.8);
+  --theme-glass-bg-subtle: rgba(255, 255, 255, 0.6);
+  --theme-glass-border: rgba(0, 0, 0, 0.08);
+  --theme-overlay-bg: rgba(0, 0, 0, 0.4);
+
+  /* Shadows - Soft shadows for depth */
+  --theme-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --theme-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --theme-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.10);
+  --theme-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
+
+  /* Component-specific */
+  --theme-input-bg: #ffffff;
+  --theme-input-border: rgba(0, 0, 0, 0.12);
+  --theme-button-bg: hsl(220, 14%, 96%);
+  --theme-button-hover: hsl(220, 14%, 92%);
+  --theme-card-bg: #ffffff;
+  --theme-sidebar-bg: hsl(220, 20%, 98%);
+  --theme-header-bg: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== DARK THEME ===== */
+[data-theme="dark"] {
+  /* Signal dark mode preference to browser */
+  color-scheme: dark;
+
+  /* Surface colors - Professional navy dark mode */
+  --theme-bg-primary: hsl(222, 47%, 11%);
+  --theme-bg-secondary: hsl(217, 33%, 17%);
+  --theme-bg-tertiary: hsl(215, 25%, 27%);
+  --theme-bg-elevated: hsl(215, 19%, 35%);
+  --theme-bg-hover: rgba(255, 255, 255, 0.03);
+  --theme-bg-active: rgba(255, 255, 255, 0.05);
+
+  /* Text colors - Light text for contrast */
+  --theme-text-primary: hsl(210, 40%, 98%);
+  --theme-text-secondary: hsl(214, 32%, 91%);
+  --theme-text-tertiary: hsl(215, 20%, 75%);
+  --theme-text-muted: hsl(215, 20%, 65%);
+  --theme-text-subtle: hsl(215, 16%, 47%);
+  --theme-text-disabled: hsl(215, 19%, 35%);
+
+  /* Border colors - Subtle edges */
+  --theme-border-subtle: rgba(255, 255, 255, 0.06);
+  --theme-border-light: rgba(255, 255, 255, 0.08);
+  --theme-border-medium: rgba(255, 255, 255, 0.12);
+  --theme-border-strong: rgba(255, 255, 255, 0.18);
+  --theme-border-hover: rgba(255, 255, 255, 0.20);
+
+  /* Accent colors */
+  --theme-accent-primary: hsl(174, 62%, 55%);
+  --theme-accent-primary-hover: hsl(174, 62%, 62%);
+  --theme-accent-secondary: hsl(217, 91%, 65%);
+
+  /* Glass/overlay effects - Dark mode */
+  --theme-glass-bg: rgba(30, 41, 59, 0.8);
+  --theme-glass-bg-subtle: rgba(30, 41, 59, 0.6);
+  --theme-glass-border: rgba(255, 255, 255, 0.08);
+  --theme-overlay-bg: rgba(0, 0, 0, 0.6);
+
+  /* Shadows - Deeper shadows for dark mode */
+  --theme-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.25);
+  --theme-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.30);
+  --theme-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.35);
+  --theme-shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.40);
+
+  /* Component-specific */
+  --theme-input-bg: hsl(217, 33%, 17%);
+  --theme-input-border: rgba(255, 255, 255, 0.12);
+  --theme-button-bg: hsl(215, 25%, 27%);
+  --theme-button-hover: hsl(215, 25%, 32%);
+  --theme-card-bg: hsl(217, 33%, 17%);
+  --theme-sidebar-bg: hsl(222, 47%, 11%);
+  --theme-header-bg: rgba(15, 23, 42, 0.9);
+}
+
+/* ===== SYSTEM PREFERENCE SUPPORT ===== */
+/* Only apply when no explicit data-theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
+    --theme-bg-primary: hsl(222, 47%, 11%);
+    --theme-bg-secondary: hsl(217, 33%, 17%);
+    --theme-bg-tertiary: hsl(215, 25%, 27%);
+    --theme-bg-elevated: hsl(215, 19%, 35%);
+    --theme-bg-hover: rgba(255, 255, 255, 0.03);
+    --theme-bg-active: rgba(255, 255, 255, 0.05);
+
+    --theme-text-primary: hsl(210, 40%, 98%);
+    --theme-text-secondary: hsl(214, 32%, 91%);
+    --theme-text-tertiary: hsl(215, 20%, 75%);
+    --theme-text-muted: hsl(215, 20%, 65%);
+    --theme-text-subtle: hsl(215, 16%, 47%);
+    --theme-text-disabled: hsl(215, 19%, 35%);
+
+    --theme-border-subtle: rgba(255, 255, 255, 0.06);
+    --theme-border-light: rgba(255, 255, 255, 0.08);
+    --theme-border-medium: rgba(255, 255, 255, 0.12);
+    --theme-border-strong: rgba(255, 255, 255, 0.18);
+    --theme-border-hover: rgba(255, 255, 255, 0.20);
+
+    --theme-accent-primary: hsl(174, 62%, 55%);
+    --theme-accent-primary-hover: hsl(174, 62%, 62%);
+    --theme-accent-secondary: hsl(217, 91%, 65%);
+
+    --theme-glass-bg: rgba(30, 41, 59, 0.8);
+    --theme-glass-bg-subtle: rgba(30, 41, 59, 0.6);
+    --theme-glass-border: rgba(255, 255, 255, 0.08);
+    --theme-overlay-bg: rgba(0, 0, 0, 0.6);
+
+    --theme-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.25);
+    --theme-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.30);
+    --theme-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.35);
+    --theme-shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.40);
+
+    --theme-input-bg: hsl(217, 33%, 17%);
+    --theme-input-border: rgba(255, 255, 255, 0.12);
+    --theme-button-bg: hsl(215, 25%, 27%);
+    --theme-button-hover: hsl(215, 25%, 32%);
+    --theme-card-bg: hsl(217, 33%, 17%);
+    --theme-sidebar-bg: hsl(222, 47%, 11%);
+    --theme-header-bg: rgba(15, 23, 42, 0.9);
+  }
+}
+
+/* ===== REDUCED MOTION SUPPORT ===== */
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  #app,
+  #root,
+  .app-container,
+  main,
+  aside,
+  nav,
+  header,
+  footer,
+  section,
+  article,
+  .sidebar,
+  .content,
+  .modal,
+  .card,
+  .panel {
+    transition: none !important;
+  }
+}

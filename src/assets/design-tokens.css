@@ -13,35 +13,55 @@
 
   /* ===== TIER 1: BASE PALETTE (HSL for flexibility) ===== */
 
-  /* Grayscale - Neutral gray palette (no blue tint) */
-  --gray-950: 0, 0%, 12%;
-  /* Neutral dark gray - Deep background */
-  --gray-900: 0, 0%, 17%;
-  /* Neutral dark gray - Primary background */
-  --gray-800: 0, 0%, 22%;
-  /* Neutral dark gray - Card backgrounds */
-  --gray-700: 0, 0%, 27%;
-  /* Neutral dark gray - Elevated surfaces */
-  --gray-600: 0, 0%, 47%;
-  /* Neutral gray - Muted text */
-  --gray-400: 0, 0%, 58%;
-  /* Neutral gray - Secondary text */
-  --gray-200: 0, 0%, 91%;
-  /* Neutral light gray - Light text */
-  --gray-100: 0, 0%, 96%;
-  /* Neutral light gray - Primary text */
-  --gray-50: 210, 40%, 98%;
+  /* Slate Scale - Professional Navy Dark Mode */
+  --slate-950: 226, 44%, 8%;
+  /* #0f172a / hsl(226, 44%, 8%) */
+  --slate-900: 222, 47%, 11%;
+  /* #0f172a base */
+  --slate-800: 217, 33%, 17%;
+  /* #1e293b / surface-primary */
+  --slate-700: 215, 25%, 27%;
+  /* #334155 */
+  --slate-600: 215, 19%, 35%;
+  /* #475569 / surface-elevated */
+  --slate-400: 215, 20%, 65%;
+  /* #94a3b8 / text-muted */
+  --slate-200: 214, 32%, 91%;
+  /* #e2e8f0 / text-tertiary */
+  --slate-100: 210, 40%, 96%;
+  /* #f1f5f9 / text-primary */
+  --slate-50: 210, 40%, 98%;
+  /* #f8fafc */
 
-  /* Brand Colors - Primary palette */
+  /* Tailwind RGB Tokens (Authentic Slate) */
+  --color-slate-50: 248, 250, 252;
+  --color-slate-100: 241, 245, 249;
+  --color-slate-200: 226, 232, 240;
+  --color-slate-300: 203, 213, 225;
+  --color-slate-400: 148, 163, 184;
+  --color-slate-500: 100, 116, 139;
+  --color-slate-600: 71, 85, 105;
+  --color-slate-700: 51, 65, 85;
+  --color-slate-800: 30, 41, 59;
+  --color-slate-900: 15, 23, 42;
+
+  /* Brand Colors - Authentic Teal (matches themes.ts #4ECDC4) */
   --teal-500: 174, 62%, 58%;
-  /* #4ECDC4 - Primary brand color */
-  --teal-400: 174, 62%, 68%;
-  /* Lighter teal for hover states */
-  --blue-500: 217, 91%, 60%;
-  --blue-400: 217, 91%, 65%;
-  --green-500: 142, 76%, 36%;
-  --red-500: 0, 84%, 60%;
-  --purple-500: 271, 76%, 53%;
+  --color-primary-50: 235, 252, 251;
+  --color-primary-100: 206, 247, 244;
+  --color-primary-200: 161, 240, 235;
+  --color-primary-300: 116, 233, 226;
+  --color-primary-400: 78, 220, 213;
+  --color-primary-500: 78, 205, 196;
+  /* Base #4ECDC4 */
+  --color-primary-600: 64, 180, 172;
+  --color-primary-700: 50, 140, 134;
+  --color-primary-800: 36, 100, 96;
+  --color-primary-900: 22, 60, 58;
+  /* Pomodoro/Success Colors */
+  --color-pomodoro-500: 239, 68, 68;
+  --color-success-500: 74, 222, 128;
+  --color-warning-500: 251, 191, 36;
 
   /* App Background Gradient - Official Board View Palette */
   --app-background-gradient: linear-gradient(135deg,
@@ -53,26 +73,28 @@
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
 
-  /* Surface Hierarchy - Background layers */
-  --surface-primary: hsl(var(--gray-950));
-  --surface-secondary: hsl(var(--gray-900));
-  --surface-tertiary: hsl(var(--gray-800));
-  --surface-elevated: hsl(var(--gray-700));
+  /* Surface Hierarchy - Authentic Web Mappings */
+  --surface-primary: hsl(var(--slate-800));
+  --surface-secondary: hsl(var(--slate-900));
+  --surface-tertiary: hsl(var(--slate-700));
+  --surface-elevated: hsl(var(--slate-600));
   --surface-hover: rgba(255, 255, 255, 0.03);
   --surface-active: rgba(255, 255, 255, 0.05);
 
   /* Overlay - Modal backgrounds */
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
-  /* Glass Surfaces - SUBTLE glassmorphism (use sparingly!) */
-  --glass-bg-solid: rgba(0, 0, 0, 0.95);
-  /* Solid black for cards/panels */
+  /* Glass Surfaces - VIBRANT & TRANSPARENT (matches token-mappings.json) */
+  --glass-bg-subtle: rgba(255, 255, 255, 0.005);
+  --glass-bg-weak: rgba(255, 255, 255, 0.015);
   --glass-bg-light: rgba(255, 255, 255, 0.02);
+  --glass-bg-tint: rgba(255, 255, 255, 0.03);
   --glass-bg-medium: rgba(255, 255, 255, 0.04);
-  --glass-bg-heavy: rgba(255, 255, 255, 0.06);
+  --glass-bg-soft: rgba(255, 255, 255, 0.05);
+  --glass-bg-heavy: rgba(255, 255, 255, 0.08);
   --glass-border: rgba(255, 255, 255, 0.10);
   --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-glow: rgba(99, 102, 241, 0.08);
+  --glass-glow: rgba(78, 205, 196, 0.08);
 
   /* Canvas Node Backgrounds - TASK-079 zoom visibility */
   /* Adjust these to control canvas element brightness */
@@ -85,14 +107,13 @@
   --canvas-group-border: rgba(255, 255, 255, 0.30);
   /* Group border */
 
-  /* Text Hierarchy - Foreground colors */
-  --text-primary: hsl(var(--gray-100));
-  --text-secondary: hsl(var(--gray-200));
-  --text-tertiary: hsl(214, 32%, 91%);
-  /* Between secondary and muted */
-  --text-muted: hsl(var(--gray-400));
-  --text-subtle: hsl(220, 9%, 40%);
-  --text-disabled: hsl(var(--gray-600));
+  /* Text Hierarchy - Authentic Web Mappings */
+  --text-primary: hsl(var(--slate-100));
+  --text-secondary: hsl(var(--slate-200));
+  --text-tertiary: hsl(var(--slate-400));
+  --text-muted: hsl(215, 16%, 60%);
+  --text-subtle: hsl(215, 16%, 45%);
+  --text-disabled: hsl(var(--slate-600));
 
   /* Border Colors - Edge definitions */
   --border-subtle: rgba(255, 255, 255, 0.08);
@@ -207,6 +228,11 @@
   /* 280px - Normal sidebar width */
   --sidebar-width-collapsed: 0px;
   /* 0px - Collapsed sidebar width */
+
+  /* Sidebar styling tokens - Iteration 4 Parity */
+  --sidebar-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --sidebar-backdrop: blur(40px) saturate(200%);
+  --sidebar-shadow: var(--shadow-2xl), inset -1px 0 0 var(--glass-bg-heavy);
 
   /* Kanban-specific sizing */
   --kanban-column-min-height: 12.5rem;
@@ -939,42 +965,53 @@
 /* ===== TAURI / WEBKITGTK TOKEN OVERRIDES ===== */
 /* More opaque backgrounds since backdrop-filter blur won't work on WebKitGTK */
 
-.tauri-app {
-  /* Glass surfaces - increased opacity since blur won't work */
-  --glass-bg-light: rgba(30, 32, 40, 0.85);
-  --glass-bg-medium: rgba(28, 30, 38, 0.90);
-  --glass-bg-heavy: rgba(25, 27, 35, 0.95);
-  --glass-bg-solid: rgba(20, 22, 28, 0.98);
-  --glass-bg: rgba(25, 27, 35, 0.92);
+.tauri-app,
+.pwa-app {
+  /* NORMALIZED: Aligned with Web App official design tokens.
+     Iteration 4: Removing 'Iteration 3' custom vibrancy and matching Web PRODUCTION values. */
+  --glass-bg-light: rgba(255, 255, 255, 0.02);
+  --glass-bg-medium: rgba(255, 255, 255, 0.04);
+  --glass-bg-heavy: rgba(255, 255, 255, 0.06);
+  --glass-bg-solid: rgba(0, 0, 0, 0.95);
+  --glass-bg: rgba(25, 27, 35, 0.35);
 
-  /* Additional glass variants with higher opacity */
-  --glass-bg-subtle: rgba(30, 32, 40, 0.75);
-  --glass-bg-weak: rgba(28, 30, 38, 0.80);
-  --glass-bg-tint: rgba(26, 28, 36, 0.85);
-  --glass-bg-soft: rgba(24, 26, 34, 0.88);
+  /* Shared glass variants */
+  --glass-bg-subtle: rgba(255, 255, 255, 0.005);
+  --glass-bg-weak: rgba(255, 255, 255, 0.015);
+  --glass-bg-tint: rgba(255, 255, 255, 0.03);
+  --glass-bg-soft: rgba(255, 255, 255, 0.05);
 
-  /* Canvas backgrounds - more opaque for visibility */
-  --canvas-task-bg: rgba(34, 36, 44, 0.98);
-  --canvas-group-bg: rgba(36, 38, 46, 0.96);
+  /* State active glass - Match web exactly */
+  --state-active-glass: blur(16px) saturate(180%);
 
-  /* Overlay components - increased opacity */
-  --overlay-component-bg: rgba(20, 20, 20, 0.98);
-  --overlay-component-backdrop: none;
+  /* Canvas backgrounds - Match web exactly */
+  --canvas-task-bg: rgba(34, 36, 44, 0.95);
+  --canvas-group-bg: rgba(36, 38, 46, 0.92);
 
-  /* Dropdown/panel backgrounds */
-  --dropdown-bg: rgba(20, 20, 20, 0.98);
-  --glass-panel-bg: rgba(20, 20, 20, 0.95);
-  --inbox-panel-bg: rgba(20, 20, 20, 0.90);
+  /* Overlay components - Match web exactly (Note: Web is dark/opaque @ 0.95) */
+  --overlay-component-bg: rgba(20, 20, 20, 0.95);
+  --overlay-component-backdrop: blur(20px);
 
-  /* Kanban backgrounds - more opaque */
-  --kanban-column-bg: rgba(28, 30, 38, 0.92);
-  --kanban-column-bg-hover: rgba(32, 34, 42, 0.95);
-  --kanban-card-glass-bg: rgba(30, 30, 46, 0.95);
+  /* Dropdown/panel backgrounds - Match web exactly */
+  --dropdown-bg: rgba(20, 20, 20, 0.9);
+  --glass-panel-bg: rgba(20, 20, 20, 0.6);
+  --inbox-panel-bg: rgba(20, 20, 20, 0.15);
+
+  /* Kanban backgrounds - Match web exactly */
+  --kanban-column-bg: rgba(255, 255, 255, 0.04);
+  --kanban-column-bg-hover: rgba(255, 255, 255, 0.08);
+  --kanban-card-glass-bg: rgba(30, 30, 46, 0.7);
+
+  /* Explicit Sidebar overrides to ensure perfect parity */
+  --sidebar-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  --sidebar-backdrop: blur(40px) saturate(200%);
 }
 
 /* ===== LIGHT THEME OVERRIDES ===== */
+/* Supports both data-theme attribute and .dark-theme class for backwards compatibility */
 
-:root:not(.dark-theme) {
+:root:not(.dark-theme):not([data-theme="dark"]),
+[data-theme="light"] {
   /* Surface adjustments for light mode */
   --surface-primary: hsl(var(--gray-50));
   --surface-secondary: #ffffff;
@@ -1087,6 +1124,148 @@
 
 .press-scale:active {
   transform: scale(0.98);
+}
+
+/* ===== LONG-PRESS VISUAL FEEDBACK SYSTEM ===== */
+/* Mobile PWA long-press to edit task feature */
+/* Uses transform and opacity only for GPU-accelerated performance */
+
+/* Base long-press item - applies to task items that support long-press */
+.long-press-item {
+  /* Enable GPU acceleration */
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+  /* Smooth transitions for state changes */
+  transition:
+    transform var(--duration-normal) var(--spring-smooth),
+    box-shadow var(--duration-normal) var(--spring-smooth);
+}
+
+/* Idle state - normal appearance */
+.long-press-idle {
+  transform: scale(1);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Pressing state - progressive scale-up during press */
+/* Note: Actual scale values are controlled by JS for smooth 0-1 progress */
+.long-press-pressing {
+  /* Subtle scale increase (1.02-1.03x) - JS applies exact value */
+  /* Elevated shadow effect - JS applies progressive shadow */
+  /* Remove transition for smooth JS-controlled animation */
+  transition: none;
+}
+
+/* Activated state - long press completed */
+.long-press-activated {
+  transform: scale(1.03);
+  box-shadow:
+    0 12px 24px 4px rgba(0, 0, 0, 0.25),
+    0 0 0 2px var(--brand-primary);
+  /* Bounce back effect on activation */
+  transition:
+    transform var(--duration-fast) var(--spring-bounce),
+    box-shadow var(--duration-fast) var(--spring-smooth);
+}
+
+/* Long-press progress indicator overlay (optional visual) */
+.long-press-progress-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  border: 2px solid transparent;
+  border-top-color: var(--brand-primary);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.long-press-pressing .long-press-progress-ring {
+  opacity: 1;
+  animation: long-press-spin var(--duration-slower) linear forwards;
+}
+
+/* Keyframe for progress ring rotation */
+@keyframes long-press-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Glow effect during long press */
+.long-press-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center,
+    var(--brand-primary) 0%,
+    transparent 70%
+  );
+  filter: blur(20px);
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.long-press-pressing .long-press-glow {
+  opacity: 0.15;
+}
+
+.long-press-activated .long-press-glow {
+  opacity: 0.25;
+}
+
+/* Mobile task item with long-press support */
+.mobile-task-item.long-press-item {
+  position: relative;
+  overflow: visible;
+}
+
+/* Haptic feedback visual indicator (pulse on activation) */
+@keyframes long-press-pulse {
+  0% {
+    transform: scale(1.03);
+    box-shadow: 0 12px 24px 4px rgba(0, 0, 0, 0.25), 0 0 0 2px var(--brand-primary);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 16px 32px 6px rgba(0, 0, 0, 0.3), 0 0 0 3px var(--brand-primary);
+  }
+  100% {
+    transform: scale(1.03);
+    box-shadow: 0 12px 24px 4px rgba(0, 0, 0, 0.25), 0 0 0 2px var(--brand-primary);
+  }
+}
+
+.long-press-activated.long-press-pulse-once {
+  animation: long-press-pulse var(--duration-slow) var(--spring-bounce) 1;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .long-press-item,
+  .long-press-idle,
+  .long-press-pressing,
+  .long-press-activated {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .long-press-pressing {
+    /* Still show some feedback without motion */
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
+
+  .long-press-progress-ring {
+    animation: none !important;
+    border-color: var(--brand-primary);
+    opacity: 1;
+  }
 }
 
 /* ===== UTILITY CLASSES (from legacy design-system.css) ===== */

@@ -324,6 +324,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
      * This is an ALLOWED geometry write as it's an explicit user action.
      *
      * Dynamically calculates position based on existing content to avoid overlap.
+     * Creates a "Done Tasks" group around the arranged tasks for easy navigation.
      */
     const arrangeDoneTasksInGrid = async () => {
         // Find all done tasks that have a canvas position
@@ -344,8 +345,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const gap = 16
         const columns = 5
         const gridWidth = columns * (cardWidth + gap)
+        const groupPadding = 20 // Padding inside the group
+        const groupHeaderHeight = 50 // Space for the group header
 
-        // Find the leftmost X position of all NON-DONE tasks and groups
+        // Find the leftmost X position of all NON-DONE tasks and groups (excluding Done Tasks group)
         const nonDoneTasks = taskStore.tasks.filter(
             (t) => t.status !== 'done' && t.canvasPosition
         )
@@ -360,21 +363,74 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             }
         }
 
-        // Check groups
+        // Check groups (excluding existing Done Tasks group)
         for (const group of groups) {
-            if (group.position && group.position.x < minX) {
+            if (group.name !== '✅ Done Tasks' && group.position && group.position.x < minX) {
                 minX = group.position.x
             }
         }
 
-        // Place grid FAR LEFT - minimum of calculated position or -5000
-        const calculatedX = minX - gridWidth - 500
-        const startX = Math.min(calculatedX, -5000) // Ensure at least -5000
-        const startY = 100 // Near top
+        // Calculate grid dimensions
+        const rows = Math.ceil(doneTasks.length / columns)
+        const actualColumns = Math.min(doneTasks.length, columns)
+        const gridActualWidth = actualColumns * (cardWidth + gap) - gap
+        const gridActualHeight = rows * (cardHeight + gap) - gap
 
-        console.log(`[ARRANGE-DONE] Placing at startX=${startX} (minX=${minX}, calculatedX=${calculatedX})`)
+        // Group dimensions (with padding)
+        const groupWidth = gridActualWidth + (groupPadding * 2)
+        const groupHeight = gridActualHeight + groupHeaderHeight + (groupPadding * 2)
+
+        // Place grid FAR LEFT - minimum of calculated position or -5000
+        const calculatedX = minX - groupWidth - 500
+        const groupX = Math.min(calculatedX, -5000) // Ensure at least -5000
+        const groupY = 100 // Near top
+
+        // Task grid starts inside the group with padding and header offset
+        const startX = groupX + groupPadding
+        const startY = groupY + groupHeaderHeight + groupPadding
+
+        console.log(`[ARRANGE-DONE] Placing group at x=${groupX}, tasks start at x=${startX}`)
 
         try {
+            // Step 1: Delete existing "Done Tasks" group if it exists (search by name pattern)
+            const existingDoneGroup = groups.find(g =>
+                g.name === '✅ Done Tasks' ||
+                g.name.toLowerCase().includes('done tasks') ||
+                g.name === 'Done'  // May be truncated in display
+            )
+            if (existingDoneGroup) {
+                console.log(`[ARRANGE-DONE] Removing existing Done Tasks group: ${existingDoneGroup.id}`)
+                await canvasStore.deleteSection(existingDoneGroup.id)
+            }
+
+            // Step 2: Create the "Done Tasks" group
+            const newGroup = await canvasStore.createSection({
+                name: '✅ Done Tasks',
+                type: 'custom',
+                color: '#10b981', // Green
+                position: {
+                    x: groupX,
+                    y: groupY,
+                    width: groupWidth,
+                    height: groupHeight
+                },
+                layout: 'freeform',
+                isVisible: true,
+                isCollapsed: false
+            })
+
+            console.log(`[ARRANGE-DONE] Created Done Tasks group: ${newGroup.id}`)
+
+            // Step 2.5: Sync to ensure group node exists in Vue Flow before assigning tasks
+            if (deps.batchSyncNodes) {
+                deps.batchSyncNodes('high')
+            } else {
+                deps.syncNodes()
+            }
+            // Small delay to ensure Vue Flow processes the group node
+            await new Promise(resolve => setTimeout(resolve, 50))
+
+            // Step 3: Arrange tasks in grid and assign to group
             for (let i = 0; i < doneTasks.length; i++) {
                 const task = doneTasks[i]
                 const col = i % columns
@@ -384,7 +440,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 const newY = startY + row * (cardHeight + gap)
 
                 await undoHistory.updateTaskWithUndo(task.id, {
-                    parentId: undefined, // Remove from any group
+                    parentId: newGroup.id, // Assign to the Done Tasks group
                     canvasPosition: { x: newX, y: newY }
                 })
             }
@@ -396,7 +452,13 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 deps.syncNodes()
             }
 
-            console.log(`[ARRANGE-DONE] Successfully arranged ${doneTasks.length} tasks`)
+            // Step 5: Ensure done tasks are visible on canvas
+            if (taskStore.hideCanvasDoneTasks) {
+                taskStore.toggleCanvasDoneTasks() // This will show done tasks
+                console.log(`[ARRANGE-DONE] Enabled showing done tasks on canvas`)
+            }
+
+            console.log(`[ARRANGE-DONE] Successfully arranged ${doneTasks.length} tasks in Done Tasks group`)
         } catch (error) {
             console.error('[ASYNC-ERROR] arrangeDoneTasksInGrid failed', error)
         }

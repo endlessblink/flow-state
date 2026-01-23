@@ -1,26 +1,35 @@
 <template>
   <div class="mobile-layout">
-    <header class="mobile-header">
+    <!-- Hide header on full-screen views like Quick Sort -->
+    <header v-if="!isFullScreenView" class="mobile-header">
        <h1>FlowState</h1>
     </header>
-    <main class="mobile-content">
+    <main class="mobile-content" :class="{ 'full-screen': isFullScreenView }">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
         </transition>
       </router-view>
     </main>
-    <MobileNav />
+    <!-- Hide nav on full-screen views -->
+    <MobileNav v-if="!isFullScreenView" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import MobileNav from '@/mobile/components/MobileNav.vue'
 
 const router = useRouter()
 const route = useRoute()
+
+// Routes that should be full-screen (no header/nav)
+const fullScreenRoutes = ['mobile-quick-sort']
+
+const isFullScreenView = computed(() => {
+  return fullScreenRoutes.includes(route.name as string)
+})
 
 onMounted(() => {
   // Redirect Canvas (/) to Inbox (/tasks) on mobile
@@ -35,6 +44,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height - accounts for iOS browser chrome */
   width: 100vw;
   background: var(--app-background-gradient);
   overflow: hidden;
@@ -66,5 +76,10 @@ onMounted(() => {
   padding-bottom: 80px; /* Space for nav */
   position: relative;
   -webkit-overflow-scrolling: touch;
+}
+
+.mobile-content.full-screen {
+  padding-bottom: 0;
+  overflow: hidden;
 }
 </style>

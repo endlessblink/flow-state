@@ -1,10 +1,8 @@
 /* Import design tokens FIRST - provides all CSS custom properties */
 @import './design-tokens.css';
 
-/* Signal dark mode preference to browser - helps native controls on some systems */
-:root {
-  color-scheme: dark;
-}
+/* Import theme variables for dark/light mode toggle support */
+@import './theme-variables.css';
 
 /* Then Tailwind CSS - provides utility classes */
 @tailwind base;
@@ -93,7 +91,8 @@ body {
   width: 100vw;
 
   /* PWA Mobile Support - ROAD-004 */
-  overscroll-behavior: none; /* Prevent rubber-banding on mobile */
+  overscroll-behavior: none;
+  /* Prevent rubber-banding on mobile */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
@@ -190,43 +189,61 @@ select option {
 /* Detect via .tauri-app class added by JavaScript or feature query fallback */
 
 /* When running in Tauri (class added by app initialization) */
+/* RESTORED: Re-enabled glass effects for Tauri consistent with Web App design */
 .tauri-app .glass,
-.tauri-app [class*="backdrop-blur"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(25, 25, 30, 0.98) !important;
-  border: 1px solid var(--border-medium) !important;
+.tauri-app [class*="backdrop-blur"],
+.pwa-app .glass,
+.pwa-app [class*="backdrop-blur"] {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  background-color: var(--glass-bg-medium) !important;
+  border: 1px solid var(--glass-border) !important;
 }
 
 /* Fix glass panel backgrounds for Tauri */
 .tauri-app .glass-panel,
-.tauri-app [class*="glass-bg"] {
-  background: rgba(20, 22, 28, 0.95) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+.tauri-app [class*="glass-bg"],
+.pwa-app .glass-panel,
+.pwa-app [class*="glass-bg"] {
+  background: var(--glass-bg-medium) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
 }
 
-/* Tauri sidebar glass fix */
+/* Tauri sidebar glass fix - Iteration 3 - PERFECT PARITY */
 .tauri-app aside,
-.tauri-app nav {
-  background: rgba(18, 20, 26, 0.98) !important;
-  backdrop-filter: none !important;
+.tauri-app nav,
+.pwa-app aside,
+.pwa-app nav {
+  background: var(--sidebar-bg) !important;
+  backdrop-filter: var(--sidebar-backdrop) !important;
+  -webkit-backdrop-filter: var(--sidebar-backdrop) !important;
+  box-shadow: var(--sidebar-shadow) !important;
 }
 
-/* Tauri modal/overlay glass fix */
+/* Tauri modal/overlay glass fix - Iteration 3 - VIBRANT DEPTH */
 .tauri-app [role="dialog"],
 .tauri-app .modal,
-.tauri-app .n-modal {
-  background: rgba(22, 24, 30, 0.98) !important;
-  backdrop-filter: none !important;
+.tauri-app .n-modal,
+.pwa-app [role="dialog"],
+.pwa-app .modal,
+.pwa-app .n-modal {
+  background: var(--glass-bg-heavy) !important;
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  box-shadow: var(--shadow-2xl), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Tauri dropdown/popover glass fix */
 .tauri-app .n-dropdown,
 .tauri-app .n-popover,
-.tauri-app [class*="dropdown"] {
-  background: rgba(20, 22, 28, 0.98) !important;
-  backdrop-filter: none !important;
+.tauri-app [class*="dropdown"],
+.pwa-app .n-dropdown,
+.pwa-app .n-popover,
+.pwa-app [class*="dropdown"] {
+  background: var(--dropdown-bg) !important;
+  backdrop-filter: blur(var(--blur-regular)) !important;
+  -webkit-backdrop-filter: blur(var(--blur-regular)) !important;
 }
 
 /* Additional Tauri fallbacks for glass morphism classes */
@@ -238,29 +255,29 @@ select option {
 .tauri-app .task-glass,
 .tauri-app .modal-glass,
 .tauri-app .sidebar-glass {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(25, 25, 30, 0.98) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  background-color: var(--glass-bg-medium) !important;
   border: 1px solid var(--border-medium) !important;
 }
 
 /* Canvas-specific fallbacks */
 .tauri-app .canvas-contour {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: rgba(30, 32, 40, 0.95) !important;
+  backdrop-filter: blur(var(--blur-xs)) !important;
+  -webkit-backdrop-filter: blur(var(--blur-xs)) !important;
+  background: var(--canvas-group-bg) !important;
 }
 
 /* Task node fallbacks */
 .tauri-app .vue-flow__node {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
 }
 
 /* Vue Flow pane fallbacks */
 .tauri-app .vue-flow__pane,
 .tauri-app .vue-flow__viewport {
-  backdrop-filter: none !important;
+  backdrop-filter: blur(2px) !important;
 }
 
 /* =========================================================================
@@ -309,15 +326,19 @@ select option {
   -webkit-backdrop-filter: none !important;
 }
 
-/* Component-specific glass fallbacks */
+/* Component-specific glass fallbacks - Restore vibrancy */
 .tauri-app .task-node-glass,
 .tauri-app .command-palette-glass,
 .tauri-app .context-menu-glass,
-.tauri-app .sidebar-panel-glass {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(22, 24, 30, 0.98) !important;
-  border: 1px solid var(--border-medium) !important;
+.tauri-app .sidebar-panel-glass,
+.pwa-app .task-node-glass,
+.pwa-app .command-palette-glass,
+.pwa-app .context-menu-glass,
+.pwa-app .sidebar-panel-glass {
+  backdrop-filter: blur(var(--blur-lg)) !important;
+  -webkit-backdrop-filter: blur(var(--blur-lg)) !important;
+  background-color: var(--glass-bg-medium) !important;
+  border: 1px solid var(--glass-border) !important;
 }
 
 /* =========================================================================
@@ -325,7 +346,7 @@ select option {
    These override inline backdrop-filter styles in Vue components
    ========================================================================= */
 
-/* Modal and Dialog fallbacks */
+/* Modal and Dialog fallbacks - Ultra deep glass */
 .tauri-app .modal-overlay,
 .tauri-app .modal-content,
 .tauri-app .modal-backdrop,
@@ -342,50 +363,87 @@ select option {
 .tauri-app .quick-task-create-modal,
 .tauri-app .sync-alert-modal,
 .tauri-app .conflict-resolution-dialog,
-.tauri-app .manual-merge-modal {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(20, 22, 28, 0.98) !important;
+.tauri-app .manual-merge-modal,
+.pwa-app .modal-overlay,
+.pwa-app .modal-content,
+.pwa-app .modal-backdrop,
+.pwa-app .dialog-overlay,
+.pwa-app .dialog-content,
+.pwa-app .base-modal-overlay,
+.pwa-app .base-modal-content,
+.pwa-app .task-edit-modal,
+.pwa-app .settings-modal,
+.pwa-app .batch-edit-modal,
+.pwa-app .group-modal,
+.pwa-app .confirmation-modal,
+.pwa-app .welcome-modal,
+.pwa-app .quick-task-create-modal,
+.pwa-app .sync-alert-modal,
+.pwa-app .conflict-resolution-dialog,
+.pwa-app .manual-merge-modal {
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  background: var(--glass-bg-heavy) !important;
 }
 
-/* Sidebar and Navigation fallbacks */
+/* Sidebar and Navigation fallbacks - Match web app vibe */
 .tauri-app .app-sidebar,
 .tauri-app .sidebar-content,
 .tauri-app .sidebar-smart-item,
 .tauri-app .sidebar-nav,
 .tauri-app .task-manager-sidebar,
 .tauri-app .category-selector,
-.tauri-app .filter-dropdown {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(18, 20, 26, 0.98) !important;
+.tauri-app .filter-dropdown,
+.pwa-app .app-sidebar,
+.pwa-app .sidebar-content,
+.pwa-app .sidebar-smart-item,
+.pwa-app .sidebar-nav,
+.pwa-app .task-manager-sidebar,
+.pwa-app .category-selector,
+.pwa-app .filter-dropdown {
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  background: var(--glass-bg-tint) !important;
 }
 
-/* Context Menu fallbacks */
+/* Context Menu fallbacks - Iteration 3 - ACCENTED GLASS */
 .tauri-app .context-menu,
 .tauri-app .task-context-menu,
 .tauri-app .canvas-context-menu,
 .tauri-app .node-context-menu,
 .tauri-app .edge-context-menu,
 .tauri-app .context-menu-container,
-.tauri-app .context-menu-content {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(20, 22, 28, 0.98) !important;
+.tauri-app .context-menu-content,
+.pwa-app .context-menu,
+.pwa-app .task-context-menu,
+.pwa-app .canvas-context-menu,
+.pwa-app .node-context-menu,
+.pwa-app .edge-context-menu,
+.pwa-app .context-menu-container,
+.pwa-app .context-menu-content {
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  background-color: var(--glass-bg-heavy) !important;
+  box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Command Palette fallbacks */
+/* Command Palette fallbacks - High depth glass */
 .tauri-app .command-palette,
 .tauri-app .command-palette-overlay,
 .tauri-app .command-palette-content,
 .tauri-app .search-modal,
-.tauri-app .search-modal-content {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(20, 22, 28, 0.98) !important;
+.tauri-app .search-modal-content,
+.pwa-app .command-palette,
+.pwa-app .command-palette-overlay,
+.pwa-app .command-palette-content,
+.pwa-app .search-modal,
+.pwa-app .search-modal-content {
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  background-color: var(--glass-bg-heavy) !important;
 }
 
-/* Canvas Component fallbacks */
+/* Canvas Component fallbacks - Iteration 3 - HIGH VIBRANCY */
 .tauri-app .task-node,
 .tauri-app .task-node-content,
 .tauri-app .group-node,
@@ -397,13 +455,26 @@ select option {
 .tauri-app .inbox-filters,
 .tauri-app .inbox-time-filters,
 .tauri-app .multi-selection-overlay,
-.tauri-app .canvas-empty-state {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(25, 27, 35, 0.98) !important;
+.tauri-app .canvas-empty-state,
+.pwa-app .task-node,
+.pwa-app .task-node-content,
+.pwa-app .group-node,
+.pwa-app .group-node-simple,
+.pwa-app .canvas-group,
+.pwa-app .section-selector,
+.pwa-app .inbox-panel,
+.pwa-app .inbox-panel-header,
+.pwa-app .inbox-filters,
+.pwa-app .inbox-time-filters,
+.pwa-app .multi-selection-overlay,
+.pwa-app .canvas-empty-state {
+  backdrop-filter: var(--state-active-glass) !important;
+  -webkit-backdrop-filter: var(--state-active-glass) !important;
+  background-color: var(--glass-bg-medium) !important;
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Task Card fallbacks (Kanban, Calendar, etc.) */
+/* Task Card fallbacks (Kanban, Calendar, etc.) - Iteration 3 - REFINED */
 .tauri-app .task-card,
 .tauri-app .task-card-content,
 .tauri-app .task-row,
@@ -412,13 +483,23 @@ select option {
 .tauri-app .hierarchical-task-row,
 .tauri-app .quick-sort-card,
 .tauri-app .kanban-column,
-.tauri-app .kanban-swimlane {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(28, 30, 38, 0.95) !important;
+.tauri-app .kanban-swimlane,
+.pwa-app .task-card,
+.pwa-app .task-card-content,
+.pwa-app .task-row,
+.pwa-app .task-list,
+.pwa-app .task-table,
+.pwa-app .hierarchical-task-row,
+.pwa-app .quick-sort-card,
+.pwa-app .kanban-column,
+.pwa-app .kanban-swimlane {
+  backdrop-filter: blur(16px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  background-color: var(--glass-bg-subtle) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
 }
 
-/* Dropdown and Popover fallbacks */
+/* Dropdown and Popover fallbacks - Iteration 3 - DEEP GLASS */
 .tauri-app .base-dropdown,
 .tauri-app .base-dropdown-content,
 .tauri-app .base-popover,
@@ -427,34 +508,44 @@ select option {
 .tauri-app .custom-select-dropdown,
 .tauri-app .emoji-picker,
 .tauri-app .emoji-picker-content,
-.tauri-app .project-filter-dropdown {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: rgba(20, 22, 28, 0.98) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+.tauri-app .project-filter-dropdown,
+.pwa-app .base-dropdown,
+.pwa-app .base-dropdown-content,
+.pwa-app .base-popover,
+.pwa-app .base-popover-content,
+.pwa-app .custom-select,
+.pwa-app .custom-select-dropdown,
+.pwa-app .emoji-picker,
+.pwa-app .emoji-picker-content,
+.pwa-app .project-filter-dropdown {
+  backdrop-filter: var(--overlay-component-backdrop) saturate(140%) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) saturate(140%) !important;
+  background: var(--glass-bg-soft) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-/* CustomSelect specific fallbacks - must override Vue scoped styles */
-/* Match the reference: subtle borders that blend with dark background */
-.tauri-app .select-dropdown {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: rgba(30, 32, 40, 0.98) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-  border: 1px solid var(--glass-border-light) !important;
+/* CustomSelect specific fallbacks - Ultra subtle triggers */
+.tauri-app .select-dropdown,
+.pwa-app .select-dropdown {
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  background: var(--dropdown-bg) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid var(--glass-border) !important;
   overflow: hidden !important;
 }
 
-.tauri-app .select-trigger {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: rgba(40, 42, 52, 0.9) !important;
-  border: 1px solid var(--glass-border-light) !important;
+.tauri-app .select-trigger,
+.pwa-app .select-trigger {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  background: var(--glass-bg-tint) !important;
+  border: 1px solid var(--glass-border) !important;
   box-shadow: none !important;
 }
 
 .tauri-app .select-trigger:hover {
-  background: rgba(45, 47, 58, 0.9) !important;
+  background: var(--glass-bg-soft) !important;
   border-color: var(--border-subtle) !important;
   box-shadow: none !important;
 }
@@ -465,7 +556,7 @@ select option {
 }
 
 .tauri-app .select-trigger.is-open {
-  background: rgba(45, 47, 58, 0.9) !important;
+  background: var(--glass-bg-soft) !important;
   border-color: rgba(78, 205, 196, 0.3) !important;
   box-shadow: none !important;
 }
@@ -503,19 +594,26 @@ select option {
   /* background: rgba(30, 32, 40, 0.95) !important; */
 }
 
-/* Calendar Component fallbacks */
+/* Calendar Component fallbacks - Iteration 3 - HIGH DEPTH */
 .tauri-app .calendar-day-view,
 .tauri-app .calendar-week-view,
 .tauri-app .calendar-header,
 .tauri-app .calendar-inbox-panel,
 .tauri-app .calendar-status-overlays,
-.tauri-app .unified-inbox-panel {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(22, 24, 30, 0.98) !important;
+.tauri-app .unified-inbox-panel,
+.pwa-app .calendar-day-view,
+.pwa-app .calendar-week-view,
+.pwa-app .calendar-header,
+.pwa-app .calendar-inbox-panel,
+.pwa-app .calendar-status-overlays,
+.pwa-app .unified-inbox-panel {
+  backdrop-filter: blur(var(--blur-xl)) !important;
+  -webkit-backdrop-filter: blur(var(--blur-xl)) !important;
+  background-color: var(--glass-bg-medium) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Sync and System UI fallbacks */
+/* Sync and System UI fallbacks - Iteration 3 - VIBRANT */
 .tauri-app .sync-status,
 .tauri-app .sync-health-dashboard,
 .tauri-app .sync-alert-system,
@@ -524,28 +622,44 @@ select option {
 .tauri-app .sync-integration,
 .tauri-app .user-profile,
 .tauri-app .auth-status-notice,
-.tauri-app .error-boundary {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(20, 22, 28, 0.98) !important;
+.tauri-app .error-boundary,
+.pwa-app .sync-status,
+.pwa-app .sync-health-dashboard,
+.pwa-app .sync-alert-system,
+.pwa-app .backup-settings,
+.pwa-app .backup-verification,
+.pwa-app .sync-integration,
+.pwa-app .user-profile,
+.pwa-app .auth-status-notice,
+.pwa-app .error-boundary {
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  background-color: var(--glass-bg-medium) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Base component fallbacks */
+/* Base component fallbacks - Iteration 3 - UNIFIED */
 .tauri-app .base-card,
 .tauri-app .base-modal,
 .tauri-app .time-display,
 .tauri-app .sort-progress,
-.tauri-app .quick-task-create {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(22, 24, 30, 0.98) !important;
+.tauri-app .quick-task-create,
+.pwa-app .base-card,
+.pwa-app .base-modal,
+.pwa-app .time-display,
+.pwa-app .sort-progress,
+.pwa-app .quick-task-create {
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  background-color: var(--glass-bg-soft) !important;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Project indicator fallbacks */
 .tauri-app .project-emoji-icon,
 .tauri-app [class*="project-indicator"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
 }
 
 /* WebKitGTK-specific fixes using @supports */
@@ -589,22 +703,30 @@ select option {
 
 /* Tauri layout fixes - ensure proper sizing within desktop window */
 .tauri-app #app,
-.tauri-app #root {
+.tauri-app #root,
+.pwa-app #app,
+.pwa-app #root {
   min-height: 100vh;
   min-width: 100vw;
   overflow: hidden;
 }
 
-/* Prevent Tauri horizontal scrollbar issues */
-.tauri-app {
+/* Layout fixes - Prevent Tauri and PWA horizontal scrollbar issues */
+.tauri-app,
+.pwa-app {
   overflow-x: hidden;
-}
-
-/* Tauri font rendering optimization */
-.tauri-app {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Explicit control panel glass for Iteration 3 parity */
+.tauri-app .control-panel,
+.pwa-app .control-panel {
+  backdrop-filter: var(--overlay-component-backdrop) !important;
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) !important;
+  background-color: var(--glass-bg-medium) !important;
+  box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 /* 2. Vue Flow Specific Optimizations */

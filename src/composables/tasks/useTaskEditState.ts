@@ -1,4 +1,4 @@
-import { ref, watch, nextTick, type Ref } from 'vue'
+import { ref, watch, nextTick, computed, type Ref } from 'vue'
 import { type Task } from '@/stores/tasks'
 
 export function useTaskEditState(
@@ -31,6 +31,9 @@ export function useTaskEditState(
         updatedAt: new Date()
     })
 
+    // Original task snapshot for dirty checking
+    const originalTaskSnapshot = ref<string>('')
+
     // Progressive disclosure state
     const showDependencies = ref(false)
     const showSubtasks = ref(true)
@@ -38,6 +41,55 @@ export function useTaskEditState(
 
     // Save-in-progress guard
     const isSaving = ref(false)
+
+    // --- Form Validation ---
+
+    // Check if title is valid (non-empty)
+    const isTitleValid = computed((): boolean => {
+        return Boolean(editedTask.value.title && editedTask.value.title.trim().length > 0)
+    })
+
+    // Form is valid if all required fields pass validation
+    const isFormValid = computed(() => {
+        return isTitleValid.value
+    })
+
+    // --- Form Dirty Tracking ---
+
+    // Create a fingerprint of task data for comparison (excludes volatile fields)
+    const createTaskFingerprint = (task: Task): string => {
+        return JSON.stringify({
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            scheduledDate: task.scheduledDate,
+            scheduledTime: task.scheduledTime,
+            estimatedDuration: task.estimatedDuration,
+            recurrence: task.recurrence,
+            subtasks: task.subtasks?.map(st => ({
+                id: st.id,
+                title: st.title,
+                isCompleted: st.isCompleted
+            }))
+        })
+    }
+
+    // Check if form has unsaved changes
+    const isFormDirty = computed(() => {
+        if (!originalTaskSnapshot.value) return false
+        const currentFingerprint = createTaskFingerprint(editedTask.value)
+        return currentFingerprint !== originalTaskSnapshot.value
+    })
+
+    // Check if form is pristine (no changes made)
+    const isFormPristine = computed(() => !isFormDirty.value)
+
+    // Save button should be disabled if form is pristine OR invalid OR currently saving
+    const isSaveDisabled = computed(() => {
+        return isFormPristine.value || !isFormValid.value || isSaving.value
+    })
 
     // Options
     const priorityOptions = [
@@ -79,6 +131,9 @@ export function useTaskEditState(
         if (editedTask.value.id !== newTask.id || currentFingerprint !== newFingerprint) {
             editedTask.value = newTaskState
 
+            // Store original snapshot for dirty tracking
+            originalTaskSnapshot.value = createTaskFingerprint(newTaskState)
+
             // Auto-expand sections
             showSubtasks.value = (newTask.subtasks || []).length > 0
             showDependencies.value = (newTask.dependsOn && newTask.dependsOn.length > 0) || false
@@ -101,6 +156,12 @@ export function useTaskEditState(
         showSubtasks,
         showPomodoros,
         priorityOptions,
-        statusOptions
+        statusOptions,
+        // Form validation & dirty tracking
+        isTitleValid,
+        isFormValid,
+        isFormDirty,
+        isFormPristine,
+        isSaveDisabled
     }
 }

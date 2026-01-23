@@ -160,15 +160,15 @@
             }"
             :style="cardStyle"
           >
-            <!-- Swipe Overlays -->
-            <div class="swipe-overlay left" :style="{ opacity: leftOverlayOpacity }">
-              <SkipForward :size="48" />
-              <span>Skip</span>
-            </div>
-            <div class="swipe-overlay right" :style="{ opacity: rightOverlayOpacity }">
-              <FolderPlus :size="48" />
-              <span>Assign</span>
-            </div>
+            <!-- Swipe Indicators (outline only, no fill or text) -->
+            <div
+              class="swipe-indicator left"
+              :style="{ opacity: leftOverlayOpacity }"
+            ></div>
+            <div
+              class="swipe-indicator right"
+              :style="{ opacity: rightOverlayOpacity }"
+            ></div>
 
             <!-- Card Content -->
             <div class="card-content" v-if="currentTask">
@@ -223,10 +223,10 @@
             </div>
           </div>
 
-          <!-- Date Quick Edit -->
-          <div class="quick-edit-row">
+          <!-- Date Quick Edit - Scrollable -->
+          <div class="quick-edit-row date-row">
             <span class="edit-label">Due</span>
-            <div class="date-pills">
+            <div class="date-pills-scroll">
               <button
                 class="pill"
                 :class="{ active: isToday }"
@@ -239,9 +239,21 @@
               >Tmrw</button>
               <button
                 class="pill"
+                @click="setDueDate('in3days')"
+              >+3d</button>
+              <button
+                class="pill"
                 :class="{ active: isWeekend }"
                 @click="setDueDate('weekend')"
               >Wknd</button>
+              <button
+                class="pill"
+                @click="setDueDate('nextweek')"
+              >+1wk</button>
+              <button
+                class="pill"
+                @click="setDueDate('1month')"
+              >+1mo</button>
               <button
                 class="pill clear"
                 @click="setDueDate('clear')"
@@ -310,11 +322,15 @@
 
             <div class="project-list">
               <button
-                v-for="project in projects"
+                v-for="{ project, depth } in projectsWithDepth"
                 :key="project.id"
                 class="project-option"
+                :style="{ paddingLeft: `${16 + depth * 24}px` }"
                 @click="handleAssignProject(project.id)"
               >
+                <span v-if="depth > 0" class="hierarchy-line" :style="{ width: `${depth * 24}px` }">
+                  <span class="hierarchy-connector"></span>
+                </span>
                 <span
                   class="project-indicator"
                   :style="{ backgroundColor: project.color }"
@@ -344,7 +360,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, Flag,
-  ChevronLeft, ChevronRight, SkipForward, FolderPlus, PartyPopper,
+  ChevronLeft, ChevronRight, SkipForward, PartyPopper,
   ArrowLeft
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
@@ -389,8 +405,33 @@ const captureInputRef = ref<HTMLInputElement | null>(null)
 const cardRef = ref<HTMLElement | null>(null)
 const confettiRef = ref<HTMLElement | null>(null)
 
-// Projects
-const projects = computed(() => projectStore.projects)
+// Projects - hierarchical structure for nested display
+const rootProjects = computed(() => projectStore.rootProjects)
+
+// Build flat list with hierarchy info for display
+interface ProjectWithDepth {
+  project: typeof projectStore.projects.value[number]
+  depth: number
+}
+
+const projectsWithDepth = computed(() => {
+  const result: ProjectWithDepth[] = []
+
+  const addProjectWithChildren = (project: typeof projectStore.projects.value[number], depth: number) => {
+    result.push({ project, depth })
+    const children = projectStore.getChildProjects(project.id)
+    for (const child of children) {
+      addProjectWithChildren(child, depth + 1)
+    }
+  }
+
+  // Start from root projects
+  for (const rootProject of rootProjects.value) {
+    addProjectWithChildren(rootProject, 0)
+  }
+
+  return result
+})
 
 // Uncategorized count
 const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
@@ -559,28 +600,43 @@ function setPriority(priority: 'low' | 'medium' | 'high') {
   triggerHaptic('light')
 }
 
-function setDueDate(preset: 'today' | 'tomorrow' | 'weekend' | 'clear') {
+function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
   if (!currentTask.value) return
 
   let dueDate: string | undefined
+  const now = new Date()
 
   if (preset === 'today') {
-    const today = new Date()
+    const today = new Date(now)
     today.setHours(0, 0, 0, 0)
     dueDate = today.toISOString()
   } else if (preset === 'tomorrow') {
-    const tomorrow = new Date()
+    const tomorrow = new Date(now)
     tomorrow.setDate(tomorrow.getDate() + 1)
     tomorrow.setHours(0, 0, 0, 0)
     dueDate = tomorrow.toISOString()
+  } else if (preset === 'in3days') {
+    const date = new Date(now)
+    date.setDate(date.getDate() + 3)
+    date.setHours(0, 0, 0, 0)
+    dueDate = date.toISOString()
   } else if (preset === 'weekend') {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
+    const dayOfWeek = now.getDay()
     const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
-    const saturday = new Date()
-    saturday.setDate(today.getDate() + daysUntilSaturday)
+    const saturday = new Date(now)
+    saturday.setDate(now.getDate() + (daysUntilSaturday || 7))
     saturday.setHours(0, 0, 0, 0)
     dueDate = saturday.toISOString()
+  } else if (preset === 'nextweek') {
+    const date = new Date(now)
+    date.setDate(date.getDate() + 7)
+    date.setHours(0, 0, 0, 0)
+    dueDate = date.toISOString()
+  } else if (preset === '1month') {
+    const date = new Date(now)
+    date.setMonth(date.getMonth() + 1)
+    date.setHours(0, 0, 0, 0)
+    dueDate = date.toISOString()
   } else {
     dueDate = undefined
   }
@@ -1094,38 +1150,28 @@ onMounted(() => {
   cursor: grabbing;
 }
 
-/* Swipe Overlays */
-.swipe-overlay {
+/* Swipe Indicators (outline only) */
+.swipe-indicator {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   border-radius: var(--radius-2xl);
-  font-size: 1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   pointer-events: none;
   transition: opacity 0.1s ease;
 }
 
-.swipe-overlay.left {
-  background: linear-gradient(135deg, rgba(100, 100, 120, 0.9), rgba(80, 80, 100, 0.85));
-  color: rgba(255, 255, 255, 0.9);
+.swipe-indicator.left {
+  border: 3px solid rgba(150, 150, 170, 0.7);
 }
 
-.swipe-overlay.right {
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(60, 180, 170, 0.85));
-  color: hsl(230, 20%, 10%);
+.swipe-indicator.right {
+  border: 3px solid var(--color-success, #10b981);
 }
 
 /* Card Content */
 .card-content {
   position: relative;
   padding: var(--space-6);
+  padding-bottom: var(--space-8);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1178,7 +1224,7 @@ onMounted(() => {
   display: flex;
   gap: var(--space-3);
   margin-top: auto;
-  padding-top: var(--space-4);
+  padding-top: var(--space-3);
 }
 
 .meta-item {
@@ -1247,8 +1293,27 @@ onMounted(() => {
   flex: 1;
 }
 
-.pill {
+.date-pills-scroll {
+  display: flex;
+  gap: var(--space-1_5);
   flex: 1;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px; /* Prevent cut-off on scroll */
+}
+
+.date-pills-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.date-row {
+  overflow: visible;
+}
+
+.pill {
+  flex: 0 0 auto;
   padding: var(--space-2) var(--space-2_5);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1258,6 +1323,11 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.priority-pills .pill {
+  flex: 1;
 }
 
 .pill.active {
@@ -1485,8 +1555,9 @@ onMounted(() => {
 .project-option {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   padding: var(--space-4);
+  padding-right: var(--space-4);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
@@ -1495,6 +1566,25 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+}
+
+.hierarchy-line {
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.hierarchy-connector {
+  width: 12px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  margin-left: auto;
+  border-radius: 1px;
 }
 
 .project-option:active {

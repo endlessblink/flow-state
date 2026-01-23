@@ -122,7 +122,7 @@
 | ~~**TASK-320**~~         | ✅ **DONE** **Fix Task Completion Detection in Orchestrator**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                        | Activity timeout, git status check, enhanced completion detection - TASK-303 subtask                                                                                                                            |                                                        |
 | **TASK-321**             | **Test and Fix Merge/Discard Workflow E2E**                            | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-321-test-and-fix-mergediscard-workflow-end-to-end-planned) - TASK-303 subtask                                                                                                               |                                                        |
 | **TASK-322**             | **Add Automatic Error Recovery for Orchestrator**                      | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-322-add-automatic-error-recovery-for-orchestrator-agents-planned) - TASK-303 subtask                                                                                                        |                                                        |
-| **TASK-323**             | **Fix Stale Agent Cleanup in Orchestrator**                            | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#task-323-fix-stale-agent-cleanup-in-orchestrator-planned) - TASK-303 subtask                                                                                                                     |                                                        |
+| ~~**TASK-323**~~         | ✅ **DONE** **Fix Stale Agent Cleanup in Orchestrator**                | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                        | Startup cleanup, periodic cleanup, graceful shutdown, SIGKILL fallback - TASK-303 subtask                                                                                                                       |                                                        |
 | ~~**TASK-324**~~         | ✅ **DONE** **PWA Install Prompt Component**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [Walkthrough](file:///home/endlessblink/.gemini/antigravity/brain/62e1538b-8b24-4393-965e-f11ae95f2523/walkthrough.md)                                                                                          |                                                        |
 | ~~**TASK-325**~~         | ✅ **DONE** **VPS Deployment Configuration**                                       | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | [SOP-VPS](./sop/deployment/VPS-DEPLOYMENT.md)                                                                                                                                                                  |                                                        |
 | ~~**TASK-326**~~         | ✅ **DONE** **PWA Cross-Device Testing**                                           | **P2**                                              | ✅ **DONE** (2026-01-19)                                                                                                         | Verified SW & Manifest via Lighthouse                                                                                                                                                                          |                                                        |
@@ -1380,7 +1380,7 @@ User Goal → Questions → Plan → Execute (Worktrees) → Review → Merge/Di
 - ~~TASK-320~~: Fix Task Completion Detection ✅
 - TASK-321: Test Merge/Discard Workflow E2E
 - TASK-322: Add Automatic Error Recovery
-- TASK-323: Fix Stale Agent Cleanup
+- ~~TASK-323~~: Fix Stale Agent Cleanup ✅
 
 **Next Steps** (for next session):
 
@@ -1535,11 +1535,12 @@ The following tasks address stability issues discovered during orchestrator test
 
 ---
 
-#### TASK-323: Fix Stale Agent Cleanup in Orchestrator (📋 PLANNED)
+#### ~~TASK-323~~: Fix Stale Agent Cleanup in Orchestrator (✅ DONE)
 
 **Priority**: P1-HIGH
 **Related**: TASK-303
 **Created**: January 19, 2026
+**Completed**: January 23, 2026
 
 **Problem**: Found stale Claude agent processes from previous tests still running. Worktrees accumulate without cleanup.
 
@@ -1548,22 +1549,23 @@ The following tasks address stability issues discovered during orchestrator test
 - Process kill on timeout may not work (SIGTERM vs SIGKILL)
 - No startup cleanup of orphaned resources
 
-**Solution**:
-1. Kill process with SIGKILL after SIGTERM timeout
-2. Clean up both worktree AND branch in `cleanupWorktree()`
-3. Add startup scan for orphaned worktrees/branches
-4. Add periodic cleanup job (every 10 minutes)
-5. Track all spawned PIDs and kill on server shutdown
+**Solution Implemented**:
+1. ✅ `killAgentProcess()` - SIGTERM with 5s timeout, then SIGKILL fallback
+2. ✅ `cleanupWorktree()` - now also deletes branch + runs `git worktree prune`
+3. ✅ `cleanupOrphanedResources()` - startup scan removes orphaned worktrees, branches, and Claude processes
+4. ✅ `startPeriodicCleanup()` - every 10 minutes, kills stuck agents (>30min runtime)
+5. ✅ `spawnedAgents` Map - global registry tracks all PIDs
+6. ✅ `gracefulShutdown()` - SIGTERM/SIGINT handlers kill all agents and clean up
 
 **Key Files**:
-- `dev-maestro/server.js` (lines 914-930, cleanup function)
-- `dev-maestro/server.js` (lines 870-911, createAgentWorktree)
+- `dev-maestro/server.js` (lines 78-230, cleanup infrastructure)
+- `dev-maestro/server.js` (lines 1078-1125, cleanupWorktree function)
 
 **Success Criteria**:
-- [ ] No orphaned Claude processes after orchestration ends
-- [ ] No orphaned branches (`bd-orch-*`)
-- [ ] No orphaned worktrees (`.agent-worktrees/*`)
-- [ ] Server shutdown cleans up all resources
+- [x] No orphaned Claude processes after orchestration ends
+- [x] No orphaned branches (`bd-*`, `orch-*`)
+- [x] No orphaned worktrees (`.agent-worktrees/*`)
+- [x] Server shutdown cleans up all resources
 
 ---
 
@@ -3240,3 +3242,27 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 - [TASK-317: Shadow Backup Deletion-Aware Restore](#task-317-shadow-backup-deletion-aware-restore--supabase-data-persistence-done)
 - [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md)
 
+
+### ~~TASK-1013~~: Multi-Agent File Locking with Deferred Execution (✅ DONE)
+
+**Status:** ✅ DONE (2026-01-23)
+**Priority:** P1
+
+**Description:** Implemented file locking system for multi-agent coordination to prevent file conflicts when multiple Claude Code sessions work on the same codebase.
+
+**Features:**
+- `task-lock-enforcer.sh` - PreToolUse hook that acquires/checks locks based on MASTER_PLAN.md task-file mappings
+- `deferred-reminder.sh` - UserPromptSubmit hook that notifies when locks release
+- Deferred execution - blocked edits saved to queue instead of blocking agent
+- Real-time monitoring in Dev-Maestro Deps & Locks tab
+- Automated test script for verification
+
+**Files:**
+- `.claude/hooks/task-lock-enforcer.sh`
+- `.claude/hooks/deferred-reminder.sh`
+- `.claude/hooks/test-multi-agent-locking.sh`
+- `.claude/deferred-queue/` (queue storage)
+- `docs/sop/SOP-019-multi-agent-file-locking.md`
+- `~/.dev-maestro/plugins/file-locking/` (portable plugin)
+
+**SOP:** [SOP-019](./sop/SOP-019-multi-agent-file-locking.md)

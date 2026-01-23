@@ -47,6 +47,15 @@ const boardDensities = [
         @update="val => settingsStore.updateSetting('powerGroupOverrideMode', val)"
       />
     </SettingsSection>
+
+    <SettingsSection title="💬 Feedback">
+      <SettingsToggle
+        label="Show undo/redo notifications"
+        description="Display a brief toast when you undo (Ctrl+Z) or redo (Ctrl+Y) an action."
+        :value="settingsStore.showUndoRedoToasts"
+        @update="val => settingsStore.updateSetting('showUndoRedoToasts', val)"
+      />
+    </SettingsSection>
   </div>
 </template>
 

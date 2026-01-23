@@ -183,10 +183,33 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // Listen for auth changes (sign in, sign out, etc.)
-      supabase.auth.onAuthStateChange((_event: string, newSession: Session | null) => {
+      supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
         session.value = newSession
         user.value = newSession?.user || null
         console.log('👤 [AUTH] Auth state changed:', _event, user.value?.id)
+
+        // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
+        if (_event === 'SIGNED_IN' && newSession?.user) {
+          console.log('👤 [AUTH] User signed in - reloading stores...')
+          try {
+            const { useProjectStore } = await import('@/stores/projects')
+            const { useTaskStore } = await import('@/stores/tasks')
+            const { useCanvasStore } = await import('@/stores/canvas')
+
+            const projectStore = useProjectStore()
+            const taskStore = useTaskStore()
+            const canvasStore = useCanvasStore()
+
+            await Promise.all([
+              projectStore.loadProjectsFromDatabase(),
+              taskStore.loadFromDatabase(),
+              canvasStore.loadFromDatabase()
+            ])
+            console.log('✅ [AUTH] Stores reloaded after sign-in')
+          } catch (e) {
+            console.error('❌ [AUTH] Failed to reload stores after sign-in:', e)
+          }
+        }
       })
 
     } catch (e: unknown) {

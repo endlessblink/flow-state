@@ -189,6 +189,26 @@
 | **FEATURE-1020**         | **Full RTL (Right-to-Left) Support**                                     | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add complete RTL language support (Hebrew, Arabic). CSS logical properties, text alignment, layout mirroring, Tailwind RTL plugin.                                                                                   | -                                                      |
 | **TASK-1021**            | **Quick Sort: Better Formatting for Web/Tauri**                          | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Improve Quick Sort UI on desktop (web & Tauri). Better card layout, spacing, typography, visual hierarchy. Distinct from mobile version.                                                                             | -                                                      |
 | **TASK-1022**            | **PWA: Full RTL + Hebrew Support E2E**                                   | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Complete RTL and Hebrew language support for mobile PWA. Text direction, input fields, navigation, date formats, all views tested end-to-end.                                                                        | FEATURE-1020                                           |
+| **FEATURE-1023**         | **Voice Input: Transcription + Task Extraction**                         | **P1**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1023-voice-input-transcription--task-extraction-planned) - Voice input with auto-extraction of task properties (priority, due date, description). Hebrew + English. Full voice control.        | FEATURE-1020                                           |
+| **TASK-1024**            | **Voice: Web Speech API Integration**                                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Integrate Web Speech API for real-time transcription. Support Hebrew + English with auto-detection. Handle browser compatibility.                                                                                     | FEATURE-1023                                           |
+| **TASK-1025**            | **Voice: Mic Button in Quick-Add Bar**                                   | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add mic icon to mobile quick-add bar. Recording state UI (pulsing, waveform). Expand to overlay when recording. Stop on release or tap.                                                                               | FEATURE-1023, TASK-1024                                |
+| **TASK-1026**            | **Voice: Task Property Extraction (NLP)**                                | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Parse transcription to extract: priority, due date, postpone duration, project, title, description. Handle Hebrew ("מחר", "בעדיפות גבוהה") + English.                                                                  | FEATURE-1023, TASK-1024                                |
+| **TASK-1027**            | **Voice: Commands for Existing Tasks**                                   | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Voice commands: "postpone X by 3 days", "mark Y done", "change priority of Z". Task lookup by name/number. Confirmation before action.                                                                                | FEATURE-1023, TASK-1026                                |
+| **TASK-1028**            | **Voice: Confirmation UI + Edit Before Submit**                          | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Show parsed result before creating/modifying. Editable fields (priority, date, title). Confirm/cancel buttons. Visual feedback during recording.                                                                      | FEATURE-1023, TASK-1025, TASK-1026                     |
+| **TASK-1029**            | **Voice: Whisper API Fallback**                                          | **P2**                                              | 📋 **PLANNED**                                                                                                                  | OpenAI Whisper API integration for when Web Speech fails or for complex audio. Cost management (use only when primary fails). Better accuracy for noisy environments.                                                  | FEATURE-1023, TASK-1024                                |
+| **BUG-1030**             | **Quick Sort: Due Date Buttons Not Highlighting**                        | **P1**                                              | 📋 **PLANNED**                                                                                                                  | +3d, +1wk, +1mo buttons don't show selected state when clicked. Only Today/Tomorrow/Wknd highlight. Fix selection state for all date options.                                                                          | TASK-1010                                              |
+| **TASK-1031**            | **Quick Sort: Add "Later This Week" Date Option**                        | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add "This Week" or "Later This Week" option to Quick Sort due date buttons. Provides middle-ground between Tomorrow and Weekend.                                                                                       | BUG-1030                                               |
+| **BUG-1032**             | **Quick Sort: Date/Priority Badges Cropped on Long Text**                | **P1**                                              | 📋 **PLANNED**                                                                                                                  | On browser Quick Sort, longer task descriptions cause date and priority badges to be cropped or disappear. Fix card layout overflow handling.                                                                           | TASK-1021                                              |
+| **TASK-1033**            | **Mobile: Markdown Rendering in Task View**                              | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Mobile PWA task views should render markdown (bold, lists, links, code) like web/Tauri versions. Currently shows raw markdown text.                                                                                     | TASK-346                                               |
+| **BUG-1034**             | **Quick Sort: Multiple Date Buttons Selected Simultaneously**            | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Pressing "Tomorrow" selects both "Tmrw" AND "Wknd" buttons. Only one date option should be selected at a time. Selection state logic broken.                                                                            | BUG-1030                                               |
+| **TASK-1035**            | **Quick Sort: Add Delete Task Option**                                   | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add delete button/action to Quick Sort view. Currently only DONE and SKIP. Options: small trash icon, long-press menu, or third button.                                                                                 | TASK-1010                                              |
+| **TASK-1036**            | **Quick Sort: Swipe Gestures (Left=Delete, Right=Edit)**                 | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Swipe LEFT reveals delete action (red, confirm). Swipe RIGHT opens quick edit panel (reschedule, change priority). Haptic feedback on threshold.                                                                         | TASK-1010, TASK-1035                                   |
+| **TASK-1037**            | **Mobile Today View: Swipe Gestures (Left=Delete, Right=Edit)**          | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Same swipe gestures for Today/Overdue task list. Swipe LEFT = delete, swipe RIGHT = quick edit. Reuse gesture component from TASK-1036.                                                                                  | TASK-1036                                              |
+| **TASK-1038**            | **Mobile Inbox View: Swipe Gestures (Left=Delete, Right=Edit)**          | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Same swipe gestures for Inbox task list. Swipe LEFT = delete, swipe RIGHT = quick edit. Reuse gesture component from TASK-1036.                                                                                           | TASK-1036                                              |
+| **TASK-1039**            | **Mobile List Views: Add Padding Between Tasks**                         | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add spacing/padding between task items in Today, Inbox, and other mobile list views. Currently tasks are too tightly packed.                                                                                              | -                                                      |
+| **BUG-1040**             | **Table View Not Loading**                                               | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Table view fails to load. Investigate cause - component error, data loading issue, or route problem.                                                                                                                        | -                                                      |
+| **TASK-1041**            | **Mobile List Views: Add X Button to Delete Task**                       | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add X/trash button on task items in Today, Inbox list views for quick delete. Confirm before deleting.                                                                                                                      | -                                                      |
+| **TASK-1042**            | **Table/List View: Larger Font + Multi-Line Wrap**                       | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Increase task title font size in Table/List view. Allow long titles to wrap to multiple lines instead of truncating. Improve readability.                                                                                   | -                                                      |
 
 ---
 
@@ -1134,6 +1154,92 @@ I couldn't detect your framework. What are you using?
 - [ ] Graceful shutdown kills all children
 
 ---
+
+#### FEATURE-1023: Voice Input - Transcription + Task Extraction (📋 PLANNED)
+
+**Priority**: P1-HIGH
+**Related**: FEATURE-1020 (RTL Support)
+**Created**: January 23, 2026
+
+**Overview**: Voice input that transcribes speech and auto-extracts task properties (priority, due date, project, description). Supports Hebrew + English with full voice control (create, edit, complete, delete tasks).
+
+**Architecture**:
+```
+User speaks → Web Speech API → Transcription → NLP Parser → Task Properties → Confirmation UI → Create/Edit Task
+                    ↓ (fallback)
+              Whisper API
+```
+
+**Subtasks** (dependency order):
+
+| ID | Task | Priority | Depends On |
+|----|------|----------|------------|
+| TASK-1024 | Web Speech API Integration | P1 | - |
+| TASK-1025 | Mic Button in Quick-Add Bar | P1 | TASK-1024 |
+| TASK-1026 | Task Property Extraction (NLP) | P1 | TASK-1024 |
+| TASK-1027 | Commands for Existing Tasks | P2 | TASK-1026 |
+| TASK-1028 | Confirmation UI + Edit Before Submit | P1 | TASK-1025, TASK-1026 |
+| TASK-1029 | Whisper API Fallback | P2 | TASK-1024 |
+
+**NLP Property Extraction Examples**:
+
+| Input (Hebrew) | Extracted Properties |
+|----------------|---------------------|
+| "תזכיר לי מחר לשלוח מייל בעדיפות גבוהה" | title: "לשלוח מייל", due: tomorrow, priority: high |
+| "בעוד שבועיים לקנות מתנה לאמא" | title: "לקנות מתנה לאמא", due: +2 weeks |
+| "דחה את המשימה של הפגישה ב-3 ימים" | action: postpone, target: "הפגישה", amount: +3 days |
+
+| Input (English) | Extracted Properties |
+|-----------------|---------------------|
+| "Remind me tomorrow to send email high priority" | title: "send email", due: tomorrow, priority: high |
+| "In two weeks buy gift for mom" | title: "buy gift for mom", due: +2 weeks |
+| "Postpone meeting task by 3 days" | action: postpone, target: "meeting", amount: +3 days |
+
+**UI Design**:
+```
+┌─────────────────────────────────────┐
+│ [Quick Add Bar]              [🎤]  │  ← Mic icon in quick-add
+└─────────────────────────────────────┘
+
+When recording:
+┌─────────────────────────────────────┐
+│                                     │
+│         🔴 Recording...             │
+│         ~~~~~~~~~~~~ (waveform)     │
+│                                     │
+│   "תזכיר לי מחר..."                 │  ← Live transcription
+│                                     │
+│         [Stop] [Cancel]             │
+└─────────────────────────────────────┘
+
+Confirmation:
+┌─────────────────────────────────────┐
+│  📝 New Task                        │
+│  ────────────────────────────────── │
+│  Title: [לשלוח מייל          ]      │
+│  Due:   [Tomorrow      ▼]           │
+│  Priority: [High ▼]                 │
+│                                     │
+│       [✓ Create]  [✗ Cancel]        │
+└─────────────────────────────────────┘
+```
+
+**Key Technologies**:
+- Web Speech API (`webkitSpeechRecognition`)
+- OpenAI Whisper API (fallback)
+- Simple NLP parser (regex + keyword matching for dates/priorities)
+
+**Success Criteria**:
+- [ ] Mic button visible in PWA quick-add bar
+- [ ] Hebrew transcription works accurately
+- [ ] English transcription works accurately
+- [ ] Auto-detects language (Hebrew/English)
+- [ ] Extracts priority from "high/urgent/גבוהה/דחוף"
+- [ ] Extracts dates from "tomorrow/מחר/next week/בעוד שבוע"
+- [ ] Shows confirmation UI before creating task
+- [ ] Voice commands work for existing tasks (postpone, complete, etc.)
+- [ ] Whisper fallback activates when Web Speech fails
+- [ ] Works offline (Web Speech only)
 
 ---
 

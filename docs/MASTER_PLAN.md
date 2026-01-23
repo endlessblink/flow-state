@@ -1,5 +1,5 @@
-**Last Updated**: January 23, 2026 (FEATURE-1012-1015 Orchestrator Auto-Detection)
-**Version**: 5.56 (Skill Consolidation 30→18)
+**Last Updated**: January 23, 2026 (Archived 32 completed tasks to MASTER_PLAN_JAN_2026.md)
+**Version**: 5.57 (Documentation Archival)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -181,6 +181,10 @@
 | **FEATURE-1014**         | **Orchestrator: Smart Question System with Pros/Cons**                   | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1014-orchestrator-smart-question-system-planned) - Only ask when uncertain, include pros/cons for each option                                                                               | TASK-303, FEATURE-1013                                 |
 | **FEATURE-1015**         | **Orchestrator: Project Context Caching**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1015-orchestrator-project-context-caching-planned) - Store analyzed project info to avoid re-analysis on each interaction                                                                    | TASK-303, FEATURE-1012                                 |
 | **FEATURE-1016**         | **PWA Icon & Favicon Consistency**                                       | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Use correct FlowState icon (cyberpunk tomato) everywhere: PWA home screen, browser favicon, manifest icons. Ensure all sizes generated correctly.                                                                   | TASK-327                                               |
+| ~~**BUG-1014**~~         | ✅ **DONE** **PWA Mobile UI Leaking to Desktop**                         | **P0**                                              | ✅ **DONE** (2026-01-23)                                                                                                        | [SOP-026](./sop/SOP-026-mobile-route-guards.md) - Added router guard to redirect desktop users from mobile routes                                                                                                   | ROAD-004, TASK-346                                     |
+| **TASK-1017**            | **Mobile: Expanded Date Options (2wk, 1mo, 2mo)**                        | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add more date options on mobile: "In 2 weeks", "In 1 month", "In 2 months". Design should feel seamless with existing UI.                                                                                            | TASK-1005                                              |
+| **BUG-1018**             | **Quick Sort: Project Selection Broken + Counter UI**                    | **P1**                                              | 📋 **PLANNED**                                                                                                                  | PWA Quick Sort project selection not functional. Counter sliding up breaks flow - explore alternative UI patterns (dropdown, chips, bottom sheet).                                                                   | TASK-1010                                              |
+| **BUG-1019**             | **Dev-Maestro: Swarm Agent Cleanup + OOM Prevention**                    | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-1019-dev-maestro-swarm-agent-cleanup-planned) - Orphaned agents consume 2.4GB RAM, spawn Vitest workers (16GB spikes), caused 336 OOM kills in 7 days. Need timeout, cleanup, deduplication.       | TASK-303, TASK-323                                     |
 
 ---
 
@@ -198,6 +202,8 @@
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
 
+---
+
 ### BUG-352: Mobile PWA "Failed to Fetch" (Network/Cert Issue)
 **Priority**: P0-CRITICAL
 **Status**: 📋 PLANNED (for Tomorrow)
@@ -206,32 +212,6 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 1.  **SSL/Cert Issue**: Android/iOS might reject the `sslip.io` cert if the chain isn't perfect (Caddy usually handles this, but maybe an intermediate is missing).
 2.  **Mobile-Specific Code Path**: Does the mobile layout have a hardcoded `localhost` fetch somewhere that the desktop layout doesn't use?
 3.  **CORS**: Mobile browser enforcing stricter CORS?
-
-### ~~TASK-356~~: Fix Tauri App Migration Error (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-22)
-
-Tauri app failed on startup with "Remote migration versions not found in local migrations directory" because it tried to run `supabase db push --local` from arbitrary working directory.
-
-**Root Cause**: Tauri apps run from `/usr/bin/` or user's home directory, not the project directory. The Supabase CLI needs to be in a directory with `supabase/migrations/` to push migrations.
-
-**Solution**: Changed `run_supabase_migrations()` in `lib.rs` to verify DB health via REST API instead of pushing migrations. This works regardless of working directory.
-
-**Prevention (Architectural Rule)**:
-- Migrations should be applied during **development setup**, not at app runtime
-- Runtime should only **verify** the database is ready, not modify it
-- Use REST API health checks which are directory-independent
-- Added to Tauri SOP: "Never run Supabase CLI commands that require project directory context"
-
-**Files Changed**:
-- `src-tauri/src/lib.rs` - `run_supabase_migrations()` now uses curl to check `/rest/v1/tasks` endpoint
-
-**Verification**:
-- [x] Rebuild Tauri app (`npm run tauri build`)
-- [x] App launches without migration error
-- [x] Database operations work normally
-- [x] User confirmed fix works (2026-01-22)
 
 ---
 
@@ -264,34 +244,6 @@ Implemented batch capture mode: rapidly add multiple tasks first, then sort them
 
 ---
 
-### ~~BUG-357~~: Tauri Edit Modal Shows Wrong Task + Edits Don't Update (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-22)
-
-**Symptoms**:
-1. Double-clicking a task on canvas opens edit modal showing DIFFERENT task's data
-2. After saving edits, the task card on canvas doesn't reflect the changes
-
-**Root Cause**:
-1. `useTaskNodeActions.triggerEdit()` was passing stale Vue Flow node data instead of fresh store data
-2. Tauri/WebKitGTK has reactivity issues where Vue's computed properties don't properly track Pinia store changes
-
-**Solution**:
-1. Modified `triggerEdit()` to fetch fresh task from store before opening modal
-2. Added `canvasUiStore.requestSync('user:manual')` after saving to force Vue Flow node refresh
-
-**Files Changed**:
-- `src/composables/canvas/node/useTaskNodeActions.ts` - `triggerEdit()` now looks up fresh task
-- `src/composables/tasks/useTaskEditActions.ts` - `saveTask()` now triggers canvas sync
-
-**SOP**: [SOP-025-tauri-vue-flow-reactivity.md](./sop/SOP-025-tauri-vue-flow-reactivity.md)
-
-**Verification**:
-- [x] Code change implemented
-- [x] Build passes
-- [x] User confirmed fix works in Tauri app (2026-01-22)
-
 ---
 
 ### TASK-357: Set Up VPS → Local Postgres Replication (📋 PLANNED)
@@ -318,126 +270,9 @@ Set up one-way Postgres logical replication from VPS to local for backup/redunda
 
 ---
 
-### ~~TASK-358~~: Create VPS Backup System (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-22)
-
-Automated backup system for VPS Supabase data with local replication.
-
-**Implemented**:
-1. [x] `pg_dump` script with timestamp (`/root/scripts/supabase-backup.sh`)
-2. [x] Backup rotation (7 daily, 4 weekly, 12 monthly)
-3. [x] Cron job for daily backups (3 AM UTC)
-4. [x] Local sync via rsync (`~/scripts/sync-vps-backups.sh`)
-5. [x] Systemd timer for 6-hourly local sync
-
-**Backup Locations**:
-- VPS: `/var/backups/supabase/{daily,weekly,monthly}`
-- Local: `~/backups/flowstate-vps/`
-
-**Commands**:
-```bash
-# Manual VPS backup
-ssh root@84.46.253.137 '~/scripts/supabase-backup.sh'
-
-# Manual local sync
-~/scripts/sync-vps-backups.sh
-
-# Check timer status
-systemctl --user status flowstate-backup-sync.timer
-```
-
-**SOP**: TODO - Create `docs/sop/SOP-XXX-VPS-BACKUP.md`
-
 ---
 
-### ~~TASK-371~~: Deploy FlowState to VPS + Set Up Replication (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-22)
-
-Deploy FlowState schema to VPS and set up real-time Postgres replication for PWA access.
-
-**Architecture**:
-```
-PWA/Mobile → VPS (primary, read/write) → Local (backup, real-time sync)
-          │                                    ▲
-          │                                    │
-          └───────── Postgres Logical ─────────┘
-                     Replication
-```
-
-**Steps**:
-1. [x] Push FlowState migrations to VPS ✅
-2. [x] Export local data (225 tasks, 9 groups, 3 projects, 5 timer_sessions) ✅
-3. [x] Import data to VPS ✅
-4. [x] Set up VPS → Local Postgres replication ✅
-5. [x] SSH access investigated - not banned, VPS under brute-force attack (627 bans) ✅
-6. [x] Test PWA connects to VPS ✅
-7. [x] Verify replication working ✅
-
-**Implementation Details**:
-
-| Component | Configuration |
-|-----------|---------------|
-| VPS Postgres Port | 5433 (via socat proxy to supabase-db) |
-| VPS Publication | `flowstate_to_local` (10 tables) |
-| Local Subscription | `sub_from_vps` |
-| Replication Slot | `local_sub_slot` (active) |
-| Service | `/etc/systemd/system/socat-postgres.service` |
-
-**VPS Supabase Credentials**:
-- URL: `http://84.46.253.137:8000`
-- Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE`
-
-**Replication Verified**: Changes on VPS appear on Local within seconds
-
-**Progress Log**:
-- 2026-01-22 21:55: Started - VPS has empty schema, local has all data
-- 2026-01-22 22:05: Migrations applied - VPS now has all 10 FlowState tables
-- 2026-01-22 22:10: SSH issue investigated - not banned, VPS under attack
-- 2026-01-22 23:00: Data exported from local and imported to VPS
-- 2026-01-22 23:02: Postgres logical replication configured and verified working
-
 ---
-
-### ~~TASK-1001~~: Configure Custom Domain (in-theflow.com) with Caddy SSL (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-23)
-
-Set up custom domain for FlowState VPS with automatic HTTPS via Caddy and deploy PWA.
-
-**Domain**: `in-theflow.com`
-**VPS IP**: `84.46.253.137`
-
-**DNS Records** (Cloudflare - proxied):
-| Type  | Name | Value          |
-|-------|------|----------------|
-| A     | @    | 84.46.253.137  |
-| A     | api  | 84.46.253.137  |
-| CNAME | www  | in-theflow.com |
-
-**Steps**:
-1. [x] Configure DNS records at Cloudflare ✅
-2. [x] Install Caddy on VPS ✅
-3. [x] Create Cloudflare Origin Certificate (15-year, expires 2041) ✅
-4. [x] Configure Caddy with origin cert for Full SSL ✅
-5. [x] Test HTTPS endpoints working ✅
-6. [x] Create `.env.production` with api.in-theflow.com ✅
-7. [x] Build PWA for production ✅
-8. [x] Deploy PWA dist/ to VPS (`/var/www/flowstate/`) ✅
-9. [x] Configure Caddy to serve PWA with SPA fallback ✅
-10. [x] Test full flow (site, API, manifest, SW) ✅
-
-**Certificates Backup**: `~/secrets/in-theflow.com/`
-
-**Live Endpoints**:
-- `https://in-theflow.com` → PWA frontend ✅
-- `https://api.in-theflow.com` → Supabase API ✅
-
-**SOP**: [SOP-026-custom-domain-deployment.md](./sop/SOP-026-custom-domain-deployment.md)
 
 ---
 
@@ -479,37 +314,7 @@ Implement voice recording → transcription → task creation using an API (Whis
 
 ---
 
-### ~~TASK-1003~~: Mobile Dev Mode for Claude Code Testing (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-23)
-
-Enable Claude Code (via Playwright) to access and test the mobile PWA during development.
-
-**Solution Implemented**: Playwright viewport resize + production PWA
-
-**Approach**:
-- Use `browser_resize` to set mobile viewport (390x844 for iPhone 14 Pro)
-- Test against production PWA at https://in-theflow.com
-- Real device testing done manually by user on actual phone
-
-**Why this works**:
-- Covers 90% of mobile testing needs (responsive layouts, mobile UI)
-- Production site always available, no tunnel setup needed
-- User tests on real phone for device-specific issues
-
-**Troubleshooting**:
-- "JWT issued at future" error → Clear localStorage and re-login
-- CORS errors → Check Caddy config on VPS
-
-**SOP**: [SOP-027-mobile-testing-workflow.md](./sop/SOP-027-mobile-testing-workflow.md)
-
 ---
-
-### ~~BUG-342~~: Canvas Multi-Drag Bug - Unselected Tasks Move Together (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-23) - Closed per user request, will reactivate if issue resurfaces
 
 ---
 
@@ -543,92 +348,7 @@ Sync errors when saving tasks with deleted parent: `insert or update on table "t
 
 ---
 
-### ~~BUG-339~~: Auth Reliability - Tauri Signouts & Password Failures (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-23)
-
-Multiple auth reliability issues: random Tauri signouts, password login failures, and seeded credentials not working.
-
-**Root Causes Identified**:
-1. **Password Login Failures**: `seed.sql` used `crypt()` instead of `extensions.crypt()` with wrong cost factor
-2. **Tauri IPC Failures**: Missing `ipc:` and `http://ipc.localhost` in CSP causing protocol fallback
-3. **Session Instability**: Supabase client missing explicit auth configuration for desktop apps
-
-**Fixes Implemented**:
-- [x] `seed.sql`: Changed to `extensions.crypt(password, extensions.gen_salt('bf', 10))` for GoTrue compatibility
-- [x] `tauri.conf.json`: Added `ipc:` and `connect-src` directive for IPC protocol
-- [x] `supabase.ts`: Added explicit auth config with custom storage key and Tauri-aware settings
-- [x] `taskPersistence.ts`: Only save to guest localStorage when NOT authenticated (prevents Supabase data leaking to guest storage)
-- [x] `taskPersistence.ts`: Added ID-based deduplication on guest mode load (prevents task congestion)
-- [x] `auth.ts`: Migration now uses `safeCreateTask()` to preserve task IDs and respect TASK-344 Immutable ID System
-- [x] `auth.ts`: Added Task type import for TypeScript compliance
-- [x] `auth.ts`: Added proactive token refresh (5 min before expiry) to prevent session expiration
-- [x] `guestModeStorage.ts`: Added `clearStaleGuestTasks()` to clear legacy keys (`pomoflow-guest-tasks`)
-- [x] `useAppInitialization.ts`: Call `clearStaleGuestTasks()` when authenticated to prevent localStorage contamination
-- [x] Database: Cleared 141 duplicate tasks (set `is_deleted = true`)
-
-**Files Changed**:
-- `supabase/seed.sql` - Fixed password hashing
-- `src-tauri/tauri.conf.json` - Fixed CSP for IPC
-- `src/services/auth/supabase.ts` - Enhanced auth client config
-- `src/stores/tasks/taskPersistence.ts` - Guest localStorage isolation + deduplication
-- `src/stores/auth.ts` - Migration with safeCreateTask, proactive token refresh
-- `src/utils/guestModeStorage.ts` - Legacy key clearing
-- `src/composables/app/useAppInitialization.ts` - Clear stale guest tasks on auth
-
-**Verification**:
-- [x] Auth API test passes: `curl POST /auth/v1/token` returns valid JWT
-- [x] Database verified: 64 unique tasks, 0 content duplicates
-- [x] Guest mode deduplication: Removes duplicates on load
-- [x] Tauri app login tested by user
-- [x] Auth protections verified (2026-01-22):
-  - ✅ **Proactive token refresh**: Logs show "Scheduling token refresh in 55 minutes" (5 min before 60-min expiry)
-  - ✅ **Retry with backoff**: `useSupabaseDatabase.ts` retries 401/403/network errors 3x with exponential backoff
-  - ✅ **Session persistence**: Session survives app reload via localStorage
-  - ✅ **Emergency auth refresh**: WebSocket 403 triggers refresh attempt, not sign-out
-- [x] No random signouts after extended Tauri use (user confirmed stable)
-
-**Risk Assessment**:
-- Web Browser: **LOW** - Auth system is reliable
-- Tauri Desktop: **MEDIUM** - Storage adapter may have edge cases (see BUG-340 fix)
-
-**SOP**: See `docs/sop/active/SOP-AUTH-reliability.md`
-
 ---
-
-### ~~TASK-349~~: Make Guest Mode Ephemeral (Clean on Restart) (✅ DONE)
-
-**Priority**: P2
-**Status**: ✅ DONE (2026-01-21)
-
-**Problem**: Guest tasks persisted in localStorage across page refreshes/restarts, causing confusion when users expected a fresh start.
-
-**Requested Behavior**:
-- Guest mode starts fresh on every app restart
-- Authenticated users keep all their tasks (from Supabase)
-- Same-session sign-in still migrates tasks (before any restart)
-
-**Changes Made**:
-
-1. **`src/utils/guestModeStorage.ts`**
-   - Added `flowstate-guest-tasks` to `GUEST_EPHEMERAL_KEYS` array
-   - Guest tasks now cleared on app startup like other ephemeral data
-
-2. **`src/stores/auth.ts`**
-   - Fixed `signOut()` to clear task store and canvas store on logout
-   - Fixed `migrateGuestData()` to load from Supabase even when no guest tasks exist
-   - Added canvas store reload after migration
-
-3. **`src/stores/tasks.ts`** / **`src/stores/canvas.ts`**
-   - Added `clearAll()` methods to reset store state on sign-out
-
-4. **`src/assets/canvas-view-layout.css`**
-   - Fixed inbox panel CSS specificity conflict for proper positioning
-
-**Bug Found & Fixed**: `migrateGuestData()` returned early without loading user data when no guest tasks existed. This caused sign-in to show empty canvas until page refresh.
-
-**SOP**: See `docs/sop/active/SOP-016-guest-mode-auth-flow.md`
 
 ---
 
@@ -658,171 +378,13 @@ Multiple auth reliability issues: random Tauri signouts, password login failures
 
 ---
 
-### ~~BUG-336~~: Fix Backup Download in Tauri App (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-20)
-
-Can't download backups from Tauri desktop app - file save dialog doesn't work.
-
-**Root Causes Found & Fixed**:
-1. **PWA Plugin CSP Error** - `VitePWA` was conditionally excluded (`!isTauri && VitePWA()`), but this didn't provide stub modules for `virtual:pwa-register/vue` imports, causing CSP errors that broke Vue event handlers
-2. **Tauri Detection Not Working in Dev** - `TAURI_ENV_PLATFORM` is only set during `tauri build`, not `tauri dev`
-3. **Missing XDG Portal Fallback** - `zenity` package needed for Linux dialog fallback
-
-**Solution**:
-- Changed `vite.config.ts` to use `VitePWA({ disable: isTauri })` which provides proper stub modules
-- Added `TAURI_DEV=true` env var in `tauri.conf.json` `beforeDevCommand`
-- Updated `isTauri` detection to check for both `TAURI_ENV_PLATFORM` (build) and `TAURI_DEV` (dev)
-- Upgraded `@tauri-apps/plugin-dialog` to 2.6.0 with `xdg-portal` feature
-- Added auto-detection for local vs remote Supabase in migration command
-
-**Files Changed**:
-- `vite.config.ts` - PWA disable option, isTauri detection
-- `src-tauri/tauri.conf.json` - beforeDevCommand with TAURI_DEV env var
-- `src-tauri/Cargo.toml` - dialog plugin with xdg-portal feature
-- `src-tauri/src/lib.rs` - Supabase migration auto-detection
-- `package.json` - Upgraded Tauri plugin versions
-
-**Tasks**:
-- [x] Investigate Tauri file save dialog implementation
-- [x] Check if Tauri plugin for dialogs is properly configured
-- [x] Test backup download functionality in browser vs Tauri
-- [x] Fix file save dialog or implement alternative download method
+---
 
 ---
 
-### ~~TASK-343~~: Fix Canvas Inbox Today Filter + Add Time Filter Dropdown (✅ DONE)
-
-**Priority**: P2
-**Status**: ✅ DONE (2026-01-20)
-
-**Problem**: The "Today" filter in Canvas Inbox showed tasks that weren't due today. A task with due date "Jan 26" appeared when "Today" filter is active (today is Jan 20).
-
-**Root Cause** (in `src/composables/useSmartViews.ts:116-125`):
-The `isTodayTask()` function included tasks created today regardless of their due date. This was incorrect - a task with a future due date should NOT appear in "Today" just because it was created today.
-
-**Solution**:
-1. **Bug Fix**: Changed `if (task.createdAt)` to `if (!task.dueDate && task.createdAt)` - only include created-today tasks if they have NO due date
-2. **New Feature**: Replaced single "Today" toggle button with dropdown offering: All, Today, This Week, This Month
-3. Added `isThisMonthTask()` function for month filtering
-
-**Files Changed**:
-- `src/composables/useSmartViews.ts` - Bug fix + added `isThisMonthTask()`
-- `src/composables/inbox/useUnifiedInboxState.ts` - Expanded filter types + counts
-- `src/components/inbox/unified/UnifiedInboxHeader.vue` - Replaced toggle with NDropdown
-- `src/components/inbox/UnifiedInboxPanel.vue` - Pass new props
-
 ---
 
-### ~~TASK-344~~: Immutable Task ID System - Prevent System-Generated Duplicates (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-20)
-**SOP**: [`docs/sop/active/SOP-013-immutable-task-ids.md`](docs/sop/active/SOP-013-immutable-task-ids.md)
-
-**Problem**: The system (sync, backup restore, Claude Code automation) can accidentally create duplicate tasks with the same ID or recreate deleted tasks. Task IDs should be immutable - once an ID is used (or was used), it can NEVER be recreated by the system.
-
-**Solution - ID Immutability Enforcement**:
-```
-Once a task ID is used → That ID is PERMANENTLY reserved
-- Active task exists → ID is in use
-- Soft-deleted task exists → ID is still reserved
-- Hard-deleted task → ID recorded in tombstones, still reserved
-```
-
-**Implementation Layers**:
-| Layer | Component | Protection |
-|-------|-----------|------------|
-| Database | `safe_create_task()` RPC | `FOR UPDATE SKIP LOCKED`, checks existing + tombstones |
-| Database | `trg_task_tombstone` trigger | Auto-creates permanent tombstone on DELETE |
-| Application | `safeCreateTask()` | TypeScript wrapper, calls RPC or manual fallback |
-| Application | `checkTaskIdsAvailability()` | Batch check for restore/sync operations |
-| Audit | `task_dedup_audit` table | Logs all dedup decisions with reasons |
-
-**Files Changed**:
-- `supabase/migrations/20260120000002_immutable_task_ids.sql` - Permanent tombstones, DELETE trigger, safe_create_task RPC, audit table
-- `src/composables/useSupabaseDatabase.ts` - `safeCreateTask()`, `checkTaskIdsAvailability()`, `logDedupDecision()`
-- `src/composables/useBackupSystem.ts` - Uses `safeCreateTask()` for each restored task (race-condition safe)
-- `src/stores/tasks/taskPersistence.ts` - Dedup-aware `importTasks()`
-
 ---
-
-### ~~TASK-338~~: Comprehensive Stress Testing Agent/Skill (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-23)
-
-Create a specialized stress testing agent/skill that rigorously tests all completed tasks, finds missed issues, vulnerabilities, and loopholes. Must assess what other agents missed and ensure system reliability.
-
-**Scope**:
-- **Reliability Testing** - Verify all critical paths work under stress
-- **Backup System Verification** - Test backup/restore integrity, shadow-mirror reliability
-- **Container Stability** - Docker/Supabase container health, restart resilience
-- **Redundancy Assessment** - Identify single points of failure
-- **Security Audit** - OWASP top 10, input validation, auth edge cases
-- **Data Integrity** - Sync conflicts, race conditions, deduplication
-- **Performance Profiling** - Memory leaks, response times under load
-
-**Research Phase** (✅ COMPLETE 2026-01-20):
-- [x] Research Vue.js stress testing best practices (2026) - Artillery, k6, Vitest bench, Fuite
-- [x] Research Supabase reliability patterns and testing approaches - pgTAP, RLS testing, WebSocket monitoring
-- [x] Research Docker/container health monitoring strategies - cAdvisor, Pumba, Prometheus
-- [x] Research backup verification methodologies - pgBackRest, restore testing, checksum validation
-- [x] Research security testing tools for web apps - OWASP ZAP, Trivy, Snyk
-- [x] Analyze FlowState codebase for critical paths to test - Full critical path map created
-
-**Research Output**: `docs/research/TASK-338-stress-testing-research.md`
-
-**Implementation Phase** (✅ COMPLETE 2026-01-23):
-- [x] Design skill architecture based on research findings
-- [x] Create skill file structure (`.claude/skills/stress-tester/`)
-- [x] Add to skills.json configuration
-- [x] Implement backup/restore verification tests (`npm run test:backup`)
-- [x] **FIX**: Shadow mirror JSON structure - added `timestamp` and `checksum` at root level (2026-01-22)
-- [x] **FIX**: Checksum algorithm mismatch - aligned SHA256 algorithm between mirror and verifier (2026-01-22)
-- [x] Create test matrix covering all completed TASK-* items (`tests/stress/test-matrix.md`)
-- [x] Implement reliability test suite (`data-integrity.spec.ts`)
-- [x] Implement container stability checks (`container-stability.spec.ts`)
-- [x] Implement security audit checks (`security.spec.ts`)
-- [x] Create comprehensive report generation (`scripts/generate-stress-report.cjs`)
-- [x] Integrate with existing qa-testing skill (updated `qa-testing/SKILL.md`)
-
-**Success Criteria**:
-- Catches issues that manual testing and qa-testing skill miss
-- Provides actionable vulnerability reports
-- Verifies backup system works under all conditions
-- Validates container orchestration reliability
-- Zero false positives in security audit
-
-**Sub-Tasks** (Created 2026-01-22):
-- TASK-361: Container Stability Tests
-- TASK-362: Sync Conflict Resolution Tests
-- TASK-363: Auth Edge Case Tests
-- TASK-364: WebSocket Stability Tests
-- TASK-365: Actual Restore Verification
-- TASK-366: Redundancy Assessment
-
----
-
-### ~~TASK-361~~: Stress Test - Container Stability (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-23)
-**Depends On**: TASK-338
-
-Test Docker/Supabase container restart resilience.
-
-**Implemented Tests** (`tests/stress/container-stability.spec.ts`):
-- [x] Docker containers running check
-- [x] Supabase API reachability check
-- [x] App database connection check
-- [x] Network interruption recovery
-- [x] WebSocket reconnection after network drop
-- [x] Multiple rapid refreshes data consistency
-- [x] Manual tests documented for DB restart and full stack restart
-
-**Files**: `tests/stress/container-stability.spec.ts`
 
 ---
 
@@ -882,31 +444,6 @@ Test Supabase Realtime reconnection under stress.
 
 ---
 
-### ~~TASK-365~~: Stress Test - Actual Restore Verification (✅ DONE)
-
-**Priority**: P0
-**Status**: ✅ DONE (2026-01-22)
-**Depends On**: TASK-338
-
-Test actual backup restore functionality (not just file existence).
-
-**Implemented Tests** (`npm run test:restore`):
-- [x] Backup files exist and are readable
-- [x] Backup structure validation (tasks, groups, timestamp, checksum)
-- [x] Task restorability (required fields, no duplicates)
-- [x] Group restorability (required fields, no duplicates)
-- [x] Checksum integrity verification
-- [x] Restore simulation (dry run)
-- [x] Relationship integrity (parent references)
-
-**Playwright E2E** (`npm run test:restore:e2e`):
-- [x] Full restore cycle: create → backup → delete → restore → verify
-- [x] Shadow backup validation
-
-**Files**:
-- `scripts/verify-restore.cjs` - Node.js 14-point verification
-- `tests/stress/restore-verification.spec.ts` - Playwright E2E tests
-
 ---
 
 ### TASK-366: Stress Test - Redundancy Assessment (📋 PLANNED)
@@ -943,41 +480,6 @@ When multiple tasks share the same position (stacked), the distribute functions 
 - `src/composables/canvas/useCanvasAlignment.ts`
 
 ---
-
-### ~~TASK-340~~: Layout Submenu Icon Grid Panel (✅ DONE)
-
-**Priority**: P2
-**Status**: ✅ DONE (2026-01-21)
-
-Replace the Layout submenu list with a compact icon grid panel (industry standard pattern used by Figma, Adobe, Canva).
-
-**Problem**:
-- Current Layout submenu has 11 items that get cut off at viewport edges
-- Nested submenus are problematic UX (users "fall out" when moving cursor)
-
-**Solution**:
-- Convert to icon grid layout with grouped sections:
-  - **Align**: 2x3 grid (Left, Center H, Right | Top, Center V, Bottom)
-  - **Distribute**: 1x2 row (Horizontal, Vertical)
-  - **Arrange**: 1x3 row (Row, Column, Grid)
-- Add tooltips for discoverability
-- Much more compact, fits any viewport
-
-**Implementation Notes** (critical for Tauri compatibility):
-- MUST use existing `submenu submenu-teleported` base classes (proven to work with Tauri's WebView)
-- MUST use `menu-item` class on all buttons (has working `pointer-events: auto`)
-- Add visual modifier classes (`layout-grid-mode`, `menu-item-icon`) on top of working base
-- See SOP: `docs/sop/SOP-013-teleported-menu-patterns.md`
-
-**Files Changed**:
-- `src/components/canvas/CanvasContextMenu.vue`
-
-**Success Criteria**:
-- [x] Icon grid renders correctly
-- [x] All alignment/distribution functions work
-- [x] Tooltips show on hover
-- [x] Fits in viewport without cutoff
-- [x] Works in Tauri (critical - first attempt failed due to click handling)
 
 ---
 
@@ -1025,160 +527,7 @@ Target: Create 3 organized files from 12 scattered SOPs
 
 ---
 
-### ~~TASK-317~~: Shadow Backup Deletion-Aware Restore + Supabase Data Persistence (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-19)
-**Root Cause**: Supabase crash wiped auth.users, shadow backup restored deleted items
-
-**Problem Analysis**:
-1. **Supabase Data Loss** - When Supabase containers crash/restart, auth.users table gets reset
-2. **Shadow Backup Overwrites** - Empty snapshots (when DB unreachable) overwrite good backups
-3. **Deletion Not Tracked** - Backup can't distinguish "deleted" from "never existed"
-4. **Incomplete Restore** - Parent-child ordering not respected, some items fail FK constraints
-
-**Requirements (MUST achieve all)**:
-- ✅ Items created and NOT deleted → MUST be fully restored (100% coverage)
-- ✅ Items deleted by user → MUST NOT be restored
-- ✅ Supabase crash/restart → Data survives without manual intervention
-- ✅ Auth credentials → Persist across restarts OR auto-recreate dev user
-
-**Solution - 4 Layers of Protection**:
-
-**Layer 1: Supabase Data Persistence (Prevent Loss at Source)**
-- [ ] Investigate why `auth.users` resets on container restart (likely schema re-init)
-- [ ] Configure PostgreSQL data persistence in Docker volume
-- [ ] Create `supabase/seed.sql` with dev user auto-creation (fallback safety net)
-- [ ] Add pre-stop hook: graceful shutdown before any container removal
-- [ ] Document safe restart: ALWAYS use `supabase stop` (NEVER `docker rm -f`)
-- [ ] Backup `.env` Supabase credentials separately
-
-**Layer 2: Shadow Backup Smart Saving (Prevent Corrupted Backups)**
-- [ ] **Threshold Guard**: Skip save if item count drops >50% from last good snapshot
-- [ ] **Connection Check**: Validate DB reachable before fetch, tag snapshot `connection_healthy`
-- [ ] **Protected Ring**: Keep last 10 snapshots with item_count > 0 as immutable
-- [ ] **Alert on Anomaly**: Log WARNING + optional notification on dramatic drops
-- [ ] **Atomic Writes**: Write to temp file, then rename (prevent partial corruption)
-
-**Layer 3: Complete Item Tracking (Track Everything Needed for Full Restore)**
-- [ ] **Deletion State**: Include `is_deleted` boolean in every snapshot item
-- [ ] **Deletion Timestamp**: Include `deleted_at` to know when deletion occurred
-- [ ] **Creation Timestamp**: Include `created_at` to verify item legitimacy
-- [ ] **User Mapping**: Track user email↔id mapping (for re-signup scenarios)
-- [ ] **Parent References**: Store `parent_id`/`parent_group_id` for ordering
-- [ ] **Schema Version**: Tag snapshots with schema version for compatibility
-
-**Layer 4: Reliable Restore (Restore Correctly & Completely)**
-- [ ] **Deletion Filter**: Only restore where `is_deleted = false`
-- [ ] **Topological Sort**: Insert parents before children (prevent FK errors)
-- [ ] **User ID Remap**: Automatically map old user_id → new user_id
-- [ ] **Upsert Strategy**: `ON CONFLICT DO UPDATE` for idempotent restores
-- [ ] **Validation**: Count restored items, compare to expected, report mismatches
-- [ ] **Preview Mode**: Show what WILL be restored before committing
-- [ ] **Transaction Safety**: Wrap in transaction, rollback on any error
-
-**Files to Modify**:
-- `src/composables/useBackupSystem.ts` - Smart save + threshold logic
-- `src/utils/shadowMirror.ts` - Enhanced schema with deletion tracking
-- `supabase/seed.sql` (new) - Dev user auto-creation fallback
-- `scripts/restore-from-shadow.ts` (new) - Full restore with ordering + remapping
-- `scripts/validate-backup.ts` (new) - Backup integrity checker
-
-**Verification Tests**:
-- [ ] Create 10 items → Force Supabase crash → Restart → All 10 items present
-- [ ] Delete 3 items → Crash → Restore → Only 7 items restored
-- [ ] Kill DB mid-backup → No empty snapshot saved → Last good preserved
-- [ ] Nested groups restore → Parents inserted first → Zero FK errors
-- [ ] New user signup → Restore → Old user_id remapped to new → Data accessible
-- [ ] 1000 backup cycles → Protected ring of 10 snapshots still intact
-
 ---
-
-### ~~TASK-305~~: Tauri Desktop Distribution - Complete Setup (✅ DONE)
-
-**Priority**: P1-HIGH
-**Status**: ✅ DONE (2026-01-18)
-**Related**: TASK-079 (Tauri Desktop & Mobile)
-**SOP**: [SOP-011](./sop/SOP-011-tauri-distribution.md)
-
-Complete the Tauri desktop distribution setup for open-source release. Enable end users to install FlowState as a standalone desktop app with automated Docker + Supabase local stack setup.
-
-**Backend Implementation (✅ COMPLETE)**:
-
-- [x] Rust backend with Docker/Supabase orchestration (`lib.rs`)
-- [x] `check_docker_status`, `start_docker_desktop` (platform-specific)
-- [x] `check_supabase_status`, `start_supabase`, `stop_supabase`
-- [x] `run_supabase_migrations` - runs `supabase db push`
-- [x] `cleanup_services` - graceful shutdown
-- [x] Shell plugin + capabilities configured
-
-**Frontend Implementation (✅ COMPLETE)**:
-
-- [x] Vue startup composable (`useTauriStartup.ts`)
-- [x] Startup screen UI (`TauriStartupScreen.vue`)
-- [x] Error detection: Docker not installed, not running, port conflicts
-- [x] Error detection: Supabase CLI missing, port conflicts
-- [x] Targeted help text for each error type
-- [x] App.vue integration (Tauri detection)
-- [x] PWA disabled for Tauri builds
-
-**Renaming Pomo-Flow → FlowState (✅ COMPLETE - 2026-01-18)**:
-
-- [x] `tauri.conf.json` - FlowState, com.flowstate.app
-- [x] `Cargo.toml` - Updated metadata, author, license, repository
-- [x] `capabilities/default.json` - FlowState description
-- [x] All source files - UI text, branding, environment URLs updated
-- [x] Test files - Updated assertions and descriptions
-
-**CI/CD Release Workflow (✅ COMPLETE - 2026-01-19)**:
-
-- [x] `.github/workflows/release.yml` - Multi-platform builds
-- [x] Linux (ubuntu-22.04) - AppImage, .deb, .rpm
-- [x] Windows (windows-latest) - .exe, .msi
-- [x] macOS (macos-latest) - .dmg (arm64 + x86_64)
-- [x] Automatic draft release creation on tag push
-- [x] Fixed: `tauriScript: npm run tauri` (was defaulting to pnpm)
-- [x] Fixed: Added Rust targets for macOS cross-compilation
-- [x] Verified: All 4 platform builds passing (2026-01-19)
-
-**Auto-Updater Signing (✅ COMPLETE - 2026-01-18)**:
-
-- [x] Generated signing keypair: `~/.tauri/flow-state.key`
-- [x] Added to GitHub secrets: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-- [x] Updated `tauri.conf.json` with public key
-- [x] Configured update endpoint: `https://github.com/endlessblink/flow-state/releases/latest/download/latest.json`
-
-**Local Linux Install (✅ COMPLETE - 2026-01-18)**:
-
-- [x] Built .deb package locally
-- [x] Installed via `dpkg -i`
-- [x] Desktop shortcut working (KDE Plasma)
-- [x] App launches from desktop
-
-**Files**:
-
-- `src-tauri/src/lib.rs` - Rust commands (9 Tauri commands)
-- `src-tauri/Cargo.toml` - Dependencies + metadata
-- `src-tauri/tauri.conf.json` - App identity + bundle config + updater pubkey
-- `src/composables/useTauriStartup.ts` - Startup sequence
-- `src/components/startup/TauriStartupScreen.vue` - UI
-- `.github/workflows/release.yml` - Multi-platform CI/CD
-
-**User Prerequisites**:
-
-| Software | Why | Install |
-|----------|-----|---------|
-| Docker Desktop | Runs Supabase containers | docker.com/products/docker-desktop |
-| Supabase CLI | Manages local database | `npm install -g supabase` |
-
-**Success Criteria**:
-
-- [x] App automatically starts Docker + Supabase
-- [x] Clear error messages guide users to fix issues
-- [x] App cleans up services on exit
-- [x] Local Linux install works end-to-end
-- [x] Auto-updater signing configured
-- [x] GitHub Actions release workflow operational
 
 ---
 
@@ -1295,32 +644,6 @@ Complete the Tauri desktop distribution setup for open-source release. Enable en
 - [ ] Test with real completion claims
 
 ---
-
-### ~~BUG-336~~: Ctrl+Z Not Working After Shift+Delete (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Status**: Complete
-**Completed**: January 22, 2026
-**Created**: January 20, 2026
-
-**Problem**: When using Shift+Delete to permanently delete a task from the canvas, Ctrl+Z (undo) doesn't restore it. Regular Delete (moves to inbox) works fine with undo.
-
-**Root Cause**: In `useCanvasTaskActions.ts:294-295`, the permanent delete path calls `taskStore.permanentlyDeleteTask()` directly **without** recording the operation in the undo history.
-
-**Fix Applied**:
-1. Added `permanentlyDeleteTaskWithUndo()` function to `undoSingleton.ts`
-2. Updated `useCanvasTaskActions.ts` to use the new function
-3. **Critical**: Fixed `createTask` in `taskOperations.ts` to preserve task ID when provided (was always generating new ID, breaking undo restore)
-
-**Testing Status**:
-- [x] Works in web browser (Playwright verified)
-- [ ] Works in Tauri desktop app (user verification needed)
-
-**Files Modified**:
-- `src/composables/undoSingleton.ts` - Added `permanentlyDeleteTaskWithUndo` function + debug logging
-- `src/composables/canvas/useCanvasTaskActions.ts` - Use new undo-aware function
-- `src/stores/tasks/taskOperations.ts` - Preserve task ID in `createTask` for undo restore
-- `src/utils/globalKeyboardHandlerSimple.ts` - Debug logging for keyboard handler
 
 ---
 
@@ -1723,37 +1046,60 @@ I couldn't detect your framework. What are you using?
 
 ---
 
-### ~~BUG-294~~: Timer Start Button Not Working (✅ DONE)
+#### BUG-1019: Dev-Maestro Swarm Agent Cleanup + OOM Prevention (📋 PLANNED)
 
 **Priority**: P0-CRITICAL
-**Status**: ✅ DONE (2026-01-15)
+**Related**: TASK-303, TASK-323
+**Created**: January 23, 2026
 
-When pressing Start or Timer buttons from task context menu, the timer doesn't start and the task isn't highlighted as active on the canvas.
+**Problem**: Swarm agents spawned by dev-maestro are not cleaned up when stuck/failed. Found 8 Claude "specialist" agents from 5 days ago still running, consuming ~2.4GB RAM collectively, spawning Vitest workers (4 workers × 4GB = 16GB spikes). Caused 336 OOM kills in 7 days.
 
-**Root Cause Identified**:
+**Evidence**:
+- 8 agents started Jan 18, still running Jan 23
+- All working on same tasks ("TimeBasedGreeting", "CurrentTime.vue") - failed orchestration
+- Agents with `--max-turns 30` exceeded that without terminating
+- Combined with Vitest parallelism → system OOM (earlyoom killed 336 processes)
 
-- Stale timer sessions in Supabase database blocking new timers
-- Device leadership timeout (30s) preventing timer start if previous session wasn't properly closed
-- Cross-tab leadership election (5s timeout) could also block if browser crashed
+**Root Causes**:
+1. **No timeout/watchdog** - Agents need max lifetime (30 min) regardless of --max-turns
+2. **No cleanup on crash** - When dev-maestro restarts, orphaned agents remain
+3. **Duplicate task spawning** - Same task assigned to 7 agents (retry without killing previous)
+4. **No resource limits** - Agents spawn unlimited Vitest workers
 
-**Fix Applied**:
+**Implementation Plan**:
 
-- [x] Added auto-cleanup of stale timer sessions in `timer.ts:checkForActiveDeviceLeader()`
-- [x] Added debug logging throughout the timer flow to diagnose issues
-- [x] Fixed: Sessions with expired device leaders are now marked inactive
+1. **Agent Lifecycle Management**:
+   - Track spawned agent PIDs in state file
+   - Implement heartbeat/health check
+   - Auto-kill agents older than configurable timeout (default 30 min)
+   - Cleanup orphans on dev-maestro startup
 
-**Files Modified**:
+2. **Resource Constraints**:
+   - Limit concurrent agents (max 4)
+   - Pass test runner config to limit parallelism (`--pool-options.threads.maxThreads=2`)
+   - Memory limit per agent if possible
 
-- `src/stores/timer.ts` - Auto-clear stale sessions
-- `src/composables/tasks/useTaskContextMenuActions.ts` - Debug logging
-- `src/composables/sync/useTimerLeaderElection.ts` - Debug logging
+3. **Graceful Shutdown**:
+   - On SIGTERM/SIGINT, kill all child agents
+   - Register cleanup handlers
 
-**Verification Required**:
+4. **Deduplication**:
+   - Don't spawn new agent for task if one already running
+   - Track task-to-agent mapping
 
-1. Open browser console (F12)
-2. Click Timer button on any task
-3. Check console for `🎯 [CONTEXT-MENU] startTimer called` log
-4. Verify timer starts and task is highlighted
+**Key Files**:
+- `~/.dev-maestro/server.js` - main orchestration logic (154KB)
+- `~/.dev-maestro/supervisors/` - may have agent management
+- `~/.dev-maestro/local/` - state/tracking
+
+**Success Criteria**:
+- [ ] No orphaned agents after orchestration ends
+- [ ] Agents auto-killed after 30 min timeout
+- [ ] Startup cleanup removes stale agents
+- [ ] Max 4 concurrent agents enforced
+- [ ] Graceful shutdown kills all children
+
+---
 
 ---
 
@@ -2202,66 +1548,12 @@ onMoveEnd(({ viewport }) => {
 **Success Criteria**:
 - [ ] Installable on iOS Safari
 - [ ] Installable on Android Chrome
-### ~~TASK-370~~: Canvas: Arrange Done Tasks Button (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Complexity**: Low
-**Status**: ✅ DONE (2026-01-22)
-**Created**: January 22, 2026
-
-**Feature**: One-click button in Canvas Toolbar to arrange all done tasks in a neat grid at the bottom-left of the canvas.
-
-**Problem**: Done tasks clutter the canvas, mixed in with active tasks inside groups. User wants to quickly organize them outside groups for review/archival.
-
-**Implementation**:
-- [x] Add `arrangeDoneTasksInGrid()` function to `useCanvasTaskActions.ts`
-- [x] Re-export in `useCanvasActions.ts`
-- [x] Add LayoutGrid button to `CanvasToolbar.vue` in new "Organize Actions" group
-- [x] Wire up `@arrange-done-tasks` event in `CanvasView.vue`
-
-**Grid Layout**:
-- Starting position: x=100, y=2000 (bottom-left area)
-- Task card size: 200x80, Gap: 16px, Columns: 5 per row
-
-**Key Files**:
-- `src/composables/canvas/useCanvasTaskActions.ts`
-- `src/components/canvas/CanvasToolbar.vue`
-- `src/views/CanvasView.vue`
-
 ---
 
 - [ ] Offline mode works on both platforms
 - [ ] Lighthouse PWA score >= 90
 
 ---
-
-### ~~TASK-314~~: Highlight Active Timer Task Across All Views (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Complexity**: Low
-**Status**: ✅ DONE (2026-01-18)
-**Created**: January 18, 2026
-
-**Feature**: Visual feedback when a task has an active timer running, across all views.
-
-**Final State**:
-- ✅ Canvas: `TaskNode.vue` - blue glow (pre-existing)
-- ✅ Calendar: `CalendarTaskCard.vue` - pulsing timer icon (pre-existing)
-- ✅ Board: `TaskCard.vue` - amber glow with pulse animation
-- ✅ Catalog: `TaskRow.vue` - amber glow with pulse animation
-- ✅ Catalog: `HierarchicalTaskRowContent.vue` - amber glow with pulse animation
-
-**Implementation**:
-- [x] Add timer store import to TaskCard.vue (Board)
-- [x] Add `isTimerActive` computed property
-- [x] Add `.timer-active` CSS class with amber glow and pulse animation
-- [x] Same for TaskRow.vue and HierarchicalTaskRowContent.vue
-
-**Design Tokens Used**:
-- `--timer-active-border` - Amber border
-- `--timer-active-glow` - Subtle amber glow
-- `--timer-active-glow-strong` - Pulse animation glow
-- `--timer-active-shadow` - Shadow for depth
 
 ---
 
@@ -2306,21 +1598,6 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-### ~~FEATURE-254~~: Canvas Inbox Smart Minimization (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Status**: ✅ DONE
-**Goal**: Canvas inbox starts minimized always unless it has tasks inside.
-**Completed**: January 13, 2026
-
-**Implementation**:
-
-- `useUnifiedInboxState.ts`: Added `hasInitialized` flag to track first load vs subsequent updates.
-- Watches `isLoadingFromDatabase` to trigger one-time auto-collapse if empty.
-- User manual toggles are respected after initialization.
-
-\| ~~**BUG-218**~~ | ✅ **DONE** **Persistent Task Position Drift** | **P0** | ✅ **RECOVERY FIXED** (TASK-232) | - |
-
 ---
 
 ### TASK-227: Fix Group/Task Containment Drift (🔥 URGENT)
@@ -2348,18 +1625,6 @@ onMoveEnd(({ viewport }) => {
 **Problem**: Right-clicking on the empty canvas (pane) opens the context menu for a group (likely the selected one) instead of the global pane menu.
 **Cause**: Probable fallback logic in `useCanvasContextMenus.ts` using `selectedNodes` when no target is found, or event propagation issue.
 **Fix**: Ensure Pane Context Menu ignores selected nodes and only shows global actions (Create Group, Paste, etc.).
-
-### ~~BUG-218~~: \[RE-OPENED] Fix Persistent Canvas Drift (✅ DONE - Rolled into TASK-232)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE
-**Completed**: January 13, 2026 (via TASK-232)
-
-### ~~BUG-220~~: \[RE-OPENED] Fix Group Counter and Task Movement Counter Issues (✅ DONE - Rolled into TASK-232)
-
-**Priority**: P0-CRITICAL
-**Status**: ✅ DONE
-**Completed**: January 13, 2026 (via TASK-232)
 
 ### TASK-241: Position Versioning & Conflict Detection (✅ FOUNDATION COMPLETE)
 
@@ -2414,15 +1679,6 @@ onMoveEnd(({ viewport }) => {
 ## Codebase Health Sprint (Jan 11, 2026)
 
 Based on [Health Report 2026-01-11](./reports/health-report-2026-01-11.md).
-
-### ~~TASK-224~~: Update Outdated Dependencies (✅ DONE - Deferred)
-
-**Priority**: P3-LOW
-**Status**: Deferred
-**Created**: January 11, 2026
-**Closed**: January 13, 2026
-
-**Decision**: Deferred indefinitely. App is stable, no critical security issues. Major version updates (pinia 3.x, tailwind 4.x, vueuse 14.x) carry breaking change risk with minimal benefit. Will revisit if specific features are needed.
 
 ---
 
@@ -2717,45 +1973,6 @@ When Vue Flow initialized with `zoom: 0` (before the canvas was ready), `isLOD3`
 **Status**: PLANNING
 **Goal**: Reduce file size (currently \~1800 lines) by extracting sub-components and logic.
 
-### ~~TASK-BACKUP-157~~: Consolidate Dual Backup Systems (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Created**: January 9, 2026
-**Completed**: January 9, 2026
-
-**Problem**: Two competing backup systems exist - `useBackupSystem.ts` and `usePersistentStorage.ts`. Both write backups independently, creating confusion about which is "correct" on restore.
-
-**Files Modified**:
-
-- `src/composables/usePersistentStorage.ts` - Added @deprecated notice
-
-**Audit Findings**:
-
-- [x] **Neither backup system is actively imported anywhere in the app**
-- [x] Data persistence is handled directly by Pinia stores + Supabase
-- [x] Backup composables exist for manual export/import, not auto-persistence
-- [x] `useBackupSystem.ts` has been enhanced with golden backup, TTL, validation (TASK-153/156)
-- [x] `usePersistentStorage.ts` is legacy code, never imported
-
-**Decision**:
-
-- **KEEP**: `useBackupSystem.ts` - Enhanced with BUG-059, TASK-153, TASK-156 improvements
-- **DEPRECATED**: `usePersistentStorage.ts` - Marked with @deprecated JSDoc notice
-- **Architecture**: Supabase is the source of truth for authenticated users; localStorage is cache only
-
-**Backup Architecture Summary**:
-
-```
-Authenticated Users:
-  Source of Truth: Supabase (tasks, projects, groups, user_settings)
-  localStorage: Cache only, cleared on logout
-  Golden Backup: Emergency restore with deleted-item filtering
-
-Guest Mode:
-  Source of Truth: None (ephemeral)
-  localStorage: Cleared on page refresh (GUEST_EPHEMERAL_KEYS)
-```
-
 ---
 
 ### TASK-065: GitHub Release (⏸️ PAUSED)
@@ -2924,45 +2141,6 @@ Add AI-powered text generation to the Tiptap markdown editor. Custom implementat
 **Problem**: Users cannot immediately re-create a connection they just deleted because `recentlyRemovedEdges` treats it as a "zombie" edge from a sync conflict and blocks it for 2 seconds.
 **Solution**: Modify `handleConnect` to explicitly remove the edge ID from `recentlyRemovedEdges` when a user intentionally creates a connection, distinguishing it from an automated background sync.
 
-### ~~BOX-001~~: Fix `ensureActionGroups` Undefined Error (✅ DONE)
-
-**Priority**: P1-HIGH
-**Completed**: January 8, 2026
-**Problem**: Helper `ensureActionGroups` was not exported from `useCanvasSmartGroups.ts`, causing runtime error.
-**Fix**: Rewrote `useCanvasSmartGroups.ts` to properly export the function and implemented new "Friday" and "Saturday" action group logic instead of legacy "Weekend" group.
-
-## Code Review Findings (January 8, 2026)
-
-> These issues were identified during comprehensive multi-agent code review of uncommitted changes (PouchDB→Supabase migration + PWA setup).
-
-## PWA Prerequisites (Phase 0) - Must Complete Before ROAD-004
-
-### ~~TASK-122~~: Bundle Size Optimization (<500KB) (✅ DONE - 505KB)
-
-**Priority**: P1-HIGH
-**Completed**: January 8, 2026
-**Blocks**: ROAD-004 (PWA Mobile Support)
-**Final**: 505.08 KB gzipped | **Target**: <500KB gzipped
-
-**Results**:
-
-- [x] Removed 9 Milkdown packages (unused - TipTap is used instead)
-- [x] Removed unused backend packages: `pg`, `express`, `cors`, `jose`, `jsonwebtoken`, `chokidar`, `top-level-await`
-- [x] Deleted unused `MilkdownEditorSurface.vue`
-- [x] Total packages removed: 226 (71 + 19 + 72 + 154)
-- [x] Build time improved: 13.04s
-
-**Bundle size progression**:
-
-| Phase                         | Size (gzipped) | Change   |
-| ----------------------------- | -------------- | -------- |
-| Baseline                      | 509.05 KB      | -        |
-| After TASK-118 (PouchDB)      | 509.05 KB      | 0        |
-| After TASK-119 (PowerSync)    | 505.45 KB      | -3.6 KB  |
-| After unused packages cleanup | 505.08 KB      | -0.37 KB |
-
-**Note**: Bundle at 505KB (5KB over target). Most removed packages were already tree-shaken. Further reduction would require code-splitting core features or removing used libraries.
-
 ### TASK-123: Consolidate Network Status Implementations (📋 PLANNED)
 
 **Priority**: P2-MEDIUM
@@ -3045,13 +2223,6 @@ Codebase has 3 competing network status implementations. Adding PWA would create
 - [ ] Option to disable in settings
 
 ---
-
-### ~~TASK-260~~: Authoritative Duplicate Detection Diagnostics (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Created**: January 13, 2026
-**Completed**: January 23, 2026
-**Status**: ✅ DONE - Diagnostics implemented across all layers. SOP: `docs/sop/canvas/CANVAS-DUPLICATE-DETECTION.md`
 
 ---
 
@@ -3239,27 +2410,3 @@ On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and 
 - [TASK-317: Shadow Backup Deletion-Aware Restore](#task-317-shadow-backup-deletion-aware-restore--supabase-data-persistence-done)
 - [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md)
 
-
-### ~~TASK-1013~~: Multi-Agent File Locking with Deferred Execution (✅ DONE)
-
-**Status:** ✅ DONE (2026-01-23)
-**Priority:** P1
-
-**Description:** Implemented file locking system for multi-agent coordination to prevent file conflicts when multiple Claude Code sessions work on the same codebase.
-
-**Features:**
-- `task-lock-enforcer.sh` - PreToolUse hook that acquires/checks locks based on MASTER_PLAN.md task-file mappings
-- `deferred-reminder.sh` - UserPromptSubmit hook that notifies when locks release
-- Deferred execution - blocked edits saved to queue instead of blocking agent
-- Real-time monitoring in Dev-Maestro Deps & Locks tab
-- Automated test script for verification
-
-**Files:**
-- `.claude/hooks/task-lock-enforcer.sh`
-- `.claude/hooks/deferred-reminder.sh`
-- `.claude/hooks/test-multi-agent-locking.sh`
-- `.claude/deferred-queue/` (queue storage)
-- `docs/sop/SOP-019-multi-agent-file-locking.md`
-- `~/.dev-maestro/plugins/file-locking/` (portable plugin)
-
-**SOP:** [SOP-019](./sop/SOP-019-multi-agent-file-locking.md)

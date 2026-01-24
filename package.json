@@ -5,7 +5,8 @@
   "main": "src/main.ts",
   "type": "module",
   "scripts": {
-    "dev": "npm run verify-auth && node scripts/validate-supabase-keys.cjs && concurrently \"vite --host 0.0.0.0 --port 5546 --strictPort\" \"npm run backup:watch\"",
+    "dev": "bash scripts/sync-doppler.sh && npm run verify-auth && node scripts/validate-supabase-keys.cjs && concurrently \"vite --host 0.0.0.0 --port 5546 --strictPort\" \"npm run backup:watch\"",
+    "sync:doppler": "bash scripts/sync-doppler.sh",
     "verify-auth": "node scripts/verify-auth-user.cjs",
     "generate:keys": "node scripts/generate-supabase-keys.cjs",
     "setup:doppler": "bash scripts/setup-doppler.sh",
@@ -22,7 +23,7 @@
     "build": "npx vite build --mode production",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:rebuild": "npm run tauri build && ./src-tauri/target/release/flow-state",
+    "tauri:rebuild": "bash scripts/sync-doppler.sh && npm run tauri build && ./src-tauri/target/release/flow-state",
     "tauri:run": "./src-tauri/target/release/flow-state",
     "test": "vitest",
     "test:watch": "vitest --ui",

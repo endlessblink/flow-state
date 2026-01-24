@@ -17,14 +17,16 @@ import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 
-const { 
-  config, 
-  backupHistory, 
-  createBackup, 
-  downloadBackup, 
+const {
+  config,
+  backupHistory,
+  createBackup,
+  downloadBackup,
   restoreFromFile,
   restoreFromGoldenBackup,
+  restoreFromGoldenBackupByIndex,
   getGoldenBackupValidation,
+  getGoldenBackups,
   fetchShadowBackup,
   restoreFromShadow,
   restoreBackup
@@ -35,6 +37,7 @@ const validationInfo = ref<any>(null)
 const shadowSnapshot = ref<any>(null)
 const showValidation = ref(false)
 const isScanningShadow = ref(false)
+const goldenRotation = ref<any[]>([])
 
 const backupIntervals = [
   { value: 60000, label: '1 min' },
@@ -98,9 +101,19 @@ const handleShadowRestore = async () => {
   }
 }
 
+const handleGoldenRestore = async (index: number) => {
+  isRestoring.value = true
+  const success = await restoreFromGoldenBackupByIndex(index, true)
+  isRestoring.value = false
+  if (success) {
+    alert(`Golden backup #${index + 1} restored!`)
+  }
+}
+
 onMounted(async () => {
     // Initial checks
     validationInfo.value = await getGoldenBackupValidation()
+    goldenRotation.value = getGoldenBackups()
     checkShadowHub()
 })
 </script>
@@ -212,59 +225,57 @@ onMounted(async () => {
       </div>
     </SettingsSection>
 
-    <SettingsSection title="🌟 Disaster Recovery (Golden Backup)">
-      <div v-if="validationInfo" class="golden-panel">
+    <SettingsSection title="🌟 Disaster Recovery (Golden Backup Rotation)">
+      <div v-if="goldenRotation.length > 0" class="golden-panel">
         <div class="golden-header">
-          <ShieldCheck v-if="validationInfo.isValid" class="icon-success" :size="32" />
+          <ShieldCheck class="icon-success" :size="32" />
           <div class="golden-meta">
-            <span class="golden-title">Golden Backup Status</span>
-            <span class="golden-status">Ready for recovery</span>
+            <span class="golden-title">Peak Task Snapshots</span>
+            <span class="golden-status">{{ goldenRotation.length }} recovery point{{ goldenRotation.length > 1 ? 's' : '' }} available</span>
           </div>
         </div>
 
-        <div v-if="validationInfo.ageWarning" class="warning-box">
+        <div v-if="validationInfo?.ageWarning" class="warning-box">
           <AlertTriangle :size="16" />
           <span>{{ validationInfo.ageWarning }}</span>
         </div>
 
-        <div class="stats-preview">
-          <div class="stat-item">
-            <span class="stat-label">Tasks</span>
-            <span class="stat-value">{{ validationInfo.preview.tasks.toRestore }}</span>
-            <span class="stat-sub">/ {{ validationInfo.preview.tasks.total }} items</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Projects</span>
-            <span class="stat-value">{{ validationInfo.preview.projects.toRestore }}</span>
-            <span class="stat-sub">/ {{ validationInfo.preview.projects.total }} items</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Groups</span>
-            <span class="stat-value">{{ validationInfo.preview.groups.toRestore }}</span>
-            <span class="stat-sub">/ {{ validationInfo.preview.groups.total }} items</span>
+        <!-- TASK-332: Show all golden backups in rotation -->
+        <div class="golden-rotation-list">
+          <div
+            v-for="(backup, index) in goldenRotation"
+            :key="backup.id"
+            class="golden-rotation-item"
+            :class="{ 'is-primary': index === 0 }"
+          >
+            <div class="rotation-rank">
+              <span class="rank-badge">{{ index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉' }}</span>
+            </div>
+            <div class="rotation-info">
+              <span class="rotation-tasks">{{ backup.metadata?.taskCount || 0 }} tasks</span>
+              <span class="rotation-date">{{ new Date(backup.timestamp).toLocaleDateString() }}</span>
+            </div>
+            <button
+              class="rotation-restore-btn"
+              :disabled="isRestoring"
+              @click="handleGoldenRestore(index)"
+            >
+              <RotateCcw :size="14" />
+              <span>Restore</span>
+            </button>
           </div>
         </div>
 
-        <div v-if="validationInfo.warnings.length > 0" class="detailed-warnings">
-          <p class="warning-title">
-            Smart Filtering Summary:
-          </p>
+        <div v-if="validationInfo?.warnings?.length > 0" class="detailed-warnings">
+          <p class="warning-title">Smart Filtering (for top peak):</p>
           <ul>
-            <li v-for="(warn, i) in validationInfo.warnings" :key="i">
-              {{ warn }}
-            </li>
+            <li v-for="(warn, i) in validationInfo.warnings" :key="i">{{ warn }}</li>
           </ul>
         </div>
 
-        <button 
-          class="restore-btn" 
-          :disabled="isRestoring"
-          @click="confirmGoldenRestore"
-        >
-          <RotateCcw v-if="!isRestoring" :size="18" />
-          <span v-else class="loader" />
-          <span>{{ isRestoring ? 'Restoring...' : 'Restore Golden State' }}</span>
-        </button>
+        <p class="golden-help">
+          Golden backups capture your highest task counts. The system keeps up to 3 peaks for flexible recovery.
+        </p>
       </div>
       <div v-else class="no-golden">
         <History :size="32" />
@@ -556,6 +567,91 @@ onMounted(async () => {
 .detailed-warnings ul {
   padding-left: var(--space-4);
   margin: 0;
+}
+
+/* TASK-332: Golden backup rotation styles */
+.golden-rotation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.golden-rotation-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  transition: all var(--duration-normal);
+}
+
+.golden-rotation-item.is-primary {
+  background: linear-gradient(135deg, rgba(var(--color-success-rgb), 0.1) 0%, rgba(var(--color-success-rgb), 0.05) 100%);
+  border-color: var(--color-success);
+}
+
+.rotation-rank {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-badge {
+  font-size: var(--text-lg);
+}
+
+.rotation-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rotation-tasks {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.rotation-date {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.rotation-restore-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+}
+
+.rotation-restore-btn:hover:not(:disabled) {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  color: var(--text-primary);
+}
+
+.rotation-restore-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.golden-help {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: var(--space-2);
 }
 
 .restore-btn {

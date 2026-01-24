@@ -119,6 +119,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useStorage } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -201,11 +202,12 @@ const {
 // Density state from global settings store
 const currentDensity = computed(() => settingsStore.boardDensity)
 
+// BUG-1051: Persist UI state across refreshes
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
-const showFilters = ref(false)
+const showFilters = useStorage<boolean>('board-show-filters', false)
 
 // View Type Switcher (priority, date, status)
-const currentViewType = ref<'priority' | 'date' | 'status'>('priority')
+const currentViewType = useStorage<'priority' | 'date' | 'status'>('board-view-type', 'priority')
 const viewTypeOptions = [
   { value: 'priority' as const, label: 'Priority', icon: Flag },
   { value: 'date' as const, label: 'Due Date', icon: Calendar },

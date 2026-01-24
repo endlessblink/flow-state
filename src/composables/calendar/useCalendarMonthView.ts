@@ -93,7 +93,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     }))
   }
 
-  const handleMonthDrop = (event: DragEvent, targetDate: string) => {
+  const handleMonthDrop = async (event: DragEvent, targetDate: string) => {
     event.preventDefault()
 
     const data = event.dataTransfer?.getData('application/json')
@@ -106,7 +106,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
     const existingTask = taskStore.getTask(taskId)
     const scheduledTime = existingTask?.scheduledTime || '09:00'
 
-    taskStore.updateTask(taskId, {
+    await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
       scheduledDate: targetDate,
       scheduledTime: scheduledTime,
       isInInbox: false // Task is now scheduled, no longer in inbox

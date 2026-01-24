@@ -63,8 +63,9 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         taskStore.selectTask(taskId)
     }
 
-    const startTimer = (taskId: string) => {
-        timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
+    const startTimer = async (taskId: string) => {
+        // BUG-1051: AWAIT for timer sync
+        await timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
     }
 
     const quickTaskCreate = async (title: string, description: string, status: string, projectId?: string) => {

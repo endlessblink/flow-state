@@ -309,19 +309,19 @@ const getProjectName = (projectId: string | null) => {
 }
 
 // Quick actions
-const applyQuickAction = (action: 'markDone' | 'highPriority' | 'deleteAll') => {
+const applyQuickAction = async (action: 'markDone' | 'highPriority' | 'deleteAll') => {
   if (action === 'markDone') {
     // Mark all as done
-    props.taskIds.forEach(taskId => {
-      taskStore.updateTask(taskId, { status: 'done' })
-    })
+    for (const taskId of props.taskIds) {
+      await taskStore.updateTask(taskId, { status: 'done' }) // BUG-1051: AWAIT to ensure persistence
+    }
     emit('applied')
     emit('close')
   } else if (action === 'highPriority') {
     // Set all to high priority
-    props.taskIds.forEach(taskId => {
-      taskStore.updateTask(taskId, { priority: 'high' })
-    })
+    for (const taskId of props.taskIds) {
+      await taskStore.updateTask(taskId, { priority: 'high' }) // BUG-1051: AWAIT to ensure persistence
+    }
     emit('applied')
     emit('close')
   } else if (action === 'deleteAll') {
@@ -337,10 +337,10 @@ const applyQuickAction = (action: 'markDone' | 'highPriority' | 'deleteAll') => 
 }
 
 // Apply changes
-const applyChanges = () => {
+const applyChanges = async () => {
   if (!hasChanges.value) return
 
-  props.taskIds.forEach(taskId => {
+  for (const taskId of props.taskIds) {
     const updates: Partial<Task> = {}
 
     if (fieldChanges.value.status.enabled && fieldChanges.value.status.value) {
@@ -364,9 +364,9 @@ const applyChanges = () => {
     }
 
     if (Object.keys(updates).length > 0) {
-      taskStore.updateTask(taskId, updates)
+      await taskStore.updateTask(taskId, updates) // BUG-1051: AWAIT to ensure persistence
     }
-  })
+  }
 
   emit('applied')
   emit('close')

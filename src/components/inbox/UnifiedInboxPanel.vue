@@ -23,6 +23,7 @@
       :selected-project="selectedProject"
       :selected-duration="selectedDuration"
       :hide-done-tasks="currentHideDoneTasks"
+      :done-task-count="doneTaskCount"
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
       :context="context"
@@ -150,6 +151,7 @@ const {
   todayCount,
   weekCount,
   monthCount,
+  doneTaskCount,
   toggleHideDoneTasks,
   clearAllFilters
 } = useUnifiedInboxState(props)
@@ -175,12 +177,13 @@ const handleTaskDoubleClick = (task: Task) => {
   }))
 }
 
-const handleStartTimer = (task: Task) => {
+const handleStartTimer = async (task: Task) => {
+  // BUG-1051: AWAIT for timer sync
   // Logic from original component
   if (timerStore.currentTaskId === task.id && timerStore.isTimerActive) {
-    timerStore.stopTimer()
+    await timerStore.stopTimer()
   } else {
-    timerStore.startTimer(task.id)
+    await timerStore.startTimer(task.id)
   }
 }
 </script>

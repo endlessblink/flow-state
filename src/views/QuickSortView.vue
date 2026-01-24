@@ -275,11 +275,11 @@ function handleCategorize(projectId: string) {
   categorizeTask(currentTask.value.id, projectId)
 }
 
-function handleTaskUpdate(updates: Partial<Task>) {
+async function handleTaskUpdate(updates: Partial<Task>) {
   if (!currentTask.value) return
 
-  // Update task with new priority or due date
-  taskStore.updateTask(currentTask.value.id, updates)
+  // Update task with new priority or due date - AWAIT to ensure persistence (BUG-1051)
+  await taskStore.updateTask(currentTask.value.id, updates)
 }
 
 function handleSkip() {

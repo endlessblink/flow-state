@@ -320,7 +320,7 @@ provide('calendar-helpers', {
 // This provides an alternative to native HTML5 drag-drop for better mobile support
 const timeGridDropList = ref<unknown[]>([])
 
-const _handleVueDraggableAdd = (evt: SortableEvent) => {
+const _handleVueDraggableAdd = async (evt: SortableEvent) => {
   // When a task is dropped via vuedraggable, schedule it to the drop time
   const droppedElement = evt.item
   const taskId = droppedElement?.dataset?.taskId
@@ -337,7 +337,8 @@ const _handleVueDraggableAdd = (evt: SortableEvent) => {
     const targetDate = new Date(currentDate.value)
     targetDate.setHours(slot.hour, slot.minute, 0, 0)
 
-    taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
+    // BUG-1051: AWAIT to ensure persistence
+    await taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
   }
 
   // Clear the drop list since we don't actually display items in it

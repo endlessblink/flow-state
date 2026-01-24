@@ -165,7 +165,7 @@ const handleDrop = async (event: DragEvent) => {
     if (store.updateTaskWithUndo) {
       await store.updateTaskWithUndo(dragData.value.taskId, updates)
     } else {
-      taskStore.updateTask(dragData.value.taskId, updates)
+      await taskStore.updateTask(dragData.value.taskId, updates) // BUG-1051: AWAIT to ensure persistence
     }
   }
 }

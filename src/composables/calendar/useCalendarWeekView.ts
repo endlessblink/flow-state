@@ -182,8 +182,8 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     let lastUpdatedDayIndex = calendarEvent.dayIndex
     let lastUpdatedSlot = calendarEvent.startSlot
 
-    const handleMouseMove = (e: MouseEvent) => {
-      requestAnimationFrame(() => {
+    const handleMouseMove = async (e: MouseEvent) => {
+      requestAnimationFrame(async () => {
         const scrollTop = weekDaysGrid.scrollTop || 0
 
         // Calculate day column
@@ -222,7 +222,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
             }
           } else {
             // Simple update: modify task's scheduledDate and scheduledTime directly
-            taskStore.updateTask(calendarEvent.taskId, {
+            await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
               scheduledDate: newDate,
               scheduledTime: newTime
             })
@@ -265,7 +265,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const originalStartSlot = calendarEvent.startSlot
     const originalDuration = calendarEvent.duration
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = async (e: MouseEvent) => {
       const deltaY = e.clientY - startY
       const deltaSlots = Math.round(deltaY / HALF_HOUR_HEIGHT)
 
@@ -281,7 +281,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       }
 
       if (direction === 'bottom') {
-        taskStore.updateTask(calendarEvent.taskId, {
+        await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
           estimatedDuration: newDuration
         })
       } else {
@@ -289,7 +289,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         const newMinute = (newStartSlot % 2) * 30
 
         if (newHour >= WORKING_HOURS_OFFSET && newHour < 23) {
-          taskStore.updateTask(calendarEvent.taskId, {
+          await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
             scheduledTime: `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`,
             estimatedDuration: newDuration
           })
@@ -318,7 +318,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     }
   }
 
-  const handleWeekDrop = (event: DragEvent, dateString: string, hour: number) => {
+  const handleWeekDrop = async (event: DragEvent, dateString: string, hour: number) => {
     event.preventDefault()
 
     const data = event.dataTransfer?.getData('application/json')
@@ -328,7 +328,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const timeStr = `${hour.toString().padStart(2, '0')}:00`
 
     // Simple update: modify task's scheduledDate and scheduledTime directly
-    taskStore.updateTask(taskId, {
+    await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
       scheduledDate: dateString,
       scheduledTime: timeStr,
       isInInbox: false // Task is now scheduled, no longer in inbox

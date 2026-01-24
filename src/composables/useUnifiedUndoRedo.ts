@@ -61,7 +61,7 @@ export const useUnifiedUndoRedo = () => {
 
     try {
       // Just perform the move operation
-      taskStore.moveTask(taskId, newStatus as Task['status'])
+      await taskStore.moveTask(taskId, newStatus as Task['status']) // BUG-1051: AWAIT to ensure persistence
       console.log(`✅ Task moved: ${taskId} to ${newStatus}`)
     } catch (error) {
       console.error('❌ Error moving task:', error)

@@ -164,10 +164,11 @@ export function useTaskContextMenuActions(
         emit('close')
     }
 
-    const startTaskNow = () => {
+    const startTaskNow = async () => {
         if (currentTask.value && !isBatchOperation.value) {
             taskStore.startTaskNowWithUndo(currentTask.value.id)
-            timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+            // BUG-1051: AWAIT for timer sync
+            await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
 
             if (router.currentRoute.value.name !== 'calendar') {
                 router.push('/calendar')
@@ -180,7 +181,7 @@ export function useTaskContextMenuActions(
         emit('close')
     }
 
-    const startTimer = () => {
+    const startTimer = async () => {
         console.log('🎯 [CONTEXT-MENU] startTimer called', {
             currentTask: currentTask.value?.id,
             currentTaskTitle: currentTask.value?.title,
@@ -188,7 +189,8 @@ export function useTaskContextMenuActions(
             workDuration: timerStore.settings.workDuration
         })
         if (currentTask.value && !isBatchOperation.value) {
-            timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+            // BUG-1051: AWAIT for timer sync
+            await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
         } else {
             console.warn('🎯 [CONTEXT-MENU] Timer not started:', {
                 hasCurrentTask: !!currentTask.value,

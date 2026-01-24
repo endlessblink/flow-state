@@ -93,9 +93,11 @@ export function useAppInitialization() {
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const projects = useProjectStore()
+            const tasks = useTaskStore()
 
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
-            const isLocked = canvas.isDragging || (typeof window !== 'undefined' && (
+            // BUG-1051: Fix sync race condition - also check for manual operations
+            const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
                 (window as any).__FlowStateIsDragging ||
                 (window as any).__FlowStateIsResizing ||
                 (window as any).__FlowStateIsSettling
@@ -122,7 +124,8 @@ export function useAppInitialization() {
             const tasks = useTaskStore()
 
             // HARDENED LOCK: Check store, dragging, resizing, and settling flags
-            const isLocked = canvas.isDragging || (typeof window !== 'undefined' && (
+            // BUG-1051: Fix sync race condition - also check for manual operations
+            const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
                 (window as any).__FlowStateIsDragging ||
                 (window as any).__FlowStateIsResizing ||
                 (window as any).__FlowStateIsSettling

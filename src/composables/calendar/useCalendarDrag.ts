@@ -295,7 +295,7 @@ export function useCalendarDrag() {
 
       // Rollback task state to prevent data loss
       try {
-        taskStore.updateTask(task.id, taskBackup)
+        await taskStore.updateTask(task.id, taskBackup) // BUG-1051: AWAIT to ensure persistence
       } catch (rollbackError) {
       }
     }
@@ -332,7 +332,7 @@ export function useCalendarDrag() {
     if (dragData.source === 'calendar-event') {
       // Moving existing calendar event
 
-      taskStore.updateTask(task.id, {
+      await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
         scheduledDate: target.date,
         scheduledTime: timeStr
       })
@@ -358,7 +358,7 @@ export function useCalendarDrag() {
 
       if (instance) {
         // Only remove from inbox if instance creation succeeded
-        taskStore.updateTask(task.id, {
+        await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
           isInInbox: false
         })
       } else {
@@ -371,7 +371,7 @@ export function useCalendarDrag() {
       })
 
       if (instance) {
-        taskStore.updateTask(task.id, {
+        await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
           isInInbox: false
         })
       } else {
@@ -401,7 +401,7 @@ export function useCalendarDrag() {
       })
     } else {
       // Move existing task
-      taskStore.updateTask(task.id, {
+      await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
         scheduledDate: target.date,
         scheduledTime,
         isInInbox: false
@@ -441,7 +441,7 @@ export function useCalendarDrag() {
       })
     } else {
       // Move existing task
-      taskStore.updateTask(task.id, {
+      await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
         scheduledDate: dateString,
         scheduledTime: timeStr
       })

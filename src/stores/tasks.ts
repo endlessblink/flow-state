@@ -191,7 +191,8 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
-          if (currentTask.updatedAt > normalizedTask.updatedAt) {
+          // BUG-1051: Fix sync race condition - use >= for equal timestamps to prevent overwrites
+          if (currentTask.updatedAt >= normalizedTask.updatedAt) {
             return
           }
 

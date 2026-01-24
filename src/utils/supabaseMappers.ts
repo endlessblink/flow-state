@@ -97,6 +97,11 @@ export interface SupabaseTask {
     column_id?: string | null
     is_in_inbox?: boolean
 
+    // BUG-1051: Add missing scheduled fields
+    scheduled_date?: string | null
+    scheduled_time?: string | null
+    is_uncategorized?: boolean
+
     is_deleted?: boolean
     deleted_at?: string | null
     completed_at?: string | null
@@ -385,6 +390,11 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         column_id: task.columnId || null,
         is_in_inbox: task.isInInbox || false,
 
+        // BUG-1051: Add missing scheduled fields
+        scheduled_date: task.scheduledDate || null,
+        scheduled_time: task.scheduledTime || null,
+        is_uncategorized: task.isUncategorized || false,
+
         is_deleted: task._soft_deleted || false,
         deleted_at: task.deletedAt ? new Date(task.deletedAt).toISOString() : null,
         completed_at: task.completedAt ? new Date(task.completedAt).toISOString() : null,
@@ -416,6 +426,11 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         subtasks: record.subtasks || [],
         tags: record.tags || undefined,
         dependsOn: record.depends_on || undefined,
+
+        // BUG-1051: Add missing scheduled fields
+        scheduledDate: record.scheduled_date || undefined,
+        scheduledTime: record.scheduled_time || undefined,
+        isUncategorized: record.is_uncategorized || false,
 
         canvasPosition: record.position ? { x: record.position.x, y: record.position.y } : undefined,
         positionVersion: record.position_version ?? 0, // Read position_version for optimistic locking
@@ -523,11 +538,16 @@ export function toSupabaseTimerSession(session: PomodoroSession, userId: string,
         console.warn(`[SUPABASE-MAPPER] Timer session had invalid ID: "${session.id}", generated new UUID: ${validSessionId}`)
     }
 
+    // BUG-1056: Ensure startTime is a Date object (might be string from localStorage)
+    const startTime = session.startTime instanceof Date
+        ? session.startTime
+        : new Date(session.startTime)
+
     return {
         id: validSessionId,
         user_id: userId,
         task_id: session.taskId,
-        start_time: session.startTime.toISOString(),
+        start_time: startTime.toISOString(),
         duration: session.duration,
         remaining_time: session.remainingTime,
         is_active: session.isActive,

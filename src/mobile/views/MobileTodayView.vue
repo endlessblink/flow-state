@@ -309,9 +309,10 @@ const formatDueTime = (dueDate: string | Date | undefined): string => {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-const toggleTask = (task: Task) => {
+const toggleTask = async (task: Task) => {
   const newStatus = task.status === 'done' ? 'planned' : 'done'
-  taskStore.updateTask(task.id, { status: newStatus })
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(task.id, { status: newStatus })
 }
 
 const handleTaskClick = (_task: Task) => {
@@ -319,8 +320,9 @@ const handleTaskClick = (_task: Task) => {
   // Swipe gestures handle edit/delete
 }
 
-const startTimer = (task: Task) => {
-  timerStore.startTimer(task.id)
+const startTimer = async (task: Task) => {
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer(task.id)
 }
 
 // Open edit bottom sheet for task (triggered by swipe right)
@@ -344,8 +346,9 @@ const closeEditSheet = () => {
 }
 
 // Save task changes from edit sheet
-const handleSaveTask = (taskId: string, updates: Partial<Task>) => {
-  taskStore.updateTask(taskId, updates)
+const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(taskId, updates)
 }
 </script>
 

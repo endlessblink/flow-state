@@ -81,14 +81,19 @@ jobs:
 
               # Force stop all containers and clean up
               echo '>>> Stopping all containers...'
-              docker compose down --remove-orphans --timeout 30 || true
+              docker compose down --remove-orphans --timeout 30 -v || true
 
               # Kill any remaining containers from this project
               docker ps -q --filter 'name=flowstate' | xargs -r docker stop || true
               docker ps -q --filter 'name=flow-state' | xargs -r docker stop || true
+              docker ps -q --filter 'name=caddy' | xargs -r docker stop || true
+
+              # Force kill any process on port 80/443 (likely stale containers)
+              sudo lsof -ti:80 | xargs -r sudo kill -9 || true
+              sudo lsof -ti:443 | xargs -r sudo kill -9 || true
 
               # Small delay to ensure ports are released
-              sleep 2
+              sleep 5
 
               # Start fresh
               echo '>>> Starting containers...'

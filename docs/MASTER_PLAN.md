@@ -1,4 +1,4 @@
-**Last Updated**: January 24, 2026 (Added BUG-1056 Brave Compatibility)
+**Last Updated**: January 24, 2026 (Completed BUG-1056 Brave + Multi-Tab Fix)
 **Version**: 5.63 (Calendar Icon + Layout Bugs)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -177,7 +177,7 @@
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
 | ~~**TASK-1010**~~        | ✅ **DONE** **Mobile: Quick Sort Redesign with Swipe Gestures**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations, nested project hierarchy, 7 date presets. Added to mobile nav. |                                                        |
 | ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |
-| **BUG-1056**             | **Brave Browser Compatibility (Voice + WebSocket)**                      | **P2**                                              | 👀 **REVIEW**                                                                                                                   | Voice input "network error" (Brave blocks Google Speech API). WebSocket interrupted. [See Details](#bug-1056-brave-browser-compatibility-review)                                                                   |                                                        |
+| ~~**BUG-1056**~~         | ✅ **DONE** **Brave Browser Compatibility + Multi-Tab Fix**             | **P2**                                              | ✅ **DONE** (2026-01-24)                                                                                                        | Brave detection, user warning banner, multi-tab auth sync, unique channel per tab. [See Details](#bug-1056-brave-browser-compatibility--data-load-recovery-done)                                                  |                                                        |
 | **BUG-1057**             | **Fix Failing Unit Tests (8 failures)**                                  | **P3**                                              | 📋 **PLANNED**                                                                                                                  | Playwright/Vitest conflicts, missing imports, obsolete test files. [See Details](#bug-1057-fix-failing-unit-tests-planned)                                                                                          |                                                        |
 | ~~**BUG-1012**~~         | ✅ **DONE** **Dev-Maestro: "Submit Answers & Continue" Button Fixed**    | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Added debugging, error feedback, validation. Button now works correctly.                                                                                                                                            |                                                        |
 | ~~**FEATURE-1012**~~     | ✅ **DONE** **Orchestrator: Auto-Detect Project Tech Stack**             | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Auto-detects Vue/React, UI libs, state mgmt, DB from package.json. Questions now focus on feature details, not tech stack.                                                                                          | TASK-303                                               |
@@ -276,9 +276,9 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 
 ---
 
-### BUG-1056: Brave Browser Compatibility + Data Load Recovery (🔄 IN PROGRESS)
+### ~~BUG-1056~~: Brave Browser Compatibility + Data Load Recovery (✅ DONE)
 **Priority**: P2
-**Status**: 🔄 IN PROGRESS
+**Status**: ✅ DONE (2026-01-24)
 
 **Issues**:
 1. **Voice Input "Network Error"**: Web Speech API sends audio to Google servers. Brave Shields blocks this by default.

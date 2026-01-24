@@ -246,6 +246,15 @@ export function useTaskOperations(
                 if (wasNotDone && isNowDone) {
                     updates.completedAt = new Date()
                     console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set`)
+
+                    // AUTO-ARCHIVE: Move done tasks off canvas to inbox
+                    // This prevents position/sync issues with done tasks on canvas
+                    if (task.canvasPosition) {
+                        updates.canvasPosition = undefined
+                        updates.isInInbox = true
+                        updates.parentId = undefined
+                        console.log(`📦 [DONE-ARCHIVE] Task "${task.title?.slice(0, 30)}" moved off canvas to inbox`)
+                    }
                 }
                 // Clear completedAt when status changes FROM 'done' (task reopened)
                 else if (wasDone && isNowNotDone) {

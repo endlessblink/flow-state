@@ -57,7 +57,9 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         }
 
         // Robust hashing for cache invalidation
-        const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')
+        // TASK-370: Added parentId to hash - without it, parentId changes weren't invalidating cache,
+        // causing Vue Flow to not receive updated parentNode, breaking group dragging
+        const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.parentId || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')
 
         if (currentHash === lastCanvasTasksHash && lastCanvasTasks.length > 0) {
             return lastCanvasTasks

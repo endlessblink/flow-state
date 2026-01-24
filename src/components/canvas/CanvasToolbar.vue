@@ -42,48 +42,18 @@
           <CalendarX v-if="taskStore.hideCanvasOverdueTasks" :size="14" />
           <Calendar v-else :size="14" />
         </button>
-
-        <!-- Hide Done Tasks Toggle (TASK-080) -->
-        <button
-          class="toolbar-btn toggle"
-          :class="{ 'active done': taskStore.hideCanvasDoneTasks }"
-          :title="taskStore.hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-          :aria-label="taskStore.hideCanvasDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-          :aria-pressed="taskStore.hideCanvasDoneTasks"
-          @click="taskStore.toggleCanvasDoneTasks()"
-        >
-          <EyeOff v-if="taskStore.hideCanvasDoneTasks" :size="14" />
-          <Eye v-else :size="14" />
-        </button>
-      </div>
-
-      <!-- Separator -->
-      <div class="toolbar-separator" />
-
-      <!-- Organize Actions Group -->
-      <div class="toolbar-group">
-        <!-- Arrange Done Tasks in Grid -->
-        <button
-          class="toolbar-btn"
-          title="Arrange done tasks in grid"
-          aria-label="Arrange done tasks in grid at bottom-left of canvas"
-          @click="$emit('arrangeDoneTasks')"
-        >
-          <LayoutGrid :size="14" />
-        </button>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { Plus, FolderPlus, Calendar, CalendarX, Eye, EyeOff, LayoutGrid } from 'lucide-vue-next'
+import { Plus, FolderPlus, Calendar, CalendarX } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 
 defineEmits<{
   (e: 'addTask'): void
   (e: 'createGroup', event: MouseEvent): void
-  (e: 'arrangeDoneTasks'): void
 }>()
 
 const taskStore = useTaskStore()
@@ -188,11 +158,5 @@ const taskStore = useTaskStore()
   color: #fb923c; /* Orange-400 */
   background: rgba(251, 146, 60, 0.15);
   border-color: rgba(251, 146, 60, 0.25);
-}
-
-.toolbar-btn.toggle.active.done {
-  color: #a78bfa; /* Purple-400 */
-  background: rgba(167, 139, 250, 0.15);
-  border-color: rgba(167, 139, 250, 0.25);
 }
 </style>

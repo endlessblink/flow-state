@@ -4,15 +4,46 @@
     <div class="capture-form">
       <!-- Title Input -->
       <div class="input-group title-group">
-        <input
-          ref="titleInputRef"
-          v-model="newTask.title"
-          type="text"
-          class="capture-input title-input"
-          placeholder="What needs to be done?"
-          maxlength="200"
-          @keydown="handleTitleKeydown"
-        >
+        <div class="title-input-row">
+          <input
+            ref="titleInputRef"
+            v-model="newTask.title"
+            type="text"
+            class="capture-input title-input"
+            :class="{ 'voice-active': isListening }"
+            :placeholder="isListening ? 'Listening...' : 'What needs to be done?'"
+            maxlength="200"
+            @keydown="handleTitleKeydown"
+          >
+          <!-- Mic button (TASK-1024) -->
+          <button
+            v-if="isVoiceSupported"
+            :class="['mic-btn', { recording: isListening }]"
+            :title="isListening ? 'Stop recording' : 'Voice input'"
+            @click="toggleVoiceInput"
+          >
+            <Mic v-if="!isListening" :size="18" />
+            <MicOff v-else :size="18" />
+          </button>
+        </div>
+        <!-- Voice feedback (when recording) -->
+        <div v-if="isListening" class="voice-feedback">
+          <div class="voice-waveform">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+          </div>
+          <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
+          <button class="voice-cancel" @click="cancelVoice">
+            <X :size="14" />
+          </button>
+        </div>
+        <!-- Voice error message -->
+        <div v-if="voiceError && !isListening" class="voice-error">
+          {{ voiceError }}
+        </div>
       </div>
 
       <!-- Description Input -->
@@ -188,7 +219,8 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, reactive } from 'vue'
-import { X, Plus, Inbox, Flag, Calendar, Zap } from 'lucide-vue-next'
+import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff } from 'lucide-vue-next'
+import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
 
 const emit = defineEmits<{
@@ -199,6 +231,39 @@ const quickCapture = useQuickCapture()
 
 // Template refs
 const titleInputRef = ref<HTMLInputElement>()
+
+// Voice input (TASK-1024)
+const {
+  isListening,
+  isSupported: isVoiceSupported,
+  displayTranscript,
+  error: voiceError,
+  start: startVoice,
+  stop: stopVoice,
+  cancel: cancelVoice
+} = useSpeechRecognition({
+  language: 'auto',
+  interimResults: true,
+  silenceTimeout: 2500,
+  onResult: (result) => {
+    if (result.isFinal && result.transcript.trim()) {
+      newTask.title = result.transcript.trim()
+    }
+  },
+  onError: (err) => {
+    console.warn('[Voice QuickCapture] Error:', err)
+  }
+})
+
+// Toggle voice recording
+const toggleVoiceInput = async () => {
+  if (isListening.value) {
+    stopVoice()
+  } else {
+    newTask.title = ''
+    await startVoice()
+  }
+}
 
 // Form state
 const newTask = reactive<Omit<PendingTask, 'id'>>({
@@ -379,6 +444,12 @@ defineExpose({
   gap: var(--space-1);
 }
 
+.title-input-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .capture-input {
   width: 100%;
   background: var(--glass-bg-soft);
@@ -400,8 +471,130 @@ defineExpose({
 }
 
 .title-input {
+  flex: 1;
   padding: var(--space-3) var(--space-4);
   font-weight: var(--font-medium);
+}
+
+.title-input.voice-active {
+  border-color: var(--danger-text, #ef4444);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+/* Mic Button (TASK-1024) */
+.mic-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.mic-btn:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-primary);
+}
+
+.mic-btn:active {
+  transform: scale(0.95);
+}
+
+.mic-btn.recording {
+  background: var(--danger-text, #ef4444);
+  color: white;
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Voice feedback panel */
+.voice-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+.voice-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+}
+
+.wave-bar {
+  width: 3px;
+  height: 6px;
+  background: var(--danger-text, #ef4444);
+  border-radius: 2px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+.wave-bar:nth-child(1) { animation-delay: 0s; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes wave {
+  0%, 100% { height: 6px; }
+  50% { height: 16px; }
+}
+
+.voice-status {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-cancel {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.voice-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--danger-text, #ef4444);
+}
+
+/* Voice error message */
+.voice-error {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--danger-text, #ef4444);
 }
 
 .description-input {

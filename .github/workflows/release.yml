@@ -32,6 +32,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install Doppler CLI
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      # Fetch secrets from Doppler for build
+      - name: Fetch Build Secrets
+        run: |
+          doppler secrets download --no-file --format env > .env.production
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -57,9 +68,12 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - uses: tauri-apps/tauri-action@v0
+      # Get signing keys from Doppler (with fallback to GitHub secrets during migration)
+      - name: Build and Release
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Doppler-first with GitHub secrets fallback
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
@@ -77,6 +91,17 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
+
+      # Install Doppler CLI
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      # Fetch secrets from Doppler for build
+      - name: Fetch Build Secrets
+        run: |
+          doppler secrets download --no-file --format env > .env.production
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

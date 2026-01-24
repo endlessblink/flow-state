@@ -546,10 +546,11 @@ export function useCanvasInteractions(deps?: {
 
                     // Skip if position didn't change meaningfully
                     // (prevents drift when task just followed parent group)
+                    // TASK-370: Increased threshold from 1 to 5 to prevent phantom movement of siblings
                     if (oldParentId === newParentId && oldParentId !== null) {
                         const oldPos = task.canvasPosition || { x: 0, y: 0 }
                         const posDelta = Math.abs(absolutePos.x - oldPos.x) + Math.abs(absolutePos.y - oldPos.y)
-                        if (posDelta < 1) {
+                        if (posDelta < 5) {
                             continue
                         }
                     }

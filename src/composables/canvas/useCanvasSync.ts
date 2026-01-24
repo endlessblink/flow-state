@@ -195,6 +195,16 @@ export function useCanvasSync() {
                 }
             }
 
+            // BUG-1047 DEBUG: Log sync positions before PM update
+            const taskUpdates = updates.filter(u => !groups.some(g => g.id === u.id))
+            if (taskUpdates.length > 0) {
+                console.log('🔍 [BUG-1047] syncStoreToCanvas feeding to PM:', taskUpdates.slice(0, 3).map(u => ({
+                    id: u.id.slice(0, 8),
+                    x: Math.round(u.x),
+                    y: Math.round(u.y)
+                })))
+            }
+
             // Commit updates (locks will prevent overwrites of dragged items)
             positionManager.batchUpdate(updates, 'remote-sync')
 
@@ -336,6 +346,15 @@ export function useCanvasSync() {
                 if (!pmNode) continue
 
                 const absolutePos = pmNode.position
+
+                // BUG-1047 DEBUG: Log PM position for first few tasks
+                if (tasksToSync.indexOf(task) < 3) {
+                    console.log('🔍 [BUG-1047] PM returning position for task:', {
+                        id: task.id.slice(0, 8),
+                        pmPosition: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
+                        storePosition: task.canvasPosition ? { x: Math.round(task.canvasPosition.x), y: Math.round(task.canvasPosition.y) } : null
+                    })
+                }
                 let parentId = pmNode.parentId
 
                 // Calculate Relative Position for Vue Flow
@@ -404,7 +423,7 @@ export function useCanvasSync() {
                     const nodeB = bMap.get(nodeA.id)
                     if (!nodeB) return true
 
-                    // Check Position
+                    // Check Position - small threshold to detect intentional position changes
                     if (Math.abs(nodeA.position.x - nodeB.position.x) > 0.1 ||
                         Math.abs(nodeA.position.y - nodeB.position.y) > 0.1) return true
 

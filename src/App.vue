@@ -2,6 +2,9 @@
   <NConfigProvider :theme="darkTheme" :theme-overrides="themeOverrides">
     <NGlobalStyle />
     <NMessageProvider>
+      <!-- BUG-1056: Brave Browser Warning Banner -->
+      <BraveBanner />
+
       <!-- Tauri Startup Screen (only shows in Tauri mode during initialization) -->
       <TauriStartupScreen
         v-if="showStartupScreen"
@@ -55,8 +58,10 @@ import FaviconManager from '@/components/common/FaviconManager.vue'
 import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
 import IOSInstallPrompt from '@/components/common/IOSInstallPrompt.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
+import BraveBanner from '@/components/ui/BraveBanner.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { useMobileDetection } from '@/composables/useMobileDetection'
+import { initializeBraveProtection } from '@/utils/braveProtection'
 
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
@@ -92,13 +97,19 @@ const handleGlobalNewTask = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Check for Tauri AFTER mount - __TAURI__ should be injected by now
   isTauriApp.value = typeof window !== 'undefined' && '__TAURI__' in window
   initialized.value = true
 
   // Log for debugging
   console.log('[App] Tauri detected:', isTauriApp.value)
+
+  // BUG-1056: Initialize Brave browser detection
+  const braveState = await initializeBraveProtection()
+  if (braveState.isBrave) {
+    console.log('[App] Brave browser detected - monitoring for blocked resources')
+  }
 
   window.addEventListener('global-new-task', handleGlobalNewTask)
   window.addEventListener('keydown', handleKeydown)

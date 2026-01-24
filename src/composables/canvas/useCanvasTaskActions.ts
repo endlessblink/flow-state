@@ -327,10 +327,23 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
      * Creates a "Done Tasks" group around the arranged tasks for easy navigation.
      */
     const arrangeDoneTasksInGrid = async () => {
+        console.log('[ARRANGE-DONE] Starting arrangement...')
+
+        // Step 0: Ensure done tasks are visible FIRST (before filtering)
+        // This must happen before we collect doneTasks, otherwise they might be filtered out
+        if (taskStore.hideCanvasDoneTasks) {
+            taskStore.toggleCanvasDoneTasks()
+            console.log(`[ARRANGE-DONE] Enabled showing done tasks on canvas`)
+            // Wait for reactivity to propagate
+            await new Promise(resolve => setTimeout(resolve, 50))
+        }
+
         // Find all done tasks that have a canvas position
         const doneTasks = taskStore.tasks.filter(
             (t) => t.status === 'done' && t.canvasPosition
         )
+
+        console.log(`[ARRANGE-DONE] Found ${doneTasks.length} done tasks with canvas positions`)
 
         if (doneTasks.length === 0) {
             console.log('[ARRANGE-DONE] No done tasks with canvas positions to arrange')
@@ -402,7 +415,13 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             )
             if (existingDoneGroup) {
                 console.log(`[ARRANGE-DONE] Removing existing Done Tasks group: ${existingDoneGroup.id}`)
-                await canvasStore.deleteSection(existingDoneGroup.id)
+                try {
+                    await canvasStore.deleteSection(existingDoneGroup.id)
+                    // Wait for deletion to propagate
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                } catch (deleteError) {
+                    console.warn(`[ARRANGE-DONE] Failed to delete existing group, continuing:`, deleteError)
+                }
             }
 
             // Step 2: Create the "Done Tasks" group
@@ -421,25 +440,21 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 isCollapsed: false
             })
 
+            if (!newGroup || !newGroup.id) {
+                console.error('[ARRANGE-DONE] Failed to create Done Tasks group')
+                return
+            }
+
             console.log(`[ARRANGE-DONE] Created Done Tasks group: ${newGroup.id}`)
 
-            // Step 2.5: Ensure done tasks are visible BEFORE syncing
-            // This is critical because the sync filter excludes done tasks when hidden
-            if (taskStore.hideCanvasDoneTasks) {
-                taskStore.toggleCanvasDoneTasks()
-                console.log(`[ARRANGE-DONE] Enabled showing done tasks on canvas (before sync)`)
-            }
-
-            // Step 2.6: Sync to ensure group node exists in Vue Flow before assigning tasks
-            if (deps.batchSyncNodes) {
-                deps.batchSyncNodes('high')
-            } else {
-                deps.syncNodes()
-            }
-            // Small delay to ensure Vue Flow processes the group node
-            await new Promise(resolve => setTimeout(resolve, 50))
+            // Step 2.5: Sync to ensure group node exists in Vue Flow before assigning tasks
+            deps.syncNodes()
+            await new Promise(resolve => setTimeout(resolve, 150))
 
             // Step 3: Arrange tasks in grid and assign to group
+            console.log(`[ARRANGE-DONE] Updating ${doneTasks.length} tasks with parentId: ${newGroup.id}`)
+            let updatedCount = 0
+
             for (let i = 0; i < doneTasks.length; i++) {
                 const task = doneTasks[i]
                 const col = i % columns
@@ -448,20 +463,27 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 const newX = startX + col * (cardWidth + gapX)
                 const newY = startY + row * (cardHeight + gapY)
 
-                await undoHistory.updateTaskWithUndo(task.id, {
-                    parentId: newGroup.id,
-                    canvasPosition: { x: newX, y: newY }
-                })
+                try {
+                    await undoHistory.updateTaskWithUndo(task.id, {
+                        parentId: newGroup.id,
+                        canvasPosition: { x: newX, y: newY }
+                    })
+                    updatedCount++
+                } catch (taskError) {
+                    console.error(`[ARRANGE-DONE] Failed to update task ${task.id}:`, taskError)
+                }
             }
 
-            // Step 4: Final sync with done tasks now visible
-            if (deps.batchSyncNodes) {
-                deps.batchSyncNodes('high')
-            } else {
-                deps.syncNodes()
-            }
+            console.log(`[ARRANGE-DONE] Updated ${updatedCount}/${doneTasks.length} tasks`)
 
-            console.log(`[ARRANGE-DONE] Successfully arranged ${doneTasks.length} tasks in Done Tasks group`)
+            // Step 4: Final sync to establish parent-child relationship in Vue Flow
+            deps.syncNodes()
+            await new Promise(resolve => setTimeout(resolve, 150))
+
+            // Step 5: Force a second sync for Vue Flow parent-child hierarchy
+            deps.syncNodes()
+
+            console.log(`[ARRANGE-DONE] Successfully arranged ${updatedCount} tasks in Done Tasks group`)
         } catch (error) {
             console.error('[ASYNC-ERROR] arrangeDoneTasksInGrid failed', error)
         }

@@ -94,6 +94,65 @@ export const useTimerStore = defineStore('timer', () => {
     await saveTimerSessionWithLeadership()
   }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
+  // TASK-1009: Polling fallback for followers (mobile PWA Realtime WebSocket may fail)
+  // Polls every 3 seconds when not the leader to sync timer state
+  const FOLLOWER_POLL_INTERVAL_MS = 3000
+  const { pause: pauseFollowerPoll, resume: resumeFollowerPoll } = useIntervalFn(async () => {
+    // Only poll if we're not the leader (leaders write, followers read)
+    if (isDeviceLeader.value) return
+
+    try {
+      const session = await fetchActiveTimerSession()
+
+      if (!session) {
+        // No active session - clear local state if we had one
+        if (currentSession.value) {
+          console.log('🍅 [TIMER] Follower poll: No active session found, clearing local state')
+          pauseTimerInterval()
+          currentSession.value = null
+        }
+        return
+      }
+
+      // Session exists - check if it's the same as ours or different
+      const isNewOrUpdated = !currentSession.value ||
+        currentSession.value.id !== session.id ||
+        currentSession.value.isActive !== session.isActive ||
+        currentSession.value.isPaused !== session.isPaused
+
+      if (isNewOrUpdated) {
+        console.log('🍅 [TIMER] Follower poll: Session updated', {
+          sessionId: session.id,
+          isActive: session.isActive,
+          isPaused: session.isPaused,
+          remainingTime: session.remainingTime
+        })
+
+        // Apply drift correction
+        let adjustedTime = session.remainingTime
+        if (session.deviceLeaderLastSeen && session.isActive && !session.isPaused) {
+          const drift = Math.floor((Date.now() - session.deviceLeaderLastSeen) / 1000)
+          if (drift > 0 && drift < 30) {
+            adjustedTime = Math.max(0, session.remainingTime - drift)
+          }
+        }
+
+        currentSession.value = {
+          ...session,
+          remainingTime: adjustedTime
+        }
+
+        if (session.isActive && !session.isPaused) {
+          resumeTimerInterval()
+        } else {
+          pauseTimerInterval()
+        }
+      }
+    } catch (err) {
+      console.warn('🍅 [TIMER] Follower poll error:', err)
+    }
+  }, FOLLOWER_POLL_INTERVAL_MS, { immediate: false })
+
   // Computed
   const isTimerActive = computed(() => currentSession.value?.isActive || false)
   const isPaused = computed(() => currentSession.value?.isPaused || false)
@@ -162,6 +221,15 @@ export const useTimerStore = defineStore('timer', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawPayload = payload as any
 
+    console.log('🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload:', {
+      hasPayload: !!payload,
+      eventType: rawPayload?.eventType,
+      table: rawPayload?.table,
+      hasNew: !!rawPayload?.new,
+      hasOld: !!rawPayload?.old,
+      hasRecord: !!rawPayload?.record
+    })
+
     // Supabase realtime wraps data in { new: {...}, old: {...}, eventType: '...' }
     // Extract the actual record from the wrapper
     const newDoc = rawPayload?.new || rawPayload?.record || rawPayload
@@ -171,14 +239,57 @@ export const useTimerStore = defineStore('timer', () => {
       if (rawPayload?.eventType === 'DELETE' || rawPayload?.type === 'DELETE') {
         currentSession.value = null
         pauseTimerInterval()
+        releaseWakeLock()
       }
       return
     }
 
+    // Skip our own updates when we're the leader
     if (isDeviceLeader.value && newDoc.device_leader_id === deviceId) return
 
     const lastSeen = new Date(newDoc.device_leader_last_seen).getTime()
-    if (Date.now() - lastSeen < DEVICE_LEADER_TIMEOUT_MS) {
+    const timeSinceLastSeen = Date.now() - lastSeen
+
+    // TASK-1009: Handle stopped sessions immediately regardless of timeout
+    // When another device stops the timer, we should clear our local state
+    // Note: Check for falsy is_active (false, 0, null, undefined) to handle various Supabase formats
+    const isSessionStopped = newDoc.is_active === false || newDoc.is_active === 0 || newDoc.is_active === 'false'
+
+    console.log('🍅 [TIMER] handleRemoteTimerUpdate received:', {
+      sessionId: newDoc.id,
+      is_active: newDoc.is_active,
+      is_active_type: typeof newDoc.is_active,
+      isSessionStopped,
+      device_leader_id: newDoc.device_leader_id,
+      ourDeviceId: deviceId,
+      weAreLeader: isDeviceLeader.value
+    })
+
+    if (isSessionStopped) {
+      console.log('🍅 [TIMER] Remote stop received - clearing session', {
+        sessionId: newDoc.id,
+        stoppedBy: newDoc.device_leader_id,
+        completedAt: newDoc.completed_at
+      })
+      pauseTimerInterval()
+      pauseHeartbeat()
+      isDeviceLeader.value = false
+      releaseWakeLock()
+
+      // Add to completed sessions if not already there
+      if (currentSession.value && currentSession.value.id === newDoc.id) {
+        completedSessions.value.push({
+          ...currentSession.value,
+          isActive: false,
+          completedAt: newDoc.completed_at ? new Date(newDoc.completed_at) : new Date()
+        })
+      }
+      currentSession.value = null
+      return
+    }
+
+    // For active sessions, only process if leader is still fresh
+    if (timeSinceLastSeen < DEVICE_LEADER_TIMEOUT_MS) {
       isDeviceLeader.value = false
       pauseHeartbeat()
 
@@ -206,8 +317,10 @@ export const useTimerStore = defineStore('timer', () => {
       currentSession.value = session as PomodoroSession
       if (session.isActive && !session.isPaused) {
         resumeTimerInterval()
+        requestWakeLock()
       } else {
         pauseTimerInterval()
+        releaseWakeLock()
       }
     }
   }
@@ -282,6 +395,7 @@ export const useTimerStore = defineStore('timer', () => {
     }
 
     isDeviceLeader.value = true
+    pauseFollowerPoll() // Leaders don't poll, they write
     resumeHeartbeat()
     broadcastSession()
     await saveTimerSessionWithLeadership()
@@ -315,9 +429,28 @@ export const useTimerStore = defineStore('timer', () => {
     isDeviceLeader.value = false
     releaseWakeLock() // Allow sleep - ROAD-004
     if (currentSession.value) {
-      completedSessions.value.push({ ...currentSession.value, isActive: false, completedAt: new Date() })
+      // Create stopped session with isActive: false
+      const stoppedSession: PomodoroSession = {
+        ...currentSession.value,
+        isActive: false,
+        completedAt: new Date()
+      }
+
+      // TASK-1009: Save stopped state to DB - triggers Supabase Realtime for other devices
+      // This ensures desktop app and KDE widget receive the stop event
+      console.log('🍅 [TIMER] stopTimer: Saving stopped session to DB for cross-device sync', {
+        sessionId: stoppedSession.id,
+        isActive: stoppedSession.isActive,
+        deviceId
+      })
+      await saveActiveTimerSession(stoppedSession, deviceId)
+      console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+
+      // Update local state
+      completedSessions.value.push(stoppedSession)
       currentSession.value = null
-      broadcastSession()
+      broadcastSession() // For same-browser tabs
+      resumeFollowerPoll() // Resume polling to detect new sessions
     }
   }
 
@@ -533,7 +666,14 @@ export const useTimerStore = defineStore('timer', () => {
         isDeviceLeader.value = false
         // Followers should also update their local countdown
         resumeTimerInterval()
+        // TASK-1009: Start follower polling as backup for Realtime
+        resumeFollowerPoll()
       }
+    } else {
+      // No active session - but still start follower polling to detect new sessions
+      // TASK-1009: This ensures we pick up timers started on other devices
+      console.log('🍅 [TIMER] No active session, starting follower poll to detect new sessions')
+      resumeFollowerPoll()
     }
 
     // Set cross-tab callbacks
@@ -561,13 +701,16 @@ export const useTimerStore = defineStore('timer', () => {
       }
     })
 
-    initRealtimeSubscription(() => { }, () => { }, handleRemoteTimerUpdate)
+    // TASK-1009: Realtime subscription is now handled by useAppInitialization
+    // to avoid multiple calls to initRealtimeSubscription killing each other's channels.
+    // The timer handler is exposed via getTimerRealtimeHandler() for app initialization to use.
   }
 
   // Cleanup
   onUnmounted(() => {
     pauseTimerInterval()
     pauseHeartbeat()
+    pauseFollowerPoll()
   })
 
   // Watch for auth state changes - initialize when auth becomes ready
@@ -589,6 +732,8 @@ export const useTimerStore = defineStore('timer', () => {
     sessionTypeIcon, tabDisplayTime, sessionStatusText,
     timerPercentage, faviconStatus, tabTitleWithTimer,
     startTimer, pauseTimer, resumeTimer, stopTimer, completeSession,
-    requestNotificationPermission, playStartSound, playEndSound
+    requestNotificationPermission, playStartSound, playEndSound,
+    // TASK-1009: Expose handler for app initialization to use in consolidated Realtime subscription
+    handleRemoteTimerUpdate
   }
 })

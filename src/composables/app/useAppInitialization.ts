@@ -173,11 +173,15 @@ export function useAppInitialization() {
             }
         }
 
-        const channel = initRealtimeSubscription(onProjectChange, onTaskChange)
+        // TASK-1009: Consolidated Realtime subscription with ALL handlers
+        // Previously, timer store called initRealtimeSubscription separately, killing this channel
+        // Now we pass the timer handler here so there's only ONE subscription point
+        const timerHandler = timerStore.handleRemoteTimerUpdate
+        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler)
         activeChannel.value = channel
 
         if (channel) {
-
+            console.log('📡 [APP-INIT] Realtime subscription created with project, task, and timer handlers')
         }
 
 

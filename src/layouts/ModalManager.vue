@@ -189,10 +189,19 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
 }
 
 const executeConfirmAction = async () => {
-  await confirmAction.value()
+  // Close modal first (optimistic) to ensure it closes even if action fails
+  const action = confirmAction.value
   showConfirmModal.value = false
   confirmAction.value = () => {}
   confirmMessage.value = ''
+  confirmDetails.value = []
+
+  // Execute action after modal is closed
+  try {
+    await action()
+  } catch (error) {
+    console.error('[ModalManager] Confirm action failed:', error)
+  }
 }
 
 const cancelConfirmAction = () => {

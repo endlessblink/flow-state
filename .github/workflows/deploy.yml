@@ -99,3 +99,14 @@ jobs:
               echo '>>> Starting containers...'
               docker compose up -d --build --force-recreate
             "
+
+      # Validate CORS configuration after deployment
+      - name: Validate CORS Configuration
+        run: |
+            echo "Waiting 30s for services to stabilize..."
+            sleep 30
+            chmod +x ./scripts/validate-cors.sh
+            ./scripts/validate-cors.sh
+        env:
+          API_URL: https://api.in-theflow.com
+          ORIGIN: https://in-theflow.com

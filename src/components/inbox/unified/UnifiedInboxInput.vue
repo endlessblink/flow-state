@@ -4,25 +4,47 @@
       <input
         v-model="newTaskTitle"
         :dir="quickAddDirection"
-        :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
-        :class="['quick-add-input', { 'voice-active': isListening }]"
+        :placeholder="isListening ? 'Listening...' : (isProcessingVoice ? 'Processing...' : 'Quick add task (Enter)...')"
+        :class="['quick-add-input', { 'voice-active': isListening || isProcessingVoice }]"
         @keydown.enter="handleAddTask"
       >
 
       <!-- Mic button (TASK-1024) -->
       <button
         v-if="isVoiceSupported"
-        :class="['mic-btn', { recording: isListening }]"
-        :title="isListening ? 'Stop recording' : 'Voice input'"
+        :class="['mic-btn', { recording: isListening, processing: isProcessingVoice }]"
+        :title="isListening ? 'Stop recording' : (isProcessingVoice ? 'Processing...' : 'Voice input')"
+        :disabled="isProcessingVoice"
         @click="toggleVoiceInput"
       >
-        <Mic v-if="!isListening" :size="18" />
+        <Loader2 v-if="isProcessingVoice" :size="18" class="spin" />
+        <Mic v-else-if="!isListening" :size="18" />
         <MicOff v-else :size="18" />
       </button>
     </div>
 
+    <!-- Voice mode toggle (TASK-1060: Groq Whisper support) -->
+    <div v-if="showVoiceModeToggle" class="voice-mode-toggle">
+      <button
+        :class="['mode-btn', { active: voiceMode === 'whisper' }]"
+        :disabled="!hasWhisperApiKey"
+        :title="hasWhisperApiKey ? 'Groq Whisper (works everywhere)' : 'No API key configured'"
+        @click="voiceMode = 'whisper'"
+      >
+        🎙️ Whisper
+      </button>
+      <button
+        :class="['mode-btn', { active: voiceMode === 'browser' }]"
+        :disabled="!isBrowserVoiceSupported"
+        :title="isBrowserVoiceSupported ? 'Browser Speech API' : 'Not supported in this browser'"
+        @click="voiceMode = 'browser'"
+      >
+        🌐 Browser
+      </button>
+    </div>
+
     <!-- Voice feedback (when recording) -->
-    <div v-if="isListening" class="voice-feedback">
+    <div v-if="isListening || isProcessingVoice" class="voice-feedback">
       <div class="voice-waveform">
         <span class="wave-bar"></span>
         <span class="wave-bar"></span>
@@ -30,15 +52,20 @@
         <span class="wave-bar"></span>
         <span class="wave-bar"></span>
       </div>
-      <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
+      <span class="voice-status">
+        {{ isProcessingVoice ? 'Processing audio...' : (displayTranscript || 'Speak now...') }}
+      </span>
       <button class="voice-cancel" @click="cancelVoice">
         <X :size="14" />
       </button>
     </div>
 
     <!-- Voice error message -->
-    <div v-if="voiceError && !isListening" class="voice-error">
+    <div v-if="voiceError && !isListening && !isProcessingVoice" class="voice-error">
       {{ voiceError }}
+      <span v-if="voiceMode === 'browser'" class="error-hint">
+        Try switching to Whisper mode above.
+      </span>
     </div>
 
     <!-- Voice Task Confirmation (TASK-1028) -->
@@ -86,11 +113,12 @@ Call client"
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { NButton } from 'naive-ui'
-import { Mic, MicOff, X } from 'lucide-vue-next'
+import { Mic, MicOff, X, Loader2 } from 'lucide-vue-next'
 import { useBrainDump } from '@/composables/useBrainDump'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
+import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useVoiceTaskParser, type ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 import VoiceTaskConfirmation from '@/mobile/components/VoiceTaskConfirmation.vue'
 
@@ -109,15 +137,46 @@ const { parseTranscript } = useVoiceTaskParser()
 const parsedVoiceTask = ref<ParsedVoiceTask | null>(null)
 const showVoiceConfirmation = ref(false)
 
-// Voice input (TASK-1024)
+// Voice mode: 'whisper' (Groq API) or 'browser' (Web Speech API)
+// TASK-1060: Default to Whisper since it works in all browsers
+const voiceMode = ref<'whisper' | 'browser'>('whisper')
+
+// Groq Whisper voice input (works everywhere, requires API key)
 const {
-  isListening,
-  isSupported: isVoiceSupported,
-  displayTranscript,
-  error: voiceError,
-  start: startVoice,
-  stop: stopVoice,
-  cancel: cancelVoice
+  isRecording: isWhisperRecording,
+  isProcessing: isWhisperProcessing,
+  isSupported: isWhisperSupported,
+  hasApiKey: hasWhisperApiKey,
+  transcript: whisperTranscript,
+  error: whisperError,
+  start: startWhisper,
+  stop: stopWhisper,
+  cancel: cancelWhisper
+} = useWhisperSpeech({
+  onResult: (result) => {
+    console.log('[Whisper] Result:', result)
+    if (result.transcript.trim()) {
+      // Auto-detect language from Whisper response
+      const lang = result.language === 'he' ? 'he-IL' : 'en-US'
+      const parsed = parseTranscript(result.transcript.trim(), lang)
+      parsedVoiceTask.value = parsed
+      showVoiceConfirmation.value = true
+    }
+  },
+  onError: (err) => {
+    console.warn('[Whisper] Error:', err)
+  }
+})
+
+// Browser-based voice input (Web Speech API - doesn't work in Brave)
+const {
+  isListening: isBrowserListening,
+  isSupported: isBrowserVoiceSupported,
+  displayTranscript: browserDisplayTranscript,
+  error: browserVoiceError,
+  start: startBrowserVoice,
+  stop: stopBrowserVoice,
+  cancel: cancelBrowserVoice
 } = useSpeechRecognition({
   language: 'auto',
   interimResults: true,
@@ -130,19 +189,76 @@ const {
     }
   },
   onError: (err) => {
-    console.warn('[Voice] Error:', err)
+    console.warn('[BrowserVoice] Error:', err)
   }
 })
+
+// Unified voice state (combines both modes)
+const isListening = computed(() =>
+  voiceMode.value === 'whisper'
+    ? isWhisperRecording.value
+    : isBrowserListening.value
+)
+const isProcessingVoice = computed(() => isWhisperProcessing.value)
+const isVoiceSupported = computed(() =>
+  voiceMode.value === 'whisper'
+    ? isWhisperSupported.value && hasWhisperApiKey.value
+    : isBrowserVoiceSupported.value
+)
+const displayTranscript = computed(() =>
+  voiceMode.value === 'whisper'
+    ? whisperTranscript.value
+    : browserDisplayTranscript.value
+)
+const voiceError = computed(() =>
+  voiceMode.value === 'whisper'
+    ? whisperError.value
+    : browserVoiceError.value
+)
+
+// Show toggle if either mode is available
+const showVoiceModeToggle = computed(() =>
+  (hasWhisperApiKey.value && isWhisperSupported.value) ||
+  isBrowserVoiceSupported.value
+)
+
+// Auto-select mode based on API key availability
+// Prefer Whisper if available (works in Brave), fallback to browser
+watch([hasWhisperApiKey, isBrowserVoiceSupported], ([hasKey, browserSupported]) => {
+  if (hasKey) {
+    voiceMode.value = 'whisper'
+  } else if (browserSupported) {
+    voiceMode.value = 'browser'
+  }
+}, { immediate: true })
 
 // Toggle voice recording
 const toggleVoiceInput = async () => {
   if (isListening.value) {
-    stopVoice()
+    if (voiceMode.value === 'whisper') {
+      stopWhisper()
+    } else {
+      stopBrowserVoice()
+    }
   } else {
     parsedVoiceTask.value = null
     showVoiceConfirmation.value = false
-    await startVoice()
+    if (voiceMode.value === 'whisper') {
+      await startWhisper()
+    } else {
+      await startBrowserVoice()
+    }
   }
+}
+
+// Cancel voice recording
+const cancelVoice = () => {
+  if (voiceMode.value === 'whisper') {
+    cancelWhisper()
+  } else {
+    cancelBrowserVoice()
+  }
+  resetVoiceState()
 }
 
 // Voice task confirmation handlers (TASK-1028)
@@ -161,7 +277,6 @@ const handleVoiceTaskCancel = () => {
 const resetVoiceState = () => {
   parsedVoiceTask.value = null
   showVoiceConfirmation.value = false
-  cancelVoice()
 }
 
 const {
@@ -237,19 +352,38 @@ const handleAddTask = () => {
   transition: all 0.2s ease;
 }
 
-.mic-btn:hover {
+.mic-btn:hover:not(:disabled) {
   background: var(--glass-bg);
   color: var(--text-primary);
 }
 
-.mic-btn:active {
+.mic-btn:active:not(:disabled) {
   transform: scale(0.95);
+}
+
+.mic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .mic-btn.recording {
   background: var(--danger-text, #ef4444);
   color: white;
   animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+.mic-btn.processing {
+  background: var(--brand-primary, #3b82f6);
+  color: white;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes pulse-recording {
@@ -259,6 +393,41 @@ const handleAddTask = () => {
   50% {
     box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
   }
+}
+
+/* Voice mode toggle (TASK-1060) */
+.voice-mode-toggle {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.mode-btn {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover:not(:disabled) {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+}
+
+.mode-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mode-btn.active {
+  background: var(--brand-primary-subtle, rgba(59, 130, 246, 0.1));
+  border-color: var(--brand-primary, #3b82f6);
+  color: var(--brand-primary, #3b82f6);
 }
 
 /* Voice feedback panel */
@@ -290,7 +459,7 @@ const handleAddTask = () => {
 
 .wave-bar:nth-child(1) { animation-delay: 0s; }
 .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(3) { animation-delay: 0.3s; }
 .wave-bar:nth-child(4) { animation-delay: 0.3s; }
 .wave-bar:nth-child(5) { animation-delay: 0.4s; }
 
@@ -335,6 +504,12 @@ const handleAddTask = () => {
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);
+}
+
+.error-hint {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--text-tertiary);
 }
 
 .brain-dump-section {

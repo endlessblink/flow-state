@@ -1,5 +1,5 @@
-**Last Updated**: January 23, 2026 (Archived 32 completed tasks to MASTER_PLAN_JAN_2026.md)
-**Version**: 5.57 (Documentation Archival)
+**Last Updated**: January 24, 2026 (Added BUG-1056 Brave Compatibility)
+**Version**: 5.63 (Calendar Icon + Layout Bugs)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -72,6 +72,7 @@
 | ~~**BUG-243**~~          | ✅ **DONE** **Canvas Filter Persistence Fix**                           | **P0**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | TASK-194                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-244**~~          | ✅ **DONE** **Canvas Selection (Ctrl+Click) Wonkiness**                 | **P1**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | ROAD-013                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-245**~~          | ✅ **DONE** **Today Smart Group Date Not Updating**                     | **P0**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | TASK-184                                                                                                                                                                                                       |                                                        |
+| **BUG-1047**             | **Task Position Drift on Edit Save**                                   | **P0**                                              | 🔄 IN PROGRESS                                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
 | ~~**TASK-231**~~         | ~~**Dynamic Skills & Docs API**~~                                      | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/skills and /api/docs endpoints                                                                                                                                                                      |                                                        |
@@ -175,7 +176,9 @@
 | **TASK-1008**            | **Mobile: Remove Active/Planned Filter Chips**                          | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Remove "Active" and "Planned" filter chips from mobile Inbox. Simplify to use bottom sheet filters instead.                                                                                                        |                                                        |
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
 | ~~**TASK-1010**~~        | ✅ **DONE** **Mobile: Quick Sort Redesign with Swipe Gestures**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations, nested project hierarchy, 7 date presets. Added to mobile nav. |                                                        |
-| ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |                                                        |
+| ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |
+| **BUG-1056**             | **Brave Browser Compatibility (Voice + WebSocket)**                      | **P2**                                              | 👀 **REVIEW**                                                                                                                   | Voice input "network error" (Brave blocks Google Speech API). WebSocket interrupted. [See Details](#bug-1056-brave-browser-compatibility-review)                                                                   |                                                        |
+| **BUG-1057**             | **Fix Failing Unit Tests (8 failures)**                                  | **P3**                                              | 📋 **PLANNED**                                                                                                                  | Playwright/Vitest conflicts, missing imports, obsolete test files. [See Details](#bug-1057-fix-failing-unit-tests-planned)                                                                                          |                                                        |
 | ~~**BUG-1012**~~         | ✅ **DONE** **Dev-Maestro: "Submit Answers & Continue" Button Fixed**    | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Added debugging, error feedback, validation. Button now works correctly.                                                                                                                                            |                                                        |
 | ~~**FEATURE-1012**~~     | ✅ **DONE** **Orchestrator: Auto-Detect Project Tech Stack**             | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Auto-detects Vue/React, UI libs, state mgmt, DB from package.json. Questions now focus on feature details, not tech stack.                                                                                          | TASK-303                                               |
 | **FEATURE-1013**         | **Orchestrator: Auto-Detect Data Layer**                                 | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1013-orchestrator-auto-detect-data-layer-planned) - Find Pinia stores, Supabase, APIs before asking about data management                                                                   | TASK-303, FEATURE-1012                                 |
@@ -212,6 +215,15 @@
 | **BUG-1043**             | **Investigate 13 Pre-Existing Test Failures**                            | **P2**                                              | 📋 **PLANNED**                                                                                                                  | 13 tests failing in: Task Instance Helpers, backup validation, etc. Pre-existing failures unrelated to recent changes - need investigation and fixes.                                                                        | -                                                      |
 | ~~**BUG-1044**~~         | ✅ **DONE** **Quick Sort Changes Reset/Reverted**                        | **P0**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | Fixed: 313 lines of uncommitted changes were never pushed. Committed and pushed delete modal, quick edit panel, swipe gestures.                                                                                                 | TASK-1010                                              |
 | **BUG-1045**             | **Canvas Loads Empty, Populates Only After Restart**                     | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Web app canvas loads empty initially - tasks only appear after page restart. Likely race condition between auth/store initialization and canvas sync.                                                                            | -                                                      |
+| **BUG-1046**             | **Quick Sort: Task Status Resets Overnight on Mobile**                   | **P1**                                              | 📋 **PLANNED**                                                                                                                  | Tasks sorted in Quick Sort on mobile PWA have their status reset during the night. Possible causes: Supabase sync not persisting, cache overwriting DB, or stale service worker data.                                            | TASK-1010                                              |
+| **FEATURE-1048**         | **Canvas: Auto-Rotating Day Groups (User-Triggered)**                    | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1048-canvas-auto-rotating-day-groups-planned) - Midnight detection + banner prompts user to rotate Mon-Sun groups. Groups stay editable/movable/deletable.                                                  | TASK-082                                               |
+| ~~**BUG-1049**~~         | ✅ **DONE** **Delete Confirmation Modal Not Closing**                    | **P1**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | Fixed: Modal stayed open after clicking Delete. Root cause: unhandled async error in `executeConfirmAction`. Fix: Close modal optimistically before action, wrap in try/catch.                                                      | -                                                      |
+| **FEATURE-1050**         | **Search in Canvas Inbox & Calendar Inbox**                              | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Add search/filter input to Canvas Inbox sidebar and Calendar Inbox sidebar. Filter tasks by title/description as user types. Quick find for large task lists.                                                                        | -                                                      |
+| **BUG-1051**             | **CRITICAL: Date Changes Reset After Refresh (Quick Sort/Inbox)**        | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Date changes made in Quick Sort or Canvas Inbox reset after page refresh. Changes not persisting to Supabase. Possible causes: missing await, sync race condition, or optimistic update not flushing to DB.                           | TASK-1010, BUG-1046                                    |
+| **BUG-1052**             | **Calendar: No Current Time Indicator**                                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Calendar view is missing a "now" line/indicator showing the current time. Should display a horizontal red/colored line at current hour position that updates in real-time.                                                             | -                                                      |
+| **BUG-1053**             | **Calendar Task Create Modal: No RTL Support**                           | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Task creation modal in Calendar view lacks RTL support. Hebrew text input should be right-aligned, labels and layout should mirror for RTL languages. Affects: title input, description, schedule section, details section.             | FEATURE-1020                                           |
+| **BUG-1054**             | **Unclear "No Project" Icon (Question Mark)**                            | **P3**                                              | 📋 **PLANNED**                                                                                                                  | The question mark icon for unsorted/no-project tasks is unclear. Need a better, more intuitive icon (e.g., folder with dash, empty circle, or inbox icon).                                                                               | -                                                      |
+| **BUG-1055**             | **Calendar: Task Icon/Text Wraps Vertically in Small Space**             | **P2**                                              | 📋 **PLANNED**                                                                                                                  | In calendar view, task icon and duration text break to multiple lines when task slot is narrow. Should stay horizontal with ellipsis or hide icon when space is limited. Use `flex-shrink: 0` and `white-space: nowrap`.                 | -                                                      |
 
 ---
 
@@ -231,6 +243,25 @@
 
 ---
 
+### BUG-1047: Task Position Drift on Edit Save (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-24)
+
+**Problem**: When editing an existing task and saving the changes, the task drifts to a new/unexpected location on the canvas. No console logging is visible to help debug.
+
+**Expected Behavior**: Task should remain in the same position after edit save.
+
+**Actual Behavior**: Task moves to a different location after saving edits.
+
+**Investigation Tasks**:
+- [ ] Add debug logging to task edit/save flow
+- [ ] Identify where position is being mutated during save
+- [ ] Check if sync is violating geometry invariants (per TASK-255)
+- [ ] Verify edit modal is not overwriting position data
+
+---
+
 ### BUG-352: Mobile PWA "Failed to Fetch" (Network/Cert Issue)
 **Priority**: P0-CRITICAL
 **Status**: 📋 PLANNED (for Tomorrow)
@@ -239,6 +270,51 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 1.  **SSL/Cert Issue**: Android/iOS might reject the `sslip.io` cert if the chain isn't perfect (Caddy usually handles this, but maybe an intermediate is missing).
 2.  **Mobile-Specific Code Path**: Does the mobile layout have a hardcoded `localhost` fetch somewhere that the desktop layout doesn't use?
 3.  **CORS**: Mobile browser enforcing stricter CORS?
+
+---
+
+### BUG-1056: Brave Browser Compatibility (🔄 IN PROGRESS)
+**Priority**: P2
+**Status**: 🔄 IN PROGRESS
+
+**Issues**:
+1. **Voice Input "Network Error"**: Web Speech API sends audio to Google servers. Brave Shields blocks this by default.
+2. **WebSocket Connection Interrupted**: Brave may block Supabase Realtime WebSocket due to fingerprinting protection.
+3. **App Doesn't Load Data**: Clearing site data fixes the issue (corrupted cache state).
+4. **Sign-in Blocked**: `ERR_BLOCKED_BY_CLIENT` errors prevent authentication flow.
+
+**Root Causes**:
+- Brave Browser intentionally does NOT support Web Speech API due to privacy concerns (audio sent to Google)
+- Brave is working on Lingvanex integration but not ready yet (as of Jan 2026)
+- Shields fingerprinting protection can block WebSocket connections
+
+**Workarounds**:
+1. Disable Brave Shields for `in-theflow.com`
+2. Use Firefox or Chrome for voice input
+3. Clear site data if app doesn't load
+
+**References**:
+- [Brave Web Speech API Issue #2802](https://github.com/brave/brave-browser/issues/2802)
+- [Brave Shields blocking WebSocket](https://community.brave.app/t/brave-browser-shields-blocking-my-websocket/395377)
+
+---
+
+### BUG-1057: Fix Failing Unit Tests (📋 PLANNED)
+**Priority**: P3 (technical debt)
+**Status**: 📋 PLANNED
+
+**8 test failures to fix** (excluding 13 canvas-characterization tests that correctly require dev server):
+
+| Test File | Issue | Fix |
+|-----------|-------|-----|
+| `canvas-resize-test.test.ts` | Playwright/Vitest conflict | Move to `tests/e2e/` |
+| `canvas-resize-test-comprehensive.test.ts` | Playwright/Vitest conflict | Move to `tests/e2e/` |
+| `bug-153-containment.test.ts` | Missing `src/utils/geometry` | Delete test or restore util |
+| `smoke.test.ts` | `beforeEach` not defined | Add missing Vitest import |
+| `css-syntax.test.ts` | `fileURLToPath` not a function | Fix import statement |
+| `vue-imports.test.ts` | `fileURLToPath` not a function | Fix import statement |
+| `tasks.test.ts` (2 failures) | Default project ID mismatch | Update test expectations |
+| `repro-bug-030.test.ts` | Uncategorized filter logic | Fix filter or test |
 
 ---
 
@@ -273,27 +349,18 @@ Implemented batch capture mode: rapidly add multiple tasks first, then sort them
 
 ---
 
-### TASK-357: Set Up VPS → Local Postgres Replication (📋 PLANNED)
+### ~~TASK-357~~: Set Up VPS → Local Postgres Replication (❌ WON'T DO)
 
 **Priority**: P2
-**Status**: 📋 PLANNED
+**Status**: ❌ WON'T DO (2026-01-24)
 
-Set up one-way Postgres logical replication from VPS to local for backup/redundancy.
+**Reason**: Existing 4-layer backup system is sufficient for a single-user app:
+- Layer 1: Local History (localStorage) - instant
+- Layer 2: Golden Backup (localStorage) - on change
+- Layer 3: Shadow Mirror (SQLite + JSON) - every 5 min
+- Layer 4: SQL Dumps - 6h incremental / daily full
 
-**Architecture**:
-- VPS Supabase = Primary (source of truth)
-- Local Supabase = Backup (subscribes to VPS changes)
-- One-way sync: VPS publishes, Local subscribes
-
-**Steps**:
-1. [ ] Check VPS Postgres `wal_level` is `logical`
-2. [ ] Expose VPS Postgres port 5432 (IP-restricted)
-3. [ ] Create replicator user on both sides
-4. [ ] Create publication on VPS for key tables
-5. [ ] Create subscription on Local
-6. [ ] Verify sync is working
-
-**Tables to Sync**: `tasks`, `groups`, `projects`, `timer_sessions`, `user_settings`, `notifications`
+VPS → Local replication adds complexity (exposing Postgres port, maintaining replication) without meaningful benefit. For additional off-site redundancy, see TASK-310 (Cloud backup to Dropbox) as a simpler alternative.
 
 ---
 
@@ -347,6 +414,89 @@ Implement voice recording → transcription → task creation using an API (Whis
 5. [ ] Test on mobile
 
 ---
+
+### FEATURE-1048: Canvas Auto-Rotating Day Groups (📋 PLANNED)
+
+**Priority**: P2
+**Status**: 📋 PLANNED
+**Dependencies**: TASK-082 (useDateTransition composable)
+
+Implement user-triggered day group rotation at midnight. When the day changes, show a notification prompting the user to rotate their day groups. This respects geometry invariants while providing the rotation UX.
+
+**Key Requirement**: Day groups (Monday-Sunday) must remain **fully editable** - users can move, delete, rename, and change them manually at any time. The rotation is a convenience feature, not a constraint.
+
+**Implementation Plan**:
+
+#### Step 1: Create `useDayGroupRotation.ts` Composable
+**File**: `src/composables/canvas/useDayGroupRotation.ts`
+
+- Import and use `useDateTransition` for midnight detection
+- Detect day-of-week groups on canvas (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
+- Use flexible name matching (same as `useCanvasSectionProperties.ts` line 32-48)
+- Calculate rotation: which group should move where
+- Expose `rotateGroups()` function that uses drag handler code path
+- Expose `hasDayGroups` computed for conditional banner display
+- Track last rotation date to prevent duplicate prompts
+
+#### Step 2: Add Rotation Toast/Banner
+**File**: `src/components/canvas/DayRotationBanner.vue`
+
+- Show when `useDateTransition` fires at midnight AND `hasDayGroups` is true
+- Display: "New day! Tap to rotate your day groups"
+- Button triggers `rotateGroups()` from composable
+- Dismiss button (X) to decline rotation
+- Auto-dismiss after 30 seconds if no action
+- Store dismissal preference in localStorage (optional "Don't show again")
+
+#### Step 3: Integrate into CanvasView
+**File**: `src/views/CanvasView.vue`
+
+- Import `useDayGroupRotation`
+- Add `DayRotationBanner` component (similar to `CanvasStatusBanner`)
+- Wire up the rotation trigger
+
+#### Step 4: Implement Safe Group Movement
+**File**: `src/composables/canvas/useDayGroupRotation.ts`
+
+- Use `onNodeDragStop` equivalent code path (geometry invariant safe)
+- Reference `useCanvasInteractions.ts` for the proper update pattern
+- Calculate new positions for day groups in a loop:
+  - Monday → moves to bottom position (becomes "next Monday")
+  - All other days shift up one slot
+- Persist changes via proper store update (`canvasStore.updateSection()`)
+- Respect position locks via `LockManager`
+
+**Key Files**:
+
+| File | Action |
+|------|--------|
+| `src/composables/canvas/useDayGroupRotation.ts` | CREATE |
+| `src/components/canvas/DayRotationBanner.vue` | CREATE |
+| `src/views/CanvasView.vue` | MODIFY - add banner |
+| `src/composables/useDateTransition.ts` | USE (already exists) |
+| `src/composables/canvas/useCanvasInteractions.ts` | REFERENCE for geometry-safe patterns |
+| `src/composables/canvas/useCanvasSectionProperties.ts` | REFERENCE for day detection patterns |
+
+**Safety Constraints** (CRITICAL):
+
+1. All position changes go through drag handler code path
+2. Never call `updateGroup()` directly for geometry from sync code
+3. Use `positionManager.updatePosition()` with 'user-action' source
+4. Acquire locks via `lockManager.acquire()` before moving groups
+5. Test that sync doesn't conflict with rotation
+6. Groups remain fully user-editable (move, delete, rename)
+
+**Verification Checklist**:
+
+1. [ ] Create 7 day groups (Mon-Sun) on canvas
+2. [ ] Wait for midnight OR trigger via devtools (`simulateTransition()`)
+3. [ ] Banner appears with rotation prompt
+4. [ ] Click rotation button
+5. [ ] Verify groups rotate (Monday→bottom, others shift up)
+6. [ ] Verify no position drift
+7. [ ] Refresh page - positions persist correctly
+8. [ ] Verify groups can still be manually moved/deleted/renamed
+9. [ ] Run `npm run test` - no regressions
 
 ---
 

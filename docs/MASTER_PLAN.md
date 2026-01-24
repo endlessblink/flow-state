@@ -1,5 +1,5 @@
-**Last Updated**: January 24, 2026 (Added TASK-1060 Infrastructure & E2E Sync Stability)
-**Version**: 5.66 (Infrastructure & E2E Sync)
+**Last Updated**: January 25, 2026 (Added BUG-1062 Selection state not synchronized)
+**Version**: 5.68 (Selection Sync Bug)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -73,6 +73,7 @@
 | ~~**BUG-244**~~          | ✅ **DONE** **Canvas Selection (Ctrl+Click) Wonkiness**                 | **P1**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | ROAD-013                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-245**~~          | ✅ **DONE** **Today Smart Group Date Not Updating**                     | **P0**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | TASK-184                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-1047**~~         | ✅ **DONE** **Task Position Drift on Edit Save**                        | **P0**                                              | ✅ **DONE** (2026-01-24) - Added debug logging, not reproducible                                                                | -                                                                                                                                                                                                              |                                                        |
+| **BUG-1062**             | **Selection state not synchronized between store and Vue Flow**        | **P0**                                              | 🔄 **IN PROGRESS** [See Details](#bug-1062-selection-state-not-synchronized-in-progress)                                        | -                                                                                                                                                                                                              |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
 | ~~**TASK-231**~~         | ~~**Dynamic Skills & Docs API**~~                                      | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/skills and /api/docs endpoints                                                                                                                                                                      |                                                        |
@@ -228,6 +229,7 @@
 | **TASK-1058**            | **MASTER_PLAN Symptom Index & Task Discovery Research**                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Research and implement better task discovery in MASTER_PLAN.md. Options: symptom index, keyword tags, consistent section headers, beads integration. Goal: find any bug/task in 1 grep, not 4 attempts.                                  | -                                                      |
 | ~~**TASK-1059**~~        | ✅ **DONE** **CORS Monitoring & Prevention Infrastructure**              | **P1**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | [SOP-031](./sop/SOP-031-cors-configuration.md) - Automated CORS validation script, CI/CD integration, comprehensive troubleshooting guide. Prevents duplicate header issues, missing headers, and browser-specific CORS failures.         | TASK-351                                               |
 | **TASK-1060**            | **Infrastructure & E2E Sync Stability (All Platforms)**                  | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1060-infrastructure--e2e-sync-stability-all-platforms-in-progress) - Fix Caddy instability, web/Tauri/PWA/KDE sync issues. Full platform E2E verification.                                                              | BUG-1056, TASK-351                                     |
+| **BUG-1061**             | **Canvas Position Drift on Cross-Browser Sync**                          | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Tasks appear in different positions across browser tabs/windows. Moving a task in one browser shows wrong position in another. Realtime sync applies stale positions or race condition overwrites user drag. Related to geometry invariants. | TASK-1060, BUG-1047                                    |
 
 ---
 
@@ -244,6 +246,47 @@
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+---
+
+### BUG-1062: Selection state not synchronized between store and Vue Flow (👀 REVIEW)
+
+**Priority**: P0-CRITICAL
+**Status**: 👀 REVIEW (2026-01-25)
+
+**Problem**: When multi-selecting tasks on the canvas and attempting alignment operations (Arrange in Column, Arrange in Row, Center Horizontal), the operation fails with error: "Selection state not synchronized between store and Vue Flow".
+
+**Root Causes Found**:
+
+1. **`syncStoreToCanvas()` destroys selection state**: When nodes are rebuilt during sync (triggered by Supabase realtime, store mutations, etc.), the `selected` property is lost because `setNodes(newNodes)` replaces all nodes without preserving selection from `canvasStore.selectedNodeIds`.
+
+2. **Validation compared apples to oranges**: The alignment validation compared ALL store selections (tasks + groups) against ONLY task nodes from Vue Flow, causing false positives when groups were selected.
+
+**Why it worked locally but broke on VPS**: VPS has more active Supabase realtime subscriptions causing more frequent syncs, exposing this latent bug faster.
+
+**Fix Applied**:
+
+1. **useCanvasSync.ts** (line 608): Added selection state restoration before `setNodes()`:
+   ```typescript
+   const selectedIds = canvasStore.selectedNodeIds
+   if (selectedIds.length > 0) {
+       for (const node of newNodes) {
+           node.selected = selectedIds.includes(node.id)
+       }
+   }
+   setNodes(newNodes)
+   ```
+
+2. **useCanvasAlignment.ts** (lines 113-148): Fixed validation to compare task-only selections:
+   - Filter `canvasStore.selectedNodeIds` to exclude group IDs (`section-*`)
+   - Compare `storeTaskSelection` vs `vueFlowSelection` (both task-only)
+   - Added diagnostic logging for future debugging
+
+**Tasks**:
+- [x] Investigate where selection sync is broken
+- [x] Fix selection synchronization between store and Vue Flow
+- [x] Fix validation logic to handle mixed task/group selection
+- [ ] **USER VERIFY**: Test alignment operations on VPS
 
 ---
 

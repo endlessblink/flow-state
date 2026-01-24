@@ -605,6 +605,16 @@ export function useCanvasSync() {
                     groupNodes: newNodes.filter((n: any) => n.type === 'sectionNode').length
                 })
 
+                // BUG-1062 FIX: Preserve selection state from canvasStore.selectedNodeIds
+                // When setNodes() replaces all nodes, the `selected` property is lost.
+                // We must restore it from the store before calling setNodes().
+                const selectedIds = canvasStore.selectedNodeIds
+                if (selectedIds.length > 0) {
+                    for (const node of newNodes) {
+                        node.selected = selectedIds.includes(node.id)
+                    }
+                }
+
                 setNodes(newNodes)
 
                 // ================================================================

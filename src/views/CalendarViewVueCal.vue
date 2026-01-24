@@ -123,7 +123,7 @@ const _getPriorityColor = (priority: string) => {
 }
 
 // Event handlers
-const handleEventDragDrop = (event: VueCalEvent, _originalEvent: unknown) => {
+const handleEventDragDrop = async (event: VueCalEvent, _originalEvent: unknown) => {
   console.log('Event dropped:', event)
 
   const newStart = new Date(event.start)
@@ -152,21 +152,23 @@ const handleEventDragDrop = (event: VueCalEvent, _originalEvent: unknown) => {
     }
   } else {
     // Regular task update
-    taskStore.updateTask(event.id, {
+    // BUG-1051: AWAIT to ensure persistence
+    await taskStore.updateTask(event.id, {
       scheduledDate: dateStr,
       scheduledTime: timeStr
     })
   }
 }
 
-const handleEventResize = (event: VueCalEvent, _originalEvent: unknown) => {
+const handleEventResize = async (event: VueCalEvent, _originalEvent: unknown) => {
   console.log('Event resized:', event)
 
   const start = new Date(event.start)
   const end = new Date(event.end)
   const duration = Math.round((end.getTime() - start.getTime()) / 60000)
 
-  taskStore.updateTask(event.id, {
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(event.id, {
     estimatedDuration: duration
   })
 }

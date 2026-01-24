@@ -157,6 +157,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveProject')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         } finally {
             isSyncing.value = false
         }
@@ -200,6 +201,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'deleteProject')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         } finally {
             isSyncing.value = false
         }
@@ -216,6 +218,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'restoreProject')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         } finally {
             isSyncing.value = false
         }
@@ -1037,6 +1040,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveNotification')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         }
     }
 
@@ -1053,6 +1057,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveNotifications')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         }
     }
 
@@ -1062,6 +1067,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'deleteNotification')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         }
     }
 
@@ -1169,6 +1175,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             }, 'saveUserSettings')
         } catch (e: unknown) {
             handleError(e, 'saveUserSettings')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         }
     }
 
@@ -1203,6 +1210,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             if (error) throw error
         } catch (e: unknown) {
             handleError(e, 'saveQuickSortSession')
+            throw e // BUG-1051: Re-throw so caller knows save failed
         }
     }
 

@@ -148,8 +148,9 @@ const handleTaskKeydown = (event: KeyboardEvent, task: Task) => {
   }
 }
 
-const handleStartTimer = (task: Task) => {
-  timerStore.startTimer(task.id)
+const handleStartTimer = async (task: Task) => {
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer(task.id)
 }
 
 const handleEditTask = (task: Task) => {

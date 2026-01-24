@@ -251,7 +251,7 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
           console.log(`🔄 [UNDO] Restoring task state: ${previousTask.title}`)
           // Use updateTask to restore all properties including position
           // Use 'USER' as the source since this is a user-initiated undo
-          taskStore.updateTask(taskId, {
+          await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
             ...previousTask,
             // Ensure position fields are included
             canvasPosition: previousTask.canvasPosition,
@@ -371,7 +371,7 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
         if (afterTask) {
           console.log(`🔁 [REDO] Re-applying task state: ${afterTask.title}`)
           // Use 'USER' as the source since this is a user-initiated redo
-          taskStore.updateTask(taskId, {
+          await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
             ...afterTask,
             canvasPosition: afterTask.canvasPosition,
             parentId: afterTask.parentId,
@@ -821,7 +821,7 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   })
 
   // Perform the update
-  taskStore.updateTask(taskId, updates)
+  await taskStore.updateTask(taskId, updates) // BUG-1051: AWAIT to ensure persistence
 
   // BUG-309-B: Commit the operation
   await nextTick()

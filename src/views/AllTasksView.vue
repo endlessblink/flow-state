@@ -184,8 +184,9 @@ const handleSelectTask = (taskId: string) => {
   taskStore.selectTask(taskId)
 }
 
-const handleStartTimer = (taskId: string) => {
-  timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
+const handleStartTimer = async (taskId: string) => {
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
 }
 
 const handleEditTask = (taskId: string) => {
@@ -213,16 +214,18 @@ const closeContextMenu = () => {
   contextMenuTask.value = null
 }
 
-const handleToggleComplete = (taskId: string) => {
+const handleToggleComplete = async (taskId: string) => {
   const task = taskStore.tasks.find(t => t.id === taskId)
   if (task) {
     const newStatus = task.status === 'done' ? 'planned' : 'done'
-    taskStore.updateTask(taskId, { status: newStatus })
+    // BUG-1051: AWAIT to ensure persistence
+    await taskStore.updateTask(taskId, { status: newStatus })
   }
 }
 
-const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
-  taskStore.updateTask(taskId, updates)
+const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(taskId, updates)
 }
 
 const handleConfirmDelete = (taskId: string) => {
@@ -258,9 +261,10 @@ const handleCollapseAll = () => {
   taskListRef.value?.collapseAll()
 }
 
-const handleMoveTask = (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
+const handleMoveTask = async (taskId: string, targetProjectId: string | null, targetParentId: string | null) => {
   // Move task to be a subtask of another task
-  taskStore.updateTask(taskId, {
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(taskId, {
     projectId: targetProjectId || undefined,
     parentTaskId: targetParentId || undefined
   })

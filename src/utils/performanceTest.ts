@@ -58,7 +58,7 @@ export class KanbanPerformanceTest {
   }
 
   // Test task status changes (simulating drag operations)
-  testStatusChangePerformance(iterations: number = 20) {
+  async testStatusChangePerformance(iterations: number = 20) {
     console.log(`🔄 Testing status change performance (${iterations} iterations)...`)
 
     const tasks = this.taskStore.tasks.filter((t: Task) => t.id.startsWith('test-task-'))
@@ -76,7 +76,7 @@ export class KanbanPerformanceTest {
       const newStatus = originalStatus === 'planned' ? 'in_progress' :
         originalStatus === 'in_progress' ? 'done' : 'planned'
 
-      this.taskStore.moveTask(task.id, newStatus as Task['status'])
+      await this.taskStore.moveTask(task.id, newStatus as Task['status']) // BUG-1051: AWAIT to ensure persistence
 
       const endTime = performance.now()
       const duration = Math.round(endTime - startTime)

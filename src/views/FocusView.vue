@@ -26,16 +26,18 @@ const currentTask = computed(() => {
   return props.taskId ? tasksStore.tasks.find(task => task.id === props.taskId) : null
 })
 
-const startFocusSession = () => {
+const startFocusSession = async () => {
   if (currentTask.value) {
     isFocused.value = true
-    timerStore.startTimer(currentTask.value.id)
+    // BUG-1051: AWAIT for timer sync
+    await timerStore.startTimer(currentTask.value.id)
   }
 }
 
-const stopFocusSession = () => {
+const stopFocusSession = async () => {
   isFocused.value = false
-  timerStore.stopTimer()
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.stopTimer()
 }
 
 const _handleComplete = () => {

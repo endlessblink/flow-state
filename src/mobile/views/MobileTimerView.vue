@@ -53,14 +53,15 @@ import { Play, Pause, Square, Smartphone } from 'lucide-vue-next'
 const timerStore = useTimerStore()
 const currentSession = computed(() => timerStore.currentSession)
 
-const toggleTimer = () => {
+const toggleTimer = async () => {
+    // BUG-1051: AWAIT for timer sync
     if (timerStore.isTimerActive && !timerStore.isPaused) {
-        timerStore.pauseTimer()
+        await timerStore.pauseTimer()
     } else if (timerStore.isPaused) {
         timerStore.resumeTimer()
     } else {
         // Start a general focus session if nothing is running
-        timerStore.startTimer('general')
+        await timerStore.startTimer('general')
     }
 }
 </script>

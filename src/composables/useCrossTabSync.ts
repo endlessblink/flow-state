@@ -92,7 +92,20 @@ export function useCrossTabSync() {
       case 'update':
         if (operation.taskId && operation.taskData) {
           const task = taskStore.tasks.find(t => t.id === operation.taskId)
-          if (task) Object.assign(task, operation.taskData)
+          // BUG-1051: Fix sync race condition - check for manual operation and timestamp
+          if (task) {
+            // Don't overwrite if user is actively editing
+            if (taskStore.manualOperationInProgress) return
+
+            // Prevent stale data from overwriting newer data
+            const incomingTimestamp = (operation.taskData as any).updatedAt
+            if (incomingTimestamp && task.updatedAt &&
+                new Date(task.updatedAt) > new Date(incomingTimestamp)) {
+              return
+            }
+
+            Object.assign(task, operation.taskData)
+          }
         }
         break
       case 'delete':

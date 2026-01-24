@@ -95,7 +95,7 @@ export function useCalendarCore() {
     return icons[status] || '○'
   }
 
-  const cycleTaskStatus = (event: MouseEvent, calendarEvent: CalendarEvent) => {
+  const cycleTaskStatus = async (event: MouseEvent, calendarEvent: CalendarEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
@@ -107,7 +107,7 @@ export function useCalendarCore() {
     const nextIndex = (currentIndex + 1) % statusCycle.length
     const nextStatus = statusCycle[nextIndex]
 
-    taskStore.moveTask(task.id, nextStatus)
+    await taskStore.moveTask(task.id, nextStatus) // BUG-1051: AWAIT to ensure persistence
   }
 
   // === PROJECT UTILITIES ===

@@ -557,11 +557,11 @@ export function useCanvasInteractions(deps?: {
 
                     // 4. Optimistic Store Update (Absolute position + parentId)
                     // GEOMETRY WRITER: Primary drag handler (TASK-255)
-                    taskStore.updateTask(task.id, {
+                    await taskStore.updateTask(task.id, {
                         parentId: newParentId ?? undefined,
                         canvasPosition: absolutePos,
                         positionFormat: 'absolute'
-                    }, 'DRAG')
+                    }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
 
                     if (oldParentId !== newParentId) {
                         // REACTIVITY FIX: Bump version FIRST to trigger count recomputation
@@ -598,7 +598,7 @@ export function useCanvasInteractions(deps?: {
                         console.log(`🔍 [SMART-GROUP-DEBUG] Actual changes after filter:`, actualChanges)
                         if (Object.keys(actualChanges).length > 0) {
                             console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, actualChanges)
-                            taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP')
+                            await taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP') // BUG-1051: AWAIT to ensure persistence
                         }
                     } else {
                         console.log(`🔍 [SMART-GROUP-DEBUG] No targetGroup found for task "${task.title}"`)

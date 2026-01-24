@@ -1,4 +1,5 @@
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 
 /**
@@ -8,9 +9,18 @@ import { useCalendarCore } from '@/composables/useCalendarCore'
 export function useCalendarNavigation() {
     const { getWeekStart } = useCalendarCore()
 
-    // State
-    const currentDate = ref(new Date())
-    const viewMode = ref<'day' | 'week' | 'month'>('day')
+    // BUG-1051: Persist UI state across refreshes
+    // Store date as ISO string in localStorage
+    const storedDate = useStorage<string>('calendar-current-date', new Date().toISOString())
+    const viewMode = useStorage<'day' | 'week' | 'month'>('calendar-view-mode', 'day')
+
+    // Computed ref that converts between Date and string for persistence
+    const currentDate = computed<Date>({
+        get: () => new Date(storedDate.value),
+        set: (value: Date) => {
+            storedDate.value = value.toISOString()
+        }
+    })
 
     /**
      * Check if current date is today

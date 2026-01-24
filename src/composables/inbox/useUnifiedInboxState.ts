@@ -1,5 +1,6 @@
 
 import { ref, computed, watch } from 'vue'
+import { useStorage } from '@vueuse/core'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
@@ -21,7 +22,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     // --- Core Filter State ---
     const isCollapsed = ref(false)
-    const activeTimeFilter = ref<TimeFilterType>('all')
+    // BUG-1051: Persist filter to localStorage so it survives refresh
+    const activeTimeFilter = useStorage<TimeFilterType>('canvas-inbox-time-filter', 'all')
 
     // --- Advanced Filter State ---
     const showAdvancedFilters = ref(false)
@@ -106,6 +108,26 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     const monthCount = computed(() => {
         return baseInboxTasks.value.filter(task => isThisMonthTask(task)).length
+    })
+
+    // Done task count (for the visible Done toggle badge)
+    // Counts tasks in inbox that are done (before the done filter is applied)
+    const doneTaskCount = computed(() => {
+        return taskStore.filteredTasks.filter(task => {
+            // Must be a done task
+            if (task.status !== 'done') return false
+            // Must not be soft deleted
+            if (task._soft_deleted) return false
+            // Must be an inbox task (not on canvas/calendar)
+            if (props.context === 'calendar') {
+                const hasInstances = task.instances && task.instances.length > 0
+                const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
+                    (task.scheduledTime && task.scheduledTime.trim() !== '')
+                return !hasInstances && !hasLegacySchedule
+            } else {
+                return !task.canvasPosition
+            }
+        }).length
     })
 
     const isScheduledOnCalendar = (task: Task): boolean => {
@@ -214,6 +236,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         todayCount,
         weekCount,
         monthCount,
+        doneTaskCount,
 
         // Actions (State Mutators)
         toggleHideDoneTasks,

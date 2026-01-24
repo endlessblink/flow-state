@@ -139,14 +139,14 @@ export const useProjectStore = defineStore('projects', () => {
                 const taskStore = useTaskStore() as any
                 // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                taskStore._rawTasks.forEach((task: any) => {
+                for (const task of taskStore._rawTasks) {
                     if (task.projectId === projectId) {
-                        taskStore.updateTask(task.id, {
+                        await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
                             projectId: 'uncategorized',
                             isUncategorized: true
                         })
                     }
-                })
+                }
 
                 // SAFETY: Use _rawProjects for mutation
                 _rawProjects.value.forEach(project => {
@@ -192,14 +192,14 @@ export const useProjectStore = defineStore('projects', () => {
 
             // Move tasks from all deleted projects to uncategorized
             // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
-            taskStore._rawTasks.forEach((task: any) => {
+            for (const task of taskStore._rawTasks) {
                 if (projectIdSet.has(task.projectId)) {
-                    taskStore.updateTask(task.id, {
+                    await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
                         projectId: 'uncategorized',
                         isUncategorized: true
                     })
                 }
-            })
+            }
 
             // Re-parent children of deleted projects
             // SAFETY: Use _rawProjects for mutation

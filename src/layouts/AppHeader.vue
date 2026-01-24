@@ -285,19 +285,22 @@ const uncategorizedCount = computed(() => {
 })
 
 // Timer methods
-const startQuickTimer = () => {
+const startQuickTimer = async () => {
   console.log('🍅 DEBUG: startQuickTimer called - starting 25 min work timer')
-  timerStore.startTimer('quick-timer', timerStore.settings.workDuration, false)
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer('quick-timer', timerStore.settings.workDuration, false)
 }
 
-const startShortBreak = () => {
+const startShortBreak = async () => {
   console.log('🍅 DEBUG: startShortBreak called - starting short break timer')
-  timerStore.startTimer('short-break', timerStore.settings.shortBreakDuration, true)
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer('short-break', timerStore.settings.shortBreakDuration, true)
 }
 
-const startLongBreak = () => {
+const startLongBreak = async () => {
   console.log('🍅 DEBUG: startLongBreak called - starting long break timer')
-  timerStore.startTimer('long-break', timerStore.settings.longBreakDuration, true)
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer('long-break', timerStore.settings.longBreakDuration, true)
 }
 </script>
 

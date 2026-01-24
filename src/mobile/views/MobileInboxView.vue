@@ -568,8 +568,9 @@ const closeEditSheet = () => {
 }
 
 // Save task changes from edit sheet
-const handleSaveTask = (taskId: string, updates: Partial<Task>) => {
-  taskStore.updateTask(taskId, updates)
+const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(taskId, updates)
 }
 
 // Prevent context menu during long-press
@@ -828,9 +829,10 @@ const resetVoiceState = () => {
   cancelVoice()
 }
 
-const toggleTask = (task: Task) => {
+const toggleTask = async (task: Task) => {
   const newStatus = task.status === 'done' ? 'planned' : 'done'
-  taskStore.updateTask(task.id, { status: newStatus })
+  // BUG-1051: AWAIT to ensure persistence
+  await taskStore.updateTask(task.id, { status: newStatus })
 }
 
 const handleTaskClick = (task: Task) => {
@@ -843,8 +845,9 @@ const handleTaskClick = (task: Task) => {
   // For now, we only use long-press to edit
 }
 
-const startTimer = (task: Task) => {
-  timerStore.startTimer(task.id)
+const startTimer = async (task: Task) => {
+  // BUG-1051: AWAIT for timer sync
+  await timerStore.startTimer(task.id)
 }
 
 const isTimerActive = (taskId: string) => {

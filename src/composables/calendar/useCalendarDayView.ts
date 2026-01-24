@@ -465,8 +465,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     const initialSlot = calendarEvent.startSlot
     let lastUpdatedSlot = initialSlot
 
-    const handleMouseMove = (e: MouseEvent) => {
-      requestAnimationFrame(() => {
+    const handleMouseMove = async (e: MouseEvent) => {
+      requestAnimationFrame(async () => {
         const containerScrollTop = container.scrollTop || 0
         const targetY = e.clientY - rect.top + containerScrollTop - clickOffsetY
         const targetSlot = Math.max(0, Math.min(47, Math.floor(targetY / SLOT_HEIGHT)))
@@ -497,7 +497,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             }
           } else {
             // Simple update: modify task's scheduledDate and scheduledTime directly
-            taskStore.updateTask(calendarEvent.taskId, {
+            await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
               scheduledDate: newDate,
               scheduledTime: newTime
             })
@@ -710,12 +710,12 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       })
     }
 
-    const handleMouseUp = () => {
+    const handleMouseUp = async () => {
 
 
       // Commit final values to store
       if (direction === 'bottom') {
-        taskStore.updateTask(calendarEvent.taskId, {
+        await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
           estimatedDuration: finalDuration
         })
 
@@ -733,7 +733,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         }
       } else {
         // Top resize - update both start time and duration
-        taskStore.updateTask(calendarEvent.taskId, {
+        await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
           scheduledTime: finalStartTime,
           estimatedDuration: finalDuration
         })

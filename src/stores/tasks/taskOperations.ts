@@ -363,8 +363,8 @@ export function useTaskOperations(
         }
     }
 
-    const moveTask = (taskId: string, newStatus: Task['status']) => {
-        updateTask(taskId, { status: newStatus })
+    const moveTask = async (taskId: string, newStatus: Task['status']) => {
+        await updateTask(taskId, { status: newStatus }) // BUG-1051: AWAIT to ensure persistence
     }
 
     const selectTask = (taskId: string) => {

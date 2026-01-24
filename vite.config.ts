@@ -116,7 +116,8 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     // TASK-038: Strip console.* in production for cleaner builds
     // Keeps console.error for critical production debugging
-    drop: mode === 'production' ? ['console', 'debugger'] : [],
+    // TEMP: Disabled to debug canvas drift issue in production
+    drop: mode === 'production' ? ['debugger'] : [],
     // Disable TypeScript checking for development
     // tsconfigRaw removed to fix type conflict
   },

@@ -68,6 +68,19 @@ export const useCanvasGroups = (
                 console.log(`📍[GROUP-PARENT-WRITE] Group ${id.slice(0, 8)}... (${group.name}) parentGroupId: "${group.parentGroupId ?? 'none'}" → "${updates.parentGroupId ?? 'none'}"`)
             }
 
+            // DRIFT LOGGING: Track ALL position writes
+            if ('position' in updates && updates.position) {
+                const oldPos = group.position
+                const newPos = updates.position
+                if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
+                    console.log(`📍[GROUP-POS-WRITE] Group "${group.name?.slice(0, 20)}" (${id.slice(0, 8)})`, {
+                        before: oldPos ? { x: Math.round(oldPos.x), y: Math.round(oldPos.y) } : null,
+                        after: { x: Math.round(newPos.x), y: Math.round(newPos.y) },
+                        stack: new Error().stack?.split('\n').slice(2, 6).join(' <- ')
+                    })
+                }
+            }
+
             if (updates.name) {
                 applySmartGroupNormalizations(updates)
             }

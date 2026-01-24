@@ -203,6 +203,20 @@ export const useTaskStore = defineStore('tasks', () => {
             normalizedTask.isInInbox = currentTask.isInInbox
           }
 
+          // DRIFT LOGGING: Track ALL incoming position changes from sync
+          if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
+            const oldPos = currentTask.canvasPosition
+            const newPos = normalizedTask.canvasPosition
+            if (Math.abs(oldPos.x - newPos.x) > 1 || Math.abs(oldPos.y - newPos.y) > 1) {
+              console.log(`📍[SYNC-POS-WRITE] Task "${currentTask.title?.slice(0, 20)}" (${taskId.slice(0, 8)})`, {
+                before: { x: Math.round(oldPos.x), y: Math.round(oldPos.y) },
+                after: { x: Math.round(newPos.x), y: Math.round(newPos.y) },
+                parentChange: currentTask.parentId !== normalizedTask.parentId ? `${currentTask.parentId?.slice(0, 8) ?? 'root'} → ${normalizedTask.parentId?.slice(0, 8) ?? 'root'}` : 'same',
+                source: 'updateTaskFromSync'
+              })
+            }
+          }
+
           // Update existing task
           if (normalizedTask._soft_deleted) {
             // If it's now deleted, remove it instead of updating

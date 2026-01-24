@@ -8,7 +8,7 @@
  *
  * Groq pricing: $0.04/hour vs OpenAI $0.36/hour
  *
- * Requires VITE_GROQ_API in environment variables.
+ * Requires VITE_GROQ_API_KEY in environment variables.
  * Get your API key at https://console.groq.com/keys
  */
 
@@ -23,7 +23,7 @@ export interface WhisperResult {
 }
 
 export interface UseWhisperSpeechOptions {
-  /** Groq API key (defaults to VITE_GROQ_API) */
+  /** Groq API key (defaults to VITE_GROQ_API_KEY) */
   apiKey?: string
   /** Whisper model to use (default: 'whisper-large-v3-turbo' - best value) */
   model?: 'whisper-large-v3' | 'whisper-large-v3-turbo' | 'distil-whisper-large-v3-en'
@@ -45,7 +45,7 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
 
 export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const {
-    apiKey = import.meta.env.VITE_GROQ_API,
+    apiKey = import.meta.env.VITE_GROQ_API_KEY,
     model = DEFAULT_OPTIONS.model,
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
@@ -85,7 +85,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const start = async (): Promise<boolean> => {
     if (!isSupported.value) {
       const msg = !apiKey
-        ? 'Groq API key not configured. Add VITE_GROQ_API to your environment or Doppler.'
+        ? 'Groq API key not configured. Add VITE_GROQ_API_KEY to your environment or Doppler.'
         : 'Audio recording not supported in this browser.'
       error.value = msg
       status.value = 'error'

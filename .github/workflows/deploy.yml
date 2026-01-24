@@ -88,12 +88,23 @@ jobs:
               docker ps -q --filter 'name=flow-state' | xargs -r docker stop || true
               docker ps -q --filter 'name=caddy' | xargs -r docker stop || true
 
-              # Force kill any process on port 80/443 (likely stale containers)
-              sudo lsof -ti:80 | xargs -r sudo kill -9 || true
-              sudo lsof -ti:443 | xargs -r sudo kill -9 || true
+              # Force kill any process on port 80/443 (multiple methods for reliability)
+              echo '>>> Killing processes on ports 80/443...'
 
-              # Small delay to ensure ports are released
-              sleep 5
+              # Method 1: fuser (most reliable, commonly installed)
+              sudo fuser -k 80/tcp 2>/dev/null || true
+              sudo fuser -k 443/tcp 2>/dev/null || true
+
+              # Method 2: lsof fallback
+              sudo lsof -ti:80 | xargs -r sudo kill -9 2>/dev/null || true
+              sudo lsof -ti:443 | xargs -r sudo kill -9 2>/dev/null || true
+
+              # Method 3: ss + grep for any remaining (last resort)
+              sudo ss -tlnp | grep ':80 ' | grep -oP 'pid=\K\d+' | xargs -r sudo kill -9 2>/dev/null || true
+              sudo ss -tlnp | grep ':443 ' | grep -oP 'pid=\K\d+' | xargs -r sudo kill -9 2>/dev/null || true
+
+              # Delay to ensure ports are released
+              sleep 8
 
               # Prune Docker build cache to ensure fresh build with new code
               echo '>>> Pruning Docker build cache...'

@@ -646,9 +646,12 @@ export function useCanvasInteractions(deps?: {
                         console.log(`🔍 [SMART-GROUP-DEBUG] No targetGroup found for task "${task.title}"`)
                     }
 
-                    // 7. Sync task to DB with optimistic locking
-                    setNodeState(task.id, NodeState.SYNCING)
-                    await syncNodePosition(task.id, node, taskAllGroups, 'tasks')
+                    // 7. Position sync is now handled by taskStore.updateTask() above (line ~570)
+                    // REMOVED: syncNodePosition was redundant and caused version conflicts:
+                    // - taskStore.updateTask() saves position with incremented version
+                    // - Smart Group's updateTask() triggers DB → version increments again
+                    // - syncNodePosition tried with stale version → always failed
+                    // The fix is to let taskStore.updateTask() handle all persistence.
                     setNodeState(task.id, NodeState.IDLE)
                 }
             }

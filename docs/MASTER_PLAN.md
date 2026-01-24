@@ -276,25 +276,44 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 
 ---
 
-### BUG-1056: Brave Browser Compatibility (🔄 IN PROGRESS)
+### BUG-1056: Brave Browser Compatibility + Data Load Recovery (🔄 IN PROGRESS)
 **Priority**: P2
 **Status**: 🔄 IN PROGRESS
 
 **Issues**:
 1. **Voice Input "Network Error"**: Web Speech API sends audio to Google servers. Brave Shields blocks this by default.
 2. **WebSocket Connection Interrupted**: Brave may block Supabase Realtime WebSocket due to fingerprinting protection.
-3. **App Doesn't Load Data**: Clearing site data fixes the issue (corrupted cache state).
-4. **Sign-in Blocked**: `ERR_BLOCKED_BY_CLIENT` errors prevent authentication flow.
+3. **App Shows 0 Tasks (FIXED)**: Initial data load fails with stale token → WebSocket auth recovers → data never reloaded.
+4. **Sign-in Blocked**: `ERR_BLOCKED_BY_CLIENT` errors prevent authentication flow on Brave.
 
 **Root Causes**:
-- Brave Browser intentionally does NOT support Web Speech API due to privacy concerns (audio sent to Google)
-- Brave is working on Lingvanex integration but not ready yet (as of Jan 2026)
+- Brave Browser intentionally does NOT support Web Speech API (privacy - audio sent to Google)
 - Shields fingerprinting protection can block WebSocket connections
+- **CRITICAL BUG FIXED**: `useSupabaseDatabase.ts:1290-1296` refreshed auth but never reloaded data
 
-**Workarounds**:
-1. Disable Brave Shields for `in-theflow.com`
+**Fix Implemented (2026-01-24)**:
+- Added `onRecovery` callback to `initRealtimeSubscription()`
+- After WebSocket auth recovery, callback triggers `loadFromDatabase()` for tasks, projects, canvas
+- Uses same proven pattern as `SIGNED_IN` event handler in auth.ts
+- **Files**: `useSupabaseDatabase.ts`, `useAppInitialization.ts`
+
+**Brave Detection & User Warning (2026-01-24)**:
+- Created `src/utils/braveProtection.ts` - Brave browser detection + blocked resource monitoring
+- Created `src/components/ui/BraveBanner.vue` - Warning banner with instructions when resources blocked
+- Updated `src/App.vue` - Initialize Brave protection on mount
+- Updated `src/stores/auth.ts` - Detect Brave-blocked auth requests and record for banner display
+
+**Multi-Tab Compatibility Fix (2026-01-24)**:
+- Issue: App fails in second tab (affects Brave, Zen, and other browsers)
+- Root cause: Shared channel names + auth token synchronization issues
+- Fix: Unique channel name per tab (`db-changes-{userId}-{tabId}`)
+- Fix: Handle `TOKEN_REFRESHED` event to update realtime WebSocket auth
+- Added tab-aware debug logging for easier troubleshooting
+- **Files**: `useSupabaseDatabase.ts`, `auth.ts`
+
+**Workarounds for Brave-specific issues**:
+1. Disable Brave Shields for `in-theflow.com` for full functionality
 2. Use Firefox or Chrome for voice input
-3. Clear site data if app doesn't load
 
 **References**:
 - [Brave Web Speech API Issue #2802](https://github.com/brave/brave-browser/issues/2802)

@@ -71,6 +71,7 @@
       <button
         class="task-row__action-btn"
         title="Start Timer"
+        :aria-label="'Start timer for ' + task.title"
         @click.stop="$emit('startTimer', task.id)"
       >
         <Play :size="14" />
@@ -78,6 +79,7 @@
       <button
         class="task-row__action-btn"
         title="Edit Task"
+        :aria-label="'Edit task ' + task.title"
         @click.stop="$emit('edit', task.id)"
       >
         <Edit :size="14" />

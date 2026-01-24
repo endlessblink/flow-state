@@ -51,6 +51,16 @@ class PositionManager {
             return true
         }
 
+        // DRIFT LOGGING: Track ALL position changes through PositionManager
+        if (current) {
+            console.log(`📍[PM-UPDATE] ${nodeId.slice(0, 8)}`, {
+                before: { x: Math.round(current.position.x), y: Math.round(current.position.y) },
+                after: { x: Math.round(position.x), y: Math.round(position.y) },
+                parentChange: current.parentId !== parentId ? `${current.parentId?.slice(0, 8) ?? 'root'} → ${parentId?.slice(0, 8) ?? 'root'}` : 'same',
+                source
+            })
+        }
+
         this.positions.set(nodeId, {
             id: nodeId,
             position: { ...position },

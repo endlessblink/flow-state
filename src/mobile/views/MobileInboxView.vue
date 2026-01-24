@@ -108,6 +108,7 @@
           class="quick-add-input"
           :class="{ 'voice-active': isListening }"
           @focus="expandQuickAdd"
+          @click="expandQuickAdd"
           @keydown.enter="submitTask"
         />
 
@@ -132,17 +133,55 @@
       </div>
 
       <!-- Voice feedback (when recording) -->
-      <div v-if="isListening" class="voice-feedback">
-        <div class="voice-waveform">
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-        </div>
-        <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
+      <div v-if="isListening || isProcessingVoice" class="voice-feedback">
+        <!-- Whisper mode: AI indicator + duration -->
+        <template v-if="voiceMode === 'whisper'">
+          <span class="voice-mode-badge whisper">🤖 AI</span>
+          <div class="voice-waveform">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+          </div>
+          <span class="voice-status">
+            <template v-if="isProcessingVoice">Processing...</template>
+            <template v-else>{{ recordingDuration }}s - Speak freely...</template>
+          </span>
+        </template>
+
+        <!-- Browser mode: Language toggle + waveform -->
+        <template v-else>
+          <button
+            class="voice-lang-toggle"
+            :title="voiceLanguage === 'he-IL' ? 'Switch to English' : 'Switch to Hebrew'"
+            @click="toggleVoiceLanguage"
+          >
+            {{ voiceLanguage === 'he-IL' ? 'עב' : 'EN' }}
+          </button>
+          <div class="voice-waveform">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+          </div>
+          <span class="voice-status">{{ displayTranscript || (voiceLanguage === 'he-IL' ? 'דבר עכשיו...' : 'Speak now...') }}</span>
+        </template>
+
         <button class="voice-cancel" @click="cancelVoice">
           <X :size="16" />
+        </button>
+      </div>
+
+      <!-- Voice mode indicator when not recording -->
+      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice && !showVoiceConfirmation" class="voice-lang-hint">
+        <button class="voice-mode-btn" @click="toggleVoiceMode">
+          {{ voiceMode === 'whisper' ? '🤖 AI (auto-detect)' : '🌐 Browser' }}
+        </button>
+        <!-- Language toggle only shown in browser mode -->
+        <button v-if="voiceMode === 'browser'" class="voice-lang-btn" @click="toggleVoiceLanguage">
+          {{ voiceLanguage === 'he-IL' ? '🇮🇱 Hebrew' : '🇺🇸 English' }}
         </button>
       </div>
 
@@ -230,6 +269,7 @@ import {
   Flag, ChevronDown, Mic, MicOff, X
 } from 'lucide-vue-next'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
+import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useVoiceTaskParser, type ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 
 const taskStore = useTaskStore()
@@ -254,32 +294,142 @@ const selectedPriority = ref<string | null>(null)
 const parsedVoiceTask = ref<ParsedVoiceTask | null>(null)
 const showVoiceConfirmation = ref(false)
 
-// Voice input (TASK-1025, TASK-1028)
+// Voice mode: 'whisper' (AI auto-detect) or 'browser' (Web Speech API)
+const voiceMode = ref<'whisper' | 'browser'>('whisper')
+
+// Voice language toggle - detect from browser or default to English (for browser mode)
+const getDefaultVoiceLanguage = (): 'he-IL' | 'en-US' => {
+  const browserLang = navigator.language || navigator.languages?.[0] || 'en-US'
+  return browserLang.startsWith('he') ? 'he-IL' : 'en-US'
+}
+const voiceLanguage = ref<'he-IL' | 'en-US'>(getDefaultVoiceLanguage())
+
+// Whisper-based voice input (AI auto-detect, supports mixed languages)
 const {
-  isListening,
-  isSupported: isVoiceSupported,
-  displayTranscript,
-  error: voiceError,
-  start: startVoice,
-  stop: stopVoice,
-  cancel: cancelVoice
-} = useSpeechRecognition({
-  language: 'auto', // Auto-detects Hebrew/English
-  interimResults: true,
-  silenceTimeout: 2500,
+  isRecording: isWhisperRecording,
+  isProcessing: isWhisperProcessing,
+  isSupported: isWhisperSupported,
+  hasApiKey: hasWhisperApiKey,
+  transcript: whisperTranscript,
+  error: whisperError,
+  recordingDuration,
+  start: startWhisper,
+  stop: stopWhisper,
+  cancel: cancelWhisper
+} = useWhisperSpeech({
   onResult: (result) => {
-    // TASK-1028: Parse transcript and show confirmation panel
-    if (result.isFinal && result.transcript.trim()) {
-      const parsed = parseTranscript(result.transcript.trim(), result.language)
+    console.log('[Whisper] Result:', result)
+    if (result.transcript.trim()) {
+      // Auto-detect language from Whisper response
+      const lang = result.language === 'he' ? 'he-IL' : 'en-US'
+      const parsed = parseTranscript(result.transcript.trim(), lang)
       parsedVoiceTask.value = parsed
       showVoiceConfirmation.value = true
-      // Don't stop voice here - let user add more or confirm
     }
   },
   onError: (err) => {
-    console.warn('[Voice] Error:', err)
+    console.warn('[Whisper] Error:', err)
   }
 })
+
+// Browser-based voice input (Web Speech API, single language)
+const {
+  isListening: isBrowserListening,
+  isSupported: isBrowserVoiceSupported,
+  displayTranscript: browserDisplayTranscript,
+  error: browserVoiceError,
+  start: startBrowserVoice,
+  stop: stopBrowserVoice,
+  cancel: cancelBrowserVoice,
+  setLanguage
+} = useSpeechRecognition({
+  language: voiceLanguage.value,
+  interimResults: true,
+  silenceTimeout: 2500,
+  onResult: (result) => {
+    if (result.isFinal && result.transcript.trim()) {
+      const parsed = parseTranscript(result.transcript.trim(), voiceLanguage.value)
+      parsedVoiceTask.value = parsed
+      showVoiceConfirmation.value = true
+    }
+  },
+  onError: (err) => {
+    console.warn('[BrowserVoice] Error:', err)
+  }
+})
+
+// Unified voice state (combines both modes)
+const isListening = computed(() =>
+  voiceMode.value === 'whisper'
+    ? isWhisperRecording.value
+    : isBrowserListening.value
+)
+const isProcessingVoice = computed(() => isWhisperProcessing.value)
+const isVoiceSupported = computed(() =>
+  voiceMode.value === 'whisper'
+    ? isWhisperSupported.value && hasWhisperApiKey.value
+    : isBrowserVoiceSupported.value
+)
+const displayTranscript = computed(() =>
+  voiceMode.value === 'whisper'
+    ? whisperTranscript.value
+    : browserDisplayTranscript.value
+)
+const voiceError = computed(() =>
+  voiceMode.value === 'whisper'
+    ? whisperError.value
+    : browserVoiceError.value
+)
+
+// Auto-select mode based on API key availability
+if (!hasWhisperApiKey.value && isBrowserVoiceSupported.value) {
+  voiceMode.value = 'browser'
+}
+
+// Toggle voice mode
+const toggleVoiceMode = () => {
+  if (voiceMode.value === 'whisper' && isBrowserVoiceSupported.value) {
+    voiceMode.value = 'browser'
+  } else if (hasWhisperApiKey.value) {
+    voiceMode.value = 'whisper'
+  }
+  triggerHaptic(10)
+}
+
+// Toggle voice language (only for browser mode)
+const toggleVoiceLanguage = async () => {
+  const oldLang = voiceLanguage.value
+  voiceLanguage.value = voiceLanguage.value === 'he-IL' ? 'en-US' : 'he-IL'
+  console.log('[Voice] 🌐 Language switched:', oldLang, '→', voiceLanguage.value)
+  await setLanguage(voiceLanguage.value)
+  triggerHaptic(10)
+}
+
+// Unified voice control functions
+const startVoice = async () => {
+  if (voiceMode.value === 'whisper') {
+    await startWhisper()
+  } else {
+    setLanguage(voiceLanguage.value)
+    await startBrowserVoice()
+  }
+}
+
+const stopVoice = () => {
+  if (voiceMode.value === 'whisper') {
+    stopWhisper()
+  } else {
+    stopBrowserVoice()
+  }
+}
+
+const cancelVoice = () => {
+  if (voiceMode.value === 'whisper') {
+    cancelWhisper()
+  } else {
+    cancelBrowserVoice()
+  }
+}
 
 // Toggle voice recording
 const toggleVoiceInput = async () => {
@@ -594,6 +744,7 @@ const toggleSort = () => {
 
 // Quick-add expansion handlers
 const expandQuickAdd = () => {
+  console.log('[TASK-1005] expandQuickAdd called, setting isQuickAddExpanded to true')
   isQuickAddExpanded.value = true
 }
 
@@ -1247,6 +1398,82 @@ const isOverdue = (dueDate: string | Date): boolean => {
   transform: scale(0.95);
   background: var(--danger-bg-subtle);
   color: var(--danger-text);
+}
+
+/* Voice language toggle button (inside feedback) */
+.voice-lang-toggle {
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.voice-lang-toggle:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Voice language hint (when not recording) */
+.voice-lang-hint {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.voice-lang-btn {
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.voice-lang-btn:active {
+  transform: scale(0.97);
+  background: var(--surface-secondary);
+}
+
+/* Voice mode toggle button */
+.voice-mode-btn {
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--brand-primary);
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--brand-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.voice-mode-btn:active {
+  transform: scale(0.97);
+  background: rgba(78, 205, 196, 0.2);
+}
+
+/* Voice mode badge (inside recording feedback) */
+.voice-mode-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.voice-mode-badge.whisper {
+  background: rgba(78, 205, 196, 0.15);
+  color: var(--brand-primary);
 }
 
 /* Voice error message */

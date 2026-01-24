@@ -219,6 +219,76 @@ If the Supabase SDK or PostgREST adds new headers:
 5. Clear Cloudflare cache (if applicable)
 6. Update this SOP
 
+## HTTP Caching Configuration
+
+**TASK-1060**: In addition to CORS, Caddy handles HTTP caching for static assets.
+
+### Cache Headers for Static Assets
+
+Add to the `in-theflow.com` site block (frontend):
+
+```caddyfile
+in-theflow.com {
+    tls /etc/caddy/certs/cloudflare-origin.pem /etc/caddy/certs/cloudflare-origin.key
+
+    # Static assets with long cache (hashed filenames)
+    @hashedAssets path_regexp \.(js|css)\?.*$ path *.*.js *.*.css
+    header @hashedAssets {
+        Cache-Control "public, max-age=31536000, immutable"
+    }
+
+    # Images and fonts - long cache
+    @staticAssets path *.png *.jpg *.jpeg *.gif *.svg *.webp *.woff *.woff2 *.ico
+    header @staticAssets {
+        Cache-Control "public, max-age=2592000"
+    }
+
+    # HTML files - short cache, revalidate
+    @html path *.html /
+    header @html {
+        Cache-Control "public, max-age=300, must-revalidate"
+    }
+
+    # Service worker - never cache
+    @sw path /sw.js /workbox-*.js
+    header @sw {
+        Cache-Control "no-cache, no-store, must-revalidate"
+    }
+
+    root * /var/www/flowstate/dist
+    file_server
+    try_files {path} /index.html
+}
+```
+
+### Cache Durations Reference
+
+| Asset Type | Cache-Control | Duration |
+|------------|---------------|----------|
+| JS/CSS (hashed) | `max-age=31536000, immutable` | 1 year |
+| Images | `max-age=2592000` | 30 days |
+| Fonts | `max-age=2592000` | 30 days |
+| HTML | `max-age=300, must-revalidate` | 5 min |
+| Service Worker | `no-cache, no-store` | Never |
+| API responses | Handled by API, not Caddy | - |
+
+### Why Service Worker Must Not Be Cached
+
+The service worker (`sw.js`) controls the PWA cache. If the SW itself is cached:
+- Users won't get app updates
+- Cache invalidation won't work
+- Old code will run indefinitely
+
+Always set `Cache-Control: no-cache, no-store` for service workers.
+
+### Cloudflare Cache Integration
+
+If using Cloudflare in front of Caddy:
+
+1. Set **Browser Cache TTL** to "Respect Existing Headers"
+2. Create page rules for `/sw.js` with "Cache Level: Bypass"
+3. Use **Purge Cache** after deployments
+
 ## Related Files
 
 | File | Purpose |

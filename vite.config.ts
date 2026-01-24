@@ -52,21 +52,16 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // TASK-1060: Skip API caching in service worker - use app-level SWR instead
+        // Prevents stale data after realtime updates (cache invalidation conflict)
+        navigateFallbackDenylist: [
+          /^\/rest\//, // Supabase REST API
+          /^\/auth\//, // Supabase Auth API
+          /^\/realtime\//, // Supabase Realtime
+        ],
         runtimeCaching: [
-          // Supabase API: Network-first with short TTL (BUG-023 FIX)
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api-cache',
-              networkTimeoutSeconds: 3,
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: CACHE_DURATIONS.FIVE_MINUTES, // Short TTL for fresh data
-              },
-            },
-          },
+          // REMOVED: Supabase API caching - conflicts with realtime updates
+          // App-level caching with realtime invalidation is implemented in useSupabaseDatabase
           // Images: Cache-first
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,

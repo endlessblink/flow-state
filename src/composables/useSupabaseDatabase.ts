@@ -1212,7 +1212,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         onProjectChange: (payload: unknown) => void,
         onTaskChange: (payload: unknown) => void,
         onTimerChange?: (payload: unknown) => void,
-        onNotificationChange?: (payload: unknown) => void
+        onNotificationChange?: (payload: unknown) => void,
+        onRecovery?: () => Promise<void> // BUG-1056: Callback to reload data after auth recovery
     ) => {
         const userId = authStore.user?.id
         if (!userId) return null
@@ -1224,8 +1225,15 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             supabase.removeAllChannels()
         }
 
-        // Use a unique channel name per user and purpose
-        const channelName = `db-changes-${userId.substring(0, 8)}`
+        // BUG-1056: Use unique channel name per tab to avoid multi-tab conflicts
+        // Each tab gets its own channel subscription
+        const tabId = (window as any).__flowstate_tab_id || (() => {
+            const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+            ;(window as any).__flowstate_tab_id = id
+            return id
+        })()
+        const channelName = `db-changes-${userId.substring(0, 8)}-${tabId}`
+        console.log(`📡 [REALTIME] Creating channel: ${channelName}`)
         const channel = supabase.channel(channelName)
             .on(
                 'postgres_changes',
@@ -1289,8 +1297,19 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                         // Retrying auth refresh if we get a 403
                         if (String(err).includes('403') || !err) {
                             console.log('📡 [REALTIME] Attempting emergency auth refresh...')
-                            supabase.auth.refreshSession().then(() => {
+                            supabase.auth.refreshSession().then(async () => {
                                 console.log('📡 [REALTIME] Session refreshed, system will auto-retry connection')
+                                // BUG-1056: Reload data after successful auth recovery
+                                // This fixes the case where initial load failed due to stale token
+                                if (onRecovery) {
+                                    console.log('📡 [REALTIME] Triggering data reload after auth recovery...')
+                                    try {
+                                        await onRecovery()
+                                        console.log('✅ [REALTIME] Data reloaded after auth recovery')
+                                    } catch (reloadErr) {
+                                        console.error('❌ [REALTIME] Data reload after recovery failed:', reloadErr)
+                                    }
+                                }
                             }).catch((refreshErr: unknown) => {
                                 console.error('[ASYNC-ERROR] initRealtimeSubscription refreshSession failed', refreshErr)
                             })

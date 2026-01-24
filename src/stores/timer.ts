@@ -330,7 +330,20 @@ export const useTimerStore = defineStore('timer', () => {
     if (currentSession.value.id.length < 10) {
       currentSession.value.id = crypto.randomUUID()
     }
-    await saveActiveTimerSession(currentSession.value, deviceId)
+    // TASK-1009 FIX: Ensure startTime is a Date before saving
+    // BroadcastChannel or other sources may pass string dates
+    const sessionToSave: PomodoroSession = {
+      ...currentSession.value,
+      startTime: currentSession.value.startTime instanceof Date
+        ? currentSession.value.startTime
+        : new Date(currentSession.value.startTime),
+      completedAt: currentSession.value.completedAt
+        ? (currentSession.value.completedAt instanceof Date
+            ? currentSession.value.completedAt
+            : new Date(currentSession.value.completedAt))
+        : undefined
+    }
+    await saveActiveTimerSession(sessionToSave, deviceId)
   }
 
   /**
@@ -430,8 +443,12 @@ export const useTimerStore = defineStore('timer', () => {
     releaseWakeLock() // Allow sleep - ROAD-004
     if (currentSession.value) {
       // Create stopped session with isActive: false
+      // TASK-1009 FIX: Ensure startTime is a Date (may be string from BroadcastChannel)
       const stoppedSession: PomodoroSession = {
         ...currentSession.value,
+        startTime: currentSession.value.startTime instanceof Date
+          ? currentSession.value.startTime
+          : new Date(currentSession.value.startTime),
         isActive: false,
         completedAt: new Date()
       }
@@ -679,12 +696,31 @@ export const useTimerStore = defineStore('timer', () => {
     // Set cross-tab callbacks
     crossTabSync.setTimerCallbacks({
       onSessionUpdate: (payload: unknown) => {
-        const session = payload as PomodoroSession | null
+        // TASK-1009 FIX: BroadcastChannel serializes Date objects to strings
+        // We need to convert them back to Date objects
+        const rawSession = payload as PomodoroSession | null
         if (!isDeviceLeader.value) {
-          currentSession.value = session
-          if (session?.isActive && !session?.isPaused) {
-            resumeTimerInterval()
+          if (rawSession) {
+            // Convert date strings back to Date objects
+            const session: PomodoroSession = {
+              ...rawSession,
+              startTime: rawSession.startTime instanceof Date
+                ? rawSession.startTime
+                : new Date(rawSession.startTime),
+              completedAt: rawSession.completedAt
+                ? (rawSession.completedAt instanceof Date
+                    ? rawSession.completedAt
+                    : new Date(rawSession.completedAt))
+                : undefined
+            }
+            currentSession.value = session
+            if (session.isActive && !session.isPaused) {
+              resumeTimerInterval()
+            } else {
+              pauseTimerInterval()
+            }
           } else {
+            currentSession.value = null
             pauseTimerInterval()
           }
         }

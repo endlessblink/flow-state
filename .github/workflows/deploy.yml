@@ -36,13 +36,20 @@ jobs:
         env:
           NODE_ENV: production
 
-      # Setup SSH
+      # Setup SSH with keep-alive to prevent timeout during Docker build
       - name: Prepare SSH Key
         run: |
             mkdir -p ~/.ssh/
             echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
             ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+            # Add SSH keep-alive config to prevent timeout during long Docker builds
+            cat >> ~/.ssh/config << 'EOF'
+            Host *
+              ServerAliveInterval=30
+              ServerAliveCountMax=20
+              TCPKeepAlive=yes
+            EOF
 
       # Sync files to VPS (excluding local .env files)
       - name: Sync Files to VPS

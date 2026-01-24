@@ -94,7 +94,7 @@ export function useQuickSort() {
     // So we are effectively looking at the next item already.
   }
 
-  function categorizeTask(taskId: string, projectId: string) {
+  async function categorizeTask(taskId: string, projectId: string) {
     const task = taskStore.tasks.find((t) => t.id === taskId)
     if (!task) return
 
@@ -110,8 +110,8 @@ export function useQuickSort() {
       timestamp: Date.now()
     }
 
-    // Update task
-    taskStore.updateTask(taskId, { projectId })
+    // Update task - AWAIT to ensure persistence (BUG-1051)
+    await taskStore.updateTask(taskId, { projectId })
 
     // Record action
     quickSortStore.recordAction(action)
@@ -138,12 +138,12 @@ export function useQuickSort() {
     }
   }
 
-  function undoLastCategorization() {
+  async function undoLastCategorization() {
     const action = quickSortStore.undo()
     if (!action) return
 
-    // Revert the task update
-    taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
+    // Revert the task update - AWAIT to ensure persistence (BUG-1051)
+    await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
 
     // Adjust index if needed
     // If the restored task reappears at the current index, we might not need to move.
@@ -154,12 +154,12 @@ export function useQuickSort() {
     }
   }
 
-  function redoLastCategorization() {
+  async function redoLastCategorization() {
     const action = quickSortStore.redo()
     if (!action) return
 
-    // Reapply the task update
-    taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+    // Reapply the task update - AWAIT to ensure persistence (BUG-1051)
+    await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
 
     handleTaskProcessed()
   }
@@ -169,9 +169,9 @@ export function useQuickSort() {
     currentIndex.value = 0
   }
 
-  function markTaskDone(taskId: string) {
-    // Mark task as done
-    taskStore.updateTask(taskId, { status: 'done' })
+  async function markTaskDone(taskId: string) {
+    // Mark task as done - AWAIT to ensure persistence (BUG-1051)
+    await taskStore.updateTask(taskId, { status: 'done' })
 
     // Create action for undo/redo
     const action: CategoryAction = {

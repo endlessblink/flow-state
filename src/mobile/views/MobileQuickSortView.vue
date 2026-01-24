@@ -664,13 +664,14 @@ function handleMarkDone() {
   triggerHaptic('heavy')
 }
 
-function setPriority(priority: 'low' | 'medium' | 'high') {
+async function setPriority(priority: 'low' | 'medium' | 'high') {
   if (!currentTask.value) return
-  taskStore.updateTask(currentTask.value.id, { priority })
+  // AWAIT to ensure persistence before UI updates (BUG-1051)
+  await taskStore.updateTask(currentTask.value.id, { priority })
   triggerHaptic('light')
 }
 
-function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
+async function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
   if (!currentTask.value) return
 
   let dueDate: string | undefined
@@ -711,7 +712,8 @@ function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'next
     dueDate = undefined
   }
 
-  taskStore.updateTask(currentTask.value.id, { dueDate: dueDate || '' })
+  // AWAIT to ensure persistence before UI updates (BUG-1051)
+  await taskStore.updateTask(currentTask.value.id, { dueDate: dueDate || '' })
   triggerHaptic('light')
 }
 

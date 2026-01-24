@@ -125,17 +125,30 @@ export const useAuthStore = defineStore('auth', () => {
   const initialize = async () => {
     if (isInitialized.value) return
 
+    // BUG-1056: Generate tab ID for multi-tab debugging
+    const tabId = (window as any).__flowstate_tab_id || (() => {
+      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+      ;(window as any).__flowstate_tab_id = id
+      return id
+    })()
+
     try {
       isLoading.value = true
+      console.log(`[AUTH:${tabId}] Initializing auth...`)
 
       if (!supabase) {
-        console.warn('Supabase client not available, staying in Guest Mode')
+        console.warn(`[AUTH:${tabId}] Supabase client not available, staying in Guest Mode`)
         return
       }
 
       // Check for existing session
+      console.log(`[AUTH:${tabId}] Fetching session from localStorage...`)
       const { data, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) throw sessionError
+      if (sessionError) {
+        console.error(`[AUTH:${tabId}] getSession error:`, sessionError)
+        throw sessionError
+      }
+      console.log(`[AUTH:${tabId}] Session found:`, !!data.session, data.session?.user?.email)
 
       // BUG-339 FIX: Check if session is expired and refresh it
       // getSession() returns the stored session but doesn't auto-refresh expired tokens
@@ -184,14 +197,29 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // Listen for auth changes (sign in, sign out, etc.)
+      // BUG-1056: This fires across all tabs when auth state changes (via localStorage sync)
       supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
+        const currentTabId = (window as any).__flowstate_tab_id || 'unknown'
+        console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event, 'userId:', newSession?.user?.id?.substring(0, 8))
+
+        // Update local state
         session.value = newSession
         user.value = newSession?.user || null
-        console.log('👤 [AUTH] Auth state changed:', _event, user.value?.id)
+
+        // BUG-1056: Handle token refresh across tabs - update realtime connection
+        if (_event === 'TOKEN_REFRESHED' && newSession?.access_token) {
+          console.log(`👤 [AUTH:${currentTabId}] Token refreshed - updating realtime auth`)
+          try {
+            // Update the realtime WebSocket with the new token
+            supabase.realtime.setAuth(newSession.access_token)
+          } catch (e) {
+            console.error(`❌ [AUTH:${currentTabId}] Failed to update realtime auth:`, e)
+          }
+        }
 
         // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
         if (_event === 'SIGNED_IN' && newSession?.user) {
-          console.log('👤 [AUTH] User signed in - reloading stores...')
+          console.log(`👤 [AUTH:${currentTabId}] User signed in - reloading stores...`)
           try {
             const { useProjectStore } = await import('@/stores/projects')
             const { useTaskStore } = await import('@/stores/tasks')
@@ -206,9 +234,9 @@ export const useAuthStore = defineStore('auth', () => {
               taskStore.loadFromDatabase(),
               canvasStore.loadFromDatabase()
             ])
-            console.log('✅ [AUTH] Stores reloaded after sign-in')
+            console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after sign-in`)
           } catch (e) {
-            console.error('❌ [AUTH] Failed to reload stores after sign-in:', e)
+            console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
           }
         }
       })

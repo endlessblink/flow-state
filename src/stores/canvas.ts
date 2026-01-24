@@ -137,20 +137,27 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   // 7. Initialize
-  const initialize = async () => {
-    await loadFromDatabase()
-    import('@/stores/auth').then(({ useAuthStore }) => {
-      const authStore = useAuthStore()
-      watch(() => [authStore.isInitialized, authStore.isAuthenticated], async ([isInit, isAuth], [_wasInit, wasAuth]) => {
-        if (isInit && isAuth && !wasAuth) {
-          await loadFromDatabase()
-        }
-      })
-    })
-  }
-  if (typeof window !== 'undefined') {
-    initialize()
-  }
+  // BUG-1045 FIX: REMOVED auto-init on store creation
+  // The canvas store was initializing BEFORE auth was ready, causing it to load
+  // empty data or from localStorage (guest mode) instead of Supabase.
+  // Initialization now happens ONLY from useAppInitialization.ts AFTER auth.
+  // Same pattern as BUG-339 fix in tasks.ts.
+  //
+  // REMOVED CODE:
+  // const initialize = async () => {
+  //   await loadFromDatabase()
+  //   import('@/stores/auth').then(({ useAuthStore }) => {
+  //     const authStore = useAuthStore()
+  //     watch(() => [authStore.isInitialized, authStore.isAuthenticated], async ([isInit, isAuth], [_wasInit, wasAuth]) => {
+  //       if (isInit && isAuth && !wasAuth) {
+  //         await loadFromDatabase()
+  //       }
+  //     })
+  //   })
+  // }
+  // if (typeof window !== 'undefined') {
+  //   initialize()
+  // }
 
   // 8. Visual Logic
   const syncTasksToCanvas = (tasks: Task[]) => {

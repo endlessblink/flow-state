@@ -599,6 +599,12 @@ export function useCanvasSync() {
                     }
                 }
 
+                // DRIFT LOGGING: Log when setNodes is called with position changes
+                console.log(`📍[VUEFLOW-SETNODES] Updating ${newNodes.length} nodes`, {
+                    taskNodes: newNodes.filter((n: any) => n.type === 'taskNode').length,
+                    groupNodes: newNodes.filter((n: any) => n.type === 'sectionNode').length
+                })
+
                 setNodes(newNodes)
 
                 // ================================================================

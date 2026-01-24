@@ -21,7 +21,7 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
-      # Build the app to check for errors before deploying
+      # Build the app
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -36,14 +36,13 @@ jobs:
         env:
           NODE_ENV: production
 
-      # Setup SSH with keep-alive to prevent timeout during Docker build
+      # Setup SSH
       - name: Prepare SSH Key
         run: |
             mkdir -p ~/.ssh/
             echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
             ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-            # Add SSH keep-alive config to prevent timeout during long Docker builds
             cat >> ~/.ssh/config << 'EOF'
             Host *
               ServerAliveInterval=30
@@ -51,79 +50,64 @@ jobs:
               TCPKeepAlive=yes
             EOF
 
-      # Sync files to VPS (excluding local .env files)
-      - name: Sync Files to VPS
+      # Deploy static files to production (NOT Docker!)
+      # System Caddy serves from /var/www/flowstate
+      - name: Deploy Static Files
         run: |
+            # Deploy built files to web root
             rsync -avz --delete \
-              --exclude 'node_modules' \
-              --exclude '.git' \
-              --exclude '.env' \
-              --exclude '.env.local' \
-              --exclude '.env.development' \
-              --exclude 'src-tauri/target' \
-              ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}/
+              ./dist/ \
+              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
 
-      # Generate .env on VPS using Doppler and restart Docker
-      - name: Deploy with Doppler Secrets
+      # Reload Caddy to pick up any potential changes (graceful, no downtime)
+      - name: Reload Caddy
         run: |
             ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-              cd ${{ secrets.VPS_TARGET_DIR }}
-
-              # Install Doppler CLI if not present
-              if ! command -v doppler > /dev/null 2>&1; then
-                curl -sLf --retry 3 --tlsv1.2 --proto '=https' 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | sudo gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg
-                echo 'deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main' | sudo tee /etc/apt/sources.list.d/doppler-cli.list
-                sudo apt-get update && sudo apt-get install -y doppler
+              # Verify Caddy is running
+              if ! systemctl is-active --quiet caddy; then
+                echo 'Caddy is not running, starting it...'
+                sudo systemctl start caddy
+              else
+                echo 'Caddy is running, reloading config...'
+                sudo systemctl reload caddy
               fi
 
-              # Generate .env from Doppler (using service token)
-              DOPPLER_TOKEN='${{ secrets.DOPPLER_TOKEN }}' doppler secrets download --no-file --format env > .env
-
-              # Force stop all containers and clean up
-              echo '>>> Stopping all containers...'
-              docker compose down --remove-orphans --timeout 30 -v || true
-
-              # Kill any remaining containers from this project
-              docker ps -q --filter 'name=flowstate' | xargs -r docker stop || true
-              docker ps -q --filter 'name=flow-state' | xargs -r docker stop || true
-              docker ps -q --filter 'name=caddy' | xargs -r docker stop || true
-
-              # Force kill any process on port 80/443 (multiple methods for reliability)
-              echo '>>> Killing processes on ports 80/443...'
-
-              # Method 1: fuser (most reliable, commonly installed)
-              sudo fuser -k 80/tcp 2>/dev/null || true
-              sudo fuser -k 443/tcp 2>/dev/null || true
-
-              # Method 2: lsof fallback
-              sudo lsof -ti:80 | xargs -r sudo kill -9 2>/dev/null || true
-              sudo lsof -ti:443 | xargs -r sudo kill -9 2>/dev/null || true
-
-              # Method 3: ss + grep for any remaining (last resort)
-              sudo ss -tlnp | grep ':80 ' | grep -oP 'pid=\K\d+' | xargs -r sudo kill -9 2>/dev/null || true
-              sudo ss -tlnp | grep ':443 ' | grep -oP 'pid=\K\d+' | xargs -r sudo kill -9 2>/dev/null || true
-
-              # Delay to ensure ports are released
-              sleep 8
-
-              # Prune Docker build cache to ensure fresh build with new code
-              echo '>>> Pruning Docker build cache...'
-              docker builder prune -af || true
-
-              # Start fresh with no-cache to ensure new code is used
-              echo '>>> Building containers (no cache)...'
-              docker compose build --no-cache
-              echo '>>> Starting containers...'
-              docker compose up -d --force-recreate
+              # Verify Caddy is healthy
+              sleep 2
+              if systemctl is-active --quiet caddy; then
+                echo '✓ Caddy is healthy'
+              else
+                echo '✗ Caddy failed to start!'
+                exit 1
+              fi
             "
 
       # Validate CORS configuration after deployment
       - name: Validate CORS Configuration
         run: |
-            echo "Waiting 30s for services to stabilize..."
-            sleep 30
+            echo "Waiting 10s for services to stabilize..."
+            sleep 10
             chmod +x ./scripts/validate-cors.sh
             ./scripts/validate-cors.sh
         env:
           API_URL: https://api.in-theflow.com
           ORIGIN: https://in-theflow.com
+
+      # Health check
+      - name: Verify Deployment
+        run: |
+            echo "Checking web app..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://in-theflow.com)
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "✗ Web app returned HTTP $HTTP_CODE"
+              exit 1
+            fi
+            echo "✓ Web app is healthy (HTTP $HTTP_CODE)"
+
+            echo "Checking API..."
+            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://api.in-theflow.com/rest/v1/)
+            if [ "$API_CODE" != "401" ] && [ "$API_CODE" != "200" ]; then
+              echo "✗ API returned unexpected HTTP $API_CODE"
+              exit 1
+            fi
+            echo "✓ API is healthy (HTTP $API_CODE)"

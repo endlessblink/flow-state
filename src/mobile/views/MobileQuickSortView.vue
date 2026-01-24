@@ -127,10 +127,10 @@
         <div class="swipe-hints" v-if="!hasSwipedOnce">
           <div class="hint hint-left">
             <ChevronLeft :size="24" />
-            <span>Skip</span>
+            <span>Delete</span>
           </div>
           <div class="hint hint-right">
-            <span>Assign</span>
+            <span>Edit</span>
             <ChevronRight :size="24" />
           </div>
         </div>
@@ -160,15 +160,25 @@
             }"
             :style="cardStyle"
           >
-            <!-- Swipe Indicators (outline only, no fill or text) -->
+            <!-- Swipe Indicators -->
             <div
               class="swipe-indicator left"
               :style="{ opacity: leftOverlayOpacity }"
-            ></div>
+            >
+              <div class="swipe-content">
+                <Trash2 :size="32" />
+                <span>Delete</span>
+              </div>
+            </div>
             <div
               class="swipe-indicator right"
               :style="{ opacity: rightOverlayOpacity }"
-            ></div>
+            >
+              <div class="swipe-content">
+                <Edit3 :size="32" />
+                <span>Edit</span>
+              </div>
+            </div>
 
             <!-- Card Content -->
             <div class="card-content" v-if="currentTask">
@@ -345,6 +355,62 @@
       </Transition>
     </Teleport>
 
+    <!-- Delete Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showDeleteConfirm" class="confirm-overlay">
+          <div class="confirm-modal">
+            <Trash2 :size="32" class="confirm-icon" />
+            <h3>Delete this task?</h3>
+            <p>This action cannot be undone</p>
+            <div class="confirm-actions">
+              <button class="cancel-btn" @click="cancelDelete">Cancel</button>
+              <button class="delete-btn" @click="confirmDelete">Delete</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Quick Edit Panel -->
+    <Teleport to="body">
+      <Transition name="sheet">
+        <div v-if="showQuickEditPanel" class="sheet-overlay" @click="showQuickEditPanel = false">
+          <div class="quick-edit-sheet" @click.stop>
+            <div class="sheet-handle"></div>
+            <h3 class="sheet-title">Quick Edit</h3>
+
+            <!-- Priority Section -->
+            <div class="edit-section">
+              <span class="edit-label">Priority</span>
+              <div class="priority-pills">
+                <button class="pill" :class="{ active: currentTask?.priority === 'low' }" @click="setPriorityAndClose('low')">Low</button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'medium' }" @click="setPriorityAndClose('medium')">Med</button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'high' }" @click="setPriorityAndClose('high')">High</button>
+              </div>
+            </div>
+
+            <!-- Date Section -->
+            <div class="edit-section">
+              <span class="edit-label">Due Date</span>
+              <div class="date-pills">
+                <button class="pill" @click="setDueDateAndClose('today')">Today</button>
+                <button class="pill" @click="setDueDateAndClose('tomorrow')">Tmrw</button>
+                <button class="pill" @click="setDueDateAndClose('in3days')">+3d</button>
+                <button class="pill" @click="setDueDateAndClose('weekend')">Wknd</button>
+              </div>
+            </div>
+
+            <!-- Assign to Project button -->
+            <button class="assign-project-btn" @click="openProjectSheet">
+              <FolderOpen :size="20" />
+              Assign to Project
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Celebration Overlay -->
     <Transition name="celebration">
       <div v-if="showCelebration" class="mini-celebration">
@@ -361,7 +427,7 @@ import { useRouter } from 'vue-router'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, Flag,
   ChevronLeft, ChevronRight, SkipForward, PartyPopper,
-  ArrowLeft
+  ArrowLeft, Trash2, Edit3, FolderOpen
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useSwipeGestures } from '@/composables/useSwipeGestures'
@@ -393,6 +459,8 @@ const showProjectSheet = ref(false)
 const showCelebration = ref(false)
 const hasSwipedOnce = ref(false)
 const sessionSummary = ref<SessionSummary | null>(null)
+const showDeleteConfirm = ref(false)
+const showQuickEditPanel = ref(false)
 
 // Capture phase state
 const newTaskTitle = ref('')
@@ -454,12 +522,13 @@ const {
   haptics: true,
   onSwipeRight: () => {
     hasSwipedOnce.value = true
-    // Open project selector
-    showProjectSheet.value = true
+    // Show quick edit panel instead of project sheet
+    showQuickEditPanel.value = true
   },
   onSwipeLeft: () => {
     hasSwipedOnce.value = true
-    handleSkip()
+    // Show delete confirmation instead of skip
+    showDeleteConfirm.value = true
   },
   onSwipeEnd: () => {
     // Reset card position handled by transition
@@ -647,6 +716,32 @@ function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'next
 
 function handleExit() {
   router.push('/tasks')
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+}
+
+function confirmDelete() {
+  if (!currentTask.value) return
+  taskStore.deleteTask(currentTask.value.id)
+  showDeleteConfirm.value = false
+  triggerHaptic('heavy')
+}
+
+function setPriorityAndClose(priority: 'low' | 'medium' | 'high') {
+  setPriority(priority)
+  showQuickEditPanel.value = false
+}
+
+function setDueDateAndClose(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
+  setDueDate(preset)
+  showQuickEditPanel.value = false
+}
+
+function openProjectSheet() {
+  showQuickEditPanel.value = false
+  showProjectSheet.value = true
 }
 
 function truncateDescription(desc: string): string {
@@ -1150,21 +1245,49 @@ onMounted(() => {
   cursor: grabbing;
 }
 
-/* Swipe Indicators (outline only) */
+/* Swipe Indicators */
 .swipe-indicator {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-2xl);
   pointer-events: none;
   transition: opacity 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .swipe-indicator.left {
-  border: 3px solid rgba(150, 150, 170, 0.7);
+  border: 3px solid var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .swipe-indicator.right {
   border: 3px solid var(--color-success, #10b981);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.swipe-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  color: inherit;
+}
+
+.swipe-indicator.left .swipe-content {
+  color: var(--color-danger, #ef4444);
+}
+
+.swipe-indicator.right .swipe-content {
+  color: var(--color-success, #10b981);
+}
+
+.swipe-content span {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Card Content */
@@ -1658,6 +1781,185 @@ onMounted(() => {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   50% { transform: translate(-50%, -50%) scale(1.1); }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ================================
+   DELETE CONFIRMATION MODAL
+   ================================ */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.confirm-modal {
+  background: linear-gradient(145deg, rgba(30, 32, 45, 0.98), rgba(25, 27, 38, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  text-align: center;
+  max-width: 320px;
+  margin: var(--space-4);
+}
+
+.confirm-icon {
+  color: var(--color-danger, #ef4444);
+  margin: 0 auto var(--space-4);
+}
+
+.confirm-modal h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-2);
+}
+
+.confirm-modal p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0 0 var(--space-6);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.confirm-actions button {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.cancel-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.delete-btn {
+  background: var(--color-danger, #ef4444);
+  border: none;
+  color: white;
+}
+
+.delete-btn:active {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+/* Modal transitions */
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.2s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .confirm-modal,
+.modal-leave-to .confirm-modal {
+  transform: scale(0.95);
+}
+
+/* ================================
+   QUICK EDIT PANEL
+   ================================ */
+
+.quick-edit-sheet {
+  width: 100%;
+  max-height: 60vh;
+  background: linear-gradient(
+    180deg,
+    hsl(240, 20%, 12%) 0%,
+    hsl(240, 18%, 10%) 100%
+  );
+  border-top-left-radius: var(--radius-2xl);
+  border-top-right-radius: var(--radius-2xl);
+  padding: var(--space-4) var(--space-5);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+.edit-section {
+  margin-bottom: var(--space-5);
+}
+
+.edit-section .edit-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-2);
+}
+
+.edit-section .priority-pills,
+.edit-section .date-pills {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.edit-section .pill {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-section .pill.active {
+  background: rgba(78, 205, 196, 0.15);
+  border-color: rgba(78, 205, 196, 0.4);
+  color: var(--brand-primary);
+}
+
+.edit-section .pill:active {
+  transform: scale(0.98);
+}
+
+.assign-project-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: var(--radius-lg);
+  color: var(--brand-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: var(--space-4);
+}
+
+.assign-project-btn:active {
+  background: rgba(78, 205, 196, 0.15);
+  transform: scale(0.98);
 }
 
 /* ================================

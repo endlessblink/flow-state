@@ -96,23 +96,113 @@
       </div>
     </div>
 
-    <!-- Persistent Quick Add Bar -->
-    <div class="quick-add-bar">
-      <input
-        ref="taskInput"
-        v-model="newTaskTitle"
-        type="text"
-        placeholder="Add a task..."
-        class="quick-add-input"
-        @keydown.enter="submitTask"
+    <!-- Expanded Quick Add Bar -->
+    <div :class="['quick-add-bar', { expanded: isQuickAddExpanded }]">
+      <!-- Main input row -->
+      <div class="quick-add-row">
+        <input
+          ref="taskInput"
+          v-model="newTaskTitle"
+          type="text"
+          :placeholder="isListening ? 'Listening...' : 'Add a task...'"
+          class="quick-add-input"
+          :class="{ 'voice-active': isListening }"
+          @focus="expandQuickAdd"
+          @keydown.enter="submitTask"
+        />
+
+        <!-- Mic button (TASK-1025) -->
+        <button
+          v-if="isVoiceSupported"
+          :class="['mic-btn', { recording: isListening }]"
+          :title="isListening ? 'Stop recording' : 'Voice input'"
+          @click="toggleVoiceInput"
+        >
+          <Mic v-if="!isListening" :size="20" />
+          <MicOff v-else :size="20" />
+        </button>
+
+        <button
+          class="add-btn"
+          :disabled="!newTaskTitle.trim()"
+          @click="submitTask"
+        >
+          <Plus :size="20" />
+        </button>
+      </div>
+
+      <!-- Voice feedback (when recording) -->
+      <div v-if="isListening" class="voice-feedback">
+        <div class="voice-waveform">
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+        </div>
+        <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
+        <button class="voice-cancel" @click="cancelVoice">
+          <X :size="16" />
+        </button>
+      </div>
+
+      <!-- Voice error message -->
+      <div v-if="voiceError && !isListening" class="voice-error">
+        {{ voiceError }}
+      </div>
+
+      <!-- Voice Task Confirmation (TASK-1028) -->
+      <VoiceTaskConfirmation
+        :is-open="showVoiceConfirmation"
+        :parsed-task="parsedVoiceTask"
+        @confirm="handleVoiceTaskConfirm"
+        @cancel="handleVoiceTaskCancel"
       />
-      <button
-        class="add-btn"
-        :disabled="!newTaskTitle.trim()"
-        @click="submitTask"
-      >
-        <Plus :size="20" />
-      </button>
+
+      <!-- Expanded options (date & priority) -->
+      <div v-if="isQuickAddExpanded" class="quick-add-options">
+        <!-- Due date quick options -->
+        <div class="option-section">
+          <div class="option-label">
+            <Calendar :size="14" />
+            <span>Due</span>
+          </div>
+          <div class="option-chips">
+            <button
+              v-for="opt in dateOptions"
+              :key="opt.label"
+              :class="['option-chip', { active: selectedDueDate === opt.value }]"
+              @click="selectDueDate(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Priority selector -->
+        <div class="option-section">
+          <div class="option-label">
+            <Flag :size="14" />
+            <span>Priority</span>
+          </div>
+          <div class="option-chips">
+            <button
+              v-for="opt in priorityOptions"
+              :key="opt.value"
+              :class="['option-chip', 'priority-chip', opt.value, { active: selectedPriority === opt.value }]"
+              @click="selectPriority(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapse button -->
+        <button class="collapse-btn" @click="collapseQuickAdd">
+          <ChevronDown :size="16" />
+          <span>Collapse</span>
+        </button>
+      </div>
     </div>
 
     <!-- Task Edit Bottom Sheet -->
@@ -133,15 +223,20 @@ import { useTimerStore } from '@/stores/timer'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { type LongPressState } from '@/composables/useLongPress'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
+import VoiceTaskConfirmation from '@/mobile/components/VoiceTaskConfirmation.vue'
 import {
   Plus, Check, Play, Calendar, Inbox,
-  Circle, Clock, CheckCircle2, ArrowUpDown
+  Circle, Clock, CheckCircle2, ArrowUpDown,
+  Flag, ChevronDown, Mic, MicOff, X
 } from 'lucide-vue-next'
+import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
+import { useVoiceTaskParser, type ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 
 const taskStore = useTaskStore()
 const authStore = useAuthStore()
 const timerStore = useTimerStore()
 const { lastSyncError } = useSupabaseDatabase()
+const { parseTranscript } = useVoiceTaskParser()
 
 // State
 const newTaskTitle = ref('')
@@ -149,6 +244,70 @@ const taskInput = ref<HTMLInputElement | null>(null)
 const showDebug = ref(false)
 const activeStatusFilter = ref<string>('active')
 const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
+
+// Quick-add expanded state
+const isQuickAddExpanded = ref(false)
+const selectedDueDate = ref<string | null>(null)
+const selectedPriority = ref<string | null>(null)
+
+// Voice confirmation state (TASK-1028)
+const parsedVoiceTask = ref<ParsedVoiceTask | null>(null)
+const showVoiceConfirmation = ref(false)
+
+// Voice input (TASK-1025, TASK-1028)
+const {
+  isListening,
+  isSupported: isVoiceSupported,
+  displayTranscript,
+  error: voiceError,
+  start: startVoice,
+  stop: stopVoice,
+  cancel: cancelVoice
+} = useSpeechRecognition({
+  language: 'auto', // Auto-detects Hebrew/English
+  interimResults: true,
+  silenceTimeout: 2500,
+  onResult: (result) => {
+    // TASK-1028: Parse transcript and show confirmation panel
+    if (result.isFinal && result.transcript.trim()) {
+      const parsed = parseTranscript(result.transcript.trim(), result.language)
+      parsedVoiceTask.value = parsed
+      showVoiceConfirmation.value = true
+      // Don't stop voice here - let user add more or confirm
+    }
+  },
+  onError: (err) => {
+    console.warn('[Voice] Error:', err)
+  }
+})
+
+// Toggle voice recording
+const toggleVoiceInput = async () => {
+  if (isListening.value) {
+    stopVoice()
+  } else {
+    // Reset confirmation state when starting new voice input
+    parsedVoiceTask.value = null
+    showVoiceConfirmation.value = false
+    expandQuickAdd()
+    await startVoice()
+  }
+}
+
+// Date quick options
+const dateOptions = [
+  { label: 'Today', value: 'today' },
+  { label: 'Tomorrow', value: 'tomorrow' },
+  { label: 'Next Week', value: 'nextweek' },
+  { label: 'None', value: null }
+]
+
+// Priority options (matches Task type: 'low' | 'medium' | 'high' | null)
+const priorityOptions = [
+  { label: 'High', value: 'high' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Low', value: 'low' }
+]
 
 // Edit sheet state
 const isEditSheetOpen = ref(false)
@@ -433,16 +592,89 @@ const toggleSort = () => {
   sortBy.value = sortOptions[(currentIndex + 1) % sortOptions.length]
 }
 
+// Quick-add expansion handlers
+const expandQuickAdd = () => {
+  isQuickAddExpanded.value = true
+}
+
+const collapseQuickAdd = () => {
+  isQuickAddExpanded.value = false
+}
+
+const selectDueDate = (value: string | null) => {
+  selectedDueDate.value = value
+}
+
+const selectPriority = (value: string | null) => {
+  selectedPriority.value = selectedPriority.value === value ? null : value
+}
+
+// Calculate actual due date from option
+const calculateDueDate = (option: string | null): Date | null => {
+  if (!option) return null
+
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+
+  switch (option) {
+    case 'today':
+      return today
+    case 'tomorrow': {
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      return tomorrow
+    }
+    case 'nextweek': {
+      const nextWeek = new Date(today)
+      nextWeek.setDate(nextWeek.getDate() + 7)
+      return nextWeek
+    }
+    default:
+      return null
+  }
+}
+
 const submitTask = () => {
   if (!newTaskTitle.value.trim()) return
 
+  const dueDate = calculateDueDate(selectedDueDate.value)
+
   taskStore.createTask({
     title: newTaskTitle.value,
-    status: 'planned'
+    status: 'planned',
+    ...(dueDate && { dueDate: dueDate.toISOString() }),
+    ...(selectedPriority.value && { priority: selectedPriority.value as 'high' | 'medium' | 'low' })
   })
 
+  // Reset state
   newTaskTitle.value = ''
-  taskInput.value?.focus()
+  selectedDueDate.value = null
+  selectedPriority.value = null
+  isQuickAddExpanded.value = false
+  taskInput.value?.blur()
+}
+
+// Voice task confirmation handlers (TASK-1028)
+const handleVoiceTaskConfirm = (task: { title: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
+  taskStore.createTask({
+    title: task.title,
+    status: 'planned',
+    ...(task.dueDate && { dueDate: task.dueDate.toISOString() }),
+    ...(task.priority && { priority: task.priority })
+  })
+
+  resetVoiceState()
+}
+
+const handleVoiceTaskCancel = () => {
+  resetVoiceState()
+}
+
+const resetVoiceState = () => {
+  parsedVoiceTask.value = null
+  showVoiceConfirmation.value = false
+  // Also cancel any ongoing voice input
+  cancelVoice()
 }
 
 const toggleTask = (task: Task) => {
@@ -743,7 +975,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   margin-top: 12px;
 }
 
-/* Persistent Quick Add Bar */
+/* Expanded Quick Add Bar */
 .quick-add-bar {
   position: fixed;
   bottom: 64px; /* Above nav */
@@ -753,10 +985,21 @@ const isOverdue = (dueDate: string | Date): boolean => {
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--surface-primary);
   border-top: 1px solid var(--border-subtle);
-  display: flex;
-  gap: 12px;
   z-index: 50;
   box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-add-bar.expanded {
+  padding-top: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.15);
+  border-radius: 24px 24px 0 0;
+}
+
+.quick-add-row {
+  display: flex;
+  gap: 12px;
 }
 
 .quick-add-input {
@@ -797,6 +1040,223 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .add-btn:active:not(:disabled) {
   transform: scale(0.95);
+}
+
+/* Quick Add Options (expanded state) */
+.quick-add-options {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.option-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.option-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-chip {
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.option-chip:active {
+  transform: scale(0.96);
+}
+
+.option-chip.active {
+  background: var(--primary-brand);
+  border-color: var(--primary-brand);
+  color: white;
+}
+
+/* Priority-specific colors when active */
+.option-chip.priority-chip.high.active {
+  background: var(--danger-text);
+  border-color: var(--danger-text);
+}
+
+.option-chip.priority-chip.medium.active {
+  background: var(--warning-text);
+  border-color: var(--warning-text);
+}
+
+.option-chip.priority-chip.low.active {
+  background: var(--text-tertiary);
+  border-color: var(--text-tertiary);
+}
+
+.collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  margin-top: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.collapse-btn:active {
+  opacity: 0.7;
+}
+
+/* Mic Button (TASK-1025) */
+.mic-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-tertiary);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.mic-btn:active {
+  transform: scale(0.95);
+}
+
+.mic-btn.recording {
+  background: var(--danger-text);
+  color: white;
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Voice input active state on input */
+.quick-add-input.voice-active {
+  border-color: var(--danger-text);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+/* Voice feedback panel */
+.voice-feedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  background: var(--surface-secondary);
+  border-radius: 12px;
+  animation: slideUp 0.2s ease-out;
+}
+
+.voice-waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+}
+
+.wave-bar {
+  width: 3px;
+  height: 8px;
+  background: var(--danger-text);
+  border-radius: 2px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+.wave-bar:nth-child(1) { animation-delay: 0s; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes wave {
+  0%, 100% { height: 8px; }
+  50% { height: 20px; }
+}
+
+.voice-status {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-cancel {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-tertiary);
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.voice-cancel:active {
+  transform: scale(0.95);
+  background: var(--danger-bg-subtle);
+  color: var(--danger-text);
+}
+
+/* Voice error message */
+.voice-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--danger-bg-subtle);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--danger-text);
 }
 
 /* Debug Banner */

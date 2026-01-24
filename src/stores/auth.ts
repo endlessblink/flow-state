@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
 import { clearGuestData } from '@/utils/guestModeStorage'
+import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
@@ -213,6 +214,11 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
     } catch (e: unknown) {
+      // BUG-1056: Detect if Brave Shields blocked auth initialization
+      if (isBlockedByBrave(e)) {
+        recordBlockedResource('supabase-auth-init')
+        console.error('[AUTH] Auth initialization blocked by Brave Shields. Please disable Shields for this site.')
+      }
       console.error('Auth initialization failed:', e)
       error.value = e as AuthError
     } finally {
@@ -389,6 +395,11 @@ export const useAuthStore = defineStore('auth', () => {
       await migrateGuestData()
 
     } catch (e: unknown) {
+      // BUG-1056: Detect if Brave Shields blocked the auth request
+      if (isBlockedByBrave(e)) {
+        recordBlockedResource('supabase-auth-signin')
+        console.error('[AUTH] Sign-in blocked by Brave Shields. Please disable Shields for this site.')
+      }
       error.value = e as AuthError
       throw e
     } finally {
@@ -476,6 +487,11 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (signInError) throw signInError
     } catch (e: unknown) {
+      // BUG-1056: Detect if Brave Shields blocked the OAuth redirect
+      if (isBlockedByBrave(e)) {
+        recordBlockedResource('supabase-auth-google-oauth')
+        console.error('[AUTH] Google sign-in blocked by Brave Shields. Please disable Shields for this site.')
+      }
       console.error('Google sign in failed:', e)
       error.value = e as AuthError
       throw e

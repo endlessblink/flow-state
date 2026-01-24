@@ -42,14 +42,44 @@
 
       <!-- Quick Task Creation - REBUILT -->
       <div class="quick-task-section">
-        <input
-          ref="quickTaskRef"
-          type="text"
-          class="quick-task-input"
-          placeholder="Quick add task (Enter)..."
-          aria-label="Quick add task"
-          @keydown.enter.prevent="createQuickTask"
-        >
+        <div class="quick-task-row">
+          <input
+            ref="quickTaskRef"
+            v-model="quickTaskText"
+            type="text"
+            class="quick-task-input"
+            :class="{ 'voice-active': isListening }"
+            :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
+            aria-label="Quick add task"
+            @keydown.enter.prevent="createQuickTask"
+          >
+          <!-- Mic button (TASK-1024) -->
+          <button
+            v-if="isVoiceSupported"
+            :class="['mic-btn', { recording: isListening }]"
+            :title="isListening ? 'Stop recording' : 'Voice input'"
+            @click="toggleVoiceInput"
+          >
+            <Mic v-if="!isListening" :size="16" />
+            <MicOff v-else :size="16" />
+          </button>
+        </div>
+        <!-- Voice feedback (when recording) -->
+        <div v-if="isListening" class="voice-feedback">
+          <div class="voice-waveform">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+          </div>
+          <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
+          <button class="voice-cancel" @click="cancelVoice">
+            <X :size="12" />
+          </button>
+        </div>
+        <!-- Voice error message -->
+        <div v-if="voiceError && !isListening" class="voice-error">
+          {{ voiceError }}
+        </div>
       </div>
 
       <!-- Project & Task Management -->
@@ -359,8 +389,9 @@ import {
   Plus, PanelLeftClose, Settings, FolderOpen,
   Calendar, List, Inbox, Zap, Clock, HelpCircle,
   ChevronRight, Coffee, Hourglass, Mountain, Trash2, X,
-  Layers
+  Layers, Mic, MicOff
 } from 'lucide-vue-next'
+import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
@@ -519,11 +550,47 @@ onBeforeUnmount(() => {
 
 // Quick Task Logic
 const quickTaskRef = ref<HTMLInputElement | null>(null)
+const quickTaskText = ref('')
+
+// Voice input (TASK-1024)
+const {
+  isListening,
+  isSupported: isVoiceSupported,
+  displayTranscript,
+  error: voiceError,
+  start: startVoice,
+  stop: stopVoice,
+  cancel: cancelVoice
+} = useSpeechRecognition({
+  language: 'auto',
+  interimResults: true,
+  silenceTimeout: 2500,
+  onResult: (result) => {
+    if (result.isFinal && result.transcript.trim()) {
+      quickTaskText.value = result.transcript.trim()
+      // Auto-submit after voice input
+      createQuickTask()
+    }
+  },
+  onError: (err) => {
+    console.warn('[Voice Sidebar] Error:', err)
+  }
+})
+
+// Toggle voice recording
+const toggleVoiceInput = async () => {
+  if (isListening.value) {
+    stopVoice()
+  } else {
+    quickTaskText.value = ''
+    await startVoice()
+  }
+}
 
 const createQuickTask = async () => {
-  if (!quickTaskRef.value || !quickTaskRef.value.value.trim()) return
+  if (!quickTaskText.value.trim()) return
 
-  const title = quickTaskRef.value.value.trim()
+  const title = quickTaskText.value.trim()
   try {
     await taskStore.createTaskWithUndo({
       title,
@@ -531,7 +598,7 @@ const createQuickTask = async () => {
       status: 'planned',
       projectId: undefined
     })
-    quickTaskRef.value.value = ''
+    quickTaskText.value = ''
   } catch (error) {
     console.error('Error creating quick task:', error)
   }
@@ -893,20 +960,146 @@ defineExpose({
   margin: var(--space-4) var(--space-6);
 }
 
+.quick-task-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .quick-task-input {
-  width: 100%;
+  flex: 1;
   padding: var(--space-2_5);
   background: var(--glass-bg-tint);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--text-sm);
+  transition: all var(--duration-normal);
 }
 
 .quick-task-input:focus {
   outline: none;
   border-color: var(--brand-primary);
   background: var(--glass-bg-light);
+}
+
+.quick-task-input.voice-active {
+  border-color: var(--danger-text, #ef4444);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+/* Mic Button (TASK-1024) */
+.mic-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.mic-btn:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+}
+
+.mic-btn:active {
+  transform: scale(0.95);
+}
+
+.mic-btn.recording {
+  background: var(--danger-text, #ef4444);
+  color: white;
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Voice feedback panel */
+.voice-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin-top: var(--space-2);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+}
+
+.voice-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.wave-bar {
+  width: 2px;
+  height: 4px;
+  background: var(--danger-text, #ef4444);
+  border-radius: 1px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+.wave-bar:nth-child(1) { animation-delay: 0s; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+
+@keyframes wave {
+  0%, 100% { height: 4px; }
+  50% { height: 12px; }
+}
+
+.voice-status {
+  flex: 1;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-cancel {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.voice-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--danger-text, #ef4444);
+}
+
+/* Voice error message */
+.voice-error {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--danger-text, #ef4444);
 }
 
 .task-management-section {

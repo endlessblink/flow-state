@@ -8,6 +8,8 @@
     "dev": "npm run verify-auth && node scripts/validate-supabase-keys.cjs && concurrently \"vite --host 0.0.0.0 --port 5546 --strictPort\" \"npm run backup:watch\"",
     "verify-auth": "node scripts/verify-auth-user.cjs",
     "generate:keys": "node scripts/generate-supabase-keys.cjs",
+    "setup:doppler": "bash scripts/setup-doppler.sh",
+    "dev:doppler": "doppler run -- npm run dev",
     "backup:watch": "node scripts/auto-backup-daemon.cjs",
     "shadow": "node scripts/shadow-mirror.cjs",
     "shadow:watch": "node scripts/auto-backup-daemon.cjs",

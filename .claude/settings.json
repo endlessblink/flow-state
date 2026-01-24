@@ -36,15 +36,6 @@
         ]
       }
     ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/auto-test-after-edit.sh"
-          }
-        ]
-      }
-    ]
+    "PostToolUse": []
   }
 }

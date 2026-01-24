@@ -20,6 +20,18 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      # Install Doppler CLI (optional - for builds requiring secrets)
+      - name: Install Doppler CLI
+        if: ${{ secrets.DOPPLER_TOKEN != '' }}
+        uses: dopplerhq/cli-action@v3
+
+      # Fetch secrets from Doppler if available
+      - name: Fetch Build Secrets
+        if: ${{ secrets.DOPPLER_TOKEN != '' }}
+        run: doppler secrets download --no-file --format env > .env.production
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
       - name: Install dependencies
         run: npm ci
 

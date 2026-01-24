@@ -185,6 +185,17 @@ export function useTaskEditActions(
             const originalCanvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
             const originalIsInInbox = editedTask.value.isInInbox ?? props.task?.isInInbox
 
+            // BUG-1047 DEBUG: Track position through save flow
+            const storeTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+            console.log('🔍 [BUG-1047] Position tracking on save:', {
+                taskId: editedTask.value.id.slice(0, 8),
+                editedTaskPosition: editedTask.value.canvasPosition,
+                propsTaskPosition: props.task?.canvasPosition,
+                storeTaskPosition: storeTask?.canvasPosition,
+                resolvedOriginalPosition: originalCanvasPosition,
+                isInInbox: originalIsInInbox
+            })
+
             const updates: Record<string, unknown> = {
                 title: editedTask.value.title,
                 description: editedTask.value.description,
@@ -241,7 +252,23 @@ export function useTaskEditActions(
             // - Instance/subtask operations with same pattern
             // Now we: Update store → Close modal → Background ops
             console.time('⚡ [BUG-291] Task update')
+
+            // BUG-1047 DEBUG: Log what we're about to save
+            console.log('🔍 [BUG-1047] About to updateTask with:', {
+                taskId: editedTask.value.id.slice(0, 8),
+                updatesHasPosition: 'canvasPosition' in updates,
+                updatesPosition: updates.canvasPosition
+            })
+
             taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
+
+            // BUG-1047 DEBUG: Log what's in store after update
+            const afterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
+            console.log('🔍 [BUG-1047] Store position after updateTask:', {
+                taskId: editedTask.value.id.slice(0, 8),
+                storePosition: afterUpdate?.canvasPosition
+            })
+
             console.timeEnd('⚡ [BUG-291] Task update')
 
             // BUG-357 FIX: Force canvas sync to update Vue Flow nodes with fresh data

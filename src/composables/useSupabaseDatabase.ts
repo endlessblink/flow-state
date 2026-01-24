@@ -1217,6 +1217,13 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         const userId = authStore.user?.id
         if (!userId) return null
 
+        // TASK-1009 FIX: Clear existing channels BEFORE creating new one
+        // Previously this was done AFTER channel creation, which removed the channel we just created!
+        if (supabase.realtime.channels.length > 0) {
+            console.log(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
+            supabase.removeAllChannels()
+        }
+
         // Use a unique channel name per user and purpose
         const channelName = `db-changes-${userId.substring(0, 8)}`
         const channel = supabase.channel(channelName)
@@ -1260,12 +1267,6 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         // DEBUG: Log auth state before subscription
         const session = authStore.session
         console.log(`📡 [REALTIME] Initializing subscription. Auth state: ${session ? 'Authenticated' : 'Anonymous'}, Role: ${session?.user?.role || 'none'}`)
-
-        // PHASE 4 FIX: Clear any existing active channel to prevent zombies
-        if (supabase.realtime.channels.length > 0) {
-            console.log(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
-            supabase.removeAllChannels()
-        }
 
         // Delay subscription to ensure client state is synced and auth is stable
         const connectRealtime = async () => {

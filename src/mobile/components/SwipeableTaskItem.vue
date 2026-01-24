@@ -39,7 +39,33 @@
       @touchend="handleTouchEnd"
       @touchcancel="handleTouchCancel"
     >
-      <slot />
+      <!-- Slot content wrapper -->
+      <div class="slot-wrapper">
+        <slot />
+      </div>
+
+      <!-- Dark overlay that dims content - MUST be after slot to be on top -->
+      <div
+        v-if="dimOpacity > 0"
+        class="dim-overlay"
+        :style="{ backgroundColor: `rgba(0, 0, 0, ${dimOpacity})` }"
+      ></div>
+
+      <!-- Swipe direction indicator overlay -->
+      <div
+        v-if="showActionOverlay"
+        class="swipe-overlay"
+        :class="{ 'swipe-left': translateX < 0, 'swipe-right': translateX > 0 }"
+      >
+        <div v-if="translateX > 0" class="overlay-icon edit">
+          <Pencil :size="28" />
+          <span>Edit</span>
+        </div>
+        <div v-else class="overlay-icon delete">
+          <Trash2 :size="28" />
+          <span>{{ isConfirmingDelete ? 'Tap to confirm' : 'Delete' }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -120,6 +146,17 @@ const leftActionOpacity = computed(() => {
 const rightActionOpacity = computed(() => {
   if (translateX.value >= 0) return 0
   return Math.min(-translateX.value / SWIPE_THRESHOLD, 1)
+})
+
+// Dim overlay opacity - darkens content as you swipe
+const dimOpacity = computed(() => {
+  const progress = Math.min(Math.abs(translateX.value) / SWIPE_THRESHOLD, 1)
+  return progress * 0.6 // Max 60% dark overlay
+})
+
+// Show action overlay when swiped enough
+const showActionOverlay = computed(() => {
+  return Math.abs(translateX.value) > 30
 })
 
 // Haptic feedback
@@ -280,6 +317,67 @@ onUnmounted(() => {
   background: var(--surface-primary, #1a1a1a);
   will-change: transform;
   touch-action: pan-y;
+  overflow: hidden;
+  border-radius: var(--radius-lg, 12px);
+}
+
+/* Slot content wrapper - needed for proper z-index stacking */
+.slot-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark overlay that dims content during swipe */
+.dim-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 1);
+  pointer-events: none;
+  z-index: 5;
+  border-radius: inherit;
+}
+
+/* Action indicator overlay */
+.swipe-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.swipe-overlay.swipe-left {
+  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.25) 0%, transparent 70%);
+}
+
+.swipe-overlay.swipe-right {
+  background: radial-gradient(circle at center, rgba(78, 205, 196, 0.25) 0%, transparent 70%);
+}
+
+.overlay-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.overlay-icon.edit {
+  color: var(--primary-brand, #4ECDC4);
+}
+
+.overlay-icon.delete {
+  color: #ff6b6b;
 }
 
 /* Action areas behind content */

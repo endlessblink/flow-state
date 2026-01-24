@@ -723,10 +723,11 @@ function cancelDelete() {
   showDeleteConfirm.value = false
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!currentTask.value) return
   // Use QuickSort's delete function which properly handles the flow (advances to next task, records action)
-  markDoneAndDeleteTask(currentTask.value.id)
+  // Must await so the task is removed before closing the dialog
+  await markDoneAndDeleteTask(currentTask.value.id)
   showDeleteConfirm.value = false
   triggerHaptic('heavy')
 }

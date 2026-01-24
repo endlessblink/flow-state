@@ -189,7 +189,7 @@ export function useQuickSort() {
     handleTaskProcessed()
   }
 
-  function markDoneAndDeleteTask(taskId: string) {
+  async function markDoneAndDeleteTask(taskId: string) {
     // First mark as done (for consistent history tracking/logging usually)
     // But here we just delete it.
 
@@ -206,8 +206,8 @@ export function useQuickSort() {
     // Record action
     quickSortStore.recordAction(action)
 
-    // Delete the task
-    taskStore.deleteTask(taskId)
+    // Delete the task - MUST await so task is removed before handleTaskProcessed adjusts index
+    await taskStore.deleteTask(taskId)
 
     handleTaskProcessed()
   }

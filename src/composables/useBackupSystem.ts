@@ -75,9 +75,14 @@ const STORAGE_KEYS = {
   // BUG-059 FIX: Golden backup that can NEVER be overwritten by auto-backups
   // Only updated when manually triggered OR when task count reaches new maximum
   GOLDEN: 'flow-state-golden-backup',
+  // TASK-332: Array of golden backups for rotation (keeps last 3 peaks)
+  GOLDEN_ROTATION: 'flow-state-golden-backup-rotation',
   // Tracks the maximum task count ever seen - used to detect data loss
   MAX_TASK_COUNT: 'flow-state-max-task-count'
 } as const
+
+// TASK-332: Maximum number of golden backups to keep in rotation
+const MAX_GOLDEN_BACKUPS = 3
 
 // BUG-059 FIX: Threshold for detecting suspicious data loss
 // If new backup has less than this % of previous max tasks, block auto-backup
@@ -153,7 +158,7 @@ function calculateChecksum(data: unknown): string {
  * Generate unique backup ID
  */
 function generateBackupId(): string {
-  return `backup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  return `backup_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
 }
 
 /**
@@ -226,31 +231,98 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
   }
 
   /**
-   * BUG-059 FIX: Get golden backup (immutable high-water mark backup)
+   * TASK-332: Get all golden backups from rotation (most recent first)
+   * Returns up to MAX_GOLDEN_BACKUPS entries, sorted by task count descending
    */
-  function getGoldenBackup(): BackupData | null {
+  function getGoldenBackups(): BackupData[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.GOLDEN)
-      return stored ? JSON.parse(stored) : null
+      // Try new rotation key first
+      const rotationStored = localStorage.getItem(STORAGE_KEYS.GOLDEN_ROTATION)
+      if (rotationStored) {
+        const rotation = JSON.parse(rotationStored) as BackupData[]
+        return rotation.sort((a, b) => (b.metadata?.taskCount || 0) - (a.metadata?.taskCount || 0))
+      }
+
+      // Fallback: migrate from legacy single golden backup
+      const legacyStored = localStorage.getItem(STORAGE_KEYS.GOLDEN)
+      if (legacyStored) {
+        const legacy = JSON.parse(legacyStored) as BackupData
+        // Migrate to rotation array
+        const rotation = [legacy]
+        localStorage.setItem(STORAGE_KEYS.GOLDEN_ROTATION, JSON.stringify(rotation))
+        console.log('[Backup] 🔄 Migrated legacy golden backup to rotation array')
+        return rotation
+      }
+
+      return []
     } catch {
-      return null
+      return []
     }
   }
 
   /**
-   * BUG-059 FIX: Save golden backup (only if task count is higher than previous)
+   * BUG-059 FIX: Get golden backup (most recent peak from rotation)
+   * Returns the backup with the highest task count from the rotation
+   */
+  function getGoldenBackup(): BackupData | null {
+    const rotation = getGoldenBackups()
+    return rotation.length > 0 ? rotation[0] : null
+  }
+
+  /**
+   * TASK-332: Save golden backup with rotation (keeps last 3 peaks)
+   * Only adds to rotation if task count is a new peak or close to existing peaks
    */
   function saveGoldenBackup(backup: BackupData, force: boolean = false): boolean {
-    const golden = getGoldenBackup()
-    const goldenTaskCount = golden?.metadata?.taskCount || 0
+    const rotation = getGoldenBackups()
     const newTaskCount = backup.metadata?.taskCount || 0
+    const highestPeak = rotation[0]?.metadata?.taskCount || 0
 
-    if (force || newTaskCount > goldenTaskCount) {
-      localStorage.setItem(STORAGE_KEYS.GOLDEN, JSON.stringify(backup))
-      console.log(`[Backup] 💛 Golden backup updated: ${newTaskCount} tasks (was ${goldenTaskCount})`)
-      return true
+    // Only save if this is a new peak or force is true
+    if (!force && newTaskCount <= highestPeak) {
+      return false
     }
-    return false
+
+    // Check if this count is significantly different from existing peaks
+    // (at least 5% more tasks than the lowest in rotation, or rotation isn't full)
+    const shouldAdd = force ||
+      rotation.length < MAX_GOLDEN_BACKUPS ||
+      newTaskCount > highestPeak
+
+    if (!shouldAdd) {
+      return false
+    }
+
+    // Add to rotation
+    const updatedRotation = [backup, ...rotation]
+
+    // Keep only unique peak values (remove duplicates with same task count)
+    const uniquePeaks = updatedRotation.reduce((acc, curr) => {
+      const existingWithSameCount = acc.find(b =>
+        b.metadata?.taskCount === curr.metadata?.taskCount
+      )
+      if (!existingWithSameCount) {
+        acc.push(curr)
+      } else if (curr.timestamp > existingWithSameCount.timestamp) {
+        // Replace with newer backup of same peak
+        const idx = acc.indexOf(existingWithSameCount)
+        acc[idx] = curr
+      }
+      return acc
+    }, [] as BackupData[])
+
+    // Sort by task count descending and keep only top MAX_GOLDEN_BACKUPS
+    const finalRotation = uniquePeaks
+      .sort((a, b) => (b.metadata?.taskCount || 0) - (a.metadata?.taskCount || 0))
+      .slice(0, MAX_GOLDEN_BACKUPS)
+
+    // Save rotation
+    localStorage.setItem(STORAGE_KEYS.GOLDEN_ROTATION, JSON.stringify(finalRotation))
+    // Also save legacy key for backward compatibility
+    localStorage.setItem(STORAGE_KEYS.GOLDEN, JSON.stringify(finalRotation[0]))
+
+    console.log(`[Backup] 💛 Golden backup rotation updated: ${newTaskCount} tasks. Rotation: [${finalRotation.map(b => b.metadata?.taskCount).join(', ')}]`)
+    return true
   }
 
   /**
@@ -1005,21 +1077,33 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         let defaultPath = filename
         try {
           const downloadsPath = await pathModule.downloadDir()
-          defaultPath = `${downloadsPath}${filename}`
+          // Ensure proper path separator (join not available in path module)
+          const separator = downloadsPath.includes('\\') ? '\\' : '/'
+          const cleanPath = downloadsPath.endsWith(separator) ? downloadsPath : downloadsPath + separator
+          defaultPath = `${cleanPath}${filename}`
           console.log('[Backup] Default path:', defaultPath)
         } catch (pathError) {
           console.warn('[Backup] Could not get downloads dir, using filename only:', pathError)
         }
 
         // Open save dialog - the selected path is automatically added to FS scope
+        // TASK-332: Add timeout to prevent hanging on XDG Portal issues
         console.log('[Backup] Opening save dialog...')
-        const filePath = await dialogModule.save({
+
+        const dialogPromise = dialogModule.save({
           defaultPath,
           filters: [{
             name: 'JSON',
             extensions: ['json']
           }]
         })
+
+        // Race against a 30-second timeout (XDG Portal can sometimes hang)
+        const timeoutPromise = new Promise<null>((_, reject) => {
+          setTimeout(() => reject(new Error('Dialog timeout after 30s - falling back to browser')), 30000)
+        })
+
+        const filePath = await Promise.race([dialogPromise, timeoutPromise])
 
         console.log('[Backup] Dialog result:', filePath)
 
@@ -1227,6 +1311,9 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     getGoldenBackup,
     getMaxTaskCount,
 
+    // TASK-332: Get all golden backups in rotation (for UI display)
+    getGoldenBackups,
+
     // TASK-153: Validate golden backup before restore
     validateGoldenBackup,
 
@@ -1260,6 +1347,27 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       console.log(`[Backup] Restoring from golden backup: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`)
       // TASK-344: Explicitly specify no dry-run to get boolean return
       const result = await restoreBackup(filteredGolden, { dryRun: false, backupSource: 'golden' })
+      return result === true
+    },
+
+    // TASK-332: Restore from a specific golden backup in the rotation (by index)
+    restoreFromGoldenBackupByIndex: async (index: number, skipValidation: boolean = false) => {
+      const rotation = getGoldenBackups()
+      if (index < 0 || index >= rotation.length) {
+        console.error(`[Backup] Invalid golden backup index: ${index}. Available: 0-${rotation.length - 1}`)
+        return false
+      }
+
+      const golden = rotation[index]
+      if (!skipValidation) {
+        console.log(`[Backup] Restoring from golden backup #${index + 1}: ${golden.metadata?.taskCount} tasks`)
+      }
+
+      // TASK-153: Filter out items that are deleted in Supabase
+      const filteredGolden = await filterGoldenBackupData(golden)
+
+      console.log(`[Backup] Restoring from golden backup #${index + 1}: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`)
+      const result = await restoreBackup(filteredGolden, { dryRun: false, backupSource: `golden-${index}` })
       return result === true
     },
 

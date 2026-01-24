@@ -177,7 +177,19 @@ export function useAppInitialization() {
         // Previously, timer store called initRealtimeSubscription separately, killing this channel
         // Now we pass the timer handler here so there's only ONE subscription point
         const timerHandler = timerStore.handleRemoteTimerUpdate
-        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler)
+
+        // BUG-1056: Recovery callback to reload data after WebSocket auth recovery
+        // This fixes intermittent "0 tasks" issue when initial load fails due to stale token
+        const onRecovery = async () => {
+            console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
+            await Promise.all([
+                taskStore.loadFromDatabase(),
+                projectStore.loadProjectsFromDatabase(),
+                canvasStore.loadFromDatabase()
+            ])
+        }
+
+        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onRecovery)
         activeChannel.value = channel
 
         if (channel) {

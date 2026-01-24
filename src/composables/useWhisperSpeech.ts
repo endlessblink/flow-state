@@ -1,11 +1,15 @@
 /**
- * useWhisperSpeech - OpenAI Whisper-based speech recognition
+ * useWhisperSpeech - Groq Whisper-based speech recognition
  * TASK-1028: Voice Confirmation UI + Edit Before Submit
+ * TASK-1029: Whisper API Fallback (using Groq - 12x cheaper than OpenAI)
  *
- * Uses Whisper API for accurate multi-language transcription.
+ * Uses Groq's Whisper API for accurate multi-language transcription.
  * Supports code-switching (mixing Hebrew and English in same sentence).
  *
- * Requires VITE_OPENAI_API_KEY in environment variables.
+ * Groq pricing: $0.04/hour vs OpenAI $0.36/hour
+ *
+ * Requires VITE_GROQ_API in environment variables.
+ * Get your API key at https://console.groq.com/keys
  */
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
@@ -19,10 +23,10 @@ export interface WhisperResult {
 }
 
 export interface UseWhisperSpeechOptions {
-  /** OpenAI API key (defaults to VITE_OPENAI_API_KEY) */
+  /** Groq API key (defaults to VITE_GROQ_API) */
   apiKey?: string
-  /** Whisper model to use (default: 'whisper-1') */
-  model?: string
+  /** Whisper model to use (default: 'whisper-large-v3-turbo' - best value) */
+  model?: 'whisper-large-v3' | 'whisper-large-v3-turbo' | 'distil-whisper-large-v3-en'
   /** Max recording duration in seconds (default: 30) */
   maxDuration?: number
   /** Callback when transcription is complete */
@@ -32,13 +36,16 @@ export interface UseWhisperSpeechOptions {
 }
 
 const DEFAULT_OPTIONS = {
-  model: 'whisper-1',
+  model: 'whisper-large-v3-turbo', // Best value: $0.04/hour, excellent quality
   maxDuration: 30
 }
 
+// Groq API endpoint (OpenAI-compatible)
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
+
 export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const {
-    apiKey = import.meta.env.VITE_OPENAI_API_KEY,
+    apiKey = import.meta.env.VITE_GROQ_API,
     model = DEFAULT_OPTIONS.model,
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
@@ -78,7 +85,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const start = async (): Promise<boolean> => {
     if (!isSupported.value) {
       const msg = !apiKey
-        ? 'OpenAI API key not configured. Add VITE_OPENAI_API_KEY to your environment.'
+        ? 'Groq API key not configured. Add VITE_GROQ_API to your environment or Doppler.'
         : 'Audio recording not supported in this browser.'
       error.value = msg
       status.value = 'error'
@@ -143,7 +150,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       }
 
       mediaRecorder.onerror = (event) => {
-        console.error('[Whisper] MediaRecorder error:', event)
+        console.error('[GroqWhisper] MediaRecorder error:', event)
         error.value = 'Recording failed'
         status.value = 'error'
         if (onError) onError(error.value)
@@ -160,15 +167,15 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       // Max duration limit
       maxDurationTimer = setTimeout(() => {
-        console.log('[Whisper] Max duration reached, stopping')
+        console.log('[GroqWhisper] Max duration reached, stopping')
         stop()
       }, maxDuration * 1000)
 
-      console.log('[Whisper] 🎤 Recording started')
+      console.log('[GroqWhisper] 🎤 Recording started')
       return true
 
     } catch (err) {
-      console.error('[Whisper] Failed to start recording:', err)
+      console.error('[GroqWhisper] Failed to start recording:', err)
       const msg = err instanceof Error && err.name === 'NotAllowedError'
         ? 'Microphone access denied. Please allow microphone permissions.'
         : 'Failed to start recording'
@@ -184,7 +191,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
    */
   const stop = (): void => {
     if (mediaRecorder && status.value === 'recording') {
-      console.log('[Whisper] 🛑 Stopping recording')
+      console.log('[GroqWhisper] 🛑 Stopping recording')
       mediaRecorder.stop()
     }
   }
@@ -207,7 +214,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     audioChunks = []
     transcript.value = ''
     status.value = 'idle'
-    console.log('[Whisper] ❌ Recording cancelled')
+    console.log('[GroqWhisper] ❌ Recording cancelled')
   }
 
   /**
@@ -215,7 +222,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
    */
   const processAudio = async (): Promise<void> => {
     status.value = 'processing'
-    console.log('[Whisper] 🔄 Processing audio...')
+    console.log('[GroqWhisper] 🔄 Processing audio...')
 
     try {
       // Create audio blob
@@ -223,7 +230,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       // Check minimum size (Whisper needs some audio)
       if (audioBlob.size < 1000) {
-        console.log('[Whisper] Audio too short, skipping')
+        console.log('[GroqWhisper] Audio too short, skipping')
         status.value = 'idle'
         return
       }
@@ -242,8 +249,8 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       // Don't specify language - let Whisper auto-detect for mixed language support
       formData.append('response_format', 'verbose_json')
 
-      // Call Whisper API
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      // Call Groq Whisper API (OpenAI-compatible endpoint)
+      const response = await fetch(GROQ_API_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`
@@ -261,7 +268,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       transcript.value = data.text || ''
       detectedLanguage.value = data.language || null
 
-      console.log('[Whisper] ✅ Transcription complete:', {
+      console.log('[GroqWhisper] ✅ Transcription complete:', {
         text: transcript.value,
         language: detectedLanguage.value,
         duration: data.duration
@@ -278,7 +285,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       }
 
     } catch (err) {
-      console.error('[Whisper] Processing error:', err)
+      console.error('[GroqWhisper] Processing error:', err)
       const msg = err instanceof Error ? err.message : 'Failed to process audio'
       error.value = msg
       status.value = 'error'

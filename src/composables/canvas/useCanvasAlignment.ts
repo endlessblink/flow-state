@@ -16,6 +16,7 @@ import { useMessage } from 'naive-ui'
 import { useTaskStore } from '../../stores/tasks'
 import { useCanvasStore } from '../../stores/canvas'
 import { getUndoSystem } from '../../composables/undoSingleton'
+import { CanvasIds } from '../../utils/canvas/canvasIds'
 
 interface NodeWithComputed extends Node {
     computedPosition?: { x: number; y: number }
@@ -111,9 +112,24 @@ export function useCanvasAlignment(
         }
 
         // Check selection synchronization
+        // BUG-1062 FIX: Filter store selection to tasks only (exclude groups with 'section-' prefix)
+        // This ensures we compare apples to apples: task selections in store vs Vue Flow
+        const storeTaskIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
         const vueFlowSelected = nodes.value.filter(n => 'selected' in n && n.selected && n.type === 'taskNode')
 
         if (vueFlowSelected.length < minNodes) {
+            // BUG-1062: Also check if store has enough tasks but Vue Flow is desynced
+            // This can happen when syncStoreToCanvas() rebuilds nodes without preserving selection
+            if (storeTaskIds.length >= minNodes) {
+                console.warn('[ALIGNMENT] Selection desync: store has tasks but Vue Flow lost selection', {
+                    storeTaskIds,
+                    vueFlowSelectedIds: vueFlowSelected.map(n => n.id)
+                })
+                return {
+                    canProceed: false,
+                    reason: `Selection lost during sync - please re-select your tasks (store: ${storeTaskIds.length}, Vue Flow: ${vueFlowSelected.length})`
+                }
+            }
             return {
                 canProceed: false,
                 reason: `Need at least ${minNodes} selected tasks, have ${vueFlowSelected.length}`
@@ -121,12 +137,18 @@ export function useCanvasAlignment(
         }
 
         const syncInfo = {
-            storeSelection: canvasStore.selectedNodeIds.length,
+            storeTaskSelection: storeTaskIds.length,
             vueFlowSelection: vueFlowSelected.length,
-            matched: vueFlowSelected.filter(n => canvasStore.selectedNodeIds.includes(n.id)).length
+            matched: vueFlowSelected.filter(n => storeTaskIds.includes(n.id)).length
         }
 
-        if (syncInfo.matched !== syncInfo.storeSelection) {
+        // BUG-1062 FIX: Compare task-only selections on both sides
+        if (syncInfo.matched !== syncInfo.storeTaskSelection) {
+            console.warn('[ALIGNMENT] Selection state mismatch detected', {
+                storeTaskIds,
+                vueFlowSelectedIds: vueFlowSelected.map(n => n.id),
+                syncInfo
+            })
             return {
                 canProceed: false,
                 reason: 'Selection state not synchronized between store and Vue Flow'

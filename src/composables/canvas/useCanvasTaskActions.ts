@@ -339,14 +339,16 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         console.log(`[ARRANGE-DONE] Arranging ${doneTasks.length} done tasks in grid`)
 
-        // Grid configuration
-        const cardWidth = 200
-        const cardHeight = 80
-        const gap = 16
-        const columns = 5
-        const gridWidth = columns * (cardWidth + gap)
-        const groupPadding = 20 // Padding inside the group
-        const groupHeaderHeight = 50 // Space for the group header
+        // Grid configuration - BUG-1020: Fixed card dimensions to match actual TaskNode.vue
+        // TaskNode.vue: width=280px (min 200, max 320), min-height=80px but content makes it ~140-160px
+        const cardWidth = 300  // TaskNode is 280px wide, add buffer
+        const cardHeight = 180 // TaskNode with content (title, date, badges) is ~140-160px, add buffer
+        const gapX = 80        // Horizontal gap between columns
+        const gapY = 50        // Vertical gap between rows
+        const columns = 4      // Reduced columns since cards are wider
+        const gridWidth = columns * (cardWidth + gapX)
+        const groupPadding = 40 // Padding inside the group
+        const groupHeaderHeight = 70 // Space for the group header
 
         // Find the leftmost X position of all NON-DONE tasks and groups (excluding Done Tasks group)
         const nonDoneTasks = taskStore.tasks.filter(
@@ -373,8 +375,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         // Calculate grid dimensions
         const rows = Math.ceil(doneTasks.length / columns)
         const actualColumns = Math.min(doneTasks.length, columns)
-        const gridActualWidth = actualColumns * (cardWidth + gap) - gap
-        const gridActualHeight = rows * (cardHeight + gap) - gap
+        const gridActualWidth = actualColumns * (cardWidth + gapX) - gapX
+        const gridActualHeight = rows * (cardHeight + gapY) - gapY
 
         // Group dimensions (with padding)
         const groupWidth = gridActualWidth + (groupPadding * 2)
@@ -421,7 +423,14 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             console.log(`[ARRANGE-DONE] Created Done Tasks group: ${newGroup.id}`)
 
-            // Step 2.5: Sync to ensure group node exists in Vue Flow before assigning tasks
+            // Step 2.5: Ensure done tasks are visible BEFORE syncing
+            // This is critical because the sync filter excludes done tasks when hidden
+            if (taskStore.hideCanvasDoneTasks) {
+                taskStore.toggleCanvasDoneTasks()
+                console.log(`[ARRANGE-DONE] Enabled showing done tasks on canvas (before sync)`)
+            }
+
+            // Step 2.6: Sync to ensure group node exists in Vue Flow before assigning tasks
             if (deps.batchSyncNodes) {
                 deps.batchSyncNodes('high')
             } else {
@@ -436,26 +445,20 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 const col = i % columns
                 const row = Math.floor(i / columns)
 
-                const newX = startX + col * (cardWidth + gap)
-                const newY = startY + row * (cardHeight + gap)
+                const newX = startX + col * (cardWidth + gapX)
+                const newY = startY + row * (cardHeight + gapY)
 
                 await undoHistory.updateTaskWithUndo(task.id, {
-                    parentId: newGroup.id, // Assign to the Done Tasks group
+                    parentId: newGroup.id,
                     canvasPosition: { x: newX, y: newY }
                 })
             }
 
-            // Sync canvas after all updates
+            // Step 4: Final sync with done tasks now visible
             if (deps.batchSyncNodes) {
                 deps.batchSyncNodes('high')
             } else {
                 deps.syncNodes()
-            }
-
-            // Step 5: Ensure done tasks are visible on canvas
-            if (taskStore.hideCanvasDoneTasks) {
-                taskStore.toggleCanvasDoneTasks() // This will show done tasks
-                console.log(`[ARRANGE-DONE] Enabled showing done tasks on canvas`)
             }
 
             console.log(`[ARRANGE-DONE] Successfully arranged ${doneTasks.length} tasks in Done Tasks group`)

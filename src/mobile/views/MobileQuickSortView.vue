@@ -450,6 +450,7 @@ const {
   endSession,
   categorizeTask,
   markTaskDone,
+  markDoneAndDeleteTask,
   skipTask
 } = useQuickSort()
 
@@ -724,7 +725,8 @@ function cancelDelete() {
 
 function confirmDelete() {
   if (!currentTask.value) return
-  taskStore.deleteTask(currentTask.value.id)
+  // Use QuickSort's delete function which properly handles the flow (advances to next task, records action)
+  markDoneAndDeleteTask(currentTask.value.id)
   showDeleteConfirm.value = false
   triggerHaptic('heavy')
 }

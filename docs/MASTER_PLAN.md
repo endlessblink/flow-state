@@ -148,7 +148,7 @@
 | **BUG-352**              | **Mobile PWA "Failed to Fetch"**                       | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-352-mobile-pwa-failed-to-fetch-persistent-cache) - Likely SW cache issue                                                                                                                                     |                                                        |
 | **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |
 | ~~**TASK-353**~~         | ✅ **DONE** **Mobile PWA UI Phase 1**                  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView (daily schedule), MobileInboxView (filter chips, sort, quick-add bar), MobileNav (4 tabs), Mobile PWA design skill                                                                                |                                                        |
-| **BUG-1020**             | **Mobile QuickSort Swipe Overlay Stuck Visible**       | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-1020-mobile-quicksort-swipe-overlay-stuck-visible-in-progress) - deltaX not reset after touch end                                                                                               |                                                        |
+| ~~**BUG-1020**~~         | ✅ **DONE** **Mobile QuickSort Swipe Overlay + Card Spacing** | **P2**                                         | ✅ **DONE** (2026-01-24)                                                                                                        | Fixed: deltaX reset, overlay→border, auth reload, Arrange Done Tasks card dimensions                                                                                                                                |                                                        |
 | ~~**TASK-354**~~         | ✅ **DONE** **Canvas CSS Import Fix**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed canvas not rendering after CSS import change. Reverted ES import to `<style src="">` for global Vue Flow overrides.                                                                                          |                                                        |
 | ~~**BUG-355**~~          | ✅ **DONE** **Timer Beep/Reset on Reload**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed timer beeping on reload when no timer was active. Added stale session detection (>1hr) and silent completion for expired sessions.                                                                           |                                                        |
 | ~~**BUG-356**~~          | ✅ **DONE** **Groups Moving Together (Accidental Nesting)**             | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed groups incorrectly moving together when dragging. Root cause: corrupted parentGroupId relationships. Added: (1) 2x area ratio requirement for group nesting, (2) invalid parent cleanup on load, (3) `resetGroupsToRoot()` emergency fix. [SOP-018](./sop/SOP-018-canvas-group-nesting.md)                                                                           |                                                        |
@@ -211,6 +211,7 @@
 | **TASK-1042**            | **Table/List View: Larger Font + Multi-Line Wrap**                       | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Increase task title font size in Table/List view. Allow long titles to wrap to multiple lines instead of truncating. Improve readability.                                                                                   | -                                                      |
 | **BUG-1043**             | **Investigate 13 Pre-Existing Test Failures**                            | **P2**                                              | 📋 **PLANNED**                                                                                                                  | 13 tests failing in: Task Instance Helpers, backup validation, etc. Pre-existing failures unrelated to recent changes - need investigation and fixes.                                                                        | -                                                      |
 | ~~**BUG-1044**~~         | ✅ **DONE** **Quick Sort Changes Reset/Reverted**                        | **P0**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | Fixed: 313 lines of uncommitted changes were never pushed. Committed and pushed delete modal, quick edit panel, swipe gestures.                                                                                                 | TASK-1010                                              |
+| **BUG-1045**             | **Canvas Loads Empty, Populates Only After Restart**                     | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Web app canvas loads empty initially - tasks only appear after page restart. Likely race condition between auth/store initialization and canvas sync.                                                                            | -                                                      |
 
 ---
 
@@ -381,33 +382,24 @@ Sync errors when saving tasks with deleted parent: `insert or update on table "t
 
 ---
 
-### BUG-1020: Mobile QuickSort Swipe Overlay Stuck Visible (🔄 IN PROGRESS)
+### ~~BUG-1020~~: Mobile QuickSort Swipe Overlay Stuck Visible (✅ DONE)
 
 **Priority**: P2
-**Status**: 🔄 IN PROGRESS (2026-01-23)
+**Status**: ✅ DONE (2026-01-24)
 
-**Problem**: In MobileQuickSortView, the swipe overlay (teal "Assign" overlay with + icon) stays permanently visible after a swipe completes. The overlay should only appear during active swiping.
+**Problem**: In MobileQuickSortView, the swipe overlay (teal "Assign" overlay with + icon) stayed permanently visible after swipe. Also, "Arrange Done Tasks" caused task overlap due to incorrect card dimensions.
 
-**Root Cause**: In `useSwipeGestures.ts`, the `handleTouchEnd` and `handleTouchCancel` functions reset `isSwiping` and `isLocked` but did NOT reset `currentX`/`currentY`. This caused `deltaX` (computed as `currentX - startX`) to remain at its final swipe value instead of returning to 0. The overlay opacity depends on `deltaX`, so it stayed visible.
-
-**Fix Applied**:
-```typescript
-// In handleTouchEnd and handleTouchCancel:
-isSwiping.value = false
-isLocked.value = false
-// Added: Reset position values to ensure deltaX/deltaY return to 0
-currentX.value = startX.value
-currentY.value = startY.value
-```
+**Fixes Applied**:
+1. **Swipe overlay** - Reset `currentX`/`currentY` in `handleTouchEnd`/`handleTouchCancel` to return `deltaX` to 0
+2. **Overlay style** - Changed from solid teal fill to green border-only indicator
+3. **Auth reload** - Added store reload in `onAuthStateChange` when user signs in (projects were empty in guest→login flow)
+4. **Card spacing** - Fixed `arrangeDoneTasksInGrid` dimensions: cardWidth=300px, cardHeight=180px, gapX=80px, gapY=50px (matched actual TaskNode.vue size)
 
 **Files Changed**:
-- `src/composables/useSwipeGestures.ts` - Lines 218-220, 225-227
-
-**Testing Required**:
-- [ ] Open MobileQuickSortView on mobile PWA
-- [ ] Swipe right on a task card to trigger "Assign" overlay
-- [ ] After swipe completes (or is cancelled), verify overlay disappears
-- [ ] Verify card content is fully visible again
+- `src/composables/useSwipeGestures.ts` - Reset position values
+- `src/mobile/views/MobileQuickSortView.vue` - Overlay→border indicator
+- `src/stores/auth.ts` - Reload stores on SIGNED_IN event
+- `src/composables/canvas/useCanvasTaskActions.ts` - Fixed card grid dimensions
 
 ---
 

@@ -20,6 +20,131 @@ import {
 } from '@/utils/supabaseMappers'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 
+// TASK-1060: SWR (Stale-While-Revalidate) Cache for database queries
+// Returns cached data immediately while fetching fresh data in background
+// Invalidated on realtime events to ensure consistency
+interface SWRCacheEntry<T> {
+    data: T
+    timestamp: number
+    promise?: Promise<T>  // Deduplication: reuse in-flight requests
+}
+
+class SWRCache {
+    private cache = new Map<string, SWRCacheEntry<unknown>>()
+    private readonly DEFAULT_STALE_TIME = 30 * 1000  // 30s before considered stale
+    private readonly DEFAULT_CACHE_TIME = 5 * 60 * 1000  // 5min max cache
+
+    /**
+     * Get data from cache or fetch if missing/expired
+     * SWR pattern: returns stale data immediately, refreshes in background
+     */
+    async getOrFetch<T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        options?: { staleTime?: number; cacheTime?: number }
+    ): Promise<T> {
+        const staleTime = options?.staleTime ?? this.DEFAULT_STALE_TIME
+        const cacheTime = options?.cacheTime ?? this.DEFAULT_CACHE_TIME
+        const now = Date.now()
+        const entry = this.cache.get(key) as SWRCacheEntry<T> | undefined
+
+        // Case 1: No cache - fetch and wait
+        if (!entry) {
+            return this.fetchAndCache(key, fetcher)
+        }
+
+        // Case 2: Cache expired - fetch and wait
+        const age = now - entry.timestamp
+        if (age > cacheTime) {
+            this.cache.delete(key)
+            return this.fetchAndCache(key, fetcher)
+        }
+
+        // Case 3: Cache fresh - return immediately
+        if (age < staleTime) {
+            return entry.data
+        }
+
+        // Case 4: Cache stale but valid - return cached, refresh in background
+        // Deduplicate: if refresh already in progress, don't start another
+        if (!entry.promise) {
+            entry.promise = fetcher()
+                .then(data => {
+                    this.cache.set(key, { data, timestamp: Date.now() })
+                    return data
+                })
+                .catch(err => {
+                    console.warn(`[SWR] Background refresh failed for ${key}:`, err)
+                    return entry.data  // Keep stale data on error
+                })
+                .finally(() => {
+                    const current = this.cache.get(key) as SWRCacheEntry<T> | undefined
+                    if (current) delete current.promise
+                })
+        }
+
+        return entry.data
+    }
+
+    private async fetchAndCache<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+        // Deduplicate concurrent requests for same key
+        const existing = this.cache.get(key) as SWRCacheEntry<T> | undefined
+        if (existing?.promise) {
+            return existing.promise
+        }
+
+        const promise = fetcher()
+        this.cache.set(key, { data: undefined as T, timestamp: 0, promise })
+
+        try {
+            const data = await promise
+            this.cache.set(key, { data, timestamp: Date.now() })
+            return data
+        } catch (err) {
+            this.cache.delete(key)
+            throw err
+        }
+    }
+
+    /** Invalidate specific cache key (call on realtime events) */
+    invalidate(key: string): void {
+        this.cache.delete(key)
+    }
+
+    /** Invalidate all keys matching prefix (e.g., 'tasks:' for all task queries) */
+    invalidatePrefix(prefix: string): void {
+        for (const key of this.cache.keys()) {
+            if (key.startsWith(prefix)) {
+                this.cache.delete(key)
+            }
+        }
+    }
+
+    /** Clear entire cache */
+    clear(): void {
+        this.cache.clear()
+    }
+
+    /** Get cache stats for debugging */
+    getStats(): { size: number; keys: string[] } {
+        return {
+            size: this.cache.size,
+            keys: Array.from(this.cache.keys())
+        }
+    }
+}
+
+// Global cache instance (shared across all useSupabaseDatabase calls)
+const swrCache = new SWRCache()
+
+// Export for realtime event handlers to invalidate cache
+export const invalidateCache = {
+    tasks: () => swrCache.invalidatePrefix('tasks:'),
+    projects: () => swrCache.invalidatePrefix('projects:'),
+    groups: () => swrCache.invalidatePrefix('groups:'),
+    all: () => swrCache.clear()
+}
+
 // FORCE_HMR_UPDATE: Clearing stale cache for position_version schema
 // App Types are defined locally or imported for convenience
 export interface TimerSettings {
@@ -125,22 +250,27 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     // -- Projects --
 
     const fetchProjects = async (): Promise<Project[]> => {
-        try {
-            return await withRetry(async () => {
-                const { data, error } = await supabase
-                    .from('projects')
-                    .select('*')
-                    .order('created_at', { ascending: true })
+        const userId = getUserIdSafe()
+        const cacheKey = `projects:${userId || 'guest'}`
 
-                if (error) throw error
-                if (!data) return []
+        return swrCache.getOrFetch(cacheKey, async () => {
+            try {
+                return await withRetry(async () => {
+                    const { data, error } = await supabase
+                        .from('projects')
+                        .select('*')
+                        .order('created_at', { ascending: true })
 
-                return (data as SupabaseProject[]).map(fromSupabaseProject)
-            }, 'fetchProjects')
-        } catch (e: unknown) {
-            handleError(e, 'fetchProjects')
-            return []
-        }
+                    if (error) throw error
+                    if (!data) return []
+
+                    return (data as SupabaseProject[]).map(fromSupabaseProject)
+                }, 'fetchProjects')
+            } catch (e: unknown) {
+                handleError(e, 'fetchProjects')
+                return []
+            }
+        })
     }
 
     const saveProject = async (project: Project): Promise<void> => {
@@ -589,31 +719,36 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     // -- Tasks --
 
     const fetchTasks = async (): Promise<Task[]> => {
-        try {
-            return await withRetry(async () => {
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .eq('is_deleted', false)
+        const userId = getUserIdSafe()
+        const cacheKey = `tasks:${userId || 'guest'}`
 
-                if (error) throw error
-                if (!data) return []
+        return swrCache.getOrFetch(cacheKey, async () => {
+            try {
+                return await withRetry(async () => {
+                    const { data, error } = await supabase
+                        .from('tasks')
+                        .select('*')
+                        .eq('is_deleted', false)
 
-                // TASK-142 DEBUG: Log what positions we receive from Supabase
-                const tasksWithPos = data.filter((d: any) => d.position)
-                if (tasksWithPos.length > 0) {
-                    console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
-                        tasksWithPos.map((d: any) => ({ id: d.id?.substring(0, 8), pos: d.position })))
-                } else {
-                    console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
-                }
+                    if (error) throw error
+                    if (!data) return []
 
-                return (data as SupabaseTask[]).map(fromSupabaseTask)
-            }, 'fetchTasks')
-        } catch (e: unknown) {
-            handleError(e, 'fetchTasks')
-            return []
-        }
+                    // TASK-142 DEBUG: Log what positions we receive from Supabase
+                    const tasksWithPos = data.filter((d: any) => d.position)
+                    if (tasksWithPos.length > 0) {
+                        console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
+                            tasksWithPos.map((d: any) => ({ id: d.id?.substring(0, 8), pos: d.position })))
+                    } else {
+                        console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
+                    }
+
+                    return (data as SupabaseTask[]).map(fromSupabaseTask)
+                }, 'fetchTasks')
+            } catch (e: unknown) {
+                handleError(e, 'fetchTasks')
+                return []
+            }
+        })
     }
 
     const fetchTrash = async (): Promise<Task[]> => {
@@ -890,28 +1025,33 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     // -- Groups --
 
     const fetchGroups = async (): Promise<CanvasGroup[]> => {
-        try {
-            const { data, error } = await supabase
-                .from('groups')
-                .select('*')
-                .eq('is_deleted', false)
+        const userId = getUserIdSafe()
+        const cacheKey = `groups:${userId || 'guest'}`
 
-            if (error) throw error
-            if (!data) return []
+        return swrCache.getOrFetch(cacheKey, async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('groups')
+                    .select('*')
+                    .eq('is_deleted', false)
+
+                if (error) throw error
+                if (!data) return []
 
 
-            // DEBUG: Log loaded groups and their dimensions
-            const groups = data as SupabaseGroup[]
-            groups.forEach((g: any) => {
-                const pos = g.position_json
-                console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
-            })
+                // DEBUG: Log loaded groups and their dimensions
+                const groups = data as SupabaseGroup[]
+                groups.forEach((g: any) => {
+                    const pos = g.position_json
+                    console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
+                })
 
-            return (data as SupabaseGroup[]).map(fromSupabaseGroup)
-        } catch (e: unknown) {
-            handleError(e, 'fetchGroups')
-            return []
-        }
+                return (data as SupabaseGroup[]).map(fromSupabaseGroup)
+            } catch (e: unknown) {
+                handleError(e, 'fetchGroups')
+                return []
+            }
+        })
     }
 
     const saveGroup = async (group: CanvasGroup): Promise<void> => {

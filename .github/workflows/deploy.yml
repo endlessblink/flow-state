@@ -11,18 +11,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install Doppler CLI
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      # Fetch secrets and create .env for build
+      - name: Fetch Secrets for Build
+        run: doppler secrets download --no-file --format env > .env.production
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
       # Build the app to check for errors before deploying
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install Dependencies
         run: npm ci --ignore-scripts
 
       - name: Build Application
         run: npm run build
+        env:
+          NODE_ENV: production
 
       # Setup SSH
       - name: Prepare SSH Key
@@ -32,18 +44,46 @@ jobs:
             chmod 600 ~/.ssh/id_rsa
             ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      # Sync files to VPS (Mirroring deploy-to-vps.sh)
+      # Sync files to VPS (excluding local .env files)
       - name: Sync Files to VPS
         run: |
             rsync -avz --delete \
               --exclude 'node_modules' \
               --exclude '.git' \
               --exclude '.env' \
-              --exclude '.env.*' \
+              --exclude '.env.local' \
+              --exclude '.env.development' \
               --exclude 'src-tauri/target' \
               ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}/
 
-      # Restart Docker
-      - name: Restart Application
+      # Generate .env on VPS using Doppler and restart Docker
+      - name: Deploy with Doppler Secrets
         run: |
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cd ${{ secrets.VPS_TARGET_DIR }} && docker compose down && docker compose up -d --build"
+            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+              cd ${{ secrets.VPS_TARGET_DIR }}
+
+              # Install Doppler CLI if not present
+              if ! command -v doppler > /dev/null 2>&1; then
+                curl -sLf --retry 3 --tlsv1.2 --proto '=https' 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | sudo gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg
+                echo 'deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main' | sudo tee /etc/apt/sources.list.d/doppler-cli.list
+                sudo apt-get update && sudo apt-get install -y doppler
+              fi
+
+              # Generate .env from Doppler (using service token)
+              DOPPLER_TOKEN='${{ secrets.DOPPLER_TOKEN }}' doppler secrets download --no-file --format env > .env
+
+              # Force stop all containers and clean up
+              echo '>>> Stopping all containers...'
+              docker compose down --remove-orphans --timeout 30 || true
+
+              # Kill any remaining containers from this project
+              docker ps -q --filter 'name=flowstate' | xargs -r docker stop || true
+              docker ps -q --filter 'name=flow-state' | xargs -r docker stop || true
+
+              # Small delay to ensure ports are released
+              sleep 2
+
+              # Start fresh
+              echo '>>> Starting containers...'
+              docker compose up -d --build --force-recreate
+            "

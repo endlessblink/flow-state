@@ -1,8 +1,12 @@
+# FlowState Docker Compose - Development & PWA Testing
+# Best practices applied: health checks, restart policies, resource limits
+# Updated: 2026-01-24 (TASK-1060)
+
 services:
   caddy:
-    image: caddy:alpine
+    image: caddy:2.10-alpine
     container_name: flowstate_caddy
-    restart: always
+    restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -15,23 +19,45 @@ services:
     networks:
       - flowstate-net
     depends_on:
-      - app
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
 
   tunnel:
     image: cloudflare/cloudflared:latest
     container_name: flowstate_tunnel
-    restart: always
-    # Quick Tunnel - generates a random stable URL
+    restart: unless-stopped
+    # Quick Tunnel for development - generates random URL
+    # For production, use Named Tunnel with TUNNEL_TOKEN environment variable
     command: tunnel --url http://caddy:80
     networks:
       - flowstate-net
     depends_on:
-      - caddy
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "cloudflared", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   app:
     build:
       context: .
       target: build-stage
+    container_name: flowstate_app
+    restart: unless-stopped
     command: npx vite --host 0.0.0.0 --port 80
     environment:
       # Override .env.local for tunnel/PWA mode - use relative path so it works through Caddy proxy
@@ -43,12 +69,25 @@ services:
     networks:
       - flowstate-net
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
 
   db:
     image: public.ecr.aws/supabase/postgres:17.6.1.071
     container_name: flowstate_db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: postgres
@@ -57,6 +96,18 @@ services:
       - flowstate-db-data:/var/lib/postgresql/data
     networks:
       - flowstate-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
 
 networks:
   flowstate-net:

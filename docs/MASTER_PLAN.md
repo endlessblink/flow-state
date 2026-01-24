@@ -1,5 +1,5 @@
-**Last Updated**: January 24, 2026 (Added TASK-1056 Board drag animations)
-**Version**: 5.65 (Board Drag-Drop Animations)
+**Last Updated**: January 24, 2026 (Added TASK-1060 Infrastructure & E2E Sync Stability)
+**Version**: 5.66 (Infrastructure & E2E Sync)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -227,6 +227,7 @@
 | **TASK-1056**            | **Board View: Improve Drag-Drop Animations**                             | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Dragging tasks between swimlanes lacks polish. Missing: grab animation on pickup, preview ghost while dragging, release/drop animation. Add smooth transitions, scale on grab, opacity on ghost, spring animation on drop.               | -                                                      |
 | **TASK-1058**            | **MASTER_PLAN Symptom Index & Task Discovery Research**                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Research and implement better task discovery in MASTER_PLAN.md. Options: symptom index, keyword tags, consistent section headers, beads integration. Goal: find any bug/task in 1 grep, not 4 attempts.                                  | -                                                      |
 | ~~**TASK-1059**~~        | ✅ **DONE** **CORS Monitoring & Prevention Infrastructure**              | **P1**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | [SOP-031](./sop/SOP-031-cors-configuration.md) - Automated CORS validation script, CI/CD integration, comprehensive troubleshooting guide. Prevents duplicate header issues, missing headers, and browser-specific CORS failures.         | TASK-351                                               |
+| **TASK-1060**            | **Infrastructure & E2E Sync Stability (All Platforms)**                  | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1060-infrastructure--e2e-sync-stability-all-platforms-in-progress) - Fix Caddy instability, web/Tauri/PWA/KDE sync issues. Full platform E2E verification.                                                              | BUG-1056, TASK-351                                     |
 
 ---
 
@@ -321,6 +322,187 @@ User reports mobile device fails to fetch even on fresh browser. This rules out 
 **References**:
 - [Brave Web Speech API Issue #2802](https://github.com/brave/brave-browser/issues/2802)
 - [Brave Shields blocking WebSocket](https://community.brave.app/t/brave-browser-shields-blocking-my-websocket/395377)
+
+---
+
+### TASK-1060: Infrastructure & E2E Sync Stability (All Platforms) (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (Started: 2026-01-24)
+**Dependencies**: BUG-1056, TASK-351
+
+#### Problem Statement
+User reports "everything is broken" - intermittent sync failures across all platforms:
+- **Web**: App shows 0 tasks, WebSocket 403 errors
+- **Tauri**: Processes exit with SIGTERM, sync issues
+- **PWA (Mobile)**: Tasks reset overnight, sync failures
+- **KDE Widget**: May not be syncing correctly with timer state
+
+Root causes discovered:
+1. **Caddy reverse proxy instability** - Dies repeatedly requiring manual restart
+2. **Conflicting Docker/System Caddy** - Port 443 conflict resolved but Caddy keeps dying
+3. **SWR cache not invalidated on auth change** - Fixed in BUG-1056
+
+#### Phase 1: Infrastructure Stability (Critical)
+
+**1.1 Caddy Health Investigation**
+- [ ] SSH to VPS and check Caddy systemd logs: `journalctl -u caddy -f`
+- [ ] Check for OOM kills: `dmesg | grep -i kill`
+- [ ] Check Caddy config for issues: `caddy validate --config /etc/caddy/Caddyfile`
+- [ ] Review Caddy reload/restart patterns
+- [ ] Add health monitoring (uptime/healthcheck endpoint)
+
+**1.2 Caddy Auto-Recovery**
+- [ ] Create systemd watchdog for Caddy: `WatchdogSec=30`
+- [ ] Add restart policy: `Restart=always`, `RestartSec=5`
+- [ ] Consider Caddy docker container with restart: always (if simpler)
+- [ ] Set up alerting on Caddy failures (optional: webhook to Discord/Telegram)
+
+**1.3 JWT Key Validation on Production**
+- [ ] Verify `/opt/supabase/docker/.env` JWT_SECRET matches what's expected
+- [ ] Check if demo keys are being used in production (CRITICAL security issue)
+- [ ] Update production keys if needed, rotate secrets properly
+
+#### Phase 2: Web Platform Verification
+
+**2.1 Auth Flow Audit**
+- [ ] Verify auth.ts handles all Supabase auth events correctly
+- [ ] Test sign-in → data load → sign-out → sign-in flow
+- [ ] Test token refresh during active session
+- [ ] Verify SWR cache clears on user change (BUG-1056 fix)
+
+**2.2 WebSocket Stability**
+- [ ] Test Realtime subscription lifecycle (connect → reconnect → auth refresh)
+- [ ] Verify onRecovery callback properly reloads data
+- [ ] Test multi-tab behavior (unique channel per tab)
+- [ ] Add reconnection backoff strategy if missing
+
+**2.3 E2E Test: Web Platform**
+- [ ] Create task → verify persists to Supabase
+- [ ] Edit task → verify update syncs
+- [ ] Delete task → verify removal syncs
+- [ ] Refresh page → verify data loads correctly
+- [ ] Sign out → sign in → verify data intact
+
+#### Phase 3: Tauri Desktop App
+
+**3.1 Tauri Debug Investigation**
+- [ ] Run `npm run tauri dev` with RUST_LOG=debug
+- [ ] Check for SIGTERM causes (WebView crash? Auth timeout? Plugin issue?)
+- [ ] Review Tauri console logs for errors
+- [ ] Check if Docker orchestration (lib.rs) is causing issues
+
+**3.2 Tauri Auth Stability**
+- [ ] Verify Tauri uses same auth flow as web
+- [ ] Test token persistence in Tauri (localStorage equiv)
+- [ ] Check if Tauri WebView has different CORS/cookie behavior
+- [ ] Test auth refresh in Tauri specifically
+
+**3.3 Tauri Build & Deploy**
+- [ ] Clean rebuild: `npm run tauri build -- --clean`
+- [ ] Test fresh install on Linux (remove old config/data)
+- [ ] Verify Supabase URL/keys in build
+- [ ] Test offline → online transition
+
+**3.4 E2E Test: Tauri App**
+- [ ] Launch Tauri → sign in → verify tasks load
+- [ ] Create task → verify syncs to web immediately
+- [ ] Edit task → verify web sees update
+- [ ] Start timer → verify KDE widget and web see timer
+- [ ] Leave running overnight → check if still signed in next day
+
+#### Phase 4: PWA (Mobile)
+
+**4.1 Service Worker Audit**
+- [ ] Check SW cache strategy (network-first for API, cache-first for assets)
+- [ ] Verify SW isn't caching stale auth tokens
+- [ ] Test SW update flow (skip waiting, claim clients)
+- [ ] Clear SW caches on sign-out
+
+**4.2 PWA Sync Reliability**
+- [ ] Test Quick Sort → verify changes persist across page reload
+- [ ] Test Inbox changes → verify persist
+- [ ] Test overnight persistence (BUG-1046)
+- [ ] Check if SW is serving stale data after server updates
+
+**4.3 E2E Test: PWA Mobile**
+- [ ] Install PWA on mobile device
+- [ ] Sign in → verify tasks load
+- [ ] Quick Sort changes → force close → reopen → verify persisted
+- [ ] Leave overnight → check next morning tasks are correct
+- [ ] Delete task on mobile → verify web/Tauri see deletion
+
+#### Phase 5: KDE Plasma Widget
+
+**5.1 Widget Sync Verification**
+- [ ] Check REST API polling interval (should be 2s)
+- [ ] Verify API endpoints return correct timer state
+- [ ] Test: start timer on web → widget shows countdown
+- [ ] Test: stop timer on widget → web sees stopped state
+
+**5.2 Widget Auth**
+- [ ] Verify widget uses correct API token
+- [ ] Check if widget handles auth expiry gracefully
+- [ ] Test widget after token refresh
+
+#### Phase 6: Cross-Platform E2E
+
+**6.1 Multi-Platform Sync Test**
+| Action | Web | Tauri | PWA | KDE Widget |
+|--------|-----|-------|-----|------------|
+| Create task (Web) | ✓ | Verify | Verify | - |
+| Edit task (Tauri) | Verify | ✓ | Verify | - |
+| Delete task (PWA) | Verify | Verify | ✓ | - |
+| Start timer (Web) | ✓ | Verify | Verify | Verify |
+| Stop timer (KDE) | Verify | Verify | Verify | ✓ |
+
+**6.2 Stress Test**
+- [ ] Run stress-tester skill: `Skill(stress-tester)`
+- [ ] Focus on sync conflict resolution tests
+- [ ] Focus on WebSocket stability tests
+
+#### Files Involved
+```
+# Infrastructure
+/etc/caddy/Caddyfile                     # Caddy reverse proxy config (VPS)
+/etc/systemd/system/caddy.service        # Caddy systemd service (VPS)
+/opt/supabase/docker/.env                # Supabase production secrets (VPS)
+
+# Auth & Sync
+src/stores/auth.ts                       # Auth state management
+src/composables/useSupabaseDatabase.ts   # Database + Realtime sync
+src/composables/useAppInitialization.ts  # App startup orchestration
+
+# Tauri
+src-tauri/src/lib.rs                     # Rust commands
+src/composables/useTauriStartup.ts       # Tauri-specific startup
+
+# PWA
+vite.config.ts                           # PWA plugin config
+src/service-worker.ts                    # Service worker (if custom)
+
+# KDE Widget
+kde-widget/package/contents/ui/main.qml  # Widget QML
+```
+
+#### Success Criteria
+1. Caddy stays running for 24+ hours without intervention
+2. Web app loads data correctly on first try (no 0 tasks)
+3. Tauri app runs without SIGTERM
+4. PWA changes persist overnight
+5. Cross-platform sync works bidirectionally
+6. KDE widget shows correct timer state
+
+#### Progress Log
+- **2026-01-24 20:15**: Caddy found dead, restarted
+- **2026-01-24 20:30**: Port 443 conflict resolved (removed Docker Caddy)
+- **2026-01-24 21:00**: BUG-1056 SWR cache fix committed and deployed
+- **2026-01-24 21:30**: TASK-1060 created with comprehensive plan
+- **2026-01-24 22:35**: **ROOT CAUSE FOUND** - CI/CD `deploy.yml` was killing System Caddy and starting Docker Caddy
+- **2026-01-24 22:40**: Docker stack stopped, System Caddy re-enabled
+- **2026-01-24 22:42**: Fixed `deploy.yml` - now deploys static files only, no Docker, graceful Caddy reload
+- **2026-01-24 22:43**: Added Caddy systemd auto-restart config (`Restart=on-failure`, memory limits)
+- **2026-01-24 22:44**: ✅ Web app (200), API (401), WebSocket (401) all verified working
 
 ---
 

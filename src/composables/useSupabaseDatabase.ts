@@ -23,6 +23,7 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 // TASK-1060: SWR (Stale-While-Revalidate) Cache for database queries
 // Returns cached data immediately while fetching fresh data in background
 // Invalidated on realtime events to ensure consistency
+// BUG-1056: Cache is also invalidated on auth state changes to prevent stale guest data
 interface SWRCacheEntry<T> {
     data: T
     timestamp: number
@@ -33,6 +34,7 @@ class SWRCache {
     private cache = new Map<string, SWRCacheEntry<unknown>>()
     private readonly DEFAULT_STALE_TIME = 30 * 1000  // 30s before considered stale
     private readonly DEFAULT_CACHE_TIME = 5 * 60 * 1000  // 5min max cache
+    private lastUserId: string | null = null  // BUG-1056: Track user for auth change detection
 
     /**
      * Get data from cache or fetch if missing/expired
@@ -125,6 +127,20 @@ class SWRCache {
         this.cache.clear()
     }
 
+    /**
+     * BUG-1056: Check if user changed and clear cache if so
+     * This prevents returning stale guest data after auth
+     */
+    checkUserChange(currentUserId: string | null): boolean {
+        if (this.lastUserId !== currentUserId) {
+            console.log(`🔄 [SWR] User changed: ${this.lastUserId?.slice(0, 8) || 'guest'} → ${currentUserId?.slice(0, 8) || 'guest'}, clearing cache`)
+            this.clear()
+            this.lastUserId = currentUserId
+            return true
+        }
+        return false
+    }
+
     /** Get cache stats for debugging */
     getStats(): { size: number; keys: string[] } {
         return {
@@ -142,7 +158,9 @@ export const invalidateCache = {
     tasks: () => swrCache.invalidatePrefix('tasks:'),
     projects: () => swrCache.invalidatePrefix('projects:'),
     groups: () => swrCache.invalidatePrefix('groups:'),
-    all: () => swrCache.clear()
+    all: () => swrCache.clear(),
+    // BUG-1056: Expose user change check for auth state changes
+    onAuthChange: (userId: string | null) => swrCache.checkUserChange(userId)
 }
 
 // FORCE_HMR_UPDATE: Clearing stale cache for position_version schema
@@ -251,6 +269,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const fetchProjects = async (): Promise<Project[]> => {
         const userId = getUserIdSafe()
+        // BUG-1056: Check if user changed since last fetch - invalidates cache if so
+        swrCache.checkUserChange(userId)
         const cacheKey = `projects:${userId || 'guest'}`
 
         return swrCache.getOrFetch(cacheKey, async () => {
@@ -720,6 +740,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const fetchTasks = async (): Promise<Task[]> => {
         const userId = getUserIdSafe()
+        // BUG-1056: Check if user changed since last fetch - invalidates cache if so
+        swrCache.checkUserChange(userId)
         const cacheKey = `tasks:${userId || 'guest'}`
 
         return swrCache.getOrFetch(cacheKey, async () => {
@@ -1026,6 +1048,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const fetchGroups = async (): Promise<CanvasGroup[]> => {
         const userId = getUserIdSafe()
+        // BUG-1056: Check if user changed since last fetch - invalidates cache if so
+        swrCache.checkUserChange(userId)
         const cacheKey = `groups:${userId || 'guest'}`
 
         return swrCache.getOrFetch(cacheKey, async () => {

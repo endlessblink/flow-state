@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { supabase, type User, type Session, type AuthError } from '@/services/auth/supabase'
 import { clearGuestData } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
+import { invalidateCache } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
@@ -201,6 +202,10 @@ export const useAuthStore = defineStore('auth', () => {
       supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
         const currentTabId = (window as any).__flowstate_tab_id || 'unknown'
         console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event, 'userId:', newSession?.user?.id?.substring(0, 8))
+
+        // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
+        // This ensures cached guest data doesn't persist after sign-in
+        invalidateCache.onAuthChange(newSession?.user?.id || null)
 
         // Update local state
         session.value = newSession

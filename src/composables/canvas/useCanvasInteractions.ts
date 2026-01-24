@@ -465,6 +465,15 @@ export function useCanvasInteractions(deps?: {
                         allGroups,
                     })
 
+                    // DRIFT LOGGING: Capture before/after for diagnosis
+                    const beforeGroupPos = group.position
+                    console.log(`📍 [DRAG-WRITE] Group "${group.name?.slice(0, 20)}" (${groupId.slice(0, 8)})`, {
+                        before: beforeGroupPos ? { x: Math.round(beforeGroupPos.x), y: Math.round(beforeGroupPos.y) } : null,
+                        after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
+                        parentChange: parentResult.transitionType !== 'no-change' ? parentResult.transitionType : 'same',
+                        source: 'onNodeDragStop'
+                    })
+
                     // Update store with ABSOLUTE position AND parentGroupId
                     canvasStore.updateSection(groupId, {
                         position: {
@@ -557,6 +566,16 @@ export function useCanvasInteractions(deps?: {
 
                     // 4. Optimistic Store Update (Absolute position + parentId)
                     // GEOMETRY WRITER: Primary drag handler (TASK-255)
+
+                    // DRIFT LOGGING: Capture before/after for diagnosis
+                    const beforePos = task.canvasPosition
+                    console.log(`📍 [DRAG-WRITE] Task "${task.title?.slice(0, 20)}" (${task.id.slice(0, 8)})`, {
+                        before: beforePos ? { x: Math.round(beforePos.x), y: Math.round(beforePos.y) } : null,
+                        after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
+                        parentChange: oldParentId !== newParentId ? `${oldParentId?.slice(0, 8) ?? 'root'} → ${newParentId?.slice(0, 8) ?? 'root'}` : 'same',
+                        source: 'onNodeDragStop'
+                    })
+
                     await taskStore.updateTask(task.id, {
                         parentId: newParentId ?? undefined,
                         canvasPosition: absolutePos,
@@ -573,11 +592,24 @@ export function useCanvasInteractions(deps?: {
                     // TASK-213: Update PositionManager
                     positionManager.updatePosition(task.id, absolutePos, 'user-drag', newParentId ?? null)
 
-                    // 5. Update Vue Flow parentNode to match new containment
+                    // 5. Update Vue Flow parentNode AND position to match new containment
+                    // BUG FIX: When parent changes, we must also update node.position
+                    // Vue Flow interprets node.position as RELATIVE to parentNode.
+                    // If we only change parentNode without updating position, Vue Flow
+                    // will interpret the old relative position as relative to the NEW parent,
+                    // causing the task to visually "drift" to the wrong location.
                     if (newParentId) {
                         node.parentNode = CanvasIds.groupNodeId(newParentId)
+                        // Convert absolute position to relative position for new parent
+                        const newParentAbsolute = getGroupAbsolutePosition(newParentId, taskAllGroups)
+                        node.position = {
+                            x: absolutePos.x - newParentAbsolute.x,
+                            y: absolutePos.y - newParentAbsolute.y
+                        }
                     } else {
                         node.parentNode = undefined
+                        // Root node: position is absolute (same as world position)
+                        node.position = { x: absolutePos.x, y: absolutePos.y }
                     }
 
                     // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)

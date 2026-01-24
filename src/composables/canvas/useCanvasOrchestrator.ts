@@ -654,6 +654,31 @@ export function useCanvasOrchestrator() {
             // TASK-262 FIX: Allow all changes to pass through including deselection
             // Previously, deselection was blocked which prevented clicking on empty canvas
             // from clearing selection. Vue Flow's default behavior is correct - let it work.
+
+            // DRIFT LOGGING: Log ALL changes from Vue Flow to catch position drift
+            const positionChanges = changes.filter((c: any) => c.type === 'position')
+            if (positionChanges.length > 0) {
+                console.log(`📍[VUEFLOW-CHANGE] ${positionChanges.length} position changes`,
+                    positionChanges.map((c: any) => ({
+                        id: c.id?.slice(0, 8),
+                        position: c.position ? { x: Math.round(c.position.x), y: Math.round(c.position.y) } : null,
+                        positionAbsolute: c.positionAbsolute ? { x: Math.round(c.positionAbsolute.x), y: Math.round(c.positionAbsolute.y) } : null,
+                        dragging: c.dragging
+                    }))
+                )
+            }
+
+            // Also log dimension changes which might affect layout
+            const dimensionChanges = changes.filter((c: any) => c.type === 'dimensions')
+            if (dimensionChanges.length > 0) {
+                console.log(`📍[VUEFLOW-DIMENSIONS] ${dimensionChanges.length} dimension changes`,
+                    dimensionChanges.map((c: any) => ({
+                        id: c.id?.slice(0, 8),
+                        dimensions: c.dimensions
+                    }))
+                )
+            }
+
             applyNodeChanges(changes)
         },
         handleEdgesChange: applyEdgeChanges,

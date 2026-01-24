@@ -365,6 +365,16 @@ export function useCanvasInteractions(deps?: {
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
 
+        // DRIFT LOGGING: Log drag start with initial positions
+        console.log(`📍[DRAG-START] ${involvedNodes.length} nodes`,
+            involvedNodes.map(n => ({
+                id: n.id?.slice(0, 12),
+                position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
+                positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
+                parentNode: n.parentNode?.slice(0, 12) ?? null
+            }))
+        )
+
         // Guard: Only proceed if we can start a new drag (operation state is idle)
         // This is the AUTHORITATIVE guard that prevents duplicate drag starts
         if (startDrag(involvedNodes.map(n => n.id))) {

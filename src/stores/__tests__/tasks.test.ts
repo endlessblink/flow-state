@@ -85,7 +85,7 @@ describe('TaskStore', () => {
       const store = useTaskStore()
       const task = await store.createTask({ title: 'Task', status: 'planned' })
 
-      store.moveTask(task.id, 'in_progress')
+      await store.moveTask(task.id, 'in_progress') // BUG-1051: AWAIT to ensure persistence
 
       const movedTask = store.tasks.find(t => t.id === task.id)
       expect(movedTask?.status).toBe('in_progress')

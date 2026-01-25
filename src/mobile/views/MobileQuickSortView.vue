@@ -180,8 +180,8 @@
               </div>
             </div>
 
-            <!-- Card Content -->
-            <div class="card-content" v-if="currentTask">
+            <!-- Card Content with blur when swiping -->
+            <div class="card-content" v-if="currentTask" :style="contentBlurStyle">
               <!-- Priority Indicator -->
               <div
                 class="priority-strip"
@@ -564,6 +564,21 @@ const leftOverlayOpacity = computed(() => {
 const rightOverlayOpacity = computed(() => {
   if (deltaX.value <= 0) return 0
   return Math.min(deltaX.value / 120, 1) * 0.9
+})
+
+// Content blur effect when swiping
+const contentBlurStyle = computed(() => {
+  const progress = Math.min(Math.abs(deltaX.value) / 100, 1)
+  if (progress < 0.1) {
+    return { filter: 'none', opacity: 1 }
+  }
+  const blurAmount = progress * 6 // Max 6px blur
+  const dimAmount = 1 - (progress * 0.4) // Dim to 60%
+  return {
+    filter: `blur(${blurAmount}px)`,
+    opacity: dimAmount,
+    transition: swipeState.value.isSwiping ? 'none' : 'filter 0.2s ease, opacity 0.2s ease'
+  }
 })
 
 // Date detection
@@ -1260,6 +1275,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10; /* Above blurred content */
 }
 
 .swipe-indicator.left {
@@ -1303,6 +1319,8 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  z-index: 1; /* Below swipe indicators */
+  will-change: filter, opacity;
 }
 
 .priority-strip {

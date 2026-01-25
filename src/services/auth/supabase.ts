@@ -14,13 +14,29 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 // Supabase JS client requires full URL (not relative path)
 // If envUrl is relative (starts with /), prepend current origin
+// BUG-1064: Tauri now connects to VPS Supabase (same as web) for cross-platform sync
 function resolveSupabaseUrl(): string {
-    if (isTauri) {
+    // Check for explicit local mode (for development/testing)
+    const useLocalSupabase = import.meta.env.VITE_USE_LOCAL_SUPABASE === 'true'
+    if (useLocalSupabase) {
         return 'http://127.0.0.1:54321'
     }
+
+    // Tauri: Use full VPS URL directly (WebView can't use relative paths)
+    if (isTauri) {
+        // envUrl should be the full VPS URL like 'https://api.in-theflow.com'
+        // If it's relative, we can't use it in Tauri - need explicit URL
+        if (envUrl.startsWith('/')) {
+            console.warn('[Supabase] Tauri requires full URL, not relative path. Check VITE_SUPABASE_URL')
+            // Fallback to production VPS
+            return 'https://api.in-theflow.com'
+        }
+        return envUrl
+    }
+
+    // Web/PWA: Convert relative path to full URL if needed
     if (envUrl.startsWith('/') && typeof window !== 'undefined') {
-        // Convert relative path to full URL using current page origin
-        // e.g., '/supabase' becomes 'https://xxx.trycloudflare.com/supabase'
+        // e.g., '/supabase' becomes 'https://in-theflow.com/supabase'
         return `${window.location.origin}${envUrl}`
     }
     return envUrl

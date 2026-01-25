@@ -53,9 +53,8 @@
             aria-label="Quick add task"
             @keydown.enter.prevent="createQuickTask"
           >
-          <!-- Mic button (TASK-1024) -->
+          <!-- Mic button (TASK-1024) - ALWAYS SHOW FOR DEBUG -->
           <button
-            v-if="isVoiceSupported"
             :class="['mic-btn', { recording: isListening }]"
             :title="isListening ? 'Stop recording' : 'Voice input'"
             @click="toggleVoiceInput"
@@ -64,8 +63,27 @@
             <MicOff v-else :size="16" />
           </button>
         </div>
+        <!-- Voice mode toggle (TASK-1071: Whisper + Browser) -->
+        <div v-if="showVoiceModeToggle" class="voice-mode-toggle">
+          <button
+            :class="['mode-btn', { active: voiceMode === 'whisper' }]"
+            :disabled="!hasWhisperApiKey || !isWhisperSupported"
+            :title="hasWhisperApiKey ? 'Groq Whisper (works everywhere)' : 'No API key'"
+            @click="voiceMode = 'whisper'"
+          >
+            🎙️ Whisper
+          </button>
+          <button
+            :class="['mode-btn', { active: voiceMode === 'browser' }]"
+            :disabled="!isBrowserVoiceSupported"
+            :title="isBrowserVoiceSupported ? 'Browser Speech API' : 'Not supported'"
+            @click="voiceMode = 'browser'"
+          >
+            🌐 Browser
+          </button>
+        </div>
         <!-- Voice feedback (when recording) -->
-        <div v-if="isListening" class="voice-feedback">
+        <div v-if="isListening || isProcessingVoice" class="voice-feedback">
           <div class="voice-waveform">
             <span class="wave-bar"></span>
             <span class="wave-bar"></span>
@@ -379,7 +397,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
@@ -392,6 +410,7 @@ import {
   Layers, Mic, MicOff
 } from 'lucide-vue-next'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
+import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
@@ -552,15 +571,45 @@ onBeforeUnmount(() => {
 const quickTaskRef = ref<HTMLInputElement | null>(null)
 const quickTaskText = ref('')
 
-// Voice input (TASK-1024)
+// Voice input (TASK-1024, TASK-1071: Whisper + Browser modes)
+console.log('[AppSidebar] Setting up voice input...')
+
+// Voice mode: 'whisper' (Groq API) or 'browser' (Web Speech API)
+const voiceMode = ref<'whisper' | 'browser'>('whisper')
+
+// Groq Whisper voice input (works everywhere, requires API key)
 const {
-  isListening,
-  isSupported: isVoiceSupported,
-  displayTranscript,
-  error: voiceError,
-  start: startVoice,
-  stop: stopVoice,
-  cancel: cancelVoice
+  isRecording: isWhisperRecording,
+  isProcessing: isWhisperProcessing,
+  isSupported: isWhisperSupported,
+  hasApiKey: hasWhisperApiKey,
+  transcript: whisperTranscript,
+  error: whisperError,
+  start: startWhisper,
+  stop: stopWhisper,
+  cancel: cancelWhisper
+} = useWhisperSpeech({
+  onResult: (result) => {
+    console.log('[Whisper Sidebar] Result:', result)
+    if (result.transcript.trim()) {
+      quickTaskText.value = result.transcript.trim()
+      createQuickTask()
+    }
+  },
+  onError: (err) => {
+    console.warn('[Whisper Sidebar] Error:', err)
+  }
+})
+
+// Browser Speech API (Chrome/Edge/Safari only)
+const {
+  isListening: isBrowserListening,
+  isSupported: isBrowserVoiceSupported,
+  displayTranscript: browserDisplayTranscript,
+  error: browserVoiceError,
+  start: startBrowserVoice,
+  stop: stopBrowserVoice,
+  cancel: cancelBrowserVoice
 } = useSpeechRecognition({
   language: 'auto',
   interimResults: true,
@@ -568,7 +617,6 @@ const {
   onResult: (result) => {
     if (result.isFinal && result.transcript.trim()) {
       quickTaskText.value = result.transcript.trim()
-      // Auto-submit after voice input
       createQuickTask()
     }
   },
@@ -577,13 +625,69 @@ const {
   }
 })
 
+// Unified voice state (combines both modes)
+const isListening = computed(() =>
+  voiceMode.value === 'whisper'
+    ? isWhisperRecording.value
+    : isBrowserListening.value
+)
+const isProcessingVoice = computed(() => isWhisperProcessing.value)
+const displayTranscript = computed(() =>
+  voiceMode.value === 'whisper'
+    ? whisperTranscript.value
+    : browserDisplayTranscript.value
+)
+const voiceError = computed(() =>
+  voiceMode.value === 'whisper'
+    ? whisperError.value
+    : browserVoiceError.value
+)
+
+// Show toggle if either mode is available
+const showVoiceModeToggle = computed(() =>
+  (hasWhisperApiKey.value && isWhisperSupported.value) ||
+  isBrowserVoiceSupported.value
+)
+
+console.log('[AppSidebar] Voice support:', {
+  whisperSupported: isWhisperSupported.value,
+  hasWhisperKey: hasWhisperApiKey.value,
+  browserSupported: isBrowserVoiceSupported.value
+})
+
+// Auto-select mode based on availability (prefer Whisper)
+watch([hasWhisperApiKey, isBrowserVoiceSupported], ([hasKey, browserSupported]) => {
+  if (hasKey && isWhisperSupported.value) {
+    voiceMode.value = 'whisper'
+  } else if (browserSupported) {
+    voiceMode.value = 'browser'
+  }
+}, { immediate: true })
+
 // Toggle voice recording
 const toggleVoiceInput = async () => {
   if (isListening.value) {
-    stopVoice()
+    if (voiceMode.value === 'whisper') {
+      stopWhisper()
+    } else {
+      stopBrowserVoice()
+    }
   } else {
     quickTaskText.value = ''
-    await startVoice()
+    if (voiceMode.value === 'whisper') {
+      await startWhisper()
+    } else {
+      await startBrowserVoice()
+    }
+  }
+}
+
+// Cancel voice recording
+const cancelVoice = () => {
+  if (voiceMode.value === 'whisper') {
+    cancelWhisper()
+  } else {
+    cancelBrowserVoice()
   }
 }
 
@@ -1100,6 +1204,41 @@ defineExpose({
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);
+}
+
+/* Voice mode toggle (TASK-1071) */
+.voice-mode-toggle {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.voice-mode-toggle .mode-btn {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.voice-mode-toggle .mode-btn:hover:not(:disabled) {
+  background: var(--glass-bg);
+  border-color: var(--border-default);
+}
+
+.voice-mode-toggle .mode-btn.active {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.voice-mode-toggle .mode-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .task-management-section {

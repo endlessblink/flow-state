@@ -164,9 +164,18 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
      * GEOMETRY WRITER: Creates task with initial canvas position (TASK-255)
      * This is an ALLOWED geometry write as it's an explicit user action (creating a task).
      */
-    const handleQuickTaskCreate = async (title: string, description: string) => {
+    interface QuickTaskData {
+        title: string
+        description: string
+        status?: string
+        priority?: 'low' | 'medium' | 'high'
+        dueDate?: string
+        projectId?: string
+    }
+
+    const handleQuickTaskCreate = async (data: QuickTaskData) => {
         try {
-            if (!title?.trim()) return
+            if (!data.title?.trim()) return
 
             const isDefaultPosition = quickTaskPosition.value.x === 0 && quickTaskPosition.value.y === 0
             const shouldCreateInInbox = isDefaultPosition
@@ -179,16 +188,20 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 shouldCreateInInbox,
                 finalPosition: shouldCreateInInbox ? 'INBOX' : { x, y },
                 finalParentId: shouldCreateInInbox ? 'NONE' : parentId,
-                parentTaskId: parentTaskId || 'NONE'
+                parentTaskId: parentTaskId || 'NONE',
+                taskData: data
             })
 
             await taskStore.createTaskWithUndo({
-                title,
-                description,
+                title: data.title,
+                description: data.description,
                 canvasPosition: shouldCreateInInbox ? undefined : { x, y },
                 parentId: shouldCreateInInbox ? undefined : parentId,
-                parentTaskId: shouldCreateInInbox ? undefined : parentTaskId,  // Creates connection if set
-                status: 'planned',
+                parentTaskId: shouldCreateInInbox ? undefined : parentTaskId,
+                status: (data.status as 'planned' | 'in_progress' | 'done') || 'planned',
+                priority: data.priority || 'medium',
+                dueDate: data.dueDate,
+                projectId: data.projectId,
                 isInInbox: shouldCreateInInbox
             })
 
@@ -198,11 +211,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 deps.syncNodes()
             }
 
-            isQuickTaskCreateOpen.value = false
-            quickTaskPosition.value = { x: 0, y: 0 }
-
         } catch (error) {
             console.error('Failed to create task', error)
+        } finally {
+            // Always close modal, even on error
+            isQuickTaskCreateOpen.value = false
+            quickTaskPosition.value = { x: 0, y: 0 }
         }
     }
 

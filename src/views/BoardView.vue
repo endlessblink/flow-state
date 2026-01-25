@@ -239,13 +239,20 @@ const handleDeleteTask = (taskId: string) => {
   openConfirmModal(taskId)
 }
 
-const handleQuickTaskCreate = async (title: string, description: string) => {
+const handleQuickTaskCreate = async (data: {
+  title: string
+  description: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate?: string
+  projectId?: string
+}) => {
   const newTask = await createTaskForColumn(
-    title,
-    description,
+    data.title,
+    data.description,
     pendingTaskColumnKey.value,
     pendingTaskViewType.value,
-    pendingTaskProjectId.value
+    data.projectId || pendingTaskProjectId.value
   )
   if (newTask) {
     closeQuickTaskCreate()

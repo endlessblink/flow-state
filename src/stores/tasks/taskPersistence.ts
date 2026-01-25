@@ -224,8 +224,72 @@ export function useTaskPersistence(
             // A duplicate here means the bug is at the database level
             logSupabaseTaskIdHistogram(loadedTasks, 'loadFromDatabase')
 
-            _rawTasks.value = loadedTasks
-            console.log(`✅ [SUPABASE] Loaded ${loadedTasks.length} tasks (${tasksWithPositions.length} with canvas positions)`)
+            // ================================================================
+            // SMART MERGE STRATEGY (BUG-FIX)
+            // ================================================================
+            // Instead of blindly overwriting local state with DB state, we merge carefully.
+            // This handles "Auth Recovery -> Reload" scenarios where local state involves
+            // recent optimistic updates that haven't persisted to DB yet due to connection drop.
+
+            // 1. Index remote tasks
+            const remoteMap = new Map(loadedTasks.map(t => [t.id, t]))
+            const mergedTasks: Task[] = []
+
+            // 2. Process existing local tasks (Preserve optimistic, Handle Remote Deletes)
+            const localTasksMap = new Map(_rawTasks.value.map(t => [t.id, t]))
+
+            for (const localTask of _rawTasks.value) {
+                const remoteTask = remoteMap.get(localTask.id)
+
+                if (remoteTask) {
+                    // CONFLICT: Task exists in both. Check who wins.
+                    // Win Condition 1: Local is explicitly newer (updatedAt > remote)
+                    const localTime = localTask.updatedAt instanceof Date ? localTask.updatedAt.getTime() : new Date(localTask.updatedAt).getTime()
+                    const remoteTime = remoteTask.updatedAt instanceof Date ? remoteTask.updatedAt.getTime() : new Date(remoteTask.updatedAt).getTime()
+
+                    // Win Condition 2: Local position version is higher (specific for drag operations)
+                    const localVer = localTask.positionVersion ?? 0
+                    const remoteVer = remoteTask.positionVersion ?? 0
+
+                    // Win Condition 3: Local updated very recently (< 5s ago) - likely active editing
+                    const now = Date.now()
+                    const isVeryRecent = (now - localTime) < 5000
+
+                    if (localVer > remoteVer || localTime > remoteTime || isVeryRecent) {
+                        console.log(`🛡️ [SMART-MERGE] Preserving local task "${localTask.title?.slice(0, 15)}" (Local v${localVer} > Remote v${remoteVer} || Local newer)`)
+                        mergedTasks.push(localTask)
+                    } else {
+                        // Remote is newer or equal -> Accept remote
+                        mergedTasks.push(remoteTask)
+                    }
+
+                    // Mark as processed so we don't add it again in step 3
+                    remoteMap.delete(localTask.id)
+                } else {
+                    // Task exists ONLY locally.
+                    // Case A: Created locally recently -> Keep (Optimistic Create)
+                    // Case B: Deleted remotely -> Drop (Remote Delete)
+
+                    const localCreated = localTask.createdAt instanceof Date ? localTask.createdAt.getTime() : new Date(localTask.createdAt).getTime()
+                    const timeSinceCreation = Date.now() - localCreated
+
+                    if (timeSinceCreation < 60000) { // Created in last 60s
+                        console.log(`🛡️ [SMART-MERGE] Preserving optimistic create "${localTask.title?.slice(0, 15)}"`)
+                        mergedTasks.push(localTask)
+                    } else {
+                        // Assume it was deleted on remote long ago
+                        // console.log(`🗑️ [SMART-MERGE] Dropping deleted task "${localTask.title?.slice(0, 15)}"`)
+                    }
+                }
+            }
+
+            // 3. Add remaining remote tasks (New from Remote)
+            for (const [_, remoteTask] of remoteMap) {
+                mergedTasks.push(remoteTask)
+            }
+
+            _rawTasks.value = mergedTasks
+            console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)
 
         } catch (error) {
             console.error('❌ [SUPABASE] Load failed:', error)

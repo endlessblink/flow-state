@@ -777,7 +777,94 @@ npm run dev
 
 ---
 
-This comprehensive debugging skill provides systematic approaches to identify and resolve complex state management, reactivity, performance, canvas interactions, and cache issues in Vue.js applications with Pinia stores.
+## Production & CDN Debugging
+
+### When to Use This Section
+- App works locally but fails in production
+- Chromium browsers fail, Firefox works
+- `curl` shows correct response but browser fails
+- MIME type errors in browser console
+- Stale assets after deployment
+
+### Cloudflare Cache MIME Type Issue (CRITICAL)
+
+**Symptom**: Chromium browsers show MIME type errors for CSS/JS, but `curl` returns correct content-type.
+
+**Root Cause**: Cloudflare caches by URL only. Chromium's preload scanner sends `Accept: text/html`, and Cloudflare serves cached HTML instead of CSS/JS.
+
+**Quick Diagnostic**:
+```bash
+# Check if Vary header is present (MUST include "Accept")
+curl -sI "https://in-theflow.com/assets/index.css" | grep -iE "vary|content-type"
+
+# Expected:
+# content-type: text/css; charset=utf-8
+# vary: Accept-Encoding, Accept
+```
+
+**Fix**:
+```bash
+# Add to Caddyfile on VPS:
+@static path /assets/*
+header @static Vary "Accept-Encoding, Accept"
+```
+
+**Full Documentation**: `docs/sop/SOP-032-cloudflare-cache-mime-prevention.md`
+
+### Cloudflare Debug Commands
+
+```bash
+# Check cache status
+curl -sI https://example.com/path | grep cf-cache-status
+# HIT = edge cache, MISS = origin, DYNAMIC = not cached
+
+# Check response headers
+curl -sI https://example.com/assets/app.css | grep -iE "content-type|cache-control|vary"
+
+# Bypass Cloudflare (test origin directly)
+curl -sI --resolve "example.com:443:YOUR_VPS_IP" https://example.com/path
+```
+
+### VPS/Caddy Debug Commands
+
+```bash
+# Check Caddy status
+ssh root@VPS "systemctl status caddy"
+
+# View Caddy logs
+ssh root@VPS "journalctl -u caddy -f"
+
+# Validate Caddy config
+ssh root@VPS "caddy validate --config /etc/caddy/Caddyfile"
+
+# Reload Caddy
+ssh root@VPS "systemctl reload caddy"
+```
+
+### Browser-Specific Issues
+
+| Works | Fails | Likely Cause |
+|-------|-------|--------------|
+| Firefox | Chrome/Brave | Cloudflare cache + preload scanner |
+| curl | All browsers | Service Worker cache |
+| Incognito | Normal mode | Browser cache |
+| VPN | Local | Regional CDN issue |
+
+### Quick Fix Script
+
+```bash
+# Emergency fix for Cloudflare MIME issue
+./scripts/fix-cloudflare-cache.sh
+
+# Then purge Cloudflare cache:
+# Dashboard → Caching → Purge Everything
+```
+
+**Full Reference**: `.claude/skills/🐛 dev-debugging/references/production-cdn-debugging.md`
+
+---
+
+This comprehensive debugging skill provides systematic approaches to identify and resolve complex state management, reactivity, performance, canvas interactions, cache issues, and production/CDN problems in Vue.js applications with Pinia stores.
 
 ---
 

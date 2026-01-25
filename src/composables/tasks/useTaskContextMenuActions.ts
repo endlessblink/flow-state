@@ -4,16 +4,11 @@ import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
-import { useToast } from '@/composables/useToast'
 import type { Task } from '@/stores/tasks'
 
-// Helper to format date for toast display
-function formatDateForToast(date: Date): string {
-    return date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-    })
+// Dispatch event to trigger brief flash animation on task card
+function flashTaskCard(taskId: string): void {
+    window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
 }
 
 export function useTaskContextMenuActions(
@@ -24,7 +19,6 @@ export function useTaskContextMenuActions(
     const timerStore = useTimerStore()
     const canvasStore = useCanvasStore()
     const router = useRouter()
-    const { showToast } = useToast()
 
     const currentTask = computed(() => props.contextTask || props.task)
     const isBatchOperation = computed(() => (props.selectedCount || 0) > 1)
@@ -50,9 +44,7 @@ export function useTaskContextMenuActions(
             try {
                 await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: customDate })
                 canvasStore.requestSync('user:context-menu')
-                // Show toast with formatted date
-                const parsedDate = new Date(customDate + 'T00:00:00')
-                showToast(`Due: ${formatDateForToast(parsedDate)}`, 'success', { duration: 1500 })
+                flashTaskCard(currentTask.value.id)
             } catch (error) {
                 console.error('Error updating task due date:', error)
             }
@@ -119,8 +111,7 @@ export function useTaskContextMenuActions(
                 const formattedDate = dueDate.toISOString().split('T')[0]
                 await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
                 canvasStore.requestSync('user:context-menu')
-                // Show toast with formatted date
-                showToast(`Due: ${formatDateForToast(dueDate)}`, 'success', { duration: 1500 })
+                flashTaskCard(currentTask.value.id)
             } catch (error) {
                 console.error('Error setting due date:', error)
             }

@@ -333,28 +333,33 @@ export function useCanvasAlignment(
     }
 
     const distributeHorizontal = () => {
-        console.log('🎯 distributeHorizontal called in useCanvasAlignment')
         executeAlignmentOperation('Distribute Horizontal', async (selectedNodes) => {
-            console.log('🎯 distributeHorizontal operation executing with', selectedNodes.length, 'nodes')
             if (selectedNodes.length < 3) return
 
             const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
-            // Sort by current absolute centerX
-            const sorted = [...boundsMapping].sort((a, b) => a.bounds.centerX - b.bounds.centerX)
+            // Sort by current absolute left edge
+            const sorted = [...boundsMapping].sort((a, b) => a.bounds.left - b.bounds.left)
 
-            const startX = sorted[0].bounds.centerX
-            const endX = sorted[sorted.length - 1].bounds.centerX
-            const naturalSpacing = (endX - startX) / (sorted.length - 1)
-            // TASK-335: If tasks are stacked (no natural spread), use fixed spacing
-            const spacing = naturalSpacing > MIN_SPACING_THRESHOLD ? naturalSpacing : DEFAULT_SPACING_X
+            // BUG-1068: Calculate edge-to-edge distribution for consistent visual gaps
+            // Total width of all tasks combined
+            const totalTaskWidth = sorted.reduce((sum, { bounds }) => sum + bounds.width, 0)
+            // Available space between first left and last right
+            const firstLeft = sorted[0].bounds.left
+            const lastRight = sorted[sorted.length - 1].bounds.right
+            const totalSpace = lastRight - firstLeft
+            // Calculate gap: (total space - task widths) / number of gaps
+            const gapCount = sorted.length - 1
+            let gap = gapCount > 0 ? (totalSpace - totalTaskWidth) / gapCount : 16
+            // TASK-335: If tasks are stacked (negative or tiny gap), use fixed spacing
+            if (gap < MIN_SPACING_THRESHOLD) gap = 16
 
+            let currentX = firstLeft
             for (const { node, bounds } of sorted) {
-                const index = sorted.indexOf(sorted.find(s => s.node === node)!)
-                const targetCenterX = startX + (spacing * index)
                 await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: targetCenterX - bounds.width / 2, y: bounds.top },
+                    canvasPosition: { x: currentX, y: bounds.top },
                     positionFormat: 'absolute'
                 }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                currentX += bounds.width + gap
             }
 
             actions.closeCanvasContextMenu()
@@ -366,22 +371,29 @@ export function useCanvasAlignment(
             if (selectedNodes.length < 3) return
 
             const boundsMapping = selectedNodes.map(n => ({ node: n, bounds: getNodeBounds(n) }))
-            // Sort by current absolute centerY
-            const sorted = [...boundsMapping].sort((a, b) => a.bounds.centerY - b.bounds.centerY)
+            // Sort by current absolute top edge
+            const sorted = [...boundsMapping].sort((a, b) => a.bounds.top - b.bounds.top)
 
-            const startY = sorted[0].bounds.centerY
-            const endY = sorted[sorted.length - 1].bounds.centerY
-            const naturalSpacing = (endY - startY) / (sorted.length - 1)
-            // TASK-335: If tasks are stacked (no natural spread), use fixed spacing
-            const spacing = naturalSpacing > MIN_SPACING_THRESHOLD ? naturalSpacing : DEFAULT_SPACING_Y
+            // BUG-1068: Calculate edge-to-edge distribution for consistent visual gaps
+            // Total height of all tasks combined
+            const totalTaskHeight = sorted.reduce((sum, { bounds }) => sum + bounds.height, 0)
+            // Available space between first top and last bottom
+            const firstTop = sorted[0].bounds.top
+            const lastBottom = sorted[sorted.length - 1].bounds.bottom
+            const totalSpace = lastBottom - firstTop
+            // Calculate gap: (total space - task heights) / number of gaps
+            const gapCount = sorted.length - 1
+            let gap = gapCount > 0 ? (totalSpace - totalTaskHeight) / gapCount : 16
+            // TASK-335: If tasks are stacked (negative or tiny gap), use fixed spacing
+            if (gap < MIN_SPACING_THRESHOLD) gap = 16
 
+            let currentY = firstTop
             for (const { node, bounds } of sorted) {
-                const index = sorted.indexOf(sorted.find(s => s.node === node)!)
-                const targetCenterY = startY + (spacing * index)
                 await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: bounds.left, y: targetCenterY - bounds.height / 2 },
+                    canvasPosition: { x: bounds.left, y: currentY },
                     positionFormat: 'absolute'
                 }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                currentY += bounds.height + gap
             }
 
             actions.closeCanvasContextMenu()
@@ -400,18 +412,20 @@ export function useCanvasAlignment(
             // Find the leftmost X position (absolute)
             const startX = sorted[0].bounds.left
 
-            // Use generous spacing to prevent overlap
-            const SPACING = DEFAULT_SPACING_X
+            // BUG-1068: Use edge-to-edge gap spacing for consistent visual gaps
+            const GAP = 16  // Consistent visual gap between task edges
 
+            let currentX = startX
             for (const { node, bounds } of sorted) {
-                const index = sorted.indexOf(sorted.find(s => s.node === node)!)
                 await taskStore.updateTask(node.id, {
                     canvasPosition: {
-                        x: startX + (SPACING * index),
+                        x: currentX,
                         y: avgCenterY - bounds.height / 2
                     },
                     positionFormat: 'absolute'
                 }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                // Move X right by this task's width + gap for next task
+                currentX += bounds.width + GAP
             }
 
             actions.closeCanvasContextMenu()
@@ -430,18 +444,21 @@ export function useCanvasAlignment(
             // Find the topmost Y position (absolute)
             const startY = sorted[0].bounds.top
 
-            // Use generous spacing to prevent overlap
-            const SPACING = DEFAULT_SPACING_Y
+            // BUG-1068: Use edge-to-edge gap spacing for consistent visual gaps
+            // Instead of fixed spacing from top, position each task based on previous task's bottom
+            const GAP = 16  // Consistent visual gap between task edges
 
+            let currentY = startY
             for (const { node, bounds } of sorted) {
-                const index = sorted.indexOf(sorted.find(s => s.node === node)!)
                 await taskStore.updateTask(node.id, {
                     canvasPosition: {
                         x: avgCenterX - bounds.width / 2,
-                        y: startY + (SPACING * index)
+                        y: currentY
                     },
                     positionFormat: 'absolute'
                 }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                // Move Y down by this task's height + gap for next task
+                currentY += bounds.height + GAP
             }
 
             actions.closeCanvasContextMenu()

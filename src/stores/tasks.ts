@@ -17,10 +17,38 @@ import type { Task } from '@/types/tasks'
 export { parseDateKey, formatDateKey } from '@/utils/dateUtils'
 
 /**
- * getTaskInstances function - for compatibility with TaskEditModal
- * Returns recurring instances for a task, simplified for current system
+ * getTaskInstances function - for compatibility with TaskEditModal and Calendar views
+ * Returns instances for a task with the following priority:
+ * 1. task.instances (explicit TaskInstance array)
+ * 2. Synthetic instance from legacy fields (scheduledDate, scheduledTime, estimatedDuration)
+ * 3. task.recurringInstances (for recurring tasks)
+ * 4. Empty array if no scheduling info
  */
-export const getTaskInstances = (task: Task) => task.recurringInstances || []
+export const getTaskInstances = (task: Task) => {
+  // Priority 1: Explicit instances array
+  if (task.instances && task.instances.length > 0) {
+    return task.instances
+  }
+
+  // Priority 2: Legacy fields - create synthetic instance
+  if (task.scheduledDate) {
+    return [{
+      id: `legacy-${task.id}`,
+      taskId: task.id,
+      scheduledDate: task.scheduledDate,
+      scheduledTime: task.scheduledTime,
+      duration: task.estimatedDuration
+    }]
+  }
+
+  // Priority 3: Recurring instances
+  if (task.recurringInstances && task.recurringInstances.length > 0) {
+    return task.recurringInstances
+  }
+
+  // Priority 4: No scheduling info
+  return []
+}
 
 /**
  * Clear only hardcoded test tasks while preserving user's real tasks
@@ -196,11 +224,34 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
-
+          // BUG-1061: Position version check - prevents out-of-order position updates
+          // Even if timestamp passes, reject if local positionVersion is higher (means we have newer position)
+          // This protects against: rapid drags where realtime events arrive out-of-order
+          if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
+            const localVersion = currentTask.positionVersion ?? 0
+            const remoteVersion = normalizedTask.positionVersion ?? 0
+            if (localVersion > remoteVersion) {
+              // Keep local geometry (position + parent), accept other field updates
+              console.log(`🛡️ [BUG-1061] Blocked stale position update for "${currentTask.title?.slice(0, 20)}"`, {
+                localVersion,
+                remoteVersion,
+                localPos: { x: Math.round(currentTask.canvasPosition.x), y: Math.round(currentTask.canvasPosition.y) },
+                remotePos: { x: Math.round(normalizedTask.canvasPosition.x), y: Math.round(normalizedTask.canvasPosition.y) }
+              })
+              normalizedTask.canvasPosition = currentTask.canvasPosition
+              normalizedTask.parentId = currentTask.parentId
+              normalizedTask.positionVersion = localVersion
+            }
+          }
 
           if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {
-            normalizedTask.canvasPosition = currentTask.canvasPosition
-            normalizedTask.isInInbox = currentTask.isInInbox
+            // BUG-1074 FIX: Only preserve local position if this isn't an intentional inbox move
+            // When isInInbox is true, the user explicitly wants to move to inbox - don't restore position
+            if (!normalizedTask.isInInbox) {
+              normalizedTask.canvasPosition = currentTask.canvasPosition
+              normalizedTask.isInInbox = currentTask.isInInbox
+              normalizedTask.parentId = currentTask.parentId  // Also restore parentId to prevent drift
+            }
           }
 
           // DRIFT LOGGING: Track ALL incoming position changes from sync
@@ -212,7 +263,8 @@ export const useTaskStore = defineStore('tasks', () => {
                 before: { x: Math.round(oldPos.x), y: Math.round(oldPos.y) },
                 after: { x: Math.round(newPos.x), y: Math.round(newPos.y) },
                 parentChange: currentTask.parentId !== normalizedTask.parentId ? `${currentTask.parentId?.slice(0, 8) ?? 'root'} → ${normalizedTask.parentId?.slice(0, 8) ?? 'root'}` : 'same',
-                source: 'updateTaskFromSync'
+                source: 'updateTaskFromSync',
+                versions: { local: currentTask.positionVersion ?? 0, remote: normalizedTask.positionVersion ?? 0 }
               })
             }
           }

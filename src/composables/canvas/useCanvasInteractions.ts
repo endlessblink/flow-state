@@ -659,11 +659,32 @@ export function useCanvasInteractions(deps?: {
                         source: 'onNodeDragStop'
                     })
 
-                    await taskStore.updateTask(task.id, {
+                    // TASK-1083: Combine position + smart-group updates into SINGLE save to prevent race condition
+                    // Previously: two separate updateTask calls could race with realtime events
+                    const dragUpdates: Record<string, any> = {
                         parentId: newParentId ?? undefined,
                         canvasPosition: absolutePos,
                         positionFormat: 'absolute'
-                    }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                    }
+
+                    // 6. Collect Smart Section Properties (Today, Tomorrow, Priorities, etc.)
+                    // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
+                    if (targetGroup) {
+                        console.log(`🔍 [SMART-GROUP-DEBUG] Group name: "${targetGroup.name}", Task: "${task.title}"`)
+                        const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
+                        console.log(`🔍 [SMART-GROUP-DEBUG] Smart updates:`, smartUpdates)
+                        // Filter out updates where the task already has the same value
+                        for (const [key, value] of Object.entries(smartUpdates)) {
+                            const taskKey = key as keyof typeof task
+                            if (task[taskKey] !== value) {
+                                dragUpdates[key] = value
+                                console.log(`✨ [SMART-GROUP] Adding "${key}" from "${targetGroup.name}" to combined update`)
+                            }
+                        }
+                    }
+
+                    // SINGLE atomic save with all updates
+                    await taskStore.updateTask(task.id, dragUpdates, 'DRAG') // BUG-1051: AWAIT to ensure persistence
 
                     if (oldParentId !== newParentId) {
                         // REACTIVITY FIX: Bump version FIRST to trigger count recomputation
@@ -693,30 +714,6 @@ export function useCanvasInteractions(deps?: {
                         node.parentNode = undefined
                         // Root node: position is absolute (same as world position)
                         node.position = { x: absolutePos.x, y: absolutePos.y }
-                    }
-
-                    // 6. Apply Smart Section Properties (Today, Tomorrow, Priorities, etc.)
-                    // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
-                    // TASK-272 FIX: Only apply if values actually differ to prevent reactive loops
-                    if (targetGroup) {
-                        console.log(`🔍 [SMART-GROUP-DEBUG] Group name: "${targetGroup.name}", Task: "${task.title}"`)
-                        const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
-                        console.log(`🔍 [SMART-GROUP-DEBUG] Smart updates:`, smartUpdates)
-                        // Filter out updates where the task already has the same value
-                        const actualChanges: any = {}
-                        for (const [key, value] of Object.entries(smartUpdates)) {
-                            const taskKey = key as keyof typeof task
-                            if (task[taskKey] !== value) {
-                                actualChanges[key] = value
-                            }
-                        }
-                        console.log(`🔍 [SMART-GROUP-DEBUG] Actual changes after filter:`, actualChanges)
-                        if (Object.keys(actualChanges).length > 0) {
-                            console.log(`✨ [SMART-GROUP] Applying properties from "${targetGroup.name}" to task "${task.title}":`, actualChanges)
-                            await taskStore.updateTask(task.id, actualChanges, 'SMART-GROUP') // BUG-1051: AWAIT to ensure persistence
-                        }
-                    } else {
-                        console.log(`🔍 [SMART-GROUP-DEBUG] No targetGroup found for task "${task.title}"`)
                     }
 
                     // 7. Position sync is now handled by taskStore.updateTask() above (line ~570)

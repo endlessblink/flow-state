@@ -141,7 +141,10 @@ export const useSmartViews = () => {
     // Calculate end of current week (Sunday)
     const weekEnd = new Date(today)
     const dayOfWeek = today.getDay()
-    const daysUntilSunday = (7 - dayOfWeek) % 7 || 7 // If today is Sunday (0), daysUntilSunday = 7
+    // When today is Sunday (0), daysUntilSunday = 0 (week ends today)
+    // When today is Monday (1), daysUntilSunday = 6
+    // When today is Saturday (6), daysUntilSunday = 1
+    const daysUntilSunday = (7 - dayOfWeek) % 7
     weekEnd.setDate(today.getDate() + daysUntilSunday)
     const weekEndStr = getLocalDateString(weekEnd)
 

@@ -78,7 +78,7 @@
 | ~~**BUG-1070**~~         | ✅ **DONE** **PWA doesn't show Whisper voice input option**            | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                          | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Tauri App Not Syncing with Web App**                     | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | TASK-1060                                                                                                                                                                                                      |                                                        |
 | **FEATURE-1065**         | **Local Supabase as VPS Backup Mirror**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | BUG-1064                                                                                                                                                                                                       |                                                        |
-| **TASK-1071**            | **Tauri: Add Microphone Permission for Voice AI**                      | **P1**                                              | 📋 **PLANNED**                                                                                                                  | FEATURE-1023                                                                                                                                                                                                   |                                                        |
+| ~~**TASK-1071**~~        | ✅ **DONE** (Win/Mac) ⚠️ Linux blocked **Tauri: Add Microphone Permission for Voice AI** | **P1**                                              | ✅ **DONE** (2026-01-25) - [SOP-034](./sop/SOP-034-tauri-linux-microphone.md)                                                   | FEATURE-1023. Win/Mac: works. Linux: blocked by WebKitGTK (no WebRTC). See SOP-034.                                                                                                                            |                                                        |
 | ~~**TASK-1072**~~        | ✅ **DONE** **Inbox: Improve Show Completed Toggle Styling**           | **P3**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | **TASK-1073**            | **Inbox: Add Sorting Options (Filters & Sort)**                        | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TASK-1072                                                                                                                                                                                                      |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
@@ -699,6 +699,25 @@ Tasks appear in different positions across browser tabs/windows. When user drags
 
 #### Progress Log
 - **2026-01-25**: BUG created, protections documented, gaps identified, starting investigation
+- **2026-01-25**: ROOT CAUSE FOUND - `positionVersion` exists but was NOT checked in `updateTaskFromSync`!
+- **2026-01-25**: FIX IMPLEMENTED in `src/stores/tasks.ts` - Added positionVersion comparison before accepting position updates
+  - If `localVersion > remoteVersion`, keeps local position and logs `🛡️ [BUG-1061]` message
+  - Also enhanced drift logging to include version numbers
+
+#### Fix Applied
+```typescript
+// BUG-1061: Position version check in updateTaskFromSync
+if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
+  const localVersion = currentTask.positionVersion ?? 0
+  const remoteVersion = normalizedTask.positionVersion ?? 0
+  if (localVersion > remoteVersion) {
+    // Keep local geometry, accept other field updates
+    normalizedTask.canvasPosition = currentTask.canvasPosition
+    normalizedTask.parentId = currentTask.parentId
+    normalizedTask.positionVersion = localVersion
+  }
+}
+```
 
 ---
 

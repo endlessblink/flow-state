@@ -107,6 +107,11 @@ in-theflow.com {
 
     @static path /assets/*
     header @static Cache-Control "public, max-age=31536000, immutable"
+    header @static Vary "Accept-Encoding, Accept"
+
+    # Also set proper no-cache for index.html to prevent Cloudflare caching stale HTML
+    @html path /index.html
+    header @html Cache-Control "no-cache, no-store, must-revalidate"
 
     try_files {path} /index.html
     file_server

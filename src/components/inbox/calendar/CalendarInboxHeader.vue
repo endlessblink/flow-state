@@ -27,7 +27,44 @@
       <span>Today</span>
       <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
     </button>
+
+    <!-- TASK-1075: Search Toggle Button -->
+    <button
+      v-if="!isCollapsed"
+      class="search-toggle-btn"
+      :class="{ active: isSearchExpanded || searchQuery }"
+      title="Search tasks"
+      @click="toggleSearch"
+    >
+      <Search :size="14" />
+    </button>
   </div>
+
+  <!-- TASK-1075: Search Input Row -->
+  <Transition name="slide-down">
+    <div v-if="!isCollapsed && isSearchExpanded" class="search-input-row">
+      <div class="search-input-wrapper">
+        <Search :size="14" class="search-icon" />
+        <input
+          ref="searchInputRef"
+          type="text"
+          class="search-input"
+          :value="searchQuery"
+          placeholder="Search tasks..."
+          @input="handleSearchInput"
+          @keydown.escape="toggleSearch"
+        />
+        <button
+          v-if="searchQuery"
+          class="clear-search-btn"
+          title="Clear search"
+          @click="clearSearch"
+        >
+          <X :size="12" />
+        </button>
+      </div>
+    </div>
+  </Transition>
 
   <!-- Collapsed state task count indicators -->
   <div v-if="isCollapsed" class="collapsed-badges-container">
@@ -103,7 +140,8 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown } from 'lucide-vue-next'
+import { ref, nextTick } from 'vue'
+import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, Search, X } from 'lucide-vue-next'
 import { NBadge } from 'naive-ui'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -128,9 +166,34 @@ defineProps<{
   hideDoneTasks: boolean
   baseTasks: Task[]
   rootProjects: any[]
+  searchQuery: string // TASK-1075
 }>()
 
-defineEmits<{
+// TASK-1075: Search state
+const isSearchExpanded = ref(false)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+const toggleSearch = async () => {
+  isSearchExpanded.value = !isSearchExpanded.value
+  if (isSearchExpanded.value) {
+    await nextTick()
+    searchInputRef.value?.focus()
+  } else {
+    emit('update:searchQuery', '')
+  }
+}
+
+const handleSearchInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  emit('update:searchQuery', target.value)
+}
+
+const clearSearch = () => {
+  emit('update:searchQuery', '')
+  searchInputRef.value?.focus()
+}
+
+const emit = defineEmits<{
   (e: 'update:isCollapsed', value: boolean): void
   (e: 'update:showTodayOnly', value: boolean): void
   (e: 'update:selectedCanvasGroups', value: Set<string>): void
@@ -139,6 +202,7 @@ defineEmits<{
   (e: 'update:selectedPriority', value: 'high' | 'medium' | 'low' | null): void
   (e: 'update:selectedProject', value: string | null): void
   (e: 'update:selectedDuration', value: DurationCategory | null): void
+  (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'toggleHideDoneTasks'): void
   (e: 'clearAllFilters'): void
 }>()
@@ -259,5 +323,117 @@ defineEmits<{
 
 .toggle-icon.rotated {
   transform: rotate(180deg);
+}
+
+/* TASK-1075: Search Styles */
+.search-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.search-toggle-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border-color: var(--border-hover);
+}
+
+.search-toggle-btn.active {
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary-dim);
+}
+
+.search-input-row {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1_5) var(--space-2);
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--brand-primary);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 2px var(--brand-primary-subtle);
+}
+
+.search-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.clear-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.clear-search-btn:hover {
+  background: var(--surface-active);
+  color: var(--text-primary);
+}
+
+/* Slide-down animation */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all var(--duration-normal) var(--ease-out);
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  opacity: 1;
+  max-height: 60px;
 }
 </style>

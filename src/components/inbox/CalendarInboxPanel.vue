@@ -18,8 +18,10 @@
       :hide-done-tasks="hideCalendarDoneTasks"
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
+      :search-query="searchQuery"
       @toggle-hide-done-tasks="toggleHideDoneTasks"
       @clear-all-filters="clearAllFilters"
+      @update:search-query="searchQuery = $event"
     />
 
     <!-- Quick Add & Brain Dump -->
@@ -74,6 +76,7 @@ const {
   selectedProject,
   selectedDuration,
   selectedCanvasGroups,
+  searchQuery, // TASK-1075
   hideCalendarDoneTasks,
   canvasGroupOptions,
   baseInboxTasks,

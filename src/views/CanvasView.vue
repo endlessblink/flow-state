@@ -69,7 +69,6 @@
       <CanvasToolbar
         @add-task="handleAddTask"
         @create-group="handleToolbarCreateGroup"
-        @arrange-done-tasks="handleArrangeDoneTasks"
       />
 
       <!-- Canvas Container -->

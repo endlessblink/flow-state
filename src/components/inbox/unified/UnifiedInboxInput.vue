@@ -222,6 +222,16 @@ const showVoiceModeToggle = computed(() =>
   isBrowserVoiceSupported.value
 )
 
+// Debug logging to diagnose PWA voice support issues (BUG-1070)
+console.log('[UnifiedInboxInput] Voice support state:', {
+  voiceMode: voiceMode.value,
+  isWhisperSupported: isWhisperSupported.value,
+  hasWhisperApiKey: hasWhisperApiKey.value,
+  isBrowserVoiceSupported: isBrowserVoiceSupported.value,
+  isVoiceSupported: isVoiceSupported.value,
+  showVoiceModeToggle: showVoiceModeToggle.value
+})
+
 // Auto-select mode based on API key availability
 // Prefer Whisper if available (works in Brave), fallback to browser
 watch([hasWhisperApiKey, isBrowserVoiceSupported], ([hasKey, browserSupported]) => {

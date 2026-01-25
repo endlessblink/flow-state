@@ -3,13 +3,10 @@
  * TASK-1028: Voice Confirmation UI + Edit Before Submit
  * TASK-1029: Whisper API Fallback (using Groq - 12x cheaper than OpenAI)
  *
- * Uses Groq's Whisper API for accurate multi-language transcription.
+ * Uses Supabase Edge Function to proxy requests to Groq Whisper API.
+ * API key is stored server-side (synced from Doppler) - never exposed to client.
+ *
  * Supports code-switching (mixing Hebrew and English in same sentence).
- *
- * Groq pricing: $0.04/hour vs OpenAI $0.36/hour
- *
- * Requires VITE_GROQ_API_KEY in environment variables.
- * Get your API key at https://console.groq.com/keys
  */
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
@@ -23,8 +20,6 @@ export interface WhisperResult {
 }
 
 export interface UseWhisperSpeechOptions {
-  /** Groq API key (defaults to VITE_GROQ_API_KEY) */
-  apiKey?: string
   /** Whisper model to use (default: 'whisper-large-v3-turbo' - best value) */
   model?: 'whisper-large-v3' | 'whisper-large-v3-turbo' | 'distil-whisper-large-v3-en'
   /** Max recording duration in seconds (default: 30) */
@@ -40,12 +35,18 @@ const DEFAULT_OPTIONS = {
   maxDuration: 30
 }
 
-// Groq API endpoint (OpenAI-compatible)
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
+// Edge function endpoint (API key is server-side, synced from Doppler)
+const getWhisperEndpoint = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+  // Handle both relative and absolute URLs
+  if (supabaseUrl.startsWith('/')) {
+    return `${window.location.origin}${supabaseUrl}/functions/v1/whisper-transcribe`
+  }
+  return `${supabaseUrl}/functions/v1/whisper-transcribe`
+}
 
 export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const {
-    apiKey = import.meta.env.VITE_GROQ_API_KEY,
     model = DEFAULT_OPTIONS.model,
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
@@ -67,26 +68,34 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   let maxDurationTimer: ReturnType<typeof setTimeout> | null = null
   let stream: MediaStream | null = null
 
-  // Check support
+  // Check support - no longer depends on client-side API key
   isSupported.value = typeof navigator !== 'undefined' &&
     !!navigator.mediaDevices?.getUserMedia &&
-    typeof MediaRecorder !== 'undefined' &&
-    !!apiKey
+    typeof MediaRecorder !== 'undefined'
+
+  // Debug logging to diagnose PWA support issues (BUG-1070)
+  console.log('[WhisperSpeech] Browser support check:', {
+    hasNavigator: typeof navigator !== 'undefined',
+    hasMediaDevices: typeof navigator !== 'undefined' && !!navigator.mediaDevices,
+    hasGetUserMedia: typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
+    hasMediaRecorder: typeof MediaRecorder !== 'undefined',
+    isSupported: isSupported.value,
+    isSecureContext: typeof window !== 'undefined' && window.isSecureContext,
+    protocol: typeof window !== 'undefined' ? window.location?.protocol : 'N/A'
+  })
 
   // Computed
   const isRecording = computed(() => status.value === 'recording')
   const isProcessing = computed(() => status.value === 'processing')
   const hasError = computed(() => status.value === 'error')
-  const hasApiKey = computed(() => !!apiKey)
+  const hasApiKey = computed(() => true) // Always true - key is server-side now
 
   /**
    * Start recording audio
    */
   const start = async (): Promise<boolean> => {
     if (!isSupported.value) {
-      const msg = !apiKey
-        ? 'Groq API key not configured. Add VITE_GROQ_API_KEY to your environment or Doppler.'
-        : 'Audio recording not supported in this browser.'
+      const msg = 'Audio recording not supported in this browser.'
       error.value = msg
       status.value = 'error'
       if (onError) onError(msg)
@@ -235,7 +244,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         return
       }
 
-      // Prepare form data for Whisper API
+      // Prepare form data for Edge Function
       const formData = new FormData()
 
       // Whisper API expects specific file extensions
@@ -247,14 +256,10 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       formData.append('file', audioBlob, `audio.${extension}`)
       formData.append('model', model)
       // Don't specify language - let Whisper auto-detect for mixed language support
-      formData.append('response_format', 'verbose_json')
 
-      // Call Groq Whisper API (OpenAI-compatible endpoint)
-      const response = await fetch(GROQ_API_URL, {
+      // Call Edge Function (API key is server-side, synced from Doppler)
+      const response = await fetch(getWhisperEndpoint(), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`
-        },
         body: formData
       })
 

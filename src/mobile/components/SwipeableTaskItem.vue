@@ -39,8 +39,8 @@
       @touchend="handleTouchEnd"
       @touchcancel="handleTouchCancel"
     >
-      <!-- Slot content wrapper -->
-      <div class="slot-wrapper">
+      <!-- Slot content wrapper with blur effect -->
+      <div class="slot-wrapper" :style="slotBlurStyle">
         <slot />
       </div>
 
@@ -151,7 +151,20 @@ const rightActionOpacity = computed(() => {
 // Dim overlay opacity - darkens content as you swipe
 const dimOpacity = computed(() => {
   const progress = Math.min(Math.abs(translateX.value) / SWIPE_THRESHOLD, 1)
-  return progress * 0.6 // Max 60% dark overlay
+  return progress * 0.5 // Max 50% dark overlay
+})
+
+// Blur effect on slot content
+const slotBlurStyle = computed(() => {
+  const progress = Math.min(Math.abs(translateX.value) / SWIPE_THRESHOLD, 1)
+  if (progress < 0.1) {
+    return { filter: 'none' }
+  }
+  const blurAmount = progress * 4 // Max 4px blur
+  return {
+    filter: `blur(${blurAmount}px)`,
+    transition: isSwiping.value ? 'none' : 'filter 0.2s ease'
+  }
 })
 
 // Show action overlay when swiped enough
@@ -321,10 +334,13 @@ onUnmounted(() => {
   border-radius: var(--radius-lg, 12px);
 }
 
-/* Slot content wrapper - needed for proper z-index stacking */
+/* Slot content wrapper - needed for proper z-index stacking and blur */
 .slot-wrapper {
   position: relative;
   z-index: 1;
+  will-change: filter;
+  -webkit-filter: blur(0);
+  filter: blur(0);
 }
 
 /* Dark overlay that dims content during swipe */

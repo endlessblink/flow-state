@@ -36,11 +36,14 @@ watch(isReady, async (ready) => {
 })
 
 onMounted(async () => {
-  // Only run startup sequence in Tauri environment
-  if (isTauri()) {
+  // BUG-1064: Check if using VPS Supabase (no local Docker needed)
+  const useLocalSupabase = import.meta.env.VITE_USE_LOCAL_SUPABASE === 'true'
+
+  // Only run Docker/Supabase startup sequence if using local Supabase
+  if (isTauri() && useLocalSupabase) {
     await runStartupSequence()
   } else {
-    // In browser mode, skip startup
+    // VPS mode or browser: skip Docker/Supabase checks
     skipStartup()
   }
 })

@@ -15,9 +15,8 @@
             maxlength="200"
             @keydown="handleTitleKeydown"
           >
-          <!-- Mic button (TASK-1024) -->
+          <!-- Mic button (TASK-1024) - ALWAYS SHOW FOR DEBUG -->
           <button
-            v-if="isVoiceSupported"
             :class="['mic-btn', { recording: isListening }]"
             :title="isListening ? 'Stop recording' : 'Voice input'"
             @click="toggleVoiceInput"

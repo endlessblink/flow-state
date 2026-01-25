@@ -1,7 +1,7 @@
 <template>
   <div
     class="task-card"
-    :class="[{ selected: isSelected }]"
+    :class="[{ selected: isSelected, 'is-done': isDone }]"
     :data-priority="task.priority || 'none'"
     :data-status="task.status"
     draggable="true"
@@ -19,6 +19,11 @@
     <!-- Timer Active Badge -->
     <div v-if="isTimerActive" class="timer-indicator" title="Timer Active">
       <Timer :size="12" />
+    </div>
+
+    <!-- Done Indicator -->
+    <div v-if="isDone" class="done-indicator" title="Completed">
+      <CheckCircle2 :size="14" />
     </div>
 
     <!-- Task Content -->
@@ -83,7 +88,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Timer, Calendar, Clock, Play, Edit2 } from 'lucide-vue-next'
+import { Timer, Calendar, Clock, Play, Edit2, CheckCircle2 } from 'lucide-vue-next'
 // ADHD-friendly: Removed NTag - redundant with priority stripe
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
@@ -118,6 +123,8 @@ const projectVisual = computed(() => {
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
 })
+
+const isDone = computed(() => props.task.status === 'done')
 
 // Helpers
 
@@ -319,5 +326,31 @@ const dueStatus = computed(() => {
 .action-btn:hover {
   background: var(--surface-hover);
   color: var(--brand-primary);
+}
+
+/* Done Task Styling */
+.task-card.is-done {
+  opacity: 0.7;
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.task-card.is-done .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.done-indicator {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  color: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-card.is-done .task-content--inbox {
+  padding-inline-start: var(--space-5);
 }
 </style>

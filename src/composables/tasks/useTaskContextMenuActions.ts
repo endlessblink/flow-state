@@ -64,9 +64,9 @@ export function useTaskContextMenuActions(
                 break
             }
             case 'nextweek': {
+                // BUG-1065 FIX: "+1wk" should add exactly 7 days, not find "next Monday"
                 dueDate = new Date(today)
-                const daysUntilNextMonday = (8 - today.getDay()) % 7 || 7
-                dueDate.setDate(today.getDate() + daysUntilNextMonday)
+                dueDate.setDate(today.getDate() + 7)
                 break
             }
             case 'nextmonth': {
@@ -82,6 +82,11 @@ export function useTaskContextMenuActions(
             case 'nextquarter': {
                 dueDate = new Date(today)
                 dueDate.setMonth(today.getMonth() + 3)
+                break
+            }
+            case 'halfyear': {
+                dueDate = new Date(today)
+                dueDate.setMonth(today.getMonth() + 6)
                 break
             }
             case 'custom': {

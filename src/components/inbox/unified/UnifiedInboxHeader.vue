@@ -22,6 +22,19 @@
     <!-- Count Badge -->
     <NBadge v-if="!isCollapsed" :value="taskCount" type="info" />
 
+    <!-- Done Tasks Filter - Shows ONLY done tasks when active -->
+    <button
+      v-if="!isCollapsed"
+      key="done-toggle"
+      class="done-toggle-btn"
+      :class="{ active: !hideDoneTasks }"
+      :title="hideDoneTasks ? `Show only done tasks (${doneTaskCount})` : 'Show active tasks'"
+      @click="$emit('update:hide-done-tasks', !hideDoneTasks)"
+    >
+      <CheckCircle2 :size="14" />
+      <span class="done-count">{{ doneTaskCount }}</span>
+    </button>
+
     <!-- Time Filter Dropdown -->
     <NDropdown
       v-if="!isCollapsed"
@@ -89,7 +102,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2 } from 'lucide-vue-next'
 import { NBadge, NDropdown } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
@@ -119,6 +132,7 @@ const props = defineProps<{
   selectedProject: string | null
   selectedDuration: DurationCategory | null
   hideDoneTasks: boolean
+  doneTaskCount: number
   baseTasks: Task[]
   rootProjects: any[]
   context: string
@@ -372,5 +386,60 @@ const handleTimeFilterSelect = (key: string) => {
 
 .toggle-icon.rotated {
   transform: rotate(180deg);
+}
+
+/* Done Tasks Toggle Button */
+/* Inactive state - subtle/muted (showing active tasks, hideDoneTasks=true) */
+.done-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  flex-shrink: 0;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.done-toggle-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-hover);
+}
+
+/* Active state - green to indicate filtering for completed tasks */
+.done-toggle-btn.active {
+  border: 1px solid #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.done-toggle-btn.active:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.done-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.done-toggle-btn.active .done-count {
+  background: #22c55e;
+  color: white;
 }
 </style>

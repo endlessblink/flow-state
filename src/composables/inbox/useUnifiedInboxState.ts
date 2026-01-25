@@ -35,12 +35,14 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // TASK-106: Canvas group filter (primary filter)
     const selectedCanvasGroups = ref<Set<string>>(new Set())
 
-    // --- Local Done Filter ---
-    // Default to hiding done tasks in Calendar context
-    const hideInboxDoneTasks = ref(props.context === 'calendar')
-    const currentHideDoneTasks = computed(() => hideInboxDoneTasks.value)
+    // --- Done Tasks Filter ---
+    // showDoneOnly = false: Show active tasks (non-done)
+    // showDoneOnly = true: Show ONLY done tasks
+    const showDoneOnly = ref(false)
+    // For backwards compatibility with prop name
+    const currentHideDoneTasks = computed(() => !showDoneOnly.value)
     const toggleHideDoneTasks = () => {
-        hideInboxDoneTasks.value = !hideInboxDoneTasks.value
+        showDoneOnly.value = !showDoneOnly.value
     }
 
     interface GroupOption {
@@ -73,9 +75,14 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // Base Inbox Tasks (Filtered by global rules + context rules)
     const baseInboxTasks = computed(() => {
         return taskStore.filteredTasks.filter(task => {
-            // 1. Hide Done tasks (Local View Filter)
-            if (currentHideDoneTasks.value && task.status === 'done') {
-                return false
+            // 1. Done/Active filter (exclusive - show one OR the other)
+            const isDone = task.status === 'done'
+            if (showDoneOnly.value) {
+                // Show ONLY done tasks
+                if (!isDone) return false
+            } else {
+                // Show ONLY active tasks (hide done)
+                if (isDone) return false
             }
 
             // 2. Soft Deleted check (Safety)

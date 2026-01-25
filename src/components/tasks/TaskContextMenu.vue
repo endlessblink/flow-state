@@ -61,6 +61,7 @@
               <button class="footer-btn" @click="setDueDate('nextmonth'); showDatePicker = false">+1mo</button>
               <button class="footer-btn" @click="setDueDate('twomonths'); showDatePicker = false">+2mo</button>
               <button class="footer-btn" @click="setDueDate('nextquarter'); showDatePicker = false">+3mo</button>
+              <button class="footer-btn" @click="setDueDate('halfyear'); showDatePicker = false">+6mo</button>
               <button class="footer-btn footer-btn--now" @click="setDueDate('today'); showDatePicker = false">Now</button>
             </div>
           </div>

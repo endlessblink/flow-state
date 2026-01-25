@@ -80,6 +80,7 @@
 | **FEATURE-1065**         | **Local Supabase as VPS Backup Mirror**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | BUG-1064                                                                                                                                                                                                       |                                                        |
 | **TASK-1071**            | **Tauri: Add Microphone Permission for Voice AI**                      | **P1**                                              | 📋 **PLANNED**                                                                                                                  | FEATURE-1023                                                                                                                                                                                                   |                                                        |
 | ~~**TASK-1072**~~        | ✅ **DONE** **Inbox: Improve Show Completed Toggle Styling**           | **P3**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
+| **TASK-1073**            | **Inbox: Add Sorting Options (Filters & Sort)**                        | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TASK-1072                                                                                                                                                                                                      |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
 | ~~**TASK-231**~~         | ~~**Dynamic Skills & Docs API**~~                                      | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/skills and /api/docs endpoints                                                                                                                                                                      |                                                        |
@@ -182,7 +183,7 @@
 | **TASK-1007**            | **Mobile: Calendar View**                                               | **P3**                                              | 📋 **PLANNED** (Deferred)                                                                                                       | Add calendar view to mobile nav. **Deferred**: Inbox sort + Today view + Quick Sort cover date needs for now.                                                                                                      |                                                        |
 | **TASK-1008**            | **Mobile: Remove Active/Planned Filter Chips**                          | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Remove "Active" and "Planned" filter chips from mobile Inbox. Simplify to use bottom sheet filters instead.                                                                                                        |                                                        |
 | **TASK-1009**            | **Mobile: Timer Stop Syncs to Desktop & KDE Widget**                    | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | When timer is stopped on mobile PWA, sync stop action to local desktop app and KDE Plasma widget via Supabase Realtime.                                                                                            |                                                        |
-| **BUG-1065**             | **Context Menu +1wk Sets Tomorrow Instead of Next Week**                | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | "+1wk" button in context menu calculates "next Monday" instead of "+7 days". Same issue may affect other date shortcuts.                                                                                           |                                                        |
+| ~~**BUG-1065**~~         | ✅ **DONE** **Context Menu +1wk Sets Tomorrow Instead of Next Week**    | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | Fixed: "+1wk" now adds 7 days. Audited all date shortcuts. Added +6mo option to date picker.                                                                                                                        |                                                        |
 | ~~**TASK-1010**~~        | ✅ **DONE** **Mobile: Quick Sort Redesign with Swipe Gestures**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations, nested project hierarchy, 7 date presets. Added to mobile nav. |                                                        |
 | ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |
 | ~~**BUG-1056**~~         | ✅ **DONE** **Brave Browser Compatibility + Multi-Tab Fix**             | **P2**                                              | ✅ **DONE** (2026-01-24)                                                                                                        | Brave detection, user warning banner, multi-tab auth sync, unique channel per tab. [See Details](#bug-1056-brave-browser-compatibility--data-load-recovery-done)                                                  |
@@ -239,11 +240,12 @@
 | **TASK-1058**            | **MASTER_PLAN Symptom Index & Task Discovery Research**                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Research and implement better task discovery in MASTER_PLAN.md. Options: symptom index, keyword tags, consistent section headers, beads integration. Goal: find any bug/task in 1 grep, not 4 attempts.                                  | -                                                      |
 | ~~**TASK-1059**~~        | ✅ **DONE** **CORS Monitoring & Prevention Infrastructure**              | **P1**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | [SOP-031](./sop/SOP-031-cors-configuration.md) - Automated CORS validation script, CI/CD integration, comprehensive troubleshooting guide. Prevents duplicate header issues, missing headers, and browser-specific CORS failures.         | TASK-351                                               |
 | **TASK-1060**            | **Infrastructure & E2E Sync Stability (All Platforms)**                  | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1060-infrastructure--e2e-sync-stability-all-platforms-in-progress) - Fix Caddy instability, web/Tauri/PWA/KDE sync issues. Full platform E2E verification.                                                              | BUG-1056, TASK-351                                     |
-| **BUG-1061**             | **Canvas Position Drift on Cross-Browser Sync**                          | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Tasks appear in different positions across browser tabs/windows. Moving a task in one browser shows wrong position in another. Realtime sync applies stale positions or race condition overwrites user drag. Related to geometry invariants. | TASK-1060, BUG-1047                                    |
+| **BUG-1061**             | **Canvas Position Drift on Cross-Browser Sync**                          | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-1061-canvas-position-drift-on-cross-browser-sync-in-progress) - Gaps: (1) Lock timing window after drag end, (2) Cross-tab timestamp drift, (3) Supabase event order. Has partial protections but still drifts.          | TASK-1060, BUG-1047                                    |
 | ~~**BUG-1063**~~         | ✅ **DONE** **Cloudflare Cache MIME Type Error (Chromium Only)**         | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Chromium browsers failed to load CSS/JS with MIME type errors. Firefox worked. Root cause: Cloudflare edge cache served wrong content for preload scanner requests. Fix: Added `Vary: Accept` header. Created SOP-032, tests, CI validation. | TASK-1060                                              |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Dev-Maestro Parser Status Detection Broken**               | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-140 showed as IN PROGRESS despite being DONE. Table tasks didn't update from PLANNED→IN PROGRESS. Fix: (1) Unrecognized `##` sections reset parser state, (2) Table parser detects 🔄/⏸️/👀 statuses. [SOP-031](./sop/SOP-031-dev-maestro-parser.md) | -                                                      |
-| **TASK-1063**            | **Update CLAUDE.md with VPS/Contabo Deployment Docs**                    | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1063-update-claudemd-with-vpscontabo-deployment-docs-in-progress) - Add comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
+| ~~**TASK-1063**~~        | ✅ **DONE** **Update CLAUDE.md with VPS/Contabo Deployment Docs**        | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Added comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
 | **TASK-1072**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
+| **TASK-1073**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
 
 ---
 
@@ -333,10 +335,10 @@
 
 ---
 
-### TASK-1063: Update CLAUDE.md with VPS/Contabo Deployment Docs (🔄 IN PROGRESS)
+### ~~TASK-1063~~: Update CLAUDE.md with VPS/Contabo Deployment Docs (✅ DONE)
 
 **Priority**: P2
-**Status**: 🔄 IN PROGRESS (2026-01-25)
+**Status**: ✅ DONE (2026-01-25)
 
 **Objective**: Update CLAUDE.md with comprehensive VPS production deployment documentation for the Contabo-hosted FlowState PWA.
 
@@ -370,7 +372,7 @@
 - [x] Gather existing SOP documentation
 - [x] Update CLAUDE.md with VPS section
 - [x] Add deployment SOPs to Extended Documentation
-- [ ] **USER VERIFY**: Confirm documentation accuracy
+- [x] **USER VERIFY**: Confirm documentation accuracy ✅
 
 ---
 
@@ -654,6 +656,49 @@ kde-widget/package/contents/ui/main.qml  # Widget QML
 - **2026-01-24 22:42**: Fixed `deploy.yml` - now deploys static files only, no Docker, graceful Caddy reload
 - **2026-01-24 22:43**: Added Caddy systemd auto-restart config (`Restart=on-failure`, memory limits)
 - **2026-01-24 22:44**: ✅ Web app (200), API (401), WebSocket (401) all verified working
+
+---
+
+### BUG-1061: Canvas Position Drift on Cross-Browser Sync (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (Started: 2026-01-25)
+**Dependencies**: TASK-1060, BUG-1047
+
+#### Problem Statement
+Tasks appear in different positions across browser tabs/windows. When user drags a task in Browser A, Browser B shows the task at a wrong position.
+
+#### Existing Protections (Already Implemented)
+| Protection | Location | Status |
+|------------|----------|--------|
+| Timestamp comparison | `tasks.ts:195` | ✅ `updatedAt >=` blocks stale updates |
+| Manual operation lock | `tasks.ts:190-191` | ✅ Blocks sync during manual ops |
+| Drag/resize locks | `useAppInitialization.ts:128-132` | ✅ Blocks sync during drag |
+| PositionManager locks | `PositionManager.ts:36-38` | ✅ `user-drag` blocks `remote-sync` |
+| Drift logging | Multiple files | ✅ `[SYNC-POS-WRITE]`, `[GEOMETRY-DRIFT]` |
+
+#### Potential Gaps (Investigation Needed)
+
+**Gap 1: Lock Timing Window**
+- After drag ends, window between `onNodeDragStop` completing and DB save finishing
+- Realtime event from another browser could overwrite during this window
+
+**Gap 2: Cross-Tab Timestamp Drift**
+- System clocks may differ slightly between tabs/browsers
+- `updatedAt >=` could accept stale data if remote clock is ahead
+
+**Gap 3: Supabase Realtime Event Order**
+- Events may arrive out-of-order: [pos3, pos1, pos2] instead of [pos1, pos2, pos3]
+- Last-write-wins applies wrong position
+
+#### Investigation Plan
+- [ ] Reproduce: Open 2 browser windows, drag in A, check console in B
+- [ ] Check `onNodeDragStop` - does it await DB save before releasing lock?
+- [ ] Log `updatedAt` values on both sides to check timestamp sync
+- [ ] Add sequence numbers to detect out-of-order events
+
+#### Progress Log
+- **2026-01-25**: BUG created, protections documented, gaps identified, starting investigation
 
 ---
 

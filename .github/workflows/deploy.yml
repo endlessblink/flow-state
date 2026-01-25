@@ -59,6 +59,19 @@ jobs:
               ./dist/ \
               ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
 
+      # One-time cleanup: Backup old .env file (TASK-351)
+      - name: Backup Legacy Env File
+        run: |
+            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+              if [ -f /var/www/flowstate/.env ]; then
+                echo 'Found legacy .env file, backing up...'
+                mv /var/www/flowstate/.env /var/www/flowstate/.env.backup-pre-doppler
+                echo '✓ Renamed to .env.backup-pre-doppler'
+              else
+                echo 'No legacy .env file found (already cleaned up or never existed)'
+              fi
+            "
+
       # Reload Caddy to pick up any potential changes (graceful, no downtime)
       - name: Reload Caddy
         run: |

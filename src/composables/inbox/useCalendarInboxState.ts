@@ -19,6 +19,9 @@ export function useCalendarInboxState() {
     const selectedDuration = ref<DurationCategory | null>(null)
     const selectedCanvasGroups = ref<Set<string>>(new Set())
 
+    // TASK-1075: Search query
+    const searchQuery = ref('')
+
     // --- Computed ---
 
     // TASK-076: Get calendar-specific hide done filter from store
@@ -114,6 +117,16 @@ export function useCalendarInboxState() {
             )
         }
 
+        // TASK-1075: Search Filter (title and description)
+        if (searchQuery.value.trim()) {
+            const query = searchQuery.value.toLowerCase().trim()
+            tasks = tasks.filter(task => {
+                const titleMatch = task.title?.toLowerCase().includes(query)
+                const descMatch = task.description?.toLowerCase().includes(query)
+                return titleMatch || descMatch
+            })
+        }
+
         return tasks
     })
 
@@ -129,6 +142,7 @@ export function useCalendarInboxState() {
         selectedProject.value = null
         selectedDuration.value = null
         selectedCanvasGroups.value = new Set()
+        searchQuery.value = '' // TASK-1075
     }
 
     return {
@@ -141,6 +155,7 @@ export function useCalendarInboxState() {
         selectedProject,
         selectedDuration,
         selectedCanvasGroups,
+        searchQuery, // TASK-1075
 
         // Computed
         hideCalendarDoneTasks,

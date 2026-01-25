@@ -234,6 +234,7 @@
       @edit-group="editGroup"
       @delete-group="deleteGroup"
       @move-to-inbox="moveSelectedTasksToInbox"
+      @done-for-now="doneForNowSelectedTasks"
       @delete-tasks="deleteSelectedTasks"
       @align-left="alignLeft"
       @align-right="alignRight"
@@ -313,7 +314,7 @@ const {
   handlePaneClick, handleCanvasRightClick, handlePaneContextMenu, handleDrop,
   // BUG-208: Canvas context menu state now comes from contextMenuStore, not orchestrator
   createTaskHere, createGroup, editGroup, deleteGroup,
-  moveSelectedTasksToInbox, deleteSelectedTasks, createTaskInGroup,
+  moveSelectedTasksToInbox, doneForNowSelectedTasks, deleteSelectedTasks, createTaskInGroup,
   deleteNode,
   isSectionSettingsOpen, editingSection,
   handleQuickTaskCreate,

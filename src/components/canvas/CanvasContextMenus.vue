@@ -13,6 +13,7 @@
     @edit-group="(section) => $emit('editGroup', section)"
     @delete-group="(section) => $emit('deleteGroup', section)"
     @move-to-inbox="$emit('moveToInbox')"
+    @done-for-now="$emit('doneForNow')"
     @delete-tasks="$emit('deleteTasks')"
     @align-left="$emit('alignLeft')"
     @align-right="$emit('alignRight')"
@@ -64,6 +65,7 @@ defineEmits<{
   (e: 'editGroup', section: CanvasSection): void
   (e: 'deleteGroup', section: CanvasSection): void
   (e: 'moveToInbox'): void
+  (e: 'doneForNow'): void
   (e: 'deleteTasks'): void
   (e: 'alignLeft'): void
   (e: 'alignRight'): void

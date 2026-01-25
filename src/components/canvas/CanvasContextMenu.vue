@@ -65,7 +65,7 @@
 
       <button
         class="menu-item danger"
-        @click="$emit('deleteGroup', contextSection)"
+        @click="handleDeleteGroup"
       >
         <Trash2 :size="16" :stroke-width="1.5" class="menu-icon" />
         <span class="menu-text">Delete Group</span>
@@ -105,6 +105,15 @@
         <Inbox :size="16" :stroke-width="1.5" class="menu-icon" />
         <span class="menu-text">Move to Inbox</span>
         <span class="menu-shortcut">Del</span>
+      </button>
+
+      <!-- Done for Now (reschedule to tomorrow) -->
+      <button
+        class="menu-item"
+        @click="handleDoneForNow"
+      >
+        <Clock :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Done for now</span>
       </button>
 
       <!-- Delete Task(s) -->
@@ -220,7 +229,8 @@ import {
   AlignVerticalJustifyEnd, AlignVerticalJustifyCenter,
   Columns as _Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3,
-  Settings, Zap, Magnet // TASK-068: Icons for group actions moved from header
+  Settings, Zap, Magnet, // TASK-068: Icons for group actions moved from header
+  Clock // Done for now
 } from 'lucide-vue-next'
 import { useContextMenu } from '@/composables/useContextMenu'
 import type { CanvasSection } from '@/stores/canvas'
@@ -247,6 +257,7 @@ const emit = defineEmits<{
   editGroup: [section: CanvasSection]
   deleteGroup: [section: CanvasSection]
   moveToInbox: []
+  doneForNow: []
   deleteTasks: []
   alignLeft: []
   alignRight: []
@@ -393,10 +404,32 @@ const handleCollectTasks = () => {
   }
 }
 
+// BUG-1076: Handler for deleting group with debug logging
+const handleDeleteGroup = () => {
+  console.log('[BUG-1076] CanvasContextMenu: Delete Group clicked', {
+    contextSection: props.contextSection,
+    sectionId: props.contextSection?.id,
+    sectionName: props.contextSection?.name
+  })
+  if (props.contextSection) {
+    emit('deleteGroup', props.contextSection)
+    emit('close')
+  } else {
+    console.error('[BUG-1076] CanvasContextMenu: contextSection is null/undefined!')
+  }
+}
+
 // Handle move to inbox
 const handleMoveToInbox = () => {
   console.log('📥 CanvasContextMenu: Move to Inbox clicked')
   emit('moveToInbox')
+  emit('close')
+}
+
+// Handle done for now (reschedule to tomorrow)
+const handleDoneForNow = () => {
+  console.log('⏰ CanvasContextMenu: Done for now clicked')
+  emit('doneForNow')
   emit('close')
 }
 

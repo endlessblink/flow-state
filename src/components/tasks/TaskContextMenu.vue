@@ -69,6 +69,15 @@
       </div>
     </div>
 
+    <!-- Done for now - prominent action -->
+    <button class="menu-item menu-item--highlight" @click="handleDoneForNow">
+      <Clock :size="16" class="menu-icon" />
+      <span class="menu-text">Done for now</span>
+      <span class="menu-hint">→ Tomorrow</span>
+    </button>
+
+    <div class="menu-divider" />
+
     <!-- Priority Section - Compact Pills -->
     <div class="menu-section menu-section--tight">
       <div class="section-header section-header--inline">
@@ -190,6 +199,7 @@
       :task-id="currentTask?.id"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('more')"
+      @done-for-now="handleDoneForNow"
       @duplicate="duplicateTask"
       @move-to-section="taskId => { $emit('moveToSection', taskId); $emit('close') }"
       @clear-selection="clearSelection"
@@ -231,6 +241,7 @@ import type { Task } from '@/stores/tasks'
 
 // New Architecture Imports
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
+import { useToast } from '@/composables/useToast'
 import { statusOptions } from './context-menu/constants'
 import StatusSubmenu from './context-menu/StatusSubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
@@ -363,6 +374,32 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
     canvasStore.requestSync('user:context-menu')
   } catch (error) {
     console.error('Error updating task due date:', error)
+  }
+
+  emit('close')
+}
+
+// Handle "Done for now" - reschedule task to tomorrow
+const handleDoneForNow = async () => {
+  if (!currentTask.value) return
+
+  const { showToast } = useToast()
+
+  // Calculate tomorrow's date
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const year = tomorrow.getFullYear()
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const day = String(tomorrow.getDate()).padStart(2, '0')
+  const tomorrowStr = `${year}-${month}-${day}`
+
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: tomorrowStr })
+    canvasStore.requestSync('user:context-menu')
+    showToast('Moved to tomorrow', 'success', { duration: 2000 })
+  } catch (error) {
+    console.error('Error updating task due date:', error)
+    showToast('Failed to reschedule task', 'error')
   }
 
   emit('close')
@@ -552,6 +589,27 @@ onUnmounted(() => {
 .menu-item.active { color: var(--brand-primary); }
 .menu-item.danger { color: var(--danger-text); }
 .menu-item.danger:hover { background: var(--danger-bg-subtle); }
+
+/* Highlighted menu item - stands out */
+.menu-item--highlight {
+  background: var(--amber-bg-light, rgba(245, 158, 11, 0.08));
+  border-left: 3px solid var(--amber-text, #f59e0b);
+  margin: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  width: calc(100% - var(--space-4));
+}
+.menu-item--highlight:hover {
+  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.15));
+}
+.menu-item--highlight .menu-icon {
+  color: var(--amber-text, #f59e0b);
+}
+
+.menu-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.7;
+}
 
 .menu-icon { flex-shrink: 0; opacity: 0.8; }
 .menu-text { flex: 1; }

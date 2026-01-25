@@ -82,6 +82,33 @@ jobs:
               fi
             "
 
+      # Purge Cloudflare cache for mutable content (index.html only)
+      # Fingerprinted assets (index-abc123.js) auto-invalidate via hash change
+      - name: Purge Cloudflare Cache
+        run: |
+            echo "Purging Cloudflare cache for index.html..."
+
+            RESPONSE=$(curl -s -X POST \
+              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              --data '{"files":["https://in-theflow.com/","https://in-theflow.com/index.html"]}')
+
+            # Check if purge succeeded
+            SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+            if [ "$SUCCESS" != "true" ]; then
+              echo "✗ Cloudflare cache purge failed!"
+              echo "$RESPONSE" | jq .
+              exit 1
+            fi
+
+            echo "✓ Cloudflare cache purged successfully"
+
+            # Verify cache was purged (should get MISS or DYNAMIC)
+            echo "Verifying cache status..."
+            CF_STATUS=$(curl -sI "https://in-theflow.com/" | grep -i "cf-cache-status" | tr -d '\r')
+            echo "  $CF_STATUS"
+
       # Validate CORS configuration after deployment
       - name: Validate CORS Configuration
         run: |
@@ -92,6 +119,21 @@ jobs:
         env:
           API_URL: https://api.in-theflow.com
           ORIGIN: https://in-theflow.com
+
+      # Validate asset headers (prevents Cloudflare cache MIME type issues)
+      - name: Validate Asset Headers
+        run: |
+            chmod +x ./scripts/validate-asset-headers.sh
+            ./scripts/validate-asset-headers.sh
+        env:
+          DOMAIN: https://in-theflow.com
+
+      # Run asset header tests with Playwright
+      - name: Run Asset Header Tests
+        run: npx playwright test tests/e2e/asset-headers.spec.ts --reporter=line
+        env:
+          TEST_URL: https://in-theflow.com
+          API_URL: https://api.in-theflow.com
 
       # Health check
       - name: Verify Deployment

@@ -77,12 +77,17 @@ try {
         // Research: Even with SW NetworkOnly, browsers can HTTP cache API responses
         // This causes stale position data to be served across devices
         global: {
-            fetch: (url, options = {}) => {
+            fetch: (url: RequestInfo | URL, options: RequestInit = {}) => {
+                // Handle headers properly - could be Headers object or plain object
+                const existingHeaders = options.headers instanceof Headers
+                    ? Object.fromEntries(options.headers.entries())
+                    : (options.headers || {})
+
                 return fetch(url, {
                     ...options,
                     cache: 'no-store', // Bypass browser HTTP cache entirely
                     headers: {
-                        ...options.headers,
+                        ...existingHeaders,
                         'Cache-Control': 'no-cache, no-store, must-revalidate',
                         'Pragma': 'no-cache',
                     },

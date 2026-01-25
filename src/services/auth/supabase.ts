@@ -74,23 +74,13 @@ try {
             storage: typeof window !== 'undefined' ? localStorage : undefined,
         },
         // TASK-1083: Prevent browser HTTP caching of Supabase responses
-        // Research: Even with SW NetworkOnly, browsers can HTTP cache API responses
-        // This causes stale position data to be served across devices
+        // Note: Cannot add Cache-Control/Pragma headers - Supabase CORS doesn't allow them
+        // Using cache: 'no-store' fetch option only (this is a Request option, not a header)
         global: {
             fetch: (url: RequestInfo | URL, options: RequestInit = {}) => {
-                // Handle headers properly - could be Headers object or plain object
-                const existingHeaders = options.headers instanceof Headers
-                    ? Object.fromEntries(options.headers.entries())
-                    : (options.headers || {})
-
                 return fetch(url, {
                     ...options,
                     cache: 'no-store', // Bypass browser HTTP cache entirely
-                    headers: {
-                        ...existingHeaders,
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                    },
                 })
             },
         },

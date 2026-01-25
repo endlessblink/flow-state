@@ -72,7 +72,23 @@ try {
             // BUG-339: Use localStorage (reliable in Tauri 2.x)
             // Combined with proactive token refresh in auth.ts for session persistence
             storage: typeof window !== 'undefined' ? localStorage : undefined,
-        }
+        },
+        // TASK-1083: Prevent browser HTTP caching of Supabase responses
+        // Research: Even with SW NetworkOnly, browsers can HTTP cache API responses
+        // This causes stale position data to be served across devices
+        global: {
+            fetch: (url, options = {}) => {
+                return fetch(url, {
+                    ...options,
+                    cache: 'no-store', // Bypass browser HTTP cache entirely
+                    headers: {
+                        ...options.headers,
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                    },
+                })
+            },
+        },
     }) : null
 } catch (e) {
     console.error('Supabase client failed to initialize:', e)

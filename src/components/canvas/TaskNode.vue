@@ -197,9 +197,11 @@ const {
 const isFlashing = ref(false)
 const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
+  console.log('[FLASH] TaskNode received event:', customEvent.detail.taskId, 'my id:', props.task?.id)
   if (customEvent.detail.taskId === props.task?.id) {
+    console.log('[FLASH] Match! Setting isFlashing=true')
     isFlashing.value = true
-    setTimeout(() => { isFlashing.value = false }, 400)
+    setTimeout(() => { isFlashing.value = false }, 600)
   }
 }
 onMounted(() => {
@@ -479,24 +481,21 @@ onUnmounted(() => {
 
 /* TASK-1074: Brief flash animation when date is updated */
 .is-flashing {
-  animation: task-flash 0.4s ease-out;
+  animation: task-flash 0.5s ease-out !important;
 }
 
 @keyframes task-flash {
   0% {
-    box-shadow:
-      0 0 0 0 var(--color-success),
-      0 12px 24px var(--shadow-md);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 #10b981;
   }
-  50% {
-    box-shadow:
-      0 0 20px 4px var(--color-success),
-      0 12px 24px var(--shadow-md);
+  30% {
+    transform: scale(1.03);
+    box-shadow: 0 0 30px 8px #10b981;
   }
   100% {
-    box-shadow:
-      0 0 0 0 var(--color-success),
-      0 12px 24px var(--shadow-md);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 #10b981;
   }
 }
 </style>

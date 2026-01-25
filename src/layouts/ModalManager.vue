@@ -224,13 +224,22 @@ const closeQuickTaskCreate = () => {
   showQuickTaskCreate.value = false
 }
 
-const handleQuickTaskCreate = async (title: string, description: string) => {
+const handleQuickTaskCreate = async (data: {
+  title: string
+  description: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate?: string
+  projectId?: string
+}) => {
   try {
     await taskStore.createTaskWithUndo({
-      title,
-      description,
-      status: 'planned',
-      projectId: undefined
+      title: data.title,
+      description: data.description,
+      status: data.status as any,
+      priority: data.priority,
+      dueDate: data.dueDate,
+      projectId: data.projectId || undefined
     })
     closeQuickTaskCreate()
   } catch (error) {
@@ -412,6 +421,7 @@ onMounted(() => {
   window.addEventListener('project-context-menu', handleProjectContextMenu)
   window.addEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.addEventListener('open-search', () => { showSearchModal.value = true })
+  window.addEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
   window.addEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
 })
 
@@ -421,6 +431,7 @@ onUnmounted(() => {
   window.removeEventListener('project-context-menu', handleProjectContextMenu)
   window.removeEventListener('open-command-palette', () => { commandPaletteRef.value?.open() })
   window.removeEventListener('open-search', () => { showSearchModal.value = true })
+  window.removeEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
   window.removeEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
 })
 

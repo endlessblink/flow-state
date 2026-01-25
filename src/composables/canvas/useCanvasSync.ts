@@ -244,7 +244,9 @@ export function useCanvasSync() {
                 if (!pmNode) continue
 
                 const absolutePos = pmNode.position
-                let parentId = pmNode.parentId // Trust PM's parentId
+                // BUG-1061 FIX: Read parentId from STORE (group), not PM
+                // Same fix as for tasks - PM updates can be rejected if locked
+                let parentId = (group.parentGroupId && group.parentGroupId !== 'NONE') ? group.parentGroupId : null
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos
@@ -347,15 +349,12 @@ export function useCanvasSync() {
 
                 const absolutePos = pmNode.position
 
-                // BUG-1047 DEBUG: Log PM position for first few tasks
-                if (tasksToSync.indexOf(task) < 3) {
-                    console.log('🔍 [BUG-1047] PM returning position for task:', {
-                        id: task.id.slice(0, 8),
-                        pmPosition: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
-                        storePosition: task.canvasPosition ? { x: Math.round(task.canvasPosition.x), y: Math.round(task.canvasPosition.y) } : null
-                    })
-                }
-                let parentId = pmNode.parentId
+                // BUG-1061 FIX: Read parentId from STORE, not PM
+                // PM updates can be rejected if node is locked (user dragging).
+                // This causes PM to have stale parentId while store has correct one.
+                // Store is always updated by realtime sync, so it's the source of truth for parentId.
+                // PM is only authoritative for x/y position during drag operations.
+                let parentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos

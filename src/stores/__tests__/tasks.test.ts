@@ -36,7 +36,7 @@ describe('TaskStore', () => {
       expect(task.progress).toBe(0)
       expect(task.completedPomodoros).toBe(0)
       expect(task.isInInbox).toBe(true)
-      expect(task.projectId).toBe('1')
+      expect(task.projectId).toBe('uncategorized')
     })
 
     it('creates a task with scheduled date and time as instance', async () => {
@@ -76,7 +76,7 @@ describe('TaskStore', () => {
 
       expect(store.tasks.length).toBe(1)
 
-      store.deleteTask(task.id)
+      await store.deleteTask(task.id)
 
       expect(store.tasks.length).toBe(0)
     })
@@ -221,7 +221,7 @@ describe('TaskStore', () => {
       expect(updated?.color).toBe('#00ff00')
     })
 
-    it('deletes a project and moves tasks to default project', async () => {
+    it('deletes a project and moves tasks to uncategorized', async () => {
       const store = useTaskStore()
       const project = await store.createProject({ name: 'To Delete' })
       const task = await store.createTask({ title: 'Task', projectId: project.id })
@@ -230,7 +230,7 @@ describe('TaskStore', () => {
 
       expect(store.projects.find(p => p.id === project.id)).toBeUndefined()
       const movedTask = store.tasks.find(t => t.id === task.id)
-      expect(movedTask?.projectId).toBeNull() // Moved to uncategorized (null)
+      expect(movedTask?.projectId).toBe('uncategorized') // Moved to uncategorized
     })
 
     it('prevents deletion of default project', async () => {

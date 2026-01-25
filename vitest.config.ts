@@ -15,7 +15,18 @@ export default defineConfig({
     environment: 'node',
     // Use node environment for file system tests
     include: ['tests/**/*.test.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
-    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+    exclude: [
+      'node_modules',
+      'dist',
+      '.idea',
+      '.git',
+      '.cache',
+      // Exclude integration/e2e tests that require running dev server
+      'tests/integration/**',
+      'tests/e2e/**',
+      'tests/canvas-characterization.test.ts', // Playwright browser tests
+      'tests/unit/canvas-resize-test*.test.ts', // Playwright browser tests
+    ],
     // Allow file system access for safety tests
     allowOnly: true,
     // Increase timeout for file system operations
@@ -26,6 +37,12 @@ export default defineConfig({
         name: 'unit',
         test: {
           include: ['tests/**/*.test.{js,ts,jsx,tsx}', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
+          exclude: [
+            'tests/integration/**',
+            'tests/e2e/**',
+            'tests/canvas-characterization.test.ts',
+            'tests/unit/canvas-resize-test*.test.ts',
+          ],
           environment: 'jsdom',
         },
         resolve: {

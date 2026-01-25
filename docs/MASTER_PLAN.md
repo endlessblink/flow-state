@@ -1,5 +1,5 @@
-**Last Updated**: January 25, 2026 (Added BUG-1064 Tauri sync issue)
-**Version**: 5.69 (Tauri Sync Bug)
+**Last Updated**: January 25, 2026 (Added BUG-1067 Canvas selection offset)
+**Version**: 5.70 (Canvas Selection Bug)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
 ---
@@ -73,7 +73,8 @@
 | ~~**BUG-244**~~          | ✅ **DONE** **Canvas Selection (Ctrl+Click) Wonkiness**                 | **P1**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | ROAD-013                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-245**~~          | ✅ **DONE** **Today Smart Group Date Not Updating**                     | **P0**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | TASK-184                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-1047**~~         | ✅ **DONE** **Task Position Drift on Edit Save**                        | **P0**                                              | ✅ **DONE** (2026-01-24) - Added debug logging, not reproducible                                                                | -                                                                                                                                                                                                              |                                                        |
-| **BUG-1062**             | **Selection state not synchronized between store and Vue Flow**        | **P0**                                              | 🔄 **IN PROGRESS** [See Details](#bug-1062-selection-state-not-synchronized-in-progress)                                        | -                                                                                                                                                                                                              |                                                        |
+| ~~**BUG-1062**~~         | ✅ **DONE** **Selection state not synchronized between store and Vue Flow** | **P0**                                          | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
+| **BUG-1068**             | **Canvas alignment operations unreliable (race condition)**            | **P0**                                              | 🔄 **IN PROGRESS** [See Details](#bug-1068-alignment-operations-unreliable-in-progress)                                          | BUG-1062                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Tauri App Not Syncing with Web App**                     | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | TASK-1060                                                                                                                                                                                                      |                                                        |
 | **FEATURE-1065**         | **Local Supabase as VPS Backup Mirror**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | BUG-1064                                                                                                                                                                                                       |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
@@ -181,7 +182,8 @@
 | **BUG-1065**             | **Context Menu +1wk Sets Tomorrow Instead of Next Week**                | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | "+1wk" button in context menu calculates "next Monday" instead of "+7 days". Same issue may affect other date shortcuts.                                                                                           |                                                        |
 | ~~**TASK-1010**~~        | ✅ **DONE** **Mobile: Quick Sort Redesign with Swipe Gestures**          | **P1**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Full mobile-first Quick Sort: Swipe-to-categorize (right=assign, left=skip), haptic feedback, full-screen cards, thumb-zone optimization, progress animations, nested project hierarchy, 7 date presets. Added to mobile nav. |                                                        |
 | ~~**TASK-1011**~~        | ✅ **DONE** **Date Picker Calendar UI & Styling**                        | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Replaced JS prompt() with Naive UI calendar. Fixed timezone, styled Today (white+dot), Selected (green stroke), Excluded (dimmed). [SOP-018](./sop/SOP-018-naive-ui-date-picker-styling.md)                         |
-| ~~**BUG-1056**~~         | ✅ **DONE** **Brave Browser Compatibility + Multi-Tab Fix**             | **P2**                                              | ✅ **DONE** (2026-01-24)                                                                                                        | Brave detection, user warning banner, multi-tab auth sync, unique channel per tab. [See Details](#bug-1056-brave-browser-compatibility--data-load-recovery-done)                                                  |                                                        |
+| ~~**BUG-1056**~~         | ✅ **DONE** **Brave Browser Compatibility + Multi-Tab Fix**             | **P2**                                              | ✅ **DONE** (2026-01-24)                                                                                                        | Brave detection, user warning banner, multi-tab auth sync, unique channel per tab. [See Details](#bug-1056-brave-browser-compatibility--data-load-recovery-done)                                                  |
+| **BUG-1067**             | **Canvas Selection Rectangle Offset from Cursor**                       | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Selection preview box when drag-selecting appears in wrong position relative to cursor/mouse position                                                                                                              |                                                        |
 | **BUG-1057**             | **Fix Failing Unit Tests (8 failures)**                                  | **P3**                                              | 📋 **PLANNED**                                                                                                                  | Playwright/Vitest conflicts, missing imports, obsolete test files. [See Details](#bug-1057-fix-failing-unit-tests-planned)                                                                                          |                                                        |
 | **BUG-1066**             | **Inbox Panel Too Transparent (Canvas View)**                            | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Inbox panel background is see-through at 15% opacity. Should be opaque/semi-opaque for readability.                                                                                                                  |                                                        |
 | ~~**BUG-1012**~~         | ✅ **DONE** **Dev-Maestro: "Submit Answers & Continue" Button Fixed**    | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Added debugging, error feedback, validation. Button now works correctly.                                                                                                                                            |                                                        |
@@ -236,6 +238,7 @@
 | **BUG-1061**             | **Canvas Position Drift on Cross-Browser Sync**                          | **P0**                                              | 📋 **PLANNED**                                                                                                                  | Tasks appear in different positions across browser tabs/windows. Moving a task in one browser shows wrong position in another. Realtime sync applies stale positions or race condition overwrites user drag. Related to geometry invariants. | TASK-1060, BUG-1047                                    |
 | ~~**BUG-1063**~~         | ✅ **DONE** **Cloudflare Cache MIME Type Error (Chromium Only)**         | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Chromium browsers failed to load CSS/JS with MIME type errors. Firefox worked. Root cause: Cloudflare edge cache served wrong content for preload scanner requests. Fix: Added `Vary: Accept` header. Created SOP-032, tests, CI validation. | TASK-1060                                              |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Dev-Maestro Parser Status Detection Broken**               | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-140 showed as IN PROGRESS despite being DONE. Table tasks didn't update from PLANNED→IN PROGRESS. Fix: (1) Unrecognized `##` sections reset parser state, (2) Table parser detects 🔄/⏸️/👀 statuses. [SOP-031](./sop/SOP-031-dev-maestro-parser.md) | -                                                      |
+| **TASK-1063**            | **Update CLAUDE.md with VPS/Contabo Deployment Docs**                    | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1063-update-claudemd-with-vpscontabo-deployment-docs-in-progress) - Add comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
 
 ---
 
@@ -293,6 +296,47 @@
 - [x] Fix selection synchronization between store and Vue Flow
 - [x] Fix validation logic to handle mixed task/group selection
 - [ ] **USER VERIFY**: Test alignment operations on VPS
+
+---
+
+### TASK-1063: Update CLAUDE.md with VPS/Contabo Deployment Docs (🔄 IN PROGRESS)
+
+**Priority**: P2
+**Status**: 🔄 IN PROGRESS (2026-01-25)
+
+**Objective**: Update CLAUDE.md with comprehensive VPS production deployment documentation for the Contabo-hosted FlowState PWA.
+
+**Changes Made**:
+
+1. **Current Status Table**: Added "VPS Production | ✅ Live at in-theflow.com (Contabo)"
+
+2. **Tech Stack Section**: Added Caddy, Cloudflare, Doppler to stack
+
+3. **NEW: VPS Production Deployment Section** (comprehensive):
+   - Architecture diagram (User → Cloudflare → Contabo VPS → Supabase)
+   - Production URLs (in-theflow.com, api.in-theflow.com)
+   - VPS Specifications (Contabo Cloud VPS 2: 6 vCPU, 16GB RAM, NVMe)
+   - Deployment methods (CI/CD via GitHub Actions, manual rsync)
+   - Secrets management (Doppler for prod, .env.local for dev)
+   - Infrastructure stack table
+   - Key VPS paths
+   - Contabo-specific gotchas and considerations
+   - Security hardening already applied
+   - Maintenance commands
+   - Backup strategy
+   - Deployment SOPs reference table
+   - VPS vs Desktop comparison table
+
+4. **Extended Documentation SOPs**: Added 5 new deployment-related SOPs
+
+5. **Footer**: Updated date, stack, and production info
+
+**Tasks**:
+- [x] Research Contabo VPS best practices
+- [x] Gather existing SOP documentation
+- [x] Update CLAUDE.md with VPS section
+- [x] Add deployment SOPs to Extended Documentation
+- [ ] **USER VERIFY**: Confirm documentation accuracy
 
 ---
 

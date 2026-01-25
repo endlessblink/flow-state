@@ -166,7 +166,7 @@ export function useCanvasAlignment(
      */
     const executeAlignmentOperation = async (
         operationName: string,
-        operation: (selectedNodes: NodeWithComputed[]) => void,
+        operation: (selectedNodes: NodeWithComputed[]) => void | Promise<void>,
         minNodes: number = 2
     ) => {
         // Pre-alignment state validation
@@ -192,15 +192,23 @@ export function useCanvasAlignment(
             // Show temporary loading state
             message.loading(`Performing ${operationName.toLowerCase()}...`, { duration: 300 })
 
+            // BUG-1068 FIX: Set manualOperationInProgress to prevent sync from interfering
+            // This flag tells the sync system to skip updates while we're batch-updating positions
+            taskStore.manualOperationInProgress = true
+
             // BATCH UNDO: Save state BEFORE all operations
             await getUndoSystem().saveState(`Before ${operationName}`)
 
-            // Execute the alignment operation
-            operation(selectedNodes)
+            // BUG-1068 FIX: Await the operation - it's async since BUG-1051
+            // Without await, updateTask() calls yield and sync overwrites positions
+            await operation(selectedNodes)
 
             // BATCH UNDO: Save state AFTER all operations
             await nextTick()
             await getUndoSystem().saveState(`After ${operationName}`)
+
+            // BUG-1068 FIX: Release the lock before triggering sync
+            taskStore.manualOperationInProgress = false
 
             // Show success feedback
             message.success(`Successfully aligned ${selectedNodes.length} tasks ${operationName.toLowerCase().replace('align ', '')}`)
@@ -212,6 +220,8 @@ export function useCanvasAlignment(
 
             return true
         } catch (error) {
+            // BUG-1068: Always release the lock on error
+            taskStore.manualOperationInProgress = false
             message.error(`Alignment operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
             return false
         }

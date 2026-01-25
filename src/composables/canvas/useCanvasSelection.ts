@@ -13,6 +13,9 @@ export interface SelectionBox {
     startX: number
     startY: number
     isVisible: boolean
+    // Container offset for proper positioning (BUG-1067: Tauri coordinate fix)
+    containerOffsetX: number
+    containerOffsetY: number
 }
 
 export function useCanvasSelection(deps: {
@@ -31,7 +34,10 @@ export function useCanvasSelection(deps: {
         height: 0,
         startX: 0,
         startY: 0,
-        isVisible: false
+        isVisible: false,
+        // BUG-1067: Container offset for Tauri coordinate fix
+        containerOffsetX: 0,
+        containerOffsetY: 0
     })
 
     const selectedTask = ref<Task | null>(null)
@@ -122,19 +128,38 @@ export function useCanvasSelection(deps: {
         if (!selectionBox.isVisible) return
         const currentX = event.clientX
         const currentY = event.clientY
+
+        // BUG-1067: Calculate position relative to container for rendering
+        // But keep viewport coordinates for width/height calculation
         selectionBox.width = Math.abs(currentX - selectionBox.startX)
         selectionBox.height = Math.abs(currentY - selectionBox.startY)
-        selectionBox.x = Math.min(currentX, selectionBox.startX)
-        selectionBox.y = Math.min(currentY, selectionBox.startY)
+        // Position relative to container
+        selectionBox.x = Math.min(currentX, selectionBox.startX) - selectionBox.containerOffsetX
+        selectionBox.y = Math.min(currentY, selectionBox.startY) - selectionBox.containerOffsetY
     }
 
     const startSelection = (event: MouseEvent) => {
         if (!event.shiftKey) return
         const { clientX, clientY } = event
+
+        // BUG-1067: Get canvas container offset for Tauri coordinate fix
+        // Use position: absolute relative to container instead of fixed to viewport
+        const canvasContainer = document.querySelector('.canvas-container')
+        if (canvasContainer) {
+            const rect = canvasContainer.getBoundingClientRect()
+            selectionBox.containerOffsetX = rect.left
+            selectionBox.containerOffsetY = rect.top
+        } else {
+            selectionBox.containerOffsetX = 0
+            selectionBox.containerOffsetY = 0
+        }
+
+        // Store viewport coordinates for intersection calculations
         selectionBox.startX = clientX
         selectionBox.startY = clientY
-        selectionBox.x = clientX
-        selectionBox.y = clientY
+        // Calculate position relative to container for rendering
+        selectionBox.x = clientX - selectionBox.containerOffsetX
+        selectionBox.y = clientY - selectionBox.containerOffsetY
         selectionBox.width = 0
         selectionBox.height = 0
         selectionBox.isVisible = true
@@ -156,10 +181,12 @@ export function useCanvasSelection(deps: {
 
         const involvedNodes = getNodes.value
         const selectedIds: string[] = []
-        const boxLeft = selectionBox.x
-        const boxTop = selectionBox.y
-        const boxRight = selectionBox.x + selectionBox.width
-        const boxBottom = selectionBox.y + selectionBox.height
+        // BUG-1067: Convert container-relative coordinates back to viewport coordinates
+        // for intersection testing with node screen positions
+        const boxLeft = selectionBox.x + selectionBox.containerOffsetX
+        const boxTop = selectionBox.y + selectionBox.containerOffsetY
+        const boxRight = boxLeft + selectionBox.width
+        const boxBottom = boxTop + selectionBox.height
 
         involvedNodes.forEach(node => {
             const { x: graphX, y: graphY } = getAbsolutePositionRecursive(node, involvedNodes)

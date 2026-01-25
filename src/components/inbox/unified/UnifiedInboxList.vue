@@ -84,10 +84,7 @@ import { Trash2, X } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 import UnifiedInboxTaskCard from './UnifiedInboxTaskCard.vue'
 
-// Virtual scrolling constants
-const ITEM_HEIGHT = 72 // Height of each task card in pixels
-const VIRTUAL_THRESHOLD = 50 // Only virtualize if more than this many items
-const OVERSCAN = 5 // Extra items to render above/below viewport
+// Extra items to render above/below viewport
 
 const props = defineProps<{
   tasks: Task[]
@@ -95,9 +92,7 @@ const props = defineProps<{
   multiSelectMode: boolean
   hasSelectedGroups: boolean
   areGlobalsFiltered: boolean
-}>()
-
-defineEmits<{
+}>() ;defineEmits<{
   (e: 'dragStart', event: DragEvent, task: Task): void
   (e: 'dragEnd'): void
   (e: 'taskClick', event: MouseEvent, task: Task): void
@@ -107,8 +102,10 @@ defineEmits<{
   (e: 'startTimer', task: Task): void
   (e: 'deleteSelected'): void
   (e: 'clearSelection'): void
-}>()
-
+}>() ;// Virtual scrolling constants
+const ITEM_HEIGHT = 72 // Height of each task card in pixels
+const VIRTUAL_THRESHOLD = 50 // Only virtualize if more than this many items
+const OVERSCAN = 5
 const selectedCount = computed(() => props.selectedTaskIds.size)
 
 // Determine if we should use virtual scrolling

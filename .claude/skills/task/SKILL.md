@@ -1,6 +1,6 @@
 ---
 name: task
-description: Quick task creation for MASTER_PLAN.md with auto-generated IDs. This skill should be used when the user wants to add a new task, bug, or feature to the project's master plan. Triggers on "/task", "add task", "new task", "create task", "track this".
+description: Quick task creation for MASTER_PLAN.md with auto-generated IDs. This skill should be used when the user wants to add a new task, bug, feature, or inquiry to the project's master plan. Triggers on "/task", "add task", "new task", "create task", "track this", "investigate".
 ---
 
 # Task Creator
@@ -29,6 +29,7 @@ Use `AskUserQuestion` tool to collect task details in a SINGLE question with mul
    - `TASK` - New feature or improvement
    - `BUG` - Bug fix
    - `FEATURE` - Major new feature
+   - `INQUIRY` - Investigation to understand behavior, errors, or unexpected results (not a bug fix)
 
 2. **Priority** (header: "Priority")
    - `P0` - Critical/Blocker

@@ -368,7 +368,7 @@ export function useCanvasInteractions(deps?: {
 
         // DRIFT LOGGING: Log drag start with initial positions
         console.log(`📍[DRAG-START] ${involvedNodes.length} nodes`,
-            involvedNodes.map(n => ({
+            involvedNodes.map((n: any) => ({
                 id: n.id?.slice(0, 12),
                 position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
                 positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
@@ -455,7 +455,7 @@ export function useCanvasInteractions(deps?: {
         // BUG-1061 DEBUG: Trace each call with unique ID
         const callId = Math.random().toString(36).slice(2, 8)
         console.log(`🔴 [DRAG-STOP-ENTRY] callId=${callId}, involvedNodes=${involvedNodes.length}`,
-            involvedNodes.map(n => `${n.id.slice(0,12)}(${n.type})`))
+            involvedNodes.map(n => `${n.id.slice(0, 12)}(${n.type})`))
 
         try {
 
@@ -577,7 +577,7 @@ export function useCanvasInteractions(deps?: {
                     // We should NOT recalculate parentId/Smart Groups for tasks that stayed in their group.
                     // Check: if task has a parent AND is still inside that parent, skip processing.
                     const oldParentId = task.parentId
-                    console.log(`🟡 [FIX3-CHECK] Task "${task.title?.slice(0,20)}" oldParentId=${oldParentId?.slice(0,8) ?? 'none'}`)
+                    console.log(`🟡 [FIX3-CHECK] Task "${task.title?.slice(0, 20)}" oldParentId=${oldParentId?.slice(0, 8) ?? 'none'}`)
                     if (oldParentId) {
                         const currentParent = taskAllGroups.find(g => g.id === oldParentId)
                         if (currentParent) {
@@ -588,9 +588,10 @@ export function useCanvasInteractions(deps?: {
                                 height: currentParent.position.height
                             }
                             // If task center is still inside current parent, skip processing
-                            const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 10)
+                            // BUG-1084 FIX: Reduced padding from 10 to 2 to prevent false "outside" detection
+                            const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 2)
                             console.log(`🟡 [FIX3-BOUNDS] stillInside=${stillInside}`, {
-                                taskCenter: { x: Math.round(spatialTask.position.x + (spatialTask.width || 200)/2), y: Math.round(spatialTask.position.y + (spatialTask.height || 40)/2) },
+                                taskCenter: { x: Math.round(spatialTask.position.x + (spatialTask.width || 200) / 2), y: Math.round(spatialTask.position.y + (spatialTask.height || 40) / 2) },
                                 parentBounds: { x: Math.round(parentBounds.position.x), y: Math.round(parentBounds.position.y), w: parentBounds.width, h: parentBounds.height }
                             })
                             if (stillInside) {
@@ -602,7 +603,7 @@ export function useCanvasInteractions(deps?: {
                                     await taskStore.updateTask(task.id, {
                                         canvasPosition: absolutePos,
                                         positionFormat: 'absolute'
-                                    }, 'DRAG-FOLLOW-PARENT')
+                                    }, 'DRAG-FOLLOW-PARENT' as any)
                                     positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
                                 }
                                 setNodeState(task.id, NodeState.IDLE)
@@ -625,7 +626,8 @@ export function useCanvasInteractions(deps?: {
                                 width: currentParent.position.width,
                                 height: currentParent.position.height
                             }
-                            const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, 10)
+                            // BUG-1084 FIX: Reduced padding from 10 to 2 (consistent with above)
+                            const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, 2)
                             if (stillInCurrentParent) {
                                 // Task is inside BOTH current parent and detected group - prefer current
                                 console.log(`🛡️ [FIX4-PREFER-CURRENT] Task inside both "${targetGroup?.name}" and current "${currentParent.name}" - keeping current`)
@@ -634,7 +636,7 @@ export function useCanvasInteractions(deps?: {
                         }
                     }
                     const newParentId = targetGroup?.id ?? null
-                    console.log(`🟢 [DETECT-PARENT] Task "${task.title?.slice(0,20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0,8) ?? 'root'})`)
+                    console.log(`🟢 [DETECT-PARENT] Task "${task.title?.slice(0, 20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0, 8) ?? 'root'})`)
 
                     // Skip if position didn't change meaningfully
                     // (prevents drift when task just followed parent group)

@@ -273,7 +273,7 @@ export function useTaskPersistence(
                     const localCreated = localTask.createdAt instanceof Date ? localTask.createdAt.getTime() : new Date(localTask.createdAt).getTime()
                     const timeSinceCreation = Date.now() - localCreated
 
-                    if (timeSinceCreation < 60000) { // Created in last 60s
+                    if (timeSinceCreation < 300000) { // Created in last 5 minutes (P0-1 fix: was 60s, too short for network issues)
                         console.log(`🛡️ [SMART-MERGE] Preserving optimistic create "${localTask.title?.slice(0, 15)}"`)
                         mergedTasks.push(localTask)
                     } else {

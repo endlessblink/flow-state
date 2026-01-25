@@ -172,8 +172,21 @@ const confirmDeleteTask = async (task: Task) => {
 }
 
 const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendarEvent?: boolean) => {
+  // BUG-1084 DEBUG: Diagnostic logging to trace delete flow
+  console.log('[DELETE-DEBUG] handleContextMenuDelete received', {
+    taskId,
+    instanceId,
+    isCalendarEvent,
+    taskStoreTaskCount: taskStore.tasks.length
+  })
+
   const task = taskStore.tasks.find(t => t.id === taskId)
-  if (!task) return
+  console.log('[DELETE-DEBUG] Task found in store:', !!task, task ? { id: task.id, title: task.title?.slice(0, 30) } : null)
+
+  if (!task) {
+    console.error('[DELETE-DEBUG] Task not found in store! Cannot delete.')
+    return
+  }
 
   if (isCalendarEvent && instanceId) {
     confirmMessage.value = `Remove "${task.title}" from calendar?`

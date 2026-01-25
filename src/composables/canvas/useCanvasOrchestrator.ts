@@ -375,7 +375,8 @@ export function useCanvasOrchestrator() {
         // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
         // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
         // This guards against remounts from: tab focus, auth refresh, route changes
-        if (!hasReconciledThisSession) {
+        // BUG-1084 FIX: Also guard against empty groups - reconciliation needs groups to determine containment
+        if (!hasReconciledThisSession && canvasStore.groups.length > 0) {
             hasReconciledThisSession = true
             console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
             await reconcileTaskParentsByContainment(

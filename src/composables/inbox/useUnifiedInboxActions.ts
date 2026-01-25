@@ -18,13 +18,15 @@ export function useUnifiedInboxActions(
 
     // --- Task Operations ---
 
-    const addTask = (title: string) => {
+    const addTask = (title: string, options?: { priority?: string; dueDate?: Date }) => {
         if (!title.trim()) return
 
         createTaskWithUndo({
             title: title.trim(),
             status: 'planned',
-            isInInbox: true
+            isInInbox: true,
+            ...(options?.priority && { priority: options.priority as 'low' | 'medium' | 'high' }),
+            ...(options?.dueDate && { dueDate: options.dueDate.toISOString() })
         })
     }
 

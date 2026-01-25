@@ -45,6 +45,12 @@ export function useAppInitialization() {
 
         // 1. Initial Load from Supabase
 
+        // TASK-1083: Clear SWR cache on page load to ensure fresh positions from DB
+        // This prevents stale cached positions from overriding newer data on other devices
+        const { invalidateCache } = useSupabaseDatabase()
+        invalidateCache.all()
+        console.log('🗑️ [TASK-1083] SWR cache cleared on page load')
+
         uiStore.loadState()
 
         console.log('🔍 [BUG-339-DEBUG] Starting database load...')

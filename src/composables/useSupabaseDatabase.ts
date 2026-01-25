@@ -32,8 +32,10 @@ interface SWRCacheEntry<T> {
 
 class SWRCache {
     private cache = new Map<string, SWRCacheEntry<unknown>>()
-    private readonly DEFAULT_STALE_TIME = 30 * 1000  // 30s before considered stale
-    private readonly DEFAULT_CACHE_TIME = 5 * 60 * 1000  // 5min max cache
+    // TASK-1083: Reduced stale time from 30s to 3s to prevent position drift between devices
+    // Old value caused stale positions to be returned for up to 30 seconds after another device updated
+    private readonly DEFAULT_STALE_TIME = 3 * 1000  // 3s before considered stale (was 30s)
+    private readonly DEFAULT_CACHE_TIME = 60 * 1000  // 1min max cache (was 5min)
     private lastUserId: string | null = null  // BUG-1056: Track user for auth change detection
 
     /**

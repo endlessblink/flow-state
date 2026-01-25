@@ -14,6 +14,7 @@
       'is-dragging': isNodeDragging,
       'is-connecting': isConnecting,
       'is-recently-created': isRecentlyCreated,
+      'is-flashing': isFlashing,
       'lod-1': isLOD1,
       'lod-2': isLOD2,
       'lod-3': isLOD3
@@ -90,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent, computed } from 'vue'
+import { defineAsyncComponent, computed, ref, onMounted, onUnmounted } from 'vue'
 import { Position } from '@vue-flow/core'
 import type { Task } from '@/types/tasks'
 import { useTaskNodeState } from '@/composables/canvas/node/useTaskNodeState'
@@ -191,6 +192,22 @@ const {
 // TASK-279: Edit (double-click) is handled via:
 // 1. Manual double-click detection in handleClick (native @dblclick doesn't work due to DOM changes)
 // 2. editCallback prop for direct callback when emits don't work in Vue Flow
+
+// TASK-1074: Flash animation when date is set via context menu
+const isFlashing = ref(false)
+const handleTaskFlash = (event: Event) => {
+  const customEvent = event as CustomEvent<{ taskId: string }>
+  if (customEvent.detail.taskId === props.task?.id) {
+    isFlashing.value = true
+    setTimeout(() => { isFlashing.value = false }, 400)
+  }
+}
+onMounted(() => {
+  window.addEventListener('task-action-flash', handleTaskFlash)
+})
+onUnmounted(() => {
+  window.removeEventListener('task-action-flash', handleTaskFlash)
+})
 </script>
 
 <style scoped>
@@ -458,5 +475,28 @@ const {
 
 .multi-select-mode:hover {
   transform: translateY(-2px) scale(1.02);
+}
+
+/* TASK-1074: Brief flash animation when date is updated */
+.is-flashing {
+  animation: task-flash 0.4s ease-out;
+}
+
+@keyframes task-flash {
+  0% {
+    box-shadow:
+      0 0 0 0 var(--color-success),
+      0 12px 24px var(--shadow-md);
+  }
+  50% {
+    box-shadow:
+      0 0 20px 4px var(--color-success),
+      0 12px 24px var(--shadow-md);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 var(--color-success),
+      0 12px 24px var(--shadow-md);
+  }
 }
 </style>

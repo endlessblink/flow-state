@@ -8,6 +8,7 @@
       { 'focused': isFocused },
       { 'selected': isSelected },
       { 'timer-active': isTimerActive },
+      { 'is-flashing': isFlashing },
       density ? `task-card--${density}` : ''
     ]"
     :tabindex="disabled ? -1 : 0"
@@ -79,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskCardState } from '@/composables/tasks/card/useTaskCardState'
 import { useTaskCardActions } from '@/composables/tasks/card/useTaskCardActions'
@@ -135,5 +136,21 @@ const {
   handleCardClick, handleKeydown, handleFocus,
   handleBlur, handleRightClick, cycleStatus
 } = actions
+
+// TASK-1074: Flash animation when date is set via context menu
+const isFlashing = ref(false)
+const handleTaskFlash = (event: Event) => {
+  const customEvent = event as CustomEvent<{ taskId: string }>
+  if (customEvent.detail.taskId === props.task?.id) {
+    isFlashing.value = true
+    setTimeout(() => { isFlashing.value = false }, 400)
+  }
+}
+onMounted(() => {
+  window.addEventListener('task-action-flash', handleTaskFlash)
+})
+onUnmounted(() => {
+  window.removeEventListener('task-action-flash', handleTaskFlash)
+})
 </script>
 

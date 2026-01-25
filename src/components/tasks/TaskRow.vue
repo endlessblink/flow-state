@@ -3,7 +3,7 @@
     class="task-row"
     :class="[
       `task-row--${density}`,
-      { 'task-row--selected': selected, 'task-row--anchor': isAnchorRow, 'task-row--timer-active': isTimerActive },
+      { 'task-row--selected': selected, 'task-row--anchor': isAnchorRow, 'task-row--timer-active': isTimerActive, 'task-row--flashing': isFlashing },
       `priority-${task.priority || 'none'}`
     ]"
     @click="$emit('select', task.id)"
@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { Play, Edit } from 'lucide-vue-next'
@@ -153,6 +153,21 @@ const projectVisual = computed(() =>
   taskStore.getProjectVisual(props.task.projectId)
 )
 
+// TASK-1074: Flash animation when date is set via context menu
+const isFlashing = ref(false)
+const handleTaskFlash = (event: Event) => {
+  const customEvent = event as CustomEvent<{ taskId: string }>
+  if (customEvent.detail.taskId === props.task?.id) {
+    isFlashing.value = true
+    setTimeout(() => { isFlashing.value = false }, 400)
+  }
+}
+onMounted(() => {
+  window.addEventListener('task-action-flash', handleTaskFlash)
+})
+onUnmounted(() => {
+  window.removeEventListener('task-action-flash', handleTaskFlash)
+})
 </script>
 
 <style scoped>
@@ -374,6 +389,23 @@ const projectVisual = computed(() =>
   }
   50% {
     box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+  }
+}
+
+/* TASK-1074: Brief flash animation when date is updated */
+.task-row--flashing {
+  animation: task-row-flash 0.4s ease-out;
+}
+
+@keyframes task-row-flash {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-success);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px var(--color-success);
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--color-success);
   }
 }
 </style>

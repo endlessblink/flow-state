@@ -544,3 +544,20 @@
 .task-title.direction-rtl {
     direction: rtl;
 }
+
+/* TASK-1074: Brief flash animation when date is updated */
+.task-card.is-flashing {
+    animation: task-card-flash 0.4s ease-out;
+}
+
+@keyframes task-card-flash {
+    0% {
+        box-shadow: 0 0 0 0 var(--color-success);
+    }
+    50% {
+        box-shadow: 0 0 16px 3px var(--color-success);
+    }
+    100% {
+        box-shadow: 0 0 0 0 var(--color-success);
+    }
+}

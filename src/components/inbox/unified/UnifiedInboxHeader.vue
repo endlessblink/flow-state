@@ -75,7 +75,7 @@
       @click="$emit('toggleAdvancedFilters')"
     >
       <Filter :size="14" />
-      <span>{{ showAdvancedFilters ? 'Hide filters' : 'More filters' }}</span>
+      <span>{{ showAdvancedFilters ? 'Hide filters & sort' : 'Filters & Sort' }}</span>
       <ChevronDown :size="14" class="toggle-icon" :class="{ rotated: showAdvancedFilters }" />
     </button>
 
@@ -87,6 +87,7 @@
         :selected-project="selectedProject"
         :selected-duration="selectedDuration"
         :hide-done-tasks="hideDoneTasks"
+        :sort-by="sortBy"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
@@ -94,6 +95,7 @@
         @update:selected-project="$emit('update:selected-project', $event)"
         @update:selected-duration="$emit('update:selected-duration', $event)"
         @update:hide-done-tasks="$emit('update:hide-done-tasks', $event)"
+        @update:sort-by="$emit('update:sortBy', $event)"
         @clear-all="$emit('clearAll')"
       />
     </Transition>
@@ -107,7 +109,7 @@ import { NBadge, NDropdown } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
-import type { TimeFilterType } from '@/composables/inbox/useUnifiedInboxState'
+import type { TimeFilterType, SortByType } from '@/composables/inbox/useUnifiedInboxState'
 
 interface GroupOption {
   label: string
@@ -136,6 +138,7 @@ const props = defineProps<{
   baseTasks: Task[]
   rootProjects: any[]
   context: string
+  sortBy: SortByType // TASK-1073
 }>()
 
 const emit = defineEmits<{
@@ -148,6 +151,7 @@ const emit = defineEmits<{
   (e: 'update:selected-project', value: string | null): void
   (e: 'update:selected-duration', value: DurationCategory | null): void
   (e: 'update:hide-done-tasks', value: boolean): void
+  (e: 'update:sortBy', value: SortByType): void // TASK-1073
   (e: 'clearAll'): void
 }>()
 
@@ -277,7 +281,7 @@ const handleTimeFilterSelect = (key: string) => {
 .time-filter-dropdown {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1_5);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
@@ -286,6 +290,8 @@ const handleTimeFilterSelect = (key: string) => {
   font-size: var(--text-xs);
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-out);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .time-filter-dropdown:hover {

@@ -22,6 +22,14 @@
     font-size: var(--text-sm);
 }
 
+.task-row:focus-visible {
+    outline: none;
+    background: var(--glass-bg-soft);
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.3);
+    z-index: 1;
+}
+
 /* Selected state */
 
 .task-row--selected {

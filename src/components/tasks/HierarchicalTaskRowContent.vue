@@ -19,6 +19,8 @@
       paddingLeft: `${indentLevel * 20 + 40}px`,
       '--indent-level': indentLevel
     }"
+    tabindex="0"
+    :aria-label="`Task: ${task.title}, Status: ${task.status}, Priority: ${task.priority || 'none'}`"
     draggable="true"
     @dragstart="$emit('dragstart', $event)"
     @dragend="$emit('dragend', $event)"

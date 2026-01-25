@@ -8,6 +8,7 @@ import type { Task } from '@/stores/tasks'
 
 // Dispatch event to trigger brief flash animation on task card
 function flashTaskCard(taskId: string): void {
+    console.log('[FLASH] Dispatching task-action-flash for:', taskId)
     window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
 }
 

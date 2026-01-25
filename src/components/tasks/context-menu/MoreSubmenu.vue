@@ -8,6 +8,12 @@
       @mouseenter="$emit('mouseenter')"
       @mouseleave="$emit('mouseleave')"
     >
+      <!-- Done for now - reschedule to tomorrow -->
+      <button class="menu-item menu-item--sm" @click="$emit('doneForNow')">
+        <Clock :size="14" class="menu-icon" />
+        <span class="menu-text">Done for now</span>
+      </button>
+
       <button class="menu-item menu-item--sm" @click="$emit('duplicate')">
         <Copy :size="14" class="menu-icon" />
         <span class="menu-text">Duplicate</span>
@@ -31,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X } from 'lucide-vue-next'
+import { Copy, Layout, X, Clock } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -42,6 +48,7 @@ defineProps<{
 }>()
 
 defineEmits<{
+  doneForNow: []
   duplicate: []
   moveToSection: [taskId: string]
   clearSelection: []

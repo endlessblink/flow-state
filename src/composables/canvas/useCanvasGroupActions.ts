@@ -26,6 +26,13 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     const canvasStore = useCanvasStore()
 
     // --- State (Use injected state or fallback to local) ---
+    // BUG-1076 DEBUG: Log whether state was properly passed
+    console.log('[BUG-1076] useCanvasGroupActions: deps.state =', {
+        hasState: !!deps.state,
+        hasIsDeleteGroupModalOpen: !!deps.state?.isDeleteGroupModalOpen,
+        hasGroupPendingDelete: !!deps.state?.groupPendingDelete
+    })
+
     const isGroupModalOpen = deps.state?.isGroupModalOpen ?? ref(false)
     const selectedGroup = deps.state?.selectedGroup ?? ref<CanvasSection | null>(null)
     const groupModalPosition = deps.state?.groupModalPosition ?? ref({ x: 100, y: 100 })
@@ -35,6 +42,14 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
 
     const isDeleteGroupModalOpen = deps.state?.isDeleteGroupModalOpen ?? ref(false)
     const groupPendingDelete = deps.state?.groupPendingDelete ?? ref<CanvasSection | null>(null)
+
+    // BUG-1076 DEBUG: Log if using local fallback refs
+    if (!deps.state?.isDeleteGroupModalOpen) {
+        console.warn('[BUG-1076] useCanvasGroupActions: Using LOCAL ref for isDeleteGroupModalOpen (NOT connected to Pinia store!)')
+    }
+    if (!deps.state?.groupPendingDelete) {
+        console.warn('[BUG-1076] useCanvasGroupActions: Using LOCAL ref for groupPendingDelete (NOT connected to Pinia store!)')
+    }
 
     // --- Helper for Ghost Removal ---
     // Note: duplicated small helper to avoid complex sharing, or could be passed in.
@@ -112,17 +127,39 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     }
 
     const deleteGroup = (section: CanvasSection) => {
-        if (!section) return
+        console.log('[BUG-1076] deleteGroup called with:', {
+            section,
+            sectionId: section?.id,
+            sectionName: section?.name,
+            isDeleteGroupModalOpenBefore: isDeleteGroupModalOpen.value
+        })
+
+        if (!section) {
+            console.error('[BUG-1076] deleteGroup: section is null/undefined!')
+            return
+        }
 
         // Show designed confirmation modal instead of native confirm()
         groupPendingDelete.value = section
         isDeleteGroupModalOpen.value = true
+
+        console.log('[BUG-1076] deleteGroup: Modal state set', {
+            groupPendingDelete: groupPendingDelete.value?.name,
+            isDeleteGroupModalOpen: isDeleteGroupModalOpen.value
+        })
+
         deps.closeCanvasContextMenu()
     }
 
     const confirmDeleteGroup = async () => {
+        console.log('[BUG-1076] confirmDeleteGroup called')
         const section = groupPendingDelete.value
-        if (!section) return
+        if (!section) {
+            console.error('[BUG-1076] confirmDeleteGroup: No section pending delete!')
+            return
+        }
+
+        console.log('[BUG-1076] Deleting section:', section.id, section.name)
 
         try {
             const sectionNodeId = CanvasIds.groupNodeId(section.id)

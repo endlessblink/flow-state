@@ -6,6 +6,7 @@ import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTrac
 import { storeToRefs } from 'pinia'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { CANVAS } from '@/constants/canvas'
+import { useToast } from '@/composables/useToast'
 
 
 
@@ -250,6 +251,40 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             deps.closeCanvasContextMenu()
         } catch (error) {
             console.error('[ASYNC-ERROR] moveSelectedTasksToInbox failed', error)
+        }
+    }
+
+    /**
+     * "Done for now" - Moves selected tasks' due date to tomorrow.
+     * User can work incrementally and automatically reschedule unfinished tasks.
+     */
+    const doneForNowSelectedTasks = async () => {
+        const { showToast } = useToast()
+        const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
+        if (selectedNodeIds.length === 0) return
+
+        // Calculate tomorrow's date in YYYY-MM-DD format
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+        try {
+            for (const nodeId of selectedNodeIds) {
+                await undoHistory.updateTaskWithUndo(nodeId, {
+                    dueDate: tomorrowStr
+                })
+            }
+
+            // Show toast notification
+            const msg = selectedNodeIds.length === 1
+                ? 'Moved to tomorrow'
+                : `${selectedNodeIds.length} tasks moved to tomorrow`
+            showToast(msg, 'success', { duration: 2000 })
+
+            deps.closeCanvasContextMenu()
+        } catch (error) {
+            console.error('[ASYNC-ERROR] doneForNowSelectedTasks failed', error)
+            showToast('Failed to reschedule tasks', 'error')
         }
     }
 
@@ -501,6 +536,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         handleQuickTaskCreate,
         closeQuickTaskCreate,
         moveSelectedTasksToInbox,
+        doneForNowSelectedTasks,
         deleteSelectedTasks,
         confirmBulkDelete,
         cancelBulkDelete,

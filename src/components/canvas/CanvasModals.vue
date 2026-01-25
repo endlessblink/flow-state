@@ -54,7 +54,7 @@
     title="Delete Group"
     :message="modals.deleteGroupMessage"
     confirm-text="Delete"
-    @confirm="$emit('confirmDeleteGroup')"
+    @confirm="handleDeleteGroupConfirm"
     @cancel="modals.closeDeleteGroupModal"
   />
 
@@ -95,9 +95,24 @@ const emit = defineEmits<{
 
 const modals = useCanvasModalsStore()
 
+// BUG-1076 DEBUG: Watch for modal state changes
+import { watch } from 'vue'
+watch(() => modals.isDeleteGroupModalOpen, (newVal) => {
+  console.log('[BUG-1076 CanvasModals] isDeleteGroupModalOpen changed to:', newVal)
+  console.log('[BUG-1076 CanvasModals] groupPendingDelete:', modals.groupPendingDelete?.name || 'null')
+  console.log('[BUG-1076 CanvasModals] deleteGroupMessage:', modals.deleteGroupMessage || '(empty)')
+})
+
 // BUG-1074 FIX: Use explicit emit function to ensure proper event propagation
 const handleBulkDeleteConfirm = () => {
   emit('confirmBulkDelete')
+}
+
+// BUG-1076: Handler for delete group confirmation with logging
+const handleDeleteGroupConfirm = () => {
+  console.log('[BUG-1076 CanvasModals] Delete Group confirm button clicked!')
+  console.log('[BUG-1076 CanvasModals] Emitting confirmDeleteGroup event')
+  emit('confirmDeleteGroup')
 }
 
 </script>

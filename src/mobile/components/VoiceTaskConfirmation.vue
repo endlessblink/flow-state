@@ -1,11 +1,21 @@
 <template>
-  <Transition name="expand">
-    <div v-if="isOpen && parsedTask" class="voice-confirmation">
+  <Teleport to="body">
+    <BaseModal
+      :is-open="isOpen"
+      :title="''"
+      size="md"
+      :show-header="false"
+      :show-footer="false"
+      :close-on-overlay-click="true"
+      :close-on-escape="true"
+      @close="handleCancel"
+    >
+    <div class="voice-confirmation-content">
       <!-- Header -->
       <div class="confirmation-header">
         <div class="header-info">
           <CheckCircle2 :size="18" class="header-icon" />
-          <span class="header-title">Confirm Task</span>
+          <span class="header-title">{{ $t?.('voice.confirmTask') || 'Confirm Task' }}</span>
         </div>
         <button class="close-btn" @click="handleCancel">
           <X :size="18" />
@@ -14,16 +24,17 @@
 
       <!-- Editable Fields -->
       <div class="confirmation-body">
-        <!-- Title Input -->
+        <!-- Title Textarea (RTL-aware) -->
         <div class="field-section">
-          <label class="field-label">Title</label>
-          <input
+          <label class="field-label">{{ $t?.('task.title') || 'Title' }}</label>
+          <textarea
             ref="titleInputRef"
             v-model="editedTitle"
-            type="text"
-            class="title-input"
-            placeholder="Task title..."
-            @keydown.enter="handleConfirm"
+            :dir="titleDirection"
+            class="title-textarea"
+            :placeholder="$t?.('task.titlePlaceholder') || 'Task title...'"
+            rows="3"
+            @keydown.enter.exact.prevent="handleConfirm"
           />
         </div>
 
@@ -31,32 +42,32 @@
         <div class="field-section">
           <label class="field-label">
             <Flag :size="12" />
-            Priority
+            {{ $t?.('task.priority') || 'Priority' }}
           </label>
           <div class="pill-options">
             <button
               :class="['pill', 'priority-high', { active: editedPriority === 'high' }]"
               @click="setPriority('high')"
             >
-              High
+              {{ $t?.('priority.high') || 'High' }}
             </button>
             <button
               :class="['pill', 'priority-medium', { active: editedPriority === 'medium' }]"
               @click="setPriority('medium')"
             >
-              Medium
+              {{ $t?.('priority.medium') || 'Medium' }}
             </button>
             <button
               :class="['pill', 'priority-low', { active: editedPriority === 'low' }]"
               @click="setPriority('low')"
             >
-              Low
+              {{ $t?.('priority.low') || 'Low' }}
             </button>
             <button
               :class="['pill', 'priority-none', { active: editedPriority === null }]"
               @click="setPriority(null)"
             >
-              None
+              {{ $t?.('priority.none') || 'None' }}
             </button>
           </div>
         </div>
@@ -65,26 +76,26 @@
         <div class="field-section">
           <label class="field-label">
             <Calendar :size="12" />
-            Due Date
+            {{ $t?.('task.dueDate') || 'Due Date' }}
           </label>
           <div class="pill-options">
             <button
               :class="['pill', 'date-pill', { active: isToday }]"
               @click="setDueDate('today')"
             >
-              Today
+              {{ $t?.('date.today') || 'Today' }}
             </button>
             <button
               :class="['pill', 'date-pill', { active: isTomorrow }]"
               @click="setDueDate('tomorrow')"
             >
-              Tomorrow
+              {{ $t?.('date.tomorrow') || 'Tomorrow' }}
             </button>
             <button
               :class="['pill', 'date-pill', { active: isNextWeek }]"
               @click="setDueDate('week')"
             >
-              Next Week
+              {{ $t?.('date.nextWeek') || 'Next Week' }}
             </button>
             <button
               v-if="editedDueDate"
@@ -95,8 +106,8 @@
             </button>
           </div>
           <!-- Show detected date label if different from presets -->
-          <div v-if="parsedTask.dueDateLabel && editedDueDate && !isPresetDate" class="detected-label">
-            Detected: {{ parsedTask.dueDateLabel }}
+          <div v-if="parsedTask?.dueDateLabel && editedDueDate && !isPresetDate" class="detected-label">
+            {{ $t?.('voice.detected') || 'Detected' }}: {{ parsedTask.dueDateLabel }}
           </div>
         </div>
       </div>
@@ -104,7 +115,7 @@
       <!-- Action Buttons -->
       <div class="confirmation-actions">
         <button class="action-btn cancel-btn" @click="handleCancel">
-          Cancel
+          {{ $t?.('common.cancel') || 'Cancel' }}
         </button>
         <button
           class="action-btn confirm-btn"
@@ -112,16 +123,18 @@
           @click="handleConfirm"
         >
           <Plus :size="18" />
-          Create Task
+          {{ $t?.('task.create') || 'Create Task' }}
         </button>
       </div>
     </div>
-  </Transition>
+    </BaseModal>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { CheckCircle2, X, Flag, Calendar, Plus } from 'lucide-vue-next'
+import BaseModal from '@/components/base/BaseModal.vue'
 import type { ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 
 interface Props {
@@ -137,12 +150,21 @@ const emit = defineEmits<{
 }>()
 
 // Refs
-const titleInputRef = ref<HTMLInputElement | null>(null)
+const titleInputRef = ref<HTMLTextAreaElement | null>(null)
 
 // Editable state
 const editedTitle = ref('')
 const editedPriority = ref<'high' | 'medium' | 'low' | null>(null)
 const editedDueDate = ref<Date | null>(null)
+
+// RTL detection for title text
+const titleDirection = computed(() => {
+  if (!editedTitle.value.trim()) return 'auto'
+  const firstChar = editedTitle.value.trim()[0]
+  // Hebrew, Arabic, Persian, Urdu character ranges
+  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+})
 
 // Initialize from parsed task
 watch(() => props.parsedTask, (task) => {
@@ -157,8 +179,11 @@ watch(() => props.parsedTask, (task) => {
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
     await nextTick()
-    titleInputRef.value?.focus()
-    titleInputRef.value?.select()
+    // Small delay to ensure modal animation completes
+    setTimeout(() => {
+      titleInputRef.value?.focus()
+      titleInputRef.value?.select()
+    }, 100)
   }
 })
 
@@ -266,17 +291,14 @@ function triggerHaptic(duration: number = 10) {
 
 <style scoped>
 /* ================================
-   VOICE TASK CONFIRMATION
-   Inline expansion panel
+   VOICE TASK CONFIRMATION MODAL
+   Popup window with RTL support
    ================================ */
 
-.voice-confirmation {
-  background: var(--surface-primary, hsl(240, 18%, 12%));
-  border-radius: 16px;
-  margin-top: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.voice-confirmation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 /* Header */
@@ -284,15 +306,15 @@ function triggerHaptic(duration: number = 10) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(78, 205, 196, 0.08);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(78, 205, 196, 0.05);
 }
 
 .header-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .header-icon {
@@ -300,92 +322,116 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
 }
 
 .close-btn {
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  border-radius: var(--radius-full);
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-fast);
+}
+
+.close-btn:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 .close-btn:active {
   transform: scale(0.9);
-  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Body */
 .confirmation-body {
-  padding: 16px 14px;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-5);
 }
 
 .field-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .field-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
-.title-input {
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: var(--text-primary, #fff);
-  font-size: 15px;
+/* Title Textarea - RTL-aware */
+.title-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+  line-height: var(--leading-relaxed);
   outline: none;
-  transition: all 0.2s ease;
+  resize: vertical;
+  transition: all var(--duration-fast);
 }
 
-.title-input:focus {
+.title-textarea:focus {
   border-color: var(--brand-primary, #4ECDC4);
-  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.15);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
 }
 
-.title-input::placeholder {
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+.title-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* RTL text alignment is handled by dir attribute */
+.title-textarea[dir="rtl"] {
+  text-align: right;
+}
+
+.title-textarea[dir="ltr"] {
+  text-align: left;
 }
 
 /* Pill Options */
 .pill-options {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .pill {
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 13px;
-  font-weight: 500;
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast);
+}
+
+.pill:hover {
+  background: var(--glass-bg);
+  border-color: var(--glass-border-hover);
 }
 
 .pill:active {
@@ -412,9 +458,9 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .pill.priority-none.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary, #fff);
+  background: var(--glass-bg);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
 }
 
 /* Date pills */
@@ -425,25 +471,29 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .pill.clear-pill {
-  padding: 8px 10px;
+  padding: var(--space-2);
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
   color: #ef4444;
 }
 
+.pill.clear-pill:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
 .detected-label {
-  font-size: 12px;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   font-style: italic;
+  margin-top: var(--space-1);
 }
 
 /* Actions */
 .confirmation-actions {
   display: flex;
-  gap: 10px;
-  padding: 12px 14px;
-  padding-bottom: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--glass-border);
 }
 
 .action-btn {
@@ -451,14 +501,14 @@ function triggerHaptic(duration: number = 10) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px 16px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-fast);
 }
 
 .action-btn:active {
@@ -466,17 +516,23 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .cancel-btn {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
 }
 
-.cancel-btn:active {
-  background: rgba(255, 255, 255, 0.1);
+.cancel-btn:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 .confirm-btn {
   background: var(--brand-primary, #4ECDC4);
-  color: hsl(230, 20%, 10%);
+  color: var(--surface-primary, hsl(230, 20%, 10%));
+}
+
+.confirm-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
 }
 
 .confirm-btn:disabled {
@@ -484,42 +540,27 @@ function triggerHaptic(duration: number = 10) {
   cursor: not-allowed;
 }
 
-.confirm-btn:not(:disabled):active {
-  transform: scale(0.97);
-}
-
 /* ================================
-   TRANSITIONS
+   RESPONSIVE
    ================================ */
 
-.expand-enter-active {
-  animation: expandIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.expand-leave-active {
-  animation: expandOut 0.2s ease-out forwards;
-}
-
-@keyframes expandIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scaleY(0.9);
-    transform-origin: top;
+@media (max-width: 480px) {
+  .confirmation-header {
+    padding: var(--space-3) var(--space-4);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-}
 
-@keyframes expandOut {
-  from {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
+  .confirmation-body {
+    padding: var(--space-4);
+    gap: var(--space-4);
   }
-  to {
-    opacity: 0;
-    transform: translateY(-10px) scaleY(0.9);
+
+  .confirmation-actions {
+    padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
   }
 }
 
@@ -528,15 +569,11 @@ function triggerHaptic(duration: number = 10) {
    ================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  .expand-enter-active,
-  .expand-leave-active {
-    animation: none;
-    transition: opacity 0.15s ease;
-  }
-
-  .expand-enter-from,
-  .expand-leave-to {
-    opacity: 0;
+  .pill,
+  .close-btn,
+  .action-btn,
+  .title-textarea {
+    transition: none;
   }
 }
 </style>

@@ -75,7 +75,7 @@
 | ~~**BUG-1047**~~         | ✅ **DONE** **Task Position Drift on Edit Save**                        | **P0**                                              | ✅ **DONE** (2026-01-24) - Added debug logging, not reproducible                                                                | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1062**~~         | ✅ **DONE** **Selection state not synchronized between store and Vue Flow** | **P0**                                          | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1068**             | **Canvas alignment operations unreliable (race condition)**            | **P0**                                              | 🔄 **IN PROGRESS** [See Details](#bug-1068-alignment-operations-unreliable-in-progress)                                          | BUG-1062                                                                                                                                                                                                       |                                                        |
-| **BUG-1070**             | **PWA doesn't show Whisper voice input option**                        | **P1**                                              | 👀 **REVIEW** [See Details](#bug-1070-pwa-whisper-voice-input-not-showing-review)                                                | -                                                                                                                                                                                                              |                                                        |
+| ~~**BUG-1070**~~         | ✅ **DONE** **PWA doesn't show Whisper voice input option**            | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                          | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Tauri App Not Syncing with Web App**                     | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | TASK-1060                                                                                                                                                                                                      |                                                        |
 | **FEATURE-1065**         | **Local Supabase as VPS Backup Mirror**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | BUG-1064                                                                                                                                                                                                       |                                                        |
 | **TASK-1071**            | **Tauri: Add Microphone Permission for Voice AI**                      | **P1**                                              | 📋 **PLANNED**                                                                                                                  | FEATURE-1023                                                                                                                                                                                                   |                                                        |
@@ -243,6 +243,7 @@
 | ~~**BUG-1063**~~         | ✅ **DONE** **Cloudflare Cache MIME Type Error (Chromium Only)**         | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Chromium browsers failed to load CSS/JS with MIME type errors. Firefox worked. Root cause: Cloudflare edge cache served wrong content for preload scanner requests. Fix: Added `Vary: Accept` header. Created SOP-032, tests, CI validation. | TASK-1060                                              |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Dev-Maestro Parser Status Detection Broken**               | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-140 showed as IN PROGRESS despite being DONE. Table tasks didn't update from PLANNED→IN PROGRESS. Fix: (1) Unrecognized `##` sections reset parser state, (2) Table parser detects 🔄/⏸️/👀 statuses. [SOP-031](./sop/SOP-031-dev-maestro-parser.md) | -                                                      |
 | **TASK-1063**            | **Update CLAUDE.md with VPS/Contabo Deployment Docs**                    | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1063-update-claudemd-with-vpscontabo-deployment-docs-in-progress) - Add comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
+| **TASK-1072**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
 
 ---
 
@@ -303,19 +304,19 @@
 
 ---
 
-### BUG-1070: PWA Whisper Voice Input Not Showing (👀 REVIEW)
+### ~~BUG-1070~~: PWA Whisper Voice Input Not Showing (✅ DONE)
 
 **Priority**: P1
-**Status**: 👀 REVIEW (2026-01-25) - Awaiting user verification
+**Status**: ✅ DONE (2026-01-25)
 
-**Problem**: The PWA (web app at in-theflow.com) doesn't show the Whisper voice input option in the Unified Inbox input field. The microphone button is not visible.
+**Problem**: The PWA (web app at in-theflow.com) didn't show the Whisper voice input option in the Unified Inbox input field. The microphone button was not visible.
 
 **Root Cause**: Production code required `VITE_GROQ_API_KEY` environment variable, but the Whisper implementation was refactored to use a server-side edge function. The uncommitted changes weren't deployed.
 
 **Fix Applied**:
 1. ✅ Frontend refactor deployed (removes client-side API key check) - commit `c03e24a`
 2. ✅ Edge function committed and deployed to VPS - commit `8ba8cbe`
-3. ✅ GROQ_API_KEY already configured in VPS edge runtime (via Doppler sync)
+3. ✅ GROQ_API_KEY configured in VPS edge runtime (via Doppler sync)
 
 **Files Changed**:
 - `src/composables/useWhisperSpeech.ts` - Uses edge function, no client API key needed
@@ -328,7 +329,7 @@
 - [x] Commit edge function (8ba8cbe)
 - [x] Verify edge function deployed to VPS (/opt/supabase/docker/volumes/functions/whisper-transcribe/)
 - [x] Verify GROQ_API_KEY set in edge runtime
-- [ ] **USER VERIFY**: Test voice input works in PWA (hard refresh https://in-theflow.com)
+- [x] User verification complete
 
 ---
 

@@ -404,18 +404,11 @@ const handleCollectTasks = () => {
   }
 }
 
-// BUG-1076: Handler for deleting group with debug logging
+// BUG-1076 FIX: Handler for deleting group - ensures proper event emission order
 const handleDeleteGroup = () => {
-  console.log('[BUG-1076] CanvasContextMenu: Delete Group clicked', {
-    contextSection: props.contextSection,
-    sectionId: props.contextSection?.id,
-    sectionName: props.contextSection?.name
-  })
   if (props.contextSection) {
     emit('deleteGroup', props.contextSection)
     emit('close')
-  } else {
-    console.error('[BUG-1076] CanvasContextMenu: contextSection is null/undefined!')
   }
 }
 

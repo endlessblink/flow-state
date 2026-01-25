@@ -194,44 +194,63 @@ select option {
    that match the visual appearance of the web version's glass effects.
    ======================================================================== */
 
-/* Override glass variables for Tauri - make them opaque */
+/* Override glass variables for Tauri - FULLY OPAQUE (BUG-1066) */
+/* WebKitGTK doesn't support backdrop-filter, so we use solid colors */
 .tauri-app {
-  /* Glass backgrounds - opaque versions matching web visual appearance */
-  --glass-bg-soft: rgba(30, 30, 35, 0.95) !important;
-  --glass-bg-light: rgba(35, 35, 42, 0.95) !important;
-  --glass-bg-medium: rgba(28, 28, 34, 0.96) !important;
-  --glass-bg-heavy: rgba(25, 25, 30, 0.97) !important;
-  --glass-bg: rgba(30, 30, 36, 0.95) !important;
-  --glass-bg-tint: rgba(32, 32, 40, 0.96) !important;
+  /* Glass backgrounds - FULLY OPAQUE solid colors */
+  --glass-bg-soft: rgb(30, 30, 35) !important;
+  --glass-bg-light: rgb(35, 35, 42) !important;
+  --glass-bg-medium: rgb(28, 28, 34) !important;
+  --glass-bg-heavy: rgb(25, 25, 30) !important;
+  --glass-bg: rgb(30, 30, 36) !important;
+  --glass-bg-tint: rgb(32, 32, 40) !important;
+  --glass-bg-subtle: rgb(32, 32, 40) !important;
 
-  /* Panel backgrounds - fully opaque */
-  --inbox-panel-bg: rgba(22, 22, 28, 0.97) !important;
-  --glass-panel-bg: rgba(24, 24, 30, 0.96) !important;
-  --dropdown-bg: rgba(22, 22, 28, 0.98) !important;
+  /* Panel backgrounds - FULLY OPAQUE */
+  --inbox-panel-bg: rgb(22, 22, 28) !important;
+  --glass-panel-bg: rgb(24, 24, 30) !important;
+  --dropdown-bg: rgb(22, 22, 28) !important;
 
-  /* Overlay components - near opaque */
-  --overlay-component-bg: rgba(20, 20, 26, 0.98) !important;
+  /* Overlay components - FULLY OPAQUE */
+  --overlay-component-bg: rgb(22, 22, 28) !important;
+  --overlay-component-backdrop: none !important;
 
-  /* Kanban backgrounds */
-  --kanban-column-bg: rgba(35, 35, 42, 0.95) !important;
-  --kanban-card-glass-bg: rgba(30, 30, 38, 0.96) !important;
+  /* Kanban backgrounds - FULLY OPAQUE */
+  --kanban-column-bg: rgb(35, 35, 42) !important;
+  --kanban-card-glass-bg: rgb(30, 30, 38) !important;
+
+  /* Surface backgrounds for components */
+  --surface-0: rgb(18, 18, 22) !important;
+  --surface-1: rgb(24, 24, 30) !important;
+  --surface-hover: rgb(35, 35, 42) !important;
 }
 
 /* When running in Tauri (class added by app initialization) */
-/* Use opaque backgrounds since backdrop-filter doesn't work */
+/* Use FULLY OPAQUE backgrounds since backdrop-filter doesn't work */
 .tauri-app .glass,
-.tauri-app [class*="backdrop-blur"],
-.pwa-app .glass,
-.pwa-app [class*="backdrop-blur"] {
+.tauri-app [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background-color: rgba(28, 28, 34, 0.96) !important;
+  background-color: rgb(28, 28, 34) !important;
   border: 1px solid var(--glass-border) !important;
 }
 
-/* Fix glass panel backgrounds for Tauri */
+.pwa-app .glass,
+.pwa-app [class*="backdrop-blur"] {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  background-color: var(--glass-bg-medium) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+/* Fix glass panel backgrounds - OPAQUE for Tauri */
 .tauri-app .glass-panel,
-.tauri-app [class*="glass-bg"],
+.tauri-app [class*="glass-bg"] {
+  background: rgb(28, 28, 34) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 .pwa-app .glass-panel,
 .pwa-app [class*="glass-bg"] {
   background: var(--glass-bg-medium) !important;
@@ -239,9 +258,15 @@ select option {
   -webkit-backdrop-filter: blur(16px) !important;
 }
 
-/* Tauri sidebar glass fix - Iteration 3 - PERFECT PARITY */
+/* Sidebar - OPAQUE for Tauri */
 .tauri-app aside,
-.tauri-app nav,
+.tauri-app nav {
+  background: rgb(18, 18, 22) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: var(--sidebar-shadow) !important;
+}
+
 .pwa-app aside,
 .pwa-app nav {
   background: var(--sidebar-bg) !important;
@@ -250,10 +275,16 @@ select option {
   box-shadow: var(--sidebar-shadow) !important;
 }
 
-/* Tauri modal/overlay glass fix - Iteration 3 - VIBRANT DEPTH */
+/* Modal/overlay - OPAQUE for Tauri */
 .tauri-app [role="dialog"],
 .tauri-app .modal,
-.tauri-app .n-modal,
+.tauri-app .n-modal {
+  background: rgb(24, 24, 30) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
 .pwa-app [role="dialog"],
 .pwa-app .modal,
 .pwa-app .n-modal {
@@ -263,13 +294,19 @@ select option {
   box-shadow: var(--shadow-2xl), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Tauri dropdown/popover glass fix */
+/* Naive UI Dropdown/Popover - OPAQUE for Tauri */
 .tauri-app .n-dropdown,
 .tauri-app .n-popover,
-.tauri-app [class*="dropdown"],
+.tauri-app .n-dropdown-menu,
+.tauri-app .n-popover-content {
+  background: rgb(22, 22, 28) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
 .pwa-app .n-dropdown,
-.pwa-app .n-popover,
-.pwa-app [class*="dropdown"] {
+.pwa-app .n-popover {
   background: var(--dropdown-bg) !important;
   backdrop-filter: blur(var(--blur-regular)) !important;
   -webkit-backdrop-filter: blur(var(--blur-regular)) !important;
@@ -743,13 +780,26 @@ select option {
   background: rgba(78, 205, 196, 0.15) !important;
 }
 
-/* Done Toggle Button */
+/* Done Toggle Button - Inactive state is subtle/muted */
 .tauri-app .unified-inbox-panel .done-toggle-btn {
-  background: rgba(34, 197, 94, 0.15) !important;
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(148, 163, 184, 1) !important;
 }
 
 .tauri-app .unified-inbox-panel .done-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Done Toggle Button - Active state shows green */
+.tauri-app .unified-inbox-panel .done-toggle-btn.active {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-color: rgb(34, 197, 94) !important;
+  color: rgb(34, 197, 94) !important;
+}
+
+.tauri-app .unified-inbox-panel .done-toggle-btn.active:hover {
+  background: rgba(34, 197, 94, 0.25) !important;
 }
 
 /* Filter Chips Section */

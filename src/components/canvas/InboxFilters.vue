@@ -1,42 +1,80 @@
 <template>
   <div class="inbox-filters">
-    <!-- All Tasks (Reset Filters) -->
-    <button
-      class="filter-chip"
-      :class="{ active: !hasActiveFilters }"
-      title="Show all tasks"
-      @click="clearAllFilters"
-    >
-      <List :size="14" />
-      <span class="chip-label">All</span>
-    </button>
+    <!-- TASK-1073: Sort Controls -->
+    <div class="sort-row">
+      <span class="sort-label">Sort:</span>
+      <div class="sort-buttons">
+        <button
+          class="sort-btn"
+          :class="{ active: sortBy === 'newest' }"
+          title="Sort by newest first"
+          @click="$emit('update:sortBy', 'newest')"
+        >
+          <Clock :size="12" />
+          Newest
+        </button>
+        <button
+          class="sort-btn"
+          :class="{ active: sortBy === 'priority' }"
+          title="Sort by priority (high first)"
+          @click="$emit('update:sortBy', 'priority')"
+        >
+          <Flag :size="12" />
+          Priority
+        </button>
+        <button
+          class="sort-btn"
+          :class="{ active: sortBy === 'dueDate' }"
+          title="Sort by due date"
+          @click="$emit('update:sortBy', 'dueDate')"
+        >
+          <CalendarDays :size="12" />
+          Due
+        </button>
+      </div>
+    </div>
 
-    <!-- TASK-076: Hide Done Toggle -->
-    <button
-      v-if="hideDoneTasks !== undefined"
-      class="filter-chip"
-      :class="{ active: hideDoneTasks }"
-      title="Hide completed tasks"
-      @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
-    >
-      <CheckCircle2 :size="14" />
-      <span class="chip-label">{{ hideDoneTasks ? 'Hiding Done' : 'Show Done' }}</span>
-    </button>
+    <div class="filter-divider" />
 
-    <!-- Unscheduled Toggle -->
-    <button
-      class="filter-chip"
-      :class="{ active: unscheduledOnly }"
-      title="Show only unscheduled tasks (not on calendar)"
-      @click="$emit('update:unscheduledOnly', !unscheduledOnly)"
-    >
-      <CalendarOff :size="14" />
-      <span class="chip-label">Unscheduled</span>
-      <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
-    </button>
+    <!-- Filter Chips Row -->
+    <div class="filter-chips-row">
+      <!-- All Tasks (Reset Filters) -->
+      <button
+        class="filter-chip"
+        :class="{ active: !hasActiveFilters }"
+        title="Show all tasks"
+        @click="clearAllFilters"
+      >
+        <List :size="14" />
+        <span class="chip-label">All</span>
+      </button>
 
-    <!-- Priority Filter -->
-    <div ref="priorityDropdownRef" class="filter-dropdown">
+      <!-- TASK-076: Hide Done Toggle -->
+      <button
+        v-if="hideDoneTasks !== undefined"
+        class="filter-chip"
+        :class="{ active: hideDoneTasks }"
+        title="Hide completed tasks"
+        @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
+      >
+        <CheckCircle2 :size="14" />
+        <span class="chip-label">{{ hideDoneTasks ? 'Hiding Done' : 'Show Done' }}</span>
+      </button>
+
+      <!-- Unscheduled Toggle -->
+      <button
+        class="filter-chip"
+        :class="{ active: unscheduledOnly }"
+        title="Show only unscheduled tasks (not on calendar)"
+        @click="$emit('update:unscheduledOnly', !unscheduledOnly)"
+      >
+        <CalendarOff :size="14" />
+        <span class="chip-label">Unscheduled</span>
+        <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
+      </button>
+
+      <!-- Priority Filter -->
+      <div ref="priorityDropdownRef" class="filter-dropdown">
       <button
         class="filter-chip"
         :class="{ active: selectedPriority !== null }"
@@ -143,22 +181,24 @@
       </div>
     </div>
 
-    <!-- Clear All Filters -->
-    <button
-      v-if="hasActiveFilters"
-      class="clear-filters-btn"
-      title="Clear all filters"
-      @click="clearAllFilters"
-    >
-      <X :size="14" />
-    </button>
+      <!-- Clear All Filters -->
+      <button
+        v-if="hasActiveFilters"
+        class="clear-filters-btn"
+        title="Clear all filters"
+        @click="clearAllFilters"
+      >
+        <X :size="14" />
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2 } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
+import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
 // TASK-144: Use centralized duration categories
 import { type DurationCategory, DURATION_FILTER_OPTIONS, matchesDurationCategory } from '@/utils/durationCategories'
 
@@ -171,6 +211,7 @@ interface Props {
   selectedProject: string | null
   selectedDuration: DurationCategory | null
   hideDoneTasks?: boolean // TASK-076: Separate done filter for each view
+  sortBy?: SortByType // TASK-1073: Sort option
 }
 
 const props = defineProps<Props>()
@@ -181,6 +222,7 @@ const emit = defineEmits<{
   'update:selectedProject': [value: string | null]
   'update:selectedDuration': [value: DurationCategory | null]
   'update:hideDoneTasks': [value: boolean] // TASK-076
+  'update:sortBy': [value: SortByType] // TASK-1073
   clearAll: []
 }>()
 
@@ -312,10 +354,67 @@ onBeforeUnmount(() => {
 <style scoped>
 .inbox-filters {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
+}
+
+/* TASK-1073: Sort Row */
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sort-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.sort-buttons {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.sort-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--spring-smooth);
+}
+
+.sort-btn:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.sort-btn.active {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  color: var(--state-active-text);
+}
+
+.filter-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-1) 0;
+}
+
+/* Filter chips row */
+.filter-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .filter-chip {

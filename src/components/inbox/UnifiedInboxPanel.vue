@@ -27,6 +27,7 @@
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
       :context="context"
+      :sort-by="sortBy"
 
       @toggleCollapse="isCollapsed = !isCollapsed"
       @update:activeTimeFilter="activeTimeFilter = $event"
@@ -37,6 +38,7 @@
       @update:selected-project="selectedProject = $event"
       @update:selected-duration="selectedDuration = $event"
       @update:hide-done-tasks="toggleHideDoneTasks"
+      @update:sortBy="sortBy = $event"
       @clearAll="clearAllFilters"
     />
 
@@ -145,6 +147,7 @@ const {
   selectedDuration,
   selectedCanvasGroups,
   currentHideDoneTasks,
+  sortBy, // TASK-1073
   canvasGroupOptions,
   baseInboxTasks,
   inboxTasks,

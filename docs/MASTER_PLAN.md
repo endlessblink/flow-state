@@ -1,4 +1,4 @@
-**Last Updated**: January 25, 2026 (BUG-1078 Inbox header crops on sides)
+**Last Updated**: January 25, 2026 (BUG-1079 Inbox panel auto-size width fix)
 **Version**: 5.74 (Inbox Header UI Fix)
 **Baseline**: Checkpoint `93d5105` (Dec 5, 2025)
 
@@ -196,6 +196,7 @@
 | ~~**TASK-1077**~~        | ✅ **DONE** **Full-Screen Task Creation for Mobile PWA**                 | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | New TaskCreateBottomSheet with 100dvh height, better mobile UX for task creation with spacious layout and proper touch targets                                                                                         |                                                        |
 | **BUG-1076**             | **Can't Delete Done Group on Canvas**                                    | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Smart Group deletion blocked - unable to delete "Done" status-based group from canvas context menu                                                                                                                     | -                                                      |
 | ~~**BUG-1078**~~         | ✅ **DONE** **Search Icon Pushed Out of Inbox Header**                   | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Fixed `.inbox-title` from `flex: 1` to `flex: 0 0 auto` to prevent greedy expansion pushing search icon out of view                                                                                                    | -                                                      |
+| **BUG-1079**             | **Inbox Panel Crops Content - Auto-Size Width**                          | **P2**                                              | 👀 **REVIEW**                                                                                                                   | Fixed: Panel uses `fit-content` width with min/max bounds. Prevents clipping of badges/dropdowns in Canvas/Calendar inbox                                                                                              | -                                                      |
 | ~~**BUG-1012**~~         | ✅ **DONE** **Dev-Maestro: "Submit Answers & Continue" Button Fixed**    | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Added debugging, error feedback, validation. Button now works correctly.                                                                                                                                            |                                                        |
 | ~~**FEATURE-1012**~~     | ✅ **DONE** **Orchestrator: Auto-Detect Project Tech Stack**             | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Auto-detects Vue/React, UI libs, state mgmt, DB from package.json. Questions now focus on feature details, not tech stack.                                                                                          | TASK-303                                               |
 | **FEATURE-1013**         | **Orchestrator: Auto-Detect Data Layer**                                 | **P2**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#feature-1013-orchestrator-auto-detect-data-layer-planned) - Find Pinia stores, Supabase, APIs before asking about data management                                                                   | TASK-303, FEATURE-1012                                 |
@@ -247,12 +248,12 @@
 | **TASK-1058**            | **MASTER_PLAN Symptom Index & Task Discovery Research**                  | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Research and implement better task discovery in MASTER_PLAN.md. Options: symptom index, keyword tags, consistent section headers, beads integration. Goal: find any bug/task in 1 grep, not 4 attempts.                                  | -                                                      |
 | ~~**TASK-1059**~~        | ✅ **DONE** **CORS Monitoring & Prevention Infrastructure**              | **P1**                                              | ✅ **DONE** (2026-01-24)                                                                                                         | [SOP-031](./sop/SOP-031-cors-configuration.md) - Automated CORS validation script, CI/CD integration, comprehensive troubleshooting guide. Prevents duplicate header issues, missing headers, and browser-specific CORS failures.         | TASK-351                                               |
 | **TASK-1060**            | **Infrastructure & E2E Sync Stability (All Platforms)**                  | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-1060-infrastructure--e2e-sync-stability-all-platforms-in-progress) - Fix Caddy instability, web/Tauri/PWA/KDE sync issues. Full platform E2E verification.                                                              | BUG-1056, TASK-351                                     |
-| **BUG-1061**             | **Canvas Position Drift on Cross-Browser Sync**                          | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#bug-1061-canvas-position-drift-on-cross-browser-sync-in-progress) - Gaps: (1) Lock timing window after drag end, (2) Cross-tab timestamp drift, (3) Supabase event order. Has partial protections but still drifts.          | TASK-1060, BUG-1047                                    |
+| **BUG-1061**             | **Canvas Position Drift on Cross-Browser Sync**                          | **P0**                                              | 👀 **REVIEW** (2026-01-25)                                                                                                       | [See Details](#bug-1061-canvas-position-drift-on-cross-browser-sync-review) - Fix #5 deployed: Module-level `canvasSyncInProgress` flag blocks spurious `onNodeDragStop` calls during sync. User testing to confirm fix.                      | TASK-1060, BUG-1047                                    |
 | ~~**BUG-1063**~~         | ✅ **DONE** **Cloudflare Cache MIME Type Error (Chromium Only)**         | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Chromium browsers failed to load CSS/JS with MIME type errors. Firefox worked. Root cause: Cloudflare edge cache served wrong content for preload scanner requests. Fix: Added `Vary: Accept` header. Created SOP-032, tests, CI validation. | TASK-1060                                              |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Dev-Maestro Parser Status Detection Broken**               | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-140 showed as IN PROGRESS despite being DONE. Table tasks didn't update from PLANNED→IN PROGRESS. Fix: (1) Unrecognized `##` sections reset parser state, (2) Table parser detects 🔄/⏸️/👀 statuses. [SOP-031](./sop/SOP-031-dev-maestro-parser.md) | -                                                      |
 | ~~**TASK-1063**~~        | ✅ **DONE** **Update CLAUDE.md with VPS/Contabo Deployment Docs**        | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Added comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
-| **TASK-1072**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
-| **TASK-1073**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
+| **TASK-1080**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
+| **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
 
 ---
 
@@ -723,10 +724,10 @@ kde-widget/package/contents/ui/main.qml  # Widget QML
 
 ---
 
-### BUG-1061: Canvas Position Drift on Cross-Browser Sync (🔄 IN PROGRESS)
+### BUG-1061: Canvas Position Drift on Cross-Browser Sync (👀 REVIEW)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS (Started: 2026-01-25)
+**Status**: 👀 REVIEW (Updated: 2026-01-25)
 **Dependencies**: TASK-1060, BUG-1047
 
 #### Problem Statement
@@ -825,6 +826,34 @@ if (oldParentId) {
     }
 }
 ```
+
+#### Fix #5 Applied (ROOT CAUSE FIX - 2026-01-25)
+
+**Root Cause Identified**: Vue Flow fires `onNodeDragStop` when `setNodes()` is called during sync operations, creating a reactive loop:
+1. User drags task → `onNodeDragStop` fires
+2. Smart Group updates dueDate → `taskStore.updateTask()`
+3. `syncTrigger++` → `batchedSyncNodes()` → `setNodes()`
+4. Vue Flow fires `onNodeDragStop` AGAIN (spurious)
+5. Loop continues, causing tasks to bounce between groups
+
+**Fix**: Module-level `canvasSyncInProgress` flag blocks spurious `onNodeDragStop` calls.
+
+```typescript
+// useCanvasSync.ts - Module-level singleton flag
+const canvasSyncInProgress = ref(false)
+export { canvasSyncInProgress }
+
+// useCanvasInteractions.ts - Guard at start of onNodeDragStop
+const onNodeDragStop = async (event: NodeDragEvent) => {
+    if (canvasSyncInProgress.value) {
+        console.log('🛡️ [DRAG-STOP-BLOCKED] Skipping - triggered during canvas sync')
+        return
+    }
+    // ... rest of handler
+}
+```
+
+**Verification**: Console shows `🛡️ [DRAG-STOP-BLOCKED]` messages when spurious calls are blocked.
 
 ---
 

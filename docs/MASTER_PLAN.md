@@ -74,7 +74,7 @@
 | ~~**BUG-245**~~          | ✅ **DONE** **Today Smart Group Date Not Updating**                     | **P0**                                              | ✅ **DONE** (2026-01-12)                                                                                                         | TASK-184                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-1047**~~         | ✅ **DONE** **Task Position Drift on Edit Save**                        | **P0**                                              | ✅ **DONE** (2026-01-24) - Added debug logging, not reproducible                                                                | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1062**~~         | ✅ **DONE** **Selection state not synchronized between store and Vue Flow** | **P0**                                          | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
-| **BUG-1068**             | **Canvas alignment operations unreliable (race condition)**            | **P0**                                              | 🔄 **IN PROGRESS** [See Details](#bug-1068-alignment-operations-unreliable-in-progress)                                          | BUG-1062                                                                                                                                                                                                       |                                                        |
+| ~~**BUG-1068**~~         | ✅ **DONE** **Canvas alignment operations unreliable (race condition)** | **P0**                                             | ✅ **DONE** (2026-01-25) - Fixed async await + manualOperationInProgress + edge-to-edge spacing                                  | BUG-1062                                                                                                                                                                                                       |                                                        |
 | ~~**BUG-1070**~~         | ✅ **DONE** **PWA doesn't show Whisper voice input option**            | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                          | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1064**~~         | ✅ **DONE** **Tauri App Not Syncing with Web App**                     | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | TASK-1060                                                                                                                                                                                                      |                                                        |
 | **FEATURE-1065**         | **Local Supabase as VPS Backup Mirror**                                | **P2**                                              | 📋 **PLANNED**                                                                                                                  | BUG-1064                                                                                                                                                                                                       |                                                        |
@@ -267,10 +267,10 @@
 
 ---
 
-### BUG-1062: Selection state not synchronized between store and Vue Flow (👀 REVIEW)
+### ~~BUG-1062~~: Selection state not synchronized between store and Vue Flow (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 👀 REVIEW (2026-01-25)
+**Status**: ✅ DONE (2026-01-25)
 
 **Problem**: When multi-selecting tasks on the canvas and attempting alignment operations (Arrange in Column, Arrange in Row, Center Horizontal), the operation fails with error: "Selection state not synchronized between store and Vue Flow".
 
@@ -280,31 +280,62 @@
 
 2. **Validation compared apples to oranges**: The alignment validation compared ALL store selections (tasks + groups) against ONLY task nodes from Vue Flow, causing false positives when groups were selected.
 
-**Why it worked locally but broke on VPS**: VPS has more active Supabase realtime subscriptions causing more frequent syncs, exposing this latent bug faster.
-
 **Fix Applied**:
 
-1. **useCanvasSync.ts** (line 608): Added selection state restoration before `setNodes()`:
-   ```typescript
-   const selectedIds = canvasStore.selectedNodeIds
-   if (selectedIds.length > 0) {
-       for (const node of newNodes) {
-           node.selected = selectedIds.includes(node.id)
-       }
-   }
-   setNodes(newNodes)
-   ```
-
-2. **useCanvasAlignment.ts** (lines 113-148): Fixed validation to compare task-only selections:
-   - Filter `canvasStore.selectedNodeIds` to exclude group IDs (`section-*`)
-   - Compare `storeTaskSelection` vs `vueFlowSelection` (both task-only)
-   - Added diagnostic logging for future debugging
+1. **useCanvasSync.ts** (line 608): Added selection state restoration before `setNodes()`
+2. **useCanvasAlignment.ts**: Fixed validation to compare task-only selections
 
 **Tasks**:
 - [x] Investigate where selection sync is broken
 - [x] Fix selection synchronization between store and Vue Flow
 - [x] Fix validation logic to handle mixed task/group selection
-- [ ] **USER VERIFY**: Test alignment operations on VPS
+- [x] User verified alignment operations work on VPS
+
+---
+
+### ~~BUG-1068~~: Canvas alignment operations unreliable (✅ DONE)
+
+**Priority**: P0-CRITICAL
+**Status**: ✅ DONE (2026-01-25)
+**Depends On**: BUG-1062
+
+**Problem**: Even after BUG-1062 fix, alignment operations (Arrange in Column, Center Horizontal) were still unreliable - sometimes working, sometimes not. Visual gaps between tasks were also inconsistent.
+
+**Root Causes Found**:
+
+1. **Async operations not awaited**: BUG-1051 changed alignment callbacks to async with `await taskStore.updateTask()`, but the caller `executeAlignmentOperation()` didn't await the callback. This caused race conditions where sync ran before all updates completed.
+
+2. **No sync protection during batch operations**: Each `updateTask()` call triggered sync watchers, potentially overwriting positions mid-operation.
+
+3. **Center-based spacing caused visual inconsistency**: Layout operations distributed by center points, not edge-to-edge gaps. Tasks with different heights had visually different gaps.
+
+**Fixes Applied**:
+
+1. **Await async callback** in `executeAlignmentOperation()`:
+   ```typescript
+   await operation(selectedNodes)  // Now properly awaited
+   ```
+
+2. **Set manualOperationInProgress during alignment** to block sync:
+   ```typescript
+   taskStore.manualOperationInProgress = true
+   // ... do all updates ...
+   taskStore.manualOperationInProgress = false
+   ```
+
+3. **Edge-to-edge spacing** for consistent visual gaps:
+   - `arrangeInColumn`: Position each task at previous task's bottom + 16px gap
+   - `arrangeInRow`: Position each task at previous task's right + 16px gap
+   - `distributeVertical/Horizontal`: Calculate gaps from actual task dimensions
+
+**Files Changed**:
+- `src/composables/canvas/useCanvasAlignment.ts`
+
+**Tasks**:
+- [x] Fix async/await race condition
+- [x] Add manualOperationInProgress protection
+- [x] Fix edge-to-edge spacing for consistent gaps
+- [x] User verified on VPS
 
 ---
 
@@ -727,12 +758,20 @@ Tasks appear in different positions across browser tabs/windows. When user drags
 
 #### Progress Log
 - **2026-01-25**: BUG created, protections documented, gaps identified, starting investigation
-- **2026-01-25**: ROOT CAUSE FOUND - `positionVersion` exists but was NOT checked in `updateTaskFromSync`!
-- **2026-01-25**: FIX IMPLEMENTED in `src/stores/tasks.ts` - Added positionVersion comparison before accepting position updates
+- **2026-01-25**: ROOT CAUSE FOUND #1 - `positionVersion` exists but was NOT checked in `updateTaskFromSync`!
+- **2026-01-25**: FIX #1 IMPLEMENTED in `src/stores/tasks.ts` - Added positionVersion comparison before accepting position updates
   - If `localVersion > remoteVersion`, keeps local position and logs `🛡️ [BUG-1061]` message
   - Also enhanced drift logging to include version numbers
+- **2026-01-25**: User reported drift STILL HAPPENING after Fix #1
+- **2026-01-25**: ROOT CAUSE FOUND #2 - `syncStoreToCanvas` reads `parentId` from PositionManager instead of store!
+  - When PositionManager's `batchUpdate` is rejected (node locked during drag), PM has stale parentId
+  - But store has correct parentId (always updated by realtime sync)
+  - This caused tasks to show as "root" when PM had stale null parentId
+- **2026-01-25**: FIX #2 IMPLEMENTED in `src/composables/canvas/useCanvasSync.ts`
+  - Changed to read `parentId` from task/group directly, not from PositionManager
+  - PM is only used for x/y position (its intended purpose)
 
-#### Fix Applied
+#### Fix #1 Applied (tasks.ts)
 ```typescript
 // BUG-1061: Position version check in updateTaskFromSync
 if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
@@ -745,6 +784,14 @@ if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
     normalizedTask.positionVersion = localVersion
   }
 }
+```
+
+#### Fix #2 Applied (useCanvasSync.ts)
+```typescript
+// BUG-1061 FIX: Read parentId from STORE, not PM
+// PM updates can be rejected if node is locked (user dragging).
+// Store is always updated by realtime sync, so it's the source of truth for parentId.
+let parentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
 ```
 
 ---

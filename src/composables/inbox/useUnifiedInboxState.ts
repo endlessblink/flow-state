@@ -14,6 +14,7 @@ export interface InboxContextProps {
 }
 
 export type TimeFilterType = 'all' | 'today' | 'week' | 'month'
+export type SortByType = 'newest' | 'priority' | 'dueDate'
 
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
@@ -31,6 +32,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
     const selectedProject = ref<string | null>(null)
     const selectedDuration = ref<DurationCategory | null>(null)
+
+    // TASK-1073: Sort state (persisted)
+    const sortBy = useStorage<SortByType>('inbox-sort-by', 'newest')
 
     // TASK-106: Canvas group filter (primary filter)
     const selectedCanvasGroups = ref<Set<string>>(new Set())
@@ -189,6 +193,34 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             )
         }
 
+        // TASK-1073: Apply sorting
+        const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 }
+
+        tasks = [...tasks].sort((a, b) => {
+            switch (sortBy.value) {
+                case 'priority':
+                    // High priority first
+                    const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 3
+                    const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 3
+                    if (aPriority !== bPriority) return aPriority - bPriority
+                    // Secondary: newest first
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+
+                case 'dueDate':
+                    // Tasks with due dates first, then by due date
+                    const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+                    const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+                    if (aDue !== bDue) return aDue - bDue
+                    // Secondary: newest first
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+
+                case 'newest':
+                default:
+                    // Newest first (by createdAt)
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            }
+        })
+
         return tasks
     })
 
@@ -235,6 +267,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         selectedDuration,
         selectedCanvasGroups,
         currentHideDoneTasks,
+        sortBy, // TASK-1073
 
         // Computed (State)
         canvasGroupOptions,

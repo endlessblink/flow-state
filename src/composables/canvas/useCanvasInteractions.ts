@@ -603,7 +603,27 @@ export function useCanvasInteractions(deps?: {
                     }
 
                     // 3. Detect new parent using spatial containment (center inside group bounds)
-                    const targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
+                    // BUG-1061 FIX #4: Prefer current parent if it still contains the task
+                    // This prevents flip-flopping when task is in overlapping region of two groups
+                    let targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
+                    if (oldParentId && targetGroup?.id !== oldParentId) {
+                        // Check if current parent also contains the task
+                        const currentParent = taskAllGroups.find(g => g.id === oldParentId)
+                        if (currentParent) {
+                            const parentAbsPos = getGroupAbsolutePosition(oldParentId, taskAllGroups)
+                            const parentBounds = {
+                                position: parentAbsPos,
+                                width: currentParent.position.width,
+                                height: currentParent.position.height
+                            }
+                            const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, 10)
+                            if (stillInCurrentParent) {
+                                // Task is inside BOTH current parent and detected group - prefer current
+                                console.log(`🛡️ [FIX4-PREFER-CURRENT] Task inside both "${targetGroup?.name}" and current "${currentParent.name}" - keeping current`)
+                                targetGroup = currentParent
+                            }
+                        }
+                    }
                     const newParentId = targetGroup?.id ?? null
                     console.log(`🟢 [DETECT-PARENT] Task "${task.title?.slice(0,20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0,8) ?? 'root'})`)
 

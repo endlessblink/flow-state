@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync, readdirSync, statSync } from 'fs'
-import { join, dirname, resolve } from 'path'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, dirname, resolve } from 'node:path'
 
 // Get project root directory
 const projectRoot = process.cwd()

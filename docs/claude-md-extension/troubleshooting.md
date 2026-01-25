@@ -103,6 +103,39 @@ To fix, run: npm run generate:keys
 
 **Local JWT Secret**: `super-secret-jwt-token-with-at-least-32-characters-long`
 
+### Cloudflare Cache MIME Type Errors (BUG-1063)
+**Symptom**: Chromium browsers (Chrome, Brave, Edge) fail to load CSS/JS with errors like:
+```
+Refused to apply style from 'https://in-theflow.com/assets/index.css'
+because its MIME type ('text/html') is not a supported stylesheet MIME type
+```
+
+Firefox works correctly. `curl` returns correct MIME types. Direct URL navigation works.
+
+**Root Cause**: Cloudflare caches by URL only, not by Accept header. Chromium's preload scanner sends `Accept: text/html` for CSS/JS requests, and Cloudflare serves the wrong cached entry.
+
+**The Contradiction**:
+- ✅ `curl -I` returns correct `content-type: text/css`
+- ✅ Direct browser navigation shows CSS content
+- ❌ Page load fails with MIME error
+
+**Solution**:
+1. Add `Vary: Accept` header in Caddyfile:
+   ```caddyfile
+   @static path /assets/*
+   header @static Vary "Accept-Encoding, Accept"
+   ```
+2. Purge Cloudflare cache (Dashboard → Caching → Purge Everything)
+3. Hard refresh browser (Ctrl+Shift+R)
+
+**Quick Fix Script**: `./scripts/fix-cloudflare-cache.sh`
+
+**Full SOP**: `docs/sop/SOP-032-cloudflare-cache-mime-prevention.md`
+
+**Prevention**: Deploy workflow now validates headers automatically.
+
+---
+
 ## Critical Gotchas
 
 ### Undo/Redo System
@@ -141,6 +174,7 @@ SOPs document production fixes with root cause analysis, solution steps, and rol
 | ID | Title | Related Bug |
 |----|-------|-------------|
 | SOP-001 (Merged) | Vue Flow Viewport Reactivity | BUG-151 (See `canvas/CANVAS-POSITION-SYSTEM.md`) |
+| SOP-032 | Cloudflare Cache MIME Type Prevention | BUG-1063 |
 | CANVAS-group-resurrection-fix | Deleted Groups Reappearing | BUG-060, BUG-061 |
 
 ### When to Create SOPs

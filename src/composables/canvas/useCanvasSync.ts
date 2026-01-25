@@ -61,6 +61,15 @@ function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): Array<
 // COMPOSABLE
 // =============================================================================
 
+// BUG-1061 FIX #5: Module-level sync flag (singleton)
+// This MUST be at module level so all useCanvasSync() callers share the same state.
+// When setNodes() is called during sync, Vue Flow may fire onNodeDragStop spuriously.
+// useCanvasInteractions checks this flag to skip processing during sync operations.
+const canvasSyncInProgress = ref(false)
+
+// Export for useCanvasInteractions to check
+export { canvasSyncInProgress }
+
 /**
  * Canvas Sync Composable
  *
@@ -84,7 +93,8 @@ export function useCanvasSync() {
     const taskStore = useTaskStore()
     const { getNodes, setNodes } = useVueFlow()
 
-    const isSyncing = ref(false)
+    // Alias to module-level ref for backward compatibility
+    const isSyncing = canvasSyncInProgress
 
     /**
      * Helper to detect if assigning a parent would create a cycle

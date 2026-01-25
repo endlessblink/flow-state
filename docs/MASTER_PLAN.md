@@ -157,7 +157,7 @@
 | **BUG-347**              | **Fix FK Constraint Violation on parent_task_id**                      | **P1**                                              | 👀 **REVIEW**                                                                                                                   | Sync errors when parent task deleted. Fix: Catch-and-retry clears orphaned parent refs. [See Details](#bug-347-fix-fk-constraint-violation-on-parent_task_id-review)                                              |                                                        |
 | ~~**TASK-348**~~         | ✅ **DONE** **Tauri Startup Guide & Shadow Mirror Fix**                | **P2**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | [SOP-011](./sop/SOP-011-tauri-distribution.md) - Fixed shadow-mirror.cjs relative URL detection, documented startup methods                                                                                      |                                                        |
 | **BUG-352**              | **Mobile PWA "Failed to Fetch"**                       | **P0**                                              | 📋 **PLANNED**                                                                                                                  | [See Details](#bug-352-mobile-pwa-failed-to-fetch-persistent-cache) - Likely SW cache issue                                                                                                                                     |                                                        |
-| **TASK-351**             | **Secure Secrets (Doppler)**                           | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | [See Details](#task-351-secure-secrets-management-doppler)                                                                                                                                                                      |
+| ~~**TASK-351**~~         | ✅ **DONE** **Secure Secrets (Doppler)**               | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | [SOP-030](./sop/SOP-030-doppler-secrets-management.md) - Doppler CLI in CI/CD, legacy .env backup step added                                                                                                                                                                      |
 | ~~**TASK-353**~~         | ✅ **DONE** **Mobile PWA UI Phase 1**                  | **P1**                                              | ✅ **DONE** (2026-01-21)                                                                                                         | MobileTodayView (daily schedule), MobileInboxView (filter chips, sort, quick-add bar), MobileNav (4 tabs), Mobile PWA design skill                                                                                |                                                        |
 | ~~**BUG-1020**~~         | ✅ **DONE** **Mobile QuickSort Swipe Overlay + Card Spacing** | **P2**                                         | ✅ **DONE** (2026-01-24)                                                                                                        | Fixed: deltaX reset, overlay→border, auth reload, Arrange Done Tasks card dimensions                                                                                                                                |                                                        |
 | ~~**TASK-354**~~         | ✅ **DONE** **Canvas CSS Import Fix**                  | **P1**                                              | ✅ **DONE** (2026-01-22)                                                                                                         | Fixed canvas not rendering after CSS import change. Reverted ES import to `<style src="">` for global Vue Flow overrides.                                                                                          |                                                        |
@@ -930,21 +930,21 @@ VPS → Local replication adds complexity (exposing Postgres port, maintaining r
 
 ---
 
-### TASK-351: Secure Secrets Management (Doppler) (🔄 IN PROGRESS)
+### ~~TASK-351~~: Secure Secrets Management (Doppler) (✅ DONE)
 
 **Priority**: P1
-**Status**: 🔄 IN PROGRESS (2026-01-23)
+**Status**: ✅ DONE (2026-01-25)
 
 Migrate from `.env` files to Doppler for secure secret injection in CI/CD and VPS.
 
 **Steps**:
-1. [ ] Create Doppler project for FlowState (USER ACTION)
-2. [ ] Add all secrets to Doppler: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_OPENAI_API_KEY (USER ACTION)
+1. [x] Create Doppler project for FlowState (USER ACTION)
+2. [x] Add all secrets to Doppler: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_GROQ_API_KEY (USER ACTION)
 3. [x] Update CI/CD to pull from Doppler (ci.yml, deploy.yml, release.yml)
 4. [x] Update VPS deployment to use Doppler CLI (auto-installs if missing)
-5. [ ] Add DOPPLER_TOKEN to GitHub secrets (USER ACTION)
-6. [ ] Test deployment with Doppler (USER ACTION)
-7. [ ] Remove manual `.env` files from VPS after successful migration (USER ACTION)
+5. [x] Add DOPPLER_TOKEN to GitHub secrets (USER ACTION)
+6. [x] Test deployment with Doppler (USER ACTION)
+7. [x] Add backup step for legacy .env file on VPS (no file existed - clean deployment)
 
 **Artifacts**:
 - SOP: `docs/sop/SOP-030-doppler-secrets-management.md`

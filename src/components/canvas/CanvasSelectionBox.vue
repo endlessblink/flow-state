@@ -27,7 +27,11 @@ defineProps<{
 
 <style scoped>
 .canvas-selection-box {
-  position: fixed;
+  /* BUG-1067: Use absolute positioning relative to canvas container
+     instead of fixed positioning to viewport. This fixes coordinate
+     offset issues in Tauri where clientX/clientY don't align with
+     viewport position. */
+  position: absolute;
   z-index: 9999;
   pointer-events: none;
   border: 2px solid rgba(99, 102, 241, 0.8);

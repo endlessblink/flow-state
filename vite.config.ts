@@ -29,9 +29,13 @@ export default defineConfig(({ mode }) => ({
     vue(),
     // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)
     // BUG-336: Use `disable` option instead of conditional inclusion to provide proper stub modules
+    // TASK-1009: Switched to injectManifest for custom timer notification handlers
     VitePWA({
       disable: isTauri, // Provides empty stub modules for virtual:pwa-register imports
-      registerType: 'autoUpdate', // Force update to clear old cache for user verification
+      strategies: 'injectManifest', // TASK-1009: Use custom SW for notification actions
+      srcDir: 'src',
+      filename: 'sw.ts',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'FlowState',
@@ -50,43 +54,11 @@ export default defineConfig(({ mode }) => ({
           { src: 'icons/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ]
       },
-      workbox: {
+      injectManifest: {
+        // TASK-1009: Glob patterns for precaching
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // TASK-1060: Skip API caching in service worker - use app-level SWR instead
-        // Prevents stale data after realtime updates (cache invalidation conflict)
-        navigateFallbackDenylist: [
-          /^\/rest\//, // Supabase REST API
-          /^\/auth\//, // Supabase Auth API
-          /^\/realtime\//, // Supabase Realtime
-        ],
-        runtimeCaching: [
-          // REMOVED: Supabase API caching - conflicts with realtime updates
-          // App-level caching with realtime invalidation is implemented in useSupabaseDatabase
-          // Images: Cache-first
-          {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'image-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: CACHE_DURATIONS.ONE_MONTH,
-              },
-            },
-          },
-          // Fonts: Cache-first with long expiry
-          {
-            urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'font-cache',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: CACHE_DURATIONS.ONE_YEAR,
-              },
-            },
-          },
-        ],
+        // Note: navigateFallbackDenylist is not used in injectManifest mode
+        // API caching is handled at the app level via useSupabaseDatabase
       },
       devOptions: {
         enabled: false, // TASK-272: Disabled in dev to reduce HMR noise/flickering

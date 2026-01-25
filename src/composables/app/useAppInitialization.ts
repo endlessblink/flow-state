@@ -6,7 +6,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
 import { useAuthStore } from '@/stores/auth'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useSupabaseDatabase, invalidateCache } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { clearGuestData, clearStaleGuestTasks } from '@/utils/guestModeStorage'
@@ -47,7 +47,6 @@ export function useAppInitialization() {
 
         // TASK-1083: Clear SWR cache on page load to ensure fresh positions from DB
         // This prevents stale cached positions from overriding newer data on other devices
-        const { invalidateCache } = useSupabaseDatabase()
         invalidateCache.all()
         console.log('🗑️ [TASK-1083] SWR cache cleared on page load')
 

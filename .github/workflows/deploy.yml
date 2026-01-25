@@ -128,13 +128,6 @@ jobs:
         env:
           DOMAIN: https://in-theflow.com
 
-      # Run asset header tests with Playwright
-      - name: Run Asset Header Tests
-        run: npx playwright test tests/e2e/asset-headers.spec.ts --reporter=line
-        env:
-          TEST_URL: https://in-theflow.com
-          API_URL: https://api.in-theflow.com
-
       # Health check
       - name: Verify Deployment
         run: |

@@ -224,24 +224,28 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
-          // BUG-1061: Position version check - prevents out-of-order position updates
-          // Even if timestamp passes, reject if local positionVersion is higher (means we have newer position)
-          // This protects against: rapid drags where realtime events arrive out-of-order
-          if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
-            const localVersion = currentTask.positionVersion ?? 0
-            const remoteVersion = normalizedTask.positionVersion ?? 0
-            if (localVersion > remoteVersion) {
-              // Keep local geometry (position + parent), accept other field updates
-              console.log(`🛡️ [BUG-1061] Blocked stale position update for "${currentTask.title?.slice(0, 20)}"`, {
-                localVersion,
-                remoteVersion,
-                localPos: { x: Math.round(currentTask.canvasPosition.x), y: Math.round(currentTask.canvasPosition.y) },
-                remotePos: { x: Math.round(normalizedTask.canvasPosition.x), y: Math.round(normalizedTask.canvasPosition.y) }
-              })
-              normalizedTask.canvasPosition = currentTask.canvasPosition
-              normalizedTask.parentId = currentTask.parentId
-              normalizedTask.positionVersion = localVersion
-            }
+          // TASK-1083: Strengthened position version check - ALWAYS check versions, not just when both have positions
+          // This prevents realtime events from overwriting fresh local drags
+          const localVersion = currentTask.positionVersion ?? 0
+          const remoteVersion = normalizedTask.positionVersion ?? 0
+
+          if (localVersion > remoteVersion) {
+            // Local is newer - ALWAYS preserve local geometry regardless of what remote has
+            console.log(`🛡️ [TASK-1083] Blocked stale sync for "${currentTask.title?.slice(0, 20)}"`, {
+              localVersion,
+              remoteVersion,
+              action: 'preserving local position'
+            })
+            // Preserve ALL local geometry
+            normalizedTask.canvasPosition = currentTask.canvasPosition
+            normalizedTask.parentId = currentTask.parentId
+            normalizedTask.positionVersion = localVersion
+            normalizedTask.positionFormat = currentTask.positionFormat
+          } else if (localVersion === remoteVersion && currentTask.canvasPosition) {
+            // Same version but local has position - this is likely an echo of our own save
+            // Preserve local to prevent micro-drift from timestamp differences
+            normalizedTask.canvasPosition = currentTask.canvasPosition
+            normalizedTask.parentId = currentTask.parentId
           }
 
           if (currentTask.canvasPosition && !normalizedTask.canvasPosition) {

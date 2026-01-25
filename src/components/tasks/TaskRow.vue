@@ -157,9 +157,11 @@ const projectVisual = computed(() =>
 const isFlashing = ref(false)
 const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
+  console.log('[FLASH] TaskRow received event:', customEvent.detail.taskId, 'my id:', props.task?.id)
   if (customEvent.detail.taskId === props.task?.id) {
+    console.log('[FLASH] TaskRow match! Setting isFlashing=true')
     isFlashing.value = true
-    setTimeout(() => { isFlashing.value = false }, 400)
+    setTimeout(() => { isFlashing.value = false }, 600)
   }
 }
 onMounted(() => {
@@ -394,18 +396,21 @@ onUnmounted(() => {
 
 /* TASK-1074: Brief flash animation when date is updated */
 .task-row--flashing {
-  animation: task-row-flash 0.4s ease-out;
+  animation: task-row-flash 0.5s ease-out !important;
 }
 
 @keyframes task-row-flash {
   0% {
-    box-shadow: 0 0 0 0 var(--color-success);
+    box-shadow: 0 0 0 0 #10b981;
+    background: transparent;
   }
-  50% {
-    box-shadow: 0 0 12px 2px var(--color-success);
+  30% {
+    box-shadow: 0 0 20px 4px #10b981;
+    background: rgba(16, 185, 129, 0.15);
   }
   100% {
-    box-shadow: 0 0 0 0 var(--color-success);
+    box-shadow: 0 0 0 0 #10b981;
+    background: transparent;
   }
 }
 </style>

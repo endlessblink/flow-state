@@ -96,27 +96,21 @@
       </div>
     </div>
 
-    <!-- Expanded Quick Add Bar -->
-    <div :class="['quick-add-bar', { expanded: isQuickAddExpanded }]">
-      <!-- Main input row -->
+    <!-- Quick Add Bar (trigger only) -->
+    <div class="quick-add-bar">
       <div class="quick-add-row">
         <input
-          ref="taskInput"
-          v-model="newTaskTitle"
           type="text"
-          :placeholder="isListening ? 'Listening...' : 'Add a task...'"
+          placeholder="Add a task..."
           class="quick-add-input"
-          :class="{ 'voice-active': isListening }"
-          @focus="expandQuickAdd"
-          @click="expandQuickAdd"
-          @keydown.enter="submitTask"
+          readonly
+          @click="openTaskCreateSheet"
         />
 
-        <!-- Mic button (TASK-1025) -->
+        <!-- Mic button -->
         <button
           v-if="isVoiceSupported"
           :class="['mic-btn', { recording: isListening }]"
-          :title="isListening ? 'Stop recording' : 'Voice input'"
           @click="toggleVoiceInput"
         >
           <Mic v-if="!isListening" :size="20" />
@@ -125,8 +119,7 @@
 
         <button
           class="add-btn"
-          :disabled="!newTaskTitle.trim()"
-          @click="submitTask"
+          @click="openTaskCreateSheet"
         >
           <Plus :size="20" />
         </button>
@@ -197,51 +190,6 @@
         @confirm="handleVoiceTaskConfirm"
         @cancel="handleVoiceTaskCancel"
       />
-
-      <!-- Expanded options (date & priority) -->
-      <div v-if="isQuickAddExpanded" class="quick-add-options">
-        <!-- Due date quick options -->
-        <div class="option-section">
-          <div class="option-label">
-            <Calendar :size="14" />
-            <span>Due</span>
-          </div>
-          <div class="option-chips">
-            <button
-              v-for="opt in dateOptions"
-              :key="opt.label"
-              :class="['option-chip', { active: selectedDueDate === opt.value }]"
-              @click="selectDueDate(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Priority selector -->
-        <div class="option-section">
-          <div class="option-label">
-            <Flag :size="14" />
-            <span>Priority</span>
-          </div>
-          <div class="option-chips">
-            <button
-              v-for="opt in priorityOptions"
-              :key="opt.value"
-              :class="['option-chip', 'priority-chip', opt.value, { active: selectedPriority === opt.value }]"
-              @click="selectPriority(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Collapse button -->
-        <button class="collapse-btn" @click="collapseQuickAdd">
-          <ChevronDown :size="16" />
-          <span>Collapse</span>
-        </button>
-      </div>
     </div>
 
     <!-- Task Edit Bottom Sheet -->
@@ -250,6 +198,15 @@
       :task="editingTask"
       @close="closeEditSheet"
       @save="handleSaveTask"
+    />
+
+    <!-- Full-screen Task Creation Sheet -->
+    <TaskCreateBottomSheet
+      :is-open="isTaskCreateOpen"
+      :is-listening="isListening"
+      :voice-transcript="displayTranscript"
+      @close="isTaskCreateOpen = false"
+      @created="handleTaskSheetCreated"
     />
   </div>
 </template>
@@ -262,6 +219,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { type LongPressState } from '@/composables/useLongPress'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
+import TaskCreateBottomSheet from '@/mobile/components/TaskCreateBottomSheet.vue'
 import VoiceTaskConfirmation from '@/mobile/components/VoiceTaskConfirmation.vue'
 import {
   Plus, Check, Play, Calendar, Inbox,
@@ -289,6 +247,9 @@ const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
 const isQuickAddExpanded = ref(false)
 const selectedDueDate = ref<string | null>(null)
 const selectedPriority = ref<string | null>(null)
+
+// Task create sheet state
+const isTaskCreateOpen = ref(false)
 
 // Voice confirmation state (TASK-1028)
 const parsedVoiceTask = ref<ParsedVoiceTask | null>(null)
@@ -753,6 +714,11 @@ const collapseQuickAdd = () => {
   isQuickAddExpanded.value = false
 }
 
+// Open task create sheet
+const openTaskCreateSheet = () => {
+  isTaskCreateOpen.value = true
+}
+
 const selectDueDate = (value: string | null) => {
   selectedDueDate.value = value
 }
@@ -820,6 +786,18 @@ const handleVoiceTaskConfirm = (task: { title: string; priority: 'high' | 'mediu
 
 const handleVoiceTaskCancel = () => {
   resetVoiceState()
+}
+
+// Task create sheet handler
+const handleTaskSheetCreated = (data: { title: string; description: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
+  taskStore.createTask({
+    title: data.title,
+    status: 'planned',
+    ...(data.description && { description: data.description }),
+    ...(data.dueDate && { dueDate: data.dueDate.toISOString() }),
+    ...(data.priority && { priority: data.priority })
+  })
+  isTaskCreateOpen.value = false
 }
 
 const resetVoiceState = () => {

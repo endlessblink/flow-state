@@ -334,17 +334,26 @@ export const useAuthStore = defineStore('auth', () => {
 
       // 3. Generate fingerprints for existing tasks
       // CRITICAL: Supabase returns snake_case (due_date), guest tasks use camelCase (dueDate)
-      // Normalize both to the same format for comparison
+      // BUG-333 FIX: Normalize dates to YYYY-MM-DD format for comparison
+      // Supabase may return ISO timestamps (2026-01-25T00:00:00.000Z) while guest mode
+      // may store dates as plain strings (2026-01-25) - these must match
+      const normalizeDate = (d: string | null | undefined): string => {
+        if (!d) return ''
+        // Extract YYYY-MM-DD from any date format
+        const dateOnly = d.split('T')[0]
+        return dateOnly || ''
+      }
+
       const existingFingerprints = new Set(
         existingTasks?.map((t: { title: string; due_date: string | null; status: string }) =>
-          `${(t.title || '').toLowerCase().trim()}|${t.due_date || ''}|${t.status}`
+          `${(t.title || '').toLowerCase().trim()}|${normalizeDate(t.due_date)}|${t.status}`
         ) || []
       )
 
       // 4. Filter out duplicates
       // Guest tasks use camelCase (dueDate) - normalize to match Supabase fingerprints
       const uniqueTasks = allGuestTasks.filter((task: { title: string; dueDate: string | null; status: string }) => {
-        const fp = `${(task.title || '').toLowerCase().trim()}|${task.dueDate || ''}|${task.status}`
+        const fp = `${(task.title || '').toLowerCase().trim()}|${normalizeDate(task.dueDate)}|${task.status}`
         return !existingFingerprints.has(fp)
       })
 

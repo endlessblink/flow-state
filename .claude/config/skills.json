@@ -1,7 +1,7 @@
 {
   "project": "FlowState",
   "version": "2.2.0",
-  "last_updated": "2026-01-22",
+  "last_updated": "2026-01-24",
   "skills": {
     "dev-maestro": {
       "name": "Dev Maestro",
@@ -564,6 +564,81 @@
         "qa-testing"
       ],
       "description": "Task completion workflow - run tests, commit/push, update MASTER_PLAN.md status, create SOP if needed. This skill should be used when a task is complete and ready to be finalized. Triggers on \"/done\", \"mark done\", \"task complete\", \"finish task\"."
+    },
+    "frontend-design": {
+      "name": "frontend-design",
+      "category": "implement",
+      "triggers": [
+        "create"
+      ],
+      "keywords": [
+        "frontend",
+        "design",
+        "create",
+        "distinctive,",
+        "production-grade",
+        "interfaces"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics."
+    },
+    "start-dev": {
+      "name": "start-dev",
+      "category": "implement",
+      "triggers": [
+        "/start-dev task-123",
+        "/start-dev 123",
+        "/start-dev",
+        "start task",
+        "begin task",
+        "start working on",
+        "plan"
+      ],
+      "keywords": [
+        "start",
+        "dev",
+        "working",
+        "task",
+        "updating",
+        "status"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Start working on a task by updating its status to IN PROGRESS in MASTER_PLAN.md. Usage \"/start-dev TASK-123\" or \"/start-dev 123\". Updates all 3 locations in MASTER_PLAN.md. Triggers on \"/start-dev\", \"start task\", \"begin task\", \"start working on\"."
+    },
+    "master-plan-auditor": {
+      "name": "Master Plan Auditor",
+      "category": "audit",
+      "triggers": [
+        "/audit-tasks",
+        "audit tasks",
+        "stale tasks",
+        "likely done",
+        "task status check",
+        "beads mismatch",
+        "status inconsistency"
+      ],
+      "keywords": [
+        "audit",
+        "stale",
+        "mismatch",
+        "inconsistent",
+        "beads",
+        "master plan",
+        "status",
+        "likely done"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "done",
+        "dev-maestro",
+        "smart-doc-manager"
+      ],
+      "description": "Audit task status across MASTER_PLAN.md and beads. Finds stale tasks, status mismatches, likely-done tasks, and beads sync issues. NEVER auto-marks tasks - only recommends. User confirmation is the only valid evidence of completion."
     }
   },
   "categories": {

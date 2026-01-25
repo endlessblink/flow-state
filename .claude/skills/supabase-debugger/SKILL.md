@@ -38,7 +38,8 @@ Issue Type?
 ├── Memory Leaks → Workflow 5: Memory Investigation
 ├── RLS Violations → Workflow 6: Policy Validation
 ├── Pre-Deploy Check → Workflow 7: Production Readiness
-└── Data Resurrection → Workflow 8: localStorage Fallback Audit
+├── Data Resurrection → Workflow 8: localStorage Fallback Audit
+└── Production API Issues → Workflow 9: Production Debugging (Cloudflare + Caddy)
 ```
 
 ## Workflow 1: Connection Diagnostics
@@ -574,6 +575,147 @@ const loadFromDatabase = async () => {
   }
 }
 ```
+
+## Workflow 9: Production API Debugging (Cloudflare + Caddy)
+
+When Supabase API works locally but fails in production behind Cloudflare and Caddy:
+
+### Step 1: Identify the Issue Layer
+
+| Works | Fails | Likely Layer |
+|-------|-------|--------------|
+| curl to API | Browser | CORS or Cloudflare cache |
+| Firefox | Chrome | Cloudflare + preload scanner |
+| Local | Production | Caddy or Cloudflare config |
+| REST | Realtime | WebSocket proxy config |
+
+### Step 2: Test Each Layer
+
+```bash
+# 1. Test Cloudflare → Origin (bypass CF cache)
+curl -sI --resolve "api.example.com:443:YOUR_VPS_IP" \
+  "https://api.example.com/rest/v1/tasks" \
+  -H "apikey: YOUR_ANON_KEY"
+
+# 2. Test via Cloudflare
+curl -sI "https://api.example.com/rest/v1/tasks" \
+  -H "apikey: YOUR_ANON_KEY" | grep -iE "cf-cache|content-type"
+
+# 3. Test CORS preflight
+curl -X OPTIONS "https://api.example.com/rest/v1/tasks" \
+  -H "Origin: https://example.com" \
+  -H "Access-Control-Request-Method: GET" \
+  -I
+
+# 4. Test WebSocket upgrade
+curl -sI "https://api.example.com/realtime/v1/websocket" \
+  -H "Upgrade: websocket" \
+  -H "Connection: Upgrade"
+```
+
+### Step 3: Common Production Issues
+
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| CORS blocked | Browser console shows CORS error | Add `Access-Control-Allow-*` headers in Caddy |
+| WebSocket fails | Realtime subscriptions don't work | Add `header_up Upgrade/Connection` in Caddy |
+| 403 on OPTIONS | Preflight rejected | Add OPTIONS handler before proxy |
+| MIME type error | Cloudflare serves wrong content | Add `Vary: Accept` header (see SOP-032) |
+| 502 Bad Gateway | Upstream not responding | Check Kong/Supabase containers |
+
+### Step 4: Correct Caddy API Configuration
+
+```caddyfile
+api.example.com {
+    tls /etc/caddy/certs/cloudflare-origin.pem /etc/caddy/certs/cloudflare-origin.key
+
+    # Handle CORS preflight FIRST
+    @options method OPTIONS
+    handle @options {
+        header Access-Control-Allow-Origin "*"
+        header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        header Access-Control-Allow-Headers "*"
+        header Access-Control-Expose-Headers "*"
+        header Access-Control-Max-Age "86400"
+        respond 204
+    }
+
+    # Proxy to Supabase Kong
+    handle {
+        reverse_proxy localhost:8000 {
+            # Required headers
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host api.example.com
+
+            # WebSocket support
+            header_up Upgrade {http.request.header.Upgrade}
+            header_up Connection {http.request.header.Connection}
+        }
+
+        # CORS headers on responses
+        header Access-Control-Allow-Origin "*"
+        header Access-Control-Expose-Headers "*"
+    }
+}
+```
+
+### Step 5: Verify Production Auth Flow
+
+```bash
+# 1. Get auth token (login)
+curl -X POST "https://api.example.com/auth/v1/token?grant_type=password" \
+  -H "apikey: YOUR_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}'
+
+# 2. Test authenticated request
+curl "https://api.example.com/rest/v1/tasks" \
+  -H "apikey: YOUR_ANON_KEY" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# 3. Check JWT claims
+echo "YOUR_ACCESS_TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | jq
+```
+
+### Step 6: Debug Realtime in Production
+
+```javascript
+// Browser console debug for production realtime
+const supabase = createClient('https://api.example.com', 'YOUR_ANON_KEY');
+
+// Enable debug logging
+supabase.realtime.setAuth(yourAccessToken);
+
+const channel = supabase
+  .channel('debug-channel')
+  .on('system', {}, (payload) => {
+    console.log('🔌 System event:', payload);
+  })
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'tasks' },
+    (payload) => console.log('📬 DB change:', payload)
+  )
+  .subscribe((status, err) => {
+    console.log('📡 Status:', status, err);
+  });
+```
+
+### Step 7: Production Checklist
+
+- [ ] Caddy handles OPTIONS preflight before proxy
+- [ ] WebSocket upgrade headers passed through
+- [ ] CORS headers include all required Supabase headers
+- [ ] Cloudflare SSL mode is "Full" (not "Flexible")
+- [ ] Origin cert is valid and not expired
+- [ ] `Vary: Accept` on asset routes (prevents MIME issues)
+- [ ] index.html has `no-cache` (prevents stale HTML)
+
+**Related SOPs**:
+- `SOP-026-custom-domain-deployment.md` - Full VPS setup
+- `SOP-031-cors-configuration.md` - CORS headers
+- `SOP-032-cloudflare-cache-mime-prevention.md` - MIME type prevention
+
+---
 
 ## Quick Reference Commands
 

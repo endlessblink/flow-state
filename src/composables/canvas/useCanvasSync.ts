@@ -170,6 +170,19 @@ export function useCanvasSync() {
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
 
+            // BUG-1084 FIX: Guard against empty groups when tasks have parents
+            // If tasks have parentId but groups haven't loaded yet, skip sync to prevent
+            // parentNode being cleared (task becoming root), then restored when groups load (JUMP).
+            const tasksWithParents = tasksToSync.filter(t => t.parentId && t.parentId !== 'NONE')
+            if (tasksWithParents.length > 0 && groups.length === 0) {
+                console.warn('[SYNC-DEFERRED] Tasks have parents but groups not loaded yet, skipping sync', {
+                    tasksWithParents: tasksWithParents.length,
+                    totalTasks: tasksToSync.length
+                })
+                isSyncing.value = false
+                return
+            }
+
             // BUG #3 FIX: Removed existingPositions preservation
             // Previously we preserved existing Vue Flow positions to "avoid visual jumps",
             // but this caused stale positions to win over fresh store data on cross-tab sync.
@@ -216,7 +229,10 @@ export function useCanvasSync() {
             }
 
             // Commit updates (locks will prevent overwrites of dragged items)
-            positionManager.batchUpdate(updates, 'remote-sync')
+            const { successCount, rejectedIds } = positionManager.batchUpdate(updates, 'remote-sync')
+            if (rejectedIds.length > 0) {
+                console.log(`[useCanvasSync] Sync deferred for ${rejectedIds.length} locked nodes (will retry next sync)`)
+            }
 
             const newNodes: any[] = []
 

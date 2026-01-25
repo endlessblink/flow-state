@@ -38,6 +38,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 | Timer Sync | ✅ Working (cross-device, KDE widget) |
 | KDE Widget | ✅ Working (`kde-widget/`) |
 | Tauri Desktop | ✅ Working (Linux/Win/Mac releases) |
+| VPS Production | ✅ Live at in-theflow.com (Contabo) |
 | Build/CI | ✅ Passing |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
@@ -45,6 +46,7 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 ## Essential Commands
 
 ```bash
+# Development
 npm run dev          # Start dev server (port 5546) - validates JWT keys first
 npm run kill         # Kill all FlowState processes (CRITICAL - DO NOT REMOVE)
 npm run build        # Production build
@@ -52,6 +54,9 @@ npm run test         # Run tests
 npm run lint         # Lint code
 npm run storybook    # Component docs (port 6006)
 npm run generate:keys  # Regenerate Supabase JWT keys if they drift
+
+# Deployment (auto via CI/CD on push to master)
+# Manual deploy: npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/
 ```
 
 ## Tech Stack
@@ -59,9 +64,12 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 - **Vue 3** + TypeScript + Vite + Pinia
 - **Tailwind CSS** + Naive UI + Glass morphism
 - **Vue Flow** for canvas, **Vuedraggable** for drag-drop
-- **Supabase** (Postgres + Auth + Realtime)
+- **Supabase** (Postgres + Auth + Realtime) - Self-hosted on VPS
 - **TipTap** for rich text editing
 - **Tauri 2.x** for desktop distribution (Linux, Windows, macOS)
+- **Caddy** reverse proxy + auto-SSL
+- **Cloudflare** DNS + CDN + Origin Certificates
+- **Doppler** for secrets management (CI/CD + production)
 
 ## Tauri Desktop Distribution
 
@@ -83,6 +91,161 @@ src-tauri/src/lib.rs                   # Rust commands (Docker/Supabase orchestr
 src/composables/useTauriStartup.ts     # Frontend startup sequence
 .github/workflows/release.yml          # CI/CD release workflow
 ```
+
+## VPS Production Deployment (Contabo)
+
+FlowState runs as a **PWA on a Contabo VPS** at `in-theflow.com` with self-hosted Supabase. This is separate from the Tauri desktop distribution.
+
+### Architecture
+
+```
+User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Supabase
+                                              ↓
+                                      PWA Static Files (/var/www/flowstate)
+```
+
+### Production URLs
+
+| Domain | Purpose |
+|--------|---------|
+| `in-theflow.com` | PWA frontend |
+| `api.in-theflow.com` | Supabase API (self-hosted) |
+| `www.in-theflow.com` | Redirect to main |
+
+### VPS Specifications (Contabo Cloud VPS 2)
+
+| Spec | Value |
+|------|-------|
+| Provider | Contabo |
+| OS | Ubuntu 22.04 LTS |
+| vCPU | 6 cores |
+| RAM | 16 GB |
+| Storage | NVMe SSD |
+| IP | 84.46.253.137 |
+
+**Why Contabo**: Cost-effective for self-hosted Supabase (~€5.60/mo). Supabase full stack requires 8-16GB RAM minimum.
+
+### Deployment Methods
+
+| Method | Trigger | What Deploys |
+|--------|---------|--------------|
+| **CI/CD** (Primary) | Push to master | PWA static files via rsync |
+| **Manual** | `npm run build` + rsync | PWA static files |
+
+**CI/CD Workflow** (`.github/workflows/deploy.yml`):
+1. Builds Vue app with production env
+2. Fetches secrets from Doppler
+3. Rsyncs `dist/` to VPS `/var/www/flowstate/`
+4. Reloads Caddy (graceful, no downtime)
+5. Validates CORS + health checks
+
+### Secrets Management (Doppler)
+
+**NEVER store secrets in `.env` files on VPS.** Use Doppler for production secrets.
+
+**Full SOP:** [`docs/sop/SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md)
+
+| Secret Location | Secrets |
+|-----------------|---------|
+| **Doppler** (`flowstate-prod`) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GROQ_API_KEY` |
+| **GitHub Secrets** | `DOPPLER_TOKEN`, `SSH_PRIVATE_KEY`, `VPS_HOST`, `VPS_USER` |
+
+**Local Development**: Continue using `.env.local` (not Doppler).
+
+### Infrastructure Stack
+
+| Component | Technology | Location |
+|-----------|------------|----------|
+| Reverse Proxy | Caddy | System service (`/etc/caddy/Caddyfile`) |
+| SSL/TLS | Cloudflare Origin Certificate | `/etc/caddy/certs/` (15-year validity) |
+| DNS/CDN | Cloudflare (proxied) | Orange cloud enabled |
+| Database | PostgreSQL (Supabase) | Docker at `/opt/supabase/docker/` |
+| Static Files | PWA build | `/var/www/flowstate/` |
+| Secrets | Doppler | Fetched at build time |
+
+### Key VPS Paths
+
+```
+/var/www/flowstate/           # PWA static files (deployment target)
+/opt/supabase/docker/         # Self-hosted Supabase installation
+/etc/caddy/Caddyfile          # Caddy configuration
+/etc/caddy/certs/             # Cloudflare origin certificates
+```
+
+### Contabo-Specific Considerations
+
+**Gotchas to Know:**
+- No built-in firewall GUI - configure via `ufw` manually
+- No live chat support - email-only during business hours
+- VNC passwords sent in plain text email (avoid VNC console)
+- No DDoS protection - Cloudflare proxy provides this
+- Cannot scale RAM/CPU independently (must upgrade entire plan)
+
+**Security Hardening (Already Applied):**
+- SSH on custom port (not 22)
+- UFW firewall enabled (80, 443, SSH only)
+- Fail2Ban monitoring SSH
+- Root login disabled
+- Password auth disabled (SSH keys only)
+
+**Maintenance Commands:**
+```bash
+# SSH into VPS
+ssh root@84.46.253.137 -p <custom-port>
+
+# Check Caddy status
+systemctl status caddy
+
+# View Caddy logs
+journalctl -u caddy -f
+
+# Restart Supabase
+cd /opt/supabase/docker && docker compose restart
+
+# Check disk space
+df -h
+
+# Docker resource usage
+docker stats
+```
+
+### Backup Strategy
+
+**Database Backups:**
+```bash
+# Manual backup
+docker exec supabase-db pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
+
+# Automated via cron (recommended)
+# See docs/sop/deployment/VPS-DEPLOYMENT.md
+```
+
+**Application Backups:**
+- FlowState's built-in Shadow Mirror backup (Settings > Storage)
+- Supabase database snapshots
+- External backup via Rclone to S3/B2 (optional)
+
+### Deployment SOPs
+
+| SOP | Purpose |
+|-----|---------|
+| [`SOP-026-custom-domain-deployment.md`](docs/sop/SOP-026-custom-domain-deployment.md) | Domain, Cloudflare, Caddy setup |
+| [`SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md) | Secrets management |
+| [`SOP-031-cors-configuration.md`](docs/sop/SOP-031-cors-configuration.md) | CORS troubleshooting |
+| [`deployment/VPS-DEPLOYMENT.md`](docs/sop/deployment/VPS-DEPLOYMENT.md) | Full VPS setup guide |
+| [`deployment/PWA-DEPLOYMENT-CHECKLIST.md`](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md) | Pre/post deploy verification |
+
+### Deployment vs Desktop (Side-by-Side)
+
+| Aspect | VPS (Web) | Tauri (Desktop) |
+|--------|-----------|-----------------|
+| **Delivery** | Browser URL | Native installer |
+| **Database** | Shared Supabase on VPS | Local Supabase per user |
+| **Offline** | Service worker (limited) | Full offline (local DB) |
+| **Updates** | Auto (CI/CD) | Auto-updater (GitHub releases) |
+| **Target Users** | Web access, mobile | Power users, full control |
+
+**Both are active and production-ready.**
 
 ## Key Development Rules
 
@@ -438,6 +601,14 @@ curl -s localhost:6010/api/status | grep -q '"running":true' && echo "Running" |
 | Paused | `PAUSED`, `⏸️` |
 | Review | `REVIEW`, `MONITORING`, `👀` |
 
+**Parser Gotchas (IMPORTANT):**
+1. **Only recognized `##` sections are parsed** - Tasks under `## Code Review Findings` or other custom sections are IGNORED
+2. **Table status must be explicit** - Include 🔄, ✅, etc. in the status column for correct parsing
+3. **Completed tasks** - Use BOTH `~~strikethrough~~` on ID AND `✅ DONE` in status
+4. **After MASTER_PLAN.md changes** - Hard refresh Dev-Maestro (`Ctrl+Shift+R`) to see updates
+
+**Full SOP:** [`docs/sop/SOP-031-dev-maestro-parser.md`](docs/sop/SOP-031-dev-maestro-parser.md)
+
 ## UI Component Standards
 
 | Component Type | Use This |
@@ -471,6 +642,11 @@ Detailed docs available in `docs/claude-md-extension/`:
 | File | Contents |
 |------|----------|
 | [`SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md) | Tauri builds, signing, GitHub Actions releases |
+| [`SOP-026-custom-domain-deployment.md`](docs/sop/SOP-026-custom-domain-deployment.md) | VPS domain, Cloudflare, Caddy setup |
+| [`SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md) | Doppler secrets for CI/CD and VPS |
+| [`SOP-031-cors-configuration.md`](docs/sop/SOP-031-cors-configuration.md) | CORS headers for self-hosted Supabase |
+| [`deployment/VPS-DEPLOYMENT.md`](docs/sop/deployment/VPS-DEPLOYMENT.md) | Full VPS setup and deployment guide |
+| [`deployment/PWA-DEPLOYMENT-CHECKLIST.md`](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md) | Pre/post deploy verification checklist |
 | [`active/UNDO-system-architecture.md`](docs/sop/active/UNDO-system-architecture.md) | Undo/redo system with operation-scoped selective restoration (BUG-309-B) |
 | [`active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md) | Cross-device timer sync (Vue app + KDE widget) |
 | [`active/SOP-022-skills-config-sync.md`](docs/sop/active/SOP-022-skills-config-sync.md) | Skills config auto-sync and maintenance |
@@ -489,5 +665,6 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: January 20, 2026
-**Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase
+**Last Updated**: January 25, 2026
+**Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.9.5
+**Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)

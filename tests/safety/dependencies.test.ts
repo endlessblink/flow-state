@@ -160,6 +160,7 @@ class DependencyAnalyzer {
     const circularDeps: CircularDependency[] = []
     const visited = new Set<string>()
     const recursionStack = new Set<string>()
+    const seenCycles = new Set<string>() // Track unique cycles
 
     const dfs = (nodePath: string[], current: string): boolean => {
       if (recursionStack.has(current)) {
@@ -200,11 +201,17 @@ class DependencyAnalyzer {
           const cycle = this.extractCycle(filePath)
           // Filter out single-element "cycles" (not real circular deps)
           if (cycle && cycle.length > 1) {
-            circularDeps.push({
-              file: cycle[0],
-              cycle: cycle,
-              path: cycle
-            })
+            // Normalize cycle for deduplication (sort the cycle members to create a unique key)
+            // This ensures A->B->A and B->A->B are treated as the same cycle
+            const cycleKey = [...cycle].sort().join('|')
+            if (!seenCycles.has(cycleKey)) {
+              seenCycles.add(cycleKey)
+              circularDeps.push({
+                file: cycle[0],
+                cycle: cycle,
+                path: cycle
+              })
+            }
           }
         }
       }
@@ -280,6 +287,10 @@ const ALLOWED_CIRCULAR_DEPS = [
   // Works because imports are used inside functions, not at module load time
   ['tasks.ts', 'undoSingleton.ts'],
   ['undoSingleton.ts', 'tasks.ts'],
+  // useSupabaseDatabase.ts ↔ auth.ts: Database needs auth info, auth needs database
+  // Works because imports are used inside functions (lazy), not at module load time
+  ['useSupabaseDatabase.ts', 'auth.ts'],
+  ['auth.ts', 'useSupabaseDatabase.ts'],
 ]
 
 function isAllowedCircularDep(cycle: string[]): boolean {

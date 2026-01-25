@@ -289,7 +289,12 @@ export const useTimerStore = defineStore('timer', () => {
     }
 
     // For active sessions, only process if leader is still fresh
-    if (timeSinceLastSeen < DEVICE_LEADER_TIMEOUT_MS) {
+    // TASK-1009 FIX: Only yield leadership if update is from a DIFFERENT device
+    // Previously, any fresh update would stop our heartbeat, even our own echoed updates
+    const updateFromDifferentDevice = newDoc.device_leader_id !== deviceId
+
+    if (timeSinceLastSeen < DEVICE_LEADER_TIMEOUT_MS && updateFromDifferentDevice) {
+      console.log('🍅 [TIMER] Yielding leadership to:', newDoc.device_leader_id)
       isDeviceLeader.value = false
       pauseHeartbeat()
 

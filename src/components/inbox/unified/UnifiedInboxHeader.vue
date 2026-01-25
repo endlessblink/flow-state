@@ -213,8 +213,8 @@ const timeFilterLabel = computed(() => {
   const labels: Record<TimeFilterType, string> = {
     all: 'All',
     today: 'Today',
-    week: 'This Week',
-    month: 'This Month'
+    week: 'Week',
+    month: 'Month'
   }
   return labels[props.activeTimeFilter]
 })
@@ -229,11 +229,11 @@ const handleTimeFilterSelect = (key: string) => {
 .inbox-header {
   display: flex;
   align-items: center;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--glass-border);
   background: transparent;
-  gap: var(--space-3);
-  height: 48px;
+  gap: var(--space-2);
+  height: 44px;
   flex-shrink: 0;
 }
 

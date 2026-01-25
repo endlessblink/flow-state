@@ -504,22 +504,81 @@ export const useTimerStore = defineStore('timer', () => {
     playEndSound()
     releaseWakeLock() // Allow sleep - ROAD-004
 
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(`Session Complete! 🍅`, {
-        body: wasBreak ? 'Ready to work?' : 'Time for a break!',
-        icon: '/favicon.ico'
-      })
+    // TASK-1009: Send notification via Service Worker for action buttons
+    // Browser Notification API doesn't support action buttons - only SW notifications do
+    await showTimerNotification(session.id, wasBreak, lastTaskId)
+
+    // TASK-1009: Removed auto-start behavior
+    // User must explicitly choose via notification action buttons
+    // Old settings (autoStartBreaks, autoStartPomodoros) are now ignored for notifications
+    isDeviceLeader.value = false
+  }
+
+  // TASK-1009: Service Worker Notification with Action Buttons
+  const showTimerNotification = async (sessionId: string, wasBreak: boolean, taskId: string) => {
+    // Get task name for notification body
+    let taskName: string | undefined
+    if (taskId && taskId !== 'general' && taskId !== 'break') {
+      const task = taskStore.tasks.find(t => t.id === taskId)
+      taskName = task?.title
     }
 
-    if (settings.autoStartBreaks && !wasBreak) {
-      isDeviceLeader.value = false
-      setTimeout(() => startTimer('break', settings.shortBreakDuration, true), 2000)
-    } else if (settings.autoStartPomodoros && wasBreak && lastTaskId !== 'break') {
-      isDeviceLeader.value = false
-      setTimeout(() => startTimer(lastTaskId, settings.workDuration, false), 2000)
-    } else {
-      isDeviceLeader.value = false
+    // Try Service Worker notification first (supports action buttons)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'TIMER_COMPLETE',
+        sessionId,
+        wasBreak,
+        taskId,
+        taskName
+      })
+      console.log('🍅 [TIMER] Sent TIMER_COMPLETE to service worker')
+      return
     }
+
+    // Fallback to basic Notification API (no action buttons)
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Session Complete! 🍅', {
+        body: wasBreak ? 'Ready to work?' : 'Time for a break!',
+        icon: '/favicon.ico',
+        tag: `timer-complete-${sessionId}`, // Deduplication
+        requireInteraction: true
+      })
+    }
+  }
+
+  // TASK-1009: Handle messages from Service Worker (notification action clicks)
+  const handleServiceWorkerMessage = (event: MessageEvent) => {
+    const data = event.data
+    if (!data || !data.type) return
+
+    console.log('🍅 [TIMER] Received SW message:', data.type, data)
+
+    switch (data.type) {
+      case 'START_BREAK':
+        // Start a break session
+        startTimer('break', settings.shortBreakDuration, true)
+        break
+
+      case 'START_WORK':
+        // Start a work session (continue with the same task if available)
+        const taskId = data.taskId && data.taskId !== 'break' ? data.taskId : 'general'
+        startTimer(taskId, settings.workDuration, false)
+        break
+
+      case 'POSTPONE_5MIN':
+        // Add 5 minutes and restart timer
+        // Create a new session with 5 minutes
+        const postponeTaskId = data.taskId || 'general'
+        const isBreak = postponeTaskId === 'break'
+        startTimer(postponeTaskId, 5 * 60, isBreak) // 5 minutes
+        break
+    }
+  }
+
+  // Register SW message listener on store initialization
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage)
   }
 
   const playStartSound = () => {
@@ -752,6 +811,10 @@ export const useTimerStore = defineStore('timer', () => {
     pauseTimerInterval()
     pauseHeartbeat()
     pauseFollowerPoll()
+    // TASK-1009: Remove SW message listener
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage)
+    }
   })
 
   // Watch for auth state changes - initialize when auth becomes ready

@@ -81,6 +81,7 @@
 | ~~**TASK-1071**~~        | ✅ **DONE** (Win/Mac) ⚠️ Linux blocked **Tauri: Add Microphone Permission for Voice AI** | **P1**                                              | ✅ **DONE** (2026-01-25) - [SOP-034](./sop/SOP-034-tauri-linux-microphone.md)                                                   | FEATURE-1023. Win/Mac: works. Linux: blocked by WebKitGTK (no WebRTC). See SOP-034.                                                                                                                            |                                                        |
 | ~~**TASK-1072**~~        | ✅ **DONE** **Inbox: Improve Show Completed Toggle Styling**           | **P3**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | **TASK-1073**            | **Inbox: Add Sorting Options (Filters & Sort)**                        | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | TASK-1072                                                                                                                                                                                                      |                                                        |
+| ~~**BUG-1074**~~         | ✅ **DONE** **Canvas Task Deletion to Inbox Not Working**              | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
 | ~~**TASK-231**~~         | ~~**Dynamic Skills & Docs API**~~                                      | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/skills and /api/docs endpoints                                                                                                                                                                      |                                                        |
@@ -332,6 +333,32 @@
 - [x] Verify edge function deployed to VPS (/opt/supabase/docker/volumes/functions/whisper-transcribe/)
 - [x] Verify GROQ_API_KEY set in edge runtime
 - [x] User verification complete
+
+---
+
+### ~~BUG-1074~~: Canvas Task Deletion to Inbox Not Working (✅ DONE)
+
+**Priority**: P1
+**Status**: ✅ DONE (2026-01-25)
+
+**Problem**: When selecting a task on the canvas and pressing Delete, the confirmation modal appeared correctly with "Items to be deleted" and Cancel/Remove buttons. However, clicking the "Remove" button did nothing - the task was not moved to inbox and the modal didn't close.
+
+**Root Cause**: Vue 3 `<script setup>` event emission issue in `CanvasModals.vue`. The `defineEmits` function wasn't captured to a variable, so `$emit` in template inline expressions wasn't reliably forwarding the `confirm` event from the confirmation modal to the parent component.
+
+**Fix Applied**:
+1. ✅ Captured `defineEmits` to an `emit` variable in `CanvasModals.vue`
+2. ✅ Created explicit handler function `handleBulkDeleteConfirm()` that uses the captured emit
+3. ✅ Used the handler function in the template instead of inline `$emit()`
+
+**Files Changed**:
+- `src/components/canvas/CanvasModals.vue` - Captured emit function, added explicit handler
+
+**Tasks**:
+- [x] Add debug logging to trace event chain
+- [x] Identify break point (event emission in Vue 3 script setup)
+- [x] Fix CanvasModals.vue to use captured emit function
+- [x] Clean up debug logging
+- [x] Verify fix with Playwright testing
 
 ---
 

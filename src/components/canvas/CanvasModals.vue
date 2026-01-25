@@ -65,7 +65,7 @@
     :message="modals.bulkDeleteMessage"
     :details="modals.bulkDeleteItems.map(item => `${item.type === 'section' ? '📁' : '📌'} ${item.name}`)"
     :confirm-text="modals.bulkDeleteIsPermanent ? 'Delete Permanently' : 'Remove'"
-    @confirm="$emit('confirmBulkDelete')"
+    @confirm="handleBulkDeleteConfirm"
     @cancel="modals.closeBulkDeleteModal"
   />
 </template>
@@ -82,7 +82,7 @@ import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'handleQuickTaskCreate', title: string, description: string): void
   (e: 'handleBatchEditApplied'): void
   (e: 'handleSectionSettingsSave', settings: any): void
@@ -94,5 +94,10 @@ defineEmits<{
 }>()
 
 const modals = useCanvasModalsStore()
+
+// BUG-1074 FIX: Use explicit emit function to ensure proper event propagation
+const handleBulkDeleteConfirm = () => {
+  emit('confirmBulkDelete')
+}
 
 </script>

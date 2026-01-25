@@ -443,6 +443,11 @@ export function useCanvasInteractions(deps?: {
         const { nodes: involvedNodes } = event
         canvasStore.isDragging = false
 
+        // BUG-1061 DEBUG: Trace each call with unique ID
+        const callId = Math.random().toString(36).slice(2, 8)
+        console.log(`🔴 [DRAG-STOP-ENTRY] callId=${callId}, involvedNodes=${involvedNodes.length}`,
+            involvedNodes.map(n => `${n.id.slice(0,12)}(${n.type})`))
+
         try {
 
             for (const node of involvedNodes) {
@@ -563,6 +568,7 @@ export function useCanvasInteractions(deps?: {
                     // We should NOT recalculate parentId/Smart Groups for tasks that stayed in their group.
                     // Check: if task has a parent AND is still inside that parent, skip processing.
                     const oldParentId = task.parentId
+                    console.log(`🟡 [FIX3-CHECK] Task "${task.title?.slice(0,20)}" oldParentId=${oldParentId?.slice(0,8) ?? 'none'}`)
                     if (oldParentId) {
                         const currentParent = taskAllGroups.find(g => g.id === oldParentId)
                         if (currentParent) {
@@ -574,6 +580,10 @@ export function useCanvasInteractions(deps?: {
                             }
                             // If task center is still inside current parent, skip processing
                             const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 10)
+                            console.log(`🟡 [FIX3-BOUNDS] stillInside=${stillInside}`, {
+                                taskCenter: { x: Math.round(spatialTask.position.x + (spatialTask.width || 200)/2), y: Math.round(spatialTask.position.y + (spatialTask.height || 40)/2) },
+                                parentBounds: { x: Math.round(parentBounds.position.x), y: Math.round(parentBounds.position.y), w: parentBounds.width, h: parentBounds.height }
+                            })
                             if (stillInside) {
                                 // Task just moved with its group - only sync position, skip parent/Smart Group recalc
                                 const posChanged = !task.canvasPosition ||
@@ -595,6 +605,7 @@ export function useCanvasInteractions(deps?: {
                     // 3. Detect new parent using spatial containment (center inside group bounds)
                     const targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
                     const newParentId = targetGroup?.id ?? null
+                    console.log(`🟢 [DETECT-PARENT] Task "${task.title?.slice(0,20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0,8) ?? 'root'})`)
 
                     // Skip if position didn't change meaningfully
                     // (prevents drift when task just followed parent group)

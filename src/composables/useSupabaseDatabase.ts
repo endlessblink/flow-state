@@ -816,6 +816,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
             await withRetry(() => attemptUpsert(payload), 'saveTask')
 
+            // TASK-1083: Invalidate cache after successful write to prevent stale reads
+            invalidateCache.tasks()
+
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveTask')
@@ -877,6 +880,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             }
 
             await withRetry(() => attemptUpsert(payload), 'saveTasks')
+
+            // TASK-1083: Invalidate cache after successful write to prevent stale reads
+            invalidateCache.tasks()
 
             lastSyncError.value = null
         } catch (e: unknown) {
@@ -1102,6 +1108,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                     console.log(`📍 [GROUP-SAVE] Saved group "${group.name}" pos=(${pos.x?.toFixed(0)}, ${pos.y?.toFixed(0)}) size=${pos.width}x${pos.height} to Supabase - VERIFIED`)
                 }
             }, 'saveGroup')
+
+            // TASK-1083: Invalidate cache after successful write to prevent stale reads
+            invalidateCache.groups()
 
             lastSyncError.value = null
         } catch (e: unknown) {

@@ -130,7 +130,7 @@ const props = withDefaults(defineProps<Props>(), {
   context: 'standalone',
   showBrainDump: false,
   startCollapsed: false,
-  maxCollapsedWidth: '48px',
+  maxCollapsedWidth: '40px', /* BUG-1079: Slimmer collapsed state */
   expandedWidth: '320px'
 })
 
@@ -206,7 +206,10 @@ const handleStartTimer = async (task: Task) => {
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  width: v-bind(expandedWidth);
+  /* BUG-1078: Auto-size to fit content, with minimum width */
+  width: fit-content;
+  min-width: v-bind(expandedWidth);
+  max-width: 420px; /* Prevent excessive growth */
   transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
   overflow: hidden;
   position: relative;
@@ -223,8 +226,13 @@ const handleStartTimer = async (task: Task) => {
 }
 
 .unified-inbox-panel.collapsed {
+  /* BUG-1079: Override auto-size for collapsed state - make it slim */
   width: v-bind(maxCollapsedWidth);
+  min-width: unset; /* Reset min-width so collapsed width takes effect */
+  max-width: unset;
   padding: var(--space-2);
+  /* Center all content in collapsed state */
+  align-items: center;
 }
 
 .collapsed-badges-container {

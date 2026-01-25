@@ -9,7 +9,7 @@
  */
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute, Route } from 'workbox-routing'
-import { CacheFirst } from 'workbox-strategies'
+import { CacheFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 // @ts-expect-error - VitePWA injects __WB_MANIFEST at build time
@@ -29,6 +29,24 @@ precacheAndRoute(self.__WB_MANIFEST)
 // ============================================================================
 // RUNTIME CACHING STRATEGIES
 // ============================================================================
+
+// TASK-1083: CRITICAL - Never cache Supabase API responses
+// This prevents stale position data from being served across devices
+// Research: Browser HTTP caching can serve old data even with SWR invalidation
+registerRoute(
+  new Route(
+    ({ url }) => {
+      // Match Supabase REST API and Realtime endpoints
+      const isSupabaseAPI = url.hostname.includes('supabase.co') ||
+                            url.hostname.includes('api.in-theflow.com')
+      const isRestAPI = url.pathname.includes('/rest/v1/')
+      const isRealtime = url.pathname.includes('/realtime/')
+      const isAuth = url.pathname.includes('/auth/')
+      return isSupabaseAPI && (isRestAPI || isRealtime || isAuth)
+    },
+    new NetworkOnly() // Never cache - always fetch from network
+  )
+)
 
 // Images: Cache-first with 30-day expiry
 registerRoute(

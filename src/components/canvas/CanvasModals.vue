@@ -11,7 +11,7 @@
     :is-open="modals.isQuickTaskCreateOpen"
     :loading="false"
     @cancel="modals.closeQuickTaskCreate"
-    @create="(data) => $emit('handleQuickTaskCreate', data.title, data.description)"
+    @create="handleQuickTaskCreateAndClose"
   />
 
   <!-- Batch Edit Modal -->
@@ -82,8 +82,17 @@ import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
+interface QuickTaskData {
+  title: string
+  description: string
+  status: string
+  priority: 'low' | 'medium' | 'high'
+  dueDate?: string
+  projectId?: string
+}
+
 const emit = defineEmits<{
-  (e: 'handleQuickTaskCreate', title: string, description: string): void
+  (e: 'handleQuickTaskCreate', data: QuickTaskData): void
   (e: 'handleBatchEditApplied'): void
   (e: 'handleSectionSettingsSave', settings: any): void
   (e: 'handleGroupCreated', group: any): void
@@ -94,6 +103,12 @@ const emit = defineEmits<{
 }>()
 
 const modals = useCanvasModalsStore()
+
+// FIX: Handle quick task create - emit full data AND close modal
+const handleQuickTaskCreateAndClose = (data: QuickTaskData) => {
+  emit('handleQuickTaskCreate', data)
+  modals.closeQuickTaskCreate()
+}
 
 // BUG-1074 FIX: Use explicit emit function to ensure proper event propagation
 const handleBulkDeleteConfirm = () => {

@@ -298,13 +298,23 @@ const handleTimeFilterSelect = (key: string) => {
   gap: var(--space-2);
   height: 44px;
   flex-shrink: 0;
+  /* BUG-1078: Ensure header content is never clipped */
+  width: fit-content;
+  min-width: 100%;
+}
+
+/* BUG-1078: Prevent NBadge from shrinking */
+.inbox-header :deep(.n-badge) {
+  flex-shrink: 0;
 }
 
 .inbox-header.is-collapsed {
-  padding: var(--space-2);
+  padding: var(--space-1);
   justify-content: center;
-  height: 40px;
+  height: auto;
+  min-height: 32px;
   border-bottom: none;
+  width: 100%; /* BUG-1079: Take full width of collapsed container */
 }
 
 .inbox-title {
@@ -312,7 +322,7 @@ const handleTimeFilterSelect = (key: string) => {
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  flex: 1;
+  flex: 0 0 auto; /* BUG-1078: Don't grow, don't shrink, use natural width */
 }
 
 .collapse-btn {

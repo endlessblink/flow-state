@@ -190,7 +190,7 @@
 | ~~**BUG-1056**~~         | ✅ **DONE** **Brave Browser Compatibility + Multi-Tab Fix**             | **P2**                                              | ✅ **DONE** (2026-01-24)                                                                                                        | Brave detection, user warning banner, multi-tab auth sync, unique channel per tab. [See Details](#bug-1056-brave-browser-compatibility--data-load-recovery-done)                                                  |
 | ~~**BUG-1067**~~         | ✅ **DONE** **Tauri: Canvas Selection Rectangle Offset from Cursor**    | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | Fixed: Changed to position:absolute + container-relative coords. Selection box now aligns with cursor in Tauri.                                                                                                   |                                                        |
 | **BUG-1057**             | **Fix Failing Unit Tests (8 failures)**                                  | **P3**                                              | 📋 **PLANNED**                                                                                                                  | Playwright/Vitest conflicts, missing imports, obsolete test files. [See Details](#bug-1057-fix-failing-unit-tests-planned)                                                                                          |                                                        |
-| **BUG-1066**             | **Inbox Panel Too Transparent (Canvas View)**                            | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Inbox panel background is see-through at 15% opacity. Should be opaque/semi-opaque for readability.                                                                                                                  |                                                        |
+| ~~**BUG-1066**~~         | ✅ **DONE** **Tauri: Transparent UI Components (WebKitGTK Limitation)**  | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | Fixed: CSS variable overrides for opaque backgrounds in Tauri. WebKitGTK doesn't support backdrop-filter. [SOP-033](./sop/SOP-033-tauri-linux-css-limitations.md)                                                    |                                                        |
 | **TASK-1075**            | **Add Search to Canvas & Calendar Inboxes**                              | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add search/filter functionality to inbox panels in Canvas and Calendar views                                                                                                                                          |                                                        |
 | ~~**BUG-1012**~~         | ✅ **DONE** **Dev-Maestro: "Submit Answers & Continue" Button Fixed**    | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Added debugging, error feedback, validation. Button now works correctly.                                                                                                                                            |                                                        |
 | ~~**FEATURE-1012**~~     | ✅ **DONE** **Orchestrator: Auto-Detect Project Tech Stack**             | **P2**                                              | ✅ **DONE** (2026-01-23)                                                                                                         | Auto-detects Vue/React, UI libs, state mgmt, DB from package.json. Questions now focus on feature details, not tech stack.                                                                                          | TASK-303                                               |
@@ -793,6 +793,33 @@ if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
 // PM updates can be rejected if node is locked (user dragging).
 // Store is always updated by realtime sync, so it's the source of truth for parentId.
 let parentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
+```
+
+- **2026-01-25**: User reported drift STILL HAPPENING when moving GROUPS (not tasks)
+- **2026-01-25**: ROOT CAUSE FOUND #3 - Smart Group reactive loop!
+  - When GROUP is dragged, Vue Flow reports child tasks as "involved" in drag
+  - Tasks near group boundary get re-evaluated for containment
+  - Smart Group applies different dueDate based on spatial position
+  - This triggers `syncTrigger++` → sync → recalculate containment → different group → loop!
+- **2026-01-25**: FIX #3 IMPLEMENTED in `src/composables/canvas/useCanvasInteractions.ts`
+  - Added early-exit: if task is STILL INSIDE its current parent, skip parentId/Smart Group recalc
+  - Only sync position, don't recalculate containment when task just followed its parent group
+
+#### Fix #3 Applied (useCanvasInteractions.ts)
+```typescript
+// BUG-1061 FIX: Skip if task just followed its parent group (didn't move independently)
+const oldParentId = task.parentId
+if (oldParentId) {
+    const currentParent = taskAllGroups.find(g => g.id === oldParentId)
+    if (currentParent) {
+        const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 10)
+        if (stillInside) {
+            // Task just moved with its group - only sync position
+            await taskStore.updateTask(task.id, { canvasPosition: absolutePos }, 'DRAG-FOLLOW-PARENT')
+            continue // Skip parentId change, skip Smart Group
+        }
+    }
+}
 ```
 
 ---

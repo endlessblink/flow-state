@@ -10,7 +10,7 @@ import { useCanvasOperationState } from './useCanvasOperationState'
 import { useCanvasResizeState } from './useCanvasResizeState'
 import { useCanvasResizeCalculation } from './useCanvasResizeCalculation'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
-import { getDeepestContainingGroup, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT } from '@/utils/canvas/spatialContainment'
+import { getDeepestContainingGroup, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT, isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { useNodeSync } from './useNodeSync'
 import { useNodeStateManager, NodeState } from './state-machine'
 import { storeToRefs } from 'pinia'
@@ -558,9 +558,42 @@ export function useCanvasInteractions(deps?: {
                         height: (node as any).height ?? DEFAULT_TASK_HEIGHT
                     }
 
+                    // BUG-1061 FIX: Skip if task just followed its parent group (didn't move independently)
+                    // When a group is dragged, Vue Flow reports child tasks as "involved".
+                    // We should NOT recalculate parentId/Smart Groups for tasks that stayed in their group.
+                    // Check: if task has a parent AND is still inside that parent, skip processing.
+                    const oldParentId = task.parentId
+                    if (oldParentId) {
+                        const currentParent = taskAllGroups.find(g => g.id === oldParentId)
+                        if (currentParent) {
+                            const parentAbsolutePos = getGroupAbsolutePosition(oldParentId, taskAllGroups)
+                            const parentBounds = {
+                                position: parentAbsolutePos,
+                                width: currentParent.position.width,
+                                height: currentParent.position.height
+                            }
+                            // If task center is still inside current parent, skip processing
+                            const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 10)
+                            if (stillInside) {
+                                // Task just moved with its group - only sync position, skip parent/Smart Group recalc
+                                const posChanged = !task.canvasPosition ||
+                                    Math.abs(absolutePos.x - task.canvasPosition.x) > 1 ||
+                                    Math.abs(absolutePos.y - task.canvasPosition.y) > 1
+                                if (posChanged) {
+                                    await taskStore.updateTask(task.id, {
+                                        canvasPosition: absolutePos,
+                                        positionFormat: 'absolute'
+                                    }, 'DRAG-FOLLOW-PARENT')
+                                    positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
+                                }
+                                setNodeState(task.id, NodeState.IDLE)
+                                continue // Skip rest of TASK DRAG END (no parentId change, no Smart Group)
+                            }
+                        }
+                    }
+
                     // 3. Detect new parent using spatial containment (center inside group bounds)
                     const targetGroup = getDeepestContainingGroup(spatialTask, taskAllGroups)
-                    const oldParentId = task.parentId
                     const newParentId = targetGroup?.id ?? null
 
                     // Skip if position didn't change meaningfully

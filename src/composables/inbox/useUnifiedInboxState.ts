@@ -36,6 +36,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // TASK-1073: Sort state (persisted)
     const sortBy = useStorage<SortByType>('inbox-sort-by', 'newest')
 
+    // TASK-1075: Search query
+    const searchQuery = ref('')
+
     // TASK-106: Canvas group filter (primary filter)
     const selectedCanvasGroups = ref<Set<string>>(new Set())
 
@@ -193,6 +196,16 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             )
         }
 
+        // TASK-1075: Search Filter (title and description)
+        if (searchQuery.value.trim()) {
+            const query = searchQuery.value.toLowerCase().trim()
+            tasks = tasks.filter(task => {
+                const titleMatch = task.title?.toLowerCase().includes(query)
+                const descMatch = task.description?.toLowerCase().includes(query)
+                return titleMatch || descMatch
+            })
+        }
+
         // TASK-1073: Apply sorting
         const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 }
 
@@ -231,6 +244,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         selectedDuration.value = null
         activeTimeFilter.value = 'all'
         selectedCanvasGroups.value = new Set()
+        searchQuery.value = '' // TASK-1075
     }
 
     // FEATURE-254: Canvas Inbox Smart Minimization
@@ -268,6 +282,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         selectedCanvasGroups,
         currentHideDoneTasks,
         sortBy, // TASK-1073
+        searchQuery, // TASK-1075
 
         // Computed (State)
         canvasGroupOptions,

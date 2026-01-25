@@ -641,6 +641,35 @@
         "smart-doc-manager"
       ],
       "description": "Audit task status across MASTER_PLAN.md and beads. Finds stale tasks, status mismatches, likely-done tasks, and beads sync issues. NEVER auto-marks tasks - only recommends. User confirmation is the only valid evidence of completion."
+    },
+    "next": {
+      "name": "What's Next?",
+      "category": "tooling",
+      "triggers": [
+        "/next",
+        "what should i work on",
+        "what's next",
+        "next task",
+        "what to do",
+        "priority",
+        "recommend task"
+      ],
+      "keywords": [
+        "next",
+        "priority",
+        "work",
+        "task",
+        "recommend",
+        "backlog"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "master-plan-auditor",
+        "dev-maestro",
+        "smart-doc-manager"
+      ],
+      "description": "Analyze beads and MASTER_PLAN.md to recommend the best task to work on next. Checks both systems, scores by priority (P0-P3), considers IN PROGRESS tasks, blocked dependencies, and quick wins. Use when starting a session or deciding what to tackle."
     }
   },
   "categories": {

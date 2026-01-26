@@ -259,7 +259,7 @@
 
 <script setup lang="ts">
 import { markRaw } from 'vue'
-import { VueFlow, type NodeMouseEvent } from '@vue-flow/core'
+import { VueFlow, type NodeMouseEvent, type NodeTypes } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import '@vue-flow/node-resizer/dist/style.css'
 import '@vue-flow/core/dist/style.css'
@@ -271,6 +271,8 @@ import { useTaskStore } from '../stores/tasks'
 import { useCanvasStore } from '../stores/canvas'
 import { useUIStore } from '../stores/ui'
 import { useCanvasContextMenuStore } from '../stores/canvas/contextMenus'
+import type { Task } from '@/types/tasks'
+import type { CanvasGroup } from '@/types/canvas'
 
 import TaskNode from '../components/canvas/TaskNode.vue'
 import GroupNodeSimple from '../components/canvas/GroupNodeSimple.vue'
@@ -287,8 +289,6 @@ import CanvasSelectionBox from '../components/canvas/CanvasSelectionBox.vue'
 
 import { useCanvasContextMenus } from '@/composables/canvas/useCanvasContextMenus'
 import { useCanvasOrchestrator } from '../composables/canvas/useCanvasOrchestrator'
-import type { CanvasGroup } from '@/types/canvas'
-import type { Task } from '@/types/tasks'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -297,8 +297,7 @@ const modalsStore = useCanvasModalsStore()
 const contextMenuStore = useCanvasContextMenuStore()
 
 // Register custom node types
-// @ts-expect-error - Vue Flow types are strict about NodeProps
-const nodeTypes: any = {
+const nodeTypes: NodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
 }
@@ -355,7 +354,7 @@ const handleOpenSectionSettingsFromContext = () => {
 const handleToggleFocusMode = () => uiStore.toggleFocusMode()
 
 // TASK-288 DEBUG: Wrapper to trace createTaskInGroup call
-const handleCreateTaskInGroupDebug = (section: any) => {
+const handleCreateTaskInGroupDebug = (section: CanvasGroup) => {
   // Get context menu position from store directly
   const menuX = contextMenuStore.canvasContextMenuX
   const menuY = contextMenuStore.canvasContextMenuY
@@ -373,7 +372,7 @@ const handleCreateTaskInGroupDebug = (section: any) => {
 
 const handleSectionUpdate = (id: string, data: Record<string, unknown>) => canvasStore.updateSection(id, data)
 const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
-const handleEditTask = (task: any) => { modalsStore.openEditModal(task as Task); closeCanvasContextMenu() }
+const handleEditTask = (task: Task) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
 // Handle double-click on nodes to open edit modal for tasks
 const handleNodeDoubleClick = ({ node }: NodeMouseEvent) => {
     console.log('[TASK-279] handleNodeDoubleClick called', { nodeType: node.type, hasTask: !!node.data?.task })

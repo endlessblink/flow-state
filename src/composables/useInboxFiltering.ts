@@ -26,19 +26,26 @@ export function useInboxFiltering() {
         return tomorrow
     }
 
+    // TASK-1089: Use calendar week ending at Sunday 00:00 (exclusive)
     const getWeekEnd = () => {
-        const weekEnd = new Date(getToday())
-        weekEnd.setDate(weekEnd.getDate() + 7)
+        const today = getToday()
+        const dayOfWeek = today.getDay()
+        // When today is Sunday (0), we want NEXT Sunday (7 days away)
+        // When today is Monday (1), we want this Sunday (6 days away)
+        const daysUntilSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek)
+        const weekEnd = new Date(today)
+        weekEnd.setDate(today.getDate() + daysUntilSunday)
         return weekEnd
     }
 
+    // TASK-1089: Use calendar week (include overdue + tasks until Sunday 00:00)
     const isThisWeek = (dateStr?: string) => {
         if (!dateStr) return false
-        const today = getToday()
         const weekEnd = getWeekEnd()
         const date = new Date(dateStr)
         date.setHours(0, 0, 0, 0)
-        return date >= today && date < weekEnd
+        // Include overdue tasks and tasks due before Sunday
+        return date < weekEnd
     }
 
     const hasDate = (task: Task) => {

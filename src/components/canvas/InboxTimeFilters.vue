@@ -60,9 +60,15 @@ const getTomorrow = () => {
   return tomorrow
 }
 
+// TASK-1089: Use calendar week ending at Sunday 00:00 (exclusive)
 const getWeekEnd = () => {
-  const weekEnd = new Date(getToday())
-  weekEnd.setDate(weekEnd.getDate() + 7)
+  const today = getToday()
+  const dayOfWeek = today.getDay()
+  // When today is Sunday (0), we want NEXT Sunday (7 days away)
+  // When today is Monday (1), we want this Sunday (6 days away)
+  const daysUntilSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek)
+  const weekEnd = new Date(today)
+  weekEnd.setDate(today.getDate() + daysUntilSunday)
   return weekEnd
 }
 
@@ -82,13 +88,15 @@ const _isTomorrow = (dateStr?: string) => {
   return date.getTime() === tomorrow.getTime()
 }
 
+// TASK-1089: Use calendar week ending at Sunday 00:00 (exclusive)
 const _isThisWeek = (dateStr?: string) => {
   if (!dateStr) return false
   const today = getToday()
   const weekEnd = getWeekEnd()
   const date = new Date(dateStr)
   date.setHours(0, 0, 0, 0)
-  return date >= today && date < weekEnd
+  // Include overdue tasks (< today) and tasks due before Sunday
+  return date < weekEnd
 }
 
 const hasDate = (task: Task) => {
@@ -156,19 +164,18 @@ const filterTasks = (filterKey: string) => {
       }
 
       case 'thisWeek': {
-        // Tasks scheduled within next 7 days
-        const todayWeek = getToday().toISOString().split('T')[0]
+        // TASK-1089: Tasks scheduled within calendar week (until Sunday 00:00, exclusive)
         const weekEndStr = getWeekEnd().toISOString().split('T')[0]
 
-        // Check instances first
+        // Check instances first - include overdue and tasks before Sunday
         if (task.instances && task.instances.length > 0) {
           return task.instances.some(inst =>
-            inst.scheduledDate >= todayWeek && inst.scheduledDate <= weekEndStr
+            inst.scheduledDate && inst.scheduledDate < weekEndStr
           )
         }
         // Fallback to legacy scheduledDate
         if (!task.scheduledDate) return false
-        return task.scheduledDate >= todayWeek && task.scheduledDate <= weekEndStr
+        return task.scheduledDate < weekEndStr
       }
 
       case 'noDate':
@@ -214,7 +221,7 @@ const timeFilters = computed((): TimeFilter[] => [
   {
     key: 'thisWeek',
     label: 'This Week',
-    description: 'Tasks scheduled within the next 7 days',
+    description: 'Tasks scheduled until Sunday (calendar week)',
     icon: CalendarPlus,
     count: filterTasks('thisWeek').length
   },

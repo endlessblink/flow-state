@@ -308,9 +308,11 @@ export function toSupabaseProject(project: Project, userId: string): SupabasePro
         color_type: project.colorType || (isEmoji ? 'emoji' : 'hex'),
         view_type: project.viewType || 'status',
         parent_id: sanitizedParentId,
-        order: (project as any).order || 0,
-        is_deleted: (project as any).isDeleted || false,
-        deleted_at: (project as any).deletedAt ? new Date((project as any).deletedAt).toISOString() : null,
+        order: (project as Project & { order?: number }).order || 0,
+        is_deleted: (project as Project & { isDeleted?: boolean }).isDeleted || false,
+        deleted_at: (project as Project & { deletedAt?: string | Date }).deletedAt
+            ? new Date((project as Project & { deletedAt?: string | Date }).deletedAt!).toISOString()
+            : null,
         created_at: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
         updated_at: new Date().toISOString()
     }
@@ -344,7 +346,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     const sanitizedDependsOn = (task.dependsOn || []).filter(id => isValidUUID(id))
 
     // SAFETY: Ensure status is valid per database constraint (tasks_status_check)
-    const sanitizedStatus = VALID_TASK_STATUSES.includes(task.status as any)
+    const sanitizedStatus = VALID_TASK_STATUSES.includes(task.status as typeof VALID_TASK_STATUSES[number])
         ? task.status
         : 'planned' // Default fallback
 
@@ -468,10 +470,10 @@ export function toSupabaseUserSettings(settings: AppSettings, userId: string): S
         play_notification_sounds: settings.playNotificationSounds,
         theme: settings.theme || 'system',
         language: settings.language || 'en',
-        sidebar_collapsed: (settings as any).sidebarCollapsed || false,
+        sidebar_collapsed: (settings as AppSettings & { sidebarCollapsed?: boolean }).sidebarCollapsed || false,
         board_density: settings.boardDensity || 'comfortable',
-        kanban_settings: (settings as any).kanbanSettings || {},
-        canvas_viewport: (settings as any).canvasViewport || null
+        kanban_settings: (settings as AppSettings & { kanbanSettings?: Record<string, unknown> }).kanbanSettings || {},
+        canvas_viewport: (settings as AppSettings & { canvasViewport?: { x: number; y: number; zoom: number } }).canvasViewport || null
     }
 }
 
@@ -494,7 +496,7 @@ export function fromSupabaseUserSettings(record: SupabaseUserSettings): AppSetti
         powerGroupOverrideMode: 'only_empty',
         textDirection: 'auto',
         enableDayGroupSuggestions: true
-    } as any // Cast back for store consumption, or we need a bigger interface
+    } as unknown as AppSettings // Cast back for store consumption, or we need a bigger interface
 }
 
 // -- Notification Mappers --

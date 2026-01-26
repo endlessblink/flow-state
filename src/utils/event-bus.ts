@@ -13,7 +13,7 @@ export class EventBus {
     console.log('Mock EventBus.emit called');
   }
 
-  on(_event: string, _callback: (...args: any[]) => void): void {
+  on(_event: string, _callback: (...args: unknown[]) => void): void {
     console.log('Mock EventBus.on called');
   }
 }

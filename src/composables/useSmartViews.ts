@@ -130,7 +130,10 @@ export const useSmartViews = () => {
 
   /**
    * Check if a task is due this week (including overdue tasks)
-   * Includes: overdue tasks + tasks due from today through end of week (Sunday)
+   * TASK-1089: Uses calendar week ending at 00:00 Sunday (exclusive of Sunday)
+   * - On Monday: shows Mon-Sat (5 days)
+   * - On Sunday: shows Sun-Sat of the upcoming week (7 days until next Sunday)
+   * Includes: overdue tasks + tasks due from today until Sunday 00:00
    */
   const isWeekTask = (task: Task): boolean => {
     if (task.status === 'done') return false
@@ -138,22 +141,25 @@ export const useSmartViews = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Calculate end of current week (Sunday)
+    // TASK-1089: Calculate end of calendar week (Sunday at 00:00, exclusive)
+    // Week boundary is Sunday 00:00, so we calculate the next Sunday
+    // and use < comparison to exclude tasks due ON Sunday
     const weekEnd = new Date(today)
     const dayOfWeek = today.getDay()
-    // When today is Sunday (0), daysUntilSunday = 0 (week ends today)
-    // When today is Monday (1), daysUntilSunday = 6
-    // When today is Saturday (6), daysUntilSunday = 1
-    const daysUntilSunday = (7 - dayOfWeek) % 7
+    // When today is Sunday (0), we want NEXT Sunday (7 days away)
+    // When today is Monday (1), we want this Sunday (6 days away)
+    // When today is Saturday (6), we want this Sunday (1 day away)
+    const daysUntilSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek)
     weekEnd.setDate(today.getDate() + daysUntilSunday)
     const weekEndStr = getLocalDateString(weekEnd)
 
-    // Include tasks due within the current week OR overdue (before today)
+    // Include tasks due before Sunday (< not <=) OR overdue (before today)
     if (task.dueDate) {
       try {
         const normalizedDueDate = normalizeDateString(task.dueDate)
-        // BUG-367 FIX: Include overdue tasks (removed >= todayStr check)
-        if (normalizedDueDate && normalizedDueDate <= weekEndStr) {
+        // BUG-367 FIX: Include overdue tasks
+        // TASK-1089: Use < to exclude Sunday itself (week ends at 00:00 Sunday)
+        if (normalizedDueDate && normalizedDueDate < weekEndStr) {
           return true
         }
       } catch (error) {
@@ -168,7 +174,8 @@ export const useSmartViews = () => {
           if (!inst || !inst.scheduledDate) return false
           const normalizedInstDate = normalizeDateString(inst.scheduledDate)
           // BUG-367 FIX: Include overdue instances
-          return normalizedInstDate && normalizedInstDate <= weekEndStr
+          // TASK-1089: Use < to exclude Sunday
+          return normalizedInstDate && normalizedInstDate < weekEndStr
         })) {
           return true
         }
@@ -182,7 +189,8 @@ export const useSmartViews = () => {
       try {
         const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
         // BUG-367 FIX: Include overdue
-        if (normalizedScheduledDate && normalizedScheduledDate <= weekEndStr) {
+        // TASK-1089: Use < to exclude Sunday
+        if (normalizedScheduledDate && normalizedScheduledDate < weekEndStr) {
           return true
         }
       } catch (error) {

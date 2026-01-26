@@ -427,8 +427,8 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .mic-btn:hover:not(:disabled) {
-  background: var(--glass-bg);
-  color: var(--text-primary);
+  background: rgba(99, 102, 241, 0.15);
+  color: rgb(165, 180, 252);
 }
 
 .mic-btn:active:not(:disabled) {
@@ -447,7 +447,7 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .mic-btn.processing {
-  background: var(--brand-primary, #3b82f6);
+  background: rgba(99, 102, 241, 0.9);
   color: white;
 }
 
@@ -469,15 +469,15 @@ watch(() => _props.isOpen, (isOpen) => {
   }
 }
 
-/* Voice feedback panel */
+/* Voice feedback panel - purple tinted */
 .voice-feedback {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  background: var(--glass-bg-soft);
+  background: rgba(99, 102, 241, 0.1);
   border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--purple-border-subtle, rgba(99, 102, 241, 0.15));
 }
 
 .voice-waveform {
@@ -562,14 +562,16 @@ watch(() => _props.isOpen, (isOpen) => {
   opacity: 0.7;
 }
 
-/* Date & Time Section */
+/* Date & Time Section - purple tinted glass */
 .date-time-row {
   display: flex;
   gap: var(--space-4);
   margin-bottom: var(--space-2);
   padding: var(--space-4);
-  background: var(--glass-bg-light);
-  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.08) 0%,
+    rgba(79, 70, 229, 0.05) 100%);
+  border: 1px solid var(--purple-border-subtle, rgba(99, 102, 241, 0.15));
   border-radius: var(--radius-lg);
 }
 
@@ -594,12 +596,12 @@ watch(() => _props.isOpen, (isOpen) => {
 
 .date-display:hover,
 .date-display:focus-within {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border-hover);
+  background: rgba(99, 102, 241, 0.12);
+  border-color: var(--purple-border-medium, rgba(99, 102, 241, 0.3));
 }
 
 .date-display:focus-within {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
 .date-input-hidden {
@@ -640,15 +642,15 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .quick-date-btn:hover {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border-hover);
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
   color: var(--text-secondary);
 }
 
 .quick-date-btn.active {
-  background: var(--glass-border);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
+  background: rgba(99, 102, 241, 0.25);
+  border-color: var(--purple-border-medium, rgba(99, 102, 241, 0.3));
+  color: rgb(165, 180, 252); /* indigo-300 */
 }
 
 /* Properties Row */
@@ -690,15 +692,15 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .compact-select :deep(.select-trigger:hover) {
-  background: var(--glass-bg-soft);
-  border-color: var(--glass-border-hover);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
   box-shadow: none;
 }
 
 .compact-select :deep(.select-trigger:focus),
 .compact-select :deep(.select-trigger.is-open) {
-  border-color: var(--border-hover);
-  box-shadow: none;
+  border-color: var(--purple-border-medium, rgba(99, 102, 241, 0.3));
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
 .compact-select :deep(.select-icon.is-open) {
@@ -727,13 +729,15 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .cancel-btn:hover {
-  background: var(--glass-bg-soft);
-  border-color: var(--border-hover);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .create-btn {
-  background: var(--glass-border);
-  border: 1px solid var(--border-hover);
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.9) 0%,
+    rgba(79, 70, 229, 0.85) 100%);
+  border: 1px solid var(--purple-border-medium, rgba(99, 102, 241, 0.3));
   color: white;
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
@@ -744,8 +748,11 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .create-btn:hover:not(:disabled) {
-  background: var(--glass-border-hover);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg,
+    rgba(109, 112, 251, 0.95) 0%,
+    rgba(89, 80, 239, 0.9) 100%);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .create-btn:disabled {

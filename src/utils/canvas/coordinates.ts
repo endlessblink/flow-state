@@ -192,7 +192,7 @@ export function vueFlowPositionToDb(
   allGroups: CanvasGroup[]
 ): Position {
   // If computedPosition is available, use it directly (already absolute)
-  const vfNode = node as any
+  const vfNode = node as Node & { computedPosition?: Position }
   if (vfNode.computedPosition) {
     return {
       x: vfNode.computedPosition.x,
@@ -218,21 +218,22 @@ export function vueFlowPositionToDb(
 /**
  * Validate that a position is valid (not NaN, not undefined)
  */
-export function isValidPosition(pos: any): pos is Position {
+export function isValidPosition(pos: unknown): pos is Position {
+  const p = pos as Position | undefined | null
   return (
-    pos !== null &&
-    pos !== undefined &&
-    typeof pos.x === 'number' &&
-    typeof pos.y === 'number' &&
-    !isNaN(pos.x) &&
-    !isNaN(pos.y)
+    p !== null &&
+    p !== undefined &&
+    typeof p.x === 'number' &&
+    typeof p.y === 'number' &&
+    !isNaN(p.x) &&
+    !isNaN(p.y)
   )
 }
 
 /**
  * Sanitize a position - return fallback if invalid
  */
-export function sanitizePosition(pos: any, fallback: Position = { x: 0, y: 0 }): Position {
+export function sanitizePosition(pos: unknown, fallback: Position = { x: 0, y: 0 }): Position {
   if (isValidPosition(pos)) {
     return { x: pos.x, y: pos.y }
   }

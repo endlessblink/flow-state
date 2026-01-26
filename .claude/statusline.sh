@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Pomo-Flow Status Line Script
-# Shows worktree name, active port, and Claude Code model
+# FlowState Status Line Script
+# Shows worktree name, current task, active port, and Claude Code model
 
 # Read JSON input from Claude Code
 read -r JSON_DATA
@@ -20,6 +20,40 @@ fi
 
 # Extract worktree name from path
 WORKTREE_NAME="${CWD##*/}"
+
+# Detect current task from MASTER_PLAN.md (look for IN PROGRESS tasks)
+CURRENT_TASK=""
+TASK_DESC=""
+if [ -f "$CWD/docs/MASTER_PLAN.md" ]; then
+  # Find task with IN PROGRESS or 🔄 status in the table
+  TASK_LINE=$(grep -E "^\|.*\|.*(IN PROGRESS|🔄)" "$CWD/docs/MASTER_PLAN.md" 2>/dev/null | head -1)
+  if [ -n "$TASK_LINE" ]; then
+    # Extract task ID (TASK-XXX, BUG-XXX, etc.)
+    CURRENT_TASK=$(echo "$TASK_LINE" | grep -oE "(TASK|BUG|ROAD|IDEA|ISSUE)-[0-9]+" | head -1)
+    # Extract description from column 2 (between first and second |)
+    # Format: | ID | Description | Priority | Status | ...
+    TASK_DESC=$(echo "$TASK_LINE" | cut -d'|' -f3 | sed 's/^\s*\*\*//; s/\*\*\s*$//; s/^\s*//; s/\s*$//')
+    # Trim to 30 chars
+    if [ ${#TASK_DESC} -gt 30 ]; then
+      TASK_DESC="${TASK_DESC:0:30}…"
+    fi
+  fi
+fi
+
+# Also check .claude/current-task.json as override
+if [ -f "$CWD/.claude/current-task.json" ]; then
+  JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/current-task.json" 2>/dev/null)
+  JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/current-task.json" 2>/dev/null)
+  if [ -n "$JSON_TASK" ]; then
+    CURRENT_TASK="$JSON_TASK"
+    if [ -n "$JSON_DESC" ]; then
+      TASK_DESC="${JSON_DESC:0:25}"
+      if [ ${#JSON_DESC} -gt 25 ]; then
+        TASK_DESC="${TASK_DESC}…"
+      fi
+    fi
+  fi
+fi
 
 # Try to find actual running Vite port for this worktree
 ACTUAL_PORT=""
@@ -63,5 +97,15 @@ else
   PORT_STATUS="$CONFIG_PORT (config)"
 fi
 
+# Build task display string
+TASK_DISPLAY=""
+if [ -n "$CURRENT_TASK" ]; then
+  if [ -n "$TASK_DESC" ]; then
+    TASK_DISPLAY=" | 🎯 $CURRENT_TASK: $TASK_DESC"
+  else
+    TASK_DISPLAY=" | 🎯 $CURRENT_TASK"
+  fi
+fi
+
 # Output status line
-echo "📍 $WORKTREE_NAME :$PORT_STATUS | $MODEL"
+echo "📍 $WORKTREE_NAME :$PORT_STATUS$TASK_DISPLAY | $MODEL"

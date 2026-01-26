@@ -216,6 +216,7 @@
       :voice-transcript="displayTranscript"
       @close="isTaskCreateOpen = false"
       @created="handleTaskSheetCreated"
+      @stop-recording="stopVoice"
     />
   </div>
 </template>

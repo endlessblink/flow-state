@@ -109,6 +109,10 @@
               <p v-if="voiceTranscript" class="voice-transcript">
                 {{ voiceTranscript }}
               </p>
+              <button class="stop-recording-btn" @click="emit('stop-recording')">
+                <Square :size="16" />
+                <span>Stop Recording</span>
+              </button>
             </div>
           </div>
         </div>
@@ -120,7 +124,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import {
-  Flag, Calendar, CalendarPlus, CalendarDays, X
+  Flag, Calendar, CalendarPlus, CalendarDays, X, Square
 } from 'lucide-vue-next'
 
 interface Props {
@@ -137,6 +141,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   close: []
   created: [data: TaskCreationData]
+  'stop-recording': []
 }>()
 
 interface TaskCreationData {
@@ -542,6 +547,28 @@ function autoResize(event: Event) {
   color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   font-size: 14px;
   line-height: 1.5;
+}
+
+.stop-recording-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 24px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 24px;
+  color: #ef4444;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stop-recording-btn:active {
+  transform: scale(0.96);
+  background: rgba(239, 68, 68, 0.25);
 }
 
 /* ================================

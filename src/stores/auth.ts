@@ -16,6 +16,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isInitialized = ref(false)
   const initializationFailed = ref(false)
 
+  // BUG-1086: Promise lock to prevent concurrent initialization attempts
+  // Multiple callers (router guard, useAppInitialization) may call initialize() simultaneously
+  // This ensures they all await the same promise instead of racing
+  let initPromise: Promise<void> | null = null
+
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -136,142 +141,153 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   // Actions
-  const initialize = async () => {
+  const initialize = async (): Promise<void> => {
+    // BUG-1086: Return existing promise if already initializing (prevents race condition)
+    // Multiple callers will await the same promise instead of starting parallel init attempts
+    if (initPromise) {
+      return initPromise
+    }
     if (isInitialized.value) return
 
     // BUG-1056: Generate tab ID for multi-tab debugging
     const tabId = (window as any).__flowstate_tab_id || (() => {
-      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       ;(window as any).__flowstate_tab_id = id
       return id
     })()
 
-    try {
-      isLoading.value = true
-      console.log(`[AUTH:${tabId}] Initializing auth...`)
+    // BUG-1086: Create and store the promise BEFORE any async work
+    // This ensures subsequent callers get this promise immediately
+    initPromise = (async () => {
+      try {
+        isLoading.value = true
+        console.log(`[AUTH:${tabId}] Initializing auth...`)
 
-      if (!supabase) {
-        console.warn(`[AUTH:${tabId}] Supabase client not available, staying in Guest Mode`)
-        return
-      }
+        if (!supabase) {
+          console.warn(`[AUTH:${tabId}] Supabase client not available, staying in Guest Mode`)
+          return
+        }
 
-      // Check for existing session
-      console.log(`[AUTH:${tabId}] Fetching session from localStorage...`)
-      const { data, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) {
-        console.error(`[AUTH:${tabId}] getSession error:`, sessionError)
-        throw sessionError
-      }
-      console.log(`[AUTH:${tabId}] Session found:`, !!data.session, data.session?.user?.email)
+        // Check for existing session
+        console.log(`[AUTH:${tabId}] Fetching session from localStorage...`)
+        const { data, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError) {
+          console.error(`[AUTH:${tabId}] getSession error:`, sessionError)
+          throw sessionError
+        }
+        console.log(`[AUTH:${tabId}] Session found:`, !!data.session, data.session?.user?.email)
 
-      // BUG-339 FIX: Check if session is expired and refresh it
-      // getSession() returns the stored session but doesn't auto-refresh expired tokens
-      if (data.session?.expires_at) {
-        const expiresAt = data.session.expires_at * 1000 // Convert to milliseconds
-        const now = Date.now()
-        const bufferMs = 60 * 1000 // 1 minute buffer before expiry
+        // BUG-339 FIX: Check if session is expired and refresh it
+        // getSession() returns the stored session but doesn't auto-refresh expired tokens
+        if (data.session?.expires_at) {
+          const expiresAt = data.session.expires_at * 1000 // Convert to milliseconds
+          const now = Date.now()
+          const bufferMs = 60 * 1000 // 1 minute buffer before expiry
 
-        if (now >= expiresAt - bufferMs) {
-          console.log('[AUTH] Session expired or expiring soon, refreshing...')
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-          if (refreshError) {
-            console.error('[AUTH] Failed to refresh session:', refreshError)
-            // Clear stale session - user needs to sign in again
-            session.value = null
-            user.value = null
-            return
-          }
-          if (refreshData.session) {
-            console.log('[AUTH] Session refreshed successfully')
-            session.value = refreshData.session
-            user.value = refreshData.session.user
-            // BUG-339: Schedule next refresh
-            if (refreshData.session.expires_at) {
-              scheduleTokenRefresh(refreshData.session.expires_at)
+          if (now >= expiresAt - bufferMs) {
+            console.log('[AUTH] Session expired or expiring soon, refreshing...')
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+            if (refreshError) {
+              console.error('[AUTH] Failed to refresh session:', refreshError)
+              // Clear stale session - user needs to sign in again
+              session.value = null
+              user.value = null
+              return
             }
+            if (refreshData.session) {
+              console.log('[AUTH] Session refreshed successfully')
+              session.value = refreshData.session
+              user.value = refreshData.session.user
+              // BUG-339: Schedule next refresh
+              if (refreshData.session.expires_at) {
+                scheduleTokenRefresh(refreshData.session.expires_at)
+              }
+            }
+          } else {
+            session.value = data.session
+            user.value = data.session?.user || null
+            // BUG-339: Schedule proactive refresh for valid session
+            scheduleTokenRefresh(data.session.expires_at)
           }
         } else {
           session.value = data.session
           user.value = data.session?.user || null
-          // BUG-339: Schedule proactive refresh for valid session
-          scheduleTokenRefresh(data.session.expires_at)
         }
-      } else {
-        session.value = data.session
-        user.value = data.session?.user || null
-      }
 
-      // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
-      // check if there's guest data to migrate. This catches redirect-based auth flows.
-      if (data.session?.user) {
-        // Run migration asynchronously - don't block initialization
-        migrateGuestData().catch(e => {
-          console.error('[AUTH] Post-init migration failed:', e)
+        // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
+        // check if there's guest data to migrate. This catches redirect-based auth flows.
+        if (data.session?.user) {
+          // Run migration asynchronously - don't block initialization
+          migrateGuestData().catch(e => {
+            console.error('[AUTH] Post-init migration failed:', e)
+          })
+        }
+
+        // Listen for auth changes (sign in, sign out, etc.)
+        // BUG-1056: This fires across all tabs when auth state changes (via localStorage sync)
+        supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
+          const currentTabId = (window as any).__flowstate_tab_id || 'unknown'
+          console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event, 'userId:', newSession?.user?.id?.substring(0, 8))
+
+          // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
+          // This ensures cached guest data doesn't persist after sign-in
+          invalidateCache.onAuthChange(newSession?.user?.id || null)
+
+          // Update local state
+          session.value = newSession
+          user.value = newSession?.user || null
+
+          // BUG-1056: Handle token refresh across tabs - update realtime connection
+          if (_event === 'TOKEN_REFRESHED' && newSession?.access_token) {
+            console.log(`👤 [AUTH:${currentTabId}] Token refreshed - updating realtime auth`)
+            try {
+              // Update the realtime WebSocket with the new token
+              supabase.realtime.setAuth(newSession.access_token)
+            } catch (e) {
+              console.error(`❌ [AUTH:${currentTabId}] Failed to update realtime auth:`, e)
+            }
+          }
+
+          // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
+          if (_event === 'SIGNED_IN' && newSession?.user) {
+            console.log(`👤 [AUTH:${currentTabId}] User signed in - reloading stores...`)
+            try {
+              const { useProjectStore } = await import('@/stores/projects')
+              const { useTaskStore } = await import('@/stores/tasks')
+              const { useCanvasStore } = await import('@/stores/canvas')
+
+              const projectStore = useProjectStore()
+              const taskStore = useTaskStore()
+              const canvasStore = useCanvasStore()
+
+              await Promise.all([
+                projectStore.loadProjectsFromDatabase(),
+                taskStore.loadFromDatabase(),
+                canvasStore.loadFromDatabase()
+              ])
+              console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after sign-in`)
+            } catch (e) {
+              console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
+            }
+          }
         })
-      }
 
-      // Listen for auth changes (sign in, sign out, etc.)
-      // BUG-1056: This fires across all tabs when auth state changes (via localStorage sync)
-      supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
-        const currentTabId = (window as any).__flowstate_tab_id || 'unknown'
-        console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event, 'userId:', newSession?.user?.id?.substring(0, 8))
-
-        // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
-        // This ensures cached guest data doesn't persist after sign-in
-        invalidateCache.onAuthChange(newSession?.user?.id || null)
-
-        // Update local state
-        session.value = newSession
-        user.value = newSession?.user || null
-
-        // BUG-1056: Handle token refresh across tabs - update realtime connection
-        if (_event === 'TOKEN_REFRESHED' && newSession?.access_token) {
-          console.log(`👤 [AUTH:${currentTabId}] Token refreshed - updating realtime auth`)
-          try {
-            // Update the realtime WebSocket with the new token
-            supabase.realtime.setAuth(newSession.access_token)
-          } catch (e) {
-            console.error(`❌ [AUTH:${currentTabId}] Failed to update realtime auth:`, e)
-          }
+      } catch (e: unknown) {
+        // BUG-1056: Detect if Brave Shields blocked auth initialization
+        if (isBlockedByBrave(e)) {
+          recordBlockedResource('supabase-auth-init')
+          console.error('[AUTH] Auth initialization blocked by Brave Shields. Please disable Shields for this site.')
         }
-
-        // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
-        if (_event === 'SIGNED_IN' && newSession?.user) {
-          console.log(`👤 [AUTH:${currentTabId}] User signed in - reloading stores...`)
-          try {
-            const { useProjectStore } = await import('@/stores/projects')
-            const { useTaskStore } = await import('@/stores/tasks')
-            const { useCanvasStore } = await import('@/stores/canvas')
-
-            const projectStore = useProjectStore()
-            const taskStore = useTaskStore()
-            const canvasStore = useCanvasStore()
-
-            await Promise.all([
-              projectStore.loadProjectsFromDatabase(),
-              taskStore.loadFromDatabase(),
-              canvasStore.loadFromDatabase()
-            ])
-            console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after sign-in`)
-          } catch (e) {
-            console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
-          }
-        }
-      })
-
-    } catch (e: unknown) {
-      // BUG-1056: Detect if Brave Shields blocked auth initialization
-      if (isBlockedByBrave(e)) {
-        recordBlockedResource('supabase-auth-init')
-        console.error('[AUTH] Auth initialization blocked by Brave Shields. Please disable Shields for this site.')
+        console.error('Auth initialization failed:', e)
+        error.value = e as AuthError
+        initializationFailed.value = true
+      } finally {
+        isLoading.value = false
+        isInitialized.value = true
       }
-      console.error('Auth initialization failed:', e)
-      error.value = e as AuthError
-      initializationFailed.value = true
-    } finally {
-      isLoading.value = false
-      isInitialized.value = true
-    }
+    })()
+
+    return initPromise
   }
 
   /**
@@ -282,6 +298,8 @@ export const useAuthStore = defineStore('auth', () => {
     initializationFailed.value = false
     error.value = null
     isInitialized.value = false
+    // BUG-1086: Reset promise lock to allow fresh initialization
+    initPromise = null
     await initialize()
   }
 

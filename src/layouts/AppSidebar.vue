@@ -426,8 +426,9 @@ const taskStore = useTaskStore()
 const authStore = useAuthStore()
 const sidebar = useSidebarManagement()
 
-// Initialize auth
-authStore.initialize()
+// BUG-1086: REMOVED fire-and-forget authStore.initialize() call
+// Auth is already initialized by router guard (src/router/index.ts:130)
+// and useAppInitialization.ts - this duplicate call caused race conditions
 
 // Project Multi-Select State (Now Global)
 const selectedProjectIds = computed(() => uiStore.selectedProjectIds)

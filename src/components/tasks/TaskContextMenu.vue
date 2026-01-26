@@ -148,8 +148,10 @@
     </div>
 
     <!-- Decomposed Submenus -->
+    <!-- BUG-1095: Pass parentVisible to ensure submenus close when parent closes -->
     <StatusSubmenu
       :is-visible="showStatusSubmenu"
+      :parent-visible="isVisible"
       :style="statusSubmenuStyle"
       :current-status="currentTask?.status"
       @mouseenter="keepSubmenuOpen"
@@ -159,6 +161,7 @@
 
     <DurationSubmenu
       :is-visible="showDurationSubmenu"
+      :parent-visible="isVisible"
       :style="durationSubmenuStyle"
       :current-duration="currentTask?.estimatedDuration"
       @mouseenter="keepSubmenuOpen"
@@ -204,6 +207,7 @@
 
     <MoreSubmenu
       :is-visible="showMoreSubmenu"
+      :parent-visible="isVisible"
       :style="moreSubmenuStyle"
       :is-batch-operation="isBatchOperation"
       :task-id="currentTask?.id"
@@ -391,6 +395,9 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
 
 // Handle "Done for now" - reschedule task to tomorrow with tracking badge
 const handleDoneForNow = async () => {
+  // BUG-1095: Close menu FIRST to prevent "stuck" menu
+  emit('close')
+
   if (!currentTask.value) return
 
   const { showToast } = useToast()
@@ -415,8 +422,6 @@ const handleDoneForNow = async () => {
     console.error('Error updating task due date:', error)
     showToast('Failed to reschedule task', 'error')
   }
-
-  emit('close')
 }
 
 // Menu positioning

@@ -83,7 +83,7 @@
 | ~~**TASK-1073**~~        | ✅ **DONE** **Inbox: Add Sorting Options (Filters & Sort)**            | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-1072                                                                                                                                                                                                      |                                                        |
 | ~~**BUG-1074**~~         | ✅ **DONE** **Canvas Task Deletion to Inbox Not Working**              | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1075**~~         | ✅ **DONE** **Inbox Header Time Filter Text Wrapping/Clipping**        | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
-| **BUG-1086**             | **VPS/PWA Auth Not Persisting + Blank Screen**                         | **P0**                                              | 🔄 **IN PROGRESS** - Symptoms: (1) Sign-out happens unexpectedly, (2) Sign-in doesn't persist correctly, (3) Blank screen. Double auth init in console. Stale cache suspected.                  | -                                                                                                                                                                                                              |                                                        |
+| **BUG-1086**             | **VPS/PWA Auth Not Persisting + Blank Screen**                         | **P0**                                              | 👀 **REVIEW** - Fixed: (1) Triple auth init race condition, (2) Duplicate SIGNED_IN handler. See [SOP-035](./sop/SOP-035-auth-initialization-race-fix.md)                  | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1090**             | **VPS: START and TIMER buttons in task menu don't work**               | **P1**                                              | 🔄 **IN PROGRESS** - Fixed race condition: event dispatched before CalendarView mounted                                          | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1091**             | **VPS: No cross-browser sync, data resets on refresh**                 | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | BUG-1086                                                                                                                                                                                                       |                                                        |
 | **TASK-1092**            | **Self-Hosted CI/CD (Replace GitHub Actions)**                         | **P3**                                              | 📋 **PLANNED**                                                                                                                  | -                                                                                                                                                                                                              |                                                        |
@@ -197,7 +197,8 @@
 | **BUG-1057**             | **Fix Failing Unit Tests (8 failures)**                                  | **P3**                                              | 📋 **PLANNED**                                                                                                                  | Playwright/Vitest conflicts, missing imports, obsolete test files. [See Details](#bug-1057-fix-failing-unit-tests-planned)                                                                                          |                                                        |
 | ~~**BUG-1066**~~         | ✅ **DONE** **Tauri: Transparent UI Components (WebKitGTK Limitation)**  | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                        | Fixed: CSS variable overrides for opaque backgrounds in Tauri. WebKitGTK doesn't support backdrop-filter. [SOP-033](./sop/SOP-033-tauri-linux-css-limitations.md)                                                    |                                                        |
 | ~~**TASK-1075**~~        | ✅ **DONE** **Add Search to Canvas & Calendar Inboxes**                  | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Add search/filter functionality to inbox panels in Canvas and Calendar views                                                                                                                                          |                                                        |
-| ~~**TASK-1077**~~        | ✅ **DONE** **Full-Screen Task Creation for Mobile PWA**                 | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | New TaskCreateBottomSheet with 100dvh height, better mobile UX for task creation with spacious layout and proper touch targets                                                                                         |                                                        |
+| ~~**TASK-1077**~~        | ✅ **DONE** **Full-Screen Task Creation for Mobile PWA**                 | **P0**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | New TaskCreateBottomSheet with 100dvh height, better mobile UX for task creation with spacious layout and proper touch targets                                                                                         |
+| **BUG-1093**             | **Board View: Tasks with today's date not showing in Today column**     | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Tasks with dueDate set to today not appearing in Board view's "Today" swimlane                                                                                                                                          |                                                        |
 | ~~**BUG-1076**~~         | ✅ **DONE** **Can't Delete Done Group on Canvas**                        | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Fixed: Added handleDeleteGroup handler in CanvasContextMenu.vue to ensure proper event emission order. Also added handleDeleteGroupConfirm in CanvasModals.vue for consistency.                                       | -                                                      |
 | ~~**BUG-1078**~~         | ✅ **DONE** **Search Icon Pushed Out of Inbox Header**                   | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Fixed `.inbox-title` from `flex: 1` to `flex: 0 0 auto` to prevent greedy expansion pushing search icon out of view                                                                                                    | -                                                      |
 | ~~**BUG-1079**~~         | ✅ **DONE** **Inbox Panel Crops Content - Auto-Size Width**              | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Fixed: Panel uses `fit-content` width with min/max bounds. Collapsed state slim (40px). [SOP-037](./sop/SOP-037-inbox-panel-auto-size.md)                                                                              | -                                                      |
@@ -283,39 +284,44 @@
 
 ---
 
-### BUG-1086: VPS/PWA Auth Not Persisting + Blank Screen (🔄 IN PROGRESS)
+### BUG-1086: VPS/PWA Auth Not Persisting + Blank Screen (👀 REVIEW)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS (2026-01-26)
+**Status**: 👀 REVIEW (2026-01-26) - [SOP-035](./sop/SOP-035-auth-initialization-race-fix.md)
 
 **Problem**: On VPS production (in-theflow.com), users experience authentication issues:
 1. **Unexpected sign-out**: User gets signed out without explicit action
 2. **Sign-in not persisting**: After signing in, auth state doesn't stay - page shows signed out or blank
 3. **Blank screen**: Intermittent blank screen on mobile PWA
 
-**Symptoms from console**:
-- Double auth initialization (`Initializing auth...` appearing multiple times)
-- `Failed to load resource: net::ERR_BLOCKED_BY_CLIENT` (likely ad blocker)
-- Stale service worker cache suspected
+**Root Cause Analysis**:
 
-**Suspected Causes**:
-- Service worker caching stale auth tokens
-- Double auth init causing race condition
-- localStorage/sessionStorage conflicts
-- Brave browser shields blocking Supabase requests
+1. **Triple Auth Initialization Race Condition**:
+   - `authStore.initialize()` was called from 3 places simultaneously:
+     - `src/router/index.ts:130` (awaited) ✅
+     - `src/composables/app/useAppInitialization.ts:35` (awaited) ✅
+     - `src/layouts/AppSidebar.vue:430` (fire-and-forget) ❌ **REMOVED**
+   - All 3 could start before any completed, causing race conditions
 
-**Investigation Tasks**:
-- [ ] Check `auth.ts` for duplicate `onAuthStateChange` subscriptions
-- [ ] Verify SW cache invalidation on auth change
-- [ ] Test in incognito/private mode
-- [ ] Check Supabase session refresh logic
-- [ ] Test with different browsers (Chrome vs Brave vs Firefox)
+2. **Duplicate SIGNED_IN Handler**:
+   - `onAuthStateChange` fired `SIGNED_IN` event multiple times (on visibility change, tab focus)
+   - Each event triggered full store reload, causing performance issues
 
-**Files to Investigate**:
-- `src/stores/auth.ts`
-- `src/services/auth/supabase.ts`
-- `src/sw.ts` (service worker)
-- `src/composables/useSupabaseDatabase.ts`
+**Fixes Applied**:
+
+1. **Fix 1**: Removed fire-and-forget `authStore.initialize()` from `AppSidebar.vue`
+2. **Fix 2**: Added promise lock (`initPromise`) in `auth.ts` to prevent concurrent initialization
+3. **Fix 3**: Added `handledSignInForUserId` guard to prevent duplicate `SIGNED_IN` store reloads
+
+**Verification Checklist**:
+- [ ] Console shows only ONE `Initializing auth...` log (not 3)
+- [ ] Console shows only ONE `User signed in - reloading stores...` (subsequent shows "skipping")
+- [ ] Sign in → refresh → still signed in
+- [ ] Sign in → close browser → reopen → still signed in
+
+**Files Modified**:
+- `src/stores/auth.ts` - Promise lock + SIGNED_IN guard
+- `src/layouts/AppSidebar.vue` - Removed duplicate init call
 
 ---
 

@@ -221,7 +221,9 @@ export function useCanvasSync() {
             }
 
             // Commit updates (locks will prevent overwrites of dragged items)
-            const { successCount, rejectedIds } = positionManager.batchUpdate(updates, 'remote-sync')
+            const batchResult = positionManager.batchUpdate(updates, 'remote-sync')
+            const successCount = batchResult?.successCount ?? 0
+            const rejectedIds = batchResult?.rejectedIds ?? []
             if (rejectedIds.length > 0) {
                 console.log(`[useCanvasSync] Sync deferred for ${rejectedIds.length} locked nodes (will retry next sync)`)
             }
@@ -258,10 +260,19 @@ export function useCanvasSync() {
 
                 // TASK-213: Read from PositionManager (Authoritative Source)
                 const pmNode = positionManager.getPosition(group.id)
-                // If missing from PM (rare), fallback to store, but PM should have it from batchUpdate
-                if (!pmNode) continue
 
-                const absolutePos = pmNode.position
+                // BUG-1084 FIX v3: Actually implement the fallback to store when PM is empty
+                // This can happen on initial load before PM is populated, or if batchUpdate was rejected
+                let absolutePos: { x: number; y: number }
+                if (pmNode) {
+                    absolutePos = pmNode.position
+                } else if (group.position && typeof group.position.x === 'number' && typeof group.position.y === 'number') {
+                    absolutePos = { x: group.position.x, y: group.position.y }
+                    console.log(`⚠️ [SYNC-FALLBACK] Group ${group.id.slice(0, 8)} not in PM, using store position`)
+                } else {
+                    console.warn(`⚠️ [SYNC-SKIP] Group ${group.id.slice(0, 8)} has no valid position, skipping`)
+                    continue
+                }
                 // BUG-1061 FIX: Read parentId from STORE (group), not PM
                 // Same fix as for tasks - PM updates can be rejected if locked
                 let parentId = (group.parentGroupId && group.parentGroupId !== 'NONE') ? group.parentGroupId : null
@@ -363,9 +374,17 @@ export function useCanvasSync() {
 
                 // TASK-213: Read from PositionManager (Authoritative Source)
                 const pmNode = positionManager.getPosition(task.id)
-                if (!pmNode) continue
 
-                const absolutePos = pmNode.position
+                // BUG-1084 FIX v3: Actually implement fallback to store when PM is empty
+                let absolutePos: { x: number; y: number }
+                if (pmNode) {
+                    absolutePos = pmNode.position
+                } else if (task.canvasPosition) {
+                    absolutePos = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+                    console.log(`⚠️ [SYNC-FALLBACK] Task ${task.id.slice(0, 8)} not in PM, using store position`)
+                } else {
+                    continue // Already checked canvasPosition at loop start, but safety first
+                }
 
                 // BUG-1061 FIX: Read parentId from STORE, not PM
                 // PM updates can be rejected if node is locked (user dragging).

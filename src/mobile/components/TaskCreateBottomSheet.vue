@@ -13,15 +13,24 @@
           @click.stop
           @touchmove.stop
         >
-          <!-- Header: Cancel | New Task | Add -->
+          <!-- Header: Cancel | New Task | Add/Stop -->
           <div class="sheet-header">
             <button class="header-btn cancel-btn" @click="handleCancel">
               Cancel
             </button>
             <h3 class="sheet-title">
-              New Task
+              {{ isListening ? 'Recording...' : 'New Task' }}
             </h3>
+            <!-- Show Stop when recording, Add when not -->
             <button
+              v-if="isListening"
+              class="header-btn stop-btn"
+              @click="emit('stop-recording')"
+            >
+              Stop
+            </button>
+            <button
+              v-else
               class="header-btn add-btn"
               :disabled="!taskTitle.trim()"
               @click="handleCreate"
@@ -393,6 +402,16 @@ function autoResize(event: Event) {
 
 .add-btn:not(:disabled):active {
   transform: scale(0.96);
+}
+
+.stop-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.stop-btn:active {
+  transform: scale(0.96);
+  background: #dc2626;
 }
 
 /* Create Form */

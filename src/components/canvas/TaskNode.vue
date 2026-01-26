@@ -63,6 +63,7 @@
         :formatted-duration="formattedDuration"
         :is-done="task?.status === 'done'"
         :is-overdue="isOverdue"
+        :done-for-now-until="task?.doneForNowUntil"
         @reschedule="handleReschedule"
       />
     </div>
@@ -480,22 +481,44 @@ onUnmounted(() => {
 }
 
 /* TASK-1074: Brief flash animation when date is updated */
+/* Default flash color (no priority) */
 .is-flashing {
-  animation: task-flash 0.5s ease-out !important;
+  --flash-color: #10b981;
+  animation: task-flash 0.6s ease-out !important;
+}
+
+/* Priority-specific flash colors */
+.priority-high.is-flashing {
+  --flash-color: #ef4444;
+}
+
+.priority-medium.is-flashing {
+  --flash-color: #f59e0b;
+}
+
+.priority-low.is-flashing {
+  --flash-color: #3b82f6;
 }
 
 @keyframes task-flash {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 #10b981;
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 var(--flash-color);
   }
-  30% {
-    transform: scale(1.03);
-    box-shadow: 0 0 30px 8px #10b981;
+  25% {
+    transform: scale(1.02);
+    filter: brightness(1.3);
+    box-shadow: 0 0 25px 6px var(--flash-color);
+  }
+  50% {
+    filter: brightness(1.15);
+    box-shadow: 0 0 15px 4px var(--flash-color);
   }
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 #10b981;
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 var(--flash-color);
   }
 }
 </style>

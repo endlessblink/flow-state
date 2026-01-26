@@ -2,7 +2,7 @@
 <template>
   <Teleport to="body">
     <div
-      v-if="isVisible"
+      v-if="isVisible && parentVisible"
       class="submenu"
       :style="style"
       @mouseenter="$emit('mouseenter')"
@@ -13,7 +13,7 @@
         :key="dur.value ?? 'none'"
         class="menu-item menu-item--sm"
         :class="{ active: currentDuration === dur.value }"
-        @click="$emit('select', dur.value)"
+        @click="handleSelect(dur.value)"
       >
         <component
           :is="dur.icon"
@@ -31,17 +31,23 @@
 import { durationOptions } from './constants'
 import type { CSSProperties } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   isVisible: boolean
+  parentVisible?: boolean // BUG-1095: Track parent menu visibility
   style: CSSProperties
   currentDuration?: number | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   select: [duration: number | null]
   mouseenter: []
   mouseleave: []
 }>()
+
+// BUG-1095: Handle selection with immediate emit
+const handleSelect = (duration: number | null) => {
+  emit('select', duration)
+}
 </script>
 
 <style scoped>

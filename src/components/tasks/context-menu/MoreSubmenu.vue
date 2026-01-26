@@ -2,7 +2,7 @@
 <template>
   <Teleport to="body">
     <div
-      v-if="isVisible"
+      v-if="isVisible && parentVisible"
       class="submenu"
       :style="style"
       @mouseenter="$emit('mouseenter')"
@@ -18,7 +18,7 @@
         <Copy :size="14" class="menu-icon" />
         <span class="menu-text">Duplicate</span>
       </button>
-      
+
       <button
         v-if="!isBatchOperation && taskId"
         class="menu-item menu-item--sm"
@@ -27,7 +27,7 @@
         <Layout :size="14" class="menu-icon" />
         <span class="menu-text">Move to Section</span>
       </button>
-      
+
       <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click="$emit('clearSelection')">
         <X :size="14" class="menu-icon" />
         <span class="menu-text">Clear Selection</span>
@@ -42,6 +42,7 @@ import type { CSSProperties } from 'vue'
 
 defineProps<{
   isVisible: boolean
+  parentVisible?: boolean // BUG-1095: Track parent menu visibility
   style: CSSProperties
   isBatchOperation: boolean
   taskId?: string

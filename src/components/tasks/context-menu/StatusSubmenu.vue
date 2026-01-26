@@ -2,7 +2,7 @@
 <template>
   <Teleport to="body">
     <div
-      v-if="isVisible"
+      v-if="isVisible && parentVisible"
       class="submenu"
       :style="style"
       @mouseenter="$emit('mouseenter')"
@@ -33,6 +33,7 @@ import type { CSSProperties } from 'vue'
 
 defineProps<{
   isVisible: boolean
+  parentVisible?: boolean // BUG-1095: Track parent menu visibility
   style: CSSProperties
   currentStatus?: string
 }>()

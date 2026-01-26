@@ -32,11 +32,13 @@ export function useTaskContextMenuActions(
     }
 
     const setDueDate = async (dateType: string, customDate?: string) => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         if (!currentTask.value) return
 
         if (isBatchOperation.value) {
             emit('setDueDate', dateType as any)
-            emit('close')
             return
         }
 
@@ -49,7 +51,6 @@ export function useTaskContextMenuActions(
             } catch (error) {
                 console.error('Error updating task due date:', error)
             }
-            emit('close')
             return
         }
 
@@ -99,7 +100,6 @@ export function useTaskContextMenuActions(
             case 'custom': {
                 // Custom date provided from date picker (second parameter)
                 // This is handled by the component passing the formatted date
-                emit('close')
                 return
             }
             default:
@@ -117,10 +117,12 @@ export function useTaskContextMenuActions(
                 console.error('Error setting due date:', error)
             }
         }
-        emit('close')
     }
 
     const setPriority = async (priority: 'high' | 'medium' | 'low') => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         if (isBatchOperation.value) {
             emit('setPriority', priority)
         } else if (currentTask.value) {
@@ -131,10 +133,12 @@ export function useTaskContextMenuActions(
                 console.error('Error setting priority:', error)
             }
         }
-        emit('close')
     }
 
     const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold') => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         if (isBatchOperation.value) {
             emit('setStatus', status as any)
         } else if (currentTask.value) {
@@ -145,10 +149,13 @@ export function useTaskContextMenuActions(
                 console.error('Error setting status:', error)
             }
         }
-        emit('close')
     }
 
     const setDuration = async (duration: number | null) => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" submenu
+        // The async operation should not block the UI
+        emit('close')
+
         if (isBatchOperation.value) {
             emit('setDuration', duration)
         } else if (currentTask.value) {
@@ -159,10 +166,12 @@ export function useTaskContextMenuActions(
                 console.error('Error setting estimated duration:', error)
             }
         }
-        emit('close')
     }
 
     const toggleDone = async () => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         if (isBatchOperation.value) {
             emit('setStatus', 'done')
         } else if (currentTask.value) {
@@ -174,10 +183,12 @@ export function useTaskContextMenuActions(
                 console.error('Error toggling done status:', error)
             }
         }
-        emit('close')
     }
 
     const startTaskNow = async () => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         console.log('🎯 [CONTEXT-MENU] startTaskNow called', {
             currentTask: currentTask.value?.id,
             currentTaskTitle: currentTask.value?.title,
@@ -215,10 +226,12 @@ export function useTaskContextMenuActions(
                 isBatchOperation: isBatchOperation.value
             })
         }
-        emit('close')
     }
 
     const startTimer = async () => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         console.log('🎯 [CONTEXT-MENU] startTimer called', {
             currentTask: currentTask.value?.id,
             currentTaskTitle: currentTask.value?.title,
@@ -234,10 +247,12 @@ export function useTaskContextMenuActions(
                 isBatchOperation: isBatchOperation.value
             })
         }
-        emit('close')
     }
 
     const duplicateTask = async () => {
+        // BUG-1095: Close menu FIRST to prevent "stuck" menu
+        emit('close')
+
         if (currentTask.value && !isBatchOperation.value) {
             try {
                 await taskStore.createTaskWithUndo({
@@ -250,7 +265,6 @@ export function useTaskContextMenuActions(
                 console.error('Error duplicating task:', error)
             }
         }
-        emit('close')
     }
 
     const deleteTask = () => {

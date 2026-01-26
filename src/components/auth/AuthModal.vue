@@ -99,6 +99,19 @@ watch(() => authStore.isAuthenticated, async (isAuth, oldIsAuth) => {
   }
 }, { flush: 'post' })
 
+// BUG-1085: Fallback watcher to catch race conditions where modal stays open after auth
+// This handles edge cases on mobile PWA where the primary watcher timing fails
+watch(
+  () => [authStore.isAuthenticated, uiStore.authModalOpen] as const,
+  ([isAuth, modalOpen]) => {
+    if (isAuth && modalOpen) {
+      console.warn('⚠️ [AuthModal] BUG-1085 fallback: Modal still open after auth, forcing close')
+      uiStore.closeAuthModal()
+    }
+  },
+  { immediate: true }
+)
+
 // ===== Methods =====
 async function handleAuthSuccess(user: User) {
   console.log('✅ Authentication successful:', user?.email)

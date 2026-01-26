@@ -83,6 +83,7 @@
 | ~~**TASK-1073**~~        | ✅ **DONE** **Inbox: Add Sorting Options (Filters & Sort)**            | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-1072                                                                                                                                                                                                      |                                                        |
 | ~~**BUG-1074**~~         | ✅ **DONE** **Canvas Task Deletion to Inbox Not Working**              | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1075**~~         | ✅ **DONE** **Inbox Header Time Filter Text Wrapping/Clipping**        | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
+| **BUG-1085**             | **PWA Auth Modal Race Condition - Blank Screen**                       | **P2**                                              | 📋 **PLANNED** - Modal stays open after auth completes due to watcher timing issue in AuthModal.vue                             | -                                                                                                                                                                                                              |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
 | ~~**TASK-231**~~         | ~~**Dynamic Skills & Docs API**~~                                      | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/skills and /api/docs endpoints                                                                                                                                                                      |                                                        |
@@ -258,6 +259,7 @@
 | ~~**TASK-1063**~~        | ✅ **DONE** **Update CLAUDE.md with VPS/Contabo Deployment Docs**        | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Added comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
 | **TASK-1080**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
 | **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
+| **BUG-1085**             | **VPS Canvas Inbox: Delete Task Does Nothing**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Deleting task from canvas inbox on VPS starts soft-delete but never completes. No error, no success. Logs show `Starting soft-delete` but no completion.                                                              | -                                                      |
 
 ---
 
@@ -274,6 +276,33 @@
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+---
+
+### BUG-1085: VPS Canvas Inbox - Delete Task Does Nothing (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-26)
+
+**Problem**: On the VPS production site (in-theflow.com), clicking delete on a task in the canvas inbox does nothing. The soft-delete operation starts but never completes - no success callback, no error, no UI update.
+
+**Symptoms**:
+- Console shows `🗑️ [SUPABASE-DELETE] Starting soft-delete for task: <id>`
+- No completion log (`soft-delete completed` or error message)
+- Task remains in inbox after delete attempt
+- Also saw: `TypeError: Cannot read properties of undefined (reading 'length')` in `syncStoreToCanvas`
+
+**Suspected Causes**:
+- Supabase soft-delete hanging on VPS/production
+- RLS policy blocking the update
+- Network/timeout issue on VPS
+- The syncNodes error may be related (tasks not loading properly)
+
+**Investigation Tasks**:
+- [ ] Check Supabase logs for the delete operation
+- [ ] Verify RLS policies allow soft-delete
+- [ ] Check if this is production-only or also local
+- [ ] Debug the `syncStoreToCanvas` TypeError
 
 ---
 

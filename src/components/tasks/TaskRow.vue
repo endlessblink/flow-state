@@ -395,53 +395,47 @@ onUnmounted(() => {
 }
 
 /* TASK-1074: Brief flash animation when date is updated */
-/* Default flash color (no priority) */
 .task-row--flashing {
-  --flash-color: #10b981;
-  --flash-bg: rgba(16, 185, 129, 0.2);
-  --flash-bg-mid: rgba(16, 185, 129, 0.1);
-  animation: task-row-flash 0.6s ease-out !important;
+  animation: row-flash-green 0.6s ease-out !important;
 }
 
-/* Priority-specific flash colors */
 .priority-high.task-row--flashing {
-  --flash-color: #ef4444;
-  --flash-bg: rgba(239, 68, 68, 0.2);
-  --flash-bg-mid: rgba(239, 68, 68, 0.1);
+  animation: row-flash-red 0.6s ease-out !important;
 }
 
 .priority-medium.task-row--flashing {
-  --flash-color: #f59e0b;
-  --flash-bg: rgba(245, 158, 11, 0.2);
-  --flash-bg-mid: rgba(245, 158, 11, 0.1);
+  animation: row-flash-amber 0.6s ease-out !important;
 }
 
 .priority-low.task-row--flashing {
-  --flash-color: #3b82f6;
-  --flash-bg: rgba(59, 130, 246, 0.2);
-  --flash-bg-mid: rgba(59, 130, 246, 0.1);
+  animation: row-flash-blue 0.6s ease-out !important;
 }
 
-@keyframes task-row-flash {
-  0% {
-    filter: brightness(1);
-    box-shadow: 0 0 0 0 var(--flash-color);
-    background: transparent;
-  }
-  25% {
-    filter: brightness(1.3);
-    box-shadow: 0 0 20px 4px var(--flash-color);
-    background: var(--flash-bg);
-  }
-  50% {
-    filter: brightness(1.15);
-    box-shadow: 0 0 12px 2px var(--flash-color);
-    background: var(--flash-bg-mid);
-  }
-  100% {
-    filter: brightness(1);
-    box-shadow: 0 0 0 0 var(--flash-color);
-    background: transparent;
-  }
+@keyframes row-flash-green {
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 #10b981; background: transparent; }
+  25% { filter: brightness(1.3); box-shadow: 0 0 20px 4px #10b981; background: rgba(16, 185, 129, 0.2); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 12px 2px #10b981; background: rgba(16, 185, 129, 0.1); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 #10b981; background: transparent; }
+}
+
+@keyframes row-flash-red {
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 #ef4444; background: transparent; }
+  25% { filter: brightness(1.3); box-shadow: 0 0 20px 4px #ef4444; background: rgba(239, 68, 68, 0.2); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 12px 2px #ef4444; background: rgba(239, 68, 68, 0.1); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 #ef4444; background: transparent; }
+}
+
+@keyframes row-flash-amber {
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 #f59e0b; background: transparent; }
+  25% { filter: brightness(1.3); box-shadow: 0 0 20px 4px #f59e0b; background: rgba(245, 158, 11, 0.2); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 12px 2px #f59e0b; background: rgba(245, 158, 11, 0.1); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 #f59e0b; background: transparent; }
+}
+
+@keyframes row-flash-blue {
+  0% { filter: brightness(1); box-shadow: 0 0 0 0 #3b82f6; background: transparent; }
+  25% { filter: brightness(1.3); box-shadow: 0 0 20px 4px #3b82f6; background: rgba(59, 130, 246, 0.2); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 12px 2px #3b82f6; background: rgba(59, 130, 246, 0.1); }
+  100% { filter: brightness(1); box-shadow: 0 0 0 0 #3b82f6; background: transparent; }
 }
 </style>

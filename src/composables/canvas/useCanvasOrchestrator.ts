@@ -414,6 +414,28 @@ export function useCanvasOrchestrator() {
         isInitialized.value = true
         console.log('✅ [ORCHESTRATOR] Initialization complete')
 
+        // BUG-1084 FIX v4: Post-initialization sync to catch late-loading data
+        // The initial sync may run before Supabase data arrives. This delayed sync
+        // ensures we re-sync after data has had time to load from the network.
+        setTimeout(() => {
+            const currentNodeCount = nodes.value.length
+            const expectedGroupCount = canvasStore.groups.length
+            const expectedTaskCount = tasksWithCanvasPosition.value.length
+
+            console.log('🔄 [ORCHESTRATOR] Post-init sync check:', {
+                currentNodes: currentNodeCount,
+                expectedGroups: expectedGroupCount,
+                expectedTasks: expectedTaskCount
+            })
+
+            // If we have fewer nodes than expected, re-sync
+            if (currentNodeCount < (expectedGroupCount + expectedTaskCount)) {
+                console.log('🔄 [ORCHESTRATOR] Running post-init sync - nodes missing')
+                syncNodes()
+                syncEdges()
+            }
+        }, 500)
+
         // TASK-299: Auto-center on Today group after nodes are rendered
         // Use setTimeout to allow Vue Flow to calculate node dimensions
         setTimeout(() => {

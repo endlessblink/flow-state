@@ -87,7 +87,8 @@ export function useTaskHistory(
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before start task now')
                 console.log('📋 Calling store.startTaskNow...')
-                store.startTaskNow(taskId)
+                // BUG-1090: AWAIT to ensure instance is persisted before continuing
+                await store.startTaskNow(taskId)
                 console.log('📋 store.startTaskNow completed')
                 await nextTick()
                 undoSystem.saveState('After start task now')

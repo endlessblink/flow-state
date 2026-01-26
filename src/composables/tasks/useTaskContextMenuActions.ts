@@ -179,7 +179,8 @@ export function useTaskContextMenuActions(
 
     const startTaskNow = async () => {
         if (currentTask.value && !isBatchOperation.value) {
-            taskStore.startTaskNowWithUndo(currentTask.value.id)
+            // BUG-1090: AWAIT to ensure instance is persisted before navigation
+            await taskStore.startTaskNowWithUndo(currentTask.value.id)
             // BUG-1051: AWAIT for timer sync
             await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
 

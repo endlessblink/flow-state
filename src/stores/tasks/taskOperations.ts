@@ -495,7 +495,7 @@ export function useTaskOperations(
         await updateTask(taskId, updates)
     }
 
-    const startTaskNow = (taskId: string) => {
+    const startTaskNow = async (taskId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) {
             console.warn('🎯 startTaskNow: Task not found:', taskId)
@@ -513,7 +513,8 @@ export function useTaskOperations(
             scheduledTime: `${roundedTime.getHours().toString().padStart(2, '0')}:${roundedTime.getMinutes().toString().padStart(2, '0')}`,
             duration: task.estimatedDuration || 60
         }
-        updateTask(taskId, { instances: [newInstance], status: 'in_progress' })
+        // BUG-1090: AWAIT to ensure instance is persisted before navigation
+        await updateTask(taskId, { instances: [newInstance], status: 'in_progress' })
     }
 
     const moveTaskToSmartGroup = (taskId: string, type: string) => {

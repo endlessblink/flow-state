@@ -78,6 +78,10 @@
             }"
             @click="$emit('select', task.id)"
             @contextmenu.prevent="$emit('contextMenu', $event, task)"
+            tabindex="0"
+            :aria-label="`Task: ${task.title}, Status: ${task.status || 'planned'}`"
+            @keydown.enter.prevent="handleRowEnter(task.id, $event)"
+            @keydown.space.prevent="handleRowEnter(task.id, $event)"
           >
             <!-- Priority Indicator -->
             <div v-if="task.priority" class="priority-indicator" />
@@ -85,6 +89,7 @@
               <input
                 type="checkbox"
                 :checked="selectedTasks.includes(task.id)"
+                :aria-label="`Select ${task.title}`"
                 @change="toggleTaskSelect(task.id)"
               >
             </div>
@@ -164,6 +169,7 @@
               <button
                 class="action-btn"
                 title="Start Timer"
+                :aria-label="`Start timer for ${task.title}`"
                 @click.stop="$emit('startTimer', task.id)"
               >
                 <Play :size="14" />
@@ -171,6 +177,7 @@
               <button
                 class="action-btn"
                 title="Edit Task"
+                :aria-label="`Edit ${task.title}`"
                 @click.stop="$emit('edit', task.id)"
               >
                 <Edit :size="14" />
@@ -194,6 +201,10 @@
         :data-status="task.status"
         @click="$emit('select', task.id)"
         @contextmenu.prevent="$emit('contextMenu', $event, task)"
+        tabindex="0"
+        :aria-label="`Task: ${task.title}, Status: ${task.status || 'planned'}`"
+        @keydown.enter.prevent="handleRowEnter(task.id, $event)"
+        @keydown.space.prevent="handleRowEnter(task.id, $event)"
       >
         <!-- Priority Indicator -->
         <div v-if="task.priority" class="priority-indicator" />
@@ -201,6 +212,7 @@
           <input
             type="checkbox"
             :checked="selectedTasks.includes(task.id)"
+            :aria-label="`Select ${task.title}`"
             @change="toggleTaskSelect(task.id)"
           >
         </div>
@@ -280,6 +292,7 @@
           <button
             class="action-btn"
             title="Start Timer"
+            :aria-label="`Start timer for ${task.title}`"
             @click.stop="$emit('startTimer', task.id)"
           >
             <Play :size="14" />
@@ -287,6 +300,7 @@
           <button
             class="action-btn"
             title="Edit Task"
+            :aria-label="`Edit ${task.title}`"
             @click.stop="$emit('edit', task.id)"
           >
             <Edit :size="14" />
@@ -474,6 +488,15 @@ const clearSelection = () => {
 }
 
 // Keyboard shortcuts
+const handleRowEnter = (taskId: string, event: KeyboardEvent) => {
+  // Prevent triggering if the target is an inner interactive element
+  const target = event.target as HTMLElement
+  if (target !== event.currentTarget) {
+    return
+  }
+  emit('select', taskId)
+}
+
 const handleKeyDown = (event: KeyboardEvent) => {
   // Don't handle if typing in an input field
   const target = event.target as HTMLElement
@@ -621,6 +644,13 @@ onUnmounted(() => {
 
 .table-row:hover {
   background-color: var(--glass-bg-medium);
+}
+
+.table-row:focus-visible {
+  outline: none;
+  background-color: var(--glass-bg-medium);
+  box-shadow: inset 0 0 0 2px var(--brand-primary);
+  z-index: 1;
 }
 
 .table-row.row-selected {

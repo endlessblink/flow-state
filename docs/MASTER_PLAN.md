@@ -259,7 +259,7 @@
 | ~~**TASK-1063**~~        | ✅ **DONE** **Update CLAUDE.md with VPS/Contabo Deployment Docs**        | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Added comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
 | **TASK-1080**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
 | **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
-| **BUG-1085**             | **VPS Canvas Inbox: Delete Task Does Nothing**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Deleting task from canvas inbox on VPS starts soft-delete but never completes. No error, no success. Logs show `Starting soft-delete` but no completion.                                                              | -                                                      |
+| **BUG-1088**             | **VPS Canvas Inbox: Delete Task Does Nothing**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Deleting task from canvas inbox on VPS starts soft-delete but never completes. No error, no success. Logs show `Starting soft-delete` but no completion.                                                              | -                                                      |
 | **TASK-1087**            | **KDE Widget: Task Readability + Active Task Highlight**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Improve KDE widget task list UX: (1) Increase task row height for better readability with RTL/long text, (2) Highlight the currently active timer task in the task list.                                               | TASK-1009                                              |
 
 ---
@@ -314,7 +314,7 @@
 
 ---
 
-### BUG-1085: VPS Canvas Inbox - Delete Task Does Nothing (🔄 IN PROGRESS)
+### BUG-1088: VPS Canvas Inbox - Delete Task Does Nothing (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL
 **Status**: 🔄 IN PROGRESS (2026-01-26)

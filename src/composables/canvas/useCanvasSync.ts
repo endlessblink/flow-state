@@ -170,18 +170,10 @@ export function useCanvasSync() {
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
 
-            // BUG-1084 FIX: Guard against empty groups when tasks have parents
-            // If tasks have parentId but groups haven't loaded yet, skip sync to prevent
-            // parentNode being cleared (task becoming root), then restored when groups load (JUMP).
-            const tasksWithParents = tasksToSync.filter(t => t.parentId && t.parentId !== 'NONE')
-            if (tasksWithParents.length > 0 && groups.length === 0) {
-                console.warn('[SYNC-DEFERRED] Tasks have parents but groups not loaded yet, skipping sync', {
-                    tasksWithParents: tasksWithParents.length,
-                    totalTasks: tasksToSync.length
-                })
-                isSyncing.value = false
-                return
-            }
+            // BUG-1084 FIX v2: Instead of skipping entire sync, we'll skip individual tasks
+            // whose parent groups haven't loaded yet. This allows root tasks to display
+            // immediately while deferring nested tasks until groups load.
+            // The actual skip logic is in the PROCESS TASKS section below.
 
             // BUG #3 FIX: Removed existingPositions preservation
             // Previously we preserved existing Vue Flow positions to "avoid visual jumps",
@@ -402,16 +394,15 @@ export function useCanvasSync() {
                     parentId = null
                 }
 
-                // FIX: Only set parentNode if parent group is VISIBLE (will be rendered in Vue Flow)
-                // If parent group is hidden, treat task as root node
-
+                // BUG-1084 FIX v2: SKIP tasks whose parent group isn't loaded yet
+                // Instead of treating as root (which causes JUMP when parent loads),
+                // we defer rendering until parent group is available. The watcher on
+                // groups.length will trigger another sync when groups load.
                 if (parentId && !visibleGroupIds.has(parentId)) {
-                    console.warn(`⚠️ [SYNC-PARENT-CLEARED] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) parent ${parentId?.slice(0, 8)} is NOT visible - treating as root`, {
-                        originalParentId,
-                        visibleGroupCount: visibleGroupIds.size,
-                        visibleGroupIds: Array.from(visibleGroupIds).map(id => id.slice(0, 8))
+                    console.log(`⏳ [SYNC-DEFERRED] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) deferred - parent ${parentId?.slice(0, 8)} not loaded yet`, {
+                        visibleGroupCount: visibleGroupIds.size
                     })
-                    parentId = null
+                    continue // Skip this task, will be synced when parent loads
                 }
 
                 newNodes.push({

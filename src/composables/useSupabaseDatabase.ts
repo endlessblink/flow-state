@@ -1406,6 +1406,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         let retryCount = 0
         let isExplicitlyClosed = false
         let heartbeatInterval: any = null
+        let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
 
         // cleanup previous channels if any
         if (supabase.realtime.channels.length > 0) {
@@ -1478,9 +1479,22 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
                     if (isExplicitlyClosed) return
 
+                    // BUG-1088: Guard against recursive removeChannel calls that cause stack overflow
+                    if (isRemovingChannel) {
+                        console.log('📡 [REALTIME] Skipping duplicate removeChannel (recursion guard)')
+                        return
+                    }
+
                     // PREVENT STALE CHANNELS:
                     // Supabase docs recommend removing the channel before reconnecting
-                    await supabase.removeChannel(channel)
+                    isRemovingChannel = true
+                    try {
+                        await supabase.removeChannel(channel)
+                    } catch (removeErr) {
+                        console.warn('📡 [REALTIME] Failed to remove channel (continuing anyway):', removeErr)
+                    } finally {
+                        isRemovingChannel = false
+                    }
                     currentChannel = null
 
                     // RETRY LOGIC (Exponential Backoff)
@@ -1520,9 +1534,16 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
                 if (!currentChannel || state === 'closed' || state === 'errored') {
                     console.log('👀 [REALTIME] Connection dead on resume. Force reconnecting...')
-                    // Only attempt cleanup if channel exists
-                    if (currentChannel) {
-                        await supabase.removeChannel(currentChannel as any)
+                    // BUG-1088: Guard against recursive removeChannel calls
+                    if (currentChannel && !isRemovingChannel) {
+                        isRemovingChannel = true
+                        try {
+                            await supabase.removeChannel(currentChannel as any)
+                        } catch (removeErr) {
+                            console.warn('👀 [REALTIME] Failed to remove channel (continuing anyway):', removeErr)
+                        } finally {
+                            isRemovingChannel = false
+                        }
                     }
                     retryCount = 0
                     setupSubscription()
@@ -1554,10 +1575,20 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
         // Return cleanup function (Proxy interface for callers)
         return {
-            unsubscribe: () => {
+            unsubscribe: async () => {
                 console.log('📡 [REALTIME] Unsubscribing explicitly.')
                 isExplicitlyClosed = true
-                if (currentChannel) supabase.removeChannel(currentChannel)
+                // BUG-1088: Guard against recursive removeChannel calls
+                if (currentChannel && !isRemovingChannel) {
+                    isRemovingChannel = true
+                    try {
+                        await supabase.removeChannel(currentChannel)
+                    } catch (removeErr) {
+                        console.warn('📡 [REALTIME] Failed to remove channel during cleanup:', removeErr)
+                    } finally {
+                        isRemovingChannel = false
+                    }
+                }
                 document.removeEventListener('visibilitychange', onVisibilityChange)
                 window.removeEventListener('online', onOnline)
             }

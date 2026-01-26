@@ -74,7 +74,7 @@
           placeholder="Search tasks..."
           @input="handleSearchInput"
           @keydown.escape="toggleSearch"
-        />
+        >
         <button
           v-if="searchQuery"
           class="clear-search-btn"
@@ -179,6 +179,20 @@ const props = defineProps<{
   searchQuery: string // TASK-1075
 }>()
 
+const emit = defineEmits<{
+  (e: 'toggleCollapse'): void
+  (e: 'update:activeTimeFilter', value: TimeFilterType): void
+  (e: 'toggleAdvancedFilters'): void
+  (e: 'update:selected-canvas-groups', groups: Set<string>): void
+  (e: 'update:unscheduled-only', value: boolean): void
+  (e: 'update:selected-priority', value: 'high' | 'medium' | 'low' | null): void
+  (e: 'update:selected-project', value: string | null): void
+  (e: 'update:selected-duration', value: DurationCategory | null): void
+  (e: 'update:hide-done-tasks', value: boolean): void
+  (e: 'update:sortBy', value: SortByType): void // TASK-1073
+  (e: 'update:searchQuery', value: string): void // TASK-1075
+  (e: 'clearAll'): void
+}>()
 // TASK-1075: Search state
 const isSearchExpanded = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)
@@ -202,21 +216,6 @@ const clearSearch = () => {
   emit('update:searchQuery', '')
   searchInputRef.value?.focus()
 }
-
-const emit = defineEmits<{
-  (e: 'toggleCollapse'): void
-  (e: 'update:activeTimeFilter', value: TimeFilterType): void
-  (e: 'toggleAdvancedFilters'): void
-  (e: 'update:selected-canvas-groups', groups: Set<string>): void
-  (e: 'update:unscheduled-only', value: boolean): void
-  (e: 'update:selected-priority', value: 'high' | 'medium' | 'low' | null): void
-  (e: 'update:selected-project', value: string | null): void
-  (e: 'update:selected-duration', value: DurationCategory | null): void
-  (e: 'update:hide-done-tasks', value: boolean): void
-  (e: 'update:sortBy', value: SortByType): void // TASK-1073
-  (e: 'update:searchQuery', value: string): void // TASK-1075
-  (e: 'clearAll'): void
-}>()
 
 // Chip Logic
 const isChipActive = (group: GroupOption) => {

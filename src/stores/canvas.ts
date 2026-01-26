@@ -296,6 +296,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     deleteGroup: groupsModule.deleteGroup,
     setGroups: groupsModule.setGroups,
     patchGroups: groupsModule.patchGroups,
+    updateGroupFromSync: groupsModule.updateGroupFromSync,
+    removeGroupFromSync: groupsModule.removeGroupFromSync,
     setViewport, loadSavedViewport,
     taskCountByGroupId: groupsModule.taskCountByGroupId,
     getTaskCountForGroup: (id: string) => groupsModule.taskCountByGroupId.value.get(id) ?? 0,
@@ -380,7 +382,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       groupsModule._rawGroups.value = [...groups]
       // Save each group to persist the fix
       for (const g of groups) {
-        await persistence.saveGroupToStorage(g)
+        await saveGroupToStorage(g)
       }
       // Trigger sync
       groupsModule.syncTrigger.value++

@@ -42,7 +42,7 @@
         size="sm"
         variant="simple"
         :title="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
-        :ariaLabel="`Toggle completion for ${task.title}`"
+        :aria-label="`Toggle completion for ${task.title}`"
         @toggle="$emit('toggleComplete')"
       />
     </div>
@@ -143,13 +143,6 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const timerStore = useTimerStore()
-
-// Timer active state
-const isTimerActive = computed(() => {
-  return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
-})
-
 defineEmits<{
   dragstart: [event: DragEvent]
   dragend: [event: DragEvent]
@@ -174,4 +167,12 @@ defineEmits<{
   edit: []
   duplicate: []
 }>()
+
+const timerStore = useTimerStore()
+
+// Timer active state
+const isTimerActive = computed(() => {
+  return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
+})
+
 </script>

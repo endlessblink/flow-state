@@ -58,7 +58,7 @@
 
     <!-- Virtual Scrolling for large lists (50+ items) -->
     <template v-if="useVirtual">
-      <div class="table-body-virtual" ref="virtualContainerRef">
+      <div ref="virtualContainerRef" class="table-body-virtual">
         <div class="table-body-wrapper" :style="{ height: `${totalHeight}px` }">
           <div
             v-for="{ data: task, index } in virtualList"
@@ -317,7 +317,13 @@ import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
-// Virtual scrolling constants
+const props = defineProps<Props>() ;const emit = defineEmits<{
+  select: [taskId: string]
+  startTimer: [taskId: string]
+  edit: [taskId: string]
+  contextMenu: [event: MouseEvent, task: Task]
+  updateTask: [taskId: string, updates: Partial<Task>]
+}>() ;// Virtual scrolling constants
 const VIRTUAL_THRESHOLD = 50 // Only virtualize if more than this many items
 const OVERSCAN = 5 // Extra items to render above/below viewport
 
@@ -332,16 +338,6 @@ interface Props {
   tasks: Task[]
   density: DensityType
 }
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  select: [taskId: string]
-  startTimer: [taskId: string]
-  edit: [taskId: string]
-  contextMenu: [event: MouseEvent, task: Task]
-  updateTask: [taskId: string, updates: Partial<Task>]
-}>()
 
 // Status options for CustomSelect
 const statusOptions = [

@@ -22,7 +22,6 @@
         <!-- iOS Install Prompt (Mobile Browser Only) -->
         <IOSInstallPrompt v-if="!isTauriApp" />
       </template>
-
     </NMessageProvider>
   </NConfigProvider>
 </template>

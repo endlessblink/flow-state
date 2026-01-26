@@ -5,14 +5,16 @@
         v-model="newTaskTitle"
         :dir="quickAddDirection"
         :placeholder="isListening ? 'Listening...' : (isProcessingVoice ? 'Processing...' : 'Quick add task (Enter)...')"
-        :class="['quick-add-input', { 'voice-active': isListening || isProcessingVoice }]"
+        class="quick-add-input"
+        :class="[{ 'voice-active': isListening || isProcessingVoice }]"
         @keydown.enter="handleAddTask"
       >
 
       <!-- Mic button (TASK-1024) -->
       <button
         v-if="isVoiceSupported"
-        :class="['mic-btn', { recording: isListening, processing: isProcessingVoice }]"
+        class="mic-btn"
+        :class="[{ recording: isListening, processing: isProcessingVoice }]"
         :title="isListening ? 'Stop recording' : (isProcessingVoice ? 'Processing...' : 'Voice input')"
         :disabled="isProcessingVoice"
         @click="toggleVoiceInput"
@@ -26,7 +28,8 @@
     <!-- Voice mode toggle (TASK-1060: Groq Whisper support) -->
     <div v-if="showVoiceModeToggle" class="voice-mode-toggle">
       <button
-        :class="['mode-btn', { active: voiceMode === 'whisper' }]"
+        class="mode-btn"
+        :class="[{ active: voiceMode === 'whisper' }]"
         :disabled="!hasWhisperApiKey"
         :title="hasWhisperApiKey ? 'Groq Whisper (works everywhere)' : 'No API key configured'"
         @click="voiceMode = 'whisper'"
@@ -34,7 +37,8 @@
         🎙️ Whisper
       </button>
       <button
-        :class="['mode-btn', { active: voiceMode === 'browser' }]"
+        class="mode-btn"
+        :class="[{ active: voiceMode === 'browser' }]"
         :disabled="!isBrowserVoiceSupported"
         :title="isBrowserVoiceSupported ? 'Browser Speech API' : 'Not supported in this browser'"
         @click="voiceMode = 'browser'"
@@ -46,11 +50,11 @@
     <!-- Voice feedback (when recording) -->
     <div v-if="isListening || isProcessingVoice" class="voice-feedback">
       <div class="voice-waveform">
-        <span class="wave-bar"></span>
-        <span class="wave-bar"></span>
-        <span class="wave-bar"></span>
-        <span class="wave-bar"></span>
-        <span class="wave-bar"></span>
+        <span class="wave-bar" />
+        <span class="wave-bar" />
+        <span class="wave-bar" />
+        <span class="wave-bar" />
+        <span class="wave-bar" />
       </div>
       <span class="voice-status">
         {{ isProcessingVoice ? 'Processing audio...' : (displayTranscript || 'Speak now...') }}

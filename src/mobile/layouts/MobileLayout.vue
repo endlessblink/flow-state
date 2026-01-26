@@ -2,7 +2,7 @@
   <div class="mobile-layout">
     <!-- Hide header on full-screen views like Quick Sort -->
     <header v-if="!isFullScreenView" class="mobile-header">
-       <h1>FlowState</h1>
+      <h1>FlowState</h1>
     </header>
     <main class="mobile-content" :class="{ 'full-screen': isFullScreenView }">
       <router-view v-slot="{ Component }">

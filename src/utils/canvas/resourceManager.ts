@@ -166,7 +166,7 @@ class CanvasResourceManager {
                 delete windowExt.__vueFlowInstances
             }
 
-        } catch (error) {
+        } catch (_error) {
             // Ignore
         }
     }

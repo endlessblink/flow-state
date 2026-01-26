@@ -86,8 +86,10 @@ class PositionManager {
     batchUpdate(
         updates: { id: string; x: number; y: number; parentId?: string | null }[],
         source: LockSource
-    ) {
+    ): { successCount: number; rejectedIds: string[] } {
         let successCount = 0
+        const rejectedIds: string[] = []
+
         updates.forEach(update => {
             // For sync, we don't necessarily need to lock hard if we trust the DB,
             // BUT if the user is dragging, we should respect the user lock.
@@ -104,19 +106,28 @@ class PositionManager {
 
             if (success) {
                 successCount++
-                // TASK-213 FIX: Remote sync should NOT hold a lock. 
+                // TASK-213 FIX: Remote sync should NOT hold a lock.
                 // It should update if free, but immediately release to allow user interaction.
                 // Otherwise, a sync blocks the UI for 5 seconds (default timeout).
                 if (source === 'remote-sync') {
                     lockManager.release(update.id, source)
                 }
+            } else {
+                rejectedIds.push(update.id)
             }
         })
+
+        // Log if any nodes were rejected for debugging
+        if (rejectedIds.length > 0) {
+            console.log(`[PositionManager] batchUpdate: ${successCount} succeeded, ${rejectedIds.length} rejected (locked)`, {
+                rejectedIds: rejectedIds.map(id => id.slice(0, 8))
+            })
+        }
 
         // Optional: specific batch notification if needed (Orchestrator currently ignores 'remote-sync' anyway)
         // this.notify({ type: 'batch-complete', source, count: successCount })
 
-        return successCount
+        return { successCount, rejectedIds }
     }
 
     /**

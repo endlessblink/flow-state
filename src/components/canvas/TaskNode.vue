@@ -104,6 +104,22 @@ import TaskNodeMeta from './node/TaskNodeMeta.vue'
 import TaskNodePriority from './node/TaskNodePriority.vue'
 import TaskNodeSelection from './node/TaskNodeSelection.vue'
 
+const props = withDefaults(defineProps<Props>(), {
+  isSelected: false,
+  multiSelectMode: false,
+  showPriority: true,
+  showStatus: true,
+  showDuration: true,
+  showSchedule: true,
+  isConnecting: false
+})
+
+const emit = defineEmits<{
+  edit: [task: Task]
+  select: [task: Task, multiSelect: boolean]
+  contextMenu: [event: MouseEvent, task: Task]
+}>()
+
 // Logic extracted directly from original component to preserve context check
 const isInVueFlowContext = computed(() => {
   if (typeof window === 'undefined') return false
@@ -120,22 +136,6 @@ const isInVueFlowContext = computed(() => {
 const Handle = defineAsyncComponent(() =>
   import('@vue-flow/core').then(mod => mod.Handle)
 )
-
-const props = withDefaults(defineProps<Props>(), {
-  isSelected: false,
-  multiSelectMode: false,
-  showPriority: true,
-  showStatus: true,
-  showDuration: true,
-  showSchedule: true,
-  isConnecting: false
-})
-
-const emit = defineEmits<{
-  edit: [task: Task]
-  select: [task: Task, multiSelect: boolean]
-  contextMenu: [event: MouseEvent, task: Task]
-}>()
 
 interface Props {
   task: Task

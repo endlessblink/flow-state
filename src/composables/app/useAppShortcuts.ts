@@ -75,10 +75,10 @@ export function useAppShortcuts() {
             }
         }
 
-        // Ctrl+Shift+T to open Quick Capture tab
-        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'T') {
+        // Alt+N to open Quick Task Create modal
+        if (event.altKey && !event.ctrlKey && !event.metaKey && event.key === 'n') {
             event.preventDefault()
-            router.push({ path: '/quick-sort', query: { tab: 'capture' } })
+            window.dispatchEvent(new CustomEvent('open-quick-task-create'))
         }
 
         // Shift+1-5 for view switching

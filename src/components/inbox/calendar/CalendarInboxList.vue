@@ -25,7 +25,7 @@
       @dblclick="$emit('taskDblclick', task)"
       @contextmenu="$emit('taskContextmenu', $event, task)"
       @keydown="$emit('taskKeydown', $event, task)"
-      @startTimer="$emit('taskStartTimer', task)"
+      @start-timer="$emit('taskStartTimer', task)"
       @edit="$emit('taskEdit', task)"
     />
   </div>

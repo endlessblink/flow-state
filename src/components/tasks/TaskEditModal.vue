@@ -3,85 +3,83 @@
     <Transition name="modal" appear>
       <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
         <div class="modal-content" @click.stop>
-        <!-- Header -->
-        <div class="modal-header">
-          <h2 class="modal-title">
-            Edit Task
-          </h2>
-          <button class="close-btn" @click="$emit('close')">
-            <X :size="16" />
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <!-- Main Task Details -->
-          <section class="form-section">
-            <h3 class="section-title">
-              Task Details
-            </h3>
-            
-            <TaskEditHeader
-              ref="headerRef"
-              v-model="editedTask"
-            />
-
-            <TaskEditMetadata
-              v-model="editedTask"
-              :current-section-id="currentSectionId"
-              :priority-options="priorityOptions"
-              :status-options="statusOptions"
-              @section-change="handleSectionChange"
-              @schedule-change="handleScheduledDateChange"
-            />
-
-            <RecurrenceSelector
-              v-model="editedTask.recurrence"
-              :start-date="editedTask.scheduledDate || editedTask.dueDate"
-              :task-id="editedTask.id"
-            />
-          </section>
-
-          <!-- Subtasks -->
-          <TaskEditSubtasks
-            :subtasks="editedTask.subtasks"
-            @add="addSubtask"
-            @delete="deleteSubtask"
-            @update="updateSubtaskCompletion"
-          />
-
-          <!-- Child Tasks (from canvas connections) -->
-          <TaskEditChildTasks
-            :child-tasks="childTasks"
-          />
-
-          <!-- Left Actions (Pomodoro reset, etc.) -->
-          <div v-if="showPomodoros" class="left-actions-section">
-            <button
-              class="reset-pomodoros-btn-inline"
-              @click="resetPomodoros"
-            >
-              Reset Pomodoros
+          <!-- Header -->
+          <div class="modal-header">
+            <h2 class="modal-title">
+              Edit Task
+            </h2>
+            <button class="close-btn" @click="$emit('close')">
+              <X :size="16" />
             </button>
           </div>
-        </div>
 
-        <!-- Sticky Action Buttons -->
-        <div class="modal-actions-sticky">
-          <button class="btn btn-secondary btn-action" @click="$emit('close')">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary btn-action"
-            :class="{ 'btn-loading': isSaving }"
-            :disabled="isSaveDisabled"
-            @click="saveTask"
-          >
-            <span v-if="isSaving" class="btn-spinner" aria-hidden="true"></span>
-            <span :class="{ 'btn-text-hidden': isSaving }">
-              {{ isFormPristine ? 'No Changes' : 'Save Changes' }}
-            </span>
-          </button>
-        </div>
+          <div class="modal-body">
+            <!-- Main Task Details -->
+            <section class="form-section">
+              <h3 class="section-title">
+                Task Details
+              </h3>
+            
+              <TaskEditHeader
+                ref="headerRef"
+                v-model="editedTask"
+              />
+
+              <TaskEditMetadata
+                v-model="editedTask"
+                :current-section-id="currentSectionId"
+                :priority-options="priorityOptions"
+                :status-options="statusOptions"
+                @section-change="handleSectionChange"
+                @schedule-change="handleScheduledDateChange"
+              />
+
+              <RecurrenceSelector
+                v-model="editedTask.recurrence"
+                :start-date="editedTask.scheduledDate || editedTask.dueDate"
+                :task-id="editedTask.id"
+              />
+            </section>
+
+            <!-- Subtasks -->
+            <TaskEditSubtasks
+              :subtasks="editedTask.subtasks"
+              @add="addSubtask"
+              @delete="deleteSubtask"
+              @update="updateSubtaskCompletion"
+            />
+
+            <!-- Child Tasks (from canvas connections) -->
+            <TaskEditChildTasks :child-tasks="childTasks" />
+
+            <!-- Left Actions (Pomodoro reset, etc.) -->
+            <div v-if="showPomodoros" class="left-actions-section">
+              <button
+                class="reset-pomodoros-btn-inline"
+                @click="resetPomodoros"
+              >
+                Reset Pomodoros
+              </button>
+            </div>
+          </div>
+
+          <!-- Sticky Action Buttons -->
+          <div class="modal-actions-sticky">
+            <button class="btn btn-secondary btn-action" @click="$emit('close')">
+              Cancel
+            </button>
+            <button
+              class="btn btn-primary btn-action"
+              :class="{ 'btn-loading': isSaving }"
+              :disabled="isSaveDisabled"
+              @click="saveTask"
+            >
+              <span v-if="isSaving" class="btn-spinner" aria-hidden="true" />
+              <span :class="{ 'btn-text-hidden': isSaving }">
+                {{ isFormPristine ? 'No Changes' : 'Save Changes' }}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </Transition>

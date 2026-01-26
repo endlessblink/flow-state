@@ -1,12 +1,14 @@
 /**
- * useCanvasAlignment - TASK-258
+ * useCanvasAlignment - TASK-258, TASK-1081
  *
- * Multi-select task alignment for canvas context menu.
+ * Multi-select alignment for canvas context menu.
+ * Supports BOTH tasks AND groups (sections).
  * Provides Figma/Sketch-like alignment operations.
  *
  * CRITICAL INVARIANTS (TASK-255):
  * - Uses ABSOLUTE positions (computedPosition) for correct alignment of nested tasks
  * - Updates via taskStore.updateTask() with 'DRAG' source to respect geometry invariants
+ * - Updates groups via canvasStore.updateGroup() preserving width/height
  * - Batches all updates into a single undo action via saveState()
  */
 
@@ -85,6 +87,35 @@ export function useCanvasAlignment(
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
 
+    /**
+     * TASK-1081: Update position for either a task or a group
+     * - Tasks: use canvasPosition { x, y } via taskStore.updateTask
+     * - Groups: use position { x, y, width, height } via canvasStore.updateGroup
+     */
+    const updateNodePosition = async (node: NodeWithComputed, newX: number, newY: number) => {
+        if (node.type === 'sectionNode') {
+            // Group node - update via canvasStore, preserve width/height
+            const groupId = CanvasIds.parseNodeId(node.id).id
+            const currentGroup = canvasStore.groups.find(g => g.id === groupId)
+            if (currentGroup) {
+                await canvasStore.updateGroup(groupId, {
+                    position: {
+                        x: newX,
+                        y: newY,
+                        width: currentGroup.position.width,
+                        height: currentGroup.position.height
+                    }
+                })
+            }
+        } else {
+            // Task node - update via taskStore with 'DRAG' source
+            await taskStore.updateTask(node.id, {
+                canvasPosition: { x: newX, y: newY },
+                positionFormat: 'absolute'
+            }, 'DRAG')
+        }
+    }
+
     // Pre-alignment state validation function
     const validateAlignmentState = (minNodes: number = 2): { canProceed: boolean; reason?: string } => {
         // Check if Vue Flow component is mounted
@@ -112,40 +143,42 @@ export function useCanvasAlignment(
         }
 
         // Check selection synchronization
-        // BUG-1062 FIX: Filter store selection to tasks only (exclude groups with 'section-' prefix)
-        // This ensures we compare apples to apples: task selections in store vs Vue Flow
-        const storeTaskIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
-        const vueFlowSelected = nodes.value.filter(n => 'selected' in n && n.selected && n.type === 'taskNode')
+        // TASK-1081: Include both tasks AND groups (sections) for alignment
+        // Tasks have type 'taskNode', groups have type 'sectionNode'
+        const storeSelectedIds = canvasStore.selectedNodeIds
+        const vueFlowSelected = nodes.value.filter(n =>
+            'selected' in n && n.selected && (n.type === 'taskNode' || n.type === 'sectionNode')
+        )
 
         if (vueFlowSelected.length < minNodes) {
-            // BUG-1062: Also check if store has enough tasks but Vue Flow is desynced
+            // BUG-1062: Also check if store has enough items but Vue Flow is desynced
             // This can happen when syncStoreToCanvas() rebuilds nodes without preserving selection
-            if (storeTaskIds.length >= minNodes) {
-                console.warn('[ALIGNMENT] Selection desync: store has tasks but Vue Flow lost selection', {
-                    storeTaskIds,
+            if (storeSelectedIds.length >= minNodes) {
+                console.warn('[ALIGNMENT] Selection desync: store has items but Vue Flow lost selection', {
+                    storeSelectedIds,
                     vueFlowSelectedIds: vueFlowSelected.map(n => n.id)
                 })
                 return {
                     canProceed: false,
-                    reason: `Selection lost during sync - please re-select your tasks (store: ${storeTaskIds.length}, Vue Flow: ${vueFlowSelected.length})`
+                    reason: `Selection lost during sync - please re-select your items (store: ${storeSelectedIds.length}, Vue Flow: ${vueFlowSelected.length})`
                 }
             }
             return {
                 canProceed: false,
-                reason: `Need at least ${minNodes} selected tasks, have ${vueFlowSelected.length}`
+                reason: `Need at least ${minNodes} selected items, have ${vueFlowSelected.length}`
             }
         }
 
         const syncInfo = {
-            storeTaskSelection: storeTaskIds.length,
+            storeSelection: storeSelectedIds.length,
             vueFlowSelection: vueFlowSelected.length,
-            matched: vueFlowSelected.filter(n => storeTaskIds.includes(n.id)).length
+            matched: vueFlowSelected.filter(n => storeSelectedIds.includes(n.id)).length
         }
 
-        // BUG-1062 FIX: Compare task-only selections on both sides
-        if (syncInfo.matched !== syncInfo.storeTaskSelection) {
+        // BUG-1062 FIX: Compare selections on both sides
+        if (syncInfo.matched !== syncInfo.storeSelection) {
             console.warn('[ALIGNMENT] Selection state mismatch detected', {
-                storeTaskIds,
+                storeSelectedIds,
                 vueFlowSelectedIds: vueFlowSelected.map(n => n.id),
                 syncInfo
             })
@@ -178,12 +211,14 @@ export function useCanvasAlignment(
             return false
         }
 
+        // TASK-1081: Include both tasks (taskNode) and groups (sectionNode)
         const selectedNodes = nodes.value.filter(n =>
-            canvasStore.selectedNodeIds.includes(n.id) && n.type === 'taskNode'
+            canvasStore.selectedNodeIds.includes(n.id) &&
+            (n.type === 'taskNode' || n.type === 'sectionNode')
         ) as NodeWithComputed[]
 
         if (selectedNodes.length < minNodes) {
-            const errorMsg = `Need at least ${minNodes} selected tasks for ${operationName.toLowerCase()}, have ${selectedNodes.length}`
+            const errorMsg = `Need at least ${minNodes} selected items for ${operationName.toLowerCase()}, have ${selectedNodes.length}`
             message.error(errorMsg)
             return false
         }
@@ -211,7 +246,7 @@ export function useCanvasAlignment(
             taskStore.manualOperationInProgress = false
 
             // Show success feedback
-            message.success(`Successfully aligned ${selectedNodes.length} tasks ${operationName.toLowerCase().replace('align ', '')}`)
+            message.success(`Successfully aligned ${selectedNodes.length} items ${operationName.toLowerCase().replace('align ', '')}`)
 
             // TASK-258 FIX: Force visual sync since orchestrator doesn't watch property changes
             if (actions.requestSync) {
@@ -228,8 +263,9 @@ export function useCanvasAlignment(
     }
 
     // =========================================================================
-    // ALIGNMENT OPERATIONS
-    // All use ABSOLUTE positions via getAbsolutePosition() and 'DRAG' source
+    // ALIGNMENT OPERATIONS - TASK-1081: Now supports both tasks AND groups
+    // All use ABSOLUTE positions via getAbsolutePosition()
+    // Tasks use 'DRAG' source, groups update via canvasStore
     // =========================================================================
 
     const alignLeft = () => {
@@ -238,10 +274,7 @@ export function useCanvasAlignment(
             const minX = Math.min(...boundsMapping.map(b => b.bounds.left))
 
             for (const { node, bounds } of boundsMapping) {
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: minX, y: bounds.top },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, minX, bounds.top)
             }
 
             actions.closeCanvasContextMenu()
@@ -255,10 +288,7 @@ export function useCanvasAlignment(
 
             for (const { node, bounds } of boundsMapping) {
                 // To align right edge, substract width from maxRight
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: maxX - bounds.width, y: bounds.top },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, maxX - bounds.width, bounds.top)
             }
 
             actions.closeCanvasContextMenu()
@@ -271,10 +301,7 @@ export function useCanvasAlignment(
             const minY = Math.min(...boundsMapping.map(b => b.bounds.top))
 
             for (const { node, bounds } of boundsMapping) {
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: bounds.left, y: minY },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, bounds.left, minY)
             }
 
             actions.closeCanvasContextMenu()
@@ -288,10 +315,7 @@ export function useCanvasAlignment(
 
             for (const { node, bounds } of boundsMapping) {
                 // To align bottom edge, substract height from maxBottom
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: bounds.left, y: maxY - bounds.height },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, bounds.left, maxY - bounds.height)
             }
 
             actions.closeCanvasContextMenu()
@@ -305,10 +329,7 @@ export function useCanvasAlignment(
 
             for (const { node, bounds } of boundsMapping) {
                 // To center, subtract half width from avg center X
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: avgCenterX - bounds.width / 2, y: bounds.top },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, avgCenterX - bounds.width / 2, bounds.top)
             }
 
             actions.closeCanvasContextMenu()
@@ -322,10 +343,7 @@ export function useCanvasAlignment(
 
             for (const { node, bounds } of boundsMapping) {
                 // To middle-align, subtract half height from avg center Y
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: bounds.left, y: avgCenterY - bounds.height / 2 },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, bounds.left, avgCenterY - bounds.height / 2)
             }
 
             actions.closeCanvasContextMenu()
@@ -341,24 +359,21 @@ export function useCanvasAlignment(
             const sorted = [...boundsMapping].sort((a, b) => a.bounds.left - b.bounds.left)
 
             // BUG-1068: Calculate edge-to-edge distribution for consistent visual gaps
-            // Total width of all tasks combined
-            const totalTaskWidth = sorted.reduce((sum, { bounds }) => sum + bounds.width, 0)
+            // Total width of all items combined
+            const totalItemWidth = sorted.reduce((sum, { bounds }) => sum + bounds.width, 0)
             // Available space between first left and last right
             const firstLeft = sorted[0].bounds.left
             const lastRight = sorted[sorted.length - 1].bounds.right
             const totalSpace = lastRight - firstLeft
-            // Calculate gap: (total space - task widths) / number of gaps
+            // Calculate gap: (total space - item widths) / number of gaps
             const gapCount = sorted.length - 1
-            let gap = gapCount > 0 ? (totalSpace - totalTaskWidth) / gapCount : 16
-            // TASK-335: If tasks are stacked (negative or tiny gap), use fixed spacing
+            let gap = gapCount > 0 ? (totalSpace - totalItemWidth) / gapCount : 16
+            // TASK-335: If items are stacked (negative or tiny gap), use fixed spacing
             if (gap < MIN_SPACING_THRESHOLD) gap = 16
 
             let currentX = firstLeft
             for (const { node, bounds } of sorted) {
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: currentX, y: bounds.top },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, currentX, bounds.top)
                 currentX += bounds.width + gap
             }
 
@@ -375,24 +390,21 @@ export function useCanvasAlignment(
             const sorted = [...boundsMapping].sort((a, b) => a.bounds.top - b.bounds.top)
 
             // BUG-1068: Calculate edge-to-edge distribution for consistent visual gaps
-            // Total height of all tasks combined
-            const totalTaskHeight = sorted.reduce((sum, { bounds }) => sum + bounds.height, 0)
+            // Total height of all items combined
+            const totalItemHeight = sorted.reduce((sum, { bounds }) => sum + bounds.height, 0)
             // Available space between first top and last bottom
             const firstTop = sorted[0].bounds.top
             const lastBottom = sorted[sorted.length - 1].bounds.bottom
             const totalSpace = lastBottom - firstTop
-            // Calculate gap: (total space - task heights) / number of gaps
+            // Calculate gap: (total space - item heights) / number of gaps
             const gapCount = sorted.length - 1
-            let gap = gapCount > 0 ? (totalSpace - totalTaskHeight) / gapCount : 16
-            // TASK-335: If tasks are stacked (negative or tiny gap), use fixed spacing
+            let gap = gapCount > 0 ? (totalSpace - totalItemHeight) / gapCount : 16
+            // TASK-335: If items are stacked (negative or tiny gap), use fixed spacing
             if (gap < MIN_SPACING_THRESHOLD) gap = 16
 
             let currentY = firstTop
             for (const { node, bounds } of sorted) {
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: { x: bounds.left, y: currentY },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                await updateNodePosition(node, bounds.left, currentY)
                 currentY += bounds.height + gap
             }
 
@@ -413,18 +425,12 @@ export function useCanvasAlignment(
             const startX = sorted[0].bounds.left
 
             // BUG-1068: Use edge-to-edge gap spacing for consistent visual gaps
-            const GAP = 16  // Consistent visual gap between task edges
+            const GAP = 16  // Consistent visual gap between item edges
 
             let currentX = startX
             for (const { node, bounds } of sorted) {
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: {
-                        x: currentX,
-                        y: avgCenterY - bounds.height / 2
-                    },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
-                // Move X right by this task's width + gap for next task
+                await updateNodePosition(node, currentX, avgCenterY - bounds.height / 2)
+                // Move X right by this item's width + gap for next item
                 currentX += bounds.width + GAP
             }
 
@@ -445,19 +451,13 @@ export function useCanvasAlignment(
             const startY = sorted[0].bounds.top
 
             // BUG-1068: Use edge-to-edge gap spacing for consistent visual gaps
-            // Instead of fixed spacing from top, position each task based on previous task's bottom
-            const GAP = 16  // Consistent visual gap between task edges
+            // Instead of fixed spacing from top, position each item based on previous item's bottom
+            const GAP = 16  // Consistent visual gap between item edges
 
             let currentY = startY
             for (const { node, bounds } of sorted) {
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: {
-                        x: avgCenterX - bounds.width / 2,
-                        y: currentY
-                    },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
-                // Move Y down by this task's height + gap for next task
+                await updateNodePosition(node, avgCenterX - bounds.width / 2, currentY)
+                // Move Y down by this item's height + gap for next item
                 currentY += bounds.height + GAP
             }
 
@@ -494,13 +494,9 @@ export function useCanvasAlignment(
                 const row = Math.floor(index / cols)
                 const col = index % cols
 
-                await taskStore.updateTask(node.id, {
-                    canvasPosition: {
-                        x: startX + (col * SPACING_X) - bounds.width / 2, // Centering node in cell
-                        y: startY + (row * SPACING_Y) - bounds.height / 2
-                    },
-                    positionFormat: 'absolute'
-                }, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                const newX = startX + (col * SPACING_X) - bounds.width / 2  // Centering node in cell
+                const newY = startY + (row * SPACING_Y) - bounds.height / 2
+                await updateNodePosition(node, newX, newY)
             }
 
             actions.closeCanvasContextMenu()

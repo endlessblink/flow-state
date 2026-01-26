@@ -30,8 +30,7 @@ export const useTimerStore = defineStore('timer', () => {
   // Initialize database composable
   const {
     fetchActiveTimerSession,
-    saveActiveTimerSession,
-    initRealtimeSubscription
+    saveActiveTimerSession
   } = useSupabaseDatabase()
 
   const settingsStore = useSettingsStore()
@@ -344,8 +343,8 @@ export const useTimerStore = defineStore('timer', () => {
         : new Date(currentSession.value.startTime),
       completedAt: currentSession.value.completedAt
         ? (currentSession.value.completedAt instanceof Date
-            ? currentSession.value.completedAt
-            : new Date(currentSession.value.completedAt))
+          ? currentSession.value.completedAt
+          : new Date(currentSession.value.completedAt))
         : undefined
     }
     await saveActiveTimerSession(sessionToSave, deviceId)
@@ -560,19 +559,21 @@ export const useTimerStore = defineStore('timer', () => {
         startTimer('break', settings.shortBreakDuration, true)
         break
 
-      case 'START_WORK':
+      case 'START_WORK': {
         // Start a work session (continue with the same task if available)
         const taskId = data.taskId && data.taskId !== 'break' ? data.taskId : 'general'
         startTimer(taskId, settings.workDuration, false)
         break
+      }
 
-      case 'POSTPONE_5MIN':
+      case 'POSTPONE_5MIN': {
         // Add 5 minutes and restart timer
         // Create a new session with 5 minutes
         const postponeTaskId = data.taskId || 'general'
         const isBreak = postponeTaskId === 'break'
         startTimer(postponeTaskId, 5 * 60, isBreak) // 5 minutes
         break
+      }
     }
   }
 
@@ -773,8 +774,8 @@ export const useTimerStore = defineStore('timer', () => {
                 : new Date(rawSession.startTime),
               completedAt: rawSession.completedAt
                 ? (rawSession.completedAt instanceof Date
-                    ? rawSession.completedAt
-                    : new Date(rawSession.completedAt))
+                  ? rawSession.completedAt
+                  : new Date(rawSession.completedAt))
                 : undefined
             }
             currentSession.value = session

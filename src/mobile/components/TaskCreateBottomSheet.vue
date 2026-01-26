@@ -13,15 +13,14 @@
           @click.stop
           @touchmove.stop
         >
-          <!-- Sheet Handle -->
-          <div class="sheet-handle"></div>
-
           <!-- Header: Cancel | New Task | Add -->
           <div class="sheet-header">
             <button class="header-btn cancel-btn" @click="handleCancel">
               Cancel
             </button>
-            <h3 class="sheet-title">New Task</h3>
+            <h3 class="sheet-title">
+              New Task
+            </h3>
             <button
               class="header-btn add-btn"
               :disabled="!taskTitle.trim()"
@@ -33,71 +32,46 @@
 
           <!-- Create Form -->
           <div class="create-form">
-            <!-- Title -->
-            <div class="form-field">
-              <label class="field-label">Title</label>
-              <input
-                ref="titleInputRef"
-                v-model="taskTitle"
-                type="text"
-                class="field-input"
-                placeholder="What needs to be done?"
-                @keydown.enter="handleCreate"
-              />
-            </div>
+            <!-- Single text block for task content -->
+            <textarea
+              ref="titleInputRef"
+              v-model="taskTitle"
+              class="task-text-block"
+              placeholder="What needs to be done?&#10;&#10;Add notes here..."
+              @input="autoResize"
+            />
 
-            <!-- Description -->
-            <div class="form-field">
-              <label class="field-label">Description (Optional)</label>
-              <textarea
-                v-model="taskDescription"
-                class="field-textarea"
-                placeholder="Add details..."
-                rows="3"
-              ></textarea>
-            </div>
-
-            <!-- Due Date -->
-            <div class="form-field">
-              <label class="field-label">Due Date</label>
-              <div class="date-options">
+            <!-- Compact options -->
+            <div class="compact-options">
+              <!-- Due Date chips -->
+              <div class="option-group">
+                <Calendar :size="14" class="option-icon" />
                 <button
-                  :class="['date-pill', { active: isDueToday }]"
+                  class="chip"
+                  :class="{ active: isDueToday }"
                   @click="setDueDate('today')"
-                >
-                  <Calendar :size="16" />
-                  Today
-                </button>
+                >Today</button>
                 <button
-                  :class="['date-pill', { active: isDueTomorrow }]"
+                  class="chip"
+                  :class="{ active: isDueTomorrow }"
                   @click="setDueDate('tomorrow')"
-                >
-                  <CalendarPlus :size="16" />
-                  Tomorrow
-                </button>
+                >Tomorrow</button>
                 <button
-                  :class="['date-pill', { active: isDueNextWeek }]"
+                  class="chip"
+                  :class="{ active: isDueNextWeek }"
                   @click="setDueDate('nextWeek')"
-                >
-                  <CalendarDays :size="16" />
-                  Next Week
-                </button>
+                >+1wk</button>
                 <button
-                  :class="['date-pill', { active: hasCustomDate }]"
+                  class="chip"
+                  :class="{ active: hasCustomDate }"
                   @click="showDatePicker = true"
-                >
-                  <CalendarDays :size="16" />
-                  {{ hasCustomDate ? formatDate(taskDueDate!) : 'Pick' }}
-                </button>
+                >{{ hasCustomDate ? formatDate(taskDueDate!) : 'Pick' }}</button>
                 <button
                   v-if="taskDueDate"
-                  class="date-pill clear-date"
+                  class="chip clear"
                   @click="clearDueDate"
-                >
-                  <X :size="16" />
-                </button>
+                ><X :size="12" /></button>
               </div>
-              <!-- Native date picker (hidden but functional) -->
               <input
                 v-show="showDatePicker"
                 ref="datePickerRef"
@@ -106,35 +80,30 @@
                 class="native-date-picker"
                 @change="handleDatePickerChange"
                 @blur="showDatePicker = false"
-              />
-            </div>
+              >
 
-            <!-- Priority -->
-            <div class="form-field">
-              <label class="field-label">Priority</label>
-              <div class="priority-options">
+              <!-- Priority chips -->
+              <div class="option-group">
+                <Flag :size="14" class="option-icon" />
                 <button
                   v-for="option in priorityOptions"
                   :key="option.value"
-                  :class="['priority-pill', `priority-${option.value}`, { active: taskPriority === option.value }]"
+                  class="chip"
+                  :class="[`priority-${option.value}`, { active: taskPriority === option.value }]"
                   @click="taskPriority = option.value"
-                >
-                  <Flag :size="16" />
-                  {{ option.label }}
-                </button>
+                >{{ option.label }}</button>
                 <button
-                  :class="['priority-pill', 'priority-none', { active: taskPriority === null }]"
+                  class="chip"
+                  :class="{ active: taskPriority === null }"
                   @click="taskPriority = null"
-                >
-                  None
-                </button>
+                >None</button>
               </div>
             </div>
 
             <!-- Voice Feedback (Optional) -->
             <div v-if="isListening" class="voice-feedback">
               <div class="voice-indicator">
-                <div class="voice-pulse"></div>
+                <div class="voice-pulse" />
                 <span>Listening...</span>
               </div>
               <p v-if="voiceTranscript" class="voice-transcript">
@@ -165,17 +134,17 @@ const props = withDefaults(defineProps<Props>(), {
   voiceTranscript: ''
 })
 
+const emit = defineEmits<{
+  close: []
+  created: [data: TaskCreationData]
+}>()
+
 interface TaskCreationData {
   title: string
   description: string
   priority: 'high' | 'medium' | 'low' | null
   dueDate: Date | null
 }
-
-const emit = defineEmits<{
-  close: []
-  created: [data: TaskCreationData]
-}>()
 
 // Form state
 const taskTitle = ref('')
@@ -186,7 +155,7 @@ const taskDueDateInput = ref('')
 const showDatePicker = ref(false)
 
 // Refs
-const titleInputRef = ref<HTMLInputElement | null>(null)
+const titleInputRef = ref<HTMLTextAreaElement | null>(null)
 const datePickerRef = ref<HTMLInputElement | null>(null)
 
 // Options
@@ -330,6 +299,13 @@ function triggerHaptic(duration: number = 10) {
     }
   }
 }
+
+// Auto-resize title textarea as user types
+function autoResize(event: Event) {
+  const textarea = event.target as HTMLTextAreaElement
+  textarea.style.height = 'auto'
+  textarea.style.height = textarea.scrollHeight + 'px'
+}
 </script>
 
 <style scoped>
@@ -345,7 +321,7 @@ function triggerHaptic(duration: number = 10) {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start; /* Start from TOP */
   z-index: 1000;
 }
 
@@ -354,22 +330,11 @@ function triggerHaptic(duration: number = 10) {
   height: 100dvh;
   max-height: none;
   background: var(--surface-primary, hsl(240, 18%, 12%));
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  /* No border-radius - full screen */
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
-}
-
-/* Sheet Handle */
-.sheet-handle {
-  width: 40px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-  margin: 12px auto 0;
-  flex-shrink: 0;
 }
 
 /* Header: Cancel | Title | Add */
@@ -429,169 +394,109 @@ function triggerHaptic(duration: number = 10) {
 .create-form {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 16px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 16px;
 }
 
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.field-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.field-input {
+/* Single text block - main writing area */
+.task-text-block {
+  flex: 1;
+  min-height: 200px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background: transparent;
+  border: none;
   color: var(--text-primary, #fff);
-  font-size: 17px;
-  outline: none;
-  transition: all 0.2s ease;
-  min-height: 44px;
-}
-
-.field-input:focus {
-  border-color: var(--brand-primary, #4ECDC4);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
-}
-
-.field-input::placeholder {
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
-}
-
-.field-textarea {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: var(--text-primary, #fff);
-  font-size: 16px;
-  outline: none;
-  resize: none;
+  font-size: 18px;
+  line-height: 1.5;
   font-family: inherit;
-  transition: all 0.2s ease;
-  min-height: 100px;
+  resize: none;
+  outline: none;
 }
 
-.field-textarea:focus {
-  border-color: var(--brand-primary, #4ECDC4);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
-}
-
-.field-textarea::placeholder {
+.task-text-block::placeholder {
   color: var(--text-muted, rgba(255, 255, 255, 0.4));
 }
 
-/* Date Options */
-.date-options {
+/* Compact options at bottom */
+.compact-options {
   display: flex;
+  flex-direction: column;
   gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.option-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.date-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 44px;
+.option-icon {
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  flex-shrink: 0;
 }
 
-.date-pill:active {
+/* Compact chips */
+.chip {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:active {
   transform: scale(0.95);
 }
 
-.date-pill.active {
+.chip.active {
   background: rgba(78, 205, 196, 0.15);
   border-color: rgba(78, 205, 196, 0.4);
   color: var(--brand-primary, #4ECDC4);
 }
 
-.date-pill.clear-date {
-  padding: 12px;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+.chip.clear {
+  padding: 6px 8px;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
 }
 
-.native-date-picker {
-  margin-top: 8px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text-primary, #fff);
-  font-size: 16px;
-  color-scheme: dark;
-}
-
-/* Priority Options */
-.priority-options {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.priority-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 44px;
-}
-
-.priority-pill:active {
-  transform: scale(0.95);
-}
-
-.priority-pill.priority-high.active {
+/* Priority colors */
+.chip.priority-high.active {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
   color: #ef4444;
 }
 
-.priority-pill.priority-medium.active {
+.chip.priority-medium.active {
   background: rgba(245, 158, 11, 0.15);
   border-color: rgba(245, 158, 11, 0.4);
   color: #f59e0b;
 }
 
-.priority-pill.priority-low.active {
+.chip.priority-low.active {
   background: rgba(59, 130, 246, 0.15);
   border-color: rgba(59, 130, 246, 0.4);
   color: #3b82f6;
 }
 
-.priority-pill.priority-none.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+.native-date-picker {
+  margin-top: 6px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
   color: var(--text-primary, #fff);
+  font-size: 14px;
+  color-scheme: dark;
 }
 
 /* Voice Feedback */
@@ -655,7 +560,8 @@ function triggerHaptic(duration: number = 10) {
 
 .sheet-enter-from .task-create-sheet,
 .sheet-leave-to .task-create-sheet {
-  transform: translateY(100%);
+  transform: translateY(-20px);
+  opacity: 0;
 }
 
 /* ================================

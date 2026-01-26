@@ -267,9 +267,13 @@ onMounted(async () => {
         </div>
 
         <div v-if="validationInfo?.warnings?.length > 0" class="detailed-warnings">
-          <p class="warning-title">Smart Filtering (for top peak):</p>
+          <p class="warning-title">
+            Smart Filtering (for top peak):
+          </p>
           <ul>
-            <li v-for="(warn, i) in validationInfo.warnings" :key="i">{{ warn }}</li>
+            <li v-for="(warn, i) in validationInfo.warnings" :key="i">
+              {{ warn }}
+            </li>
           </ul>
         </div>
 

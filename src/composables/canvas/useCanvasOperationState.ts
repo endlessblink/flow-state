@@ -26,6 +26,9 @@ export type CanvasOperationState =
 // Singleton state to be shared across all canvas composables
 const state = ref<CanvasOperationState>({ type: 'idle' })
 
+// Queue for updates that arrive during settling state
+const pendingUpdates = ref<Array<() => void>>([])
+
 /**
  * State machine for canvas operations.
  * Replaces ad-hoc lock flags with formal transitions.
@@ -51,6 +54,10 @@ export function useCanvasOperationState() {
         const settleTimeout = window.setTimeout(() => {
             if (state.value.type === 'drag-settling') {
                 state.value = { type: 'idle' }
+                // Process any queued updates after settling completes
+                const updates = [...pendingUpdates.value]
+                pendingUpdates.value = []
+                updates.forEach(update => update())
             }
         }, 800)
 
@@ -69,6 +76,10 @@ export function useCanvasOperationState() {
         const settleTimeout = window.setTimeout(() => {
             if (state.value.type === 'resize-settling') {
                 state.value = { type: 'idle' }
+                // Process any queued updates after settling completes
+                const updates = [...pendingUpdates.value]
+                pendingUpdates.value = []
+                updates.forEach(update => update())
             }
         }, 800)
 
@@ -135,6 +146,13 @@ export function useCanvasOperationState() {
     })
 
     /**
+     * Queue an update to be processed after settling completes
+     */
+    const queueUpdate = (updateFn: () => void) => {
+        pendingUpdates.value.push(updateFn)
+    }
+
+    /**
      * Get debug info for troubleshooting
      */
     const getDebugInfo = () => ({
@@ -142,6 +160,7 @@ export function useCanvasOperationState() {
         canAcceptRemoteUpdate: canAcceptRemoteUpdate.value,
         isLocked: isLocked.value,
         isSettling: isSettling.value,
+        pendingUpdatesCount: pendingUpdates.value.length,
         fullState: state.value
     })
 
@@ -164,6 +183,7 @@ export function useCanvasOperationState() {
         resetToIdle,
         isSettling,
         shouldBlockUpdates,
+        queueUpdate,
         getDebugInfo
     }
 }

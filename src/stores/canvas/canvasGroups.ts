@@ -189,6 +189,74 @@ export const useCanvasGroups = (
         })
     }
 
+    // Flag to prevent auto-save after sync updates (breaks circular loop)
+    let syncUpdateInProgress = false
+
+    const updateGroupFromSync = (groupId: string, data: Partial<CanvasGroup>) => {
+        // SAFETY: Validate incoming data to prevent corrupted groups
+        if (!data || typeof data !== 'object') {
+            console.warn(`[GROUP-SYNC] Ignoring invalid data for group ${groupId}:`, data)
+            return
+        }
+
+        // Set flag to prevent watcher from triggering auto-save
+        syncUpdateInProgress = true
+
+        try {
+            const index = _rawGroups.value.findIndex(g => g.id === groupId)
+
+            if (index !== -1) {
+                // Update existing group (don't trigger saveGroupToStorage)
+                _rawGroups.value[index] = {
+                    ..._rawGroups.value[index],
+                    ...data,
+                    id: groupId, // Ensure ID is preserved
+                    updatedAt: data.updatedAt || new Date().toISOString()
+                }
+            } else {
+                // Add new group from remote - use defaults matching createGroup
+                const newGroup: CanvasGroup = {
+                    // Apply data first
+                    ...data,
+                    // Then apply required fields (override if missing)
+                    id: groupId,
+                    name: data.name || 'Untitled Group',
+                    type: data.type || 'custom',
+                    position: data.position || { x: 0, y: 0, width: 400, height: 300 },
+                    color: data.color || '#3b82f6',
+                    layout: data.layout || 'freeform',
+                    isVisible: data.isVisible !== false,
+                    isCollapsed: data.isCollapsed || false,
+                    parentGroupId: data.parentGroupId || null,
+                    positionVersion: data.positionVersion || 1,
+                    positionFormat: data.positionFormat || 'absolute',
+                    updatedAt: data.updatedAt || new Date().toISOString()
+                }
+                _rawGroups.value.push(newGroup)
+            }
+
+            // Update localStorage backup
+            persistence.saveGroupsToLocalStorage(_rawGroups.value)
+        } finally {
+            // Reset flag after Vue's next tick to ensure watcher sees it
+            setTimeout(() => {
+                syncUpdateInProgress = false
+            }, 100)
+        }
+    }
+
+    const removeGroupFromSync = (groupId: string) => {
+        // SAFETY: Use _rawGroups for sync mutations
+        const index = _rawGroups.value.findIndex(g => g.id === groupId)
+        if (index !== -1) {
+            _rawGroups.value.splice(index, 1)
+            if (activeSectionId.value === groupId) {
+                activeSectionId.value = null
+            }
+            persistence.saveGroupsToLocalStorage(_rawGroups.value)
+        }
+    }
+
     return {
         _rawGroups,
         activeGroupId,
@@ -205,6 +273,8 @@ export const useCanvasGroups = (
         patchGroups,
         taskCountByGroupId,
         aggregatedTaskCountByGroupId,
-        getTasksInSection
+        getTasksInSection,
+        updateGroupFromSync,
+        removeGroupFromSync
     }
 }

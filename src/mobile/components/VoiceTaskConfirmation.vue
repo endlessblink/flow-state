@@ -2,7 +2,7 @@
   <Teleport to="body">
     <BaseModal
       :is-open="isOpen"
-      :title="''"
+      title=""
       size="md"
       :show-header="false"
       :show-footer="false"
@@ -10,123 +10,130 @@
       :close-on-escape="true"
       @close="handleCancel"
     >
-    <div class="voice-confirmation-content">
-      <!-- Header -->
-      <div class="confirmation-header">
-        <div class="header-info">
-          <CheckCircle2 :size="18" class="header-icon" />
-          <span class="header-title">{{ $t?.('voice.confirmTask') || 'Confirm Task' }}</span>
-        </div>
-        <button class="close-btn" @click="handleCancel">
-          <X :size="18" />
-        </button>
-      </div>
-
-      <!-- Editable Fields -->
-      <div class="confirmation-body">
-        <!-- Title Textarea (RTL-aware) -->
-        <div class="field-section">
-          <label class="field-label">{{ $t?.('task.title') || 'Title' }}</label>
-          <textarea
-            ref="titleInputRef"
-            v-model="editedTitle"
-            :dir="titleDirection"
-            class="title-textarea"
-            :placeholder="$t?.('task.titlePlaceholder') || 'Task title...'"
-            rows="3"
-            @keydown.enter.exact.prevent="handleConfirm"
-          />
+      <div class="voice-confirmation-content">
+        <!-- Header -->
+        <div class="confirmation-header">
+          <div class="header-info">
+            <CheckCircle2 :size="18" class="header-icon" />
+            <span class="header-title">{{ $t?.('voice.confirmTask') || 'Confirm Task' }}</span>
+          </div>
+          <button class="close-btn" @click="handleCancel">
+            <X :size="18" />
+          </button>
         </div>
 
-        <!-- Priority Pills -->
-        <div class="field-section">
-          <label class="field-label">
-            <Flag :size="12" />
-            {{ $t?.('task.priority') || 'Priority' }}
-          </label>
-          <div class="pill-options">
-            <button
-              :class="['pill', 'priority-high', { active: editedPriority === 'high' }]"
-              @click="setPriority('high')"
-            >
-              {{ $t?.('priority.high') || 'High' }}
-            </button>
-            <button
-              :class="['pill', 'priority-medium', { active: editedPriority === 'medium' }]"
-              @click="setPriority('medium')"
-            >
-              {{ $t?.('priority.medium') || 'Medium' }}
-            </button>
-            <button
-              :class="['pill', 'priority-low', { active: editedPriority === 'low' }]"
-              @click="setPriority('low')"
-            >
-              {{ $t?.('priority.low') || 'Low' }}
-            </button>
-            <button
-              :class="['pill', 'priority-none', { active: editedPriority === null }]"
-              @click="setPriority(null)"
-            >
-              {{ $t?.('priority.none') || 'None' }}
-            </button>
+        <!-- Editable Fields -->
+        <div class="confirmation-body">
+          <!-- Title Textarea (RTL-aware) -->
+          <div class="field-section">
+            <label class="field-label">{{ $t?.('task.title') || 'Title' }}</label>
+            <textarea
+              ref="titleInputRef"
+              v-model="editedTitle"
+              :dir="titleDirection"
+              class="title-textarea"
+              :placeholder="$t?.('task.titlePlaceholder') || 'Task title...'"
+              rows="3"
+              @keydown.enter.exact.prevent="handleConfirm"
+            />
+          </div>
+
+          <!-- Priority Pills -->
+          <div class="field-section">
+            <label class="field-label">
+              <Flag :size="12" />
+              {{ $t?.('task.priority') || 'Priority' }}
+            </label>
+            <div class="pill-options">
+              <button
+                class="pill priority-high"
+                :class="[{ active: editedPriority === 'high' }]"
+                @click="setPriority('high')"
+              >
+                {{ $t?.('priority.high') || 'High' }}
+              </button>
+              <button
+                class="pill priority-medium"
+                :class="[{ active: editedPriority === 'medium' }]"
+                @click="setPriority('medium')"
+              >
+                {{ $t?.('priority.medium') || 'Medium' }}
+              </button>
+              <button
+                class="pill priority-low"
+                :class="[{ active: editedPriority === 'low' }]"
+                @click="setPriority('low')"
+              >
+                {{ $t?.('priority.low') || 'Low' }}
+              </button>
+              <button
+                class="pill priority-none"
+                :class="[{ active: editedPriority === null }]"
+                @click="setPriority(null)"
+              >
+                {{ $t?.('priority.none') || 'None' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Due Date Chips -->
+          <div class="field-section">
+            <label class="field-label">
+              <Calendar :size="12" />
+              {{ $t?.('task.dueDate') || 'Due Date' }}
+            </label>
+            <div class="pill-options">
+              <button
+                class="pill date-pill"
+                :class="[{ active: isToday }]"
+                @click="setDueDate('today')"
+              >
+                {{ $t?.('date.today') || 'Today' }}
+              </button>
+              <button
+                class="pill date-pill"
+                :class="[{ active: isTomorrow }]"
+                @click="setDueDate('tomorrow')"
+              >
+                {{ $t?.('date.tomorrow') || 'Tomorrow' }}
+              </button>
+              <button
+                class="pill date-pill"
+                :class="[{ active: isNextWeek }]"
+                @click="setDueDate('week')"
+              >
+                {{ $t?.('date.nextWeek') || 'Next Week' }}
+              </button>
+              <button
+                v-if="editedDueDate"
+                class="pill clear-pill"
+                @click="clearDueDate"
+              >
+                <X :size="14" />
+              </button>
+            </div>
+            <!-- Show detected date label if different from presets -->
+            <div v-if="parsedTask?.dueDateLabel && editedDueDate && !isPresetDate" class="detected-label">
+              {{ $t?.('voice.detected') || 'Detected' }}: {{ parsedTask.dueDateLabel }}
+            </div>
           </div>
         </div>
 
-        <!-- Due Date Chips -->
-        <div class="field-section">
-          <label class="field-label">
-            <Calendar :size="12" />
-            {{ $t?.('task.dueDate') || 'Due Date' }}
-          </label>
-          <div class="pill-options">
-            <button
-              :class="['pill', 'date-pill', { active: isToday }]"
-              @click="setDueDate('today')"
-            >
-              {{ $t?.('date.today') || 'Today' }}
-            </button>
-            <button
-              :class="['pill', 'date-pill', { active: isTomorrow }]"
-              @click="setDueDate('tomorrow')"
-            >
-              {{ $t?.('date.tomorrow') || 'Tomorrow' }}
-            </button>
-            <button
-              :class="['pill', 'date-pill', { active: isNextWeek }]"
-              @click="setDueDate('week')"
-            >
-              {{ $t?.('date.nextWeek') || 'Next Week' }}
-            </button>
-            <button
-              v-if="editedDueDate"
-              class="pill clear-pill"
-              @click="clearDueDate"
-            >
-              <X :size="14" />
-            </button>
-          </div>
-          <!-- Show detected date label if different from presets -->
-          <div v-if="parsedTask?.dueDateLabel && editedDueDate && !isPresetDate" class="detected-label">
-            {{ $t?.('voice.detected') || 'Detected' }}: {{ parsedTask.dueDateLabel }}
-          </div>
+        <!-- Action Buttons -->
+        <div class="confirmation-actions">
+          <button class="action-btn cancel-btn" @click="handleCancel">
+            {{ $t?.('common.cancel') || 'Cancel' }}
+          </button>
+          <button
+            class="action-btn confirm-btn"
+            :disabled="!editedTitle.trim()"
+            @click="handleConfirm"
+          >
+            <Plus :size="18" />
+            {{ $t?.('task.create') || 'Create Task' }}
+          </button>
         </div>
       </div>
-
-      <!-- Action Buttons -->
-      <div class="confirmation-actions">
-        <button class="action-btn cancel-btn" @click="handleCancel">
-          {{ $t?.('common.cancel') || 'Cancel' }}
-        </button>
-        <button
-          class="action-btn confirm-btn"
-          :disabled="!editedTitle.trim()"
-          @click="handleConfirm"
-        >
-          <Plus :size="18" />
-          {{ $t?.('task.create') || 'Create Task' }}
-        </button>
-      </div>
-    </div>
     </BaseModal>
   </Teleport>
 </template>

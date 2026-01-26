@@ -600,11 +600,18 @@ export function useCanvasInteractions(deps?: {
                                     Math.abs(absolutePos.x - task.canvasPosition.x) > 1 ||
                                     Math.abs(absolutePos.y - task.canvasPosition.y) > 1
                                 if (posChanged) {
-                                    await taskStore.updateTask(task.id, {
-                                        canvasPosition: absolutePos,
-                                        positionFormat: 'absolute'
-                                    }, 'DRAG-FOLLOW-PARENT' as any)
-                                    positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
+                                    // High Severity Issue #7: Mark task as pending write
+                                    taskStore.addPendingWrite(task.id)
+                                    try {
+                                        await taskStore.updateTask(task.id, {
+                                            canvasPosition: absolutePos,
+                                            positionFormat: 'absolute'
+                                        }, 'DRAG-FOLLOW-PARENT' as any)
+                                        positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
+                                    } finally {
+                                        // High Severity Issue #7: Clear pending write
+                                        taskStore.removePendingWrite(task.id)
+                                    }
                                 }
                                 setNodeState(task.id, NodeState.IDLE)
                                 continue // Skip rest of TASK DRAG END (no parentId change, no Smart Group)
@@ -685,8 +692,16 @@ export function useCanvasInteractions(deps?: {
                         }
                     }
 
-                    // SINGLE atomic save with all updates
-                    await taskStore.updateTask(task.id, dragUpdates, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                    // High Severity Issue #7: Mark task as pending write before save
+                    taskStore.addPendingWrite(task.id)
+
+                    try {
+                        // SINGLE atomic save with all updates
+                        await taskStore.updateTask(task.id, dragUpdates, 'DRAG') // BUG-1051: AWAIT to ensure persistence
+                    } finally {
+                        // High Severity Issue #7: Clear pending write after save completes
+                        taskStore.removePendingWrite(task.id)
+                    }
 
                     if (oldParentId !== newParentId) {
                         // REACTIVITY FIX: Bump version FIRST to trigger count recomputation

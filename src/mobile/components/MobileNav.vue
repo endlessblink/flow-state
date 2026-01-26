@@ -21,8 +21,8 @@
     </router-link>
 
     <div class="nav-item" @click="toggleMenu">
-        <MenuIcon />
-        <span>Menu</span>
+      <MenuIcon />
+      <span>Menu</span>
     </div>
 
     <!-- Mobile Menu Overlay -->

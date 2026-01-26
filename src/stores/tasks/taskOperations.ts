@@ -231,8 +231,9 @@ export function useTaskOperations(
             }
 
             // TASK-240: Handle position versioning
+            // NOTE: hasGeometryChange already defined at line ~157 includes both parentId AND canvasPosition changes
             const currentVersion = task.positionVersion || 0
-            const newVersion = updates.canvasPosition ? currentVersion + 1 : currentVersion
+            const newVersion = hasGeometryChange ? currentVersion + 1 : currentVersion
 
             // DONE-ZONE: Track completedAt when task status changes to/from 'done'
             // This enables age-based filtering for Done Zone (1-7 days) vs Inbox (7+ days)

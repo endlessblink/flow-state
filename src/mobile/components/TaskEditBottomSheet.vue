@@ -14,14 +14,16 @@
           @touchmove.stop
         >
           <!-- Sheet Handle -->
-          <div class="sheet-handle"></div>
+          <div class="sheet-handle" />
 
           <!-- Header with Cancel/Save -->
           <div class="sheet-header">
             <button class="header-btn cancel-btn" @click="handleCancel">
               Cancel
             </button>
-            <h3 class="sheet-title">Edit Task</h3>
+            <h3 class="sheet-title">
+              Edit Task
+            </h3>
             <button
               class="header-btn save-btn"
               :disabled="!hasChanges || !editedTitle.trim()"
@@ -43,7 +45,7 @@
                 class="field-input"
                 placeholder="Task title"
                 @keydown.enter="handleSave"
-              />
+              >
             </div>
 
             <!-- Description -->
@@ -54,7 +56,7 @@
                 class="field-textarea"
                 placeholder="Add details..."
                 rows="3"
-              ></textarea>
+              />
             </div>
 
             <!-- Priority -->
@@ -64,14 +66,16 @@
                 <button
                   v-for="option in priorityOptions"
                   :key="option.value"
-                  :class="['priority-pill', `priority-${option.value}`, { active: editedPriority === option.value }]"
+                  class="priority-pill"
+                  :class="[`priority-${option.value}`, { active: editedPriority === option.value }]"
                   @click="editedPriority = option.value"
                 >
                   <Flag :size="14" />
                   {{ option.label }}
                 </button>
                 <button
-                  :class="['priority-pill', 'priority-none', { active: editedPriority === null }]"
+                  class="priority-pill priority-none"
+                  :class="[{ active: editedPriority === null }]"
                   @click="editedPriority = null"
                 >
                   None
@@ -84,21 +88,24 @@
               <label class="field-label">Due Date</label>
               <div class="date-options">
                 <button
-                  :class="['date-pill', { active: isDueToday }]"
+                  class="date-pill"
+                  :class="[{ active: isDueToday }]"
                   @click="setDueDate('today')"
                 >
                   <Calendar :size="14" />
                   Today
                 </button>
                 <button
-                  :class="['date-pill', { active: isDueTomorrow }]"
+                  class="date-pill"
+                  :class="[{ active: isDueTomorrow }]"
                   @click="setDueDate('tomorrow')"
                 >
                   <CalendarPlus :size="14" />
                   Tomorrow
                 </button>
                 <button
-                  :class="['date-pill', { active: hasDueDate && !isDueToday && !isDueTomorrow }]"
+                  class="date-pill"
+                  :class="[{ active: hasDueDate && !isDueToday && !isDueTomorrow }]"
                   @click="showDatePicker = true"
                 >
                   <CalendarDays :size="14" />
@@ -121,7 +128,7 @@
                 class="native-date-picker"
                 @change="handleDatePickerChange"
                 @blur="showDatePicker = false"
-              />
+              >
             </div>
 
             <!-- Status -->
@@ -131,7 +138,8 @@
                 <button
                   v-for="option in statusOptions"
                   :key="option.value"
-                  :class="['status-pill', { active: editedStatus === option.value }]"
+                  class="status-pill"
+                  :class="[{ active: editedStatus === option.value }]"
                   @click="editedStatus = option.value"
                 >
                   <component :is="option.icon" :size="14" />

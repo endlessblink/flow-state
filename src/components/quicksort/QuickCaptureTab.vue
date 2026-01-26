@@ -17,7 +17,8 @@
           >
           <!-- Mic button (TASK-1024) - ALWAYS SHOW FOR DEBUG -->
           <button
-            :class="['mic-btn', { recording: isListening }]"
+            class="mic-btn"
+            :class="[{ recording: isListening }]"
             :title="isListening ? 'Stop recording' : 'Voice input'"
             @click="toggleVoiceInput"
           >
@@ -28,11 +29,11 @@
         <!-- Voice feedback (when recording) -->
         <div v-if="isListening" class="voice-feedback">
           <div class="voice-waveform">
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
           </div>
           <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
           <button class="voice-cancel" @click="cancelVoice">

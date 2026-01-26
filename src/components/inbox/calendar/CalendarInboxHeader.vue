@@ -53,7 +53,7 @@
           placeholder="Search tasks..."
           @input="handleSearchInput"
           @keydown.escape="toggleSearch"
-        />
+        >
         <button
           v-if="searchQuery"
           class="clear-search-btn"
@@ -169,6 +169,19 @@ defineProps<{
   searchQuery: string // TASK-1075
 }>()
 
+const emit = defineEmits<{
+  (e: 'update:isCollapsed', value: boolean): void
+  (e: 'update:showTodayOnly', value: boolean): void
+  (e: 'update:selectedCanvasGroups', value: Set<string>): void
+  (e: 'update:showAdvancedFilters', value: boolean): void
+  (e: 'update:unscheduledOnly', value: boolean): void
+  (e: 'update:selectedPriority', value: 'high' | 'medium' | 'low' | null): void
+  (e: 'update:selectedProject', value: string | null): void
+  (e: 'update:selectedDuration', value: DurationCategory | null): void
+  (e: 'update:searchQuery', value: string): void // TASK-1075
+  (e: 'toggleHideDoneTasks'): void
+  (e: 'clearAllFilters'): void
+}>()
 // TASK-1075: Search state
 const isSearchExpanded = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)
@@ -193,19 +206,6 @@ const clearSearch = () => {
   searchInputRef.value?.focus()
 }
 
-const emit = defineEmits<{
-  (e: 'update:isCollapsed', value: boolean): void
-  (e: 'update:showTodayOnly', value: boolean): void
-  (e: 'update:selectedCanvasGroups', value: Set<string>): void
-  (e: 'update:showAdvancedFilters', value: boolean): void
-  (e: 'update:unscheduledOnly', value: boolean): void
-  (e: 'update:selectedPriority', value: 'high' | 'medium' | 'low' | null): void
-  (e: 'update:selectedProject', value: string | null): void
-  (e: 'update:selectedDuration', value: DurationCategory | null): void
-  (e: 'update:searchQuery', value: string): void // TASK-1075
-  (e: 'toggleHideDoneTasks'): void
-  (e: 'clearAllFilters'): void
-}>()
 </script>
 
 <style scoped>

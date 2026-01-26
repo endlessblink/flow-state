@@ -115,9 +115,26 @@ export function useNodeSync(
             }
 
             // ================================================================
-            // 3. GET CURRENT VERSION
+            // 3. GET CURRENT VERSION (with fallback to store)
             // ================================================================
-            const currentVersion = versionMap.get(nodeId) ?? 0
+            // CRITICAL FIX: If versionMap is out of sync, fall back to task store
+            let currentVersion = versionMap.get(nodeId)
+            if (currentVersion === undefined) {
+                // Try to get version from task store as fallback
+                try {
+                    const { useTaskStore } = await import('@/stores/tasks')
+                    const taskStore = useTaskStore()
+                    const task = taskStore.tasks.find((t: any) => t.id === nodeId)
+                    if (task?.positionVersion !== undefined) {
+                        currentVersion = task.positionVersion
+                        versionMap.set(nodeId, currentVersion) // Sync the map
+                        console.log(`[NODE-SYNC] Recovered version from task store for ${nodeId.slice(0, 8)}: v${currentVersion}`)
+                    }
+                } catch {
+                    // Store not available, use 0
+                }
+                currentVersion = currentVersion ?? 0
+            }
 
             // ================================================================
             // 4. PREPARE DB PAYLOAD

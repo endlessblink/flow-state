@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
 
@@ -12,7 +12,7 @@ export const useProjectStore = defineStore('projects', () => {
     const isLoading = ref(false)
 
     // Manual operation flag to prevent watch system conflicts
-    let manualOperationInProgress = false
+    const manualOperationInProgress = ref(false)
 
     // SAFETY: Filtered projects for display
     // - Filters out corrupted projects (missing name, invalid data)
@@ -87,7 +87,7 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const createProject = async (projectData: Partial<Project>) => {
-        manualOperationInProgress = true
+        manualOperationInProgress.value = true
         try {
             const newProject: Project = {
                 id: crypto.randomUUID(), // Use standard UUID
@@ -105,14 +105,14 @@ export const useProjectStore = defineStore('projects', () => {
             await saveProject(newProject)
             return newProject
         } finally {
-            manualOperationInProgress = false
+            manualOperationInProgress.value = false
         }
     }
 
     const updateProject = async (projectId: string, updates: Partial<Project>) => {
         const projectIndex = _rawProjects.value.findIndex(p => p.id === projectId)
         if (projectIndex !== -1) {
-            manualOperationInProgress = true
+            manualOperationInProgress.value = true
             try {
                 _rawProjects.value[projectIndex] = {
                     ..._rawProjects.value[projectIndex],
@@ -121,7 +121,7 @@ export const useProjectStore = defineStore('projects', () => {
                 }
                 await saveProject(_rawProjects.value[projectIndex])
             } finally {
-                manualOperationInProgress = false
+                manualOperationInProgress.value = false
             }
         }
     }
@@ -129,7 +129,7 @@ export const useProjectStore = defineStore('projects', () => {
     const deleteProject = async (projectId: string) => {
         const projectIndex = _rawProjects.value.findIndex(p => p.id === projectId)
         if (projectIndex !== -1) {
-            manualOperationInProgress = true
+            manualOperationInProgress.value = true
             try {
                 const projectToDelete = _rawProjects.value[projectIndex]
                 const parentId = projectToDelete.parentId
@@ -163,7 +163,7 @@ export const useProjectStore = defineStore('projects', () => {
             } catch (e) {
                 console.error('Failed to delete project:', e)
             } finally {
-                manualOperationInProgress = false
+                manualOperationInProgress.value = false
             }
         }
     }
@@ -174,7 +174,7 @@ export const useProjectStore = defineStore('projects', () => {
     const deleteProjects = async (projectIds: string[]) => {
         if (projectIds.length === 0) return
 
-        manualOperationInProgress = true
+        manualOperationInProgress.value = true
         try {
             const { useTaskStore } = await import('./tasks')
             const taskStore = useTaskStore() as any
@@ -223,7 +223,7 @@ export const useProjectStore = defineStore('projects', () => {
             }
 
         } finally {
-            manualOperationInProgress = false
+            manualOperationInProgress.value = false
         }
     }
 
@@ -231,14 +231,14 @@ export const useProjectStore = defineStore('projects', () => {
         // SAFETY: Use _rawProjects for mutation
         const project = _rawProjects.value.find(p => p.id === projectId)
         if (project) {
-            manualOperationInProgress = true
+            manualOperationInProgress.value = true
             try {
                 project.color = color
                 project.colorType = colorType
                 project.emoji = colorType === 'emoji' ? emoji : undefined
                 await saveProjectsToStorage(_rawProjects.value, `setProjectColor-${projectId}`)
             } finally {
-                manualOperationInProgress = false
+                manualOperationInProgress.value = false
             }
         }
     }
@@ -386,9 +386,9 @@ export const useProjectStore = defineStore('projects', () => {
             }
         } finally {
             // Reset flag after Vue's next tick to ensure watcher sees it
-            setTimeout(() => {
+            nextTick(() => {
                 syncUpdateInProgress = false
-            }, 100)
+            })
         }
     }
 
@@ -434,7 +434,7 @@ export const useProjectStore = defineStore('projects', () => {
         // - manualOperationInProgress: Direct CRUD operations (already saving)
         // - isLoading: Loading from database (don't save during load)
         // - syncUpdateInProgress: Realtime update just happened (don't echo back)
-        if (manualOperationInProgress || isLoading.value || syncUpdateInProgress) {
+        if (manualOperationInProgress.value || isLoading.value || syncUpdateInProgress) {
             return
         }
         if (saveTimeout) clearTimeout(saveTimeout)

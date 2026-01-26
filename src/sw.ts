@@ -12,7 +12,7 @@ import { registerRoute, Route } from 'workbox-routing'
 import { CacheFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
-// @ts-expect-error - VitePWA injects __WB_MANIFEST at build time
+// VitePWA injects __WB_MANIFEST at build time
 declare const self: ServiceWorkerGlobalScope
 
 // ============================================================================
@@ -23,7 +23,7 @@ declare const self: ServiceWorkerGlobalScope
 cleanupOutdatedCaches()
 
 // Precache all assets from the manifest (injected by VitePWA)
-// @ts-expect-error - VitePWA injects __WB_MANIFEST
+// Precaching
 precacheAndRoute(self.__WB_MANIFEST)
 
 // ============================================================================
@@ -38,7 +38,7 @@ registerRoute(
     ({ url }) => {
       // Match Supabase REST API and Realtime endpoints
       const isSupabaseAPI = url.hostname.includes('supabase.co') ||
-                            url.hostname.includes('api.in-theflow.com')
+        url.hostname.includes('api.in-theflow.com')
       const isRestAPI = url.pathname.includes('/rest/v1/')
       const isRealtime = url.pathname.includes('/realtime/')
       const isAuth = url.pathname.includes('/auth/')
@@ -102,8 +102,8 @@ interface NotificationData {
 /**
  * Handle messages from the main app
  */
-// @ts-expect-error - Service worker event types
-self.addEventListener('message', (event) => {
+// Event listener
+(self as any).addEventListener('message', (event: any) => {
   const data = event.data
 
   if (!data || !data.type) return
@@ -135,13 +135,13 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
   // Determine action buttons based on session type
   const actions = wasBreak
     ? [
-        { action: 'start-work', title: '🍅 Start Work' },
-        { action: 'postpone', title: '⏰ +5 min' },
-      ]
+      { action: 'start-work', title: '🍅 Start Work' },
+      { action: 'postpone', title: '⏰ +5 min' },
+    ]
     : [
-        { action: 'start-break', title: '☕ Start Break' },
-        { action: 'postpone', title: '⏰ +5 min' },
-      ]
+      { action: 'start-break', title: '☕ Start Break' },
+      { action: 'postpone', title: '⏰ +5 min' },
+    ]
 
   try {
     // @ts-expect-error - Service worker registration
@@ -168,8 +168,8 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
 /**
  * Handle notification click events (body click or action button click)
  */
-// @ts-expect-error - Service worker event types
-self.addEventListener('notificationclick', (event) => {
+// Event listener
+(self as any).addEventListener('notificationclick', (event: any) => {
   const notification = event.notification
   const action = event.action
   const data = notification.data as NotificationData
@@ -221,8 +221,14 @@ self.addEventListener('notificationclick', (event) => {
 /**
  * Handle notification close (dismissed without action)
  */
-// @ts-expect-error - Service worker event types
-self.addEventListener('notificationclose', (event) => {
+// Create a typed reference to self
+const sw = self as any;
+
+/**
+ * Handle notification close (dismissed without action)
+ */
+// Event listener
+sw.addEventListener('notificationclose', (event: any) => {
   // User dismissed the notification - could log this for analytics
   console.log('[SW] Notification dismissed:', event.notification.tag)
 })
@@ -231,15 +237,15 @@ self.addEventListener('notificationclose', (event) => {
 // SERVICE WORKER LIFECYCLE
 // ============================================================================
 
-self.addEventListener('install', () => {
+sw.addEventListener('install', () => {
   console.log('[SW] Timer notification service worker installed')
   // Skip waiting to activate immediately (user opted for auto-update)
   // @ts-expect-error - Service worker method
   self.skipWaiting()
 })
 
-// @ts-expect-error - Service worker event types
-self.addEventListener('activate', (event) => {
+// Event listener
+sw.addEventListener('activate', (event: any) => {
   console.log('[SW] Timer notification service worker activated')
   // Claim all clients immediately
   // @ts-expect-error - Service worker clients

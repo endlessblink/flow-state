@@ -1,18 +1,18 @@
 <template>
   <div class="done-toggle">
     <DoneToggleVisuals
+      v-model:is-hovered="isHovered"
+      v-model:is-focused="isFocused"
       :is-completed="completed"
       :disabled="disabled"
       :ripples="ripples"
-      v-model:is-hovered="isHovered"
-      :show-celebration="showCelebration"
       
-      v-model:is-focused="isFocused"
+      :show-celebration="showCelebration"
       :show-touch-feedback="showTouchFeedback"
       :size="size"
       :variant="variant"
       :title="title"
-      :ariaLabel="ariaLabel"
+      :aria-label="ariaLabel"
       :show-hints="showHints"
       :show-progress="showProgress"
       

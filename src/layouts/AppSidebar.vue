@@ -55,7 +55,8 @@
           >
           <!-- Mic button (TASK-1024) - ALWAYS SHOW FOR DEBUG -->
           <button
-            :class="['mic-btn', { recording: isListening }]"
+            class="mic-btn"
+            :class="[{ recording: isListening }]"
             :title="isListening ? 'Stop recording' : 'Voice input'"
             @click="toggleVoiceInput"
           >
@@ -66,7 +67,8 @@
         <!-- Voice mode toggle (TASK-1071: Whisper + Browser) -->
         <div v-if="showVoiceModeToggle" class="voice-mode-toggle">
           <button
-            :class="['mode-btn', { active: voiceMode === 'whisper' }]"
+            class="mode-btn"
+            :class="[{ active: voiceMode === 'whisper' }]"
             :disabled="!hasWhisperApiKey || !isWhisperSupported"
             :title="hasWhisperApiKey ? 'Groq Whisper (works everywhere)' : 'No API key'"
             @click="voiceMode = 'whisper'"
@@ -74,7 +76,8 @@
             🎙️ Whisper
           </button>
           <button
-            :class="['mode-btn', { active: voiceMode === 'browser' }]"
+            class="mode-btn"
+            :class="[{ active: voiceMode === 'browser' }]"
             :disabled="!isBrowserVoiceSupported"
             :title="isBrowserVoiceSupported ? 'Browser Speech API' : 'Not supported'"
             @click="voiceMode = 'browser'"
@@ -85,9 +88,9 @@
         <!-- Voice feedback (when recording) -->
         <div v-if="isListening || isProcessingVoice" class="voice-feedback">
           <div class="voice-waveform">
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
           </div>
           <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
           <button class="voice-cancel" @click="cancelVoice">

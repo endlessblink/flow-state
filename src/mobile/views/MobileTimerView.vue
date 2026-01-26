@@ -20,27 +20,27 @@
     </div>
 
     <div class="timer-actions">
-        <!-- Stop Button -->
-        <button 
-          v-if="timerStore.isTimerActive" 
-          class="action-btn stop" 
-          @click="timerStore.stopTimer"
-        >
-          <Square :size="24" fill="currentColor" />
-          <span>Stop</span>
-        </button>
+      <!-- Stop Button -->
+      <button 
+        v-if="timerStore.isTimerActive" 
+        class="action-btn stop" 
+        @click="timerStore.stopTimer"
+      >
+        <Square :size="24" fill="currentColor" />
+        <span>Stop</span>
+      </button>
 
-        <!-- Focus Mode Toggle (Keep Screen On) -->
-        <div class="focus-mode-indicator" v-if="timerStore.isTimerActive">
-           <Smartphone :size="16" />
-           <span>Screen Awake</span>
-        </div>
+      <!-- Focus Mode Toggle (Keep Screen On) -->
+      <div v-if="timerStore.isTimerActive" class="focus-mode-indicator">
+        <Smartphone :size="16" />
+        <span>Screen Awake</span>
+      </div>
     </div>
 
     <!-- Active Task Info -->
-    <div class="current-task" v-if="timerStore.currentTaskName">
-        <h3>Current Focus</h3>
-        <p>{{ timerStore.currentTaskName }}</p>
+    <div v-if="timerStore.currentTaskName" class="current-task">
+      <h3>Current Focus</h3>
+      <p>{{ timerStore.currentTaskName }}</p>
     </div>
   </div>
 </template>

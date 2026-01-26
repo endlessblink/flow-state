@@ -111,13 +111,17 @@ const handleQuickTaskCreateAndClose = (data: QuickTaskData) => {
 }
 
 // BUG-1074 FIX: Use explicit emit function to ensure proper event propagation
+// BUG-1089 FIX: Close modal via Pinia store after emitting confirm event
 const handleBulkDeleteConfirm = () => {
   emit('confirmBulkDelete')
+  modals.closeBulkDeleteModal()
 }
 
 // BUG-1076 FIX: Handler for delete group confirmation
+// BUG-1089 FIX: Close modal via Pinia store after emitting confirm event
 const handleDeleteGroupConfirm = () => {
   emit('confirmDeleteGroup')
+  modals.closeDeleteGroupModal()
 }
 
 </script>

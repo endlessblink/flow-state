@@ -260,6 +260,7 @@
 | **TASK-1080**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
 | **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
 | **BUG-1085**             | **VPS Canvas Inbox: Delete Task Does Nothing**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Deleting task from canvas inbox on VPS starts soft-delete but never completes. No error, no success. Logs show `Starting soft-delete` but no completion.                                                              | -                                                      |
+| **TASK-1087**            | **KDE Widget: Task Readability + Active Task Highlight**                 | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Improve KDE widget task list UX: (1) Increase task row height for better readability with RTL/long text, (2) Highlight the currently active timer task in the task list.                                               | TASK-1009                                              |
 
 ---
 
@@ -276,6 +277,32 @@
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+---
+
+### TASK-1087: KDE Widget - Task Readability + Active Task Highlight (📋 PLANNED)
+
+**Priority**: P2
+**Status**: 📋 PLANNED
+**Depends On**: TASK-1009
+
+**Problem**: The KDE Plasma widget task list has UX issues:
+1. **Task text truncation**: Long task titles (especially RTL Hebrew text) are hard to read - need more row height
+2. **No active task highlight**: When a timer is running for a specific task, that task should be visually highlighted in the list
+
+**Requirements**:
+1. Increase task row minimum height for better readability
+2. Allow text to wrap to 2 lines if needed
+3. Highlight the active timer task with accent color border/glow (matching web app's `timer-active` styling)
+
+**Files to Modify**:
+- `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+
+**Tasks**:
+- [ ] Increase task row height from current to allow 2-line text
+- [ ] Add text wrap for long titles
+- [ ] Add `isActiveTimerTask` computed property
+- [ ] Apply highlight styling when task matches `currentTaskId`
 
 ---
 

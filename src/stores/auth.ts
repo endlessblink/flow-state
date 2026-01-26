@@ -21,6 +21,10 @@ export const useAuthStore = defineStore('auth', () => {
   // This ensures they all await the same promise instead of racing
   let initPromise: Promise<void> | null = null
 
+  // BUG-1086: Track which user we've already handled SIGNED_IN for
+  // Prevents duplicate store reloads when onAuthStateChange fires multiple times
+  let handledSignInForUserId: string | null = null
+
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -248,8 +252,19 @@ export const useAuthStore = defineStore('auth', () => {
             }
           }
 
+          // BUG-1086: Reset sign-in handler on sign-out so next sign-in reloads stores
+          if (_event === 'SIGNED_OUT') {
+            handledSignInForUserId = null
+          }
+
           // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
+          // BUG-1086: Only run ONCE per user to prevent duplicate reloads from repeated SIGNED_IN events
           if (_event === 'SIGNED_IN' && newSession?.user) {
+            if (handledSignInForUserId === newSession.user.id) {
+              console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN already handled for this user, skipping reload`)
+              return
+            }
+            handledSignInForUserId = newSession.user.id
             console.log(`👤 [AUTH:${currentTabId}] User signed in - reloading stores...`)
             try {
               const { useProjectStore } = await import('@/stores/projects')

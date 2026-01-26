@@ -211,8 +211,8 @@ select option {
   --glass-panel-bg: rgb(24, 24, 30) !important;
   --dropdown-bg: rgb(22, 22, 28) !important;
 
-  /* Overlay components - FULLY OPAQUE */
-  --overlay-component-bg: rgb(22, 22, 28) !important;
+  /* Overlay components - FULLY OPAQUE purple-tinted */
+  --overlay-component-bg: rgb(28, 25, 45) !important;
   --overlay-component-backdrop: none !important;
 
   /* Kanban backgrounds - FULLY OPAQUE */

@@ -389,7 +389,7 @@ const handleDatePickerSelect = async (timestamp: number | null) => {
   emit('close')
 }
 
-// Handle "Done for now" - reschedule task to tomorrow
+// Handle "Done for now" - reschedule task to tomorrow with tracking badge
 const handleDoneForNow = async () => {
   if (!currentTask.value) return
 
@@ -404,7 +404,11 @@ const handleDoneForNow = async () => {
   const tomorrowStr = `${year}-${month}-${day}`
 
   try {
-    await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: tomorrowStr })
+    // Set both dueDate and doneForNowUntil to track the badge
+    await taskStore.updateTaskWithUndo(currentTask.value.id, {
+      dueDate: tomorrowStr,
+      doneForNowUntil: tomorrowStr
+    })
     canvasStore.requestSync('user:context-menu')
     showToast('Moved to tomorrow', 'success', { duration: 2000 })
   } catch (error) {

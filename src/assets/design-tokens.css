@@ -777,8 +777,8 @@
   /* Dropdowns, Modals, Context Menus - Dark Glass Morphism */
   /* MANDATORY: Use CustomSelect.vue, ContextMenu.vue, BaseModal.vue */
 
-  /* Overlay backgrounds - Dark glass morphism */
-  --overlay-component-bg: rgba(20, 20, 20, 0.95);
+  /* Overlay backgrounds - Purple-tinted glass morphism */
+  --overlay-component-bg: rgba(28, 25, 45, 0.92);
   --overlay-component-bg-lighter: rgba(0, 0, 0, 0.4);
   --overlay-component-backdrop: blur(20px);
   --overlay-component-border: 1px solid rgba(255, 255, 255, 0.15);
@@ -988,8 +988,8 @@
   --canvas-task-bg: rgba(34, 36, 44, 0.95);
   --canvas-group-bg: rgba(36, 38, 46, 0.92);
 
-  /* Overlay components - Match web exactly (Note: Web is dark/opaque @ 0.95) */
-  --overlay-component-bg: rgba(20, 20, 20, 0.95);
+  /* Overlay components - Purple-tinted glass (matching web) */
+  --overlay-component-bg: rgba(28, 25, 45, 0.92);
   --overlay-component-backdrop: blur(20px);
 
   /* Dropdown/panel backgrounds - Match web exactly */

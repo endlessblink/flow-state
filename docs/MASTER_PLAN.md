@@ -85,6 +85,8 @@
 | ~~**BUG-1075**~~         | ✅ **DONE** **Inbox Header Time Filter Text Wrapping/Clipping**        | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1086**             | **VPS/PWA Auth Not Persisting + Blank Screen**                         | **P0**                                              | 🔄 **IN PROGRESS** - Symptoms: (1) Sign-out happens unexpectedly, (2) Sign-in doesn't persist correctly, (3) Blank screen. Double auth init in console. Stale cache suspected.                  | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1090**             | **VPS: START and TIMER buttons in task menu don't work**               | **P1**                                              | 🔄 **IN PROGRESS** - Fixed race condition: event dispatched before CalendarView mounted                                          | -                                                                                                                                                                                                              |                                                        |
+| **BUG-1091**             | **VPS: No cross-browser sync, data resets on refresh**                 | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | BUG-1086                                                                                                                                                                                                       |                                                        |
+| **TASK-1092**            | **Self-Hosted CI/CD (Replace GitHub Actions)**                         | **P3**                                              | 📋 **PLANNED**                                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
 | ~~**TASK-231**~~         | ~~**Dynamic Skills & Docs API**~~                                      | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/skills and /api/docs endpoints                                                                                                                                                                      |                                                        |
@@ -268,9 +270,6 @@
 
 ---
 
----
-
-
 ### TASK-328: Test task from API
 
 **Priority**: Medium
@@ -317,6 +316,40 @@
 - `src/services/auth/supabase.ts`
 - `src/sw.ts` (service worker)
 - `src/composables/useSupabaseDatabase.ts`
+
+---
+
+### BUG-1091: VPS - No Cross-Browser Sync, Data Resets on Refresh (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-26)
+**Depends On**: BUG-1086
+
+**Problem**: On VPS production (in-theflow.com), changes made in one browser (e.g., Zen) do not sync to another browser (e.g., Brave). After refresh, data resets to previous state.
+
+**Symptoms**:
+- Create/edit task in Zen browser → change doesn't appear in Brave
+- Refresh either browser → data reverts to older state
+- Realtime sync appears non-functional between browser instances
+
+**Suspected Causes**:
+- Supabase Realtime WebSocket connection issues
+- Service worker caching stale data
+- Auth session mismatch between browsers
+- Related to BUG-1086 auth persistence issues
+
+**Investigation Tasks**:
+- [ ] Check Realtime WebSocket connection status in both browsers
+- [ ] Verify `onAuthStateChange` subscription is active
+- [ ] Check if service worker is intercepting and caching API responses
+- [ ] Test without service worker (clear cache + unregister SW)
+- [ ] Verify Supabase RLS policies allow cross-device sync
+
+**Files to Investigate**:
+- `src/composables/useSupabaseDatabase.ts`
+- `src/stores/tasks.ts`
+- `src/sw.ts`
+- `src/services/auth/supabase.ts`
 
 ---
 
@@ -822,84 +855,16 @@ Implement voice recording → transcription → task creation using an API (Whis
 **Status**: 📋 PLANNED
 **Dependencies**: TASK-082 (useDateTransition composable)
 
-Implement user-triggered day group rotation at midnight. When the day changes, show a notification prompting the user to rotate their day groups. This respects geometry invariants while providing the rotation UX.
+**Problem**: Users manually maintain day groups (Mon-Sun) on canvas. At midnight, they need to manually rotate positions.
 
-**Key Requirement**: Day groups (Monday-Sunday) must remain **fully editable** - users can move, delete, rename, and change them manually at any time. The rotation is a convenience feature, not a constraint.
-
-**Implementation Plan**:
-
-#### Step 1: Create `useDayGroupRotation.ts` Composable
-**File**: `src/composables/canvas/useDayGroupRotation.ts`
-
-- Import and use `useDateTransition` for midnight detection
-- Detect day-of-week groups on canvas (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
-- Use flexible name matching (same as `useCanvasSectionProperties.ts` line 32-48)
-- Calculate rotation: which group should move where
-- Expose `rotateGroups()` function that uses drag handler code path
-- Expose `hasDayGroups` computed for conditional banner display
-- Track last rotation date to prevent duplicate prompts
-
-#### Step 2: Add Rotation Toast/Banner
-**File**: `src/components/canvas/DayRotationBanner.vue`
-
-- Show when `useDateTransition` fires at midnight AND `hasDayGroups` is true
-- Display: "New day! Tap to rotate your day groups"
-- Button triggers `rotateGroups()` from composable
-- Dismiss button (X) to decline rotation
-- Auto-dismiss after 30 seconds if no action
-- Store dismissal preference in localStorage (optional "Don't show again")
-
-#### Step 3: Integrate into CanvasView
-**File**: `src/views/CanvasView.vue`
-
-- Import `useDayGroupRotation`
-- Add `DayRotationBanner` component (similar to `CanvasStatusBanner`)
-- Wire up the rotation trigger
-
-#### Step 4: Implement Safe Group Movement
-**File**: `src/composables/canvas/useDayGroupRotation.ts`
-
-- Use `onNodeDragStop` equivalent code path (geometry invariant safe)
-- Reference `useCanvasInteractions.ts` for the proper update pattern
-- Calculate new positions for day groups in a loop:
-  - Monday → moves to bottom position (becomes "next Monday")
-  - All other days shift up one slot
-- Persist changes via proper store update (`canvasStore.updateSection()`)
-- Respect position locks via `LockManager`
+**Solution**: User-triggered rotation with midnight notification. Groups remain fully editable (move, delete, rename).
 
 **Key Files**:
+- `src/composables/canvas/useDayGroupRotation.ts` (CREATE)
+- `src/components/canvas/DayRotationBanner.vue` (CREATE)
+- `src/views/CanvasView.vue` (MODIFY)
 
-| File | Action |
-|------|--------|
-| `src/composables/canvas/useDayGroupRotation.ts` | CREATE |
-| `src/components/canvas/DayRotationBanner.vue` | CREATE |
-| `src/views/CanvasView.vue` | MODIFY - add banner |
-| `src/composables/useDateTransition.ts` | USE (already exists) |
-| `src/composables/canvas/useCanvasInteractions.ts` | REFERENCE for geometry-safe patterns |
-| `src/composables/canvas/useCanvasSectionProperties.ts` | REFERENCE for day detection patterns |
-
-**Safety Constraints** (CRITICAL):
-
-1. All position changes go through drag handler code path
-2. Never call `updateGroup()` directly for geometry from sync code
-3. Use `positionManager.updatePosition()` with 'user-action' source
-4. Acquire locks via `lockManager.acquire()` before moving groups
-5. Test that sync doesn't conflict with rotation
-6. Groups remain fully user-editable (move, delete, rename)
-
-**Verification Checklist**:
-
-1. [ ] Create 7 day groups (Mon-Sun) on canvas
-2. [ ] Wait for midnight OR trigger via devtools (`simulateTransition()`)
-3. [ ] Banner appears with rotation prompt
-4. [ ] Click rotation button
-5. [ ] Verify groups rotate (Monday→bottom, others shift up)
-6. [ ] Verify no position drift
-7. [ ] Refresh page - positions persist correctly
-8. [ ] Verify groups can still be manually moved/deleted/renamed
-9. [ ] Run `npm run test` - no regressions
-
----
+**Safety Constraints**: All position changes via drag handler code path. Use `positionManager.updatePosition()` with 'user-action' source. Respect position locks.
 
 ---
 
@@ -960,16 +925,6 @@ Sync errors when saving tasks with deleted parent: `insert or update on table "t
 - [ ] Add feature highlights
 - [ ] Add guest mode sign-in prompt
 - [ ] Test with new users
-
----
-
----
-
----
-
----
-
----
 
 ---
 
@@ -1912,54 +1867,17 @@ Instead of restoring full snapshots, track which entities were affected by each 
 ### TASK-292: Enhance Canvas Connection Edge Visuals (📋 PLANNED)
 
 **Priority**: P3-LOW
-**Complexity**: Medium
 **Status**: Planned
 **Created**: January 15, 2026
 
-**Feature**: Improve the visual appearance and rendering of connection edges (cables) between tasks on the canvas.
+**Problem**: Basic edge styling between connected tasks. No animations, priority colors, or visual polish.
 
-**Current State**:
-
-- Basic styling in `src/assets/canvas-view-overrides.css`
-- Uses Vue Flow's default edge type (likely bezier/smoothstep)
-- Simple stroke with drop-shadow filter
-- Hover and selected states defined
-
-**Current CSS** (lines 140-168):
-
-```css
-.vue-flow__edge-path {
-    stroke: var(--border-secondary);
-    stroke-width: 2px;
-    filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.4));
-}
-.vue-flow__edge:hover .vue-flow__edge-path {
-    stroke: var(--brand-primary);
-    stroke-width: 3px;
-}
-```
-
-**Enhancement Ideas**:
-
-- [ ] Custom edge component with animated flow effect (dashed line animation)
-- [ ] Gradient strokes matching task priority colors
-- [ ] Glow effect that matches the glass morphism design
-- [ ] Different edge styles based on connection type (dependency vs reference)
-- [ ] Smooth curved paths with adjustable curvature
-- [ ] Connection labels showing relationship type
-- [ ] Arrow markers at endpoints
-
-**Vue Flow Custom Edge Reference**:
-
-- Create custom edge component in `src/components/canvas/CustomEdge.vue`
-- Register in VueFlow with `:edge-types="{ custom: CustomEdge }"`
-- Access props: `sourceX`, `sourceY`, `targetX`, `targetY`, `data`
+**Enhancement Ideas**: Custom edge component with animated flow effect, gradient strokes, glow effects, arrow markers.
 
 **Files to Modify**:
-
-- `src/components/canvas/CustomEdge.vue` (new)
+- `src/components/canvas/CustomEdge.vue` (CREATE)
 - `src/views/CanvasView.vue` - Register custom edge type
-- `src/assets/canvas-view-overrides.css` - Enhanced edge styling
+- `src/assets/canvas-view-overrides.css`
 
 ---
 
@@ -1992,92 +1910,34 @@ Instead of restoring full snapshots, track which entities were affected by each 
 ### TASK-293: Canvas Viewport - Center on Today + Persist Position (📋 PLANNED)
 
 **Priority**: P2-MEDIUM
-**Complexity**: Medium
 **Status**: Planned
 **Created**: January 15, 2026
 
-**Feature**: Improve canvas viewport behavior on entry:
+**Problem**: Canvas opens at default position every time. No memory of previous viewport state.
 
-1. **First visit**: Auto-center viewport on the "Today" group if it exists
-2. **Subsequent visits**: Remember and restore the user's last viewport position
-
-**Behavior**:
-
-- On first canvas load (no saved viewport): Find "Today" group → center viewport on it
-- If no "Today" group exists: Use default center position
-- After user pans/zooms: Save viewport state (x, y, zoom) to localStorage
-- On subsequent visits: Restore saved viewport position
-
-**Implementation Steps**:
-
-- [ ] Add viewport persistence to localStorage (key: `flowstate-canvas-viewport`)
-- [ ] On mount: Check if saved viewport exists
-  - If yes: Restore saved position
-  - If no: Find "Today" group and center on it using `fitView()` or `setCenter()`
-- [ ] On viewport change: Debounce and save to localStorage
-- [ ] Handle "Today" group detection via power keyword matching
-
-**Vue Flow APIs**:
-
-```typescript
-// Center on specific node
-const { setCenter, fitView, getNode } = useVueFlow()
-
-// Find Today group
-const todayGroup = groups.find(g =>
-  g.name.toLowerCase() === 'today' ||
-  detectPowerKeyword(g.name)?.value === 'today'
-)
-
-// Center on group position
-if (todayGroup) {
-  setCenter(todayGroup.position.x + width/2, todayGroup.position.y + height/2)
-}
-
-// Save viewport on change
-onMoveEnd(({ viewport }) => {
-  localStorage.setItem('flowstate-canvas-viewport', JSON.stringify(viewport))
-})
-```
+**Solution**: First visit centers on "Today" group if exists. Subsequent visits restore saved viewport (x, y, zoom) from localStorage.
 
 **Files to Modify**:
-
-- `src/composables/canvas/useCanvasNavigation.ts` - Add viewport persistence logic
-- `src/composables/canvas/useCanvasOrchestrator.ts` - Initialize viewport on mount
-- `src/views/CanvasView.vue` - Wire up viewport restoration
+- `src/composables/canvas/useCanvasNavigation.ts`
+- `src/composables/canvas/useCanvasOrchestrator.ts`
+- `src/views/CanvasView.vue`
 
 ---
 
 ### TASK-313: Canvas Multi-Select Batch Status Change (📋 PLANNED)
 
 **Priority**: P2-MEDIUM
-**Complexity**: Medium
 **Status**: Planned
 **Created**: January 18, 2026
 
-**Feature**: When multiple tasks are selected on the canvas, provide a batch action to change the status of all selected tasks at once.
+**Problem**: No batch operations for multiple selected tasks. Status changes require editing each task individually.
 
-**Current Behavior**:
-- Users can select multiple tasks on the canvas
-- No batch operations available for selected tasks
-- Status changes require editing each task individually
-
-**Desired Behavior**:
-- When 2+ tasks are selected, show a context menu option "Change Status"
-- Clicking opens a submenu/dropdown with status options (Plan, Todo, In Progress, Done, etc.)
-- Selecting a status applies it to ALL selected tasks
-
-**Implementation Ideas**:
-- [ ] Add "Change Status" option to multi-select context menu
-- [ ] Create submenu with all available status options
-- [ ] Batch update selected tasks via task store
-- [ ] Show success toast with count of updated tasks
-- [ ] Preserve selection after status change
+**Solution**: When 2+ tasks selected, show "Change Status" in context menu with status submenu.
 
 **Files to Modify**:
-- `src/components/canvas/CanvasContextMenu.vue` - Add batch status option
-- `src/composables/canvas/useCanvasInteractions.ts` - Handle batch status change
-- `src/stores/tasks/taskCrud.ts` - Add batch update method if needed
+- `src/components/canvas/CanvasContextMenu.vue`
+- `src/composables/canvas/useCanvasInteractions.ts`
+- `src/stores/tasks/taskCrud.ts`
 
 ---
 
@@ -2175,24 +2035,7 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
----
-
-### ~~BUG-259~~: Canvas Task Layout Changes on Click (✅ DONE)
-
-**Priority**: P1
-**Status**: ✅ DONE (2026-01-25) - Cannot Reproduce
-**Created**: January 13, 2026
-
-**Bug**: Clicking on a task in the canvas changes its layout/width when it shouldn't.
-
-**Investigation (2026-01-13)**:
-
-- Width stays constant at 280px before and after click
-- Only \~2px height change detected (145px → 143px)
-- CSS correctly constrains: `width: 280px; min-width: 200px; max-width: 320px`
-- `.selected` class only modifies `box-shadow`, not dimensions
-
-**Resolution**: User confirmed cannot reproduce. Closed.
+*Archived to docs/archive/MASTER_PLAN_JAN_2026.md: BUG-259*
 
 ---
 
@@ -2296,620 +2139,80 @@ onMoveEnd(({ viewport }) => {
 
 ---
 
-## Codebase Health Sprint (Jan 11, 2026)
+## Codebase Health Sprint & Code Review Archives (Jan 7-11, 2026)
 
-Based on [Health Report 2026-01-11](./reports/health-report-2026-01-11.md).
+> **Archived**: See [Code Review Findings Archive](./archive/CODE_REVIEW_FINDINGS_JAN_2026.md) for full historical code review findings, codebase health sprint tasks, and completed bug fixes from January 7-11, 2026.
 
----
+### Active Tasks From Health Sprint
 
-### TASK-157: ADHD-Friendly View Redesign (⏸️ PAUSED)
+### TASK-157: ADHD-Friendly View Redesign (PAUSED)
 
 **Priority**: P3-LOW
 **Started**: January 9, 2026
 **Detailed Plan**: [docs/plans/adhd-redesign-task-157.md](../plans/adhd-redesign-task-157.md)
 
-Redesign Board and Catalog views with Todoist-style compact design for ADHD-friendly UX.
+Phase 1 (Bulk Selection) complete. Phases 2-4 (Compact Components, Catalog Redesign, Polish) pending.
 
-**Problem**: Board (Kanban), List, and Table views are underused due to:
-
-- Visual overload (TaskCard: 1,217 lines, 7-9 metadata badges)
-- God components (HierarchicalTaskRow: 1,023 lines, 37+ event listeners)
-- No external structure to guide focus (unlike Calendar/Canvas/Quick Sort)
-
-**Solution**: Compact, Calm-by-default redesign with robust bulk operations.
-
-**Phase 1: Foundation (Bulk Selection System)**
-
-- [x] Implement `useBulkSelection.ts` (Selection Logic)
-- [x] Implement `useBulkActions.ts` (Supabase Batch Updates)
-- [x] Create `BulkActionBar.vue` (Floating UI)
-
-**Phase 2: Compact Components**
-
-- [ ] Create `TaskRowCompact.vue` (\~150 lines, calm metadata)
-- [ ] Create `KanbanCardCompact.vue` (\~250 lines, no banners)
-
-**Phase 3: Catalog View Redesign**
-
-- [ ] Create `CatalogView.vue` (Unified List/Table)
-- [ ] Create `CatalogHeader.vue` (Density/Sort controls)
-
-**Phase 4: Polish & Integration**
-
-- [ ] Add View Switcher to Sidebar
-- [ ] Add keyboard shortcuts (x, Shift+Arrow, #, e)
-- [ ] Verify large dataset performance (Virtualization check)
-
----
-
-### TASK-095: TypeScript & Lint Cleanup (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Completed**: January 8, 2026
-
-- [x] Detected and removed 7 dead files related to legacy PouchDB/Offline system.
-- [x] Refactored `offlineQueue` types to `src/types/offline.ts`.
-- [x] Reduced TypeScript errors from 71 to 14.
-
-### TASK-142: Zero Error Baseline Achievement
-
-**Priority**: P1-HIGH
-**Goal**: Resolve the remaining 14 TypeScript errors to reach 0 errors.
-
-- \[/] Fix `TiptapEditor.vue` missing `TaskItem` import.
-- \[/] Fix `TaskNode.vue` `useVueFlow` type mismatch.
-- \[/] Fix `CanvasGroup.vue` unsafe property access.
-- \[/] Fix `auth.ts` `onAuthStateChange` callback typing.
-- \[/] Remove unused and broken `MarkdownExportService.ts`.
-- \[/] Fix `markdown.ts` null safety in table conversion.
-- [x] Run `vue-tsc` to confirm 0 errors.
-
-### BUG-144: Canvas Content Disappeared (✅ DONE)
+### TASK-149: Canvas Group Stability Fixes (REVIEW)
 
 **Priority**: P0-CRITICAL
-**Completed**: January 8, 2026
-**Resolution**: Added missing `<slot />` to `GroupNodeSimple.vue` enabling Vue Flow to render nested specific nodes.
-
-### BUG-170: Self-Healing Destroys Group Relationships (✅ ALREADY FIXED)
-
-**Priority**: P1-HIGH
-**Discovered**: January 9, 2026
-**Status**: Already fixed in commit `d4350e6` (TASK-141 Canvas Group System Refactor)
-**Problem**: `useCanvasSync.ts` was auto-clearing `parentGroupId` when a section's center was outside its parent's bounds.
-**Evidence**: Current code at `useCanvasSync.ts:142-143` only logs a warning, does NOT auto-modify data.
-**No action required** - the destructive auto-healing was removed during TASK-141 refactor.
-
-### BUG-171: RLS Partial Write Failures Silent (✅ FIXED)
-
-**Priority**: P1-HIGH
-**Completed**: January 9, 2026
-**Problem**: When upserting multiple rows, if RLS blocks some but not all, the code silently succeeded with incomplete data.
-**Root Cause** (from TODO-012):
-
-- `saveTasks` already had proper check
-- `saveProjects` had NO verification - silent data loss possible
-  **Resolution**:
-- [x] Added `.select('id')` to `saveProjects` to get returned data
-- [x] Added `data.length !== payload.length` check to detect partial writes
-- [x] Added `throw e` to re-throw errors so callers know save failed
-  **Files Modified**:
-- `src/composables/useSupabaseDatabaseV2.ts` - `saveProjects` function
-
-### ~~TASK-138~~: Refactor CanvasView Phase 2 (Store & UI) ✅ DONE
-
-**Priority**: P3-LOW
-**Goal**: Clean up the store layer and begin UI decomposition.
-
-### TASK-137: Refactor CanvasView\.vue Phase 1 (✅ DONE)
-
-**Priority**: P1-HIGH
-**Goal**: Reduce technical debt in the massive `CanvasView.vue` file by strictly extracting logic into composables without touching the critical Vue Flow template structure.
-
-- [x] Extract filtering logic to `useCanvasFiltering.ts`.
-- [x] Fix initialization order of `isInteracting`.
-- [x] Extract event handlers to `useCanvasInteractionHandlers.ts`.
-- [x] Verify no regressions in drag/drop or sync.
-
-### TASK-149: Canvas Group Stability Fixes (👀 REVIEW)
-
-**Priority**: P0-CRITICAL
-**Status**: 👀 REVIEW
-**Created**: January 9, 2026
+**Status**: REVIEW
 **Related**: TASK-141 (Canvas Group System Refactor)
 
-**Problems Addressed**:
+**Problems**: Position jump during resize, zombie groups, tolerance snapping, inconsistent containment, group duplication bug.
 
-1. **Position jump during resize** - Groups jump when resizing other groups (race condition)
-2. **Zombie groups** - Deleted groups reappear after sync
-3. **10px tolerance snapping** - Micro-jumps from position preservation logic
-4. **Inconsistent containment** - Different algorithms in drag vs sync
-5. **Permissive parent assignment** - 5% size difference too loose
-6. **Z-index by area not depth** - Same-size siblings have same z-index
-7. **Group duplication bug** - Same group.id appearing multiple times without user action
+**Diagnostics**: `assertNoDuplicateIds()` helper in `src/utils/canvas/invariants.ts`. Console logs identify duplication source layer.
 
----
-
-#### Group Duplication Bug Context (January 13, 2026)
-
-**Problem Definition**:
-
-- Users can intentionally create multiple groups with the same title (e.g., several "Today" groups) - this is ALLOWED
-- The bug is when the SAME group.id appears multiple times without user action (auto-duplication)
-- This causes duplicate Vue Flow nodes for one logical group
-
-**Group Data Flow Table**:
-
-| Layer                | Function                 | File:Line                                         |
-| -------------------- | ------------------------ | ------------------------------------------------- |
-| **Load**             | `fetchGroups()`          | `src/composables/useSupabaseDatabase.ts:501-522`  |
-| **Realtime**         | **MISSING**              | Groups have NO realtime subscription!             |
-| **Store Sync**       | **MISSING**              | No `updateGroupFromSync()` exists                 |
-| **Store**            | `_rawGroups` ref         | `src/stores/canvas.ts:149`                        |
-| **Selector**         | `visibleGroups` computed | `src/stores/canvas.ts:159-165`                    |
-| **Node Builder**     | `syncStoreToCanvas()`    | `src/composables/canvas/useCanvasSync.ts:155-500` |
-| **Group Processing** | Group loop               | `src/composables/canvas/useCanvasSync.ts:171-278` |
-| **setNodes()**       | Final update             | `src/composables/canvas/useCanvasSync.ts:482`     |
-
-**CRITICAL FINDING**: Groups have NO realtime subscription in `initRealtimeSubscription()` at `useSupabaseDatabase.ts:787-884`. Only `projects`, `tasks`, `timer_sessions`, `notifications` tables are subscribed. Group changes from other tabs won't sync until page refresh.
-
-**Diagnostics Implemented**:
-All use `assertNoDuplicateIds()` from `src/utils/canvas/invariants.ts` for consistent detection.
-
-| Console Log                          | Layer        | File:Line                  | Triggers When                   |
-| ------------------------------------ | ------------ | -------------------------- | ------------------------------- |
-| `[SUPABASE-GROUP-DUPLICATES]`        | Database     | `canvas.ts:224-239`        | Supabase returns duplicate IDs  |
-| `[GROUP-STORE-DUPLICATE-DETECTED]`   | Store        | `canvas.ts:1072-1095`      | Duplicates enter `_rawGroups`   |
-| `[GROUP-ID-HISTOGRAM] DUPLICATES`    | Selector     | `canvas.ts:36-53`          | Duplicates in `visibleGroups`   |
-| `[ASSERT-FAILED] Duplicate groupIds` | Pre-Build    | `useCanvasSync.ts:178-189` | Duplicates before node creation |
-| `[DUPLICATE-GROUP-NODES]`            | Node Builder | `useCanvasSync.ts:459-480` | Duplicate Vue Flow nodes        |
-| `[GROUP-NODE-BUILDER]`               | Debug        | `useCanvasSync.ts:475-479` | Always (shows counts)           |
-| `[GROUP-LOAD-HISTOGRAM]`             | Debug        | `canvas.ts:235-238`        | Always on load                  |
-
-**How to Test**:
-
-1. `npm run dev`
-2. Open browser console, filter for `GROUP`
-3. Navigate to Canvas view
-4. Check for `[GROUP-*]` log messages
-5. Try to reproduce duplicate groups (refresh, create groups, etc.)
-6. The FIRST error log that fires pinpoints the origin layer
-
-**Next Steps for Future Claude Instance**:
-
-1. Reproduce the duplication bug and identify which diagnostic fires FIRST
-2. If `[SUPABASE-GROUP-DUPLICATES]` fires → Bug is at database level (check RLS, unique constraints)
-3. If `[GROUP-STORE-DUPLICATE-DETECTED]` fires → Bug is in store mutation logic (check `createGroup`, `loadFromDatabase`)
-4. If `[ASSERT-FAILED]` fires but store is clean → Bug is in how groups are passed to sync
-5. Once origin identified, apply targeted fix (do NOT apply fixes blindly)
-
-**Files Modified for Diagnostics**:
-
-- `src/composables/canvas/useCanvasSync.ts:178-189` - Upstream assertion before group processing
-- `src/composables/canvas/useCanvasSync.ts:459-480` - Node builder duplicate detection
-- `src/stores/canvas.ts:36-53` - `logGroupIdHistogram()` helper function
-- `src/stores/canvas.ts:159-165` - `visibleGroups` computed with histogram logging
-- `src/stores/canvas.ts:224-239` - Load diagnostics in `loadFromDatabase()`
-- `src/stores/canvas.ts:1072-1095` - Dev-only watcher for store duplicates
+**Pending Fixes**:
+- [ ] Fix 4: Set settling flag BEFORE async store updates
+- [ ] Fix 5: Remove 10px tolerance snapping
+- [ ] Fix 8: Strengthen zombie prevention
+- [ ] Fix 1-3, 6-7: See archive for details
 
 ---
 
-**Fixes Planned**:
+> **Historical Bug Fixes (BUG-151, BUG-152, BUG-020-025)**: See [Code Review Findings Archive](./archive/CODE_REVIEW_FINDINGS_JAN_2026.md) for full details on completed canvas, reactivity, and sync bugs fixed in January 2026.
 
-- [ ] Fix 4: Set settling flag BEFORE async store updates in resize
-- [ ] Fix 5: Remove 10px tolerance snapping in useCanvasSync.ts
-- [ ] Fix 8: Strengthen recentlyDeletedGroups zombie prevention
-- [ ] Fix 1: Atomic batch position updates in resize handler
-- [ ] Fix 3: Standardize containment to 75% threshold everywhere
-- [ ] Fix 6: Increase parent assignment ratio from 1.05x to 1.5x
-- [ ] Fix 2: Add toRelativePosition helper to canvasGraph.ts
-- [ ] Fix 7: Z-index based on nesting depth, not area
+### Active Planned Tasks (From Code Reviews)
 
----
-
-## Code Review Findings (January 9, 2026)
-
-> Comprehensive multi-agent code review identified 7 new issues. Related todo files in `todos/019-025-*.md`.
-
-### ~~TASK-164~~: Create Agent API Layer (❌ WON'T DO)
-
-**Priority**: P3-LOW
-**Status**: ❌ WON'T DO
-**Created**: January 9, 2026
-**Removed**: January 14, 2026
-
-**Problem**: No formal agent/tool API layer exists. Zoom controls require Vue context and aren't agent-accessible.
-
-**Resolution**: Removed - the proposed `window.__flowstateAgent` pattern is too simple to be meaningful. Playwright already covers testing needs. If AI integration becomes a goal, MCP (Model Context Protocol) would be the proper foundation, not a thin CRUD wrapper.
-
----
-
-### BUG-151: Tasks Render Empty on First Refresh (✅ DONE)
-
-**Priority**: P1-HIGH
-**Created**: January 9, 2026
-**Fixed**: January 9, 2026
-
-**Problem**: Task nodes rendered as empty shells (no title, description, metadata) on the first page refresh, but appeared correctly after a second refresh.
-
-**Root Cause**: In `TaskNode.vue`, the viewport zoom was copied once during setup instead of being tracked reactively:
-
-```typescript
-// BUG: One-time copy, not reactive
-viewport.value = vf.viewport.value
-```
-
-When Vue Flow initialized with `zoom: 0` (before the canvas was ready), `isLOD3` became `true` (since `0 < 0.2`), hiding all content. Since the viewport wasn't tracked reactively, it never updated.
-
-**Fix Applied**:
-
-- Store Vue Flow context reference for reactive access
-- Access `viewport.value.zoom` through computed with guards
-- Default to `zoom: 1` if value is 0, undefined, or invalid
-
-**File Changed**: `src/components/canvas/TaskNode.vue` (lines 161-180)
-
----
-
-### BUG-152: Group Task Count Requires Refresh After Drop (✅ DONE)
-
-**Priority**: P1-HIGH
-**Created**: January 9, 2026
-**Fixed**: January 9, 2026
-**Additional Fixes**: January 9, 2026
-
-**Problem**: When tasks were dropped into a group, the task count badge didn't update until a page refresh. Tasks also couldn't be moved immediately after being dropped, and couldn't be dragged outside of groups.
-
-**Root Causes**:
-
-1. `updateSectionTaskCounts` used `filteredTasks.value` which hadn't updated yet (async timing)
-2. Multi-drag path had early return that skipped `updateSectionTaskCounts` entirely
-3. No `nextTick` to wait for Vue reactivity to propagate store updates
-4. **BUG-152A**: `syncNodes()` didn't include `taskCount` in comparison for existing section nodes
-5. **BUG-152C**: `handleDrop()` called `setNodes(getNodes.value)` before v-model synced, reading stale state
-6. **BUG-152D**: `extent: 'parent'` CONSTRAINED tasks to group bounds, preventing drag-out
-7. **BUG-152E**: `syncNodes()` REPLACED `target.data = node.data` which broke `useNode()` reference tracking
-
-**Fix Applied**:
-
-- Made `updateSectionTaskCounts` async with `await nextTick()` before reading `filteredTasks`
-- Added task count updates to multi-drag path (was missing)
-- Await the async function at call sites
-- **BUG-152A**: Added `taskCount` to comparison in `syncNodes()` so group counts update
-- **BUG-152C**: Added `await nextTick()` before `setNodes()` to allow v-model sync
-- **BUG-152D**: Removed `extent: 'parent'` - `parentNode` alone handles child-moves-with-parent
-- **BUG-152E**: Changed to MUTATE individual properties (`target.data.taskCount = x`) instead of replacing the whole data object. This maintains the reference that `useNode()` is tracking in GroupNodeSimple.
-
-**Files Changed**:
-
-- `src/composables/canvas/useCanvasDragDrop.ts`
-- `src/composables/canvas/useCanvasSync.ts`
-- `src/composables/canvas/useCanvasEvents.ts`
-
----
-
-### TASK-179: Refactor TaskEditModal.vue (Planned)
+### TASK-179: Refactor TaskEditModal.vue (PLANNED)
 
 **Priority**: P2-MEDIUM
-**Status**: PLANNING
-**Goal**: Reduce file size (currently \~1800 lines) by extracting sub-components and logic.
+**Goal**: Reduce file size (~1800 lines) by extracting sub-components.
 
----
-
-### TASK-065: GitHub Release (⏸️ PAUSED)
+### TASK-065: GitHub Release (PAUSED)
 
 **Priority**: P3-LOW
-**Status**: Paused
+Remove hardcoded credentials, add Docker guide, create MIT LICENSE.
 
-- Remove hardcoded CouchDB credentials.
-- Add Docker self-host guide to README.
-- Create MIT LICENSE.
-
-### TASK-079: Tauri Desktop & Mobile (⏸️ PAUSED)
+### TASK-079: Tauri Desktop & Mobile (PAUSED)
 
 **Priority**: P3-LOW
-**Status**: Paused
+Desktop working. Mobile (Android/iOS) adds native timer and widgets beyond PWA.
 
-**Desktop (Working)**:
-
-- [x] Basic Tauri v2 app runs on Linux (Tuxedo OS)
-- [ ] System Tray (icon + menu)
-- [ ] KDE Taskbar Progress (D-Bus)
-- [ ] Fokus-style Break Splash Screen
-
-**Mobile (Future - Tauri v2 supports Android/iOS)**:
-
-- [ ] Android build configuration
-- [ ] Foreground service for timer (prevents kill)
-- [ ] Native notifications
-- [ ] Home screen widget (optional)
-- [ ] APK distribution (sideload or Play Store $25)
-
-**Note**: PWA provides mobile access now (ROAD-004). Tauri Mobile adds native features like reliable background timer and widgets.
-
-### TASK-110: New Branding: "Cyber Tomato" (⏸️ PAUSED)
-
-**Priority**: P2-MEDIUM
-**Status**: Paused
-
-- Design and implement new clean, minimal, cyberpunky "Cyber Tomato" icon set.
-- Includes: Main logo, Tauri app icon, and favicon.
-
-### TASK-108: Tauri/Web Design Parity (✅ DONE)
-
-**Priority**: P1-HIGH
-**Status**: ✅ DONE (2026-01-23)
-
-- Ensure the Tauri app design mimics 1-to-1 the web app design.
-
-### TASK-165: AI Text Generation in Markdown Editor (⏸️ PAUSED)
+### TASK-139: Undo State Persistence to localStorage (PLANNED)
 
 **Priority**: P3-LOW
-**Status**: Paused
-**Related**: ROAD-011 (AI Assistant)
+Persist undo/redo history to localStorage for session recovery.
 
-Add AI-powered text generation to the Tiptap markdown editor. Custom implementation (not using Tiptap Cloud Pro).
-
-**Proposed Features**:
-
-- Custom Tiptap extension that calls Claude/OpenAI API
-- Commands: "Complete", "Rewrite", "Summarize", "Expand", "Fix grammar"
-- Stream responses directly into the editor
-- Keyboard shortcut (Ctrl+Space or similar) to trigger AI menu
-
-### TASK-112: Admin/Developer Role & UI Restrictions (✅ DONE)
-
-**Priority**: P1-HIGH
-**Completed**: January 7, 2026
-
-- [x] Implement `isAdmin` / `isDev` flags in `useAuthStore` or user metadata.
-- [x] Create an "Admin Class" logic for privileged dashboard access.
-- [x] Restrict `/performance` and other debug views to Admin users only.
-- [x] Add "Developer Settings" section in the main settings.
-
-## Code Review Findings (January 7, 2026)
-
-> These issues were identified during comprehensive code review of uncommitted changes.
-
-### TASK-123: Fix Canvas Reactivity Issues (✅ DONE)
-
-**Priority**: P1-HIGH
-**Status**: Resolved
-
-- [x] Fix UI updates not reflecting immediately without manual refresh.
-- [x] Ensure `useTaskStore` state changes propagate correctly.
-- [x] Optimize `CanvasView` computed properties and watchers.
-
-### BUG-020: Drag Drop Position Resets (✅ DONE)
-
-**Priority**: P1-HIGH
-**Completed**: January 8, 2026
-
-- [x] Prevent tasks from resetting position after drag operations.
-- [x] Fix multi-node drag position stability.
-- [x] Ensure `isNodeDragging` and `isDragSettling` are correctly managed.
-
-### BUG-021: Group Resize Limit (✅ DONE)
-
-**Priority**: P2-MEDIUM
-**Completed**: January 8, 2026
-**Problem**: Users could not resize groups larger than 2000px, which was insufficient for large projects.
-**Fix**: Increased maximum width/height limits to 50,000px in `GroupNodeSimple.vue`, `CanvasView.vue`, and `useCanvasResize.ts`.
-
-### BUG-022: New Task Resets Existing Positions (✅ DONE)
-
-**Priority**: P1-HIGH
-**Completed**: January 8, 2026
-**Problem**: Creating a new task caused existing tasks to jump or reset their positions due to strict sync logic.
-**Fix**:
-
-1. Added a tolerance check (2.0px) in `useCanvasSync.ts` to preserve existing visual positions if they are close.
-2. **Crucial**: Updated `handleNodeDragStop` in `useCanvasDragDrop.ts` to update absolute positions of ALL child tasks when a section is dragged. This ensures the store stays in sync with visual relative movements.
-
-### BUG-023: Editor UI Rendering Issues (✅ DONE)
-
-**Priority**: P0-CRITICAL
-**Completed**: January 8, 2026
-**Problem**: Editor showed artifacts or black box due to excessive reactivity re-rendering the component while typing.
-
-### BUG-024: Group Resize Task Stability (✅ DONE)
-
-**Priority**: P1-HIGH
-**Completed**: January 8, 2026
-**Problem**: Resizing a group from the top/left edge caused child tasks to visually move or reset because the parent's origin shift wasn't correctly counteracted in the store.
-**Fix**: Updated `handleSectionResizeEnd` in `CanvasView.vue` to explicitly calculate and persist the correct absolute position for all child tasks when the parent's origin changes, ensuring they remain stationary on the canvas.
-
-### BUG-025: Unrelated Groups Move with Parent (Weekends)
-
-**Priority**: P1-HIGH
-**Status**: 🔴 OPEN
-**Problem**: Dragging a specific group (e.g., "Weekend") causes other unrelated groups to move as if they were children, despite not being visually inside it.
-**Location**: `src/composables/canvas/useCanvasDragDrop.ts` (Likely `parentGroupId` logic)
-**Location**: `src/views/CanvasView.vue` line 1845
-
-**Fix Applied**: Changed priority back to 'normal'. The 16ms batch delay (60fps) still feels instant but prevents performance issues when multiple tasks change rapidly.
-
-**Subtasks**:
-
-- [x] Changed priority from 'high' to 'normal'
-- [x] Build verification passed
-
-### TASK-125: Remove Debug Console.log Statements (📋 PLANNED - REDUCED SCOPE)
+### TASK-125: Remove Debug Console.log Statements (PLANNED - REDUCED SCOPE)
 
 **Priority**: P3-LOW
-**Discovered**: January 7, 2026
-**Updated**: January 15, 2026
+Only `taskOperations.ts:672` needs wrapping in `import.meta.env.DEV` check.
 
-**Problem**: Debug console.log statements in production code paths.
+### BUG-025: Unrelated Groups Move with Parent (OPEN)
 
-**Status Update (Jan 15, 2026)**:
+**Priority**: P1-HIGH
+Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.ts` parentGroupId logic.
 
-- ~~`src/composables/canvas/useCanvasDragDrop.ts`~~ - File no longer exists (refactored)
-- ~~`src/components/tasks/TaskEditModal.vue`~~ - Clean, no console.logs found
-- `src/stores/tasks/taskOperations.ts` - 3 statements remain:
-  - Lines 174, 184: `📍 [GEOMETRY-*]` logs - **KEEP** (intentional drift detection per CLAUDE.md)
-  - Line 672: Project move log - **Candidate for removal**
-
-**Remaining Work**:
-
-- [ ] Remove or wrap line 672 in `import.meta.env.DEV` check
-- [ ] Verify no runtime issues
-
-### BUG-022: Fix Zombie Edge UX
+### TASK-123: Consolidate Network Status Implementations (PLANNED)
 
 **Priority**: P2-MEDIUM
-**Discovered**: January 8, 2026
-**Problem**: Users cannot immediately re-create a connection they just deleted because `recentlyRemovedEdges` treats it as a "zombie" edge from a sync conflict and blocks it for 2 seconds.
-**Solution**: Modify `handleConnect` to explicitly remove the edge ID from `recentlyRemovedEdges` when a user intentionally creates a connection, distinguishing it from an automated background sync.
-
-### TASK-123: Consolidate Network Status Implementations (📋 PLANNED)
-
-**Priority**: P2-MEDIUM
-**Related**: ROAD-004 (PWA Mobile Support)
-
-Codebase has 3 competing network status implementations. Adding PWA would create a 4th.
-
-**Current Implementations**:
-
-1. `src/services/sync/NetworkMonitorService.ts`
-2. `src/composables/useNetworkOptimizer.ts` (line 108)
-3. `src/composables/useOptimisticUI.ts` (line 44)
-
-**Recommended**: Consolidate into single `useNetworkStatus.ts` or use VueUse's `useOnline()`.
-
-**Subtasks**:
-
-- [ ] Audit all 3 implementations for feature differences
-- [ ] Create single source of truth composable
-- [ ] Deprecate or delete redundant implementations
-  - [x] Analyze logs and source code
-  - [x] Create implementation plan
-  - [x] Make Realtime subscription more robust
-  - [x] Verify fix
-- [ ] Update all consumers to use consolidated version
-
-### ~~BUG-027~~: Canvas View Frequent Remounting (❌ NOT A BUG)
-
-**Priority**: P1-HIGH (Usability)
-**Discovered**: January 8, 2026
-**Closed**: January 8, 2026
-**Related**: Undo/Redo System Review
-
-**Original Problem**: Canvas view appeared to repeatedly unmount and remount, observed via "Full Remount Detected" logs.
-
-**Investigation Result**: This was NOT a bug. The frequent remounting observed was caused by **HMR (Hot Module Replacement)** during development when code files were edited. During normal navigation (e.g., Board -> Canvas), the component only mounts once as expected.
-
-**Evidence**:
-
-- Normal navigation shows single "CanvasView mounted" message
-- Multiple mounts only occur when Vite HMR updates components
-- Canvas view is stable during production-like usage
+3 competing implementations. Consolidate into single `useNetworkStatus.ts`.
 
 ---
 
-### TASK-139: Undo State Persistence to localStorage (📋 PLANNED)
-
-**Priority**: P3-LOW (Enhancement)
-**Discovered**: January 8, 2026
-**Related**: Undo/Redo System Review
-
-**Feature**: Persist undo/redo history to localStorage for session recovery.
-
-**Current Behavior**: Undo history is lost on page refresh. Users lose ability to undo actions from before the refresh.
-
-**Proposed**:
-
-- [ ] Serialize undo stack to localStorage on state changes
-- [ ] Restore undo stack from localStorage on app initialization
-- [ ] Add TTL to prevent stale history from being restored
-- [ ] Handle large state gracefully (truncate if over localStorage limits)
-
----
-
-### ~~TASK-140~~: Undo/Redo Visual Feedback (✅ DONE)
-
-**Priority**: P3-LOW (UX Enhancement)
-**Discovered**: January 8, 2026
-**Completed**: January 23, 2026
-**Related**: Undo/Redo System Review
-
-**Feature**: Show toast/notification when undo or redo is performed.
-
-**Implementation**:
-- Toast notifications via `showUndoRedoToast()` in `undoSingleton.ts`
-- Setting `showUndoRedoToasts` in settings store (default: true)
-- Toggle in Settings > Workflow > Feedback
-
-**Completed**:
-
-- [x] Show brief toast: "Undone: [action description]"
-- [x] Show brief toast: "Redone: [action description]"
-- [x] Auto-dismiss after 2.5 seconds
-- [x] Option to disable in settings
-
----
-
----
-
-#### Problem Statement
-
-Tasks/groups sometimes appear duplicated on the canvas (two visually identical nodes with the same `task.id`). This is NOT about the intentional "Duplicate task" feature - it's about automatic/unintended duplication where only one node should exist.
-
-**Definition of "duplicate bug"**: Two or more Vue Flow nodes representing the same underlying `task.id` or `group.id`, where only one should exist unless the user explicitly used a "duplicate" feature.
-
----
-
-#### Data Flow Pipeline (Supabase → Store → Canvas → Nodes)
-
-```
-┌──────────────┐    ┌─────────────────────┐    ┌──────────────────┐    ┌────────────┐
-│  Supabase    │ → │   Task Store        │ → │  Canvas Sync     │ → │ Vue Flow   │
-│  (tasks DB)  │    │   (_rawTasks ref)   │    │  (node builder)  │    │ (nodes)    │
-└──────────────┘    └─────────────────────┘    └──────────────────┘    └────────────┘
-       ↑                      ↑
-       │                      │
-  fetchTasks()         updateTaskFromSync()
-  (initial load)       (realtime updates)
-```
-
-**Key Functions by Layer**:
-
-| Layer           | Function                     | File                        |
-| --------------- | ---------------------------- | --------------------------- |
-| Load            | `fetchTasks()`               | `useSupabaseDatabase.ts`    |
-| Load            | `loadFromDatabase()`         | `taskPersistence.ts`        |
-| Realtime        | `initRealtimeSubscription()` | `useSupabaseDatabase.ts`    |
-| Realtime        | `onTaskChange()` callback    | `useAppInitialization.ts`   |
-| Store Sync      | `updateTaskFromSync()`       | `tasks.ts`                  |
-| Filtered Tasks  | `useTaskFiltering()`         | `taskStates.ts`             |
-| Canvas Selector | `tasksWithCanvasPosition`    | `useCanvasFilteredState.ts` |
-| Node Builder    | `syncStoreToCanvas()`        | `useCanvasSync.ts`          |
-
----
-
-#### Solution Implemented
-
-**1. Centralized Helper** (`src/utils/canvas/invariants.ts`):
-
-```typescript
-export function assertNoDuplicateIds<T extends { id: string }>(
-    items: T[],
-    context: string
-): DuplicateIdResult {
-    // Returns { duplicates, totalCount, uniqueIdCount, hasDuplicates }
-    // Logs [ASSERT-FAILED] on detection
-}
-```
-
-**2. Detection at Every Layer** (all use `assertNoDuplicateIds`):
-
-| Layer                | File                        | Console Tag on Duplicate               |
-| -------------------- | --------------------------- | -------------------------------------- |
-| **Supabase Load**    | `taskPersistence.ts`        | `[SUPABASE-DUPLICATES]`                |
-| **Supabase Load**    | `canvas.ts`                 | `[SUPABASE-GROUP-DUPLICATES]`          |
-| **Realtime Sync**    | `tasks.ts`                  | `[SYNC-DUPLICATE-CREATED]`             |
-| **Store Watcher**    | `taskStates.ts`             | `[STORE-DUPLICATE-DETECTED]`           |
-| **Store Watcher**    | `canvas.ts`                 | `[GROUP-STORE-DUPLICATE-DETECTED]`     |
-| **Canvas Selector**  | `useCanvasFilteredState.ts` | `[TASK-ID-HISTOGRAM] DUPLICATES`       |
+> **Canvas Duplicate Detection Diagnostics**: See [Code Review Findings Archive](./archive/CODE_REVIEW_FINDINGS_JAN_2026.md#canvas-duplicate-detection) for full data flow pipeline, diagnostic console tags, and verification steps.
 | **Canvas Selector**  | `canvas.ts`                 | `[GROUP-ID-HISTOGRAM] DUPLICATES`      |
 | **Node Builder**     | `useCanvasSync.ts`          | `[DUPLICATE-NODES]`                    |
 | **Node Builder**     | `useCanvasSync.ts`          | `[DUPLICATE-GROUP-NODES]`              |
@@ -2978,74 +2281,12 @@ If user visually sees a duplicate task/group node, **at least one** of these MUS
 
 ---
 
----
-
 ### January 20, 2026: Data Crisis & System Stabilization
 
-**Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS
+**Status**: Mostly resolved. See [Code Review Findings Archive](./archive/CODE_REVIEW_FINDINGS_JAN_2026.md#january-20-2026-data-crisis--system-stabilization) for full crisis table and completed tasks (TASK-329, TASK-330, TASK-331, TASK-332).
+
 **Crisis Analysis**: [reports/2026-01-20-auth-data-loss-analysis.md](../reports/2026-01-20-auth-data-loss-analysis.md)
 
-On Jan 20, 2026, a major data crisis occurred where `auth.users` were wiped and backup systems failed to recover the data due to root causes in persistence and automation.
-
-| ID | Issue | Root Cause | Status | Deep Context |
-|----|-------|------------|--------|--------------|
-| 1 | Auth wiped | No DB volumes | **Fixed** | Supabase restart lost `auth.users`; recreated with original UUID. |
-| 2 | Seed missing | Partial `seed.sql` | **Fixed** | Added `endlessblink@gmail.com` with UUID `717f5209-42d8-4bb9-8781-740107a384e5`. |
-| 3 | Shadow-mirror | Automation gap | **Partial** | Script exists but wasn't auto-running; now manually verified. |
-| 4 | LocalStorage | Tauri ID mismatch | **Fixed** | Pointed to `com.flowstate.app` instead of `com.pomoflow.desktop`. |
-| 5 | Role detector | String check bug | **Fixed** | Corrected `shadow-mirror.cjs` to check decoded payload for service role. |
-| 6 | Password lost | Reset required | **Resolved** | Used temporary password for recovery. |
-| 7 | Download stuck | Tauri Webview bug | **Workaround** | Manual extraction; native dialog fix planned in TASK-332. |
-| 8 | Schema error | PostgREST Cache | **Fixed** | Service restart cleared schema cache issues. |
-| 9 | Golden Offline | Conn. required | **Expected** | Feature requires Supabase connectivity for validation. |
-| 10| Data mismatch | Local > Cloud | **Active** | 53 local tasks vs 42 cloud; reconciliation required. |
-
-#### Roadmap Updates (Crisis Stabilization)
-
-##### TASK-329: Auth & Data Persistence Hardening (✅ DONE)
-- [x] Implement `post-start` hook to verify `endlessblink` user exists.
-- [x] Configure PostgreSQL data persistence in Docker volume more robustly.
-- [x] Update `useSupabaseDatabase.ts` to retry auth on 401/403 with exponential backoff.
-
-##### TASK-330: Shadow-Mirror Reliability & Automation (✅ DONE)
-- [x] Implement automatic `supabase stop --backup` hook via `scripts/db-stop.sh`.
-- [x] Add `npm run shadow` trigger to `npm run dev` startup (via `backup:watch`).
-- [x] Add cron-like monitoring to ensure `shadow.db` is updating every 5 minutes.
-- [x] Add `auth.users` export via `docker exec` to `shadow-mirror.cjs` (✅ Done).
-
-##### ~~TASK-331~~: Tauri Multi-App Migration (LocalStorage) (✅ OBSOLETE)
-- ~~Create migration script to copy data from `com.pomoflow.desktop` to `com.flowstate.app`.~~ N/A
-- ~~Update all persistence layers to use the unified app name.~~ N/A
-- **Closed 2026-01-23**: Single-user app, old `com.pomoflow.desktop` directory deleted manually. No migration needed.
-
-##### ~~TASK-332~~: Backup Reliability & Verification (✅ DONE)
-- [x] Fix Tauri native file dialog for "Download Backup" button.
-  - Added path separator fix
-  - Added 30s timeout to prevent XDG portal hangs
-  - Browser fallback when Tauri methods fail
-- [x] Implement Golden Backup rotation (keep last 3 peak task counts).
-  - New storage key: `flow-state-golden-backup-rotation`
-  - Backups sorted by task count descending
-  - Legacy single-backup migration supported
-  - UI shows all peaks with restore option for each
-- [x] Add Automated Backup Verification tests (22 comprehensive tests).
-  - Checksum validation
-  - Data completeness
-  - Edge cases (empty, corrupted)
-  - Golden backup rotation
-  - Suspicious data loss detection (BUG-059)
-  - Restore analysis (TASK-344 dry-run)
-  - Export/import round-trip
-
-##### TASK-333: Independent Audit of Crisis Analysis (🔄 IN PROGRESS)
-- [ ] Spawn independent QA Supervisor via `dev-maestro`.
-- [ ] Verify consistency between documented fixes and codebase state.
-- [ ] Review crisis report for any missing deep context or technical inaccuracies.
-
----
-
-#### Related
-- [TASK-317: Shadow Backup Deletion-Aware Restore](#task-317-shadow-backup-deletion-aware-restore--supabase-data-persistence-done)
-- [Crisis Report](../reports/2026-01-20-auth-data-loss-analysis.md)
+**Active Task**:
+- TASK-333: Independent Audit of Crisis Analysis (IN PROGRESS) - QA Supervisor verification pending
 

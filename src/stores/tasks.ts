@@ -222,8 +222,14 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
-          // BUG-1051: Fix sync race condition - use >= for equal timestamps to prevent overwrites
-          if (currentTask.updatedAt >= normalizedTask.updatedAt) {
+          // BUG-1091: Fix cross-browser sync - when timestamps are equal, ACCEPT remote (DB is source of truth)
+          // Previous code used >= which caused split-brain when both browsers had same timestamp
+          // Only skip if local is STRICTLY newer (not equal)
+          if (currentTask.updatedAt > normalizedTask.updatedAt) {
+            console.log(`🛡️ [BUG-1091] Skipping older sync for "${currentTask.title?.slice(0, 20)}"`, {
+              localUpdatedAt: currentTask.updatedAt,
+              remoteUpdatedAt: normalizedTask.updatedAt
+            })
             return
           }
 

@@ -752,10 +752,16 @@ export const useTimerStore = defineStore('timer', () => {
         resumeFollowerPoll()
       }
     } else {
-      // No active session - but still start follower polling to detect new sessions
-      // TASK-1009: This ensures we pick up timers started on other devices
-      console.log('🍅 [TIMER] No active session, starting follower poll to detect new sessions')
-      resumeFollowerPoll()
+      // No active session - rely on Realtime subscription to detect new sessions
+      // BUG-1085 FIX: Do NOT start follower poll when there's no session
+      // Previously, this was polling every 3 seconds indefinitely, causing:
+      // - Excessive API calls (even when timer isn't being used)
+      // - Console log spam
+      // - Potential rate limiting issues
+      // Realtime subscription handles detecting new sessions from other devices.
+      // Follower polling is only needed when we HAVE a session and are not the leader.
+      console.log('🍅 [TIMER] No active session, waiting for Realtime to detect new sessions')
+      // pauseFollowerPoll() is already the default state - don't start it here
     }
 
     // Set cross-tab callbacks

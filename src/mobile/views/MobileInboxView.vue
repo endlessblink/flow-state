@@ -293,7 +293,8 @@ const {
       // Close TaskCreateBottomSheet if open (prevents overlap issues)
       isTaskCreateOpen.value = false
       // Auto-detect language from Whisper response
-      const lang = result.language === 'he' ? 'he-IL' : 'en-US'
+      // Groq returns full language name like 'Hebrew', 'English', etc.
+      const lang = (result.language === 'Hebrew' || result.language === 'he') ? 'he-IL' : 'en-US'
       const parsed = parseTranscript(result.transcript.trim(), lang)
       parsedVoiceTask.value = parsed
       showVoiceConfirmation.value = true
@@ -413,9 +414,8 @@ const toggleVoiceInput = async () => {
     // Reset confirmation state when starting new voice input
     parsedVoiceTask.value = null
     showVoiceConfirmation.value = false
-    // DON'T open TaskCreateBottomSheet for voice input
-    // The quick-add-bar voice feedback is visible and provides better UX
-    // isTaskCreateOpen.value = true // <-- Removed: was blocking mic button
+    // Open TaskCreateBottomSheet to show voice feedback during recording
+    isTaskCreateOpen.value = true
     await startVoice()
   }
 }

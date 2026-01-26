@@ -178,22 +178,42 @@ export function useTaskContextMenuActions(
     }
 
     const startTaskNow = async () => {
+        console.log('🎯 [CONTEXT-MENU] startTaskNow called', {
+            currentTask: currentTask.value?.id,
+            currentTaskTitle: currentTask.value?.title,
+            isBatchOperation: isBatchOperation.value
+        })
         if (currentTask.value && !isBatchOperation.value) {
-            // BUG-1090: AWAIT to ensure instance is persisted before navigation
-            await taskStore.startTaskNowWithUndo(currentTask.value.id)
-            // BUG-1051: AWAIT for timer sync
-            await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+            try {
+                // BUG-1090: AWAIT to ensure instance is persisted before navigation
+                console.log('🎯 [CONTEXT-MENU] Starting task now, creating calendar instance...')
+                await taskStore.startTaskNowWithUndo(currentTask.value.id)
+                console.log('🎯 [CONTEXT-MENU] Task instance created, starting timer...')
 
-            // BUG-1090: Use query param instead of event to avoid race condition
-            // The event was dispatched before CalendarView mounted, causing it to miss
-            if (router.currentRoute.value.name !== 'calendar') {
-                await router.push({ path: '/calendar', query: { startNow: 'true' } })
-            } else {
-                // Already on calendar - dispatch event directly
-                window.dispatchEvent(new CustomEvent('start-task-now', {
-                    detail: { taskId: currentTask.value.id }
-                }))
+                // BUG-1051: AWAIT for timer sync
+                await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+                console.log('🎯 [CONTEXT-MENU] Timer started, navigating...')
+
+                // BUG-1090: Use query param instead of event to avoid race condition
+                // The event was dispatched before CalendarView mounted, causing it to miss
+                if (router.currentRoute.value.name !== 'calendar') {
+                    console.log('🎯 [CONTEXT-MENU] Navigating to calendar with startNow param')
+                    await router.push({ path: '/calendar', query: { startNow: 'true' } })
+                } else {
+                    // Already on calendar - dispatch event directly
+                    console.log('🎯 [CONTEXT-MENU] Already on calendar, dispatching event')
+                    window.dispatchEvent(new CustomEvent('start-task-now', {
+                        detail: { taskId: currentTask.value.id }
+                    }))
+                }
+            } catch (error) {
+                console.error('🎯 [CONTEXT-MENU] startTaskNow ERROR:', error)
             }
+        } else {
+            console.warn('🎯 [CONTEXT-MENU] startTaskNow skipped:', {
+                hasCurrentTask: !!currentTask.value,
+                isBatchOperation: isBatchOperation.value
+            })
         }
         emit('close')
     }

@@ -83,7 +83,7 @@
 | ~~**TASK-1073**~~        | ✅ **DONE** **Inbox: Add Sorting Options (Filters & Sort)**            | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | TASK-1072                                                                                                                                                                                                      |                                                        |
 | ~~**BUG-1074**~~         | ✅ **DONE** **Canvas Task Deletion to Inbox Not Working**              | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1075**~~         | ✅ **DONE** **Inbox Header Time Filter Text Wrapping/Clipping**        | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
-| **BUG-1086**             | **PWA Blank Screen on Mobile - Intermittent**                          | **P1**                                              | 🔄 **IN PROGRESS** - Fallback watcher added but issue persists. Seeing double auth init. User has stale cache.                  | -                                                                                                                                                                                                              |                                                        |
+| **BUG-1086**             | **VPS/PWA Auth Not Persisting + Blank Screen**                         | **P0**                                              | 🔄 **IN PROGRESS** - Symptoms: (1) Sign-out happens unexpectedly, (2) Sign-in doesn't persist correctly, (3) Blank screen. Double auth init in console. Stale cache suspected.                  | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1090**             | **VPS: START and TIMER buttons in task menu don't work**               | **P1**                                              | 🔄 **IN PROGRESS** - Fixed race condition: event dispatched before CalendarView mounted                                          | -                                                                                                                                                                                                              |                                                        |
 | ROAD-025                 | Backup Containerization (VPS)                                          | P3                                                  | [See Detailed Plan](#roadmaps)                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | ~~**TASK-230**~~         | ~~**Fix Deps & Locks Tab**~~                                           | **P2**                                              | ✅ **DONE** (2026-01-11)                                                                                                         | Added /api/locks endpoint, fixed dependency parser                                                                                                                                                             |                                                        |
@@ -281,6 +281,42 @@
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+---
+
+### BUG-1086: VPS/PWA Auth Not Persisting + Blank Screen (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-26)
+
+**Problem**: On VPS production (in-theflow.com), users experience authentication issues:
+1. **Unexpected sign-out**: User gets signed out without explicit action
+2. **Sign-in not persisting**: After signing in, auth state doesn't stay - page shows signed out or blank
+3. **Blank screen**: Intermittent blank screen on mobile PWA
+
+**Symptoms from console**:
+- Double auth initialization (`Initializing auth...` appearing multiple times)
+- `Failed to load resource: net::ERR_BLOCKED_BY_CLIENT` (likely ad blocker)
+- Stale service worker cache suspected
+
+**Suspected Causes**:
+- Service worker caching stale auth tokens
+- Double auth init causing race condition
+- localStorage/sessionStorage conflicts
+- Brave browser shields blocking Supabase requests
+
+**Investigation Tasks**:
+- [ ] Check `auth.ts` for duplicate `onAuthStateChange` subscriptions
+- [ ] Verify SW cache invalidation on auth change
+- [ ] Test in incognito/private mode
+- [ ] Check Supabase session refresh logic
+- [ ] Test with different browsers (Chrome vs Brave vs Firefox)
+
+**Files to Investigate**:
+- `src/stores/auth.ts`
+- `src/services/auth/supabase.ts`
+- `src/sw.ts` (service worker)
+- `src/composables/useSupabaseDatabase.ts`
 
 ---
 

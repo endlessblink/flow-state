@@ -85,7 +85,7 @@ export class ConflictResolutionService {
     // Select strategy based on conflict type and severity
     const strategy = this.selectLegacyStrategy(conflict);
 
-    let resolvedDocument: any = conflict.localVersion.data;
+    let resolvedDocument: unknown = conflict.localVersion.data;
     let winner = 'local';
 
     if (strategy === ResolutionType.LAST_WRITE_WINS) {
@@ -191,13 +191,13 @@ export class ConflictResolutionService {
         const sortedRules = [...rules].sort((a, b) => a.priority - b.priority);
         for (const rule of sortedRules) {
           if (this.shouldApplyRule(rule, diff.localValue, diff.remoteValue)) {
-            (mergedTask as any)[field] = this.applyRule(rule, diff.localValue, diff.remoteValue);
+            (mergedTask as Record<string, unknown>)[field] = this.applyRule(rule, diff.localValue, diff.remoteValue);
             break;
           }
         }
       } else {
         // Default: local wins for unknown conflicting fields
-        (mergedTask as any)[field] = diff.localValue;
+        (mergedTask as Record<string, unknown>)[field] = diff.localValue;
       }
     }
 
@@ -205,7 +205,7 @@ export class ConflictResolutionService {
     return mergedTask;
   }
 
-  private shouldApplyRule(rule: ResolutionRule, local: any, remote: any): boolean {
+  private shouldApplyRule(rule: ResolutionRule, local: unknown, remote: unknown): boolean {
     switch (rule.condition) {
       case 'always': return true;
       case 'when-empty': return !local || !remote;
@@ -215,7 +215,7 @@ export class ConflictResolutionService {
     }
   }
 
-  private applyRule(rule: ResolutionRule, local: any, remote: any): any {
+  private applyRule(rule: ResolutionRule, local: unknown, remote: unknown): unknown {
     switch (rule.action) {
       case 'prefer-local': return local;
       case 'prefer-remote': return remote;

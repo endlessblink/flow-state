@@ -62,7 +62,7 @@ export interface InvariantViolation {
     nodeId: string
     nodeType: 'group' | 'task'
     message: string
-    details: Record<string, any>
+    details: Record<string, unknown>
 }
 
 /**
@@ -556,7 +556,7 @@ type GeometrySource = typeof ALLOWED_GEOMETRY_SOURCES[number]
 /**
  * Check if an update object contains geometry fields
  */
-export function containsGeometryFields(updates: Record<string, any>): GeometryField[] {
+export function containsGeometryFields(updates: Record<string, unknown>): GeometryField[] {
     return GEOMETRY_FIELDS.filter(field => field in updates)
 }
 
@@ -572,7 +572,7 @@ export function containsGeometryFields(updates: Record<string, any>): GeometryFi
  * @param entityId - The ID of the entity being updated
  */
 export function assertGeometrySource(
-    updates: Record<string, any>,
+    updates: Record<string, unknown>,
     source: string | undefined,
     entityType: 'task' | 'group',
     entityId: string

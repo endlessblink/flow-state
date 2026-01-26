@@ -1,3 +1,4 @@
+/// <reference lib="webworker" />
 /**
  * TASK-1009: Custom Service Worker for Timer Notifications
  *
@@ -13,7 +14,8 @@ import { CacheFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 // VitePWA injects __WB_MANIFEST at build time
-declare const self: ServiceWorkerGlobalScope
+// VitePWA injects __WB_MANIFEST at build time
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 // ============================================================================
 // WORKBOX PRECACHING (auto-injected by VitePWA)
@@ -99,18 +101,22 @@ interface NotificationData {
   taskName?: string
 }
 
+interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
 /**
  * Handle messages from the main app
  */
-// Event listener
-(self as any).addEventListener('message', (event: any) => {
+self.addEventListener('message', (event) => {
   const data = event.data
 
   if (!data || !data.type) return
 
   switch (data.type) {
     case 'SKIP_WAITING':
-      // @ts-expect-error - Service worker method
       self.skipWaiting()
       break
 
@@ -133,7 +139,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
     : `Great work! ${taskName ? `Time for a break from "${taskName}"` : 'Time for a break!'}`
 
   // Determine action buttons based on session type
-  const actions = wasBreak
+  const actions: NotificationAction[] = wasBreak
     ? [
       { action: 'start-work', title: '🍅 Start Work' },
       { action: 'postpone', title: '⏰ +5 min' },
@@ -144,7 +150,6 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
     ]
 
   try {
-    // @ts-expect-error - Service worker registration
     await self.registration.showNotification(title, {
       body,
       icon: '/icons/pwa-192x192.png',
@@ -159,7 +164,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
         taskName,
       } as NotificationData,
       vibrate: [200, 100, 200], // Vibration pattern for mobile
-    })
+    } as NotificationOptions & { actions?: NotificationAction[] })
   } catch (error) {
     console.error('[SW] Failed to show notification:', error)
   }
@@ -168,8 +173,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
 /**
  * Handle notification click events (body click or action button click)
  */
-// Event listener
-(self as any).addEventListener('notificationclick', (event: any) => {
+self.addEventListener('notificationclick', (event) => {
   const notification = event.notification
   const action = event.action
   const data = notification.data as NotificationData
@@ -193,12 +197,12 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
 
   // Send message to all open clients
   event.waitUntil(
-    // @ts-expect-error - Service worker clients
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList: WindowClient[]) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
       // Try to focus an existing window first
       for (const client of clientList) {
-        if ('focus' in client) {
-          await client.focus()
+        // WindowClient type check
+        if ('focus' in client && typeof (client as WindowClient).focus === 'function') {
+          await (client as WindowClient).focus()
           client.postMessage({
             type: messageType,
             taskId: data?.taskId,
@@ -209,9 +213,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
       }
 
       // No existing window - open a new one
-      // @ts-expect-error - Service worker clients
       if (self.clients.openWindow) {
-        // @ts-expect-error - Service worker clients
         await self.clients.openWindow('/')
       }
     })
@@ -221,14 +223,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
 /**
  * Handle notification close (dismissed without action)
  */
-// Create a typed reference to self
-const sw = self as any;
-
-/**
- * Handle notification close (dismissed without action)
- */
-// Event listener
-sw.addEventListener('notificationclose', (event: any) => {
+self.addEventListener('notificationclose', (event) => {
   // User dismissed the notification - could log this for analytics
   console.log('[SW] Notification dismissed:', event.notification.tag)
 })
@@ -237,17 +232,14 @@ sw.addEventListener('notificationclose', (event: any) => {
 // SERVICE WORKER LIFECYCLE
 // ============================================================================
 
-sw.addEventListener('install', () => {
+self.addEventListener('install', () => {
   console.log('[SW] Timer notification service worker installed')
   // Skip waiting to activate immediately (user opted for auto-update)
-  // @ts-expect-error - Service worker method
   self.skipWaiting()
 })
 
-// Event listener
-sw.addEventListener('activate', (event: any) => {
+self.addEventListener('activate', (event) => {
   console.log('[SW] Timer notification service worker activated')
   // Claim all clients immediately
-  // @ts-expect-error - Service worker clients
   event.waitUntil(self.clients.claim())
 })

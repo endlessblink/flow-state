@@ -142,7 +142,7 @@ class CanvasResourceManager {
         try {
             // Clear Vue Flow instance
             if (this.vueFlowInstance) {
-                const instance = this.vueFlowInstance as any
+                const instance = this.vueFlowInstance as { destroy?: () => void; clearNodes?: () => void; clearEdges?: () => void }
                 if (typeof instance.destroy === 'function') {
                     instance.destroy()
                 }

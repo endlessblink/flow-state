@@ -167,7 +167,7 @@ export class PerformanceBenchmark {
         // 2. Measure Canvas Sync
         const syncStart = performance.now()
         if (typeof (canvasStore as any).syncTasksToCanvas === 'function') {
-          ; (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])
+           (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])
         }
         const syncEnd = performance.now()
 

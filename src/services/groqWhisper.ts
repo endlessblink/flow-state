@@ -140,7 +140,7 @@ export function recordAndTranscribe(
   options: GroqWhisperOptions = {}
 ): Promise<GroqWhisperResult> & { stop: () => void; cancel: () => void } {
   let mediaRecorder: MediaRecorder | null = null
-  let audioChunks: Blob[] = []
+  const audioChunks: Blob[] = []
   let resolvePromise: (result: GroqWhisperResult) => void
   let rejectPromise: (error: Error) => void
   let isCancelled = false

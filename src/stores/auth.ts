@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const error = ref<AuthError | null>(null)
   const isInitialized = ref(false)
+  const initializationFailed = ref(false)
 
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
@@ -46,9 +47,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * BUG-339: Perform token refresh and reschedule
+   * BUG-339: Perform token refresh and reschedule with retry logic
    */
-  const performTokenRefresh = async () => {
+  const performTokenRefresh = async (attempt = 1, maxAttempts = 3): Promise<void> => {
     if (!supabase) return
 
     try {
@@ -56,8 +57,14 @@ export const useAuthStore = defineStore('auth', () => {
       const { data, error: refreshError } = await supabase.auth.refreshSession()
 
       if (refreshError) {
-        console.error('[AUTH] Proactive token refresh failed:', refreshError)
-        // Don't clear session - let user continue until actual API call fails
+        if (attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
+          console.warn(`[AUTH] Token refresh failed, retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`)
+          setTimeout(() => performTokenRefresh(attempt + 1, maxAttempts), delay)
+        } else {
+          console.error('[AUTH] Token refresh failed after all retries:', refreshError)
+          // Don't clear session - let user continue until actual API call fails
+        }
         return
       }
 
@@ -72,7 +79,13 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } catch (e) {
-      console.error('[AUTH] Proactive token refresh error:', e)
+      if (attempt < maxAttempts) {
+        const delay = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
+        console.warn(`[AUTH] Token refresh error, retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`)
+        setTimeout(() => performTokenRefresh(attempt + 1, maxAttempts), delay)
+      } else {
+        console.error('[AUTH] Token refresh error after all retries:', e)
+      }
     }
   }
 
@@ -254,10 +267,22 @@ export const useAuthStore = defineStore('auth', () => {
       }
       console.error('Auth initialization failed:', e)
       error.value = e as AuthError
+      initializationFailed.value = true
     } finally {
       isLoading.value = false
       isInitialized.value = true
     }
+  }
+
+  /**
+   * Retry auth initialization after a failure
+   */
+  const retryInitialization = async () => {
+    console.log('[AUTH] Retrying initialization...')
+    initializationFailed.value = false
+    error.value = null
+    isInitialized.value = false
+    await initialize()
   }
 
   /**
@@ -607,6 +632,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading,
     error,
     isInitialized,
+    initializationFailed,
 
     // Getters
     isAuthenticated,
@@ -619,6 +645,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Actions
     initialize,
+    retryInitialization,
     signIn,
     signInWithPassword,
     signInWithGoogle,

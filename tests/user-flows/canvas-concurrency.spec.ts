@@ -209,9 +209,10 @@ test.describe('Canvas Concurrency & Race Conditions', () => {
 
             // Simulate "Remote Sync"
             const pm = await debug.positionManager;
-            pm.batchUpdate([
+            const result = pm.batchUpdate([
                 { id: gid, x: 300, y: 300, width: 200, height: 200 } // Reset to original
             ], 'remote-sync');
+            console.log('Sync result:', result);
 
         }, groupId);
 

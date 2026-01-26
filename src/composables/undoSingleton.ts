@@ -83,7 +83,7 @@ let operationStack: OperationSnapshot[] = []
 let redoOperationStack: OperationSnapshot[] = []
 
 // Flag to track if we're in operation-aware mode
-let useOperationAwareUndo = true
+const useOperationAwareUndo = true
 
 // Global singleton refHistory instance - created only ONCE
 let refHistoryInstance: ReturnType<typeof useManualRefHistory<UnifiedUndoState>> | null = null

@@ -30,18 +30,18 @@
       :sort-by="sortBy"
       :search-query="searchQuery"
 
-      @toggleCollapse="isCollapsed = !isCollapsed"
-      @update:activeTimeFilter="activeTimeFilter = $event"
-      @toggleAdvancedFilters="showAdvancedFilters = !showAdvancedFilters"
+      @toggle-collapse="isCollapsed = !isCollapsed"
+      @update:active-time-filter="activeTimeFilter = $event"
+      @toggle-advanced-filters="showAdvancedFilters = !showAdvancedFilters"
       @update:selected-canvas-groups="selectedCanvasGroups = $event"
       @update:unscheduled-only="unscheduledOnly = $event"
       @update:selected-priority="selectedPriority = $event"
       @update:selected-project="selectedProject = $event"
       @update:selected-duration="selectedDuration = $event"
       @update:hide-done-tasks="toggleHideDoneTasks"
-      @update:sortBy="sortBy = $event"
-      @update:searchQuery="searchQuery = $event"
-      @clearAll="clearAllFilters"
+      @update:sort-by="sortBy = $event"
+      @update:search-query="searchQuery = $event"
+      @clear-all="clearAllFilters"
     />
 
     <!-- Collapsed State Badges -->
@@ -78,7 +78,7 @@
     <UnifiedInboxInput
       v-if="!isCollapsed"
       :show-brain-dump="showBrainDump"
-      @addTask="addTask"
+      @add-task="addTask"
     />
 
     <!-- 3. Task List -->
@@ -89,15 +89,15 @@
       :multi-select-mode="multiSelectMode"
       :has-selected-groups="selectedCanvasGroups.size > 0"
       :are-globals-filtered="taskStore.filteredTasks.length > 0"
-      @dragStart="onDragStart"
-      @dragEnd="onDragEnd"
-      @taskClick="handleTaskClick"
-      @taskDblclick="handleTaskDoubleClick"
-      @taskContextmenu="handleTaskContextMenu"
-      @taskKeydown="handleTaskKeydown"
-      @startTimer="handleStartTimer"
-      @deleteSelected="deleteSelectedTasks"
-      @clearSelection="clearSelection"
+      @drag-start="onDragStart"
+      @drag-end="onDragEnd"
+      @task-click="handleTaskClick"
+      @task-dblclick="handleTaskDoubleClick"
+      @task-contextmenu="handleTaskContextMenu"
+      @task-keydown="handleTaskKeydown"
+      @start-timer="handleStartTimer"
+      @delete-selected="deleteSelectedTasks"
+      @clear-selection="clearSelection"
     />
   </div>
 </template>

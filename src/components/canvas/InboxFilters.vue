@@ -75,111 +75,111 @@
 
       <!-- Priority Filter -->
       <div ref="priorityDropdownRef" class="filter-dropdown">
-      <button
-        class="filter-chip"
-        :class="{ active: selectedPriority !== null }"
-        @click="showPriorityDropdown = !showPriorityDropdown"
-      >
-        <Flag :size="14" />
-        <span class="chip-label">{{ priorityLabel }}</span>
-        <ChevronDown :size="12" class="chevron" :class="{ rotated: showPriorityDropdown }" />
-      </button>
-      <div v-if="showPriorityDropdown" class="dropdown-menu">
         <button
-          class="dropdown-item"
-          :class="{ selected: selectedPriority === null }"
-          @click="selectPriority(null)"
+          class="filter-chip"
+          :class="{ active: selectedPriority !== null }"
+          @click="showPriorityDropdown = !showPriorityDropdown"
         >
-          All Priorities
+          <Flag :size="14" />
+          <span class="chip-label">{{ priorityLabel }}</span>
+          <ChevronDown :size="12" class="chevron" :class="{ rotated: showPriorityDropdown }" />
         </button>
-        <button
-          v-for="priority in priorities"
-          :key="priority.value"
-          class="dropdown-item"
-          :class="{ selected: selectedPriority === priority.value }"
-          @click="selectPriority(priority.value)"
-        >
-          <span class="priority-dot" :class="`priority-${priority.value}`" />
-          {{ priority.label }}
-          <span class="item-count">{{ getPriorityCount(priority.value) }}</span>
-        </button>
+        <div v-if="showPriorityDropdown" class="dropdown-menu">
+          <button
+            class="dropdown-item"
+            :class="{ selected: selectedPriority === null }"
+            @click="selectPriority(null)"
+          >
+            All Priorities
+          </button>
+          <button
+            v-for="priority in priorities"
+            :key="priority.value"
+            class="dropdown-item"
+            :class="{ selected: selectedPriority === priority.value }"
+            @click="selectPriority(priority.value)"
+          >
+            <span class="priority-dot" :class="`priority-${priority.value}`" />
+            {{ priority.label }}
+            <span class="item-count">{{ getPriorityCount(priority.value) }}</span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <!-- Duration Filter -->
-    <div ref="durationDropdownRef" class="filter-dropdown">
-      <button
-        class="filter-chip"
-        :class="{ active: selectedDuration !== null }"
-        @click="showDurationDropdown = !showDurationDropdown"
-      >
-        <Clock :size="14" />
-        <span class="chip-label">{{ durationLabel }}</span>
-        <ChevronDown :size="12" class="chevron" :class="{ rotated: showDurationDropdown }" />
-      </button>
-      <div v-if="showDurationDropdown" class="dropdown-menu">
+      <!-- Duration Filter -->
+      <div ref="durationDropdownRef" class="filter-dropdown">
         <button
-          class="dropdown-item"
-          :class="{ selected: selectedDuration === null }"
-          @click="selectDuration(null)"
+          class="filter-chip"
+          :class="{ active: selectedDuration !== null }"
+          @click="showDurationDropdown = !showDurationDropdown"
         >
-          All Durations
+          <Clock :size="14" />
+          <span class="chip-label">{{ durationLabel }}</span>
+          <ChevronDown :size="12" class="chevron" :class="{ rotated: showDurationDropdown }" />
         </button>
-        <button
-          v-for="duration in durations"
-          :key="duration.value"
-          class="dropdown-item"
-          :class="{ selected: selectedDuration === duration.value }"
-          @click="selectDuration(duration.value)"
-        >
-          <span class="duration-icon">{{ duration.icon }}</span>
-          {{ duration.label }}
-          <span class="item-count">{{ getDurationCount(duration.value) }}</span>
-        </button>
+        <div v-if="showDurationDropdown" class="dropdown-menu">
+          <button
+            class="dropdown-item"
+            :class="{ selected: selectedDuration === null }"
+            @click="selectDuration(null)"
+          >
+            All Durations
+          </button>
+          <button
+            v-for="duration in durations"
+            :key="duration.value"
+            class="dropdown-item"
+            :class="{ selected: selectedDuration === duration.value }"
+            @click="selectDuration(duration.value)"
+          >
+            <span class="duration-icon">{{ duration.icon }}</span>
+            {{ duration.label }}
+            <span class="item-count">{{ getDurationCount(duration.value) }}</span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <!-- Project Filter -->
-    <div ref="projectDropdownRef" class="filter-dropdown">
-      <button
-        class="filter-chip"
-        :class="{ active: selectedProject !== null }"
-        @click="showProjectDropdown = !showProjectDropdown"
-      >
-        <FolderOpen :size="14" />
-        <span class="chip-label">{{ projectLabel }}</span>
-        <ChevronDown :size="12" class="chevron" :class="{ rotated: showProjectDropdown }" />
-      </button>
-      <div v-if="showProjectDropdown" class="dropdown-menu">
+      <!-- Project Filter -->
+      <div ref="projectDropdownRef" class="filter-dropdown">
         <button
-          class="dropdown-item"
-          :class="{ selected: selectedProject === null }"
-          @click="selectProject(null)"
+          class="filter-chip"
+          :class="{ active: selectedProject !== null }"
+          @click="showProjectDropdown = !showProjectDropdown"
         >
-          All Projects
+          <FolderOpen :size="14" />
+          <span class="chip-label">{{ projectLabel }}</span>
+          <ChevronDown :size="12" class="chevron" :class="{ rotated: showProjectDropdown }" />
         </button>
-        <button
-          class="dropdown-item"
-          :class="{ selected: selectedProject === 'none' }"
-          @click="selectProject('none')"
-        >
-          <span class="project-icon">📥</span>
-          No Project
-          <span class="item-count">{{ getProjectCount(null) }}</span>
-        </button>
-        <button
-          v-for="project in projects"
-          :key="project.id"
-          class="dropdown-item"
-          :class="{ selected: selectedProject === project.id }"
-          @click="selectProject(project.id)"
-        >
-          <span class="project-icon">{{ project.emoji || '📁' }}</span>
-          {{ project.name }}
-          <span class="item-count">{{ getProjectCount(project.id) }}</span>
-        </button>
+        <div v-if="showProjectDropdown" class="dropdown-menu">
+          <button
+            class="dropdown-item"
+            :class="{ selected: selectedProject === null }"
+            @click="selectProject(null)"
+          >
+            All Projects
+          </button>
+          <button
+            class="dropdown-item"
+            :class="{ selected: selectedProject === 'none' }"
+            @click="selectProject('none')"
+          >
+            <span class="project-icon">📥</span>
+            No Project
+            <span class="item-count">{{ getProjectCount(null) }}</span>
+          </button>
+          <button
+            v-for="project in projects"
+            :key="project.id"
+            class="dropdown-item"
+            :class="{ selected: selectedProject === project.id }"
+            @click="selectProject(project.id)"
+          >
+            <span class="project-icon">{{ project.emoji || '📁' }}</span>
+            {{ project.name }}
+            <span class="item-count">{{ getProjectCount(project.id) }}</span>
+          </button>
+        </div>
       </div>
-    </div>
 
       <!-- Clear All Filters -->
       <button

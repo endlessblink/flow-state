@@ -9,9 +9,9 @@ interface LockState {
 
 /**
  * LockManager
- * 
+ *
  * Manages write locks for canvas nodes to prevent race conditions.
- * 
+ *
  * CORE PRINCIPLE:
  * - Only ONE source can own a lock on a node at a time.
  * - 'user-drag' is the highest priority implicitly (UI should acquire it).
@@ -19,7 +19,8 @@ interface LockState {
  */
 class LockManager {
     private locks: Map<string, LockState> = reactive(new Map())
-    private readonly DEFAULT_TIMEOUT_MS = 5000 // 5 seconds default safety valve
+    // Increased to 15s to handle slow network sync and prevent premature lock expiration during remote updates
+    private readonly DEFAULT_TIMEOUT_MS = 15000
 
     /**
      * Attempt to acquire a lock for a node.

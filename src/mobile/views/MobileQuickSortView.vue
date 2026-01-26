@@ -1,11 +1,11 @@
 <template>
   <div class="mobile-quick-sort">
     <!-- Grain Texture Overlay -->
-    <div class="grain-overlay" aria-hidden="true"></div>
+    <div class="grain-overlay" aria-hidden="true" />
 
     <!-- Header -->
     <header class="qs-header">
-      <button class="back-btn" @click="handleExit" aria-label="Exit Quick Sort">
+      <button class="back-btn" aria-label="Exit Quick Sort" @click="handleExit">
         <X :size="24" />
       </button>
       <div class="header-content">
@@ -13,7 +13,9 @@
           <Zap :size="20" class="zap-icon" />
           <span>Quick Sort</span>
         </h1>
-        <p class="qs-subtitle">{{ activePhase === 'capture' ? 'Capture' : 'Swipe to sort' }}</p>
+        <p class="qs-subtitle">
+          {{ activePhase === 'capture' ? 'Capture' : 'Swipe to sort' }}
+        </p>
       </div>
       <div class="header-stats">
         <span class="stat-badge">{{ progress.current }}/{{ progress.total }}</span>
@@ -21,12 +23,12 @@
     </header>
 
     <!-- Progress Bar -->
-    <div class="progress-track" v-if="!isComplete && activePhase === 'sort'">
+    <div v-if="!isComplete && activePhase === 'sort'" class="progress-track">
       <div
         class="progress-fill"
         :style="{ width: `${progress.percentage}%` }"
-      ></div>
-      <div class="progress-glow" :style="{ left: `${progress.percentage}%` }"></div>
+      />
+      <div class="progress-glow" :style="{ left: `${progress.percentage}%` }" />
     </div>
 
     <!-- Phase Toggle -->
@@ -62,9 +64,9 @@
               type="text"
               class="capture-input"
               placeholder="What needs to be done?"
-              @keydown.enter="handleQuickAdd"
               autofocus
-            />
+              @keydown.enter="handleQuickAdd"
+            >
 
             <!-- Quick Actions -->
             <div class="quick-actions">
@@ -107,7 +109,9 @@
 
         <!-- Recently Added -->
         <div v-if="recentlyAdded.length > 0" class="recently-added">
-          <h3 class="section-title">Just Added</h3>
+          <h3 class="section-title">
+            Just Added
+          </h3>
           <TransitionGroup name="task-list" tag="ul" class="recent-list">
             <li
               v-for="task in recentlyAdded"
@@ -124,7 +128,7 @@
       <!-- SORT PHASE -->
       <div v-else-if="!isComplete" class="sort-phase">
         <!-- Swipe Instructions -->
-        <div class="swipe-hints" v-if="!hasSwipedOnce">
+        <div v-if="!hasSwipedOnce" class="swipe-hints">
           <div class="hint hint-left">
             <ChevronLeft :size="24" />
             <span>Delete</span>
@@ -147,7 +151,7 @@
               opacity: 1 - idx * 0.3,
               zIndex: 10 - idx
             }"
-          ></div>
+          />
 
           <!-- Active Card -->
           <div
@@ -181,14 +185,16 @@
             </div>
 
             <!-- Card Content with blur when swiping -->
-            <div class="card-content" v-if="currentTask" :style="contentBlurStyle">
+            <div v-if="currentTask" class="card-content" :style="contentBlurStyle">
               <!-- Priority Indicator -->
               <div
                 class="priority-strip"
                 :class="`priority-${currentTask.priority || 'none'}`"
-              ></div>
+              />
 
-              <h2 class="task-title">{{ currentTask.title }}</h2>
+              <h2 class="task-title">
+                {{ currentTask.title }}
+              </h2>
 
               <p v-if="currentTask.description" class="task-description">
                 {{ truncateDescription(currentTask.description) }}
@@ -219,17 +225,23 @@
                 class="pill"
                 :class="{ active: currentTask?.priority === 'low' }"
                 @click="setPriority('low')"
-              >Low</button>
+              >
+                Low
+              </button>
               <button
                 class="pill"
                 :class="{ active: currentTask?.priority === 'medium' }"
                 @click="setPriority('medium')"
-              >Med</button>
+              >
+                Med
+              </button>
               <button
                 class="pill"
                 :class="{ active: currentTask?.priority === 'high' }"
                 @click="setPriority('high')"
-              >High</button>
+              >
+                High
+              </button>
             </div>
           </div>
 
@@ -241,29 +253,41 @@
                 class="pill"
                 :class="{ active: isToday }"
                 @click="setDueDate('today')"
-              >Today</button>
+              >
+                Today
+              </button>
               <button
                 class="pill"
                 :class="{ active: isTomorrow }"
                 @click="setDueDate('tomorrow')"
-              >Tmrw</button>
+              >
+                Tmrw
+              </button>
               <button
                 class="pill"
                 @click="setDueDate('in3days')"
-              >+3d</button>
+              >
+                +3d
+              </button>
               <button
                 class="pill"
                 :class="{ active: isWeekend }"
                 @click="setDueDate('weekend')"
-              >Wknd</button>
+              >
+                Wknd
+              </button>
               <button
                 class="pill"
                 @click="setDueDate('nextweek')"
-              >+1wk</button>
+              >
+                +1wk
+              </button>
               <button
                 class="pill"
                 @click="setDueDate('1month')"
-              >+1mo</button>
+              >
+                +1mo
+              </button>
               <button
                 class="pill clear"
                 @click="setDueDate('clear')"
@@ -290,16 +314,20 @@
       <!-- COMPLETION CELEBRATION -->
       <div v-else class="completion-phase">
         <div class="celebration-container">
-          <div class="confetti-burst" ref="confettiRef"></div>
+          <div ref="confettiRef" class="confetti-burst" />
 
           <div class="celebration-icon">
             <PartyPopper :size="80" />
           </div>
 
-          <h2 class="celebration-title">All Sorted!</h2>
-          <p class="celebration-subtitle">You've processed all your tasks</p>
+          <h2 class="celebration-title">
+            All Sorted!
+          </h2>
+          <p class="celebration-subtitle">
+            You've processed all your tasks
+          </p>
 
-          <div class="session-summary" v-if="sessionSummary">
+          <div v-if="sessionSummary" class="session-summary">
             <div class="summary-stat">
               <span class="stat-number">{{ sessionSummary.tasksProcessed }}</span>
               <span class="stat-label">Tasks</span>
@@ -308,7 +336,7 @@
               <span class="stat-number">{{ formatDuration(sessionSummary.timeSpent) }}</span>
               <span class="stat-label">Time</span>
             </div>
-            <div class="summary-stat" v-if="sessionSummary.efficiency > 0">
+            <div v-if="sessionSummary.efficiency > 0" class="summary-stat">
               <span class="stat-number">{{ sessionSummary.efficiency.toFixed(1) }}</span>
               <span class="stat-label">Tasks/min</span>
             </div>
@@ -327,8 +355,10 @@
       <Transition name="sheet">
         <div v-if="showProjectSheet" class="sheet-overlay" @click="showProjectSheet = false">
           <div class="project-sheet" @click.stop>
-            <div class="sheet-handle"></div>
-            <h3 class="sheet-title">Assign to Project</h3>
+            <div class="sheet-handle" />
+            <h3 class="sheet-title">
+              Assign to Project
+            </h3>
 
             <div class="project-list">
               <button
@@ -339,7 +369,7 @@
                 @click="handleAssignProject(project.id)"
               >
                 <span v-if="depth > 0" class="hierarchy-line" :style="{ width: `${depth * 24}px` }">
-                  <span class="hierarchy-connector"></span>
+                  <span class="hierarchy-connector" />
                 </span>
                 <span
                   class="project-indicator"
@@ -364,8 +394,12 @@
             <h3>Delete this task?</h3>
             <p>This action cannot be undone</p>
             <div class="confirm-actions">
-              <button class="cancel-btn" @click="cancelDelete">Cancel</button>
-              <button class="delete-btn" @click="confirmDelete">Delete</button>
+              <button class="cancel-btn" @click="cancelDelete">
+                Cancel
+              </button>
+              <button class="delete-btn" @click="confirmDelete">
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -377,16 +411,24 @@
       <Transition name="sheet">
         <div v-if="showQuickEditPanel" class="sheet-overlay" @click="showQuickEditPanel = false">
           <div class="quick-edit-sheet" @click.stop>
-            <div class="sheet-handle"></div>
-            <h3 class="sheet-title">Quick Edit</h3>
+            <div class="sheet-handle" />
+            <h3 class="sheet-title">
+              Quick Edit
+            </h3>
 
             <!-- Priority Section -->
             <div class="edit-section">
               <span class="edit-label">Priority</span>
               <div class="priority-pills">
-                <button class="pill" :class="{ active: currentTask?.priority === 'low' }" @click="setPriorityAndClose('low')">Low</button>
-                <button class="pill" :class="{ active: currentTask?.priority === 'medium' }" @click="setPriorityAndClose('medium')">Med</button>
-                <button class="pill" :class="{ active: currentTask?.priority === 'high' }" @click="setPriorityAndClose('high')">High</button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'low' }" @click="setPriorityAndClose('low')">
+                  Low
+                </button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'medium' }" @click="setPriorityAndClose('medium')">
+                  Med
+                </button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'high' }" @click="setPriorityAndClose('high')">
+                  High
+                </button>
               </div>
             </div>
 
@@ -394,10 +436,18 @@
             <div class="edit-section">
               <span class="edit-label">Due Date</span>
               <div class="date-pills">
-                <button class="pill" @click="setDueDateAndClose('today')">Today</button>
-                <button class="pill" @click="setDueDateAndClose('tomorrow')">Tmrw</button>
-                <button class="pill" @click="setDueDateAndClose('in3days')">+3d</button>
-                <button class="pill" @click="setDueDateAndClose('weekend')">Wknd</button>
+                <button class="pill" @click="setDueDateAndClose('today')">
+                  Today
+                </button>
+                <button class="pill" @click="setDueDateAndClose('tomorrow')">
+                  Tmrw
+                </button>
+                <button class="pill" @click="setDueDateAndClose('in3days')">
+                  +3d
+                </button>
+                <button class="pill" @click="setDueDateAndClose('weekend')">
+                  Wknd
+                </button>
               </div>
             </div>
 
@@ -479,14 +529,14 @@ const rootProjects = computed(() => projectStore.rootProjects)
 
 // Build flat list with hierarchy info for display
 interface ProjectWithDepth {
-  project: typeof projectStore.projects.value[number]
+  project: typeof projectStore.projects[number]
   depth: number
 }
 
 const projectsWithDepth = computed(() => {
   const result: ProjectWithDepth[] = []
 
-  const addProjectWithChildren = (project: typeof projectStore.projects.value[number], depth: number) => {
+  const addProjectWithChildren = (project: typeof projectStore.projects[number], depth: number) => {
     result.push({ project, depth })
     const children = projectStore.getChildProjects(project.id)
     for (const child of children) {
@@ -609,7 +659,7 @@ const isWeekend = computed(() => {
 })
 
 // Actions
-function handleQuickAdd() {
+async function handleQuickAdd() {
   if (!newTaskTitle.value.trim()) return
 
   let dueDate: string | undefined
@@ -621,7 +671,7 @@ function handleQuickAdd() {
     dueDate = tomorrow.toISOString()
   }
 
-  const newTask = taskStore.createTask({
+  const newTask = await taskStore.createTask({
     title: newTaskTitle.value.trim(),
     priority: newTaskPriority.value,
     dueDate

@@ -7,9 +7,13 @@
       <div>User: {{ userId || 'none' }}</div>
       <div>Tasks loaded: {{ taskStore.tasks.length }}</div>
       <div>Filtered: {{ filteredTasks.length }}</div>
-      <div v-if="syncError" class="error">Error: {{ syncError }}</div>
+      <div v-if="syncError" class="error">
+        Error: {{ syncError }}
+      </div>
     </div>
-    <button v-else class="debug-toggle" @click="showDebug = true">?</button>
+    <button v-else class="debug-toggle" @click="showDebug = true">
+      ?
+    </button>
 
     <!-- Header -->
     <div class="mobile-inbox-header">
@@ -25,7 +29,8 @@
         <button
           v-for="filter in statusFilters"
           :key="filter.value"
-          :class="['filter-chip', { active: activeStatusFilter === filter.value }]"
+          class="filter-chip"
+          :class="[{ active: activeStatusFilter === filter.value }]"
           @click="setStatusFilter(filter.value)"
         >
           <component :is="filter.icon" :size="14" />
@@ -46,16 +51,19 @@
     <div class="mobile-task-list">
       <div v-if="filteredTasks.length === 0" class="empty-state">
         <Inbox :size="48" />
-        <p v-if="activeStatusFilter === 'all'">No tasks yet</p>
-        <p v-else>No {{ activeStatusFilter }} tasks</p>
+        <p v-if="activeStatusFilter === 'all'">
+          No tasks yet
+        </p>
+        <p v-else>
+          No {{ activeStatusFilter }} tasks
+        </p>
       </div>
 
       <div
         v-for="task in filteredTasks"
         :key="task.id"
+        class="mobile-task-item long-press-item"
         :class="[
-          'mobile-task-item',
-          'long-press-item',
           { 'timer-active': isTimerActive(task.id) },
           { 'long-press-idle': getLongPressState(task.id).state === 'idle' },
           { 'long-press-pressing': getLongPressState(task.id).state === 'pressing' },
@@ -72,18 +80,18 @@
         @contextmenu="handleContextMenu"
       >
         <div class="task-checkbox" @click.stop="toggleTask(task)">
-          <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
+          <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
             <Check v-if="task.status === 'done'" :size="14" />
           </div>
         </div>
 
         <div class="task-content">
-          <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+          <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
           <div class="task-meta">
-            <span v-if="task.priority" :class="['priority-badge', task.priority]">
+            <span v-if="task.priority" class="priority-badge" :class="[task.priority]">
               {{ priorityLabel(task.priority || 'none') }}
             </span>
-            <span v-if="task.dueDate" :class="['due-date', { overdue: isOverdue(task.dueDate) }]">
+            <span v-if="task.dueDate" class="due-date" :class="[{ overdue: isOverdue(task.dueDate) }]">
               <Calendar :size="12" />
               {{ formatDueDate(task.dueDate) }}
             </span>
@@ -105,12 +113,13 @@
           class="quick-add-input"
           readonly
           @click="openTaskCreateSheet"
-        />
+        >
 
         <!-- Mic button -->
         <button
           v-if="isVoiceSupported"
-          :class="['mic-btn', { recording: isListening }]"
+          class="mic-btn"
+          :class="[{ recording: isListening }]"
           @click="toggleVoiceInput"
         >
           <Mic v-if="!isListening" :size="20" />
@@ -131,11 +140,11 @@
         <template v-if="voiceMode === 'whisper'">
           <span class="voice-mode-badge whisper">🤖 AI</span>
           <div class="voice-waveform">
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
           </div>
           <span class="voice-status">
             <template v-if="isProcessingVoice">Processing...</template>
@@ -153,11 +162,11 @@
             {{ voiceLanguage === 'he-IL' ? 'עב' : 'EN' }}
           </button>
           <div class="voice-waveform">
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
-            <span class="wave-bar"></span>
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
           </div>
           <span class="voice-status">{{ displayTranscript || (voiceLanguage === 'he-IL' ? 'דבר עכשיו...' : 'Speak now...') }}</span>
         </template>
@@ -281,6 +290,8 @@ const {
   onResult: (result) => {
     console.log('[Whisper] Result:', result)
     if (result.transcript.trim()) {
+      // Close TaskCreateBottomSheet if open (prevents overlap issues)
+      isTaskCreateOpen.value = false
       // Auto-detect language from Whisper response
       const lang = result.language === 'he' ? 'he-IL' : 'en-US'
       const parsed = parseTranscript(result.transcript.trim(), lang)
@@ -309,6 +320,8 @@ const {
   silenceTimeout: 2500,
   onResult: (result) => {
     if (result.isFinal && result.transcript.trim()) {
+      // Close TaskCreateBottomSheet if open (prevents overlap issues)
+      isTaskCreateOpen.value = false
       const parsed = parseTranscript(result.transcript.trim(), voiceLanguage.value)
       parsedVoiceTask.value = parsed
       showVoiceConfirmation.value = true
@@ -400,7 +413,9 @@ const toggleVoiceInput = async () => {
     // Reset confirmation state when starting new voice input
     parsedVoiceTask.value = null
     showVoiceConfirmation.value = false
-    expandQuickAdd()
+    // DON'T open TaskCreateBottomSheet for voice input
+    // The quick-add-bar voice feedback is visible and provides better UX
+    // isTaskCreateOpen.value = true // <-- Removed: was blocking mic button
     await startVoice()
   }
 }

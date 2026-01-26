@@ -232,10 +232,7 @@ export function isValidPosition(pos: any): pos is Position {
 /**
  * Sanitize a position - return fallback if invalid
  */
-export function sanitizePosition(
-  pos: any,
-  fallback: Position = { x: 0, y: 0 }
-): Position {
+export function sanitizePosition(pos: any, fallback: Position = { x: 0, y: 0 }): Position {
   if (isValidPosition(pos)) {
     return { x: pos.x, y: pos.y }
   }

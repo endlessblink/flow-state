@@ -51,7 +51,9 @@ const handleReload = async () => {
               <RefreshCw class="icon-spin" :size="20" />
             </div>
             <div class="text-content">
-              <NText strong class="title">Update Available</NText>
+              <NText strong class="title">
+                Update Available
+              </NText>
               <NText depth="3" class="description">
                 A new version of FlowState is available.
               </NText>
@@ -66,7 +68,12 @@ const handleReload = async () => {
                 Reload
               </NButton>
 
-              <NButton quaternary circle size="small" @click="close">
+              <NButton
+                quaternary
+                circle
+                size="small"
+                @click="close"
+              >
                 <template #icon>
                   <X :size="16" />
                 </template>
@@ -80,13 +87,20 @@ const handleReload = async () => {
               <CheckCircle2 :size="20" />
             </div>
             <div class="text-content">
-              <NText strong class="title">Ready for Offline</NText>
+              <NText strong class="title">
+                Ready for Offline
+              </NText>
               <NText depth="3" class="description">
                 App ready to work offline.
               </NText>
             </div>
             <div class="actions">
-              <NButton quaternary circle size="small" @click="close">
+              <NButton
+                quaternary
+                circle
+                size="small"
+                @click="close"
+              >
                 <template #icon>
                   <X :size="16" />
                 </template>

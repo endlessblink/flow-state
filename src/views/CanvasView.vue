@@ -297,7 +297,7 @@ const modalsStore = useCanvasModalsStore()
 const contextMenuStore = useCanvasContextMenuStore()
 
 // Register custom node types
-// @ts-ignore - Vue Flow types are strict about NodeProps
+// @ts-expect-error - Vue Flow types are strict about NodeProps
 const nodeTypes: any = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
@@ -329,8 +329,7 @@ const {
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge,
-  arrangeDoneTasksInGrid
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge
 } = orchestrator
 
 // Register global hotkeys
@@ -343,7 +342,6 @@ useEventListener(window, 'keydown', (e) => {
 const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
-const handleArrangeDoneTasks = () => arrangeDoneTasksInGrid()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }
 // UI Wrappers
 const handleOpenSectionSettings = (id: string) => {
@@ -423,4 +421,5 @@ if (process.env.NODE_ENV === 'development' || (window as unknown as Record<strin
 </script>
 
 <style scoped src="@/assets/canvas-view-layout.css"></style>
+
 <style src="@/assets/canvas-view-overrides.css"></style>

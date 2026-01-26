@@ -5,7 +5,6 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useAuthStore } from '@/stores/auth'
 import { useBroadcastChannelSync } from './sync/useBroadcastChannelSync'
 import { useTimerLeaderElection } from './sync/useTimerLeaderElection'
-import { useSupabaseRealtimeSync } from './sync/useSupabaseRealtimeSync'
 
 // Types for cross-tab messages
 export interface CrossTabMessage {
@@ -77,10 +76,6 @@ export function useCrossTabSync() {
     onSessionUpdate: (session) => _onTimerSessionUpdate?.(session)
   })
 
-  const { subscribe: subscribeRealtime, unsubscribe: unsubscribeRealtime } = useSupabaseRealtimeSync({
-    userId: authStore.user?.id
-  })
-
   // Message processing logic
   const handleTaskOperation = async (operation: TaskOperation) => {
     switch (operation.operation) {
@@ -104,7 +99,21 @@ export function useCrossTabSync() {
               return
             }
 
-            Object.assign(task, operation.taskData)
+            // CRITICAL FIX: Version-aware update - never overwrite geometry from cross-tab
+            const incomingVersion = (operation.taskData as any).positionVersion ?? 0
+            const localVersion = task.positionVersion ?? 0
+
+            // Only accept if incoming version is newer
+            if (incomingVersion < localVersion) {
+              console.log(`[CROSS-TAB] Skipping stale update for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
+              return
+            }
+
+            // Strip geometry fields from cross-tab sync - geometry should only come from drag handlers
+            const { canvasPosition, parentId, positionFormat, ...safeUpdates } = operation.taskData as any
+
+            // Apply only non-geometry updates
+            Object.assign(task, safeUpdates)
           }
         }
         break
@@ -135,18 +144,10 @@ export function useCrossTabSync() {
     if (isListening.value) return
     connect()
     isListening.value = true
-
-    if (authStore.user?.id) {
-      subscribeRealtime(
-        (_payload) => { /* handle task change */ },
-        (_payload) => { /* handle timer change */ }
-      )
-    }
   }
 
   const cleanup = () => {
     disconnect()
-    unsubscribeRealtime()
     cleanupLeader()
     isListening.value = false
   }

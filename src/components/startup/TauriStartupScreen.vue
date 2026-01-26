@@ -66,11 +66,15 @@ function openSupabaseInstall() {
           <div class="logo">
             <span class="logo-icon">🍅</span>
           </div>
-          <h1 class="app-name">FlowState</h1>
+          <h1 class="app-name">
+            FlowState
+          </h1>
         </div>
 
         <!-- Status Message -->
-        <p class="status-message">{{ statusMessage }}</p>
+        <p class="status-message">
+          {{ statusMessage }}
+        </p>
 
         <!-- Progress Bar -->
         <div v-if="isLoading" class="progress-container">
@@ -85,8 +89,12 @@ function openSupabaseInstall() {
 
         <!-- Error State -->
         <div v-if="hasError" class="error-container">
-          <div class="error-icon">⚠️</div>
-          <p class="error-message">{{ state.error }}</p>
+          <div class="error-icon">
+            ⚠️
+          </div>
+          <p class="error-message">
+            {{ state.error }}
+          </p>
 
           <!-- Specific help based on error type -->
           <div v-if="state.errorType === 'docker_not_installed'" class="error-help">

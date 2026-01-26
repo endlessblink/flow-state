@@ -1396,118 +1396,172 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         onTaskChange: (payload: unknown) => void,
         onTimerChange?: (payload: unknown) => void,
         onNotificationChange?: (payload: unknown) => void,
-        onRecovery?: () => Promise<void> // BUG-1056: Callback to reload data after auth recovery
+        onGroupChange?: (payload: unknown) => void,
+        onRecovery?: () => Promise<void> // Callback to reload data after recovery
     ) => {
         const userId = authStore.user?.id
         if (!userId) return null
 
-        // TASK-1009 FIX: Clear existing channels BEFORE creating new one
-        // Previously this was done AFTER channel creation, which removed the channel we just created!
+        let currentChannel: any = null
+        let retryCount = 0
+        let isExplicitlyClosed = false
+        let heartbeatInterval: any = null
+
+        // cleanup previous channels if any
         if (supabase.realtime.channels.length > 0) {
             console.log(`📡 [REALTIME] Cleaning up ${supabase.realtime.channels.length} existing channels...`)
             supabase.removeAllChannels()
         }
 
-        // BUG-1056: Use unique channel name per tab to avoid multi-tab conflicts
-        // Each tab gets its own channel subscription
+        // Unique channel name per tab
         const tabId = (window as any).__flowstate_tab_id || (() => {
             const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
-            ;(window as any).__flowstate_tab_id = id
+                ; (window as any).__flowstate_tab_id = id
             return id
         })()
+
         const channelName = `db-changes-${userId.substring(0, 8)}-${tabId}`
-        console.log(`📡 [REALTIME] Creating channel: ${channelName}`)
-        const channel = supabase.channel(channelName)
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
-                (payload: any) => {
-                    // SAFETY: Explicitly verify table to prevent cross-talk
-                    if (payload.table === 'projects') {
-                        onProjectChange(payload)
-                    }
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
-                (payload: any) => {
-                    // SAFETY: Explicitly verify table
-                    if (payload.table === 'tasks') {
-                        onTaskChange(payload)
-                    }
-                }
-            )
 
-        if (onTimerChange) {
-            channel.on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
-                (payload: any) => onTimerChange(payload)
-            )
-        }
+        const setupSubscription = async () => {
+            if (isExplicitlyClosed) return
 
-        if (onNotificationChange) {
-            channel.on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-                (payload: any) => onNotificationChange(payload)
-            )
-        }
+            // connection guard
+            const { data: { session: freshSession } } = await supabase.auth.getSession()
+            if (!freshSession?.access_token) {
+                console.warn('📡 [REALTIME] No auth token available, aborting setup')
+                return
+            }
+            supabase.realtime.setAuth(freshSession.access_token)
 
-        // DEBUG: Log auth state before subscription
-        const session = authStore.session
-        console.log(`📡 [REALTIME] Initializing subscription. Auth state: ${session ? 'Authenticated' : 'Anonymous'}, Role: ${session?.user?.role || 'none'}`)
+            console.log(`📡 [REALTIME] Connecting to channel: ${channelName} (Attempt ${retryCount + 1})`)
 
-        // Delay subscription to ensure client state is synced and auth is stable
-        const connectRealtime = async () => {
-            console.log('📡 [REALTIME] Preparing connection...')
+            const channel = supabase.channel(channelName)
+            currentChannel = channel
 
-            try {
-                // BUG-202: CRITICAL - Ensure we have a fresh token BEFORE any .subscribe() call
-                const { data: { session: freshSession } } = await supabase.auth.getSession()
-                if (freshSession?.access_token) {
-                    console.log('📡 [REALTIME] Setting fresh auth token for WebSocket')
-                    supabase.realtime.setAuth(freshSession.access_token)
+            // Attach Listeners
+            channel
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
+                    (payload: any) => payload.table === 'projects' && onProjectChange(payload))
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
+                    (payload: any) => payload.table === 'tasks' && onTaskChange(payload))
+
+            if (onTimerChange) {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
+                    (payload: any) => onTimerChange(payload))
+            }
+
+            if (onNotificationChange) {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+                    (payload: any) => onNotificationChange(payload))
+            }
+
+            if (onGroupChange) {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `user_id=eq.${userId}` },
+                    (payload: any) => onGroupChange(payload))
+            }
+
+            // Subscribe with Robust Error Handling
+            channel.subscribe(async (status: any, err: any) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('📡 [REALTIME] Connected! 🟢')
+                    retryCount = 0 // Reset backoff
+
+                    // If this was a recovery (retryCount > 0 previously implies we were trying), reload data
+                    // But we just reset it. We need a flag.
+                    // Actually, if we are in this function, we assume we might have missed data if it's a reconnect.
+                    // But 'SUBSCRIBED' fires on first connect too. 
+                    // reliable strategy: only reload if we actually recovered from an error or it's a re-connection
                 }
 
-                channel.subscribe((status: any, err?: any) => {
-                    if (status === 'SUBSCRIBED') {
-                        console.log('📡 [REALTIME] Successfully subscribed to database changes')
-                    } else if (status === 'CHANNEL_ERROR') {
-                        console.error('📡 [REALTIME] Handshake failed or connection error:', err || 'Check RLS and JWT expiration')
+                else if (status === 'CLOSED' || status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+                    console.warn(`📡 [REALTIME] Connection dropped (${status}):`, err || 'unknown reason')
 
-                        // Retrying auth refresh if we get a 403
-                        if (String(err).includes('403') || !err) {
-                            console.log('📡 [REALTIME] Attempting emergency auth refresh...')
-                            supabase.auth.refreshSession().then(async () => {
-                                console.log('📡 [REALTIME] Session refreshed, system will auto-retry connection')
-                                // BUG-1056: Reload data after successful auth recovery
-                                // This fixes the case where initial load failed due to stale token
+                    if (isExplicitlyClosed) return
+
+                    // PREVENT STALE CHANNELS:
+                    // Supabase docs recommend removing the channel before reconnecting
+                    await supabase.removeChannel(channel)
+                    currentChannel = null
+
+                    // RETRY LOGIC (Exponential Backoff)
+                    const maxRetries = 10
+                    if (retryCount < maxRetries) {
+                        const delay = Math.pow(1.5, retryCount) * 1000 + (Math.random() * 500)
+                        console.log(`📡 [REALTIME] Reconnecting in ${delay.toFixed(0)}ms...`)
+
+                        setTimeout(() => {
+                            retryCount++
+                            setupSubscription().then(() => {
+                                // On successful reconnect setup, we might want to reload data
                                 if (onRecovery) {
-                                    console.log('📡 [REALTIME] Triggering data reload after auth recovery...')
-                                    try {
-                                        await onRecovery()
-                                        console.log('✅ [REALTIME] Data reloaded after auth recovery')
-                                    } catch (reloadErr) {
-                                        console.error('❌ [REALTIME] Data reload after recovery failed:', reloadErr)
-                                    }
+                                    console.log('📡 [REALTIME] Triggering recovery data reload...')
+                                    // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
+                                    invalidateCache.all()
+                                    onRecovery().catch(e => console.error('Recovery failed:', e))
                                 }
-                            }).catch((refreshErr: unknown) => {
-                                console.error('[ASYNC-ERROR] initRealtimeSubscription refreshSession failed', refreshErr)
                             })
-                        }
+                        }, delay)
+                    } else {
+                        console.error('📡 [REALTIME] Max retries reached. Connection lost permanently until refresh.')
+                        handleError(new Error('Realtime connection lost'), 'RealtimeSubscription')
                     }
-                })
-            } catch (authErr) {
-                console.warn('📡 [REALTIME] Initialization failed:', authErr)
+                }
+            })
+        }
+
+        // Start initial connection
+        setupSubscription()
+
+        // VISIBILITY RESUME (Handle Background Tab Throttling)
+        const onVisibilityChange = async () => {
+            if (document.visibilityState === 'visible') {
+                console.log('👀 [REALTIME] App visible - checking connection health...')
+                const state = currentChannel?.state
+
+                if (!currentChannel || state === 'closed' || state === 'errored') {
+                    console.log('👀 [REALTIME] Connection dead on resume. Force reconnecting...')
+                    // Only attempt cleanup if channel exists
+                    if (currentChannel) {
+                        await supabase.removeChannel(currentChannel as any)
+                    }
+                    retryCount = 0
+                    setupSubscription()
+                    if (onRecovery) {
+                        // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
+                        invalidateCache.all()
+                        onRecovery()
+                    }
+                } else {
+                    // Pulse check - verify we are actually connected
+                    // (Optional: Send a heartbeat or just assume it's okay if state says joined)
+                }
             }
         }
+        document.addEventListener('visibilitychange', onVisibilityChange)
 
-        // Start connection
-        connectRealtime()
+        // ONLINE RESUME
+        const onOnline = () => {
+            console.log('🌐 [REALTIME] Online event detected. Reconnecting...')
+            retryCount = 0
+            setupSubscription()
+            if (onRecovery) {
+                // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
+                invalidateCache.all()
+                onRecovery()
+            }
+        }
+        window.addEventListener('online', onOnline)
 
-        return channel
+        // Return cleanup function (Proxy interface for callers)
+        return {
+            unsubscribe: () => {
+                console.log('📡 [REALTIME] Unsubscribing explicitly.')
+                isExplicitlyClosed = true
+                if (currentChannel) supabase.removeChannel(currentChannel)
+                document.removeEventListener('visibilitychange', onVisibilityChange)
+                window.removeEventListener('online', onOnline)
+            }
+        }
     }
 
     return {

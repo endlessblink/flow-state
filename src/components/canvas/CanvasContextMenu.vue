@@ -127,7 +127,7 @@
       </button>
     </template>
 
-    <!-- Layout Submenu (2+ tasks) -->
+    <!-- Layout Submenu (2+ items - tasks and/or groups) - TASK-1081 -->
     <template v-if="selectedCount >= 2">
       <div class="menu-divider" />
       <div
@@ -154,42 +154,46 @@
       >
         <!-- Section: Align -->
         <div class="layout-section">
-          <div class="layout-section-label">Align</div>
+          <div class="layout-section-label">
+            Align
+          </div>
           <div class="layout-icon-row">
-            <button class="menu-item menu-item-icon" @click="handleAlignLeft" title="Align Left">
+            <button class="menu-item menu-item-icon" title="Align Left" @click="handleAlignLeft">
               <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" />
             </button>
-            <button class="menu-item menu-item-icon" @click="handleAlignCenterHorizontal" title="Center Horizontally">
+            <button class="menu-item menu-item-icon" title="Center Horizontally" @click="handleAlignCenterHorizontal">
               <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" />
             </button>
-            <button class="menu-item menu-item-icon" @click="handleAlignRight" title="Align Right">
+            <button class="menu-item menu-item-icon" title="Align Right" @click="handleAlignRight">
               <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" />
             </button>
           </div>
           <div class="layout-icon-row">
-            <button class="menu-item menu-item-icon" @click="handleAlignTop" title="Align Top">
+            <button class="menu-item menu-item-icon" title="Align Top" @click="handleAlignTop">
               <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" />
             </button>
-            <button class="menu-item menu-item-icon" @click="handleAlignCenterVertical" title="Center Vertically">
+            <button class="menu-item menu-item-icon" title="Center Vertically" @click="handleAlignCenterVertical">
               <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" />
             </button>
-            <button class="menu-item menu-item-icon" @click="handleAlignBottom" title="Align Bottom">
+            <button class="menu-item menu-item-icon" title="Align Bottom" @click="handleAlignBottom">
               <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" />
             </button>
           </div>
         </div>
 
-        <!-- Section: Distribute (3+ tasks) -->
+        <!-- Section: Distribute (3+ items) - TASK-1081 -->
         <template v-if="selectedCount >= 3">
           <div class="menu-divider" />
           <div class="layout-section">
-            <div class="layout-section-label">Distribute</div>
+            <div class="layout-section-label">
+              Distribute
+            </div>
             <div class="layout-icon-row">
-              <button class="menu-item menu-item-icon-wide" @click="handleDistributeHorizontal" title="Distribute Horizontally">
+              <button class="menu-item menu-item-icon-wide" title="Distribute Horizontally" @click="handleDistributeHorizontal">
                 <ArrowLeftRight :size="16" :stroke-width="1.5" />
                 <span>Horiz</span>
               </button>
-              <button class="menu-item menu-item-icon-wide" @click="handleDistributeVertical" title="Distribute Vertically">
+              <button class="menu-item menu-item-icon-wide" title="Distribute Vertically" @click="handleDistributeVertical">
                 <ArrowUpDown :size="16" :stroke-width="1.5" />
                 <span>Vert</span>
               </button>
@@ -200,17 +204,19 @@
         <!-- Section: Arrange -->
         <div class="menu-divider" />
         <div class="layout-section">
-          <div class="layout-section-label">Arrange</div>
+          <div class="layout-section-label">
+            Arrange
+          </div>
           <div class="layout-icon-row">
-            <button class="menu-item menu-item-icon-wide" @click="handleArrangeInRow" title="Arrange in Row">
+            <button class="menu-item menu-item-icon-wide" title="Arrange in Row" @click="handleArrangeInRow">
               <Rows :size="16" :stroke-width="1.5" />
               <span>Row</span>
             </button>
-            <button class="menu-item menu-item-icon-wide" @click="handleArrangeInColumn" title="Arrange in Column">
+            <button class="menu-item menu-item-icon-wide" title="Arrange in Column" @click="handleArrangeInColumn">
               <LayoutList :size="16" :stroke-width="1.5" />
               <span>Column</span>
             </button>
-            <button class="menu-item menu-item-icon-wide" @click="handleArrangeInGrid" title="Arrange in Grid">
+            <button class="menu-item menu-item-icon-wide" title="Arrange in Grid" @click="handleArrangeInGrid">
               <Grid3x3 :size="16" :stroke-width="1.5" />
               <span>Grid</span>
             </button>

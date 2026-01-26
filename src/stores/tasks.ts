@@ -1,5 +1,5 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useTaskStates } from './tasks/taskStates'
 import { useTaskPersistence } from './tasks/taskPersistence'
 import { useTaskOperations } from './tasks/taskOperations'
@@ -99,6 +99,9 @@ export const useTaskStore = defineStore('tasks', () => {
     activeDurationFilter, isLoadingFromDatabase, manualOperationInProgress,
     isLoadingFilters, syncInProgress, runAllTaskMigrations, calendarFilteredTasks
   } = states
+
+  // High Severity Issue #7: Pending-write registry to prevent drag/sync race conditions
+  const pendingWrites = ref<Set<string>>(new Set())
 
   // 2. Initialize Persistence
   // BUG-057: Pass syncInProgress to prevent saves during sync operations
@@ -349,6 +352,19 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  // High Severity Issue #7: Pending-write registry helpers
+  const addPendingWrite = (taskId: string) => {
+    pendingWrites.value.add(taskId)
+    // Auto-clear after 5 seconds as safety net
+    setTimeout(() => pendingWrites.value.delete(taskId), 5000)
+  }
+
+  const removePendingWrite = (taskId: string) => {
+    pendingWrites.value.delete(taskId)
+  }
+
+  const isPendingWrite = (taskId: string) => pendingWrites.value.has(taskId)
+
   return {
     ...states,
     ...persistence,
@@ -401,7 +417,12 @@ export const useTaskStore = defineStore('tasks', () => {
     validateDataConsistency: async () => {
       // Basic check
       return true // Supabase handles this now
-    }
+    },
+
+    // High Severity Issue #7: Pending-write registry API
+    addPendingWrite,
+    removePendingWrite,
+    isPendingWrite
   }
 })
 

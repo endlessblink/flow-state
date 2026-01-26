@@ -145,6 +145,12 @@ export function useAppInitialization() {
             const taskId = newDoc?.id || oldDoc?.id
             if (!taskId) return
 
+            // High Severity Issue #7: Skip if task is pending local write (drag in progress)
+            if (tasks.isPendingWrite(taskId)) {
+                console.log(`[REALTIME] Skipping task ${taskId.slice(0,8)} - pending local write`)
+                return
+            }
+
             // BUG-169 DEBUG: Log ALL realtime events to diagnose task disappearance
             /* console.log(`[REALTIME] Task event:`, {
                 eventType,
@@ -181,6 +187,32 @@ export function useAppInitialization() {
             }
         }
 
+        const onGroupChange = (payload: any) => {
+            // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
+            const canvas = useCanvasStore()
+            const tasks = useTaskStore()
+
+            // HARDENED LOCK: Check store, dragging, resizing, and settling flags
+            const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                (window as any).__FlowStateIsDragging ||
+                (window as any).__FlowStateIsResizing ||
+                (window as any).__FlowStateIsSettling
+            ))
+
+            if (isLocked) {
+                return
+            }
+
+            const { eventType, new: newDoc, old: oldDoc } = payload
+            if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                canvas.removeGroupFromSync(newDoc?.id || oldDoc?.id)
+            } else if (newDoc) {
+                // Map raw Supabase data to app format
+                // Groups use position field directly, no special mapping needed
+                canvas.updateGroupFromSync(newDoc.id, newDoc)
+            }
+        }
+
         // TASK-1009: Consolidated Realtime subscription with ALL handlers
         // Previously, timer store called initRealtimeSubscription separately, killing this channel
         // Now we pass the timer handler here so there's only ONE subscription point
@@ -197,7 +229,7 @@ export function useAppInitialization() {
             ])
         }
 
-        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onRecovery)
+        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery)
         activeChannel.value = channel
 
         if (channel) {

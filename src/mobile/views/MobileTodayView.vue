@@ -15,7 +15,9 @@
       <span class="hint-text">← Delete</span>
       <span class="hint-divider">|</span>
       <span class="hint-text">Edit →</span>
-      <button class="hint-dismiss" @click="dismissSwipeHint">Got it</button>
+      <button class="hint-dismiss" @click="dismissSwipeHint">
+        Got it
+      </button>
     </div>
 
     <!-- Time-based sections -->
@@ -37,12 +39,12 @@
           >
             <div class="task-item" @click="handleTaskClick(task)">
               <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
+                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
                   <Check v-if="task.status === 'done'" :size="14" />
                 </div>
               </div>
               <div class="task-content">
-                <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
                 <span v-if="task.dueDate" class="task-due overdue">{{ formatDueTime(task.dueDate) }}</span>
               </div>
               <button class="timer-btn" @click.stop="startTimer(task)">
@@ -70,12 +72,12 @@
           >
             <div class="task-item" @click="handleTaskClick(task)">
               <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
+                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
                   <Check v-if="task.status === 'done'" :size="14" />
                 </div>
               </div>
               <div class="task-content">
-                <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
                 <span v-if="task.dueDate" class="task-due">{{ formatDueTime(task.dueDate) }}</span>
               </div>
               <button class="timer-btn" @click.stop="startTimer(task)">
@@ -103,12 +105,12 @@
           >
             <div class="task-item" @click="handleTaskClick(task)">
               <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
+                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
                   <Check v-if="task.status === 'done'" :size="14" />
                 </div>
               </div>
               <div class="task-content">
-                <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
                 <span v-if="task.dueDate" class="task-due">{{ formatDueTime(task.dueDate) }}</span>
               </div>
               <button class="timer-btn" @click.stop="startTimer(task)">
@@ -136,12 +138,12 @@
           >
             <div class="task-item" @click="handleTaskClick(task)">
               <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
+                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
                   <Check v-if="task.status === 'done'" :size="14" />
                 </div>
               </div>
               <div class="task-content">
-                <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
                 <span v-if="task.dueDate" class="task-due">{{ formatDueTime(task.dueDate) }}</span>
               </div>
               <button class="timer-btn" @click.stop="startTimer(task)">
@@ -169,12 +171,12 @@
           >
             <div class="task-item" @click="handleTaskClick(task)">
               <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div :class="['checkbox-circle', { checked: task.status === 'done' }]">
+                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
                   <Check v-if="task.status === 'done'" :size="14" />
                 </div>
               </div>
               <div class="task-content">
-                <span :class="['task-title', { done: task.status === 'done' }]">{{ task.title }}</span>
+                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
               </div>
               <button class="timer-btn" @click.stop="startTimer(task)">
                 <Play :size="16" />

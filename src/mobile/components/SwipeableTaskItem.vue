@@ -49,7 +49,7 @@
         v-if="dimOpacity > 0"
         class="dim-overlay"
         :style="{ backgroundColor: `rgba(0, 0, 0, ${dimOpacity})` }"
-      ></div>
+      />
 
       <!-- Swipe direction indicator overlay -->
       <div

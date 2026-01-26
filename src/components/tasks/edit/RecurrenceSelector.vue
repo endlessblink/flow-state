@@ -11,7 +11,7 @@
           :checked="safeModelValue.isEnabled"
           @change="toggleEnabled"
         >
-        <span class="slider"></span>
+        <span class="slider" />
       </label>
     </div>
 
@@ -130,52 +130,52 @@
         <div class="form-group">
           <label class="field-label">Ends</label>
           <div class="detail-column">
-             <div class="detail-row">
-                <input
-                  type="radio"
-                  name="endCondition"
-                  id="end-never"
-                  :checked="safeModelValue.endCondition.type === EndCondition.NEVER"
-                  @change="updateEndType(EndCondition.NEVER)"
-                >
-                <label for="end-never">Never</label>
-             </div>
-             <div class="detail-row">
-                <input
-                  type="radio"
-                  name="endCondition"
-                  id="end-date"
-                  :checked="safeModelValue.endCondition.type === EndCondition.ON_DATE"
-                  @change="updateEndType(EndCondition.ON_DATE)"
-                >
-                <label for="end-date">On Date</label>
-                <input
-                  v-if="safeModelValue.endCondition.type === EndCondition.ON_DATE"
-                  type="date"
-                  class="date-input"
-                  :value="safeModelValue.endCondition.date"
-                  @input="updateEndDate"
-                >
-             </div>
-             <div class="detail-row">
-                <input
-                  type="radio"
-                  name="endCondition"
-                  id="end-after"
-                  :checked="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT"
-                  @change="updateEndType(EndCondition.AFTER_COUNT)"
-                >
-                <label for="end-after">After</label>
-                <input
-                  v-if="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT"
-                  type="number"
-                  class="number-input"
-                  min="1"
-                  :value="safeModelValue.endCondition.count"
-                  @input="updateEndCount"
-                >
-                <span v-if="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT">occurrences</span>
-             </div>
+            <div class="detail-row">
+              <input
+                id="end-never"
+                type="radio"
+                name="endCondition"
+                :checked="safeModelValue.endCondition.type === EndCondition.NEVER"
+                @change="updateEndType(EndCondition.NEVER)"
+              >
+              <label for="end-never">Never</label>
+            </div>
+            <div class="detail-row">
+              <input
+                id="end-date"
+                type="radio"
+                name="endCondition"
+                :checked="safeModelValue.endCondition.type === EndCondition.ON_DATE"
+                @change="updateEndType(EndCondition.ON_DATE)"
+              >
+              <label for="end-date">On Date</label>
+              <input
+                v-if="safeModelValue.endCondition.type === EndCondition.ON_DATE"
+                type="date"
+                class="date-input"
+                :value="safeModelValue.endCondition.date"
+                @input="updateEndDate"
+              >
+            </div>
+            <div class="detail-row">
+              <input
+                id="end-after"
+                type="radio"
+                name="endCondition"
+                :checked="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT"
+                @change="updateEndType(EndCondition.AFTER_COUNT)"
+              >
+              <label for="end-after">After</label>
+              <input
+                v-if="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT"
+                type="number"
+                class="number-input"
+                min="1"
+                :value="safeModelValue.endCondition.count"
+                @input="updateEndCount"
+              >
+              <span v-if="safeModelValue.endCondition.type === EndCondition.AFTER_COUNT">occurrences</span>
+            </div>
           </div>
         </div>
 
@@ -223,6 +223,10 @@ const props = withDefaults(defineProps<{
   })
 })
 
+const emit = defineEmits<{
+  'update:modelValue': [value: TaskRecurrence]
+}>()
+
 // Default recurrence value for computed fallback
 const defaultRecurrence: TaskRecurrence = {
   isEnabled: false,
@@ -234,10 +238,6 @@ const defaultRecurrence: TaskRecurrence = {
 
 // Computed to safely access modelValue with fallback
 const safeModelValue = computed(() => props.modelValue ?? defaultRecurrence)
-
-const emit = defineEmits<{
-  'update:modelValue': [value: TaskRecurrence]
-}>()
 
 const patternOptions = [
   { label: 'Daily', value: RecurrencePattern.DAILY },

@@ -2,8 +2,8 @@
   <div ref="wrapperRef" class="overdue-badge-wrapper" @click.stop>
     <button
       class="overdue-badge"
-      @click="toggleMenu"
       title="Reschedule overdue task"
+      @click="toggleMenu"
     >
       <AlertCircle :size="12" />
       Overdue

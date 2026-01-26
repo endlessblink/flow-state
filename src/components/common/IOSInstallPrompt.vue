@@ -35,14 +35,25 @@ const dismiss = () => {
     <div v-if="showTooltip" class="ios-install-tooltip">
       <NCard class="tooltip-card" size="small" :bordered="false">
         <div class="tooltip-header">
-          <NText strong>Install FlowState</NText>
-          <NButton quaternary circle size="tiny" @click="dismiss">
-            <template #icon><X :size="14" /></template>
+          <NText strong>
+            Install FlowState
+          </NText>
+          <NButton
+            quaternary
+            circle
+            size="tiny"
+            @click="dismiss"
+          >
+            <template #icon>
+              <X :size="14" />
+            </template>
           </NButton>
         </div>
         
         <div class="tooltip-body">
-          <NText depth="3">To install FlowState on your iPhone:</NText>
+          <NText depth="3">
+            To install FlowState on your iPhone:
+          </NText>
           <div class="instruction-steps">
             <div class="step">
               <span class="step-icon"><Share :size="16" /></span>
@@ -55,7 +66,7 @@ const dismiss = () => {
           </div>
         </div>
       </NCard>
-      <div class="tooltip-arrow"></div>
+      <div class="tooltip-arrow" />
     </div>
   </Transition>
 </template>

@@ -183,13 +183,16 @@ export function useTaskContextMenuActions(
             // BUG-1051: AWAIT for timer sync
             await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
 
+            // BUG-1090: Use query param instead of event to avoid race condition
+            // The event was dispatched before CalendarView mounted, causing it to miss
             if (router.currentRoute.value.name !== 'calendar') {
-                router.push('/calendar')
+                await router.push({ path: '/calendar', query: { startNow: 'true' } })
+            } else {
+                // Already on calendar - dispatch event directly
+                window.dispatchEvent(new CustomEvent('start-task-now', {
+                    detail: { taskId: currentTask.value.id }
+                }))
             }
-
-            window.dispatchEvent(new CustomEvent('start-task-now', {
-                detail: { taskId: currentTask.value.id }
-            }))
         }
         emit('close')
     }

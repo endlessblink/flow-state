@@ -130,6 +130,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -162,6 +163,8 @@ interface SortableEvent {
   [key: string]: unknown
 }
 
+const route = useRoute()
+const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const uiStore = useUIStore()
@@ -476,8 +479,17 @@ onMounted(() => {
     currentTime.value = new Date()
   }, 30000) // Update every 30 seconds
 
-  // Scroll to current time on mount
-  scrollToCurrentTime()
+  // BUG-1090: Check for startNow query param (from START button navigation)
+  // This replaces the event-based approach that had a race condition
+  if (route.query.startNow === 'true') {
+    // Navigate to today and scroll to current time
+    handleStartTaskNow()
+    // Clear the query param to prevent re-triggering on refresh
+    router.replace({ path: '/calendar', query: {} })
+  } else {
+    // Scroll to current time on mount
+    scrollToCurrentTime()
+  }
 
   // Add event listeners
   window.addEventListener('start-task-now', handleStartTaskNow)

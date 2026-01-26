@@ -152,6 +152,15 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 
 **Local Development**: Continue using `.env.local` (not Doppler).
 
+**IMPORTANT - Tracked .env Files Are Safe:**
+The `.env` and `.env.production` files in git contain **only local development keys** (`iss: "supabase-demo"`). These are the standard default keys from `supabase start` and:
+- Only work against LOCAL Supabase instances
+- Are publicly documented in Supabase docs
+- Cannot access production database
+- Get **overwritten by Doppler** during CI/CD build
+
+This is NOT a security issue. Do not flag these as leaked credentials.
+
 ### Infrastructure Stack
 
 | Component | Technology | Location |

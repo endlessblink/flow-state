@@ -90,6 +90,10 @@ export interface Task {
   // Soft Delete Support (Phase 14)
   _soft_deleted?: boolean
   deletedAt?: Date | string
+
+  // "Done for now" tracking - shows badge when task was rescheduled via this feature
+  // Resets when dueDate changes to something other than this value
+  doneForNowUntil?: string // YYYY-MM-DD format
 }
 
 export interface Project {

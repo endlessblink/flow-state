@@ -269,8 +269,9 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
     }
 
     /**
-     * "Done for now" - Moves selected tasks' due date to tomorrow.
+     * "Done for now" - Moves selected tasks' due date to tomorrow with tracking badge.
      * User can work incrementally and automatically reschedule unfinished tasks.
+     * Badge shows until user changes the due date to something else.
      */
     const doneForNowSelectedTasks = async () => {
         const { showToast } = useToast()
@@ -284,8 +285,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         try {
             for (const nodeId of selectedNodeIds) {
+                // Set both dueDate and doneForNowUntil to track the badge
                 await undoHistory.updateTaskWithUndo(nodeId, {
-                    dueDate: tomorrowStr
+                    dueDate: tomorrowStr,
+                    doneForNowUntil: tomorrowStr
                 })
             }
 

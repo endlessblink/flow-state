@@ -3,6 +3,16 @@
     <!-- Status -->
     <span v-if="showStatus" class="status-badge">{{ statusLabel }}</span>
 
+    <!-- "Done for now" Badge - shows when task was rescheduled via this feature -->
+    <span
+      v-if="isDoneForNow"
+      class="done-for-now-badge"
+      title="Done for now - rescheduled to tomorrow"
+    >
+      <Clock :size="12" />
+      Done for now
+    </span>
+
     <!-- TASK-282: Overdue Badge (takes priority over regular due date display) -->
     <OverdueBadge
       v-if="isOverdue"
@@ -10,8 +20,8 @@
       @reschedule="(dateType) => $emit('reschedule', dateType)"
     />
 
-    <!-- Due Date (only show if not overdue) -->
-    <span v-else-if="dueDate" class="due-date-badge" title="Due Date">
+    <!-- Due Date (only show if not overdue and not done-for-now) -->
+    <span v-else-if="dueDate && !isDoneForNow" class="due-date-badge" title="Due Date">
       <Calendar :size="12" />
       {{ formattedDueDate }}
     </span>
@@ -41,10 +51,11 @@
 </template>
 
 <script setup lang="ts">
-import { Calendar, Check } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { Calendar, Check, Clock } from 'lucide-vue-next'
 import OverdueBadge from './OverdueBadge.vue'
 
-defineProps<{
+const props = defineProps<{
   showStatus: boolean
   statusLabel: string
   dueDate?: string | null
@@ -58,7 +69,14 @@ defineProps<{
   formattedDuration: string
   isDone: boolean
   isOverdue: boolean
+  doneForNowUntil?: string | null
 }>()
+
+// Show "Done for now" badge when dueDate matches doneForNowUntil
+// Badge resets when user changes dueDate to something else
+const isDoneForNow = computed(() => {
+  return props.doneForNowUntil && props.dueDate === props.doneForNowUntil
+})
 
 defineEmits<{
   reschedule: [dateType: string]
@@ -93,6 +111,14 @@ defineEmits<{
   color: #10b981;
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* "Done for now" badge - amber/orange to indicate rescheduled */
+.done-for-now-badge {
+  color: var(--amber-text, #f59e0b);
+  background: var(--amber-bg-light, rgba(245, 158, 11, 0.12));
+  border: 1px solid var(--amber-border, rgba(245, 158, 11, 0.3));
+  font-weight: 500;
 }
 
 /* Duration Styles */

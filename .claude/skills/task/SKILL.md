@@ -9,15 +9,20 @@ Quickly add new tasks to `docs/MASTER_PLAN.md` with automatic ID generation.
 
 ## Workflow
 
-### Step 1: Generate Unique Task ID
+### Step 1: Generate and Announce Task ID (FIRST!)
 
-Run the ID generator script:
+**CRITICAL**: Before doing ANYTHING else, run the ID generator and tell the user:
 
 ```bash
 node ./scripts/utils/get-next-task-id.cjs
 ```
 
-Extract the next available ID number from the output.
+**Immediately output to user:**
+```
+Using task number: [ID]
+```
+
+This must happen BEFORE asking any questions or gathering details.
 
 ### Step 2: Gather Task Information
 

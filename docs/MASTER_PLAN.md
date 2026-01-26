@@ -260,7 +260,7 @@
 | **TASK-1080**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
 | **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
 | **BUG-1085**             | **VPS Canvas Inbox: Delete Task Does Nothing**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Deleting task from canvas inbox on VPS starts soft-delete but never completes. No error, no success. Logs show `Starting soft-delete` but no completion.                                                              | -                                                      |
-| **TASK-1087**            | **KDE Widget: Task Readability + Active Task Highlight**                 | **P2**                                              | 📋 **PLANNED**                                                                                                                  | Improve KDE widget task list UX: (1) Increase task row height for better readability with RTL/long text, (2) Highlight the currently active timer task in the task list.                                               | TASK-1009                                              |
+| **TASK-1087**            | **KDE Widget: Task Readability + Active Task Highlight**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Improve KDE widget task list UX: (1) Increase task row height for better readability with RTL/long text, (2) Highlight the currently active timer task in the task list.                                               | TASK-1009                                              |
 
 ---
 
@@ -280,10 +280,10 @@
 
 ---
 
-### TASK-1087: KDE Widget - Task Readability + Active Task Highlight (📋 PLANNED)
+### TASK-1087: KDE Widget - Task Readability + Active Task Highlight (🔄 IN PROGRESS)
 
 **Priority**: P2
-**Status**: 📋 PLANNED
+**Status**: 🔄 IN PROGRESS (2026-01-26)
 **Depends On**: TASK-1009
 
 **Problem**: The KDE Plasma widget task list has UX issues:
@@ -295,14 +295,22 @@
 2. Allow text to wrap to 2 lines if needed
 3. Highlight the active timer task with accent color border/glow (matching web app's `timer-active` styling)
 
-**Files to Modify**:
+**Files Modified**:
 - `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 
-**Tasks**:
-- [ ] Increase task row height from current to allow 2-line text
-- [ ] Add text wrap for long titles
-- [ ] Add `isActiveTimerTask` computed property
-- [ ] Apply highlight styling when task matches `currentTaskId`
+**Changes Made**:
+- [x] Added `currentTaskId` property to track active timer task
+- [x] Increased task row height (44-64px dynamic based on content)
+- [x] Added 2-line text wrap with RTL support
+- [x] Added active task highlight (accent border + glow + pulse animation)
+- [x] Added chronometer icon for active task
+- [x] Bold text for active task
+- [x] Increased list spacing (4px → 6px)
+
+**Verification**:
+- [ ] Restart Plasma: `plasmashell --replace &`
+- [ ] Test with RTL Hebrew task titles
+- [ ] Test active task highlighting when timer running
 
 ---
 

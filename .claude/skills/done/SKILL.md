@@ -9,124 +9,98 @@ Finalize a completed task: verify tests pass, commit changes, update MASTER_PLAN
 
 ## Workflow
 
-### Step 1: Get Task Information
+### Step 1: Check What Changed
 
-Ask user for:
-1. **Task ID** (e.g., TASK-1017, BUG-1018, FEATURE-1020)
-2. **Brief summary** of what was done (1-2 sentences)
-3. **SOP needed?** - Was the fix non-obvious and worth documenting?
+**FIRST**, run git status to see what files were modified:
 
-Use `AskUserQuestion` tool:
-```
-Questions:
-1. "What is the task ID?" (header: "Task ID", free text via Other)
-2. "Should an SOP be created for this fix?" (header: "Create SOP", options: Yes/No)
+```bash
+git status
+git diff --stat
 ```
 
-### Step 2: Run Tests
+**Output to user immediately:**
+```
+Files changed:
+- [list of modified files]
+```
 
-Execute test suite to verify everything works:
+### Step 2: Get Task Information
+
+Ask user for task details. Use `AskUserQuestion` tool:
+
+**Questions:**
+1. **Task ID** (header: "Task ID")
+   - Options: "Tracked task (enter ID)" or "Quick fix (no ID)"
+
+2. **Create SOP?** (header: "Create SOP")
+   - Options: "No" (recommended) or "Yes"
+
+**Then ask in plain text:** "What's a brief summary of the changes? (1-2 sentences)"
+
+**IMPORTANT**: Wait for user to provide the summary before proceeding.
+
+### Step 3: Run Tests
+
+Execute test suite:
 
 ```bash
 npm run test
 ```
 
-**If tests fail**: STOP. Do not proceed. Report failures to user.
+**If tests fail**: STOP immediately. Report failures. Do NOT proceed.
 
-**If tests pass**: Continue to next step.
+**If tests pass**: Continue.
 
-### Step 3: Git Commit and Push
+### Step 4: Update MASTER_PLAN.md (if tracked task)
 
-Stage, commit, and push changes:
+**Skip this step if user selected "Quick fix (no ID)".**
 
-```bash
-# Check status first
-git status
-
-# Stage relevant files (NOT .env or credentials)
-git add <specific-files>
-
-# Commit with task ID in message
-git commit -m "$(cat <<'EOF'
-[TASK-XXX] Brief description of changes
-
-- Detail 1
-- Detail 2
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-EOF
-)"
-
-# Push to remote
-git push
-```
-
-### Step 4: Update MASTER_PLAN.md
-
-**CRITICAL**: Tasks appear in **3 locations** in MASTER_PLAN.md. Update ALL of them:
+**CRITICAL**: Tasks appear in **3 locations**. Update ALL of them:
 
 #### 4a. Summary Table (Roadmap section)
 
-Find the task row and update:
-- Add `~~strikethrough~~` around task ID
-- Change status to `✅ **DONE**`
-- Add completion date
-
-**Before:**
 ```markdown
-| **TASK-1017** | **Mobile: Expanded Date Options** | **P2** | 📋 **PLANNED** | ... |
+# Before:
+| **TASK-XXX** | **Title** | **P2** | 📋 **PLANNED** | ... |
+
+# After:
+| ~~**TASK-XXX**~~ | ✅ **Title** | **P2** | ✅ **DONE** (YYYY-MM-DD) | ... |
 ```
 
-**After:**
+#### 4b. Subtasks Lists (if applicable)
+
 ```markdown
-| ~~**TASK-1017**~~ | ✅ **DONE** **Mobile: Expanded Date Options** | **P2** | ✅ **DONE** (2026-01-23) | ... |
-```
+# Before:
+- TASK-XXX: Description
 
-#### 4b. Subtasks Lists (if task is a subtask)
-
-Find any bullet points referencing this task and add strikethrough + checkmark:
-
-**Before:**
-```markdown
-- TASK-1017: Mobile date options
-```
-
-**After:**
-```markdown
-- ~~TASK-1017~~: ✅ Mobile date options
+# After:
+- ~~TASK-XXX~~: ✅ Description
 ```
 
 #### 4c. Detailed Section (#### headers)
 
-Find the detailed task section and update the header:
-
-**Before:**
 ```markdown
-#### TASK-1017: Mobile Expanded Date Options (📋 PLANNED)
+# Before:
+#### TASK-XXX: Title (📋 PLANNED)
+
+# After:
+#### ~~TASK-XXX~~: Title (✅ DONE)
 ```
 
-**After:**
-```markdown
-#### ~~TASK-1017~~: Mobile Expanded Date Options (✅ DONE)
-```
-
-#### 4d. Verification
-
-Run grep to verify all occurrences updated:
+#### 4d. Verify All Updated
 
 ```bash
-grep "TASK-1017" docs/MASTER_PLAN.md
+grep "TASK-XXX" docs/MASTER_PLAN.md
 ```
 
-All matches should show strikethrough or ✅ DONE.
+All matches must show strikethrough or ✅ DONE.
 
-### Step 5: Create SOP (if needed)
+### Step 5: Create SOP (if requested)
 
-If user indicated SOP is needed:
+**Skip if user selected "No" for SOP.**
 
-1. **Determine SOP number**: Check `docs/sop/` for highest number, use next
-2. **Create SOP file**: `docs/sop/SOP-XXX-<descriptive-name>.md`
-3. **Use template**:
+1. Find next SOP number: `ls docs/sop/SOP-*.md | tail -1`
+2. Create `docs/sop/SOP-XXX-<name>.md` using template:
 
 ```markdown
 # SOP-XXX: [Title]
@@ -136,55 +110,94 @@ If user indicated SOP is needed:
 **Status**: Active
 
 ## Problem
-
 [What problem does this solve?]
 
 ## Solution
-
 [Step-by-step solution]
 
 ## Key Files
-
 - `path/to/file.ts` - [what it does]
 
 ## Verification
-
 [How to verify the fix works]
 ```
 
-### Step 6: Final Commit (if SOP created)
+### Step 6: Commit and Push (MANDATORY)
 
-If SOP was created, commit it:
+**This step is NOT optional. ALL changes must be committed and pushed.**
 
 ```bash
-git add docs/sop/SOP-XXX-*.md docs/MASTER_PLAN.md
-git commit -m "docs: Add SOP-XXX and mark TASK-XXX done
+# Stage all relevant files (NOT .env, credentials, or backup files)
+git add <code-files>
+git add docs/MASTER_PLAN.md  # if task was tracked
+git add docs/sop/SOP-*.md    # if SOP was created
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+# Commit with proper message
+git commit -m "$(cat <<'EOF'
+[TASK-XXX] Brief summary from user
+
+- Key change 1
+- Key change 2
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+
+# Push to remote (triggers deployment)
 git push
 ```
 
-### Step 7: Report Completion
+**For quick fixes (no task ID):**
+```bash
+git commit -m "$(cat <<'EOF'
+fix: Brief summary from user
 
-Output summary to user:
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+### Step 7: Verify Deployment
+
+**Wait for CI/CD and confirm:**
+
+```bash
+# Check if push triggered CI
+gh run list --limit 1
+```
+
+### Step 8: Report Completion
+
+**Output this summary to user:**
 
 ```
-✅ Task [TASK-ID] marked as DONE
+✅ Task Complete
 
 Summary:
 - Tests: ✅ Passed
-- Commit: [commit hash]
-- MASTER_PLAN.md: Updated (3 locations)
+- Commit: [hash] - [message]
+- Push: ✅ Pushed to origin/master
+- Deployment: ✅ CI/CD triggered
+- MASTER_PLAN.md: [Updated / N/A (quick fix)]
 - SOP: [Created SOP-XXX / Not needed]
-
-Changes pushed to remote.
 ```
+
+---
 
 ## Important Rules
 
-- **NEVER skip tests** - Always run `npm run test` first
-- **Update ALL 3 locations** in MASTER_PLAN.md
-- **Use strikethrough** (`~~ID~~`) on the task ID
-- **Include task ID** in commit message
-- **Only create SOP** if fix was non-obvious
-- **Verify with grep** after updating MASTER_PLAN.md
+1. **NEVER skip tests** - Always run `npm run test` first
+2. **NEVER skip commit/push** - Changes must be deployed
+3. **ALWAYS collect summary** - Don't proceed without knowing what changed
+4. **Update ALL 3 locations** in MASTER_PLAN.md for tracked tasks
+5. **Verify with grep** after updating MASTER_PLAN.md
+6. **Wait for user input** - Don't assume or skip questions
+
+## Files to NEVER Commit
+
+- `.env*` files
+- `credentials*.json`
+- `backups/shadow.db`
+- `public/shadow-latest.json`
+- `stats.html` (generated)

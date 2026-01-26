@@ -481,44 +481,47 @@ onUnmounted(() => {
 }
 
 /* TASK-1074: Brief flash animation when date is updated */
-/* Default flash color (no priority) */
 .is-flashing {
-  --flash-color: #10b981;
-  animation: task-flash 0.6s ease-out !important;
+  animation: task-flash-green 0.6s ease-out !important;
 }
 
-/* Priority-specific flash colors */
 .priority-high.is-flashing {
-  --flash-color: #ef4444;
+  animation: task-flash-red 0.6s ease-out !important;
 }
 
 .priority-medium.is-flashing {
-  --flash-color: #f59e0b;
+  animation: task-flash-amber 0.6s ease-out !important;
 }
 
 .priority-low.is-flashing {
-  --flash-color: #3b82f6;
+  animation: task-flash-blue 0.6s ease-out !important;
 }
 
-@keyframes task-flash {
-  0% {
-    transform: scale(1);
-    filter: brightness(1);
-    box-shadow: 0 0 0 0 var(--flash-color);
-  }
-  25% {
-    transform: scale(1.02);
-    filter: brightness(1.3);
-    box-shadow: 0 0 25px 6px var(--flash-color);
-  }
-  50% {
-    filter: brightness(1.15);
-    box-shadow: 0 0 15px 4px var(--flash-color);
-  }
-  100% {
-    transform: scale(1);
-    filter: brightness(1);
-    box-shadow: 0 0 0 0 var(--flash-color);
-  }
+@keyframes task-flash-green {
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #10b981; }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #10b981; }
+  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #10b981; }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #10b981; }
+}
+
+@keyframes task-flash-red {
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #ef4444; }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #ef4444; }
+  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #ef4444; }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #ef4444; }
+}
+
+@keyframes task-flash-amber {
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #f59e0b; }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #f59e0b; }
+  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #f59e0b; }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #f59e0b; }
+}
+
+@keyframes task-flash-blue {
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #3b82f6; }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #3b82f6; }
+  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #3b82f6; }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #3b82f6; }
 }
 </style>

@@ -395,21 +395,52 @@ onUnmounted(() => {
 }
 
 /* TASK-1074: Brief flash animation when date is updated */
+/* Default flash color (no priority) */
 .task-row--flashing {
-  animation: task-row-flash 0.5s ease-out !important;
+  --flash-color: #10b981;
+  --flash-bg: rgba(16, 185, 129, 0.2);
+  --flash-bg-mid: rgba(16, 185, 129, 0.1);
+  animation: task-row-flash 0.6s ease-out !important;
+}
+
+/* Priority-specific flash colors */
+.priority-high.task-row--flashing {
+  --flash-color: #ef4444;
+  --flash-bg: rgba(239, 68, 68, 0.2);
+  --flash-bg-mid: rgba(239, 68, 68, 0.1);
+}
+
+.priority-medium.task-row--flashing {
+  --flash-color: #f59e0b;
+  --flash-bg: rgba(245, 158, 11, 0.2);
+  --flash-bg-mid: rgba(245, 158, 11, 0.1);
+}
+
+.priority-low.task-row--flashing {
+  --flash-color: #3b82f6;
+  --flash-bg: rgba(59, 130, 246, 0.2);
+  --flash-bg-mid: rgba(59, 130, 246, 0.1);
 }
 
 @keyframes task-row-flash {
   0% {
-    box-shadow: 0 0 0 0 #10b981;
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 var(--flash-color);
     background: transparent;
   }
-  30% {
-    box-shadow: 0 0 20px 4px #10b981;
-    background: rgba(16, 185, 129, 0.15);
+  25% {
+    filter: brightness(1.3);
+    box-shadow: 0 0 20px 4px var(--flash-color);
+    background: var(--flash-bg);
+  }
+  50% {
+    filter: brightness(1.15);
+    box-shadow: 0 0 12px 2px var(--flash-color);
+    background: var(--flash-bg-mid);
   }
   100% {
-    box-shadow: 0 0 0 0 #10b981;
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 var(--flash-color);
     background: transparent;
   }
 }

@@ -10,7 +10,7 @@
  */
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute, Route } from 'workbox-routing'
-import { CacheFirst, NetworkOnly } from 'workbox-strategies'
+import { CacheFirst, NetworkOnly, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 // VitePWA injects __WB_MANIFEST at build time
@@ -27,6 +27,24 @@ cleanupOutdatedCaches()
 // Precache all assets from the manifest (injected by VitePWA)
 // Precaching
 precacheAndRoute(self.__WB_MANIFEST)
+
+// BUG-1089: Fallback for assets not in precache (handles stale SW edge case)
+// If precache fails, try network directly
+registerRoute(
+  new Route(
+    ({ url }) => url.pathname.startsWith('/assets/') &&
+      (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')),
+    new NetworkFirst({
+      cacheName: 'asset-fallback-cache',
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 50,
+          maxAgeSeconds: 24 * 60 * 60 // 1 day
+        })
+      ]
+    })
+  )
+)
 
 // ============================================================================
 // RUNTIME CACHING STRATEGIES

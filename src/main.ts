@@ -1,7 +1,7 @@
-// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-25T14:00:00Z - V21 - CLOUDFLARE CACHE PURGE
+// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-26T22:00:00Z - V22 - SW FIX
 
 // Cache bust version - increment to force new asset hashes
-const __BUILD_VERSION__ = 'v21-cloudflare-purge-20260125'
+const __BUILD_VERSION__ = 'v22-sw-fix-20260126'
 console.log(`[FlowState] Build: ${__BUILD_VERSION__}`)
 
 // Console filter - reduces log noise in development (toggle via localStorage)

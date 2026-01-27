@@ -7,7 +7,7 @@
         <Calendar :size="14" />
         <span class="field-label">Due</span>
         <input
-          :value="modelValue.dueDate"
+          :value="formattedDueDate"
           type="date"
           class="inline-input"
           @input="updateDate('dueDate', $event)"
@@ -18,7 +18,7 @@
         <Clock :size="14" />
         <span class="field-label">Do</span>
         <input
-          :value="modelValue.scheduledDate"
+          :value="formattedScheduledDate"
           type="date"
           class="inline-input"
           @input="updateDate('scheduledDate', $event)"
@@ -113,16 +113,19 @@ const props = defineProps<{
   statusOptions: { label: string; value: string }[]
 }>()
 
-// BUG-1097 DEBUG: Log what we're receiving
-watch(() => props.modelValue, (task) => {
-  console.log('🔴 [BUG-1097] TaskEditMetadata received task:', {
-    id: task?.id?.slice(0, 8),
-    title: task?.title?.slice(0, 20),
-    dueDate: task?.dueDate,
-    dueDateType: typeof task?.dueDate,
-    scheduledDate: task?.scheduledDate
-  })
-}, { immediate: true, deep: true })
+// BUG-1097 FIX: Convert ISO timestamp to YYYY-MM-DD format for HTML date input
+const formatDateForInput = (dateValue: string | undefined | null): string => {
+  if (!dateValue) return ''
+  // If already in YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue
+  // If ISO timestamp (2026-01-30T00:00:00+00:00), extract date part
+  if (dateValue.includes('T')) return dateValue.split('T')[0]
+  return dateValue
+}
+
+// Computed properties for properly formatted dates
+const formattedDueDate = computed(() => formatDateForInput(props.modelValue.dueDate))
+const formattedScheduledDate = computed(() => formatDateForInput(props.modelValue.scheduledDate))
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Task): void

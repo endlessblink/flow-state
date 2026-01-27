@@ -627,7 +627,7 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .parent-select option {
-  background: #1a1a1a;
+  background: #1c1a2d;
   color: var(--text-primary);
   padding: var(--space-2);
 }

@@ -216,8 +216,8 @@
     <TaskCreateBottomSheet
       :is-open="isTaskCreateOpen"
       :is-listening="isListening"
-      :voice-transcript="displayTranscript"
-      @close="isTaskCreateOpen = false"
+      :voice-transcript="finalVoiceTranscript || displayTranscript"
+      @close="handleTaskCreateClose"
       @created="handleTaskSheetCreated"
       @stop-recording="stopVoice"
     />
@@ -263,6 +263,7 @@ const selectedPriority = ref<string | null>(null)
 
 // Task create sheet state
 const isTaskCreateOpen = ref(false)
+const finalVoiceTranscript = ref('')
 
 // Swipe hint - show once for first-time users
 const SWIPE_HINT_KEY = 'flowstate-inbox-swipe-hint-dismissed'
@@ -310,14 +311,9 @@ const {
   onResult: (result) => {
     console.log('[Whisper] Result:', result)
     if (result.transcript.trim()) {
-      // Close TaskCreateBottomSheet if open (prevents overlap issues)
-      isTaskCreateOpen.value = false
-      // Auto-detect language from Whisper response
-      // Groq returns full language name like 'Hebrew', 'English', etc.
-      const lang = (result.language === 'Hebrew' || result.language === 'he') ? 'he-IL' : 'en-US'
-      const parsed = parseTranscript(result.transcript.trim(), lang)
-      parsedVoiceTask.value = parsed
-      showVoiceConfirmation.value = true
+      // Keep TaskCreateBottomSheet open - transcript flows via voiceTranscript prop
+      // The sheet's watcher will populate the text field
+      finalVoiceTranscript.value = result.transcript.trim()
     }
   },
   onError: (err) => {
@@ -341,11 +337,8 @@ const {
   silenceTimeout: 2500,
   onResult: (result) => {
     if (result.isFinal && result.transcript.trim()) {
-      // Close TaskCreateBottomSheet if open (prevents overlap issues)
-      isTaskCreateOpen.value = false
-      const parsed = parseTranscript(result.transcript.trim(), voiceLanguage.value)
-      parsedVoiceTask.value = parsed
-      showVoiceConfirmation.value = true
+      // Keep TaskCreateBottomSheet open - transcript flows via voiceTranscript prop
+      finalVoiceTranscript.value = result.transcript.trim()
     }
   },
   onError: (err) => {
@@ -431,9 +424,10 @@ const toggleVoiceInput = async () => {
   if (isListening.value) {
     stopVoice()
   } else {
-    // Reset confirmation state when starting new voice input
+    // Reset state when starting new voice input
     parsedVoiceTask.value = null
     showVoiceConfirmation.value = false
+    finalVoiceTranscript.value = ''
     // Open TaskCreateBottomSheet to show voice feedback during recording
     isTaskCreateOpen.value = true
     await startVoice()
@@ -486,8 +480,8 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 // Delete task (triggered by swipe left + confirm)
-const handleDeleteTask = async (task: Task) => {
-  await taskStore.deleteTask(task.id)
+const handleDeleteTask = (task: Task) => {
+  taskStore.deleteTask(task.id)
 }
 
 // Filter configuration
@@ -640,6 +634,11 @@ const handleVoiceTaskCancel = () => {
 }
 
 // Task create sheet handler
+const handleTaskCreateClose = () => {
+  isTaskCreateOpen.value = false
+  finalVoiceTranscript.value = ''
+}
+
 const handleTaskSheetCreated = (data: { title: string; description: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
   taskStore.createTask({
     title: data.title,
@@ -648,7 +647,7 @@ const handleTaskSheetCreated = (data: { title: string; description: string; prio
     ...(data.dueDate && { dueDate: data.dueDate.toISOString() }),
     ...(data.priority && { priority: data.priority })
   })
-  isTaskCreateOpen.value = false
+  handleTaskCreateClose()
 }
 
 const resetVoiceState = () => {

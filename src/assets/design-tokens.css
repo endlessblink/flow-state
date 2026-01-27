@@ -787,10 +787,10 @@
 
   /* Inbox Panel Customization - User Controlled */
   --inbox-panel-opacity: 0.15;
-  --inbox-panel-bg: rgba(20, 20, 20, var(--inbox-panel-opacity));
-  --glass-panel-bg: rgba(20, 20, 20, 0.6);
+  --inbox-panel-bg: rgba(28, 25, 45, var(--inbox-panel-opacity));
+  --glass-panel-bg: rgba(28, 25, 45, 0.6);
   /* Semi-transparent headers/panels */
-  --dropdown-bg: rgba(20, 20, 20, 0.9);
+  --dropdown-bg: rgba(28, 25, 45, 0.9);
   /* Opaque-ish dropdowns */
 
   /* Dropdown-specific tokens */
@@ -973,7 +973,7 @@
   --glass-bg-medium: rgba(255, 255, 255, 0.04);
   --glass-bg-heavy: rgba(255, 255, 255, 0.06);
   --glass-bg-solid: rgba(0, 0, 0, 0.95);
-  --glass-bg: rgba(25, 27, 35, 0.35);
+  --glass-bg: rgba(30, 27, 45, 0.35);
 
   /* Shared glass variants */
   --glass-bg-subtle: rgba(255, 255, 255, 0.005);
@@ -992,10 +992,10 @@
   --overlay-component-bg: rgba(28, 25, 45, 0.92);
   --overlay-component-backdrop: blur(20px);
 
-  /* Dropdown/panel backgrounds - Match web exactly */
-  --dropdown-bg: rgba(20, 20, 20, 0.9);
-  --glass-panel-bg: rgba(20, 20, 20, 0.6);
-  --inbox-panel-bg: rgba(20, 20, 20, 0.15);
+  /* Dropdown/panel backgrounds - Purple-tinted glass */
+  --dropdown-bg: rgba(28, 25, 45, 0.9);
+  --glass-panel-bg: rgba(28, 25, 45, 0.6);
+  --inbox-panel-bg: rgba(28, 25, 45, 0.15);
 
   /* Kanban backgrounds - Match web exactly */
   --kanban-column-bg: rgba(255, 255, 255, 0.04);

@@ -35,7 +35,7 @@ type Story = StoryObj<typeof BaseDropdown>
 // Glass morphism container style
 const glassContainer = `
   padding: 40px;
-  background: rgba(20, 20, 35, 0.7);
+  background: rgba(28, 25, 45, 0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);

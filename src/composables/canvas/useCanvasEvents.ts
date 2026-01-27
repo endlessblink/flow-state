@@ -5,6 +5,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { errorHandler, ErrorCategory } from '@/utils/errorHandler'
 import { useCanvasContextMenus } from './useCanvasContextMenus'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
 export function useCanvasEvents(syncNodes?: () => void) {
     const canvasStore = useCanvasStore()
@@ -110,8 +111,10 @@ export function useCanvasEvents(syncNodes?: () => void) {
             return
         }
 
-        canvasContextMenuX.value = event.clientX
-        canvasContextMenuY.value = event.clientY
+        // BUG-1096: Use normalized coordinates for Tauri compatibility
+        const { x, y } = getViewportCoordinates(event)
+        canvasContextMenuX.value = x
+        canvasContextMenuY.value = y
         showCanvasContextMenu.value = true
     }
 
@@ -127,8 +130,10 @@ export function useCanvasEvents(syncNodes?: () => void) {
         // so we don't accidentally open a group menu
         canvasContextSection.value = null
 
-        canvasContextMenuX.value = event.clientX
-        canvasContextMenuY.value = event.clientY
+        // BUG-1096: Use normalized coordinates for Tauri compatibility
+        const { x, y } = getViewportCoordinates(event)
+        canvasContextMenuX.value = x
+        canvasContextMenuY.value = y
         showCanvasContextMenu.value = true
     }
 
@@ -207,9 +212,8 @@ export function useCanvasEvents(syncNodes?: () => void) {
 
         if (!node) return
 
-        // Use clientX/Y from MouseEvent or TouchEvent (first touch)
-        const clientX = 'clientX' in mouseEvent ? mouseEvent.clientX : (mouseEvent as TouchEvent).touches[0].clientX
-        const clientY = 'clientY' in mouseEvent ? mouseEvent.clientY : (mouseEvent as TouchEvent).touches[0].clientY
+        // BUG-1096: Use normalized coordinates for Tauri compatibility
+        const { x, y } = getViewportCoordinates(mouseEvent)
 
         mouseEvent.preventDefault()
 
@@ -229,14 +233,14 @@ export function useCanvasEvents(syncNodes?: () => void) {
             const section = canvasStore.groups.find(s => s.id === sectionId)
 
             console.log('[TASK-288-DEBUG] handleNodeContextMenu - storing position for sectionNode', {
-                clientX,
-                clientY,
+                x,
+                y,
                 sectionId,
                 sectionName: section?.name
             })
 
-            canvasContextMenuX.value = clientX
-            canvasContextMenuY.value = clientY
+            canvasContextMenuX.value = x
+            canvasContextMenuY.value = y
             canvasContextSection.value = section || null
             showCanvasContextMenu.value = true
 
@@ -245,7 +249,7 @@ export function useCanvasEvents(syncNodes?: () => void) {
             showEdgeContextMenu.value = false
         } else {
             // Default generic node menu (for any other custom types)
-            openNodeContextMenu(clientX, clientY, node.id)
+            openNodeContextMenu(x, y, node.id)
         }
     }
 
@@ -260,12 +264,12 @@ export function useCanvasEvents(syncNodes?: () => void) {
             mouseEvent = event as MouseEvent | TouchEvent
         }
 
-        const clientX = 'clientX' in mouseEvent ? mouseEvent.clientX : (mouseEvent as TouchEvent).touches[0].clientX
-        const clientY = 'clientY' in mouseEvent ? mouseEvent.clientY : (mouseEvent as TouchEvent).touches[0].clientY
+        // BUG-1096: Use normalized coordinates for Tauri compatibility
+        const { x, y } = getViewportCoordinates(mouseEvent)
 
         mouseEvent.preventDefault()
         if (edgeId) {
-            openEdgeContextMenu(clientX, clientY, edgeId)
+            openEdgeContextMenu(x, y, edgeId)
         }
     }
 

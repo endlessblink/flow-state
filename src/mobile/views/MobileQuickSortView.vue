@@ -1296,8 +1296,8 @@ onMounted(() => {
   max-height: 260px;
   background: linear-gradient(
     145deg,
-    rgba(30, 32, 45, 0.95),
-    rgba(25, 27, 38, 0.98)
+    rgba(35, 32, 50, 0.95),
+    rgba(28, 25, 45, 0.98)
   );
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-2xl);
@@ -1873,7 +1873,7 @@ onMounted(() => {
 }
 
 .confirm-modal {
-  background: linear-gradient(145deg, rgba(30, 32, 45, 0.98), rgba(25, 27, 38, 0.98));
+  background: linear-gradient(145deg, rgba(35, 32, 50, 0.98), rgba(28, 25, 45, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-2xl);
   padding: var(--space-8);

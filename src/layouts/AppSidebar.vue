@@ -1517,7 +1517,7 @@ defineExpose({
 }
 
 .delete-confirm-modal {
-  background: rgba(20, 20, 25, 0.95);
+  background: rgba(28, 25, 45, 0.95);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);

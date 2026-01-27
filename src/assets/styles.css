@@ -120,9 +120,9 @@ body {
    in ALL environments (Chromium, WebKitGTK, Firefox)
    ========================================================================= */
 
-/* Force dark styling on ALL native select elements */
+/* Force dark styling on ALL native select elements - purple-tinted */
 select {
-  background-color: #1e1e28 !important;
+  background-color: #221f35 !important;
   color: #e0e0e0 !important;
   border: 1px solid var(--border-hover) !important;
   border-radius: var(--radius-md);
@@ -134,7 +134,7 @@ select:focus {
 }
 
 select option {
-  background-color: #1e1e28 !important;
+  background-color: #221f35 !important;
   color: #e0e0e0 !important;
   padding: var(--space-2);
 }
@@ -144,7 +144,7 @@ select option {
 .filter-controls .filter-select,
 .filter-control select,
 .filter-select {
-  background-color: #1e1e28 !important;
+  background-color: #221f35 !important;
   color: #e0e0e0 !important;
   border: 1px solid var(--border-hover) !important;
 }
@@ -197,32 +197,32 @@ select option {
 /* Override glass variables for Tauri - FULLY OPAQUE (BUG-1066) */
 /* WebKitGTK doesn't support backdrop-filter, so we use solid colors */
 .tauri-app {
-  /* Glass backgrounds - FULLY OPAQUE solid colors */
-  --glass-bg-soft: rgb(30, 30, 35) !important;
-  --glass-bg-light: rgb(35, 35, 42) !important;
-  --glass-bg-medium: rgb(28, 28, 34) !important;
-  --glass-bg-heavy: rgb(25, 25, 30) !important;
-  --glass-bg: rgb(30, 30, 36) !important;
-  --glass-bg-tint: rgb(32, 32, 40) !important;
-  --glass-bg-subtle: rgb(32, 32, 40) !important;
+  /* Glass backgrounds - FULLY OPAQUE purple-tinted */
+  --glass-bg-soft: rgb(35, 32, 50) !important;
+  --glass-bg-light: rgb(40, 37, 55) !important;
+  --glass-bg-medium: rgb(33, 30, 48) !important;
+  --glass-bg-heavy: rgb(30, 27, 44) !important;
+  --glass-bg: rgb(35, 32, 50) !important;
+  --glass-bg-tint: rgb(37, 34, 52) !important;
+  --glass-bg-subtle: rgb(37, 34, 52) !important;
 
-  /* Panel backgrounds - FULLY OPAQUE */
-  --inbox-panel-bg: rgb(22, 22, 28) !important;
-  --glass-panel-bg: rgb(24, 24, 30) !important;
-  --dropdown-bg: rgb(22, 22, 28) !important;
+  /* Panel backgrounds - FULLY OPAQUE purple-tinted */
+  --inbox-panel-bg: rgb(28, 25, 45) !important;
+  --glass-panel-bg: rgb(30, 27, 48) !important;
+  --dropdown-bg: rgb(28, 25, 45) !important;
 
   /* Overlay components - FULLY OPAQUE purple-tinted */
   --overlay-component-bg: rgb(28, 25, 45) !important;
   --overlay-component-backdrop: none !important;
 
-  /* Kanban backgrounds - FULLY OPAQUE */
-  --kanban-column-bg: rgb(35, 35, 42) !important;
-  --kanban-card-glass-bg: rgb(30, 30, 38) !important;
+  /* Kanban backgrounds - FULLY OPAQUE purple-tinted */
+  --kanban-column-bg: rgb(40, 37, 55) !important;
+  --kanban-card-glass-bg: rgb(35, 32, 52) !important;
 
-  /* Surface backgrounds for components */
-  --surface-0: rgb(18, 18, 22) !important;
-  --surface-1: rgb(24, 24, 30) !important;
-  --surface-hover: rgb(35, 35, 42) !important;
+  /* Surface backgrounds for components - purple-tinted */
+  --surface-0: rgb(24, 21, 38) !important;
+  --surface-1: rgb(30, 27, 48) !important;
+  --surface-hover: rgb(40, 37, 55) !important;
 }
 
 /* When running in Tauri (class added by app initialization) */
@@ -231,7 +231,7 @@ select option {
 .tauri-app [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background-color: rgb(28, 28, 34) !important;
+  background-color: rgb(33, 30, 48) !important;
   border: 1px solid var(--glass-border) !important;
 }
 
@@ -246,7 +246,7 @@ select option {
 /* Fix glass panel backgrounds - OPAQUE for Tauri */
 .tauri-app .glass-panel,
 .tauri-app [class*="glass-bg"] {
-  background: rgb(28, 28, 34) !important;
+  background: rgb(33, 30, 48) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -261,7 +261,7 @@ select option {
 /* Sidebar - OPAQUE for Tauri */
 .tauri-app aside,
 .tauri-app nav {
-  background: rgb(18, 18, 22) !important;
+  background: rgb(24, 21, 38) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: var(--sidebar-shadow) !important;
@@ -279,7 +279,7 @@ select option {
 .tauri-app [role="dialog"],
 .tauri-app .modal,
 .tauri-app .n-modal {
-  background: rgb(24, 24, 30) !important;
+  background: rgb(30, 27, 48) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
@@ -299,7 +299,7 @@ select option {
 .tauri-app .n-popover,
 .tauri-app .n-dropdown-menu,
 .tauri-app .n-popover-content {
-  background: rgb(22, 22, 28) !important;
+  background: rgb(28, 25, 45) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
@@ -352,10 +352,10 @@ select option {
    CSS variables may not work - use explicit colors.
    ========================================================================= */
 
-/* Native select dropdowns - explicit dark styling for WebKitGTK */
+/* Native select dropdowns - purple-tinted for WebKitGTK */
 .tauri-app select,
 .tauri-app .filter-select {
-  background-color: #1a1a24 !important;
+  background-color: #1c1a30 !important;
   color: #e0e0e0 !important;
   border: 1px solid var(--glass-border-hover) !important;
   -webkit-appearance: menulist !important;
@@ -364,18 +364,18 @@ select option {
 
 .tauri-app select option,
 .tauri-app .filter-select option {
-  background-color: #1a1a24 !important;
+  background-color: #1c1a30 !important;
   color: #e0e0e0 !important;
 }
 
-/* Native input fields */
+/* Native input fields - purple-tinted */
 .tauri-app input[type="text"],
 .tauri-app input[type="email"],
 .tauri-app input[type="password"],
 .tauri-app input[type="number"],
 .tauri-app input[type="search"],
 .tauri-app textarea {
-  background-color: #1a1a24 !important;
+  background-color: #1c1a30 !important;
   color: #e0e0e0 !important;
   border: 1px solid var(--glass-border-hover) !important;
 }
@@ -437,7 +437,7 @@ select option {
 .tauri-app .manual-merge-modal {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(24, 24, 30) !important;
+  background: rgb(30, 27, 48) !important;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -473,7 +473,7 @@ select option {
 .tauri-app .filter-dropdown {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(18, 18, 22) !important;
+  background: rgb(24, 21, 38) !important;
 }
 
 .pwa-app .app-sidebar,
@@ -498,7 +498,7 @@ select option {
 .tauri-app .context-menu-content {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(22, 22, 28) !important;
+  background: rgb(28, 25, 45) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -522,7 +522,7 @@ select option {
 .tauri-app .search-modal-content {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(22, 22, 28) !important;
+  background: rgb(28, 25, 45) !important;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -557,7 +557,7 @@ select option {
 .tauri-app .canvas-empty-state {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(28, 28, 35) !important;
+  background: rgb(33, 30, 50) !important;
   box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
@@ -591,7 +591,7 @@ select option {
 .tauri-app .kanban-swimlane {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(32, 32, 40) !important;
+  background: rgb(37, 34, 52) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
 }
 
@@ -623,7 +623,7 @@ select option {
 .tauri-app .select-dropdown {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(22, 22, 28) !important;
+  background: rgb(28, 25, 45) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -719,7 +719,7 @@ select option {
 .tauri-app .calendar-status-overlays {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(24, 24, 30) !important;
+  background: rgb(30, 27, 48) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
@@ -744,7 +744,7 @@ select option {
 .tauri-app .unified-inbox-panel {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  background: rgb(22, 22, 28) !important;
+  background: rgb(28, 25, 45) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 8px 32px rgba(0, 0, 0, 0.4) !important;
@@ -981,21 +981,21 @@ select option {
   .glass-panel {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background-color: rgba(25, 25, 30, 0.98) !important;
+    background-color: rgba(30, 27, 45, 0.98) !important;
     border: 1px solid var(--border-medium) !important;
   }
 
-  /* Native form elements for WebKitGTK (no backdrop-filter support) */
+  /* Native form elements for WebKitGTK - purple-tinted */
   select,
   .filter-select {
-    background-color: #1a1a24 !important;
+    background-color: #1c1a30 !important;
     color: #e0e0e0 !important;
     border: 1px solid var(--glass-border-hover) !important;
   }
 
   select option,
   .filter-select option {
-    background-color: #1a1a24 !important;
+    background-color: #1c1a30 !important;
     color: #e0e0e0 !important;
   }
 
@@ -1005,7 +1005,7 @@ select option {
   input[type="number"],
   input[type="search"],
   textarea {
-    background-color: #1a1a24 !important;
+    background-color: #1c1a30 !important;
     color: #e0e0e0 !important;
     border: 1px solid var(--glass-border-hover) !important;
   }

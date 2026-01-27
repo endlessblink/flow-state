@@ -3,6 +3,7 @@ import { type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { EdgeMouseEvent, Edge } from '@vue-flow/core'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
+import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
 interface ConnectionDeps {
     syncEdges: () => void
@@ -149,8 +150,10 @@ export function useCanvasConnections(
         event.event.preventDefault()
         event.event.stopPropagation()
 
-        state.edgeContextMenuX.value = mouseEvent.clientX
-        state.edgeContextMenuY.value = mouseEvent.clientY
+        // BUG-1096: Use normalized coordinates for Tauri compatibility
+        const { x, y } = getViewportCoordinates(mouseEvent)
+        state.edgeContextMenuX.value = x
+        state.edgeContextMenuY.value = y
         state.selectedEdge.value = event.edge
         state.showEdgeContextMenu.value = true
 

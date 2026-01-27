@@ -154,7 +154,7 @@ const handleDisableFeature = () => {
 
 .suggestion-toast {
   pointer-events: auto;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  background: linear-gradient(135deg, #1c1a38 0%, #1a1f42 50%, #14122a 100%);
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-xl, 16px);
   padding: var(--space-4, 16px);

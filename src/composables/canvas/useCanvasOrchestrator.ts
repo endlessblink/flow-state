@@ -402,39 +402,47 @@ export function useCanvasOrchestrator() {
             logHierarchySummary(canvasStore._rawGroups || [])
         }
 
-        // SINGLE initial sync respecting current filters
-        console.log('🚀 [ORCHESTRATOR] Initial syncNodes...')
-        syncNodes()
+        // BUG-1084 v5: Wait for stores to be ready before initial sync
+        // The root cause of empty canvas on initial load was calling syncNodes() before
+        // stores were populated. Now we use a watcher to wait for initialization.
+        const stopInitWatcher = watch(
+            [
+                () => taskStore._hasInitializedOnce,
+                () => canvasStore._hasInitializedOnce
+            ],
+            ([tasksReady, groupsReady]) => {
+                // Run initial sync once BOTH stores have finished loading
+                if (tasksReady && groupsReady && !isInitialized.value) {
+                    console.log('🚀 [ORCHESTRATOR] Stores initialized, running initial sync', {
+                        tasks: taskStore.tasks.length,
+                        groups: canvasStore.groups.length
+                    })
+                    syncNodes()
+                    syncEdges()
+                    isInitialized.value = true
+                    console.log('✅ [ORCHESTRATOR] Initialization complete')
+                    stopInitWatcher()
+                }
+            },
+            { immediate: true }
+        )
 
-        // Sync edges from task.dependsOn arrays
-        console.log('🚀 [ORCHESTRATOR] Initial syncEdges...')
-        syncEdges()
-
-        // Mark initialization complete - watchers can now fire
-        isInitialized.value = true
-        console.log('✅ [ORCHESTRATOR] Initialization complete')
-
-        // BUG-1084 FIX v4: Post-initialization sync to catch late-loading data
-        // The initial sync may run before Supabase data arrives. This delayed sync
-        // ensures we re-sync after data has had time to load from the network.
+        // Fallback: If stores don't signal ready within 2s, sync anyway
+        // This handles edge cases like empty databases or network timeouts
         setTimeout(() => {
-            const currentNodeCount = nodes.value.length
-            const expectedGroupCount = canvasStore.groups.length
-            const expectedTaskCount = tasksWithCanvasPosition.value.length
-
-            console.log('🔄 [ORCHESTRATOR] Post-init sync check:', {
-                currentNodes: currentNodeCount,
-                expectedGroups: expectedGroupCount,
-                expectedTasks: expectedTaskCount
-            })
-
-            // If we have fewer nodes than expected, re-sync
-            if (currentNodeCount < (expectedGroupCount + expectedTaskCount)) {
-                console.log('🔄 [ORCHESTRATOR] Running post-init sync - nodes missing')
+            if (!isInitialized.value) {
+                console.warn('⚠️ [ORCHESTRATOR] Fallback sync - stores took too long', {
+                    tasksReady: taskStore._hasInitializedOnce,
+                    groupsReady: canvasStore._hasInitializedOnce,
+                    tasks: taskStore.tasks.length,
+                    groups: canvasStore.groups.length
+                })
                 syncNodes()
                 syncEdges()
+                isInitialized.value = true
+                stopInitWatcher()
             }
-        }, 500)
+        }, 2000)
 
         // TASK-299: Auto-center on Today group after nodes are rendered
         // Use setTimeout to allow Vue Flow to calculate node dimensions

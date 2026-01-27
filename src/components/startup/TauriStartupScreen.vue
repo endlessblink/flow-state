@@ -188,7 +188,7 @@ function openSupabaseInstall() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--overlay-component-bg, rgba(18, 18, 20, 0.98));
+  background: var(--overlay-component-bg, rgba(28, 25, 45, 0.98));
   backdrop-filter: var(--overlay-component-backdrop, blur(20px));
 }
 

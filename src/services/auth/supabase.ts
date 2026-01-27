@@ -16,9 +16,19 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 // If envUrl is relative (starts with /), prepend current origin
 // BUG-1064: Tauri now connects to VPS Supabase (same as web) for cross-platform sync
 function resolveSupabaseUrl(): string {
-    // Check for explicit local mode (for development/testing)
+    // BUG-1094: Add diagnostic logging for Tauri connection issues
     const useLocalSupabase = import.meta.env.VITE_USE_LOCAL_SUPABASE === 'true'
+
+    console.log('[Supabase] Resolving URL:', {
+        isTauri,
+        envUrl,
+        useLocalSupabase,
+        VITE_USE_LOCAL_SUPABASE: import.meta.env.VITE_USE_LOCAL_SUPABASE,
+    })
+
+    // Check for explicit local mode (for development/testing)
     if (useLocalSupabase) {
+        console.log('[Supabase] Using LOCAL Supabase (VITE_USE_LOCAL_SUPABASE=true)')
         return 'http://127.0.0.1:54321'
     }
 
@@ -29,16 +39,21 @@ function resolveSupabaseUrl(): string {
         if (envUrl.startsWith('/')) {
             console.warn('[Supabase] Tauri requires full URL, not relative path. Check VITE_SUPABASE_URL')
             // Fallback to production VPS
+            console.log('[Supabase] Using VPS fallback: https://api.in-theflow.com')
             return 'https://api.in-theflow.com'
         }
+        console.log('[Supabase] Using envUrl for Tauri:', envUrl)
         return envUrl
     }
 
     // Web/PWA: Convert relative path to full URL if needed
     if (envUrl.startsWith('/') && typeof window !== 'undefined') {
         // e.g., '/supabase' becomes 'https://in-theflow.com/supabase'
-        return `${window.location.origin}${envUrl}`
+        const resolved = `${window.location.origin}${envUrl}`
+        console.log('[Supabase] Web/PWA resolved URL:', resolved)
+        return resolved
     }
+    console.log('[Supabase] Using envUrl as-is:', envUrl)
     return envUrl
 }
 

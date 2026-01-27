@@ -85,7 +85,7 @@
 | ~~**BUG-1075**~~         | ✅ **DONE** **Inbox Header Time Filter Text Wrapping/Clipping**        | **P1**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1086**             | **VPS/PWA Auth Not Persisting + Blank Screen**                         | **P0**                                              | 👀 **REVIEW** - Fixed: (1) Triple auth init race condition, (2) Duplicate SIGNED_IN handler. See [SOP-035](./sop/SOP-035-auth-initialization-race-fix.md)                  | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1090**             | **VPS: START and TIMER buttons in task menu don't work**               | **P1**                                              | 🔄 **IN PROGRESS** - Fixed race condition: event dispatched before CalendarView mounted                                          | -                                                                                                                                                                                                              |                                                        |
-| **BUG-1091**             | **VPS: No cross-browser sync, data resets on refresh**                 | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | BUG-1086                                                                                                                                                                                                       |                                                        |
+| ~~**BUG-1091**~~         | ✅ **VPS: No cross-browser sync, data resets on refresh**              | **P0**                                              | ✅ **DONE** (2026-01-27) - Fixed split-brain timestamp comparison (>= to >)                                                      | BUG-1086                                                                                                                                                                                                       |                                                        |
 | **TASK-1092**            | **Self-Hosted CI/CD (Replace GitHub Actions)**                         | **P3**                                              | 📋 **PLANNED**                                                                                                                  | -                                                                                                                                                                                                              |                                                        |
 | **BUG-1094**             | **Tauri app WebSocket fails to connect to local Supabase**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | -                                                                                                                                                                                                              |                                                        |
 | ~~**BUG-1095**~~         | ~~**Context menu duration submenu stays open on click**~~              | **P2**                                              | ✅ **DONE** (2026-01-26) - Moved `emit('close')` before async operations in all context menu actions                             | -                                                                                                                                                                                                              |                                                        |
@@ -351,37 +351,20 @@
 
 ---
 
-### BUG-1091: VPS - No Cross-Browser Sync, Data Resets on Refresh (🔄 IN PROGRESS)
+### ~~BUG-1091~~: VPS - No Cross-Browser Sync, Data Resets on Refresh (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS (2026-01-26)
+**Status**: ✅ DONE (2026-01-27)
 **Depends On**: BUG-1086
 
 **Problem**: On VPS production (in-theflow.com), changes made in one browser (e.g., Zen) do not sync to another browser (e.g., Brave). After refresh, data resets to previous state.
 
-**Symptoms**:
-- Create/edit task in Zen browser → change doesn't appear in Brave
-- Refresh either browser → data reverts to older state
-- Realtime sync appears non-functional between browser instances
+**Root Cause**: Timestamp comparison in `updateTaskFromSync()` used `>=` which caused split-brain - when timestamps were equal, both browsers rejected each other's changes.
 
-**Suspected Causes**:
-- Supabase Realtime WebSocket connection issues
-- Service worker caching stale data
-- Auth session mismatch between browsers
-- Related to BUG-1086 auth persistence issues
+**Fix**: Changed `>=` to `>` in `src/stores/tasks.ts:226` so equal timestamps accept remote (DB is source of truth). Only skip if local is STRICTLY newer.
 
-**Investigation Tasks**:
-- [ ] Check Realtime WebSocket connection status in both browsers
-- [ ] Verify `onAuthStateChange` subscription is active
-- [ ] Check if service worker is intercepting and caching API responses
-- [ ] Test without service worker (clear cache + unregister SW)
-- [ ] Verify Supabase RLS policies allow cross-device sync
-
-**Files to Investigate**:
-- `src/composables/useSupabaseDatabase.ts`
-- `src/stores/tasks.ts`
-- `src/sw.ts`
-- `src/services/auth/supabase.ts`
+**Files Changed**:
+- `src/stores/tasks.ts` - Fixed timestamp comparison in `updateTaskFromSync()`
 
 ---
 

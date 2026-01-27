@@ -97,10 +97,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { 
-  Calendar, Clock, TimerReset, Flag, Zap, Circle, 
-  PlayCircle, CheckCircle, Archive, AlertCircle, Layers 
+import { computed, watch } from 'vue'
+import {
+  Calendar, Clock, TimerReset, Flag, Zap, Circle,
+  PlayCircle, CheckCircle, Archive, AlertCircle, Layers
 } from 'lucide-vue-next'
 import { type Task } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -112,6 +112,17 @@ const props = defineProps<{
   priorityOptions: { label: string; value: string }[]
   statusOptions: { label: string; value: string }[]
 }>()
+
+// BUG-1097 DEBUG: Log what we're receiving
+watch(() => props.modelValue, (task) => {
+  console.log('🔴 [BUG-1097] TaskEditMetadata received task:', {
+    id: task?.id?.slice(0, 8),
+    title: task?.title?.slice(0, 20),
+    dueDate: task?.dueDate,
+    dueDateType: typeof task?.dueDate,
+    scheduledDate: task?.scheduledDate
+  })
+}, { immediate: true, deep: true })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Task): void

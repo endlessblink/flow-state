@@ -150,16 +150,12 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 | **Doppler** (`flowstate-prod`) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GROQ_API_KEY` |
 | **GitHub Secrets** | `DOPPLER_TOKEN`, `SSH_PRIVATE_KEY`, `VPS_HOST`, `VPS_USER` |
 
-**Local Development**: Continue using `.env.local` (not Doppler).
+**Local Development Setup:**
+1. Copy `.env.example` to `.env` (or `.env.local`)
+2. Run `supabase status` to get your local Supabase keys
+3. Fill in the values from `supabase status` output
 
-**IMPORTANT - Tracked .env Files Are Safe:**
-The `.env` and `.env.production` files in git contain **only local development keys** (`iss: "supabase-demo"`). These are the standard default keys from `supabase start` and:
-- Only work against LOCAL Supabase instances
-- Are publicly documented in Supabase docs
-- Cannot access production database
-- Get **overwritten by Doppler** during CI/CD build
-
-This is NOT a security issue. Do not flag these as leaked credentials.
+**Note:** `.env` and `.env.production` are gitignored - Doppler is the single source of truth for all environments.
 
 ### Infrastructure Stack
 

@@ -1,4 +1,4 @@
-import { type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Task } from '@/types/tasks'
 import { useProjectStore } from '../projects'
@@ -22,6 +22,10 @@ export function useTaskPersistence(
     _runAllTaskMigrations: () => void
 ) {
     const projectStore = useProjectStore()
+
+    // BUG-1084 v5: Flag to indicate that loadFromDatabase has completed at least once
+    // Used by useCanvasOrchestrator to wait for store initialization before syncing
+    const _hasInitializedOnce = ref(false)
     const FILTER_STORAGE_KEY = 'flow-state-filters'
 
     interface PersistedFilterState {
@@ -295,6 +299,8 @@ export function useTaskPersistence(
             console.error('❌ [SUPABASE] Load failed:', error)
         } finally {
             isLoadingFromDatabase.value = false
+            // BUG-1084 v5: Mark initialization complete (even on error)
+            _hasInitializedOnce.value = true
         }
     }
 
@@ -358,6 +364,8 @@ export function useTaskPersistence(
         loadFromDatabase,
         loadPersistedFilters,
         persistFilters,
+        // BUG-1084 v5: Expose initialization flag for orchestrator
+        _hasInitializedOnce,
         importTasksFromJSON: async () => {
             // Disabled / TBD
         },

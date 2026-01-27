@@ -474,6 +474,11 @@ const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) =>
     submenuTimeout.value = null
   }
 
+  // BUG-1095: Close ALL other submenus before opening a new one
+  showStatusSubmenu.value = false
+  showDurationSubmenu.value = false
+  showMoreSubmenu.value = false
+
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   const submenuWidth = 150

@@ -25,70 +25,69 @@ export function isTauri(): boolean {
  * @returns Normalized viewport coordinates { x, y }
  */
 export function getViewportCoordinates(event: MouseEvent | TouchEvent): { x: number; y: number } {
-    // Get base coordinates from event
+    // Get all available coordinate types from event
     const clientX = 'clientX' in event ? event.clientX : (event as TouchEvent).touches[0].clientX
     const clientY = 'clientY' in event ? event.clientY : (event as TouchEvent).touches[0].clientY
+    const pageX = 'pageX' in event ? event.pageX : (event as TouchEvent).touches[0].pageX
+    const pageY = 'pageY' in event ? event.pageY : (event as TouchEvent).touches[0].pageY
+    const screenX = 'screenX' in event ? event.screenX : 0
+    const screenY = 'screenY' in event ? event.screenY : 0
+    const offsetX = 'offsetX' in event ? (event as MouseEvent).offsetX : 0
+    const offsetY = 'offsetY' in event ? (event as MouseEvent).offsetY : 0
 
+    const target = event.target as HTMLElement
+    const targetRect = target?.getBoundingClientRect()
+
+    // Always log in Tauri for debugging
     if (isTauri()) {
-        // BUG-1096 FIX: In Tauri, use multiple strategies to get correct coordinates
+        console.log('[BUG-1096] 🎯 TAURI COORDINATE DEBUG:', {
+            clientX, clientY,
+            pageX, pageY,
+            screenX, screenY,
+            offsetX, offsetY,
+            windowScroll: { x: window.scrollX, y: window.scrollY },
+            windowInner: { w: window.innerWidth, h: window.innerHeight },
+            windowOuter: { w: window.outerWidth, h: window.outerHeight },
+            devicePixelRatio: window.devicePixelRatio,
+            targetClass: target?.className,
+            targetRect: targetRect ? {
+                left: targetRect.left,
+                top: targetRect.top,
+                width: targetRect.width,
+                height: targetRect.height
+            } : null
+        })
 
-        // Strategy 1: Use pageX/pageY converted to viewport coords
-        // These are more reliable in embedded WebViews
-        const pageX = 'pageX' in event ? event.pageX : (event as TouchEvent).touches[0].pageX
-        const pageY = 'pageY' in event ? event.pageY : (event as TouchEvent).touches[0].pageY
-
-        // Convert page coordinates to viewport coordinates
-        const viewportX = pageX - window.scrollX
-        const viewportY = pageY - window.scrollY
-
-        // Strategy 2: Validate against known container
-        // If we have a Vue Flow container, check if coords are within bounds
-        const vueFlowContainer = document.querySelector('.vue-flow')
-
-        if (vueFlowContainer) {
-            const rect = vueFlowContainer.getBoundingClientRect()
-
-            // If the calculated coords are within the container, use them
-            if (viewportX >= rect.left && viewportX <= rect.right &&
-                viewportY >= rect.top && viewportY <= rect.bottom) {
-                console.debug('[BUG-1096] Tauri coords normalized via pageX/pageY:', {
-                    original: { clientX, clientY },
-                    normalized: { x: viewportX, y: viewportY }
-                })
-                return { x: viewportX, y: viewportY }
-            }
-
-            // Strategy 3: Use target element's position + offsetX/offsetY
-            // This works when the click target is reliable
-            const target = event.target as HTMLElement
-            if (target && 'offsetX' in event) {
-                const targetRect = target.getBoundingClientRect()
-                const correctedX = targetRect.left + (event as MouseEvent).offsetX
-                const correctedY = targetRect.top + (event as MouseEvent).offsetY
-
-                // Only use if the corrected coords are reasonable
-                if (correctedX >= 0 && correctedY >= 0 &&
-                    correctedX <= window.innerWidth && correctedY <= window.innerHeight) {
-                    console.debug('[BUG-1096] Tauri coords corrected via target offset:', {
-                        original: { clientX, clientY },
-                        corrected: { x: correctedX, y: correctedY },
-                        target: target.className
-                    })
-                    return { x: correctedX, y: correctedY }
-                }
+        // Try multiple strategies and log them all
+        const strategies = {
+            clientXY: { x: clientX, y: clientY },
+            pageMinusScroll: { x: pageX - window.scrollX, y: pageY - window.scrollY },
+            targetPlusOffset: targetRect ? {
+                x: targetRect.left + offsetX,
+                y: targetRect.top + offsetY
+            } : null,
+            // Try adjusting for devicePixelRatio
+            clientDPR: {
+                x: clientX / window.devicePixelRatio,
+                y: clientY / window.devicePixelRatio
+            },
+            // Try screenX minus window position (if available)
+            screenMinusWindow: {
+                x: screenX - window.screenX,
+                y: screenY - window.screenY
             }
         }
 
-        // If validation passed or no container to check, use the pageX/pageY approach
-        // Only if it differs significantly from clientX/clientY (indicating a bug)
-        const delta = Math.abs(viewportX - clientX) + Math.abs(viewportY - clientY)
-        if (delta > 10) {
-            console.debug('[BUG-1096] Tauri coords using pageX/pageY (significant delta):', {
-                original: { clientX, clientY },
-                normalized: { x: viewportX, y: viewportY },
-                delta
-            })
-            return { x: viewportX, y: viewportY }
+        console.log('[BUG-1096] 📊 STRATEGY COMPARISON:', strategies)
+
+        // Strategy: Use target element position + offsetX/offsetY
+        // This should be the most reliable as it's relative to the actual clicked element
+        if (targetRect && offsetX !== undefined && offsetY !== undefined) {
+            const correctedX = targetRect.left + offsetX
+            const correctedY = targetRect.top + offsetY
+
+            console.log('[BUG-1096] ✅ Using targetRect + offset:', { x: correctedX, y: correctedY })
+            return { x: correctedX, y: correctedY }
         }
     }
 

@@ -21,38 +21,62 @@ fi
 # Extract worktree name from path
 WORKTREE_NAME="${CWD##*/}"
 
-# Detect current task from MASTER_PLAN.md (look for IN PROGRESS tasks)
+# Get session ID from Claude Code JSON (for per-instance task tracking)
+SESSION_ID=$(echo "$JSON_DATA" | jq -r '.session_id // empty' 2>/dev/null)
+
+# Detect current task - priority order:
+# 1. Per-session task file (.claude/tasks/{session_id}.json)
+# 2. Global current-task.json (.claude/current-task.json)
+# 3. First IN PROGRESS in MASTER_PLAN.md (fallback)
 CURRENT_TASK=""
 TASK_DESC=""
-if [ -f "$CWD/docs/MASTER_PLAN.md" ]; then
-  # Find task with IN PROGRESS or 🔄 status in the table
-  TASK_LINE=$(grep -E "^\|.*\|.*(IN PROGRESS|🔄)" "$CWD/docs/MASTER_PLAN.md" 2>/dev/null | head -1)
-  if [ -n "$TASK_LINE" ]; then
-    # Extract task ID (TASK-XXX, BUG-XXX, etc.)
-    CURRENT_TASK=$(echo "$TASK_LINE" | grep -oE "(TASK|BUG|ROAD|IDEA|ISSUE)-[0-9]+" | head -1)
-    # Extract description from column 2 (between first and second |)
-    # Format: | ID | Description | Priority | Status | ...
-    TASK_DESC=$(echo "$TASK_LINE" | cut -d'|' -f3 | sed 's/^\s*\*\*//; s/\*\*\s*$//; s/^\s*//; s/\s*$//')
-    # Trim to 30 chars
-    if [ ${#TASK_DESC} -gt 30 ]; then
-      TASK_DESC="${TASK_DESC:0:30}…"
+
+# 1a. Check per-session task file (by Claude session ID)
+if [ -n "$SESSION_ID" ] && [ -f "$CWD/.claude/tasks/${SESSION_ID}.json" ]; then
+  JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/tasks/${SESSION_ID}.json" 2>/dev/null)
+  JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/tasks/${SESSION_ID}.json" 2>/dev/null)
+  if [ -n "$JSON_TASK" ]; then
+    CURRENT_TASK="$JSON_TASK"
+    TASK_DESC="$JSON_DESC"
+  fi
+fi
+
+# 1b. Check per-terminal task file (by TTY - for manual set-task.sh usage)
+if [ -z "$CURRENT_TASK" ]; then
+  TTY_KEY=$(tty 2>/dev/null | tr '/' '_')
+  if [ -n "$TTY_KEY" ] && [ -f "$CWD/.claude/tasks/${TTY_KEY}.json" ]; then
+    JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/tasks/${TTY_KEY}.json" 2>/dev/null)
+    JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/tasks/${TTY_KEY}.json" 2>/dev/null)
+    if [ -n "$JSON_TASK" ]; then
+      CURRENT_TASK="$JSON_TASK"
+      TASK_DESC="$JSON_DESC"
     fi
   fi
 fi
 
-# Also check .claude/current-task.json as override
-if [ -f "$CWD/.claude/current-task.json" ]; then
+# 2. Fallback to global current-task.json
+if [ -z "$CURRENT_TASK" ] && [ -f "$CWD/.claude/current-task.json" ]; then
   JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/current-task.json" 2>/dev/null)
   JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/current-task.json" 2>/dev/null)
   if [ -n "$JSON_TASK" ]; then
     CURRENT_TASK="$JSON_TASK"
-    if [ -n "$JSON_DESC" ]; then
-      TASK_DESC="${JSON_DESC:0:25}"
-      if [ ${#JSON_DESC} -gt 25 ]; then
-        TASK_DESC="${TASK_DESC}…"
-      fi
-    fi
+    TASK_DESC="$JSON_DESC"
   fi
+fi
+
+# 3. Fallback to MASTER_PLAN.md (only if no task file exists)
+if [ -z "$CURRENT_TASK" ] && [ -f "$CWD/docs/MASTER_PLAN.md" ]; then
+  # Find task with IN PROGRESS or 🔄 status in the table
+  TASK_LINE=$(grep -E "^\|.*\|.*(IN PROGRESS|🔄)" "$CWD/docs/MASTER_PLAN.md" 2>/dev/null | head -1)
+  if [ -n "$TASK_LINE" ]; then
+    CURRENT_TASK=$(echo "$TASK_LINE" | grep -oE "(TASK|BUG|ROAD|IDEA|ISSUE)-[0-9]+" | head -1)
+    TASK_DESC=$(echo "$TASK_LINE" | cut -d'|' -f3 | sed 's/^\s*\*\*//; s/\*\*\s*$//; s/^\s*//; s/\s*$//')
+  fi
+fi
+
+# Trim description to 30 chars
+if [ ${#TASK_DESC} -gt 30 ]; then
+  TASK_DESC="${TASK_DESC:0:30}…"
 fi
 
 # Try to find actual running Vite port for this worktree

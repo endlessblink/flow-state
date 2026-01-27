@@ -9,12 +9,12 @@
       @mouseleave="$emit('mouseleave')"
     >
       <!-- Done for now - reschedule to tomorrow -->
-      <button class="menu-item menu-item--sm" @click="$emit('doneForNow')">
+      <button class="menu-item menu-item--sm" @click.stop="$emit('doneForNow')">
         <Clock :size="14" class="menu-icon" />
         <span class="menu-text">Done for now</span>
       </button>
 
-      <button class="menu-item menu-item--sm" @click="$emit('duplicate')">
+      <button class="menu-item menu-item--sm" @click.stop="$emit('duplicate')">
         <Copy :size="14" class="menu-icon" />
         <span class="menu-text">Duplicate</span>
       </button>
@@ -22,13 +22,13 @@
       <button
         v-if="!isBatchOperation && taskId"
         class="menu-item menu-item--sm"
-        @click="$emit('moveToSection', taskId)"
+        @click.stop="$emit('moveToSection', taskId)"
       >
         <Layout :size="14" class="menu-icon" />
         <span class="menu-text">Move to Section</span>
       </button>
 
-      <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click="$emit('clearSelection')">
+      <button v-if="isBatchOperation" class="menu-item menu-item--sm" @click.stop="$emit('clearSelection')">
         <X :size="14" class="menu-icon" />
         <span class="menu-text">Clear Selection</span>
       </button>

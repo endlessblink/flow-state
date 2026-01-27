@@ -193,7 +193,6 @@ const {
               </div>
               <div class="task-meta">
                 <span class="task-time">{{ formatEventTime(calEvent) }}</span>
-                <span class="task-meta-separator">•</span>
                 <span class="task-duration">{{ calEvent.duration }}min</span>
               </div>
             </div>
@@ -349,10 +348,9 @@ const {
 .task-content--calendar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  width: 100%;
-  /* Account for project emoji stripe (16px wide at 6px left = 22px, plus 2px gap) */
-  margin-left: var(--space-3);
+  gap: var(--space-0_5);
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 

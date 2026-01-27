@@ -22,6 +22,10 @@ export const useCanvasStore = defineStore('canvas', () => {
     import('@/stores/tasks').then(m => { taskStoreRef.value = m.useTaskStore() as unknown as { tasks: Task[] } })
   }
 
+  // BUG-1084 v5: Flag to indicate that loadFromDatabase has completed at least once
+  // Used by useCanvasOrchestrator to wait for store initialization before syncing
+  const _hasInitializedOnce = ref(false)
+
   // 2. Persistence Layer
   const {
     fetchGroups,
@@ -133,6 +137,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       console.error('❌ [SUPABASE] Failed to load canvas groups:', e)
       const localGroups = loadGroupsFromLocalStorage()
       if (localGroups.length > 0) groupsModule.setGroups(breakGroupCycles(localGroups))
+    } finally {
+      // BUG-1084 v5: Mark initialization complete (even on error)
+      _hasInitializedOnce.value = true
     }
   }
 
@@ -288,6 +295,8 @@ export const useCanvasStore = defineStore('canvas', () => {
     showPriorityIndicator, showStatusBadge, showDurationBadge, showScheduleBadge,
     activeSectionId: groupsModule.activeSectionId, syncTrigger: groupsModule.syncTrigger,
     nodeVersionMap, isDragging,
+    // BUG-1084 v5: Initialization flag for orchestrator
+    _hasInitializedOnce,
 
     // Actions
     loadFromDatabase,

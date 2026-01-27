@@ -13,7 +13,7 @@
         :key="status.value"
         class="menu-item menu-item--sm"
         :class="{ active: currentStatus === status.value }"
-        @click="$emit('select', status.value)"
+        @click.stop="$emit('select', status.value)"
       >
         <component
           :is="status.icon"

@@ -33,6 +33,13 @@ export * from './types'
 // Base abstract class
 export { BaseAIProvider } from './BaseAIProvider'
 
+// Ollama (Local)
+export {
+  OllamaProvider,
+  createOllamaProvider,
+  autoDetectOllama,
+} from './ollama'
+
 // Re-export commonly used types from @/types/ai for convenience
 export type {
   AIProvider,

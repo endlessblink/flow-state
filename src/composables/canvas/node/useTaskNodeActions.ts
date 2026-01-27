@@ -210,6 +210,13 @@ export function useTaskNodeActions(
         }, 'USER')
     }
 
+    // Clear "Done for now" badge by resetting doneForNowUntil
+    const handleClearDoneForNow = () => {
+        if (!props.task) return
+        console.log(`🗑️ Clearing "Done for now" badge for task "${props.task.title}"`)
+        taskStore.updateTask(props.task.id, { doneForNowUntil: undefined }, 'USER')
+    }
+
     // TASK-282: Reschedule overdue task (sync - fires updates without waiting)
     const handleReschedule = (dateType: string) => {
         if (!props.task) return
@@ -282,6 +289,7 @@ export function useTaskNodeActions(
         handleMouseDown,
         handleContextMenu,
         handleReschedule, // TASK-282
+        handleClearDoneForNow,
         triggerEdit
     }
 }

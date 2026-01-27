@@ -432,11 +432,11 @@ button svg {
    NAIVE UI DATE PICKER - DARK THEME OVERRIDE (BUG-367/TASK-368)
    ============================================================================= */
 
-/* Date picker panel - dark background */
+/* Date picker panel - purple-tinted background */
 .n-date-picker-panel,
 .n-date-panel,
 .n-date-panel-calendar {
-    background: var(--overlay-component-bg, rgba(30, 30, 35, 0.98)) !important;
+    background: var(--overlay-component-bg, rgba(35, 32, 55, 0.98)) !important;
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
     border-radius: var(--radius-lg, 12px) !important;
 }

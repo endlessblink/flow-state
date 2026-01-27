@@ -19,15 +19,22 @@
               Cancel
             </button>
             <h3 class="sheet-title">
-              {{ isListening ? 'Recording...' : 'New Task' }}
+              {{ isListening ? 'Recording...' : isProcessing ? 'Processing...' : 'New Task' }}
             </h3>
-            <!-- Show Stop when recording, Add when not -->
+            <!-- Show Stop when recording, spinner when processing, Add when idle -->
             <button
               v-if="isListening"
               class="header-btn stop-btn"
               @click="emit('stop-recording')"
             >
               Stop
+            </button>
+            <button
+              v-else-if="isProcessing"
+              class="header-btn processing-btn"
+              disabled
+            >
+              <div class="btn-spinner" />
             </button>
             <button
               v-else
@@ -109,16 +116,17 @@
               </div>
             </div>
 
-            <!-- Voice Feedback (Optional) -->
-            <div v-if="isListening" class="voice-feedback">
+            <!-- Voice Feedback (Recording or Processing) -->
+            <div v-if="isListening || isProcessing" class="voice-feedback" :class="{ processing: isProcessing }">
               <div class="voice-indicator">
-                <div class="voice-pulse" />
-                <span>Listening...</span>
+                <div v-if="isProcessing" class="processing-spinner" />
+                <div v-else class="voice-pulse" />
+                <span>{{ isProcessing ? 'Transcribing audio...' : 'Listening...' }}</span>
               </div>
               <p v-if="voiceTranscript" class="voice-transcript">
                 {{ voiceTranscript }}
               </p>
-              <button class="stop-recording-btn" @click="emit('stop-recording')">
+              <button v-if="isListening" class="stop-recording-btn" @click="emit('stop-recording')">
                 <Square :size="16" />
                 <span>Stop Recording</span>
               </button>
@@ -139,11 +147,13 @@ import {
 interface Props {
   isOpen: boolean
   isListening?: boolean
+  isProcessing?: boolean
   voiceTranscript?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isListening: false,
+  isProcessing: false,
   voiceTranscript: ''
 })
 
@@ -414,6 +424,29 @@ function autoResize(event: Event) {
   background: #dc2626;
 }
 
+.processing-btn {
+  background: var(--brand-primary, #4ECDC4);
+  color: hsl(230, 20%, 10%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: hsl(230, 20%, 10%);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Create Form */
 .create-form {
   flex: 1;
@@ -548,6 +581,29 @@ function autoResize(event: Event) {
   background: var(--brand-primary, #4ECDC4);
   border-radius: 50%;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.processing-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(78, 205, 196, 0.3);
+  border-top-color: var(--brand-primary, #4ECDC4);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.voice-feedback.processing {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.voice-feedback.processing .voice-indicator {
+  color: #f59e0b;
+}
+
+.voice-feedback.processing .processing-spinner {
+  border-color: rgba(245, 158, 11, 0.3);
+  border-top-color: #f59e0b;
 }
 
 @keyframes pulse {

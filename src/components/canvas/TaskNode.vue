@@ -65,6 +65,7 @@
         :is-overdue="isOverdue"
         :done-for-now-until="task?.doneForNowUntil"
         @reschedule="handleReschedule"
+        @clear-done-for-now="handleClearDoneForNow"
       />
     </div>
 
@@ -183,7 +184,8 @@ const {
   handleClick,
   handleMouseDown,
   handleContextMenu,
-  handleReschedule
+  handleReschedule,
+  handleClearDoneForNow
 } = useTaskNodeActions(props, emit)
 
 // TASK-262: Selection is handled via:

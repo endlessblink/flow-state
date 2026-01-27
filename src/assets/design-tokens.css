@@ -84,24 +84,24 @@
   /* Overlay - Modal backgrounds */
   --overlay-bg: rgba(0, 0, 0, 0.6);
 
-  /* Glass Surfaces - VIBRANT & TRANSPARENT (matches token-mappings.json) */
-  --glass-bg-subtle: rgba(255, 255, 255, 0.005);
-  --glass-bg-weak: rgba(255, 255, 255, 0.015);
-  --glass-bg-light: rgba(255, 255, 255, 0.02);
-  --glass-bg-tint: rgba(255, 255, 255, 0.03);
-  --glass-bg-medium: rgba(255, 255, 255, 0.04);
-  --glass-bg-soft: rgba(255, 255, 255, 0.05);
-  --glass-bg-heavy: rgba(255, 255, 255, 0.08);
+  /* Glass Surfaces - PURPLE-TINTED glass morphism (matches app gradient) */
+  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
+  --glass-bg-weak: rgba(45, 40, 70, 0.04);
+  --glass-bg-light: rgba(45, 40, 70, 0.08);
+  --glass-bg-tint: rgba(45, 40, 70, 0.10);
+  --glass-bg-medium: rgba(45, 40, 70, 0.15);
+  --glass-bg-soft: rgba(45, 40, 70, 0.18);
+  --glass-bg-heavy: rgba(45, 40, 70, 0.25);
   --glass-border: rgba(255, 255, 255, 0.10);
   --glass-border-hover: rgba(255, 255, 255, 0.15);
   --glass-glow: rgba(78, 205, 196, 0.08);
 
-  /* Canvas Node Backgrounds - TASK-079 zoom visibility */
+  /* Canvas Node Backgrounds - TASK-079 zoom visibility (purple-tinted) */
   /* Adjust these to control canvas element brightness */
-  --canvas-task-bg: rgba(34, 36, 44, 0.95);
-  /* Task cards on canvas */
-  --canvas-group-bg: rgba(36, 38, 46, 0.92);
-  /* Groups/sections on canvas */
+  --canvas-task-bg: rgba(35, 32, 52, 0.95);
+  /* Task cards on canvas - purple-tinted */
+  --canvas-group-bg: rgba(38, 35, 55, 0.92);
+  /* Groups/sections on canvas - purple-tinted */
   --canvas-task-border: rgba(255, 255, 255, 0.25);
   /* Task border */
   --canvas-group-border: rgba(255, 255, 255, 0.30);
@@ -275,8 +275,8 @@
   /* Scroll container background */
   --kanban-badge-bg: var(--glass-bg-heavy);
   /* Count badges */
-  --kanban-card-glass-bg: rgba(30, 30, 46, 0.7);
-  /* Dark semi-transparent card background */
+  --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
+  /* Purple-tinted semi-transparent card background */
 
   /* ===== TASKCARD STATUS ICON COLORS ===== */
   /* Planned status (blue) */
@@ -625,11 +625,11 @@
   /* Week view specific */
   --week-hover-bg: rgba(16, 185, 129, 0.02);
 
-  /* Additional glass opacity variations */
-  --glass-bg-subtle: rgba(255, 255, 255, 0.005);
-  --glass-bg-weak: rgba(255, 255, 255, 0.015);
-  --glass-bg-tint: rgba(255, 255, 255, 0.03);
-  --glass-bg-soft: rgba(255, 255, 255, 0.05);
+  /* Additional glass opacity variations - purple-tinted */
+  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
+  --glass-bg-weak: rgba(45, 40, 70, 0.04);
+  --glass-bg-tint: rgba(45, 40, 70, 0.10);
+  --glass-bg-soft: rgba(45, 40, 70, 0.18);
   --glass-border-faint: rgba(255, 255, 255, 0.03);
   --glass-border-light: rgba(255, 255, 255, 0.06);
   --glass-border-medium: rgba(255, 255, 255, 0.16);
@@ -967,26 +967,25 @@
 
 .tauri-app,
 .pwa-app {
-  /* NORMALIZED: Aligned with Web App official design tokens.
-     Iteration 4: Removing 'Iteration 3' custom vibrancy and matching Web PRODUCTION values. */
-  --glass-bg-light: rgba(255, 255, 255, 0.02);
-  --glass-bg-medium: rgba(255, 255, 255, 0.04);
-  --glass-bg-heavy: rgba(255, 255, 255, 0.06);
-  --glass-bg-solid: rgba(0, 0, 0, 0.95);
-  --glass-bg: rgba(30, 27, 45, 0.35);
+  /* PURPLE-TINTED glass morphism - matching app gradient palette */
+  --glass-bg-light: rgba(45, 40, 70, 0.08);
+  --glass-bg-medium: rgba(45, 40, 70, 0.15);
+  --glass-bg-heavy: rgba(45, 40, 70, 0.25);
+  --glass-bg-solid: rgba(28, 25, 45, 0.95);
+  --glass-bg: rgba(35, 32, 55, 0.35);
 
-  /* Shared glass variants */
-  --glass-bg-subtle: rgba(255, 255, 255, 0.005);
-  --glass-bg-weak: rgba(255, 255, 255, 0.015);
-  --glass-bg-tint: rgba(255, 255, 255, 0.03);
-  --glass-bg-soft: rgba(255, 255, 255, 0.05);
+  /* Shared glass variants - purple-tinted */
+  --glass-bg-subtle: rgba(45, 40, 70, 0.02);
+  --glass-bg-weak: rgba(45, 40, 70, 0.04);
+  --glass-bg-tint: rgba(45, 40, 70, 0.10);
+  --glass-bg-soft: rgba(45, 40, 70, 0.18);
 
   /* State active glass - Match web exactly */
   --state-active-glass: blur(16px) saturate(180%);
 
-  /* Canvas backgrounds - Match web exactly */
-  --canvas-task-bg: rgba(34, 36, 44, 0.95);
-  --canvas-group-bg: rgba(36, 38, 46, 0.92);
+  /* Canvas backgrounds - purple-tinted */
+  --canvas-task-bg: rgba(35, 32, 52, 0.95);
+  --canvas-group-bg: rgba(38, 35, 55, 0.92);
 
   /* Overlay components - Purple-tinted glass (matching web) */
   --overlay-component-bg: rgba(28, 25, 45, 0.92);
@@ -997,10 +996,10 @@
   --glass-panel-bg: rgba(28, 25, 45, 0.6);
   --inbox-panel-bg: rgba(28, 25, 45, 0.15);
 
-  /* Kanban backgrounds - Match web exactly */
-  --kanban-column-bg: rgba(255, 255, 255, 0.04);
-  --kanban-column-bg-hover: rgba(255, 255, 255, 0.08);
-  --kanban-card-glass-bg: rgba(30, 30, 46, 0.7);
+  /* Kanban backgrounds - purple-tinted */
+  --kanban-column-bg: rgba(45, 40, 70, 0.15);
+  --kanban-column-bg-hover: rgba(45, 40, 70, 0.25);
+  --kanban-card-glass-bg: rgba(35, 32, 55, 0.7);
 
   /* Explicit Sidebar overrides to ensure perfect parity */
   --sidebar-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);

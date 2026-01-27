@@ -389,37 +389,33 @@ const {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   white-space: nowrap;
-  overflow: hidden;
 }
 
 .task-time {
-  flex-shrink: 0;
+  opacity: 0.8;
 }
 
-.task-meta-separator {
-  flex-shrink: 0;
+.task-time::after {
+  content: " · ";
   opacity: 0.5;
 }
 
 .task-duration {
-  flex-shrink: 0;
+  font-weight: var(--font-medium);
 }
 
 .project-stripe {
-  width: 4px;
+  width: 3px;
   border-radius: var(--radius-xs);
   height: calc(100% - 8px);
   position: absolute;
-  left: var(--space-1);
+  left: 2px;
   top: var(--space-1);
 }
 
 .project-emoji-stripe {
-  width: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  left: var(--space-1_5);
+  /* Hide emoji stripe - causes layout issues */
+  display: none;
 }
 
 .project-color-stripe {

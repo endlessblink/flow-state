@@ -6,8 +6,9 @@
     <!-- "Done for now" Badge - shows when task was rescheduled via this feature -->
     <span
       v-if="isDoneForNow"
-      class="done-for-now-badge"
-      title="Done for now - rescheduled to tomorrow"
+      class="done-for-now-badge clickable"
+      title="Click to clear"
+      @click.stop="$emit('clearDoneForNow')"
     >
       <Clock :size="12" />
       Done for now
@@ -80,6 +81,7 @@ const isDoneForNow = computed(() => {
 
 defineEmits<{
   reschedule: [dateType: string]
+  clearDoneForNow: []
 }>()
 </script>
 
@@ -116,6 +118,16 @@ defineEmits<{
 /* "Done for now" badge - amber text to indicate rescheduled */
 .done-for-now-badge {
   color: var(--amber-text, #f59e0b);
+}
+
+/* Clickable badges */
+.clickable {
+  cursor: pointer;
+  transition: opacity var(--duration-fast) ease;
+}
+
+.clickable:hover {
+  opacity: 0.7;
 }
 
 /* Duration Styles */

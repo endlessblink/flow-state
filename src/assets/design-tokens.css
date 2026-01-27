@@ -73,13 +73,13 @@
 
   /* ===== TIER 2: SEMANTIC TOKENS (Theme-aware) ===== */
 
-  /* Surface Hierarchy - Authentic Web Mappings */
-  --surface-primary: hsl(var(--slate-800));
-  --surface-secondary: hsl(var(--slate-900));
-  --surface-tertiary: hsl(var(--slate-700));
-  --surface-elevated: hsl(var(--slate-600));
-  --surface-hover: rgba(255, 255, 255, 0.03);
-  --surface-active: rgba(255, 255, 255, 0.05);
+  /* Surface Hierarchy - Purple-tinted to match app gradient */
+  --surface-primary: hsl(250, 29%, 16%);    /* rgb(35, 32, 52) - task cards, nav */
+  --surface-secondary: hsl(250, 30%, 12%);  /* rgb(28, 25, 45) - secondary elements */
+  --surface-tertiary: hsl(250, 25%, 20%);   /* rgb(45, 40, 65) - hover states */
+  --surface-elevated: hsl(250, 22%, 24%);   /* rgb(52, 47, 75) - elevated elements */
+  --surface-hover: rgba(45, 40, 70, 0.15);
+  --surface-active: rgba(45, 40, 70, 0.25);
 
   /* Overlay - Modal backgrounds */
   --overlay-bg: rgba(0, 0, 0, 0.6);

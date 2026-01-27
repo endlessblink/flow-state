@@ -353,7 +353,7 @@ function autoResize(event: Event) {
   width: 100%;
   height: 100dvh;
   max-height: none;
-  background: var(--surface-primary, hsl(240, 18%, 12%));
+  background: var(--surface-primary, rgb(35, 32, 52));
   /* No border-radius - full screen */
   border-radius: 0;
   display: flex;

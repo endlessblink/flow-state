@@ -359,7 +359,7 @@ function triggerHaptic(duration: number = 10) {
 .task-edit-sheet {
   width: 100%;
   max-height: 85vh;
-  background: var(--surface-primary, hsl(240, 18%, 12%));
+  background: var(--surface-primary, rgb(35, 32, 52));
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
   display: flex;

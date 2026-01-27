@@ -1,6 +1,6 @@
 import { computed } from 'vue'
-import type { Task, useTaskStore, RecurringTaskInstance } from '@/stores/tasks'
-import { parseDateKey, getTaskInstances } from '@/stores/tasks'
+import type { Task, useTaskStore } from '@/stores/tasks'
+import { parseDateKey, getTaskInstances, formatDateKey } from '@/stores/tasks'
 
 interface BoardStateDependencies {
     taskStore: ReturnType<typeof useTaskStore>
@@ -164,7 +164,8 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().split('T')[0]
+    // BUG-1093: Use formatDateKey for local timezone (toISOString returns UTC)
+    const todayStr = formatDateKey(today)
     const tomorrow = addDays(today, 1)
     const weekendStart = getUpcomingFriday(today)
     const weekendEnd = addDays(weekendStart, 2)

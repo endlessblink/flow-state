@@ -16,17 +16,27 @@ export function useCanvasHotkeys(
 ) {
     const canvasStore = useCanvasStore()
     const taskStore = useTaskStore()
-    const { getSelectedNodes, toObject } = useVueFlow()
+    const { getSelectedNodes } = useVueFlow()
 
     // Handle Delete Key
     const handleKeyDown = async (event: KeyboardEvent) => {
-        // Handle Creation Hotkeys
+        // Input protection - skip hotkeys when user is typing in input fields or modals
+        const target = event.target as HTMLElement | null
+        if (target) {
+            const tagName = target.tagName
+            const isEditable = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
+            // Also check if we're inside a modal/dialog
+            const isInModal = target.closest('[role="dialog"], .modal, .n-modal, .n-dialog')
+            if (isEditable || isInModal) {
+                // Allow normal typing - don't intercept hotkeys
+                return
+            }
+        }
+
+        // Handle Creation Hotkeys - Shift+G creates a group
         if (event.shiftKey && (event.key === 'G' || event.key === 'g')) {
             event.preventDefault()
-            // Create group at center of viewport
-            const viewport = toObject().viewport
-            // Calculate center: -x/zoom + width/2/zoom
-            // Simple approximation or just let createGroup handle default (center)
+            // Create group at center of viewport (createGroup handles positioning)
             await deps.createGroup()
             return
         }
@@ -34,14 +44,6 @@ export function useCanvasHotkeys(
         const isDeleteKey = event.key === 'Delete' || event.key === 'Backspace'
 
         if (!isDeleteKey) return
-
-        // Input protection
-        const target = event.target as HTMLElement | null
-        if (target) {
-            const tagName = target.tagName
-            const isEditable = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
-            if (isEditable && !event.shiftKey) return
-        }
 
         // Check for selected nodes
         // Use canvasStore source of truth if possible, or VueFlow
@@ -73,8 +75,6 @@ export function useCanvasHotkeys(
                 })
             }
         }
-
-        if (itemsToDelete.length === 0) return
 
         if (itemsToDelete.length === 0) return
 

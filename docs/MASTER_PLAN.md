@@ -121,17 +121,43 @@ Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue 
 
 ---
 
-### BUG-1100: Ctrl+G Creates Group While Typing in Modals (📋 PLANNED)
+### BUG-1101: Route Navigation Crashes on Module Load Failure (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (2026-01-27)
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-01-27)
 
-**Problem**: Global keyboard shortcut Ctrl+G (create group) triggers even when user is typing in the Create Task modal, preventing input of the letter "G".
+**Problem**: When Vite server disconnects or dynamic imports fail, Vue Router throws uncaught `TypeError: Failed to fetch dynamically imported module` with no graceful error handling.
 
-**Expected Behavior**: Global shortcuts should be disabled when:
-1. A modal/dialog is open
-2. Focus is in a text input field
+**Observed Behavior**:
+1. `[vite] server connection lost. Polling for restart...`
+2. User navigates to a route (e.g., Board view)
+3. `Failed to load resource: net::ERR_CONNECTION_REFUSED`
+4. `TypeError: Failed to fetch dynamically imported module` (uncaught)
+5. `[Vue Router warn]: uncaught error during route navigation`
+6. Navigation fails silently - no user feedback
 
-**Files to Investigate**: `src/utils/globalKeyboardHandlerSimple.ts`, `src/composables/useGlobalKeyboard.ts`
+**Expected Behavior**: Show error boundary/fallback UI when route modules fail to load, with "Reload" button option.
+
+**Fix Approach**:
+1. Add global error handler for dynamic import failures in `router/index.ts`
+2. Create `ErrorBoundary.vue` component for route-level errors
+3. Add retry logic with exponential backoff for failed imports
+
+**Files**: `src/router/index.ts`, `src/components/ErrorBoundary.vue` (CREATE), `src/App.vue`
+
+---
+
+### ~~BUG-1100~~: Shift+G Creates Group While Typing in Modals (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-27)
+
+**Problem**: Canvas hotkey Shift+G (create group) triggered even when user was typing in the Create Task modal, preventing input of capital "G".
+
+**Fix Applied**: Added input protection at the start of `handleKeyDown()` in `src/composables/canvas/useCanvasHotkeys.ts`:
+- Checks for `INPUT`, `TEXTAREA`, `contentEditable` elements
+- Checks for modal containers (`[role="dialog"]`, `.modal`, `.n-modal`, `.n-dialog`)
+- Returns early to allow normal typing when in these contexts
+
+**File Changed**: `src/composables/canvas/useCanvasHotkeys.ts`
 
 ---
 

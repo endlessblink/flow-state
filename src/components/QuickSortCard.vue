@@ -7,7 +7,7 @@
   >
     <div class="card-content">
       <!-- Task Title -->
-      <h2 class="task-title">
+      <h2 class="task-title" dir="auto">
         {{ task.title }}
       </h2>
 
@@ -472,6 +472,11 @@ function handleSwipeEnd() {
   color: var(--text-primary);
   margin: 0;
   line-height: var(--leading-tight);
+}
+
+/* RTL support for Hebrew/Arabic text */
+.task-title:dir(rtl) {
+  text-align: right;
 }
 
 .task-description {

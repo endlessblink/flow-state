@@ -120,16 +120,19 @@ const {
         @drop.prevent="$emit('drop', $event, slot)"
         @mousedown="$emit('slotMouseDown', $event, slot)"
       >
-        <!-- Tasks rendered INSIDE the slot -->
-        <template v-for="calEvent in getTasksForSlot(slot)" :key="`${calEvent.id}-${slot.slotIndex}`">
+        <!-- Tasks rendered INSIDE the slot with entrance animation -->
+        <TransitionGroup name="task-appear">
           <div
-            v-if="isTaskPrimarySlot(slot, calEvent)"
+            v-for="calEvent in getTasksForSlot(slot)"
+            :key="`${calEvent.id}-${slot.slotIndex}`"
+            v-show="isTaskPrimarySlot(slot, calEvent)"
             class="slot-task is-primary"
             :class="{
               'timer-active-event': currentTaskId === calEvent.taskId,
               'dragging': isDragging && draggedEventId === calEvent.id,
               'is-hovered': hoveredEventId === calEvent.id,
-              'has-overlap': calEvent.totalColumns > 1
+              'has-overlap': calEvent.totalColumns > 1,
+              'is-compact': calEvent.duration <= 30
             }"
             :style="getSlotTaskStyle(calEvent)"
             draggable="true"
@@ -167,10 +170,10 @@ const {
               :title="`Priority: ${getPriorityLabel(calEvent)}`"
             />
 
-            <!-- Task Content -->
-            <div class="task-content--calendar">
+            <!-- Task Content - dir="auto" detects RTL/LTR from content -->
+            <div class="task-content--calendar" dir="auto">
               <div class="task-header">
-                <div class="task-title">
+                <div class="task-title" dir="auto">
                   {{ calEvent.title }}
                 </div>
                 <div class="task-actions">
@@ -222,7 +225,7 @@ const {
               <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
             </div>
           </div>
-        </template>
+        </TransitionGroup>
       </div>
     </div>
   </div>
@@ -404,6 +407,47 @@ const {
   font-weight: var(--font-medium);
 }
 
+/* ========================================
+   COMPACT TASK LAYOUT (short duration tasks)
+   Single horizontal line: Title ... Time · Duration
+   RTL text (Hebrew/Arabic) auto-detected and layout flipped
+   ======================================== */
+
+.slot-task.is-compact {
+  padding: var(--space-1) var(--space-2);
+}
+
+.slot-task.is-compact .task-content--calendar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* RTL: Reverse flex direction so title appears on right, meta on left */
+.slot-task.is-compact .task-content--calendar[dir="rtl"] {
+  flex-direction: row-reverse;
+}
+
+.slot-task.is-compact .task-header {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-task.is-compact .task-title {
+  font-size: 11px;
+}
+
+.slot-task.is-compact .task-meta {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+/* Hide actions in compact mode to save space */
+.slot-task.is-compact .task-actions {
+  display: none;
+}
+
 .project-stripe {
   width: 3px;
   border-radius: var(--radius-xs);
@@ -575,5 +619,74 @@ const {
 .remove-from-calendar-btn:hover {
   color: var(--color-danger);
   background: var(--color-danger-bg-light);
+}
+
+/* ========================================
+   TASK ENTRANCE ANIMATION
+   ======================================== */
+
+/* Keyframes for task appearing on calendar */
+@keyframes task-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* TransitionGroup animation classes */
+.task-appear-enter-active {
+  animation: task-appear var(--duration-normal) var(--spring-smooth);
+}
+
+.task-appear-leave-active {
+  animation: task-appear var(--duration-fast) var(--spring-smooth) reverse;
+}
+
+.task-appear-move {
+  transition: transform var(--duration-normal) var(--spring-smooth);
+}
+
+/* ========================================
+   RTL (Right-to-Left) SUPPORT
+   ======================================== */
+
+/* Task title and meta inherit document direction */
+.task-title,
+.task-meta {
+  direction: inherit;
+  text-align: start;
+}
+
+/* RTL-specific styles */
+:dir(rtl) .task-title {
+  direction: rtl;
+  unicode-bidi: plaintext;
+}
+
+:dir(rtl) .task-meta {
+  direction: rtl;
+  unicode-bidi: plaintext;
+}
+
+/* Flip project stripe from left to right in RTL */
+:dir(rtl) .slot-task.is-primary {
+  border-left: 1px solid var(--border-subtle);
+  border-right: 4px solid var(--accent-primary);
+  padding-left: var(--space-3);
+  padding-right: calc(var(--space-3) - 2px);
+}
+
+:dir(rtl) .project-stripe {
+  left: auto;
+  right: 2px;
+}
+
+:dir(rtl) .priority-stripe {
+  left: auto;
+  right: 0;
 }
 </style>

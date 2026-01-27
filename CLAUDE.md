@@ -59,6 +59,27 @@ npm run generate:keys  # Regenerate Supabase JWT keys if they drift
 # Manual deploy: npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/
 ```
 
+## Development Server with Doppler (IMPORTANT)
+
+**Always start the dev server with Doppler:**
+```bash
+doppler run -- npm run dev
+```
+
+**What happens:**
+1. Doppler injects secrets as environment variables
+2. `scripts/sync-doppler.sh` writes secrets to `.env.local`
+3. Vite reads from `.env.local` (not `.env`)
+4. Auth user verified, Supabase keys validated
+5. Dev server + backup daemon start concurrently
+
+**Never do:**
+- `npm run dev` alone (secrets won't be injected from Doppler)
+- Edit `.env` for Supabase URLs (use Doppler dashboard)
+- Edit `.env.local` manually (gets overwritten by Doppler sync)
+
+**Note:** If you're using local Supabase with manual `.env.local` setup (see "Local Development Setup" below), `npm run dev` works without Doppler. Doppler is required when connecting to production/staging Supabase.
+
 ## Tech Stack
 
 - **Vue 3** + TypeScript + Vite + Pinia

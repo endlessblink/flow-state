@@ -20,8 +20,8 @@
       @reschedule="(dateType) => $emit('reschedule', dateType)"
     />
 
-    <!-- Due Date (only show if not overdue and not done-for-now) -->
-    <span v-else-if="dueDate && !isDoneForNow" class="due-date-badge" title="Due Date">
+    <!-- Due Date (only show if not overdue) -->
+    <span v-else-if="dueDate" class="due-date-badge" title="Due Date">
       <Calendar :size="12" />
       {{ formattedDueDate }}
     </span>
@@ -91,7 +91,7 @@ defineEmits<{
   align-items: center;
 }
 
-.status-badge, .due-date-badge, .schedule-badge, .duration-badge, .done-badge {
+.status-badge, .due-date-badge, .schedule-badge, .duration-badge, .done-badge, .done-for-now-badge {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -113,12 +113,9 @@ defineEmits<{
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-/* "Done for now" badge - amber/orange to indicate rescheduled */
+/* "Done for now" badge - amber text to indicate rescheduled */
 .done-for-now-badge {
   color: var(--amber-text, #f59e0b);
-  background: var(--amber-bg-light, rgba(245, 158, 11, 0.12));
-  border: 1px solid var(--amber-border, rgba(245, 158, 11, 0.3));
-  font-weight: 500;
 }
 
 /* Duration Styles */

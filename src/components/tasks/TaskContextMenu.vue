@@ -480,14 +480,18 @@ const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) =>
   showMoreSubmenu.value = false
 
   const target = event.currentTarget as HTMLElement
-  const rect = target.getBoundingClientRect()
+  const triggerRect = target.getBoundingClientRect()
+  const menuRect = menuRef.value?.getBoundingClientRect()
   const submenuWidth = 150
 
-  let x = rect.right + 4
-  let y = rect.top
+  // BUG-1095: Position to the right of the MENU, not the trigger
+  let x = menuRect ? menuRect.right + 4 : triggerRect.right + 4
+  // Y position stays relative to trigger for vertical alignment
+  let y = triggerRect.top
 
+  // Flip to left if not enough space on right
   if (x + submenuWidth > window.innerWidth - 8) {
-    x = rect.left - submenuWidth - 4
+    x = menuRect ? menuRect.left - submenuWidth - 4 : triggerRect.left - submenuWidth - 4
   }
 
   const submenuHeight = type === 'more' ? 100 : 180

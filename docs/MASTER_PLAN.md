@@ -267,11 +267,12 @@
 | ~~**TASK-1063**~~        | ✅ **DONE** **Update CLAUDE.md with VPS/Contabo Deployment Docs**        | **P2**                                              | ✅ **DONE** (2026-01-25)                                                                                                         | Added comprehensive VPS Production section with Contabo specs, architecture, secrets (Doppler), SOPs, and maintenance commands. | -                                                      |
 | **TASK-1080**            | **Whisper Confirm Dialog: RTL Support + Popup Redesign**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Proper Hebrew RTL layout, larger modal for transcription review/edit, better text area visibility                                                                                                                      | FEATURE-1023                                           |
 | **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
-| **BUG-1088**             | **VPS Canvas Inbox: Delete Task Does Nothing**                           | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | Deleting task from canvas inbox on VPS starts soft-delete but never completes. No error, no success. Logs show `Starting soft-delete` but no completion.                                                              | -                                                      |
+| ~~**BUG-1088**~~         | ✅ **VPS Canvas Inbox: Delete Task Does Nothing**                        | **P0**                                              | ✅ **DONE** (2026-01-26)                                                                                                        | Fixed: Added `isRemovingChannel` guard to prevent recursive removeChannel calls causing stack overflow. Supabase realtime error handling was triggering infinite recursion.                                            | -                                                      |
 | **TASK-1087**            | **KDE Widget: Task Readability + Active Task Highlight**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Improve KDE widget task list UX: (1) Increase task row height for better readability with RTL/long text, (2) Highlight the currently active timer task in the task list.                                               | TASK-1009                                              |
 | **FEATURE-1089**         | **Inbox Tab Swipe Gestures (Edit Left, Done Right)**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add swipe gesture support to Inbox tab matching Today tab behavior: swipe left to edit task, swipe right to mark done/delete.                                                                                          | -                                                      |
 | ~~**TASK-1089**~~        | ✅ **Inbox Filters: Calendar Week/Month Instead of Rolling Days**        | **P2**                                              | ✅ **DONE** (2026-01-27)                                                                                                        | "This Week" filter now shows tasks until 00:00 Sunday (calendar week, exclusive). On Sunday, shows next 7 days until following Sunday. Fixed in `useSmartViews.ts`, `InboxTimeFilters.vue`, `useInboxFiltering.ts`.      | -                                                      |
 | **BUG-1095**             | **Calendar: No Time Indicator + Icon/Element Overlap**                   | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Calendar view issues: (1) No start/end time shown on events, (2) Unrelated icon appearing on task cards, (3) Elements overlapping in narrow slots. Affects task readability.                                             | BUG-1055                                               |
+| **BUG-1097**             | **Edit Task Modal: Due Date Not Persisting + Modal Not Closing**         | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | 3 issues: (1) Modal doesn't close on Save, (2) Due date changes not persisting, (3) Canvas overdue task reschedule updates card but not actual due date / Today filter                                                    | -                                                      |
 
 ---
 
@@ -285,6 +286,27 @@
 
 > \[!NOTE]
 > Detailed progress and tasks are tracked in the [Active Task Details](#active-task-details) section below.
+
+---
+
+### BUG-1097: Edit Task Modal - Due Date Not Persisting + Modal Not Closing (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL
+**Status**: 🔄 IN PROGRESS (2026-01-27)
+
+**Problem**: Three related issues with the Edit Task modal and due date handling:
+
+1. **Modal doesn't close on Save**: After clicking "Save Changes" in the Edit Task modal, the modal remains open instead of closing
+2. **Due date changes not persisting**: Changing the due date from the Edit Task modal doesn't save - reverts on refresh
+3. **Canvas overdue reschedule broken**: Moving an overdue task to a new date via canvas badge updates the card display but:
+   - Doesn't actually update the due date in the database
+   - Task doesn't filter out when using "Today" filter in sidebar
+
+**Tasks**:
+- [ ] Investigate modal close handler in Edit Task modal
+- [ ] Debug due date persistence in modal save function
+- [ ] Trace canvas overdue badge reschedule flow to database
+- [ ] Verify sidebar filter logic receives updated due dates
 
 ---
 
@@ -419,30 +441,28 @@
 
 ---
 
-### BUG-1088: VPS Canvas Inbox - Delete Task Does Nothing (🔄 IN PROGRESS)
+### ~~BUG-1088~~: VPS Canvas Inbox - Delete Task Does Nothing (✅ DONE)
 
 **Priority**: P0-CRITICAL
-**Status**: 🔄 IN PROGRESS (2026-01-26)
+**Status**: ✅ DONE (2026-01-26)
 
 **Problem**: On the VPS production site (in-theflow.com), clicking delete on a task in the canvas inbox does nothing. The soft-delete operation starts but never completes - no success callback, no error, no UI update.
 
-**Symptoms**:
-- Console shows `🗑️ [SUPABASE-DELETE] Starting soft-delete for task: <id>`
-- No completion log (`soft-delete completed` or error message)
-- Task remains in inbox after delete attempt
-- Also saw: `TypeError: Cannot read properties of undefined (reading 'length')` in `syncStoreToCanvas`
+**Root Cause**: Supabase realtime `removeChannel()` was causing infinite recursion:
+1. WebSocket connection fails → error handler calls `removeChannel()`
+2. `removeChannel()` triggers internal callbacks
+3. Callbacks fire more error events
+4. Error handler calls `removeChannel()` again
+5. Infinite recursion → `Maximum call stack size exceeded`
+6. All Supabase operations (including delete) hang because connection is broken
 
-**Suspected Causes**:
-- Supabase soft-delete hanging on VPS/production
-- RLS policy blocking the update
-- Network/timeout issue on VPS
-- The syncNodes error may be related (tasks not loading properly)
+**Fix Applied**:
+- Added `isRemovingChannel` guard flag in `useSupabaseDatabase.ts`
+- Wrapped all `removeChannel()` calls in try/catch
+- Guard prevents recursive calls that cause stack overflow
 
-**Investigation Tasks**:
-- [ ] Check Supabase logs for the delete operation
-- [ ] Verify RLS policies allow soft-delete
-- [ ] Check if this is production-only or also local
-- [ ] Debug the `syncStoreToCanvas` TypeError
+**Files Modified**:
+- `src/composables/useSupabaseDatabase.ts` - Added recursion guard (3 locations)
 
 ---
 

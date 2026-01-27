@@ -253,20 +253,27 @@ export function useTaskEditActions(
             // Now we: Update store → Close modal → Background ops
             console.time('⚡ [BUG-291] Task update')
 
-            // BUG-1047 DEBUG: Log what we're about to save
-            console.log('🔍 [BUG-1047] About to updateTask with:', {
+            // BUG-1097 DEBUG: Log what we're about to save including due date
+            console.log('🔍 [BUG-1097] About to updateTask with:', {
                 taskId: editedTask.value.id.slice(0, 8),
                 updatesHasPosition: 'canvasPosition' in updates,
-                updatesPosition: updates.canvasPosition
+                updatesPosition: updates.canvasPosition,
+                dueDate: updates.dueDate
             })
+
+            // BUG-1097 FIX: Ensure dueDate is included in updates
+            if (editedTask.value.dueDate !== undefined) {
+                updates.dueDate = editedTask.value.dueDate
+            }
 
             taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
 
-            // BUG-1047 DEBUG: Log what's in store after update
+            // BUG-1097 DEBUG: Log what's in store after update
             const afterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
-            console.log('🔍 [BUG-1047] Store position after updateTask:', {
+            console.log('🔍 [BUG-1097] Store after updateTask:', {
                 taskId: editedTask.value.id.slice(0, 8),
-                storePosition: afterUpdate?.canvasPosition
+                storePosition: afterUpdate?.canvasPosition,
+                storeDueDate: afterUpdate?.dueDate
             })
 
             console.timeEnd('⚡ [BUG-291] Task update')
@@ -275,13 +282,13 @@ export function useTaskEditActions(
             // This fixes Tauri/WebKitGTK reactivity issue where computed doesn't re-evaluate
             canvasUiStore.requestSync('user:manual')
 
-            // Show success feedback
-            showToast('Task saved successfully', 'success')
-
-            // CRITICAL: Close modal IMMEDIATELY after Pinia update
-            // Instance/subtask ops happen in background below
+            // BUG-1097 FIX: Close modal FIRST, then show toast
+            // This ensures the modal closes even if toast has issues
             emit('close')
             isSaving.value = false
+
+            // Show success feedback after close
+            showToast('Task saved successfully', 'success')
 
             // === BACKGROUND OPERATIONS (fire-and-forget) ===
             // These run after modal closes - user doesn't wait for them

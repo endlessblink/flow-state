@@ -174,6 +174,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
       badge: '/icons/pwa-64x64.png',
       tag: `timer-complete-${sessionId}`, // Deduplication - same sessionId won't show twice
       requireInteraction: true, // Stay visible until user interacts
+      silent: true, // Suppress browser sound - we use our own playEndSound()
       actions,
       data: {
         sessionId,
@@ -181,7 +182,7 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
         taskId,
         taskName,
       } as NotificationData,
-      vibrate: [200, 100, 200], // Vibration pattern for mobile
+      vibrate: [200, 100, 200], // Vibration pattern for mobile (only if not silent)
     } as NotificationOptions & { actions?: NotificationAction[] })
   } catch (error) {
     console.error('[SW] Failed to show notification:', error)

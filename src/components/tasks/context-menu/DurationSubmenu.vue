@@ -13,7 +13,7 @@
         :key="dur.value ?? 'none'"
         class="menu-item menu-item--sm"
         :class="{ active: currentDuration === dur.value }"
-        @click="handleSelect(dur.value)"
+        @click.stop="handleSelect(dur.value)"
       >
         <component
           :is="dur.icon"

@@ -107,6 +107,9 @@ export interface SupabaseTask {
     completed_at?: string | null
     created_at?: string
     updated_at?: string
+
+    // "Done for now" feature - tracks when task was rescheduled via this feature
+    done_for_now_until?: string | null
 }
 
 export interface SupabaseGroup {
@@ -401,6 +404,9 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         deleted_at: task.deletedAt ? new Date(task.deletedAt).toISOString() : null,
         completed_at: task.completedAt ? new Date(task.completedAt).toISOString() : null,
 
+        // "Done for now" feature
+        done_for_now_until: task.doneForNowUntil || null,
+
         created_at: task.createdAt instanceof Date ? task.createdAt.toISOString() : (task.createdAt || now),
         updated_at: now
     }
@@ -453,7 +459,10 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         completedAt: record.completed_at ? new Date(record.completed_at) : undefined,
 
         _soft_deleted: record.is_deleted || false,
-        deletedAt: record.deleted_at ? new Date(record.deleted_at) : undefined
+        deletedAt: record.deleted_at ? new Date(record.deleted_at) : undefined,
+
+        // "Done for now" feature
+        doneForNowUntil: record.done_for_now_until || undefined
     }
 }
 

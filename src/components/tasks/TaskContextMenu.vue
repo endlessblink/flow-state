@@ -156,7 +156,7 @@
       :current-status="currentTask?.status"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('status')"
-      @select="(s: string) => setStatus(s as 'planned' | 'in_progress' | 'done')"
+      @select="(s: string) => { closeAllSubmenusNow(); setStatus(s as 'planned' | 'in_progress' | 'done') }"
     />
 
     <DurationSubmenu
@@ -166,7 +166,7 @@
       :current-duration="currentTask?.estimatedDuration"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('duration')"
-      @select="setDuration"
+      @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
     />
 
     <!-- Quick Actions Row -->
@@ -213,10 +213,10 @@
       :task-id="currentTask?.id"
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('more')"
-      @done-for-now="handleDoneForNow"
-      @duplicate="duplicateTask"
-      @move-to-section="taskId => { $emit('moveToSection', taskId); $emit('close') }"
-      @clear-selection="clearSelection"
+      @done-for-now="() => { closeAllSubmenusNow(); handleDoneForNow() }"
+      @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
+      @move-to-section="taskId => { closeAllSubmenusNow(); $emit('moveToSection', taskId); $emit('close') }"
+      @clear-selection="() => { closeAllSubmenusNow(); clearSelection() }"
     />
 
     <div class="menu-divider" />
@@ -517,13 +517,27 @@ const closeSubmenu = (type: 'status' | 'duration' | 'more') => {
   }, 150)
 }
 
+// BUG-1095: Immediately close ALL submenus - no timeout
+const closeAllSubmenusNow = () => {
+  if (submenuTimeout.value) {
+    clearTimeout(submenuTimeout.value)
+    submenuTimeout.value = null
+  }
+  showStatusSubmenu.value = false
+  showDurationSubmenu.value = false
+  showMoreSubmenu.value = false
+}
+
 const enterFocus = () => {
+  // BUG-1095: Close submenus first
+  closeAllSubmenusNow()
+  emit('close')
+
   if (currentTask.value && !isBatchOperation.value && enterFocusModeFn) {
     enterFocusModeFn(currentTask.value.id)
   } else if (isBatchOperation.value) {
     emit('enterFocusMode')
   }
-  emit('close')
 }
 
 // Click outside handler

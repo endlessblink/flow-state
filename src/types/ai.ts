@@ -697,3 +697,328 @@ export function isCanvasCleanupSuggestion(
 ): suggestion is CanvasCleanupSuggestion {
   return suggestion.type === 'canvas_cleanup'
 }
+
+// ============================================================================
+// AI Message and Response Types (Provider Abstraction)
+// ============================================================================
+
+/**
+ * Role in an AI conversation.
+ */
+export type AIMessageRole = 'system' | 'user' | 'assistant'
+
+/**
+ * A message in an AI conversation.
+ * Standard format for all AI providers.
+ */
+export interface AIMessage {
+  /** Role of the message sender */
+  role: AIMessageRole
+
+  /** Content of the message */
+  content: string
+
+  /** Optional name identifier for the message sender */
+  name?: string
+
+  /** Optional metadata for provider-specific extensions */
+  metadata?: Record<string, unknown>
+}
+
+/**
+ * Token usage statistics from an AI response.
+ */
+export interface AITokenUsage {
+  /** Tokens in the prompt/input */
+  promptTokens: number
+
+  /** Tokens in the completion/output */
+  completionTokens: number
+
+  /** Total tokens used */
+  totalTokens: number
+}
+
+/**
+ * Standard response from an AI completion.
+ */
+export interface AIResponse {
+  /** Unique identifier for this response */
+  id: string
+
+  /** The generated content */
+  content: string
+
+  /** Provider that generated this response */
+  provider: AIProvider
+
+  /** Model used for generation */
+  model: string
+
+  /** Token usage statistics */
+  usage?: AITokenUsage
+
+  /** Time taken to generate response in milliseconds */
+  latencyMs: number
+
+  /** Finish reason (e.g., 'stop', 'length', 'content_filter') */
+  finishReason?: string
+
+  /** Raw response from the provider (for debugging) */
+  raw?: unknown
+}
+
+/**
+ * Chunk emitted during streaming response.
+ */
+export interface AIStreamChunk {
+  /** Incremental content chunk */
+  content: string
+
+  /** Whether this is the final chunk */
+  done: boolean
+
+  /** Cumulative content so far (optional) */
+  accumulated?: string
+
+  /** Token usage (only on final chunk) */
+  usage?: AITokenUsage
+
+  /** Finish reason (only on final chunk) */
+  finishReason?: string
+}
+
+/**
+ * Options for AI completion requests.
+ */
+export interface AICompletionOptions {
+  /** Model to use (overrides provider default) */
+  model?: string
+
+  /** Maximum tokens to generate */
+  maxTokens?: number
+
+  /** Temperature for generation (0-1) */
+  temperature?: number
+
+  /** Top-p sampling parameter */
+  topP?: number
+
+  /** Stop sequences to end generation */
+  stopSequences?: string[]
+
+  /** System prompt to prepend */
+  systemPrompt?: string
+
+  /** Request timeout in milliseconds */
+  timeout?: number
+
+  /** Custom headers for the request */
+  headers?: Record<string, string>
+
+  /** Abort signal for cancellation */
+  signal?: AbortSignal
+}
+
+/**
+ * Model information returned by a provider.
+ */
+export interface AIModelInfo {
+  /** Model identifier */
+  id: string
+
+  /** Display name */
+  name: string
+
+  /** Model provider */
+  provider: AIProvider
+
+  /** Maximum context window size */
+  contextWindow?: number
+
+  /** Maximum output tokens */
+  maxOutputTokens?: number
+
+  /** Whether the model supports streaming */
+  supportsStreaming: boolean
+
+  /** Additional capabilities */
+  capabilities?: string[]
+
+  /** Model description */
+  description?: string
+}
+
+/**
+ * Health check result for a provider.
+ */
+export interface AIHealthCheckResult {
+  /** Whether the provider is healthy and accessible */
+  healthy: boolean
+
+  /** Response latency in milliseconds */
+  latencyMs: number
+
+  /** Available models (if health check succeeded) */
+  availableModels?: string[]
+
+  /** Error message if unhealthy */
+  error?: string
+
+  /** Timestamp of the health check */
+  timestamp: Date
+}
+
+/**
+ * Error codes for AI provider errors.
+ */
+export enum AIErrorCode {
+  /** Network or connection error */
+  NETWORK_ERROR = 'NETWORK_ERROR',
+
+  /** Authentication failure */
+  AUTH_ERROR = 'AUTH_ERROR',
+
+  /** Rate limit exceeded */
+  RATE_LIMIT = 'RATE_LIMIT',
+
+  /** Invalid request parameters */
+  INVALID_REQUEST = 'INVALID_REQUEST',
+
+  /** Model not found or unavailable */
+  MODEL_NOT_FOUND = 'MODEL_NOT_FOUND',
+
+  /** Content filtered by safety systems */
+  CONTENT_FILTERED = 'CONTENT_FILTERED',
+
+  /** Request timeout */
+  TIMEOUT = 'TIMEOUT',
+
+  /** Token/context limit exceeded */
+  CONTEXT_LENGTH_EXCEEDED = 'CONTEXT_LENGTH_EXCEEDED',
+
+  /** Provider service error */
+  SERVICE_ERROR = 'SERVICE_ERROR',
+
+  /** Unknown error */
+  UNKNOWN = 'UNKNOWN'
+}
+
+/**
+ * Structured error from AI provider operations.
+ */
+export interface AIProviderError {
+  /** Error code for programmatic handling */
+  code: AIErrorCode
+
+  /** Human-readable error message */
+  message: string
+
+  /** Provider that caused the error */
+  provider: AIProvider
+
+  /** Whether this error is retryable */
+  retryable: boolean
+
+  /** Suggested retry delay in milliseconds (if retryable) */
+  retryAfterMs?: number
+
+  /** Original error (if available) */
+  cause?: Error
+
+  /** Additional error context */
+  context?: Record<string, unknown>
+}
+
+/**
+ * Configuration for retry behavior.
+ */
+export interface AIRetryConfig {
+  /** Maximum number of retry attempts */
+  maxRetries: number
+
+  /** Initial delay between retries in milliseconds */
+  initialDelayMs: number
+
+  /** Maximum delay between retries in milliseconds */
+  maxDelayMs: number
+
+  /** Exponential backoff multiplier */
+  backoffMultiplier: number
+
+  /** Jitter factor (0-1) to add randomness to delays */
+  jitterFactor: number
+}
+
+/**
+ * Default retry configuration.
+ */
+export const DEFAULT_RETRY_CONFIG: AIRetryConfig = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  maxDelayMs: 30000,
+  backoffMultiplier: 2,
+  jitterFactor: 0.1
+}
+
+/**
+ * Configuration for rate limiting.
+ */
+export interface AIRateLimitConfig {
+  /** Maximum requests per minute */
+  requestsPerMinute: number
+
+  /** Maximum tokens per minute (if applicable) */
+  tokensPerMinute?: number
+
+  /** Maximum concurrent requests */
+  maxConcurrent: number
+}
+
+/**
+ * Default rate limit configuration.
+ */
+export const DEFAULT_RATE_LIMIT_CONFIG: AIRateLimitConfig = {
+  requestsPerMinute: 60,
+  tokensPerMinute: 100000,
+  maxConcurrent: 5
+}
+
+/**
+ * Check if an error is an AIProviderError.
+ */
+export function isAIProviderError(error: unknown): error is AIProviderError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    'message' in error &&
+    'provider' in error &&
+    'retryable' in error
+  )
+}
+
+/**
+ * Create an AIProviderError from various error types.
+ */
+export function createAIProviderError(
+  code: AIErrorCode,
+  message: string,
+  provider: AIProvider,
+  options: Partial<Omit<AIProviderError, 'code' | 'message' | 'provider'>> = {}
+): AIProviderError {
+  const retryableCodes = [
+    AIErrorCode.NETWORK_ERROR,
+    AIErrorCode.RATE_LIMIT,
+    AIErrorCode.TIMEOUT,
+    AIErrorCode.SERVICE_ERROR
+  ]
+
+  return {
+    code,
+    message,
+    provider,
+    retryable: options.retryable ?? retryableCodes.includes(code),
+    ...options
+  }
+}

@@ -255,6 +255,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   max-width: 650px;
   max-height: 85vh;
   overflow-y: auto;
+  /* Reserve space for scrollbar to prevent content/button cutoff */
+  scrollbar-gutter: stable;
 }
 
 .modal-header {
@@ -389,8 +391,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 .modal-actions-sticky {
   position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
@@ -402,10 +402,10 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
     var(--overlay-component-bg) 100%
   );
   border-top: 1px solid var(--border-subtle);
-  margin: 0 calc(-1 * var(--space-5));
-  margin-bottom: calc(-1 * var(--space-4));
-  width: calc(100% + var(--space-5) * 2);
   z-index: 10;
+  /* Ensure buttons don't overflow - account for scrollbar */
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* Larger, more prominent action buttons */

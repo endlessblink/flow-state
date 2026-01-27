@@ -255,16 +255,20 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
   /**
    * Compute positioning style for slot tasks (handles overlapping tasks side-by-side)
+   * Short tasks (<= 30min) get compact class for single-line layout
    */
   const getSlotTaskStyle = (calEvent: CalendarEvent) => {
     const baseHeight = (calEvent.slotSpan * 30) - 4
+    // Mark short tasks for compact CSS styling (single horizontal line)
+    const isCompact = calEvent.duration <= 30
 
     // If no overlap (totalColumns is 1 or undefined), use normal flow with full width
     if (!calEvent.totalColumns || calEvent.totalColumns <= 1) {
       return {
         height: `${baseHeight}px`,
         minHeight: `${baseHeight}px`,
-        zIndex: 10
+        zIndex: 10,
+        '--is-compact': isCompact ? '1' : '0'
       }
     }
 
@@ -282,7 +286,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       minHeight: `${baseHeight}px`,
       width: `calc(${widthPercentage}% - 4px)`,
       left: `calc(${leftPercentage}% + 2px)`,
-      zIndex: 10 + (calEvent.column || 0) // Later columns render on top
+      zIndex: 10 + (calEvent.column || 0), // Later columns render on top
+      '--is-compact': isCompact ? '1' : '0'
     }
   }
 

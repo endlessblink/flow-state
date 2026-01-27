@@ -425,7 +425,8 @@ const {
 }
 
 /* RTL: Reverse flex direction so title appears on right, meta on left */
-.slot-task.is-compact .task-content--calendar[dir="rtl"] {
+/* Use :dir(rtl) pseudo-class which detects computed direction from dir="auto" */
+.slot-task.is-compact .task-content--calendar:dir(rtl) {
   flex-direction: row-reverse;
 }
 
@@ -661,15 +662,21 @@ const {
   text-align: start;
 }
 
-/* RTL-specific styles */
-:dir(rtl) .task-title {
+/* RTL-specific styles - use element:dir(rtl) since dir="auto" is on the element itself */
+.task-title:dir(rtl) {
   direction: rtl;
   unicode-bidi: plaintext;
+  text-align: right;
 }
 
-:dir(rtl) .task-meta {
+.task-meta:dir(rtl) {
   direction: rtl;
   unicode-bidi: plaintext;
+  text-align: right;
+}
+
+.task-content--calendar:dir(rtl) {
+  text-align: right;
 }
 
 /* Flip project stripe from left to right in RTL */

@@ -401,8 +401,8 @@ function autoResize(event: Event) {
 }
 
 .add-btn {
-  background: var(--brand-primary, #4ECDC4);
-  color: hsl(230, 20%, 10%);
+  background: transparent;
+  color: var(--brand-primary, #4ECDC4);
 }
 
 .add-btn:disabled {

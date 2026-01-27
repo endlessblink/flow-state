@@ -38,8 +38,10 @@ supabase/backups/*.sql
 firebase-debug.log
 *.log
 
-# Environment files with API keys (CRITICAL SECURITY)
+# Environment files - use Doppler or copy from .env.example (CRITICAL SECURITY)
+.env
 .env.local
+.env.production
 .env.*.local
 
 # Private planning documents (keep local only, do not push to GitHub)

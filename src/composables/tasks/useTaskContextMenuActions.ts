@@ -186,23 +186,30 @@ export function useTaskContextMenuActions(
     }
 
     const startTaskNow = async () => {
+        // BUG-1090: Capture task data BEFORE closing menu
+        // When emit('close') is called, parent sets props to null, making currentTask.value null
+        const taskId = currentTask.value?.id
+        const taskTitle = currentTask.value?.title
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
         console.log('🎯 [CONTEXT-MENU] startTaskNow called', {
-            currentTask: currentTask.value?.id,
-            currentTaskTitle: currentTask.value?.title,
-            isBatchOperation: isBatchOperation.value
+            taskId,
+            taskTitle,
+            isBatch
         })
-        if (currentTask.value && !isBatchOperation.value) {
+
+        if (taskId && !isBatch) {
             try {
                 // BUG-1090: AWAIT to ensure instance is persisted before navigation
                 console.log('🎯 [CONTEXT-MENU] Starting task now, creating calendar instance...')
-                await taskStore.startTaskNowWithUndo(currentTask.value.id)
+                await taskStore.startTaskNowWithUndo(taskId)
                 console.log('🎯 [CONTEXT-MENU] Task instance created, starting timer...')
 
                 // BUG-1051: AWAIT for timer sync
-                await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+                await timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
                 console.log('🎯 [CONTEXT-MENU] Timer started, navigating...')
 
                 // BUG-1090: Use query param instead of event to avoid race condition
@@ -214,7 +221,7 @@ export function useTaskContextMenuActions(
                     // Already on calendar - dispatch event directly
                     console.log('🎯 [CONTEXT-MENU] Already on calendar, dispatching event')
                     window.dispatchEvent(new CustomEvent('start-task-now', {
-                        detail: { taskId: currentTask.value.id }
+                        detail: { taskId }
                     }))
                 }
             } catch (error) {
@@ -222,29 +229,37 @@ export function useTaskContextMenuActions(
             }
         } else {
             console.warn('🎯 [CONTEXT-MENU] startTaskNow skipped:', {
-                hasCurrentTask: !!currentTask.value,
-                isBatchOperation: isBatchOperation.value
+                hasTaskId: !!taskId,
+                isBatch
             })
         }
     }
 
     const startTimer = async () => {
+        // BUG-1090: Capture task data BEFORE closing menu
+        // When emit('close') is called, parent sets props to null, making currentTask.value null
+        const taskId = currentTask.value?.id
+        const taskTitle = currentTask.value?.title
+        const isBatch = isBatchOperation.value
+        const workDuration = timerStore.settings.workDuration
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
         console.log('🎯 [CONTEXT-MENU] startTimer called', {
-            currentTask: currentTask.value?.id,
-            currentTaskTitle: currentTask.value?.title,
-            isBatchOperation: isBatchOperation.value,
-            workDuration: timerStore.settings.workDuration
+            taskId,
+            taskTitle,
+            isBatch,
+            workDuration
         })
-        if (currentTask.value && !isBatchOperation.value) {
+
+        if (taskId && !isBatch) {
             // BUG-1051: AWAIT for timer sync
-            await timerStore.startTimer(currentTask.value.id, timerStore.settings.workDuration, false)
+            await timerStore.startTimer(taskId, workDuration, false)
         } else {
             console.warn('🎯 [CONTEXT-MENU] Timer not started:', {
-                hasCurrentTask: !!currentTask.value,
-                isBatchOperation: isBatchOperation.value
+                hasTaskId: !!taskId,
+                isBatch
             })
         }
     }

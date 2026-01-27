@@ -199,7 +199,7 @@ defineExpose({ open, close })
 
 /* Modal */
 .command-palette-modal {
-  background: rgba(30, 32, 45, 0.75);
+  background: rgba(35, 32, 50, 0.75);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--glass-border-medium);

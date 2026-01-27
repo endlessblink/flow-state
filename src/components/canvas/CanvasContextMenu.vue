@@ -518,8 +518,8 @@ const handleArrangeInGrid = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  /* Glass morphism styling - more transparent with blur */
-  background: rgba(30, 30, 40, 0.65);
+  /* Glass morphism - purple-tinted with blur */
+  background: rgba(35, 32, 50, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -685,8 +685,8 @@ const handleArrangeInGrid = () => {
   position: absolute;
   left: calc(100% + var(--space-1));
   top: 0;
-  /* Glass morphism styling - more transparent with blur */
-  background: rgba(30, 30, 40, 0.65);
+  /* Glass morphism - purple-tinted with blur */
+  background: rgba(35, 32, 50, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -739,8 +739,8 @@ const handleArrangeInGrid = () => {
 <!-- Global styles for teleported submenu (escapes scoped styles) -->
 <style>
 .submenu-teleported {
-  /* Glass morphism styling - more transparent with blur */
-  background: rgba(30, 30, 40, 0.65);
+  /* Glass morphism - purple-tinted with blur */
+  background: rgba(35, 32, 50, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);

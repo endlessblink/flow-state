@@ -43,6 +43,7 @@ defineEmits<{
 const helpers = inject('calendar-helpers') as any
 const {
   formatHour,
+  formatEventTime,
   isCurrentTimeSlot,
   getTasksForSlot,
   isTaskPrimarySlot,
@@ -190,8 +191,10 @@ const {
                   </button>
                 </div>
               </div>
-              <div class="task-duration">
-                {{ calEvent.duration }}min
+              <div class="task-meta">
+                <span class="task-time">{{ formatEventTime(calEvent) }}</span>
+                <span class="task-meta-separator">•</span>
+                <span class="task-duration">{{ calEvent.duration }}min</span>
               </div>
             </div>
 
@@ -348,6 +351,9 @@ const {
   flex-direction: column;
   gap: var(--space-1);
   width: 100%;
+  /* Account for project emoji stripe (16px wide at 6px left = 22px, plus 2px gap) */
+  margin-left: var(--space-3);
+  overflow: hidden;
 }
 
 .task-header {
@@ -378,12 +384,27 @@ const {
   opacity: 1;
 }
 
-.task-duration {
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
   color: var(--text-secondary);
-  background: var(--glass-bg-subtle);
-  padding: 2px var(--space-1);
-  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.task-time {
+  flex-shrink: 0;
+}
+
+.task-meta-separator {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.task-duration {
+  flex-shrink: 0;
 }
 
 .project-stripe {

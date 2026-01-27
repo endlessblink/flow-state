@@ -92,6 +92,7 @@ import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
+import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
 import type { Task } from '@/stores/tasks'
 
@@ -203,8 +204,10 @@ const closeEditModal = () => {
 }
 
 const handleContextMenu = (event: MouseEvent, task: Task) => {
-  contextMenuX.value = event.clientX
-  contextMenuY.value = event.clientY
+  // BUG-1096: Use normalized coordinates for Tauri compatibility
+  const { x, y } = getViewportCoordinates(event)
+  contextMenuX.value = x
+  contextMenuY.value = y
   contextMenuTask.value = task
   showContextMenu.value = true
 }

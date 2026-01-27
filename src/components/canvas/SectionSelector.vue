@@ -207,7 +207,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(30, 30, 50, 0.35);
+  background: rgba(35, 32, 55, 0.35);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border-hover);

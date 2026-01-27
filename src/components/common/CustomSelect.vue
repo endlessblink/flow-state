@@ -301,8 +301,8 @@ watch(isOpen, (newVal) => {
   /* Position is set via inline style from Teleport */
   z-index: 99999;
 
-  /* Glass morphism - semi-transparent with blur */
-  background: rgba(30, 30, 40, 0.65);
+  /* Glass morphism - purple-tinted with blur */
+  background: rgba(35, 32, 50, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);

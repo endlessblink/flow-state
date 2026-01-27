@@ -364,7 +364,7 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-create-modal {
-  background: rgba(20, 20, 40, 0.85);
+  background: rgba(28, 25, 48, 0.85);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border: 1px solid var(--glass-border-hover);

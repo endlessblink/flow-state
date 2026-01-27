@@ -101,6 +101,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
+import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
 
 // Components
@@ -413,8 +414,10 @@ const handleTaskContextMenu = (event: Event) => {
     contextMenuTask.value = task
   }
 
-  contextMenuX.value = mouseEvent.clientX
-  contextMenuY.value = mouseEvent.clientY
+  // BUG-1096: Use normalized coordinates for Tauri compatibility
+  const { x, y } = getViewportCoordinates(mouseEvent)
+  contextMenuX.value = x
+  contextMenuY.value = y
   showTaskContextMenu.value = true
 }
 
@@ -422,8 +425,10 @@ const handleProjectContextMenu = (event: Event) => {
   const customEvent = event as CustomEvent
   const { event: mouseEvent, project } = customEvent.detail
 
-  projectContextMenuX.value = mouseEvent.clientX
-  projectContextMenuY.value = mouseEvent.clientY
+  // BUG-1096: Use normalized coordinates for Tauri compatibility
+  const { x, y } = getViewportCoordinates(mouseEvent)
+  projectContextMenuX.value = x
+  projectContextMenuY.value = y
   contextMenuProject.value = project
   showProjectContextMenu.value = true
 }
@@ -461,14 +466,18 @@ defineExpose({
     showConfirmModal.value = true
   },
   openTaskContextMenu: (event: MouseEvent, task: Task) => {
-    contextMenuX.value = event.clientX
-    contextMenuY.value = event.clientY
+    // BUG-1096: Use normalized coordinates for Tauri compatibility
+    const { x, y } = getViewportCoordinates(event)
+    contextMenuX.value = x
+    contextMenuY.value = y
     contextMenuTask.value = task
     showTaskContextMenu.value = true
   },
   openProjectContextMenu: (event: MouseEvent, project: Project) => {
-    projectContextMenuX.value = event.clientX
-    projectContextMenuY.value = event.clientY
+    // BUG-1096: Use normalized coordinates for Tauri compatibility
+    const { x, y } = getViewportCoordinates(event)
+    projectContextMenuX.value = x
+    projectContextMenuY.value = y
     contextMenuProject.value = project
     showProjectContextMenu.value = true
   },

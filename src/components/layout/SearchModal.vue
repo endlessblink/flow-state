@@ -230,8 +230,8 @@ onMounted(() => {
 }
 
 .search-modal-content {
-  /* Glass morphism - dark with blur */
-  background: rgba(20, 20, 20, 0.95);
+  /* Glass morphism - purple-tinted with blur */
+  background: rgba(28, 25, 45, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 

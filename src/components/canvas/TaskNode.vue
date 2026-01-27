@@ -218,8 +218,8 @@ onUnmounted(() => {
   border: none !important;
   outline: none !important;
   border-radius: var(--radius-xl);
-  /* Glassmorphism: semi-transparent background with blur */
-  background: rgba(28, 30, 38, 0.55) !important;
+  /* Glassmorphism: purple-tinted semi-transparent with blur */
+  background: rgba(32, 30, 48, 0.55) !important;
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   /* Subtle border for definition */
@@ -268,7 +268,7 @@ onUnmounted(() => {
 .task-node.lod-2 {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(28, 30, 38, 0.95) !important; /* Solid fallback when blur is disabled */
+  background: rgba(32, 30, 48, 0.95) !important; /* Solid fallback when blur is disabled */
 }
 
 .task-node.lod-3 {
@@ -458,8 +458,8 @@ onUnmounted(() => {
 }
 
 .status-done::before {
-  /* Slightly darker/muted backdrop for completed tasks */
-  background: rgba(35, 38, 48, 0.70);
+  /* Slightly darker/muted purple backdrop for completed tasks */
+  background: rgba(38, 35, 52, 0.70);
 }
 
 .status-in-progress {

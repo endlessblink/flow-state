@@ -271,6 +271,7 @@ import { useTaskStore } from '../stores/tasks'
 import { useCanvasStore } from '../stores/canvas'
 import { useUIStore } from '../stores/ui'
 import { useCanvasContextMenuStore } from '../stores/canvas/contextMenus'
+import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 
@@ -402,7 +403,9 @@ const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
     }
     // BUG-208 FIX: Use Pinia store instead of local refs
     // CanvasContextMenus.vue reads from the store, so we must write to it
-    contextMenuStore.openCanvasContextMenu(event.clientX, event.clientY, section as unknown as CanvasGroup)
+    // BUG-1096: Use normalized coordinates for Tauri compatibility
+    const { x, y } = getViewportCoordinates(event)
+    contextMenuStore.openCanvasContextMenu(x, y, section as unknown as CanvasGroup)
 }
 
 // Expose for testing purposes (Fundamental Stability)

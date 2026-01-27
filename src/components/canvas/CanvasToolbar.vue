@@ -80,8 +80,8 @@ const taskStore = useTaskStore()
   /* Rounded corners */
   border-radius: var(--radius-md);
 
-  /* Glass morphism */
-  background: rgba(30, 30, 40, 0.92);
+  /* Glass morphism - purple-tinted */
+  background: rgba(35, 32, 50, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);

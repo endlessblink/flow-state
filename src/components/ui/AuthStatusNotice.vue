@@ -96,7 +96,7 @@ const learnMore = () => {
 
 <style scoped>
 .auth-status-notice {
-  background: rgba(20, 20, 20, 0.36);
+  background: rgba(28, 25, 45, 0.36);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);

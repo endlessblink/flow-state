@@ -25,6 +25,7 @@ defineEmits<{
 const helpers = inject('calendar-helpers') as any
 const {
   formatHour,
+  formatEventTime,
   getWeekEventStyle,
   isCurrentWeekTimeCell,
   getProjectVisual,
@@ -165,8 +166,10 @@ const {
                   </button>
                 </div>
               </div>
-              <div class="event-duration">
-                {{ event.duration }}min
+              <div class="event-meta">
+                <span class="event-time">{{ formatEventTime(event) }}</span>
+                <span class="event-meta-separator">•</span>
+                <span class="event-duration">{{ event.duration }}min</span>
               </div>
             </div>
 
@@ -328,6 +331,9 @@ const {
   display: flex;
   flex-direction: column;
   gap: var(--space-0_5);
+  /* Account for project emoji stripe */
+  margin-left: var(--space-3);
+  overflow: hidden;
 }
 
 .event-header {
@@ -354,9 +360,27 @@ const {
   opacity: 1;
 }
 
-.event-duration {
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.event-time {
+  flex-shrink: 0;
+}
+
+.event-meta-separator {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.event-duration {
+  flex-shrink: 0;
 }
 
 .week-current-time-layer {

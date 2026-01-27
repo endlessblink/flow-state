@@ -785,8 +785,8 @@ const insertTable = () => {
   z-index: 100;
   min-width: 180px;
   max-width: 220px;
-  /* Solid opaque background to prevent content showing through */
-  background: rgb(30, 30, 35);
+  /* Solid opaque background - purple-tinted */
+  background: rgb(35, 32, 48);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);

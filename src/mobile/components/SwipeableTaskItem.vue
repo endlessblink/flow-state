@@ -327,7 +327,7 @@ onUnmounted(() => {
 .swipeable-content {
   position: relative;
   z-index: 2;
-  background: var(--surface-primary, #1a1a1a);
+  background: var(--surface-primary, #1c1a2d);
   will-change: transform;
   touch-action: pan-y;
   overflow: hidden;

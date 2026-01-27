@@ -1,10 +1,11 @@
 import { ref, watch, nextTick, computed, type Ref } from 'vue'
-import { type Task } from '@/stores/tasks'
+import { type Task, useTaskStore } from '@/stores/tasks'
 
 export function useTaskEditState(
     props: { isOpen: boolean; task: Task | null },
     titleInputRef?: Ref<HTMLInputElement | undefined>
 ) {
+    const taskStore = useTaskStore()
     // Editing state
     const editedTask = ref<Task>({
         id: '',
@@ -110,6 +111,15 @@ export function useTaskEditState(
         // Guard: If we are saving, ignore external updates
         if (isSaving.value || !newTask) return
 
+        // BUG-1097 DEBUG: Log incoming task data
+        console.log('🔍 [BUG-1097] useTaskEditState watch triggered:', {
+            taskId: newTask.id?.slice(0, 8),
+            dueDate: newTask.dueDate,
+            scheduledDate: newTask.scheduledDate,
+            currentEditedId: editedTask.value.id?.slice(0, 8),
+            currentDueDate: editedTask.value.dueDate
+        })
+
         // Fingerprint for change detection
         const currentFingerprint = JSON.stringify({
             ...editedTask.value,
@@ -119,7 +129,11 @@ export function useTaskEditState(
 
         const newTaskState = {
             ...newTask,
-            subtasks: [...(newTask.subtasks || [])]
+            subtasks: [...(newTask.subtasks || [])],
+            // BUG-1097 FIX: Explicitly copy date fields to ensure they're not lost
+            dueDate: newTask.dueDate || '',
+            scheduledDate: newTask.scheduledDate || '',
+            scheduledTime: newTask.scheduledTime || '09:00'
         }
 
         const newFingerprint = JSON.stringify({
@@ -128,7 +142,13 @@ export function useTaskEditState(
             updatedAt: undefined
         })
 
+        // BUG-1097 FIX: Always update if IDs match (same task being edited)
+        // This ensures external changes to the task are reflected
         if (editedTask.value.id !== newTask.id || currentFingerprint !== newFingerprint) {
+            console.log('🔍 [BUG-1097] Updating editedTask with newTaskState:', {
+                dueDate: newTaskState.dueDate,
+                scheduledDate: newTaskState.scheduledDate
+            })
             editedTask.value = newTaskState
 
             // Store original snapshot for dirty tracking
@@ -148,6 +168,36 @@ export function useTaskEditState(
             })
         }
     }, { immediate: true })
+
+    // BUG-1097 FIX: Also watch isOpen to ensure fresh data when modal opens
+    watch(() => props.isOpen, (isOpen) => {
+        if (isOpen && props.task) {
+            // Get FRESH task from store (not the potentially stale props.task)
+            const freshTask = taskStore.tasks.find(t => t.id === props.task!.id)
+            if (freshTask) {
+                console.log('🔍 [BUG-1097] Modal opened - loading fresh task from store:', {
+                    taskId: freshTask.id?.slice(0, 8),
+                    dueDate: freshTask.dueDate,
+                    scheduledDate: freshTask.scheduledDate
+                })
+
+                const newTaskState = {
+                    ...freshTask,
+                    subtasks: [...(freshTask.subtasks || [])],
+                    dueDate: freshTask.dueDate || '',
+                    scheduledDate: freshTask.scheduledDate || '',
+                    scheduledTime: freshTask.scheduledTime || '09:00'
+                }
+                editedTask.value = newTaskState
+                originalTaskSnapshot.value = createTaskFingerprint(newTaskState)
+
+                // Auto-expand sections
+                showSubtasks.value = (freshTask.subtasks || []).length > 0
+                showDependencies.value = (freshTask.dependsOn && freshTask.dependsOn.length > 0) || false
+                showPomodoros.value = (freshTask.completedPomodoros || 0) > 0
+            }
+        }
+    })
 
     return {
         editedTask,

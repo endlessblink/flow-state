@@ -99,13 +99,14 @@ jobs:
       # Fingerprinted assets (index-abc123.js) auto-invalidate via hash change
       - name: Purge Cloudflare Cache
         run: |
-            echo "Purging Cloudflare cache for index.html..."
+            echo "Purging Cloudflare cache for index.html, sw.js, and manifest..."
 
+            # BUG-1089: Must purge sw.js to prevent stale ServiceWorker serving old asset hashes
             RESPONSE=$(curl -s -X POST \
               "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
               -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
               -H "Content-Type: application/json" \
-              --data '{"files":["https://in-theflow.com/","https://in-theflow.com/index.html"]}')
+              --data '{"files":["https://in-theflow.com/","https://in-theflow.com/index.html","https://in-theflow.com/sw.js","https://in-theflow.com/manifest.webmanifest"]}')
 
             # Check if purge succeeded
             SUCCESS=$(echo "$RESPONSE" | jq -r '.success')

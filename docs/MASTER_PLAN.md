@@ -269,7 +269,7 @@
 | **TASK-1081**            | **Canvas: Add Alignment Options to Groups (Not Just Tasks)**             | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                                  | Extend canvas alignment feature to work with groups, not just tasks. Allow aligning multiple groups (left, right, center, top, bottom) and distributing spacing.                                                      | -                                                      |
 | ~~**BUG-1088**~~         | ✅ **VPS Canvas Inbox: Delete Task Does Nothing**                        | **P0**                                              | ✅ **DONE** (2026-01-26)                                                                                                        | Fixed: Added `isRemovingChannel` guard to prevent recursive removeChannel calls causing stack overflow. Supabase realtime error handling was triggering infinite recursion.                                            | -                                                      |
 | **TASK-1087**            | **KDE Widget: Task Readability + Active Task Highlight**                 | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Improve KDE widget task list UX: (1) Increase task row height for better readability with RTL/long text, (2) Highlight the currently active timer task in the task list.                                               | TASK-1009                                              |
-| **FEATURE-1089**         | **Inbox Tab Swipe Gestures (Edit Left, Done Right)**                     | **P1**                                              | 🔄 **IN PROGRESS**                                                                                                              | Add swipe gesture support to Inbox tab matching Today tab behavior: swipe left to edit task, swipe right to mark done/delete.                                                                                          | -                                                      |
+| ~~**FEATURE-1089**~~     | ✅ **Inbox Tab Swipe Gestures (Edit Left, Done Right)**                  | **P1**                                              | ✅ **DONE** (2026-01-27)                                                                                                        | Added SwipeableTaskItem to Inbox tab: swipe left to delete (with confirmation), swipe right to edit. Removed old long-press code. Matches Today tab behavior.                                                            | -                                                      |
 | ~~**TASK-1089**~~        | ✅ **Inbox Filters: Calendar Week/Month Instead of Rolling Days**        | **P2**                                              | ✅ **DONE** (2026-01-27)                                                                                                        | "This Week" filter now shows tasks until 00:00 Sunday (calendar week, exclusive). On Sunday, shows next 7 days until following Sunday. Fixed in `useSmartViews.ts`, `InboxTimeFilters.vue`, `useInboxFiltering.ts`.      | -                                                      |
 | **BUG-1095**             | **Calendar: No Time Indicator + Icon/Element Overlap**                   | **P2**                                              | 🔄 **IN PROGRESS**                                                                                                              | Calendar view issues: (1) No start/end time shown on events, (2) Unrelated icon appearing on task cards, (3) Elements overlapping in narrow slots. Affects task readability.                                             | BUG-1055                                               |
 | **BUG-1097**             | **Edit Task Modal: Due Date Not Persisting + Modal Not Closing**         | **P0**                                              | 🔄 **IN PROGRESS**                                                                                                              | 3 issues: (1) Modal doesn't close on Save, (2) Due date changes not persisting, (3) Canvas overdue task reschedule updates card but not actual due date / Today filter                                                    | -                                                      |
@@ -402,25 +402,30 @@
 
 ---
 
-### FEATURE-1089: Inbox Tab Swipe Gestures (Edit Left, Done Right) (🔄 IN PROGRESS)
+### ~~FEATURE-1089~~: Inbox Tab Swipe Gestures (Edit Left, Done Right) (✅ DONE)
 
 **Priority**: P1-HIGH
-**Status**: 🔄 IN PROGRESS (2026-01-26)
+**Status**: ✅ DONE (2026-01-27)
 
-**Problem**: The Inbox tab does not support swipe gestures for task actions. The Today tab has swipe left to edit and swipe right to delete/mark done, but Inbox lacks this functionality.
+**Problem**: The Inbox tab did not support swipe gestures for task actions. The Today tab had swipe functionality, but Inbox used long-press which was less intuitive.
 
-**Requirements**:
-1. Add swipe gesture support to Inbox tab task items
-2. Swipe left → Opens task for editing
-3. Swipe right → Marks task as done (or deletes)
-4. Match Today tab's swipe behavior and visual feedback exactly
+**Solution**:
+- Added `SwipeableTaskItem` component wrapper to Inbox task items
+- Swipe left → Delete with confirmation (matches Today tab)
+- Swipe right → Edit task (opens TaskEditBottomSheet)
+- Added swipe hint banner for first-time users
+- Removed 250 lines of old long-press gesture code
+- Aligned delete handler with Today view (non-awaited call)
+
+**Files Modified**:
+- `src/mobile/views/MobileInboxView.vue` (+105, -250 lines)
 
 **Implementation Tasks**:
-- [ ] Identify swipe component used in Today tab
-- [ ] Add same swipe component to Inbox task items
-- [ ] Wire up edit action on left swipe
-- [ ] Wire up done/delete action on right swipe
-- [ ] Test swipe gestures work on mobile/touch
+- [x] Identify swipe component used in Today tab (`SwipeableTaskItem.vue`)
+- [x] Add same swipe component to Inbox task items
+- [x] Wire up edit action on right swipe
+- [x] Wire up delete action on left swipe (with confirmation)
+- [x] Test swipe gestures work on mobile/touch
 
 ---
 

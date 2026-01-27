@@ -180,7 +180,7 @@
       </div>
 
       <!-- Voice mode indicator when not recording -->
-      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice && !showVoiceConfirmation" class="voice-lang-hint">
+      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice" class="voice-lang-hint">
         <button class="voice-mode-btn" @click="toggleVoiceMode">
           {{ voiceMode === 'whisper' ? '🤖 AI (auto-detect)' : '🌐 Browser' }}
         </button>
@@ -195,13 +195,7 @@
         {{ voiceError }}
       </div>
 
-      <!-- Voice Task Confirmation (TASK-1028) -->
-      <VoiceTaskConfirmation
-        :is-open="showVoiceConfirmation"
-        :parsed-task="parsedVoiceTask"
-        @confirm="handleVoiceTaskConfirm"
-        @cancel="handleVoiceTaskCancel"
-      />
+      <!-- Voice Task Confirmation removed - using TaskCreateBottomSheet instead (TASK-1077) -->
     </div>
 
     <!-- Task Edit Bottom Sheet -->
@@ -216,6 +210,7 @@
     <TaskCreateBottomSheet
       :is-open="isTaskCreateOpen"
       :is-listening="isListening"
+      :is-processing="isProcessingVoice"
       :voice-transcript="finalVoiceTranscript || displayTranscript"
       @close="handleTaskCreateClose"
       @created="handleTaskSheetCreated"
@@ -232,7 +227,6 @@ import { useTimerStore } from '@/stores/timer'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
 import TaskCreateBottomSheet from '@/mobile/components/TaskCreateBottomSheet.vue'
-import VoiceTaskConfirmation from '@/mobile/components/VoiceTaskConfirmation.vue'
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
 import {
   Plus, Check, Play, Calendar, Inbox,
@@ -241,13 +235,11 @@ import {
 } from 'lucide-vue-next'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
-import { useVoiceTaskParser, type ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 
 const taskStore = useTaskStore()
 const authStore = useAuthStore()
 const timerStore = useTimerStore()
 const { lastSyncError } = useSupabaseDatabase()
-const { parseTranscript } = useVoiceTaskParser()
 
 // State
 const newTaskTitle = ref('')
@@ -280,10 +272,6 @@ const dismissSwipeHint = () => {
   showSwipeHint.value = false
   localStorage.setItem(SWIPE_HINT_KEY, 'true')
 }
-
-// Voice confirmation state (TASK-1028)
-const parsedVoiceTask = ref<ParsedVoiceTask | null>(null)
-const showVoiceConfirmation = ref(false)
 
 // Voice mode: 'whisper' (AI auto-detect) or 'browser' (Web Speech API)
 const voiceMode = ref<'whisper' | 'browser'>('whisper')
@@ -425,8 +413,6 @@ const toggleVoiceInput = async () => {
     stopVoice()
   } else {
     // Reset state when starting new voice input
-    parsedVoiceTask.value = null
-    showVoiceConfirmation.value = false
     finalVoiceTranscript.value = ''
     // Open TaskCreateBottomSheet to show voice feedback during recording
     isTaskCreateOpen.value = true
@@ -617,22 +603,6 @@ const submitTask = () => {
   taskInput.value?.blur()
 }
 
-// Voice task confirmation handlers (TASK-1028)
-const handleVoiceTaskConfirm = (task: { title: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
-  taskStore.createTask({
-    title: task.title,
-    status: 'planned',
-    ...(task.dueDate && { dueDate: task.dueDate.toISOString() }),
-    ...(task.priority && { priority: task.priority })
-  })
-
-  resetVoiceState()
-}
-
-const handleVoiceTaskCancel = () => {
-  resetVoiceState()
-}
-
 // Task create sheet handler
 const handleTaskCreateClose = () => {
   isTaskCreateOpen.value = false
@@ -648,13 +618,6 @@ const handleTaskSheetCreated = (data: { title: string; description: string; prio
     ...(data.priority && { priority: data.priority })
   })
   handleTaskCreateClose()
-}
-
-const resetVoiceState = () => {
-  parsedVoiceTask.value = null
-  showVoiceConfirmation.value = false
-  // Also cancel any ongoing voice input
-  cancelVoice()
 }
 
 const toggleTask = async (task: Task) => {

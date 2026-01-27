@@ -31,8 +31,36 @@ SESSION_ID=$(echo "$JSON_DATA" | jq -r '.session_id // empty' 2>/dev/null)
 CURRENT_TASK=""
 TASK_DESC=""
 
-# 1. Check environment variables first (set per-terminal via: export CLAUDE_TASK="BUG-1091:description")
-if [ -n "$CLAUDE_TASK" ]; then
+# 1. Parse task ID from zellij tab name (automatic - just name your tab with the task ID)
+if [ -n "$ZELLIJ" ]; then
+  TAB_NAME=$(zellij action dump-layout 2>/dev/null | grep -E 'tab name=.*focus=true' | sed 's/.*tab name="\([^"]*\)".*/\1/')
+  if [ -n "$TAB_NAME" ] && [ "$TAB_NAME" != "Tab #"* ]; then
+    # Try full format first (TASK-XXX, BUG-XXX, etc.)
+    PARSED_TASK=$(echo "$TAB_NAME" | grep -oE "(TASK|BUG|ROAD|IDEA|ISSUE)-[0-9]+" | head -1)
+
+    # Fallback: just a number at the start (e.g., "1091 - description")
+    if [ -z "$PARSED_TASK" ]; then
+      PARSED_NUM=$(echo "$TAB_NAME" | grep -oE "^[0-9]+" | head -1)
+      if [ -n "$PARSED_NUM" ]; then
+        # Guess prefix based on number range (bugs typically 1000+, tasks 100-999)
+        if [ "$PARSED_NUM" -ge 1000 ]; then
+          PARSED_TASK="BUG-$PARSED_NUM"
+        else
+          PARSED_TASK="TASK-$PARSED_NUM"
+        fi
+      fi
+    fi
+
+    if [ -n "$PARSED_TASK" ]; then
+      CURRENT_TASK="$PARSED_TASK"
+      # Use rest of tab name as description (after the number/ID)
+      TASK_DESC=$(echo "$TAB_NAME" | sed 's/^[A-Z]*-*[0-9]*\s*[-:]\?\s*//')
+    fi
+  fi
+fi
+
+# 2. Fallback: Check environment variable (export CLAUDE_TASK="BUG-1091:description")
+if [ -z "$CURRENT_TASK" ] && [ -n "$CLAUDE_TASK" ]; then
   CURRENT_TASK=$(echo "$CLAUDE_TASK" | cut -d':' -f1)
   TASK_DESC=$(echo "$CLAUDE_TASK" | cut -d':' -f2-)
 fi

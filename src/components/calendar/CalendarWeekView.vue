@@ -168,7 +168,6 @@ const {
               </div>
               <div class="event-meta">
                 <span class="event-time">{{ formatEventTime(event) }}</span>
-                <span class="event-meta-separator">•</span>
                 <span class="event-duration">{{ event.duration }}min</span>
               </div>
             </div>
@@ -331,8 +330,8 @@ const {
   display: flex;
   flex-direction: column;
   gap: var(--space-0_5);
-  /* Account for project emoji stripe */
-  margin-left: var(--space-3);
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -367,20 +366,19 @@ const {
   font-size: var(--text-xs);
   color: var(--text-muted);
   white-space: nowrap;
-  overflow: hidden;
 }
 
 .event-time {
-  flex-shrink: 0;
+  opacity: 0.8;
 }
 
-.event-meta-separator {
-  flex-shrink: 0;
+.event-time::after {
+  content: " · ";
   opacity: 0.5;
 }
 
 .event-duration {
-  flex-shrink: 0;
+  font-weight: var(--font-medium);
 }
 
 .week-current-time-layer {
@@ -408,20 +406,17 @@ const {
 }
 
 .project-stripe {
-  width: 4px;
+  width: 3px;
   border-radius: var(--radius-xs);
   height: calc(100% - 4px);
   position: absolute;
-  left: var(--space-0_5);
+  left: 2px;
   top: var(--space-0_5);
 }
 
 .project-emoji-stripe {
-  width: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  left: var(--space-1);
+  /* Hide emoji stripe - causes layout issues */
+  display: none;
 }
 
 .priority-stripe {

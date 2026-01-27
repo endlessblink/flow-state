@@ -163,8 +163,8 @@ select option {
   .glass,
   [class*="backdrop-blur"] {
     backdrop-filter: none !important;
-    background-color: rgba(30, 30, 35, 0.95) !important;
-    /* Solid fallback */
+    background-color: rgba(35, 32, 55, 0.95) !important;
+    /* Purple-tinted solid fallback */
     border: 1px solid var(--glass-border) !important;
   }
 
@@ -879,7 +879,7 @@ select option {
 
 /* Task Actions Popup */
 .tauri-app .unified-inbox-panel .task-actions {
-  background: rgba(30, 30, 35, 0.95) !important;
+  background: rgba(35, 32, 55, 0.95) !important;
 }
 
 /* Project Badge */

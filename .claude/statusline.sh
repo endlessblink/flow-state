@@ -31,26 +31,19 @@ SESSION_ID=$(echo "$JSON_DATA" | jq -r '.session_id // empty' 2>/dev/null)
 CURRENT_TASK=""
 TASK_DESC=""
 
-# 1a. Check per-session task file (by Claude session ID)
-if [ -n "$SESSION_ID" ] && [ -f "$CWD/.claude/tasks/${SESSION_ID}.json" ]; then
+# 1. Check environment variables first (set per-terminal via: export CLAUDE_TASK="BUG-1091:description")
+if [ -n "$CLAUDE_TASK" ]; then
+  CURRENT_TASK=$(echo "$CLAUDE_TASK" | cut -d':' -f1)
+  TASK_DESC=$(echo "$CLAUDE_TASK" | cut -d':' -f2-)
+fi
+
+# 2. Check per-session task file (by Claude session ID)
+if [ -z "$CURRENT_TASK" ] && [ -n "$SESSION_ID" ] && [ -f "$CWD/.claude/tasks/${SESSION_ID}.json" ]; then
   JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/tasks/${SESSION_ID}.json" 2>/dev/null)
   JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/tasks/${SESSION_ID}.json" 2>/dev/null)
   if [ -n "$JSON_TASK" ]; then
     CURRENT_TASK="$JSON_TASK"
     TASK_DESC="$JSON_DESC"
-  fi
-fi
-
-# 1b. Check per-terminal task file (by TTY - for manual set-task.sh usage)
-if [ -z "$CURRENT_TASK" ]; then
-  TTY_KEY=$(tty 2>/dev/null | tr '/' '_')
-  if [ -n "$TTY_KEY" ] && [ -f "$CWD/.claude/tasks/${TTY_KEY}.json" ]; then
-    JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/tasks/${TTY_KEY}.json" 2>/dev/null)
-    JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/tasks/${TTY_KEY}.json" 2>/dev/null)
-    if [ -n "$JSON_TASK" ]; then
-      CURRENT_TASK="$JSON_TASK"
-      TASK_DESC="$JSON_DESC"
-    fi
   fi
 fi
 

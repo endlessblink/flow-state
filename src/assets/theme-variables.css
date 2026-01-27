@@ -125,9 +125,9 @@ article,
   --theme-accent-primary-hover: hsl(174, 62%, 62%);
   --theme-accent-secondary: hsl(217, 91%, 65%);
 
-  /* Glass/overlay effects - Dark mode */
-  --theme-glass-bg: rgba(30, 41, 59, 0.8);
-  --theme-glass-bg-subtle: rgba(30, 41, 59, 0.6);
+  /* Glass/overlay effects - Purple-tinted dark mode */
+  --theme-glass-bg: rgba(35, 32, 55, 0.8);
+  --theme-glass-bg-subtle: rgba(35, 32, 55, 0.6);
   --theme-glass-border: rgba(255, 255, 255, 0.08);
   --theme-overlay-bg: rgba(0, 0, 0, 0.6);
 

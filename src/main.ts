@@ -1,8 +1,8 @@
-// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-27T10:00:00Z - V23 - BUG-1090 FIX
-// BUG-1090: START/TIMER buttons fixed with proper async/await chain
+// 🚨 CACHE BREAKER - FORCES RELOAD - TIMESTAMP: 2026-01-27T11:00:00Z - V24 - BUG-1090 FIX2
+// BUG-1090: Capture task data BEFORE emit('close') to prevent null reference
 
 // Cache bust version - increment to force new asset hashes
-const __BUILD_VERSION__ = 'v23-bug1090-fix-20260127'
+const __BUILD_VERSION__ = 'v24-bug1090-fix2-20260127'
 console.log(`[FlowState] Build: ${__BUILD_VERSION__}`)
 
 // Console filter - reduces log noise in development (toggle via localStorage)

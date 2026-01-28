@@ -1,26 +1,24 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 
 /**
  * Calendar navigation composable
  * Manages currentDate, viewMode, and navigation actions
+ *
+ * TASK-1102: Calendar always starts on current day when entering the view.
+ * Date is NOT persisted - each time user enters calendar view, it shows today.
+ * View mode (day/week/month) IS persisted as a user preference.
  */
 export function useCalendarNavigation() {
     const { getWeekStart } = useCalendarCore()
 
-    // BUG-1051: Persist UI state across refreshes
-    // Store date as ISO string in localStorage
-    const storedDate = useStorage<string>('calendar-current-date', new Date().toISOString())
-    const viewMode = useStorage<'day' | 'week' | 'month'>('calendar-view-mode', 'day')
+    // TASK-1102: Date is NOT persisted - always start on today when entering calendar view
+    // This is a regular ref, so each CalendarView mount starts fresh at today
+    const currentDate = ref<Date>(new Date())
 
-    // Computed ref that converts between Date and string for persistence
-    const currentDate = computed<Date>({
-        get: () => new Date(storedDate.value),
-        set: (value: Date) => {
-            storedDate.value = value.toISOString()
-        }
-    })
+    // View mode IS persisted as a user preference (day/week/month)
+    const viewMode = useStorage<'day' | 'week' | 'month'>('calendar-view-mode', 'day')
 
     /**
      * Check if current date is today

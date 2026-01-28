@@ -58,6 +58,8 @@
             class="mic-btn"
             :class="[{ recording: isListening }]"
             :title="isListening ? 'Stop recording' : 'Voice input'"
+            aria-label="Toggle voice input"
+            :aria-pressed="isListening"
             @click="toggleVoiceInput"
           >
             <Mic v-if="!isListening" :size="16" />
@@ -71,6 +73,7 @@
             :class="[{ active: voiceMode === 'whisper' }]"
             :disabled="!hasWhisperApiKey || !isWhisperSupported"
             :title="hasWhisperApiKey ? 'Groq Whisper (works everywhere)' : 'No API key'"
+            :aria-pressed="voiceMode === 'whisper'"
             @click="voiceMode = 'whisper'"
           >
             🎙️ Whisper
@@ -80,6 +83,7 @@
             :class="[{ active: voiceMode === 'browser' }]"
             :disabled="!isBrowserVoiceSupported"
             :title="isBrowserVoiceSupported ? 'Browser Speech API' : 'Not supported'"
+            :aria-pressed="voiceMode === 'browser'"
             @click="voiceMode = 'browser'"
           >
             🌐 Browser
@@ -92,8 +96,13 @@
             <span class="wave-bar" />
             <span class="wave-bar" />
           </div>
-          <span class="voice-status">{{ displayTranscript || 'Speak now...' }}</span>
-          <button class="voice-cancel" @click="cancelVoice">
+          <span class="voice-status" aria-live="polite">{{ displayTranscript || 'Speak now...' }}</span>
+          <button
+            class="voice-cancel"
+            title="Cancel recording"
+            aria-label="Cancel recording"
+            @click="cancelVoice"
+          >
             <X :size="12" />
           </button>
         </div>

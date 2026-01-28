@@ -1,10 +1,12 @@
 <template>
-  <div
-    v-if="isVisible"
-    ref="menuRef"
-    class="context-menu"
-    :style="menuPosition"
-  >
+  <!-- BUG-1096: Teleport to body to escape Vue Flow transforms that break fixed positioning -->
+  <Teleport to="body">
+    <div
+      v-if="isVisible"
+      ref="menuRef"
+      class="context-menu"
+      :style="menuPosition"
+    >
     <!-- Group-specific options (when contextSection is provided) -->
     <template v-if="contextSection">
       <div class="menu-section-header">
@@ -224,7 +226,8 @@
         </div>
       </div>
     </Teleport>
-  </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

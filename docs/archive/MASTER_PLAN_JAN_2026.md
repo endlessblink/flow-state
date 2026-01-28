@@ -1066,4 +1066,128 @@ Migrate from `.env` files to Doppler for secure secret injection in CI/CD and VP
 
 ---
 
+## January 27, 2026 Archive (MASTER_PLAN Condensation)
+
+### ~~BUG-1091~~: VPS - No Cross-Browser Sync, Data Resets on Refresh (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-01-27)
+
+**Problem**: On VPS production, changes made in one browser don't sync to another. Data resets on refresh.
+
+**Root Cause**: Timestamp comparison in `updateTaskFromSync()` used `>=` causing split-brain when timestamps were equal.
+
+**Fix**: Changed `>=` to `>` in `src/stores/tasks.ts:226`. Equal timestamps now accept remote (DB is source of truth).
+
+---
+
+### ~~FEATURE-1089~~: Inbox Tab Swipe Gestures (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-27)
+
+Added swipe gestures to Inbox tab: swipe left → delete, swipe right → edit. Removed 250 lines of old long-press code.
+
+**Files**: `src/mobile/views/MobileInboxView.vue` (+105, -250 lines)
+
+---
+
+### ~~BUG-1088~~: VPS Canvas Inbox - Delete Task Does Nothing (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-01-26)
+
+**Root Cause**: Supabase realtime `removeChannel()` caused infinite recursion → stack overflow → all operations hung.
+
+**Fix**: Added `isRemovingChannel` guard flag in `useSupabaseDatabase.ts` (3 locations).
+
+---
+
+### ~~TASK-300~~: Documentation Phase 2 - Content Consolidation (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-18)
+
+Consolidated redundant documentation:
+- **Phase 2A**: CLAUDE.md deduplication (reduced ~94 lines)
+- **Phase 2B**: Canvas SOP consolidation (12 SOPs → 3 organized files)
+- **Phase 2C**: Backup doc consolidation
+
+---
+
+### ~~TASK-335~~: Fix Canvas Distribution for Stacked Tasks (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-20)
+
+Fixed distribute functions calculating spacing as 0 for stacked tasks. Added minimum spacing constants (`DEFAULT_SPACING_X = 240px`, `DEFAULT_SPACING_Y = 120px`) in `useCanvasAlignment.ts`.
+
+---
+
+### ~~TASK-335~~: Judge Agent Integration in Dev-Maestro (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-22)
+
+Layer 5 of AI "Done" Claim Verification System. API endpoint `/api/judge/evaluate` accepts task description + artifacts, returns verdict with reasoning.
+
+**Files**: `dev-maestro/server.js:2749-2884`
+
+---
+
+### ~~BUG-309-B~~: Undo/Redo Position Drift (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-18)
+
+**Problem**: Undoing an operation caused OTHER tasks to jump to old positions.
+
+**Root Cause**: Full-state snapshots captured ALL positions; restore overwrote everything.
+
+**Solution**: Operation-scoped undo - tracks `affectedIds` per operation, only restores those entities. See `src/composables/undoSingleton.ts`.
+
+**SOP**: `docs/sop/active/UNDO-system-architecture.md`
+
+---
+
+### Dev-Maestro Orchestrator Subtasks (TASK-303 Children)
+
+#### ~~TASK-319~~: Fix Agent Output Capture (✅ DONE - 2026-01-23)
+Added `--output-format stream-json` to sub-agent spawn, real-time broadcast via `parseAndBroadcastOrchOutput()`, persistent logs to `~/.dev-maestro/logs/agent-{taskId}.log`.
+
+#### ~~TASK-320~~: Fix Task Completion Detection (✅ DONE - 2026-01-23)
+Added git status check for uncommitted changes, activity timeout (60s), new completion statuses (`completed`, `completed_no_changes`, `completed_empty`).
+
+#### ~~TASK-323~~: Fix Stale Agent Cleanup (✅ DONE - 2026-01-23)
+Added `killAgentProcess()` with SIGTERM→SIGKILL fallback, `cleanupOrphanedResources()` on startup, periodic cleanup every 10 min, graceful shutdown handlers.
+
+#### ~~FEATURE-1012~~: Auto-Detect Project Tech Stack (✅ DONE - 2026-01-23)
+Added `detectProjectContext()` to auto-detect framework, UI library, state management, database, testing tools. Skips redundant questions.
+
+---
+
+### PWA Phase 2 Tasks (ROAD-004)
+
+#### ~~TASK-324~~: PWA Install Prompt Component (✅ DONE)
+Created `ReloadPrompt.vue` for PWA updates and install prompts, integrated in `App.vue`.
+
+#### ~~TASK-325~~: VPS Deployment Configuration (✅ DONE)
+Created `Caddyfile`, `.github/workflows/deploy.yml`, security headers, documented rollback in `docs/sop/deployment/VPS-DEPLOYMENT.md`.
+
+#### ~~TASK-326~~: PWA Cross-Device Testing (✅ DONE)
+Tested install on iOS Safari, Android Chrome, desktop Chrome. Ran Lighthouse PWA audit.
+
+---
+
+### ~~TASK-192~~: Calendar View Refactor (✅ DONE - 2026-01-15)
+
+**Goal**: Fix memory leaks, consolidate overlap calculation. Implemented global listener registry pattern for cleanup. Removed duplicate `calculateOverlappingPositions`.
+
+---
+
+### ~~TASK-227~~: Fix Group/Task Containment Drift (✅ DONE)
+
+**Problem**: Tasks and nested groups "drift" out of parents. Fixed by removing `isActuallyInsideParent` check for groups, trusting DB relationship. Added `parentId` to Task schema.
+
+---
+
+### ~~BUG-228~~: Group Context Menu on Pane Click (✅ DONE)
+
+Fixed: Right-clicking empty canvas no longer opens group context menu. Pane menu now ignores selected nodes.
+
+---
+
 *End of January 2026 Archive*

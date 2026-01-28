@@ -14,24 +14,6 @@
         >
       </div>
 
-      <div class="metadata-field" title="Do date - When you plan to do this task">
-        <Clock :size="14" />
-        <span class="field-label">Do</span>
-        <input
-          :value="formattedScheduledDate"
-          type="date"
-          class="inline-input"
-          @input="updateDate('scheduledDate', $event)"
-        >
-        <input
-          v-if="modelValue.scheduledDate"
-          :value="modelValue.scheduledTime"
-          type="time"
-          class="inline-input"
-          @input="updateTime($event)"
-        >
-      </div>
-
       <div class="metadata-field">
         <TimerReset :size="14" />
         <span class="field-label">Duration</span>
@@ -99,7 +81,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import {
-  Calendar, Clock, TimerReset, Flag, Zap, Circle,
+  Calendar, TimerReset, Flag, Zap, Circle,
   PlayCircle, CheckCircle, Archive, AlertCircle, Layers
 } from 'lucide-vue-next'
 import { type Task } from '@/stores/tasks'
@@ -125,7 +107,6 @@ const formatDateForInput = (dateValue: string | undefined | null): string => {
 
 // Computed properties for properly formatted dates
 const formattedDueDate = computed(() => formatDateForInput(props.modelValue.dueDate))
-const formattedScheduledDate = computed(() => formatDateForInput(props.modelValue.scheduledDate))
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Task): void
@@ -140,12 +121,6 @@ const updateDate = (field: 'dueDate' | 'scheduledDate', event: Event) => {
   const newTask = { ...props.modelValue, [field]: target.value }
   emit('update:modelValue', newTask)
   if (field === 'scheduledDate') emit('schedule-change')
-}
-
-const updateTime = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const newTask = { ...props.modelValue, scheduledTime: target.value }
-  emit('update:modelValue', newTask)
 }
 
 const updatePriority = (value: string | number) => {

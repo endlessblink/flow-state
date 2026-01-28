@@ -1,17 +1,20 @@
 <template>
-  <div
-    v-if="isVisible"
-    ref="menuRef"
-    class="context-menu"
-    :style="menuPosition"
-  >
-    <!-- Delete/Disconnect -->
-    <button class="menu-item disconnect-item" @click="$emit('disconnect')">
-      <Unlink :size="16" :stroke-width="1.5" class="menu-icon" />
-      <span class="menu-text">{{ menuText }}</span>
-      <span class="menu-shortcut">Del</span>
-    </button>
-  </div>
+  <!-- BUG-1096: Teleport to body to escape Vue Flow transforms that break fixed positioning -->
+  <Teleport to="body">
+    <div
+      v-if="isVisible"
+      ref="menuRef"
+      class="context-menu"
+      :style="menuPosition"
+    >
+      <!-- Delete/Disconnect -->
+      <button class="menu-item disconnect-item" @click="$emit('disconnect')">
+        <Unlink :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">{{ menuText }}</span>
+        <span class="menu-shortcut">Del</span>
+      </button>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

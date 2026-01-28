@@ -53,6 +53,29 @@ ReferenceError: can't access lexical declaration 'xe' before initialization
 
 ---
 
+### BUG-1103: Local Dev Auth Signs Out Both Tabs on Second Tab Sign-In (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-28)
+
+**Problem**: In local development, when user has two browser tabs open:
+1. Sign in on first tab - works
+2. Open second tab and try to sign in
+3. Both tabs get signed out
+
+**Symptoms**: Auth session not persisting across multiple browser tab instances during local development.
+
+**Likely Causes**:
+1. Session token overwrite/conflict between tabs
+2. `onAuthStateChange` listener firing logout event to all tabs
+3. Supabase local storage key collision
+4. Race condition in auth initialization across tabs
+
+**Files to Investigate**: `src/stores/auth.ts`, `src/services/auth/supabase.ts`
+
+**Related**: BUG-1086 (auth persistence issues on VPS)
+
+---
+
 ### BUG-1086: VPS/PWA Auth Not Persisting + Blank Screen (👀 REVIEW)
 
 **Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-01-26)
@@ -271,6 +294,33 @@ QA Supervisor verification of January 20, 2026 Data Crisis. See `docs/reports/20
 ---
 
 ## Planned Tasks (NEXT/BACKLOG)
+
+### TASK-1104: Enhanced Task Filtering and Grouping Options (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-28)
+
+Current filters (All, Active, Planned, Done, Newest) are not useful for daily workflow. Need flexible filtering and grouping system.
+
+**Requirements**:
+- **Grouping options**: Group by date, by project, by priority
+- **Filters**: Due today, due this week
+- Replace or extend current status-based filter bar
+
+**Files**: `src/components/tasks/TaskFilters.vue` (or equivalent filter component)
+
+---
+
+### ~~TASK-1102~~: Calendar View Start on Current Day with Time Scroll (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE
+
+When entering calendar view: default to current day's date and auto-scroll to current time position.
+
+**Solution**: Changed `useCalendarNavigation.ts` to use a regular `ref` instead of `useStorage` for the current date. This ensures each time the CalendarView component mounts, it starts fresh at today's date. The existing `scrollToCurrentTime()` call in `onMounted` handles scrolling to current time.
+
+**Files Modified**: `src/composables/calendar/useCalendarNavigation.ts`
+
+---
 
 ### TASK-1002: Voice Transcription to Task (📋 NEXT)
 

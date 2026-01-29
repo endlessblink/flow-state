@@ -319,6 +319,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { useTimerStore } from '@/stores/timer'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useMobileFilters, type GroupByType } from '@/composables/mobile/useMobileFilters'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
 import TaskCreateBottomSheet from '@/mobile/components/TaskCreateBottomSheet.vue'
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
@@ -338,25 +339,35 @@ const timerStore = useTimerStore()
 const { lastSyncError } = useSupabaseDatabase()
 const { triggerHaptic } = useHaptics()
 
+// Shared mobile filter state (persists across view navigation)
+const {
+  selectedProject,
+  selectedPriority,
+  groupBy,
+  hideDoneTasks,
+  hasActiveFilters,
+  priorityLabel,
+  clearFilters,
+  setGroupBy,
+  toggleHideDoneTasks
+} = useMobileFilters()
+
 // State
 const newTaskTitle = ref('')
 const taskInput = ref<HTMLInputElement | null>(null)
 const showDebug = ref(false)
 const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
 
-// TASK-1104: Enhanced filtering state
+// TASK-1104: Enhanced filtering state (view-specific)
 type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
-type GroupByType = 'none' | 'date' | 'project' | 'priority'
 
 const activeTimeFilter = ref<TimeFilterType>('all')
-const groupBy = ref<GroupByType>('none')
-const hideDoneTasks = ref(true) // Default to hiding done tasks
 const showGroupByDropdown = ref(false)
 
 // Quick-add expanded state
 const isQuickAddExpanded = ref(false)
 const selectedDueDate = ref<string | null>(null)
-const selectedPriority = ref<string | null>(null)
+const quickAddPriority = ref<string | null>(null) // Local state for quick-add form only
 
 // Task create sheet state
 const isTaskCreateOpen = ref(false)
@@ -474,7 +485,7 @@ const toggleVoiceMode = () => {
   } else if (hasWhisperApiKey.value) {
     voiceMode.value = 'whisper'
   }
-  triggerHaptic(10)
+  triggerHaptic('light')
 }
 
 // Toggle voice language (only for browser mode)
@@ -483,7 +494,7 @@ const toggleVoiceLanguage = async () => {
   voiceLanguage.value = voiceLanguage.value === 'he-IL' ? 'en-US' : 'he-IL'
   console.log('[Voice] 🌐 Language switched:', oldLang, '→', voiceLanguage.value)
   await setLanguage(voiceLanguage.value)
-  triggerHaptic(10)
+  triggerHaptic('light')
 }
 
 // Unified voice control functions
@@ -833,7 +844,7 @@ const toggleGroupByDropdown = () => {
 }
 
 const selectGroupBy = (value: GroupByType) => {
-  groupBy.value = value
+  setGroupBy(value)
   showGroupByDropdown.value = false
 }
 
@@ -878,8 +889,8 @@ const selectDueDate = (value: string | null) => {
   selectedDueDate.value = value
 }
 
-const selectPriority = (value: string | null) => {
-  selectedPriority.value = selectedPriority.value === value ? null : value
+const selectQuickAddPriority = (value: string | null) => {
+  quickAddPriority.value = quickAddPriority.value === value ? null : value
 }
 
 // Calculate actual due date from option
@@ -916,13 +927,13 @@ const submitTask = () => {
     title: newTaskTitle.value,
     status: 'planned',
     ...(dueDate && { dueDate: dueDate.toISOString() }),
-    ...(selectedPriority.value && { priority: selectedPriority.value as 'high' | 'medium' | 'low' })
+    ...(quickAddPriority.value && { priority: quickAddPriority.value as 'high' | 'medium' | 'low' })
   })
 
   // Reset state
   newTaskTitle.value = ''
   selectedDueDate.value = null
-  selectedPriority.value = null
+  quickAddPriority.value = null
   isQuickAddExpanded.value = false
   taskInput.value?.blur()
 }
@@ -964,16 +975,7 @@ const isTimerActive = (taskId: string) => {
   return timerStore.isTimerActive && timerStore.currentTaskId === taskId
 }
 
-// Helpers
-const priorityLabel = (priority: string) => {
-  const labels: Record<string, string> = {
-    critical: 'P0',
-    high: 'P1',
-    medium: 'P2',
-    low: 'P3'
-  }
-  return labels[priority] || priority
-}
+// Helpers are now provided by useMobileFilters composable (priorityLabel)
 
 const formatDueDate = (dueDate: string | Date): string => {
   const date = new Date(dueDate)
@@ -1066,9 +1068,9 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .filter-chip.active {
-  background: var(--primary-brand);
+  background: transparent;
   border-color: var(--primary-brand);
-  color: white;
+  color: var(--primary-brand);
 }
 
 .sort-section {
@@ -1087,7 +1089,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .filter-chip.active .filter-count {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--primary-brand);
+  color: white;
 }
 
 /* TASK-1104: Controls row (Group By + Sort) */
@@ -1587,25 +1590,28 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .option-chip.active {
-  background: var(--primary-brand);
+  background: transparent;
   border-color: var(--primary-brand);
-  color: white;
+  color: var(--primary-brand);
 }
 
 /* Priority-specific colors when active */
 .option-chip.priority-chip.high.active {
-  background: var(--danger-text);
+  background: transparent;
   border-color: var(--danger-text);
+  color: var(--danger-text);
 }
 
 .option-chip.priority-chip.medium.active {
-  background: var(--warning-text);
+  background: transparent;
   border-color: var(--warning-text);
+  color: var(--warning-text);
 }
 
 .option-chip.priority-chip.low.active {
-  background: var(--text-tertiary);
+  background: transparent;
   border-color: var(--text-tertiary);
+  color: var(--text-tertiary);
 }
 
 .collapse-btn {

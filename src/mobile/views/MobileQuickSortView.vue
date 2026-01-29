@@ -192,7 +192,7 @@
                 :class="`priority-${currentTask.priority || 'none'}`"
               />
 
-              <h2 class="task-title">
+              <h2 class="task-title" dir="auto">
                 {{ currentTask.title }}
               </h2>
 
@@ -964,8 +964,8 @@ onMounted(() => {
 
 .stat-badge {
   padding: var(--space-1_5) var(--space-3);
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.1));
-  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: transparent;
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-full);
   font-size: 0.875rem;
   font-weight: 600;
@@ -1031,8 +1031,8 @@ onMounted(() => {
 }
 
 .phase-btn.active {
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
-  border-color: rgba(78, 205, 196, 0.4);
+  background: transparent;
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
@@ -1042,7 +1042,8 @@ onMounted(() => {
 
 .count-badge {
   padding: var(--space-0_5) var(--space-2);
-  background: rgba(78, 205, 196, 0.2);
+  background: var(--brand-primary);
+  color: var(--bg-primary);
   border-radius: var(--radius-full);
   font-size: 0.75rem;
 }
@@ -1127,8 +1128,8 @@ onMounted(() => {
 }
 
 .quick-action-btn.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.4);
+  background: transparent;
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
@@ -1148,10 +1149,10 @@ onMounted(() => {
   width: 100%;
   margin-top: var(--space-4);
   padding: var(--space-4);
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(78, 205, 196, 0.7));
-  border: none;
+  background: transparent;
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-lg);
-  color: hsl(230, 20%, 8%);
+  color: var(--brand-primary);
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -1405,6 +1406,9 @@ onMounted(() => {
   margin: 0 0 var(--space-3);
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  /* RTL support */
+  text-align: start;
+  unicode-bidi: plaintext;
 }
 
 .task-description {
@@ -1527,8 +1531,8 @@ onMounted(() => {
 }
 
 .pill.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.4);
+  background: transparent;
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
@@ -2003,8 +2007,8 @@ onMounted(() => {
 }
 
 .edit-section .pill.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.4);
+  background: transparent;
+  border-color: var(--brand-primary);
   color: var(--brand-primary);
 }
 
@@ -2053,5 +2057,104 @@ onMounted(() => {
     animation: none;
     opacity: 0.5;
   }
+}
+
+/* ================================
+   RTL LAYOUT SUPPORT
+   ================================ */
+
+[dir="rtl"] .qs-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .header-content {
+  text-align: right;
+}
+
+[dir="rtl"] .qs-title {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .card-content {
+  text-align: right;
+}
+
+[dir="rtl"] .task-meta {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .meta-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .quick-edit-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .priority-pills,
+[dir="rtl"] .date-pills,
+[dir="rtl"] .date-pills-scroll {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .action-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .action-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .quick-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .quick-action-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .recent-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .capture-input {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .project-option {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .project-name {
+  text-align: right;
+}
+
+[dir="rtl"] .swipe-hints {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .hint-left {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .hint-right {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .phase-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .add-task-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .return-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .assign-project-btn {
+  flex-direction: row-reverse;
 }
 </style>

@@ -72,6 +72,25 @@
 
 ---
 
+### ~~BUG-1095~~: Calendar Current Time Indicator Not Showing (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-01-29)
+
+**Problem**: Red horizontal line showing current time position on calendar was invisible because CSS color variables were referenced but never defined.
+
+**Root Cause**: `--color-danger: hsl(var(--red-500))` referenced `--red-500` which was never defined in `design-tokens.css`.
+
+**Solution**:
+1. Added missing color palette variables (`--red-500`, `--green-500`, `--blue-500`) to design-tokens.css
+2. Fixed invalid CSS syntax: `margin-left: -var()` → `margin-left: calc(-1 * var())`
+3. Made indicator less aggressive: lower z-index (behind tasks), reduced opacity, smaller dot
+
+**Files**: `src/assets/design-tokens.css`, `src/components/calendar/CalendarDayView.vue`
+
+**SOP**: `docs/sop/SOP-040-calendar-time-indicator.md`
+
+---
+
 ### BUG-1097: Due Date Not Persisting from Edit Modal (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-27)

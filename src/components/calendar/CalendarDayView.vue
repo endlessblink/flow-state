@@ -535,27 +535,27 @@ const {
   position: absolute;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 2; /* Behind tasks (z-index: 5) so events stay visible */
   pointer-events: none;
   display: flex;
   align-items: center;
 }
 
 .time-indicator-dot {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--color-danger);
-  box-shadow: 0 0 8px var(--color-danger), 0 0 16px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 4px var(--color-danger);
   flex-shrink: 0;
-  margin-left: -var(--space-1_5);
+  margin-left: calc(-1 * var(--space-1));
 }
 
 .time-indicator-line {
   flex: 1;
   height: 2px;
   background: var(--color-danger);
-  box-shadow: 0 0 4px var(--color-danger), 0 1px 2px rgba(0, 0, 0, 0.2);
+  opacity: 0.7; /* Semi-transparent so tasks show through */
 }
 
 .ghost-preview-inline {
@@ -695,5 +695,25 @@ const {
 :dir(rtl) .priority-stripe {
   left: auto;
   right: 0;
+}
+
+/* ========================================
+   TIMER-ACTIVE HIGHLIGHT
+   Amber glow when task has active timer
+   ======================================== */
+
+.slot-task.timer-active-event {
+  border-color: var(--timer-active-border);
+  box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+  animation: timer-pulse 2s ease-in-out infinite;
+}
+
+.slot-task.timer-active-event:hover {
+  box-shadow: var(--timer-active-glow-strong), var(--timer-active-shadow-hover);
+}
+
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
 }
 </style>

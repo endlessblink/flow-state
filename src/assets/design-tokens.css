@@ -47,6 +47,11 @@
 
   /* Brand Colors - Authentic Teal (matches themes.ts #4ECDC4) */
   --teal-500: 174, 62%, 58%;
+
+  /* Core Color Palette (HSL values for semantic tokens) */
+  --red-500: 0, 84%, 60%;      /* #ef4444 - danger, errors, current time indicator */
+  --green-500: 142, 71%, 45%;  /* #22c55e - success, completed */
+  --blue-500: 217, 91%, 60%;   /* #3b82f6 - info, links */
   --color-primary-50: 235, 252, 251;
   --color-primary-100: 206, 247, 244;
   --color-primary-200: 161, 240, 235;

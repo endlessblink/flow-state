@@ -129,15 +129,16 @@ function updateGroupParentAfterDrag(args: {
     const targetParent = getDeepestContainingGroup(spatialGroup, allGroups, groupId)
     let newParentId: string | null = targetParent?.id ?? null
 
-    // Log center position for debugging
-    const centerX = absoluteRect.x + absoluteRect.width / 2
-    const centerY = absoluteRect.y + absoluteRect.height / 2
+    if (import.meta.env.DEV) {
+        const centerX = absoluteRect.x + absoluteRect.width / 2
+        const centerY = absoluteRect.y + absoluteRect.height / 2
 
-    console.log(`[GROUP-PARENT] Checking containment for "${group?.name || groupId}"`, {
-        center: { x: Math.round(centerX), y: Math.round(centerY) },
-        oldParent: oldParentId ?? '(root)',
-        detectedParent: newParentId ?? '(root)',
-    })
+        console.log(`[CANVAS:INTERACT] Checking containment for "${group?.name || groupId}"`, {
+            center: { x: Math.round(centerX), y: Math.round(centerY) },
+            oldParent: oldParentId ?? '(root)',
+            detectedParent: newParentId ?? '(root)',
+        })
+    }
 
     // ================================================================
     // CYCLE PREVENTION
@@ -211,13 +212,15 @@ function updateGroupParentAfterDrag(args: {
             transitionType = 'child-to-child'
         }
 
-        const oldName = oldParentId ? allGroups.find(g => g.id === oldParentId)?.name : '(root)'
-        const newName = newParentId ? allGroups.find(g => g.id === newParentId)?.name : '(root)'
-        console.log(`[GROUP-PARENT] ✓ Transition: ${transitionType}`, {
-            group: group?.name || groupId,
-            from: oldName,
-            to: newName,
-        })
+        if (import.meta.env.DEV) {
+            const oldName = oldParentId ? allGroups.find(g => g.id === oldParentId)?.name : '(root)'
+            const newName = newParentId ? allGroups.find(g => g.id === newParentId)?.name : '(root)'
+            console.log(`[CANVAS:INTERACT] Transition: ${transitionType}`, {
+                group: group?.name || groupId,
+                from: oldName,
+                to: newName,
+            })
+        }
     }
 
     return {
@@ -366,15 +369,16 @@ export function useCanvasInteractions(deps?: {
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
 
-        // DRIFT LOGGING: Log drag start with initial positions
-        console.log(`📍[DRAG-START] ${involvedNodes.length} nodes`,
-            involvedNodes.map((n: any) => ({
-                id: n.id?.slice(0, 12),
-                position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
-                positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
-                parentNode: n.parentNode?.slice(0, 12) ?? null
-            }))
-        )
+        if (import.meta.env.DEV) {
+            console.log(`[CANVAS:INTERACT] Drag start - ${involvedNodes.length} nodes`,
+                involvedNodes.map((n: any) => ({
+                    id: n.id?.slice(0, 12),
+                    position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
+                    positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
+                    parentNode: n.parentNode?.slice(0, 12) ?? null
+                }))
+            )
+        }
 
         // Guard: Only proceed if we can start a new drag (operation state is idle)
         // This is the AUTHORITATIVE guard that prevents duplicate drag starts
@@ -445,17 +449,20 @@ export function useCanvasInteractions(deps?: {
         // Vue Flow may fire nodeDragStop when setNodes() updates node positions programmatically.
         // This creates a reactive loop: drag → Smart Group update → sync → setNodes → drag fires again.
         if (canvasSyncInProgress.value) {
-            console.log('🛡️ [DRAG-STOP-BLOCKED] Skipping - triggered during canvas sync')
+            if (import.meta.env.DEV) {
+                console.log('[CANVAS:INTERACT] Drag stop blocked - triggered during canvas sync')
+            }
             return
         }
 
         const { nodes: involvedNodes } = event
         canvasStore.isDragging = false
 
-        // BUG-1061 DEBUG: Trace each call with unique ID
-        const callId = Math.random().toString(36).slice(2, 8)
-        console.log(`🔴 [DRAG-STOP-ENTRY] callId=${callId}, involvedNodes=${involvedNodes.length}`,
-            involvedNodes.map(n => `${n.id.slice(0, 12)}(${n.type})`))
+        if (import.meta.env.DEV) {
+            const callId = Math.random().toString(36).slice(2, 8)
+            console.log(`[CANVAS:INTERACT] Drag stop - callId=${callId}, involvedNodes=${involvedNodes.length}`,
+                involvedNodes.map(n => `${n.id.slice(0, 12)}(${n.type})`))
+        }
 
         try {
 
@@ -489,14 +496,15 @@ export function useCanvasInteractions(deps?: {
                         allGroups,
                     })
 
-                    // DRIFT LOGGING: Capture before/after for diagnosis
-                    const beforeGroupPos = group.position
-                    console.log(`📍 [DRAG-WRITE] Group "${group.name?.slice(0, 20)}" (${groupId.slice(0, 8)})`, {
-                        before: beforeGroupPos ? { x: Math.round(beforeGroupPos.x), y: Math.round(beforeGroupPos.y) } : null,
-                        after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
-                        parentChange: parentResult.transitionType !== 'no-change' ? parentResult.transitionType : 'same',
-                        source: 'onNodeDragStop'
-                    })
+                    if (import.meta.env.DEV) {
+                        const beforeGroupPos = group.position
+                        console.log(`[CANVAS:INTERACT] Group drag write "${group.name?.slice(0, 20)}" (${groupId.slice(0, 8)})`, {
+                            before: beforeGroupPos ? { x: Math.round(beforeGroupPos.x), y: Math.round(beforeGroupPos.y) } : null,
+                            after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
+                            parentChange: parentResult.transitionType !== 'no-change' ? parentResult.transitionType : 'same',
+                            source: 'onNodeDragStop'
+                        })
+                    }
 
                     // Update store with ABSOLUTE position AND parentGroupId
                     canvasStore.updateSection(groupId, {
@@ -577,7 +585,9 @@ export function useCanvasInteractions(deps?: {
                     // We should NOT recalculate parentId/Smart Groups for tasks that stayed in their group.
                     // Check: if task has a parent AND is still inside that parent, skip processing.
                     const oldParentId = task.parentId
-                    console.log(`🟡 [FIX3-CHECK] Task "${task.title?.slice(0, 20)}" oldParentId=${oldParentId?.slice(0, 8) ?? 'none'}`)
+                    if (import.meta.env.DEV) {
+                        console.log(`[CANVAS:INTERACT] Task "${task.title?.slice(0, 20)}" oldParentId=${oldParentId?.slice(0, 8) ?? 'none'}`)
+                    }
                     if (oldParentId) {
                         const currentParent = taskAllGroups.find(g => g.id === oldParentId)
                         if (currentParent) {
@@ -590,10 +600,12 @@ export function useCanvasInteractions(deps?: {
                             // If task center is still inside current parent, skip processing
                             // BUG-1084 FIX: Reduced padding from 10 to 2 to prevent false "outside" detection
                             const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 2)
-                            console.log(`🟡 [FIX3-BOUNDS] stillInside=${stillInside}`, {
-                                taskCenter: { x: Math.round(spatialTask.position.x + (spatialTask.width || 200) / 2), y: Math.round(spatialTask.position.y + (spatialTask.height || 40) / 2) },
-                                parentBounds: { x: Math.round(parentBounds.position.x), y: Math.round(parentBounds.position.y), w: parentBounds.width, h: parentBounds.height }
-                            })
+                            if (import.meta.env.DEV) {
+                                console.log(`[CANVAS:INTERACT] stillInside=${stillInside}`, {
+                                    taskCenter: { x: Math.round(spatialTask.position.x + (spatialTask.width || 200) / 2), y: Math.round(spatialTask.position.y + (spatialTask.height || 40) / 2) },
+                                    parentBounds: { x: Math.round(parentBounds.position.x), y: Math.round(parentBounds.position.y), w: parentBounds.width, h: parentBounds.height }
+                                })
+                            }
                             if (stillInside) {
                                 // Task just moved with its group - only sync position, skip parent/Smart Group recalc
                                 const posChanged = !task.canvasPosition ||
@@ -637,13 +649,17 @@ export function useCanvasInteractions(deps?: {
                             const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, 2)
                             if (stillInCurrentParent) {
                                 // Task is inside BOTH current parent and detected group - prefer current
-                                console.log(`🛡️ [FIX4-PREFER-CURRENT] Task inside both "${targetGroup?.name}" and current "${currentParent.name}" - keeping current`)
+                                if (import.meta.env.DEV) {
+                                    console.log(`[CANVAS:INTERACT] Task inside both "${targetGroup?.name}" and current "${currentParent.name}" - keeping current`)
+                                }
                                 targetGroup = currentParent
                             }
                         }
                     }
                     const newParentId = targetGroup?.id ?? null
-                    console.log(`🟢 [DETECT-PARENT] Task "${task.title?.slice(0, 20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0, 8) ?? 'root'})`)
+                    if (import.meta.env.DEV) {
+                        console.log(`[CANVAS:INTERACT] Task "${task.title?.slice(0, 20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0, 8) ?? 'root'})`)
+                    }
 
                     // Skip if position didn't change meaningfully
                     // (prevents drift when task just followed parent group)
@@ -659,14 +675,15 @@ export function useCanvasInteractions(deps?: {
                     // 4. Optimistic Store Update (Absolute position + parentId)
                     // GEOMETRY WRITER: Primary drag handler (TASK-255)
 
-                    // DRIFT LOGGING: Capture before/after for diagnosis
-                    const beforePos = task.canvasPosition
-                    console.log(`📍 [DRAG-WRITE] Task "${task.title?.slice(0, 20)}" (${task.id.slice(0, 8)})`, {
-                        before: beforePos ? { x: Math.round(beforePos.x), y: Math.round(beforePos.y) } : null,
-                        after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
-                        parentChange: oldParentId !== newParentId ? `${oldParentId?.slice(0, 8) ?? 'root'} → ${newParentId?.slice(0, 8) ?? 'root'}` : 'same',
-                        source: 'onNodeDragStop'
-                    })
+                    if (import.meta.env.DEV) {
+                        const beforePos = task.canvasPosition
+                        console.log(`[CANVAS:INTERACT] Task drag write "${task.title?.slice(0, 20)}" (${task.id.slice(0, 8)})`, {
+                            before: beforePos ? { x: Math.round(beforePos.x), y: Math.round(beforePos.y) } : null,
+                            after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
+                            parentChange: oldParentId !== newParentId ? `${oldParentId?.slice(0, 8) ?? 'root'} → ${newParentId?.slice(0, 8) ?? 'root'}` : 'same',
+                            source: 'onNodeDragStop'
+                        })
+                    }
 
                     // TASK-1083: Combine position + smart-group updates into SINGLE save to prevent race condition
                     // Previously: two separate updateTask calls could race with realtime events
@@ -679,15 +696,21 @@ export function useCanvasInteractions(deps?: {
                     // 6. Collect Smart Section Properties (Today, Tomorrow, Priorities, etc.)
                     // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
                     if (targetGroup) {
-                        console.log(`🔍 [SMART-GROUP-DEBUG] Group name: "${targetGroup.name}", Task: "${task.title}"`)
+                        if (import.meta.env.DEV) {
+                            console.log(`[CANVAS:INTERACT] Smart Group check - Group: "${targetGroup.name}", Task: "${task.title}"`)
+                        }
                         const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
-                        console.log(`🔍 [SMART-GROUP-DEBUG] Smart updates:`, smartUpdates)
+                        if (import.meta.env.DEV) {
+                            console.log(`[CANVAS:INTERACT] Smart updates:`, smartUpdates)
+                        }
                         // Filter out updates where the task already has the same value
                         for (const [key, value] of Object.entries(smartUpdates)) {
                             const taskKey = key as keyof typeof task
                             if (task[taskKey] !== value) {
                                 dragUpdates[key] = value
-                                console.log(`✨ [SMART-GROUP] Adding "${key}" from "${targetGroup.name}" to combined update`)
+                                if (import.meta.env.DEV) {
+                                    console.log(`[CANVAS:INTERACT] Adding "${key}" from "${targetGroup.name}" to combined update`)
+                                }
                             }
                         }
                     }
@@ -907,7 +930,9 @@ export function useCanvasInteractions(deps?: {
         // we must sync all descendant positions to DB. When resizing from
         // bottom-right only, deltaX/deltaY will be 0 and no sync is needed.
         if (deltaX !== 0 || deltaY !== 0) {
-            console.log(`📐 [RESIZE] Origin changed by (${deltaX}, ${deltaY}), syncing descendants...`)
+            if (import.meta.env.DEV) {
+                console.log(`[CANVAS:INTERACT] Resize origin changed by (${deltaX}, ${deltaY}), syncing descendants...`)
+            }
 
             // Sync ALL Descendant Tasks (reuse helpers from BUG #1 fix)
             const descendantTasks = collectDescendantTasks(sectionId, taskStore.tasks, canvasStore.groups)

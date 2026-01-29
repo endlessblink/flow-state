@@ -139,11 +139,13 @@ export function useGroqWhisper(options: UseGroqWhisperOptions = {}) {
         status.value = 'processing'
         const audioBlob = new Blob(audioChunks, { type: mimeType })
 
-        console.log('[useGroqWhisper] Processing audio:', {
-          size: audioBlob.size,
-          duration: recordingDuration.value,
-          language: currentLanguage.value
-        })
+        if (import.meta.env.DEV) {
+          console.log('[VOICE] Processing audio:', {
+            size: audioBlob.size,
+            duration: recordingDuration.value,
+            language: currentLanguage.value
+          })
+        }
 
         const result = await transcribeAudio(audioBlob, {
           language: getGroqLanguage(currentLanguage.value),
@@ -194,7 +196,9 @@ export function useGroqWhisper(options: UseGroqWhisperOptions = {}) {
         }
       }, maxDuration)
 
-      console.log('[useGroqWhisper] Recording started')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Recording started')
+      }
       return true
     } catch (e) {
       cleanup()

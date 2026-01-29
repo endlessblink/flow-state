@@ -514,9 +514,20 @@ const isTimerActive = computed(() =>
 
 ## Supabase JWT Key Validation
 
-**Problem:** JWT keys in `.env.local` can drift from local Supabase's JWT secret, causing WebSocket 403 errors.
+**Problem:** JWT keys must be signed with the same secret as the Supabase instance. Mismatched keys cause 401 Unauthorized and `JwtSignatureError` errors.
 
-**Prevention:** `npm run dev` automatically validates JWT signatures before starting.
+### Local vs Production Keys
+
+| Environment | JWT Secret | Keys Location |
+|-------------|-----------|---------------|
+| **Local Supabase** | `super-secret-jwt-token-with-at-least-32-characters-long` | `.env` |
+| **Production (VPS)** | `your-super-secret-jwt-token-with-at-least-32-characters-long` | Doppler + VPS `.env` |
+
+**CRITICAL:** Local and production use DIFFERENT JWT secrets. Never mix them.
+
+### For Local Development (without Doppler)
+
+`npm run dev` validates JWT signatures before starting.
 
 **If validation fails:**
 ```
@@ -526,11 +537,24 @@ To fix, run: npm run generate:keys
 
 **Fix:** Run `npm run generate:keys` and copy output to `.env.local`.
 
-**Scripts:**
-- `scripts/validate-supabase-keys.cjs` - Validates JWT signature on startup
-- `scripts/generate-supabase-keys.cjs` - Generates correctly signed keys
+### For Production (with Doppler)
 
-**Local JWT Secret:** `super-secret-jwt-token-with-at-least-32-characters-long` (default for local Supabase)
+When connecting to production (`api.in-theflow.com`), validation is skipped:
+```
+[Supabase] Remote URL detected, skipping local key validation
+```
+
+**If production auth fails (401 errors):**
+1. Check that Doppler has correct keys: `doppler secrets get VITE_SUPABASE_ANON_KEY`
+2. Verify VPS Supabase has matching keys: `ssh root@84.46.253.137 "grep ANON_KEY /opt/supabase/docker/.env"`
+3. If mismatched, follow **SOP-036** to regenerate keys
+
+**Full SOP:** [`docs/sop/SOP-036-supabase-jwt-key-regeneration.md`](docs/sop/SOP-036-supabase-jwt-key-regeneration.md)
+
+### Scripts
+
+- `scripts/validate-supabase-keys.cjs` - Validates JWT signature on startup (local only)
+- `scripts/generate-supabase-keys.cjs` - Generates keys for LOCAL Supabase
 
 ## Canvas Position Persistence (CRITICAL)
 

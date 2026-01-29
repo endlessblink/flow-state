@@ -1,20 +1,23 @@
 import type { UnifiedTask, GitHubIssueRef } from '@/types/unified-task';
 
+/**
+ * Mock GitHubService - placeholder for future GitHub integration
+ * Note: Not currently used in production
+ */
 export class GitHubService {
   async sync(_tasks: UnifiedTask[]): Promise<void> {
-    console.log('Mock GitHubService.sync called');
+    // Mock implementation - no-op
   }
 
   async createIssue(_task: UnifiedTask): Promise<GitHubIssueRef> {
-    console.log('Mock GitHubService.createIssue called');
     return { id: 'mock-issue-id', url: 'https://github.com/mock' };
   }
 
   async updateIssue(_task: UnifiedTask): Promise<void> {
-    console.log('Mock GitHubService.updateIssue called');
+    // Mock implementation - no-op
   }
 
   async closeIssue(_issueId: string): Promise<void> {
-    console.log('Mock GitHubService.closeIssue called');
+    // Mock implementation - no-op
   }
 }

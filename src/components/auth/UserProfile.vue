@@ -102,10 +102,9 @@ const dropdownStyle = computed((): CSSProperties => {
 
 // ===== Methods =====
 const toggleDropdown = (event?: Event) => {
-  console.log('🔵🔵🔵 CLICK DETECTED on UserProfile! 🔵🔵🔵')
-  console.log('Event:', event)
-  console.log('Target:', event?.target)
-  console.log('Current dropdown state:', isDropdownOpen.value)
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] Dropdown toggle clicked, current state:', isDropdownOpen.value)
+  }
 
   if (event) {
     event.stopPropagation()
@@ -113,32 +112,38 @@ const toggleDropdown = (event?: Event) => {
   }
 
   isDropdownOpen.value = !isDropdownOpen.value
-
-  console.log('New dropdown state:', isDropdownOpen.value)
 }
 
 const closeDropdown = () => {
   if (isDropdownOpen.value) {
-    console.log('Closing dropdown')
+    if (import.meta.env.DEV) {
+      console.log('[AUTH:UI] Closing dropdown')
+    }
     isDropdownOpen.value = false
   }
 }
 
 const handleSettings = () => {
-  console.log('⚙️ Settings clicked')
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] Settings clicked')
+  }
   closeDropdown()
   uiStore.openSettingsModal()
 }
 
 const handleSignOut = async () => {
-  console.log('🔴 Sign out clicked from user profile')
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] Sign out clicked')
+  }
   closeDropdown()
 
   try {
     await authStore.signOut()
-    console.log('✅ Signed out successfully')
+    if (import.meta.env.DEV) {
+      console.log('[AUTH:UI] Signed out successfully')
+    }
   } catch (error) {
-    console.error('❌ Sign out error:', error)
+    console.error('[AUTH:UI] Sign out error:', error)
   }
 }
 
@@ -153,29 +158,21 @@ const handleClickOutside = (event: MouseEvent) => {
 let pointerHandler: ((e: Event) => void) | null = null
 
 onMounted(() => {
-  console.log('🔵 UserProfile component mounted')
-  console.log('  📊 Auth state:')
-  console.log('    • isAuthenticated:', authStore.isAuthenticated)
-  console.log('    • user email:', authStore.user?.email)
-  console.log('    • user displayName:', authStore.displayName)
-  console.log('    • user photoURL:', authStore.photoURL)
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] UserProfile mounted, isAuthenticated:', authStore.isAuthenticated)
+  }
 
   // NUCLEAR OPTION: Direct DOM event listener with capture phase
   // Using ONLY pointerdown to prevent double-toggle (pointerdown + click both firing)
   if (profileRef.value) {
-    console.log('🔧 Attaching DIRECT DOM event listener to avatar')
-
     // Use ONLY pointer events - handles mouse, touch, and pen input
     // This prevents the double-toggle issue where both pointerdown and click fire
     pointerHandler = (e: Event) => {
-      console.log('💥 POINTER HANDLER FIRED!')
       toggleDropdown(e)
     }
     profileRef.value.addEventListener('pointerdown', pointerHandler, { capture: true })
-
-    console.log('✅ Event listener attached successfully')
   } else {
-    console.error('❌ profileRef is null - cannot attach event listeners!')
+    console.error('[AUTH:UI] profileRef is null - cannot attach event listeners!')
   }
 
   // Click outside to close
@@ -183,8 +180,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  console.log('🔴 UserProfile component unmounting - cleaning up event listener')
-
   if (profileRef.value && pointerHandler) {
     profileRef.value.removeEventListener('pointerdown', pointerHandler, { capture: true })
   }

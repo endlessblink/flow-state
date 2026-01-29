@@ -405,7 +405,10 @@ export function useCanvasOrchestrator() {
         // BUG-1084 v5: Wait for stores to be ready before initial sync
         // The root cause of empty canvas on initial load was calling syncNodes() before
         // stores were populated. Now we use a watcher to wait for initialization.
-        const stopInitWatcher = watch(
+        // BUG-1107: Use let + nextTick to avoid "can't access before initialization" error
+        // when watcher runs immediately and tries to call stopInitWatcher()
+        let stopInitWatcher: (() => void) | null = null
+        stopInitWatcher = watch(
             [
                 () => taskStore._hasInitializedOnce,
                 () => canvasStore._hasInitializedOnce
@@ -421,7 +424,8 @@ export function useCanvasOrchestrator() {
                     syncEdges()
                     isInitialized.value = true
                     console.log('✅ [ORCHESTRATOR] Initialization complete')
-                    stopInitWatcher()
+                    // Defer stop to next tick to ensure stopInitWatcher is assigned
+                    if (stopInitWatcher) stopInitWatcher()
                 }
             },
             { immediate: true }
@@ -440,7 +444,7 @@ export function useCanvasOrchestrator() {
                 syncNodes()
                 syncEdges()
                 isInitialized.value = true
-                stopInitWatcher()
+                if (stopInitWatcher) stopInitWatcher()
             }
         }, 2000)
 

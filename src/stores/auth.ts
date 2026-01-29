@@ -231,11 +231,34 @@ export const useAuthStore = defineStore('auth', () => {
         // BUG-1056: This fires across all tabs when auth state changes (via localStorage sync)
         supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
           const currentTabId = (window as any).__flowstate_tab_id || 'unknown'
-          console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event, 'userId:', newSession?.user?.id?.substring(0, 8))
+          const currentUserId = user.value?.id?.substring(0, 8) || 'none'
+          const newUserId = newSession?.user?.id?.substring(0, 8) || 'none'
+          console.log(`👤 [AUTH:${currentTabId}] Auth state changed:`, _event,
+            'current:', currentUserId, '→ new:', newUserId,
+            'hasSession:', !!session.value, '→', !!newSession)
 
           // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
           // This ensures cached guest data doesn't persist after sign-in
           invalidateCache.onAuthChange(newSession?.user?.id || null)
+
+          // BUG-1103: Multi-tab sign-in fix
+          // When Tab 2 signs in, Supabase may fire SIGNED_OUT (old session) before SIGNED_IN (new session)
+          // Tab 1 would blindly clear state, even though localStorage has Tab 2's valid new session
+          // Fix: On SIGNED_OUT, check if localStorage actually has a session before clearing
+          if (_event === 'SIGNED_OUT' && !newSession) {
+            // Double-check: maybe another tab just signed in and localStorage has their session
+            const { data: currentSession } = await supabase.auth.getSession()
+            if (currentSession.session) {
+              console.log(`👤 [AUTH:${currentTabId}] SIGNED_OUT received but localStorage has session - using it instead`)
+              session.value = currentSession.session
+              user.value = currentSession.session.user
+              // Schedule refresh for the recovered session
+              if (currentSession.session.expires_at) {
+                scheduleTokenRefresh(currentSession.session.expires_at)
+              }
+              return // Don't process as sign-out
+            }
+          }
 
           // Update local state
           session.value = newSession

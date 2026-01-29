@@ -40,7 +40,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     try {
       await saveGroup(group)
     } catch (_e) {
-      console.debug(`⏭️[GROUP-SAVE] Supabase skipped/failed - localStorage backup saved`)
+      if (import.meta.env.DEV) console.debug('[CANVAS:SAVE] Supabase skipped/failed - localStorage backup saved')
     }
   }
 
@@ -102,7 +102,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Integrity checks
       loadedGroups.forEach((g: CanvasGroup) => {
         if (!g.position || !Number.isFinite(g.position.x) || !Number.isFinite(g.position.y)) {
-          console.warn(`🛠️[INTEGRITY] Auto-repairing position for group ${g.name}`)
+          console.warn(`[CANVAS:INTEGRITY] Auto-repairing position for group ${g.name}`)
           g.position = { x: 0, y: 0, width: g.position?.width || 600, height: g.position?.height || 400 }
         }
       })
@@ -111,7 +111,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (loadedGroups.length === 0 && groupsModule._rawGroups.value.length > 0) {
         const sessionStart = (window as unknown as Record<string, unknown>).FlowStateSessionStart as number || 0
         if (Date.now() - sessionStart < 10000) {
-          console.warn(`🛡️[GROUP-LOAD] BLOCKED empty overwrite`)
+          console.warn('[CANVAS:LOAD] BLOCKED empty overwrite')
           return
         }
       }
@@ -134,7 +134,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
 
     } catch (e) {
-      console.error('❌ [SUPABASE] Failed to load canvas groups:', e)
+      console.error('[CANVAS:LOAD] Failed to load canvas groups:', e)
       const localGroups = loadGroupsFromLocalStorage()
       if (localGroups.length > 0) groupsModule.setGroups(breakGroupCycles(localGroups))
     } finally {
@@ -207,7 +207,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       const otherNodes = nodes.value.filter(n => n.type !== 'task' && n.type !== 'taskNode')
       nodes.value = [...otherNodes, ...updatedTaskNodes] as Node[]
     } catch (e) {
-      console.error('Sync tasks to canvas failed:', e)
+      console.error('[CANVAS:SYNC] Sync tasks to canvas failed:', e)
     }
   }
 
@@ -279,7 +279,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     const USER_ACTION_SOURCES = ['user:drag-drop', 'user:create', 'user:delete', 'user:undo', 'user:redo', 'user:resize', 'user:connect', 'user:context-menu', 'user:manual']
     if (USER_ACTION_SOURCES.includes(source)) {
       groupsModule.syncTrigger.value++
-      console.log(`🔄[CANVAS] Sync triggered by ${source}`)
+      console.log(`[CANVAS] Sync triggered by ${source}`)
     }
   }
 
@@ -395,7 +395,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
       // Trigger sync
       groupsModule.syncTrigger.value++
-      console.log('✅ All groups reset to root level. Refresh the page to see changes.')
+      console.log('[CANVAS] All groups reset to root level. Refresh the page to see changes.')
     }
   }
 })

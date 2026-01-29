@@ -74,15 +74,17 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     typeof MediaRecorder !== 'undefined'
 
   // Debug logging to diagnose PWA support issues (BUG-1070)
-  console.log('[WhisperSpeech] Browser support check:', {
-    hasNavigator: typeof navigator !== 'undefined',
-    hasMediaDevices: typeof navigator !== 'undefined' && !!navigator.mediaDevices,
-    hasGetUserMedia: typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
-    hasMediaRecorder: typeof MediaRecorder !== 'undefined',
-    isSupported: isSupported.value,
-    isSecureContext: typeof window !== 'undefined' && window.isSecureContext,
-    protocol: typeof window !== 'undefined' ? window.location?.protocol : 'N/A'
-  })
+  if (import.meta.env.DEV) {
+    console.log('[VOICE] Browser support check:', {
+      hasNavigator: typeof navigator !== 'undefined',
+      hasMediaDevices: typeof navigator !== 'undefined' && !!navigator.mediaDevices,
+      hasGetUserMedia: typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
+      hasMediaRecorder: typeof MediaRecorder !== 'undefined',
+      isSupported: isSupported.value,
+      isSecureContext: typeof window !== 'undefined' && window.isSecureContext,
+      protocol: typeof window !== 'undefined' ? window.location?.protocol : 'N/A'
+    })
+  }
 
   // Computed
   const isRecording = computed(() => status.value === 'recording')
@@ -159,7 +161,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       }
 
       mediaRecorder.onerror = (event) => {
-        console.error('[GroqWhisper] MediaRecorder error:', event)
+        console.error('[VOICE] MediaRecorder error:', event)
         error.value = 'Recording failed'
         status.value = 'error'
         if (onError) onError(error.value)
@@ -176,15 +178,19 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       // Max duration limit
       maxDurationTimer = setTimeout(() => {
-        console.log('[GroqWhisper] Max duration reached, stopping')
+        if (import.meta.env.DEV) {
+          console.log('[VOICE] Max duration reached, stopping')
+        }
         stop()
       }, maxDuration * 1000)
 
-      console.log('[GroqWhisper] 🎤 Recording started')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Recording started')
+      }
       return true
 
     } catch (err) {
-      console.error('[GroqWhisper] Failed to start recording:', err)
+      console.error('[VOICE] Failed to start recording:', err)
       const msg = err instanceof Error && err.name === 'NotAllowedError'
         ? 'Microphone access denied. Please allow microphone permissions.'
         : 'Failed to start recording'
@@ -200,7 +206,9 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
    */
   const stop = (): void => {
     if (mediaRecorder && status.value === 'recording') {
-      console.log('[GroqWhisper] 🛑 Stopping recording')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Stopping recording')
+      }
       mediaRecorder.stop()
     }
   }
@@ -223,7 +231,9 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     audioChunks = []
     transcript.value = ''
     status.value = 'idle'
-    console.log('[GroqWhisper] ❌ Recording cancelled')
+    if (import.meta.env.DEV) {
+      console.log('[VOICE] Recording cancelled')
+    }
   }
 
   /**
@@ -231,7 +241,9 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
    */
   const processAudio = async (): Promise<void> => {
     status.value = 'processing'
-    console.log('[GroqWhisper] 🔄 Processing audio...')
+    if (import.meta.env.DEV) {
+      console.log('[VOICE] Processing audio...')
+    }
 
     try {
       // Create audio blob
@@ -239,7 +251,9 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       // Check minimum size (Whisper needs some audio)
       if (audioBlob.size < 1000) {
-        console.log('[GroqWhisper] Audio too short, skipping')
+        if (import.meta.env.DEV) {
+          console.log('[VOICE] Audio too short, skipping')
+        }
         status.value = 'idle'
         return
       }
@@ -273,11 +287,13 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       transcript.value = data.text || ''
       detectedLanguage.value = data.language || null
 
-      console.log('[GroqWhisper] ✅ Transcription complete:', {
-        text: transcript.value,
-        language: detectedLanguage.value,
-        duration: data.duration
-      })
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Transcription complete:', {
+          text: transcript.value,
+          language: detectedLanguage.value,
+          duration: data.duration
+        })
+      }
 
       status.value = 'idle'
 
@@ -290,7 +306,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       }
 
     } catch (err) {
-      console.error('[GroqWhisper] Processing error:', err)
+      console.error('[VOICE] Processing error:', err)
       const msg = err instanceof Error ? err.message : 'Failed to process audio'
       error.value = msg
       status.value = 'error'

@@ -487,12 +487,12 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const setupEventListeners = () => {
     const handleOnline = () => {
       onlineStatus.value = true
-      console.log('🌐 Network connection restored')
+      console.log('[NETWORK] Connection restored')
     }
 
     const handleOffline = () => {
       onlineStatus.value = false
-      console.log('📡 Network connection lost')
+      console.log('[NETWORK] Connection lost')
     }
 
     const handleConnectionChange = () => {
@@ -520,7 +520,9 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const clearCache = () => {
     responseCache.value.clear()
     performance.clearCache()
-    console.log('🧹 Network cache cleared')
+    if (import.meta.env.DEV) {
+      console.log('[NETWORK] Cache cleared')
+    }
   }
 
   // Cleanup

@@ -81,7 +81,7 @@ export const clearHardcodedTestTasks = async () => {
       }
     }
   } catch (error) {
-    console.error('❌ Failed to clear test tasks:', error)
+    console.error('[TASKS] Failed to clear test tasks:', error)
   }
 }
 
@@ -132,7 +132,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const initializeFromDatabase = async () => {
     try {
       const dbReady = await projectStore.initializeFromDatabase()
-      if (!dbReady) console.debug('⚠️ Project store failed to initialize')
+      if (!dbReady && import.meta.env.DEV) console.debug('[TASKS] Project store failed to initialize')
       await loadFromDatabase()
       await loadPersistedFilters()
       runAllTaskMigrations()
@@ -163,9 +163,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const updateTaskFromSync = (taskId: string, taskDoc: Task | null, isDeleted = false) => {
     syncInProgress.value = true
 
-    // ================================================================
     // DUPLICATE DETECTION - Realtime Sync Entry Point
-    // ================================================================
     // This tracks what's coming in from realtime and whether the task exists
     // A duplicate after this function means the push logic is racing with initial load
     if (import.meta.env.DEV) {
@@ -182,11 +180,9 @@ export const useTaskStore = defineStore('tasks', () => {
       } else {
         // BUG-061 FIX: Validate task before adding/updating
         if (!taskDoc || !taskDoc.id || !taskDoc.title === undefined) {
-          console.warn('⚠️ [TASK STORE] Ignoring invalid task from sync (missing id or title):', taskId)
+          console.warn('[TASKS:SYNC] Ignoring invalid task from sync (missing id or title):', taskId)
           return
         }
-
-        // DEBUG: Trace sync payload for connections (BUG-023)
         // Handle strings, timestamps, or Date objects safely
         const toDate = (val: unknown): Date => {
           if (!val) return new Date()
@@ -226,10 +222,12 @@ export const useTaskStore = defineStore('tasks', () => {
           // Previous code used >= which caused split-brain when both browsers had same timestamp
           // Only skip if local is STRICTLY newer (not equal)
           if (currentTask.updatedAt > normalizedTask.updatedAt) {
-            console.log(`🛡️ [BUG-1091] Skipping older sync for "${currentTask.title?.slice(0, 20)}"`, {
-              localUpdatedAt: currentTask.updatedAt,
-              remoteUpdatedAt: normalizedTask.updatedAt
-            })
+            if (import.meta.env.DEV) {
+              console.log(`[TASKS:SYNC] Skipping older sync for "${currentTask.title?.slice(0, 20)}"`, {
+                localUpdatedAt: currentTask.updatedAt,
+                remoteUpdatedAt: normalizedTask.updatedAt
+              })
+            }
             return
           }
 
@@ -240,11 +238,13 @@ export const useTaskStore = defineStore('tasks', () => {
 
           if (localVersion > remoteVersion) {
             // Local is newer - ALWAYS preserve local geometry regardless of what remote has
-            console.log(`🛡️ [TASK-1083] Blocked stale sync for "${currentTask.title?.slice(0, 20)}"`, {
-              localVersion,
-              remoteVersion,
-              action: 'preserving local position'
-            })
+            if (import.meta.env.DEV) {
+              console.log(`[TASKS:POS] Blocked stale sync for "${currentTask.title?.slice(0, 20)}"`, {
+                localVersion,
+                remoteVersion,
+                action: 'preserving local position'
+              })
+            }
             // Preserve ALL local geometry
             normalizedTask.canvasPosition = currentTask.canvasPosition
             normalizedTask.parentId = currentTask.parentId
@@ -268,11 +268,11 @@ export const useTaskStore = defineStore('tasks', () => {
           }
 
           // DRIFT LOGGING: Track ALL incoming position changes from sync
-          if (normalizedTask.canvasPosition && currentTask.canvasPosition) {
+          if (import.meta.env.DEV && normalizedTask.canvasPosition && currentTask.canvasPosition) {
             const oldPos = currentTask.canvasPosition
             const newPos = normalizedTask.canvasPosition
             if (Math.abs(oldPos.x - newPos.x) > 1 || Math.abs(oldPos.y - newPos.y) > 1) {
-              console.log(`📍[SYNC-POS-WRITE] Task "${currentTask.title?.slice(0, 20)}" (${taskId.slice(0, 8)})`, {
+              console.log(`[TASKS:POS] Task "${currentTask.title?.slice(0, 20)}" (${taskId.slice(0, 8)})`, {
                 before: { x: Math.round(oldPos.x), y: Math.round(oldPos.y) },
                 after: { x: Math.round(newPos.x), y: Math.round(newPos.y) },
                 parentChange: currentTask.parentId !== normalizedTask.parentId ? `${currentTask.parentId?.slice(0, 8) ?? 'root'} → ${normalizedTask.parentId?.slice(0, 8) ?? 'root'}` : 'same',
@@ -310,9 +310,7 @@ export const useTaskStore = defineStore('tasks', () => {
         } else {
           // Add new task - ONLY if not deleted
           if (!normalizedTask._soft_deleted) {
-            // ================================================================
             // RACE CONDITION GUARD - Double-check before push
-            // ================================================================
             // Even though findIndex returned -1, another async operation might
             // have added this task between findIndex and now. Check again.
             const existingCount = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
@@ -320,7 +318,7 @@ export const useTaskStore = defineStore('tasks', () => {
             if (existingCount > 0) {
               // Task already exists - this is a race condition
               // Update instead of push to avoid duplication
-              console.error('[SYNC-DUPLICATE-CREATED]', {
+              console.error('[TASKS:SYNC] Race condition detected - duplicate task avoided', {
                 taskId: taskId.slice(0, 8),
                 existingCount,
                 taskTitle: normalizedTask.title?.slice(0, 20),
@@ -341,7 +339,7 @@ export const useTaskStore = defineStore('tasks', () => {
               if (import.meta.env.DEV) {
                 const countAfterPush = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
                 if (countAfterPush > 1) {
-                  console.error('[SYNC-DUPLICATE-UNEXPECTED]', {
+                  console.error('[TASKS:SYNC] Unexpected duplicate after push', {
                     taskId: taskId.slice(0, 8),
                     occurrences: countAfterPush,
                     taskTitle: normalizedTask.title?.slice(0, 20),

@@ -5,6 +5,9 @@
       <!-- BUG-1056: Brave Browser Warning Banner -->
       <BraveBanner />
 
+      <!-- BUG-1101: Route Error Boundary for dynamic import failures -->
+      <RouteErrorBoundary />
+
       <!-- Tauri Startup Screen (only shows in Tauri mode during initialization) -->
       <TauriStartupScreen
         v-if="showStartupScreen"
@@ -58,9 +61,11 @@ import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
 import IOSInstallPrompt from '@/components/common/IOSInstallPrompt.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'
+import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
+import { useTauriDebug } from '@/composables/useTauriDebug'
 
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
@@ -103,6 +108,13 @@ onMounted(async () => {
 
   // Log for debugging
   console.log('[App] Tauri detected:', isTauriApp.value)
+
+  // TASK-1060: Start Tauri memory monitoring for SIGTERM debugging
+  if (isTauriApp.value) {
+    const tauriDebug = useTauriDebug()
+    tauriDebug.startMonitoring()
+    console.log('[App] Tauri memory monitoring started')
+  }
 
   // BUG-1056: Initialize Brave browser detection
   const braveState = await initializeBraveProtection()

@@ -1439,26 +1439,65 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const channel = supabase.channel(channelName)
             currentChannel = channel
 
-            // Attach Listeners
+            // Attach Listeners with detailed logging
             channel
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'projects', filter: `user_id=eq.${userId}` },
-                    (payload: any) => payload.table === 'projects' && onProjectChange(payload))
+                    (payload: any) => {
+                        console.log('📡 [REALTIME] PROJECT event received:', {
+                            eventType: payload.eventType,
+                            table: payload.table,
+                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                            name: payload.new?.name || payload.old?.name
+                        })
+                        if (payload.table === 'projects') onProjectChange(payload)
+                    })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
-                    (payload: any) => payload.table === 'tasks' && onTaskChange(payload))
+                    (payload: any) => {
+                        console.log('📡 [REALTIME] TASK event received:', {
+                            eventType: payload.eventType,
+                            table: payload.table,
+                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                            title: payload.new?.title?.substring(0, 20) || payload.old?.title?.substring(0, 20),
+                            position: payload.new?.position ? `(${payload.new.position.x},${payload.new.position.y})` : 'N/A'
+                        })
+                        if (payload.table === 'tasks') onTaskChange(payload)
+                    })
 
             if (onTimerChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'timer_sessions', filter: `user_id=eq.${userId}` },
-                    (payload: any) => onTimerChange(payload))
+                    (payload: any) => {
+                        console.log('📡 [REALTIME] TIMER event received:', {
+                            eventType: payload.eventType,
+                            sessionId: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                            isActive: payload.new?.is_active,
+                            remainingTime: payload.new?.remaining_time
+                        })
+                        onTimerChange(payload)
+                    })
             }
 
             if (onNotificationChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-                    (payload: any) => onNotificationChange(payload))
+                    (payload: any) => {
+                        console.log('📡 [REALTIME] NOTIFICATION event received:', {
+                            eventType: payload.eventType,
+                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8)
+                        })
+                        onNotificationChange(payload)
+                    })
             }
 
             if (onGroupChange) {
                 channel.on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `user_id=eq.${userId}` },
-                    (payload: any) => onGroupChange(payload))
+                    (payload: any) => {
+                        console.log('📡 [REALTIME] GROUP event received:', {
+                            eventType: payload.eventType,
+                            id: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8),
+                            name: payload.new?.name || payload.old?.name,
+                            position: payload.new?.position ? `(${payload.new.position.x},${payload.new.position.y})` : 'N/A'
+                        })
+                        onGroupChange(payload)
+                    })
             }
 
             // Subscribe with Robust Error Handling

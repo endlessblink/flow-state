@@ -685,4 +685,29 @@ function autoResize(event: Event) {
     animation: none;
   }
 }
+
+/* RTL Support */
+[dir="rtl"] .sheet-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .form-field {
+  text-align: right;
+}
+
+[dir="rtl"] .field-input,
+[dir="rtl"] .field-textarea {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .priority-options,
+[dir="rtl"] .date-options {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .priority-pill,
+[dir="rtl"] .date-pill {
+  flex-direction: row-reverse;
+}
 </style>

@@ -74,12 +74,14 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   isSupported.value = !!SpeechRecognitionAPI
 
   // Debug logging
-  console.log('[SpeechRecognition] Browser support check:', {
-    hasWindow: typeof window !== 'undefined',
-    hasSpeechRecognition: typeof window !== 'undefined' && !!window.SpeechRecognition,
-    hasWebkitSpeechRecognition: typeof window !== 'undefined' && !!window.webkitSpeechRecognition,
-    isSupported: isSupported.value
-  })
+  if (import.meta.env.DEV) {
+    console.log('[VOICE] Browser support check:', {
+      hasWindow: typeof window !== 'undefined',
+      hasSpeechRecognition: typeof window !== 'undefined' && !!window.SpeechRecognition,
+      hasWebkitSpeechRecognition: typeof window !== 'undefined' && !!window.webkitSpeechRecognition,
+      isSupported: isSupported.value
+    })
+  }
 
   // Computed
   const isListening = computed(() => status.value === 'listening')
@@ -102,7 +104,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
 
     // If browser language starts with 'he', use Hebrew
     if (browserLang.toLowerCase().startsWith('he')) {
-      console.log('[SpeechRecognition] Browser language is Hebrew, using he-IL')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Browser language is Hebrew, using he-IL')
+      }
       return 'he-IL'
     }
 
@@ -145,14 +149,18 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     // Use currentLanguage.value for dynamic language switching
     const langCode = getLanguageCode(currentLanguage.value)
     rec.lang = langCode
-    console.log('[SpeechRecognition] 🎤 Initializing with language:', {
-      requested: currentLanguage.value,
-      resolved: langCode,
-      browserLang: typeof navigator !== 'undefined' ? navigator.language : 'N/A'
-    })
+    if (import.meta.env.DEV) {
+      console.log('[VOICE] Initializing with language:', {
+        requested: currentLanguage.value,
+        resolved: langCode,
+        browserLang: typeof navigator !== 'undefined' ? navigator.language : 'N/A'
+      })
+    }
 
     rec.onstart = () => {
-      console.log('[SpeechRecognition] Started listening')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Started listening')
+      }
       status.value = 'listening'
       error.value = null
       resetSilenceTimer()
@@ -177,7 +185,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
           const detected = detectLanguageFromText(text)
           if (detectedLanguage.value !== detected) {
             detectedLanguage.value = detected
-            console.log(`[SpeechRecognition] Detected language: ${detected}`)
+            if (import.meta.env.DEV) {
+              console.log(`[VOICE] Detected language: ${detected}`)
+            }
           }
         } else {
           interimText += text
@@ -200,12 +210,14 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
         interimTranscript.value = interimText
       }
 
-      console.log('[SpeechRecognition] Transcript:', transcript.value + interimTranscript.value)
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Transcript:', transcript.value + interimTranscript.value)
+      }
     }
 
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
       clearSilenceTimer()
-      console.error('[SpeechRecognition] Error:', event.error, event.message)
+      console.error('[VOICE] Error:', event.error, event.message)
 
       const errorMessages: Record<string, string> = {
         'no-speech': 'No speech detected. Please try again.',
@@ -229,7 +241,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     }
 
     rec.onend = () => {
-      console.log('[SpeechRecognition] Ended')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Ended')
+      }
       clearSilenceTimer()
       if (status.value === 'listening' || status.value === 'processing') {
         status.value = 'idle'
@@ -237,7 +251,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     }
 
     rec.onspeechend = () => {
-      console.log('[SpeechRecognition] Speech ended')
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Speech ended')
+      }
       status.value = 'processing'
     }
 
@@ -251,7 +267,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     clearSilenceTimer()
     if (!continuous && silenceTimeout > 0) {
       silenceTimer = setTimeout(() => {
-        console.log('[SpeechRecognition] Silence timeout, stopping')
+        if (import.meta.env.DEV) {
+          console.log('[VOICE] Silence timeout, stopping')
+        }
         stop()
       }, silenceTimeout)
     }
@@ -288,7 +306,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
       // Stop the stream immediately - we just needed permission
       stream.getTracks().forEach(track => track.stop())
     } catch (e) {
-      console.error('[SpeechRecognition] Microphone permission denied:', e)
+      console.error('[VOICE] Microphone permission denied:', e)
       error.value = 'Microphone access denied. Please allow microphone permissions.'
       status.value = 'error'
       if (onError) onError(error.value)
@@ -309,7 +327,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
         recognition.start()
         return true
       } catch (e) {
-        console.error('[SpeechRecognition] Failed to start:', e)
+        console.error('[VOICE] Failed to start:', e)
         error.value = 'Failed to start speech recognition'
         status.value = 'error'
         if (onError) onError(error.value)

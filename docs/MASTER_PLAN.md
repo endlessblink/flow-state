@@ -50,6 +50,28 @@
 
 ---
 
+### ~~TASK-1009~~: Unified Timer Completion Notifications (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-01-29)
+
+**Enhancement**: Timer completion notifications with actionable buttons across all platforms.
+
+**Implementation**:
+1. **Web App**: Service Worker notifications with "Start Break" / "+5 min" action buttons (`src/sw.ts`, `src/stores/timer.ts`)
+2. **KDE Widget**: notify-send notifications + full-screen overlay with action buttons (`main.qml`)
+3. **Deduplication**: Tag-based notification deduplication prevents duplicate alerts
+4. **Auto-start removed**: User must explicitly choose next action via notification buttons
+
+**Additional Fixes**:
+- Fixed KDE widget auth by correcting Supabase anon key mismatch in plasma config
+- Added Tab/Enter key navigation to KDE widget login form
+
+**SOP Created**: `docs/sop/SOP-038-kde-widget-supabase-config.md`
+
+**Files**: `src/sw.ts`, `src/stores/timer.ts`, `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+
+---
+
 ### BUG-1097: Due Date Not Persisting from Edit Modal (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-27)

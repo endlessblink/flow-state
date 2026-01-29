@@ -1,12 +1,32 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: January 27, 2026
+> **Last Updated**: January 29, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
 ---
 
 ## Active Bugs (P0-P1)
+
+### ~~BUG-1105~~: JWT Signature Mismatch - All Supabase Requests Return 401 (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-01-29)
+
+**Problem**: Production Supabase JWT keys mismatched after VPS JWT_SECRET configuration.
+
+**Root Cause**:
+1. VPS Supabase had JWT_SECRET but ANON_KEY/SERVICE_ROLE_KEY were signed with demo secret
+2. Production build had outdated keys after regeneration
+
+**Fix Applied**:
+1. Generated new JWT keys signed with VPS JWT_SECRET (see SOP-036)
+2. Updated VPS `/opt/supabase/docker/.env` with new keys
+3. Updated Doppler secrets
+4. Redeployed production: `doppler run -- npm run build && rsync dist/ VPS`
+
+**SOP Created**: `docs/sop/SOP-036-supabase-jwt-key-regeneration.md`
+
+---
 
 ### BUG-1097: Due Date Not Persisting from Edit Modal (🔄 IN PROGRESS)
 
@@ -295,18 +315,19 @@ QA Supervisor verification of January 20, 2026 Data Crisis. See `docs/reports/20
 
 ## Planned Tasks (NEXT/BACKLOG)
 
-### TASK-1104: Enhanced Task Filtering and Grouping Options (🔄 IN PROGRESS)
+### ~~TASK-1104~~: Enhanced Task Filtering and Grouping Options (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-28)
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-29)
 
-Current filters (All, Active, Planned, Done, Newest) are not useful for daily workflow. Need flexible filtering and grouping system.
+Replaced status-based filters with flexible filtering and grouping system in Mobile Inbox and Today views.
 
-**Requirements**:
-- **Grouping options**: Group by date, by project, by priority
-- **Filters**: Due today, due this week
-- Replace or extend current status-based filter bar
+**Implemented**:
+- **Time filters**: All, Due Today, Due This Week, Overdue (Inbox)
+- **Grouping options**: None, By Date, By Project, By Priority
+- **Filter dropdowns**: Project filter, Priority filter (Today view)
+- **Hide Done toggle**: Show/hide completed tasks
 
-**Files**: `src/components/tasks/TaskFilters.vue` (or equivalent filter component)
+**Files Modified**: `src/mobile/views/MobileInboxView.vue`, `src/mobile/views/MobileTodayView.vue`
 
 ---
 

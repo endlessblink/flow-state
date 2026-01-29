@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
@@ -20,8 +20,10 @@ export function useAppInitialization() {
     const canvasStore = useCanvasStore()
     const uiStore = useUIStore()
     const notificationStore = useNotificationStore()
+    const authStore = useAuthStore()
     const itpProtection = useSafariITPProtection()
     const activeChannel = ref<any>(null)
+    const realtimeInitialized = ref(false)
 
     onMounted(async () => {
         // MARK: SESSION START for stability guards
@@ -31,7 +33,6 @@ export function useAppInitialization() {
 
 
         // 0. Initialize auth and clear guest data if not authenticated
-        const authStore = useAuthStore()
         await authStore.initialize()
 
         if (!authStore.isAuthenticated) {
@@ -231,12 +232,96 @@ export function useAppInitialization() {
 
         const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery)
         activeChannel.value = channel
+        realtimeInitialized.value = !!channel
 
         if (channel) {
             console.log('📡 [APP-INIT] Realtime subscription created with project, task, and timer handlers')
+        } else {
+            console.log('📡 [APP-INIT] No realtime subscription (user not authenticated yet)')
         }
+    })
 
+    // BUG-1106: Re-initialize realtime when user signs in after initial page load
+    // This handles the case where user opens the app as guest and later signs in via modal
+    watch(() => authStore.isAuthenticated, async (isAuthenticated, wasAuthenticated) => {
+        // Only trigger when going from NOT authenticated to authenticated
+        // AND realtime wasn't already initialized
+        if (isAuthenticated && !wasAuthenticated && !realtimeInitialized.value) {
+            console.log('📡 [APP-INIT] User signed in - initializing realtime subscription...')
 
+            const { initRealtimeSubscription } = useSupabaseDatabase()
+
+            // Simplified handlers for post-login initialization
+            // These use the same logic as the onMounted handlers
+            const onProjectChange = (payload: any) => {
+                const canvas = useCanvasStore()
+                const projects = useProjectStore()
+                const tasks = useTaskStore()
+                const isLocked = canvas.isDragging || tasks.manualOperationInProgress
+                if (isLocked) return
+
+                const { eventType, new: newDoc, old: oldDoc } = payload
+                if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                    projects.removeProjectFromSync(newDoc?.id || oldDoc?.id)
+                } else if (newDoc) {
+                    const mappedProject = fromSupabaseProject(newDoc as SupabaseProject)
+                    projects.updateProjectFromSync(mappedProject.id, mappedProject)
+                }
+            }
+
+            const onTaskChange = (payload: any) => {
+                const canvas = useCanvasStore()
+                const tasks = useTaskStore()
+                const isLocked = canvas.isDragging || tasks.manualOperationInProgress
+                if (isLocked) return
+
+                const { eventType, new: newDoc, old: oldDoc } = payload
+                const taskId = newDoc?.id || oldDoc?.id
+                if (!taskId) return
+                if (tasks.isPendingWrite(taskId)) return
+
+                const isHardDelete = eventType === 'DELETE'
+                const isSoftDelete = newDoc && newDoc.is_deleted === true
+                if (isHardDelete || isSoftDelete) {
+                    tasks.updateTaskFromSync(taskId, null, true)
+                } else if (newDoc) {
+                    const mappedTask = fromSupabaseTask(newDoc as SupabaseTask)
+                    tasks.updateTaskFromSync(taskId, mappedTask, false)
+                }
+            }
+
+            const onGroupChange = (payload: any) => {
+                const canvas = useCanvasStore()
+                const tasks = useTaskStore()
+                const isLocked = canvas.isDragging || tasks.manualOperationInProgress
+                if (isLocked) return
+
+                const { eventType, new: newDoc, old: oldDoc } = payload
+                if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                    canvas.removeGroupFromSync(newDoc?.id || oldDoc?.id)
+                } else if (newDoc) {
+                    canvas.updateGroupFromSync(newDoc.id, newDoc)
+                }
+            }
+
+            const onRecovery = async () => {
+                console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
+                await Promise.all([
+                    taskStore.loadFromDatabase(),
+                    projectStore.loadProjectsFromDatabase(),
+                    canvasStore.loadFromDatabase()
+                ])
+            }
+
+            const timerHandler = timerStore.handleRemoteTimerUpdate
+            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery)
+
+            if (channel) {
+                activeChannel.value = channel
+                realtimeInitialized.value = true
+                console.log('📡 [APP-INIT] Realtime subscription created after sign-in')
+            }
+        }
     })
 
     onUnmounted(() => {

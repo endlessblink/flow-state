@@ -6,8 +6,96 @@
         <span class="full-date">{{ formattedDate }}</span>
       </div>
       <div class="task-count">
-        {{ todayTasks.length }} tasks
+        {{ filteredTodayTasks.length }} tasks
       </div>
+    </div>
+
+    <!-- TASK-1104: Filter Controls -->
+    <div class="filter-section">
+      <!-- Project Filter -->
+      <div class="filter-row">
+        <div class="filter-dropdown-wrapper">
+          <button class="filter-btn" @click="toggleProjectDropdown">
+            <FolderOpen :size="14" />
+            <span>{{ selectedProjectLabel }}</span>
+            <ChevronDown :size="12" :class="{ rotated: showProjectDropdown }" />
+          </button>
+          <div v-if="showProjectDropdown" class="dropdown-menu">
+            <button
+              class="dropdown-item"
+              :class="{ active: selectedProject === null }"
+              @click="selectProject(null)"
+            >
+              All Projects
+            </button>
+            <button
+              v-for="project in taskStore.projects"
+              :key="project.id"
+              class="dropdown-item"
+              :class="{ active: selectedProject === project.id }"
+              @click="selectProject(project.id)"
+            >
+              <span v-if="project.emoji" class="project-emoji">{{ project.emoji }}</span>
+              {{ project.name }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Priority Filter -->
+        <div class="filter-dropdown-wrapper">
+          <button class="filter-btn" @click="togglePriorityDropdown">
+            <Flag :size="14" />
+            <span>{{ selectedPriorityLabel }}</span>
+            <ChevronDown :size="12" :class="{ rotated: showPriorityDropdown }" />
+          </button>
+          <div v-if="showPriorityDropdown" class="dropdown-menu">
+            <button
+              class="dropdown-item"
+              :class="{ active: selectedPriority === null }"
+              @click="selectPriority(null)"
+            >
+              All Priorities
+            </button>
+            <button
+              v-for="p in priorityOptions"
+              :key="p.value"
+              class="dropdown-item"
+              :class="{ active: selectedPriority === p.value }"
+              @click="selectPriority(p.value)"
+            >
+              <span class="priority-dot" :class="p.value" />
+              {{ p.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Group By Toggle -->
+        <div class="filter-dropdown-wrapper">
+          <button class="filter-btn" @click="toggleGroupByDropdown">
+            <Layers :size="14" />
+            <span>{{ groupByLabel }}</span>
+            <ChevronDown :size="12" :class="{ rotated: showGroupByDropdown }" />
+          </button>
+          <div v-if="showGroupByDropdown" class="dropdown-menu">
+            <button
+              v-for="option in groupByOptions"
+              :key="option.value"
+              class="dropdown-item"
+              :class="{ active: groupBy === option.value }"
+              @click="selectGroupBy(option.value)"
+            >
+              <component :is="option.icon" :size="14" />
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clear Filters -->
+      <button v-if="hasActiveFilters" class="clear-btn" @click="clearFilters">
+        <X :size="14" />
+        Clear
+      </button>
     </div>
 
     <!-- Swipe hint (shows once) -->
@@ -20,177 +108,60 @@
       </button>
     </div>
 
-    <!-- Time-based sections -->
+    <!-- Grouped Task Sections -->
     <div class="time-sections">
-      <!-- Overdue -->
-      <div v-if="overdueTasks.length > 0" class="time-section overdue">
-        <div class="section-header">
-          <AlertCircle :size="16" />
-          <span>Overdue</span>
-          <span class="count">{{ overdueTasks.length }}</span>
-        </div>
-        <div class="task-list">
-          <SwipeableTaskItem
-            v-for="task in overdueTasks"
-            :key="task.id"
-            :task-id="task.id"
-            @edit="handleEditTask(task)"
-            @delete="handleDeleteTask(task)"
-          >
-            <div class="task-item" @click="handleTaskClick(task)">
-              <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-                  <Check v-if="task.status === 'done'" :size="14" />
+      <!-- Dynamic grouped display -->
+      <template v-for="group in groupedTasks" :key="group.key">
+        <div class="time-section" :class="{ overdue: group.key === 'overdue' }">
+          <div class="section-header">
+            <component :is="group.icon" :size="16" />
+            <span>{{ group.title }}</span>
+            <span class="count">{{ group.tasks.length }}</span>
+          </div>
+          <div class="task-list">
+            <SwipeableTaskItem
+              v-for="task in group.tasks"
+              :key="task.id"
+              :task-id="task.id"
+              @edit="handleEditTask(task)"
+              @delete="handleDeleteTask(task)"
+            >
+              <div class="task-item" @click="handleTaskClick(task)">
+                <div class="task-checkbox" @click.stop="toggleTask(task)">
+                  <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
+                    <Check v-if="task.status === 'done'" :size="14" />
+                  </div>
                 </div>
-              </div>
-              <div class="task-content">
-                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-                <span v-if="task.dueDate" class="task-due overdue">{{ formatDueTime(task.dueDate) }}</span>
-              </div>
-              <button class="timer-btn" @click.stop="startTimer(task)">
-                <Play :size="16" />
-              </button>
-            </div>
-          </SwipeableTaskItem>
-        </div>
-      </div>
-
-      <!-- Morning -->
-      <div v-if="morningTasks.length > 0" class="time-section">
-        <div class="section-header">
-          <Sunrise :size="16" />
-          <span>Morning</span>
-          <span class="count">{{ morningTasks.length }}</span>
-        </div>
-        <div class="task-list">
-          <SwipeableTaskItem
-            v-for="task in morningTasks"
-            :key="task.id"
-            :task-id="task.id"
-            @edit="handleEditTask(task)"
-            @delete="handleDeleteTask(task)"
-          >
-            <div class="task-item" @click="handleTaskClick(task)">
-              <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-                  <Check v-if="task.status === 'done'" :size="14" />
+                <div class="task-content">
+                  <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
+                  <div class="task-meta">
+                    <span v-if="task.dueDate && groupBy !== 'time'" class="task-due" :class="{ overdue: isOverdue(task.dueDate) }">
+                      {{ formatDueTime(task.dueDate) }}
+                    </span>
+                    <span v-if="task.priority && groupBy !== 'priority'" class="priority-badge" :class="task.priority">
+                      {{ priorityLabel(task.priority) }}
+                    </span>
+                    <span v-if="getProjectName(task.projectId) && groupBy !== 'project'" class="project-badge">
+                      {{ getProjectName(task.projectId) }}
+                    </span>
+                  </div>
                 </div>
+                <button class="timer-btn" @click.stop="startTimer(task)">
+                  <Play :size="16" />
+                </button>
               </div>
-              <div class="task-content">
-                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-                <span v-if="task.dueDate" class="task-due">{{ formatDueTime(task.dueDate) }}</span>
-              </div>
-              <button class="timer-btn" @click.stop="startTimer(task)">
-                <Play :size="16" />
-              </button>
-            </div>
-          </SwipeableTaskItem>
+            </SwipeableTaskItem>
+          </div>
         </div>
-      </div>
-
-      <!-- Afternoon -->
-      <div v-if="afternoonTasks.length > 0" class="time-section">
-        <div class="section-header">
-          <Sun :size="16" />
-          <span>Afternoon</span>
-          <span class="count">{{ afternoonTasks.length }}</span>
-        </div>
-        <div class="task-list">
-          <SwipeableTaskItem
-            v-for="task in afternoonTasks"
-            :key="task.id"
-            :task-id="task.id"
-            @edit="handleEditTask(task)"
-            @delete="handleDeleteTask(task)"
-          >
-            <div class="task-item" @click="handleTaskClick(task)">
-              <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-                  <Check v-if="task.status === 'done'" :size="14" />
-                </div>
-              </div>
-              <div class="task-content">
-                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-                <span v-if="task.dueDate" class="task-due">{{ formatDueTime(task.dueDate) }}</span>
-              </div>
-              <button class="timer-btn" @click.stop="startTimer(task)">
-                <Play :size="16" />
-              </button>
-            </div>
-          </SwipeableTaskItem>
-        </div>
-      </div>
-
-      <!-- Evening -->
-      <div v-if="eveningTasks.length > 0" class="time-section">
-        <div class="section-header">
-          <Moon :size="16" />
-          <span>Evening</span>
-          <span class="count">{{ eveningTasks.length }}</span>
-        </div>
-        <div class="task-list">
-          <SwipeableTaskItem
-            v-for="task in eveningTasks"
-            :key="task.id"
-            :task-id="task.id"
-            @edit="handleEditTask(task)"
-            @delete="handleDeleteTask(task)"
-          >
-            <div class="task-item" @click="handleTaskClick(task)">
-              <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-                  <Check v-if="task.status === 'done'" :size="14" />
-                </div>
-              </div>
-              <div class="task-content">
-                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-                <span v-if="task.dueDate" class="task-due">{{ formatDueTime(task.dueDate) }}</span>
-              </div>
-              <button class="timer-btn" @click.stop="startTimer(task)">
-                <Play :size="16" />
-              </button>
-            </div>
-          </SwipeableTaskItem>
-        </div>
-      </div>
-
-      <!-- No specific time -->
-      <div v-if="untimedTasks.length > 0" class="time-section">
-        <div class="section-header">
-          <Calendar :size="16" />
-          <span>Anytime Today</span>
-          <span class="count">{{ untimedTasks.length }}</span>
-        </div>
-        <div class="task-list">
-          <SwipeableTaskItem
-            v-for="task in untimedTasks"
-            :key="task.id"
-            :task-id="task.id"
-            @edit="handleEditTask(task)"
-            @delete="handleDeleteTask(task)"
-          >
-            <div class="task-item" @click="handleTaskClick(task)">
-              <div class="task-checkbox" @click.stop="toggleTask(task)">
-                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-                  <Check v-if="task.status === 'done'" :size="14" />
-                </div>
-              </div>
-              <div class="task-content">
-                <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-              </div>
-              <button class="timer-btn" @click.stop="startTimer(task)">
-                <Play :size="16" />
-              </button>
-            </div>
-          </SwipeableTaskItem>
-        </div>
-      </div>
+      </template>
 
       <!-- Empty state -->
-      <div v-if="todayTasks.length === 0" class="empty-state">
+      <div v-if="filteredTodayTasks.length === 0" class="empty-state">
         <CheckCircle :size="48" />
-        <h3>All clear for today!</h3>
-        <p>No tasks scheduled. Add one from Inbox.</p>
+        <h3 v-if="hasActiveFilters">No matching tasks</h3>
+        <h3 v-else>All clear for today!</h3>
+        <p v-if="hasActiveFilters">Try adjusting your filters.</p>
+        <p v-else>No tasks scheduled. Add one from Inbox.</p>
       </div>
     </div>
 
@@ -205,14 +176,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 // @ts-ignore - Avoid strict type check on imported Task type if causing issues
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
 import {
-  Check, Play, AlertCircle, Sunrise, Sun, Moon, Calendar, CheckCircle
+  Check, Play, AlertCircle, Sunrise, Sun, Moon, Calendar, CheckCircle,
+  FolderOpen, Flag, ChevronDown, Layers, X, Clock
 } from 'lucide-vue-next'
 
 const taskStore = useTaskStore()
@@ -221,6 +193,102 @@ const timerStore = useTimerStore()
 // Edit sheet state
 const isEditSheetOpen = ref(false)
 const editingTask = ref<Task | null>(null)
+
+// TASK-1104: Filter state
+type GroupByType = 'time' | 'project' | 'priority'
+const selectedProject = ref<string | null>(null)
+const selectedPriority = ref<string | null>(null)
+const groupBy = ref<GroupByType>('time')
+const showProjectDropdown = ref(false)
+const showPriorityDropdown = ref(false)
+const showGroupByDropdown = ref(false)
+
+// Priority options
+const priorityOptions = [
+  { value: 'critical', label: 'Critical (P0)' },
+  { value: 'high', label: 'High (P1)' },
+  { value: 'medium', label: 'Medium (P2)' },
+  { value: 'low', label: 'Low (P3)' }
+]
+
+// Group by options
+const groupByOptions = [
+  { value: 'time' as const, label: 'By Time', icon: Clock },
+  { value: 'project' as const, label: 'By Project', icon: FolderOpen },
+  { value: 'priority' as const, label: 'By Priority', icon: Flag }
+]
+
+// Computed labels
+const selectedProjectLabel = computed(() => {
+  if (!selectedProject.value) return 'All Projects'
+  const project = taskStore.projects.find(p => p.id === selectedProject.value)
+  return project?.name || 'Project'
+})
+
+const selectedPriorityLabel = computed(() => {
+  if (!selectedPriority.value) return 'All Priorities'
+  const p = priorityOptions.find(o => o.value === selectedPriority.value)
+  return p?.label.split(' ')[0] || 'Priority'
+})
+
+const groupByLabel = computed(() => {
+  const option = groupByOptions.find(o => o.value === groupBy.value)
+  return option?.label || 'Group'
+})
+
+const hasActiveFilters = computed(() => {
+  return selectedProject.value !== null || selectedPriority.value !== null
+})
+
+// Filter actions
+const toggleProjectDropdown = () => {
+  showProjectDropdown.value = !showProjectDropdown.value
+  showPriorityDropdown.value = false
+  showGroupByDropdown.value = false
+}
+
+const togglePriorityDropdown = () => {
+  showPriorityDropdown.value = !showPriorityDropdown.value
+  showProjectDropdown.value = false
+  showGroupByDropdown.value = false
+}
+
+const toggleGroupByDropdown = () => {
+  showGroupByDropdown.value = !showGroupByDropdown.value
+  showProjectDropdown.value = false
+  showPriorityDropdown.value = false
+}
+
+const selectProject = (projectId: string | null) => {
+  selectedProject.value = projectId
+  showProjectDropdown.value = false
+}
+
+const selectPriority = (priority: string | null) => {
+  selectedPriority.value = priority
+  showPriorityDropdown.value = false
+}
+
+const selectGroupBy = (value: GroupByType) => {
+  groupBy.value = value
+  showGroupByDropdown.value = false
+}
+
+const clearFilters = () => {
+  selectedProject.value = null
+  selectedPriority.value = null
+}
+
+// Close dropdowns when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.filter-dropdown-wrapper')) {
+    showProjectDropdown.value = false
+    showPriorityDropdown.value = false
+    showGroupByDropdown.value = false
+  }
+}
+
 
 // Swipe hint - show once for first-time users
 const SWIPE_HINT_KEY = 'flowstate-today-swipe-hint-dismissed'
@@ -231,6 +299,11 @@ onMounted(() => {
   if (!dismissed) {
     showSwipeHint.value = true
   }
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const dismissSwipeHint = () => {
@@ -269,40 +342,144 @@ const overdueTasks = computed(() => {
   })
 })
 
+// TASK-1104: Apply filters to today + overdue tasks
+const filteredTodayTasks = computed(() => {
+  let tasks = [...todayTasks.value, ...overdueTasks.value]
+
+  // Apply project filter
+  if (selectedProject.value) {
+    tasks = tasks.filter(t => t.projectId === selectedProject.value)
+  }
+
+  // Apply priority filter
+  if (selectedPriority.value) {
+    tasks = tasks.filter(t => t.priority === selectedPriority.value)
+  }
+
+  return tasks
+})
+
 // Time-based categorization
 const getTaskHour = (task: Task): number | null => {
   if (!task.dueDate) return null
   return new Date(task.dueDate).getHours()
 }
 
-const morningTasks = computed(() => {
-  return todayTasks.value.filter(t => {
-    const hour = getTaskHour(t)
-    return hour !== null && hour >= 6 && hour < 12
-  })
-})
+const isOverdue = (dueDate: string | Date | undefined): boolean => {
+  if (!dueDate) return false
+  return new Date(dueDate) < todayStart
+}
 
-const afternoonTasks = computed(() => {
-  return todayTasks.value.filter(t => {
-    const hour = getTaskHour(t)
-    return hour !== null && hour >= 12 && hour < 18
-  })
-})
+// Helper to get project name
+const getProjectName = (projectId: string | undefined | null): string | null => {
+  if (!projectId) return null
+  const project = taskStore.projects.find(p => p.id === projectId)
+  return project?.name || null
+}
 
-const eveningTasks = computed(() => {
-  return todayTasks.value.filter(t => {
-    const hour = getTaskHour(t)
-    return hour !== null && (hour >= 18 || hour < 6)
-  })
-})
+// Priority label helper
+const priorityLabel = (priority: string | null | undefined): string => {
+  const labels: Record<string, string> = {
+    critical: 'P0',
+    high: 'P1',
+    medium: 'P2',
+    low: 'P3'
+  }
+  return labels[priority || ''] || ''
+}
 
-const untimedTasks = computed(() => {
-  return todayTasks.value.filter(t => {
-    if (!t.dueDate) return true
-    const dueDate = new Date(t.dueDate)
-    // Check if it's just a date without specific time (midnight)
-    return dueDate.getHours() === 0 && dueDate.getMinutes() === 0
-  })
+// TASK-1104: Grouped tasks based on groupBy mode
+interface TaskGroup {
+  key: string
+  title: string
+  icon: typeof AlertCircle
+  tasks: Task[]
+}
+
+const groupedTasks = computed((): TaskGroup[] => {
+  const tasks = filteredTodayTasks.value
+  const groups: TaskGroup[] = []
+
+  if (groupBy.value === 'time') {
+    // Time-based grouping (original behavior)
+    const overdueFiltered = tasks.filter(t => isOverdue(t.dueDate))
+    const morningFiltered = tasks.filter(t => {
+      if (isOverdue(t.dueDate)) return false
+      const hour = getTaskHour(t)
+      return hour !== null && hour >= 6 && hour < 12
+    })
+    const afternoonFiltered = tasks.filter(t => {
+      if (isOverdue(t.dueDate)) return false
+      const hour = getTaskHour(t)
+      return hour !== null && hour >= 12 && hour < 18
+    })
+    const eveningFiltered = tasks.filter(t => {
+      if (isOverdue(t.dueDate)) return false
+      const hour = getTaskHour(t)
+      return hour !== null && (hour >= 18 || hour < 6)
+    })
+    const untimedFiltered = tasks.filter(t => {
+      if (isOverdue(t.dueDate)) return false
+      if (!t.dueDate) return true
+      const dueDate = new Date(t.dueDate)
+      return dueDate.getHours() === 0 && dueDate.getMinutes() === 0
+    })
+
+    if (overdueFiltered.length > 0) groups.push({ key: 'overdue', title: 'Overdue', icon: AlertCircle, tasks: overdueFiltered })
+    if (morningFiltered.length > 0) groups.push({ key: 'morning', title: 'Morning', icon: Sunrise, tasks: morningFiltered })
+    if (afternoonFiltered.length > 0) groups.push({ key: 'afternoon', title: 'Afternoon', icon: Sun, tasks: afternoonFiltered })
+    if (eveningFiltered.length > 0) groups.push({ key: 'evening', title: 'Evening', icon: Moon, tasks: eveningFiltered })
+    if (untimedFiltered.length > 0) groups.push({ key: 'anytime', title: 'Anytime Today', icon: Calendar, tasks: untimedFiltered })
+  } else if (groupBy.value === 'project') {
+    // Group by project
+    const projectMap = new Map<string, Task[]>()
+
+    tasks.forEach(task => {
+      const key = task.projectId || 'no-project'
+      if (!projectMap.has(key)) projectMap.set(key, [])
+      projectMap.get(key)!.push(task)
+    })
+
+    // Sort: projects first, then no-project
+    const sortedKeys = Array.from(projectMap.keys()).sort((a, b) => {
+      if (a === 'no-project') return 1
+      if (b === 'no-project') return -1
+      const aName = getProjectName(a) || ''
+      const bName = getProjectName(b) || ''
+      return aName.localeCompare(bName)
+    })
+
+    sortedKeys.forEach(key => {
+      const projectTasks = projectMap.get(key)!
+      const title = key === 'no-project' ? 'No Project' : (getProjectName(key) || 'Unknown')
+      groups.push({ key, title, icon: FolderOpen, tasks: projectTasks })
+    })
+  } else if (groupBy.value === 'priority') {
+    // Group by priority
+    const priorityOrder = ['critical', 'high', 'medium', 'low', 'none']
+    const priorityLabels: Record<string, string> = {
+      critical: 'Critical (P0)',
+      high: 'High (P1)',
+      medium: 'Medium (P2)',
+      low: 'Low (P3)',
+      none: 'No Priority'
+    }
+    const priorityMap = new Map<string, Task[]>()
+
+    tasks.forEach(task => {
+      const key = task.priority || 'none'
+      if (!priorityMap.has(key)) priorityMap.set(key, [])
+      priorityMap.get(key)!.push(task)
+    })
+
+    priorityOrder.forEach(key => {
+      if (priorityMap.has(key) && priorityMap.get(key)!.length > 0) {
+        groups.push({ key, title: priorityLabels[key], icon: Flag, tasks: priorityMap.get(key)! })
+      }
+    })
+  }
+
+  return groups
 })
 
 const formatDueTime = (dueDate: string | Date | undefined): string => {
@@ -405,7 +582,153 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+/* TASK-1104: Filter Section */
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-dropdown-wrapper {
+  position: relative;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filter-btn:active {
+  transform: scale(0.98);
+}
+
+.filter-btn .rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 160px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dropdown-item:hover {
+  background: var(--surface-secondary);
+}
+
+.dropdown-item.active {
+  background: var(--primary-brand-bg-subtle);
+  color: var(--primary-brand);
+}
+
+.project-emoji {
+  font-size: 16px;
+}
+
+.priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.priority-dot.critical { background: #dc2626; }
+.priority-dot.high { background: #f97316; }
+.priority-dot.medium { background: #eab308; }
+.priority-dot.low { background: #22c55e; }
+
+.clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-bg-subtle);
+  color: var(--danger-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.clear-btn:active {
+  transform: scale(0.98);
+}
+
+/* Task meta row */
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.priority-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.priority-badge.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
+.priority-badge.high { background: var(--warning-bg-subtle); color: var(--warning-text); }
+.priority-badge.medium { background: var(--primary-brand-bg-subtle); color: var(--primary-brand); }
+.priority-badge.low { background: var(--surface-tertiary); color: var(--text-muted); }
+
+.project-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-tertiary);
+  color: var(--text-tertiary);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .date-display h2 {
@@ -519,9 +842,18 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .task-title {
   font-size: 15px;
   color: var(--text-primary);
-  white-space: nowrap;
+  /* Multi-line truncation for RTL/long text */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.4;
+  word-break: break-word;
+  /* RTL support */
+  text-align: start;
+  unicode-bidi: plaintext;
 }
 
 .task-title.done {
@@ -571,5 +903,54 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .empty-state p {
   margin: 0;
   font-size: 14px;
+}
+
+/* RTL Layout Support */
+[dir="rtl"] .today-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .filter-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .task-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .task-content {
+  text-align: right;
+}
+
+[dir="rtl"] .task-meta {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .section-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .section-header .count {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+[dir="rtl"] .dropdown-item {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+[dir="rtl"] .filter-btn {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .time-section.overdue {
+  border-left: none;
+  border-right: 3px solid var(--danger-text);
 }
 </style>

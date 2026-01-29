@@ -23,26 +23,60 @@
       </div>
     </div>
 
-    <!-- Filter Chips -->
+    <!-- TASK-1104: Enhanced Filter Section -->
     <div class="filter-section">
+      <!-- Time-based Filters Row -->
       <div class="filter-chips">
         <button
-          v-for="filter in statusFilters"
+          v-for="filter in timeFilters"
           :key="filter.value"
           class="filter-chip"
-          :class="[{ active: activeStatusFilter === filter.value }]"
-          @click="setStatusFilter(filter.value)"
+          :class="[{ active: activeTimeFilter === filter.value }]"
+          @click="setTimeFilter(filter.value)"
         >
           <component :is="filter.icon" :size="14" />
           {{ filter.label }}
+          <span v-if="filter.count > 0" class="filter-count">{{ filter.count }}</span>
         </button>
       </div>
 
-      <!-- Sort toggle -->
-      <div class="sort-section">
+      <!-- Group By + Sort Row -->
+      <div class="controls-row">
+        <!-- Group By Dropdown -->
+        <div class="group-by-control">
+          <button class="control-btn" @click="toggleGroupByDropdown">
+            <Layers :size="14" />
+            <span>{{ groupByLabel }}</span>
+            <ChevronDown :size="12" :class="{ rotated: showGroupByDropdown }" />
+          </button>
+          <div v-if="showGroupByDropdown" class="dropdown-menu">
+            <button
+              v-for="option in groupByOptions"
+              :key="option.value"
+              class="dropdown-item"
+              :class="{ active: groupBy === option.value }"
+              @click="selectGroupBy(option.value)"
+            >
+              <component :is="option.icon" :size="14" />
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Sort toggle -->
         <button class="sort-btn" @click="toggleSort">
           <ArrowUpDown :size="16" />
           {{ sortLabel }}
+        </button>
+
+        <!-- Hide Done Toggle -->
+        <button
+          class="control-btn hide-done-btn"
+          :class="{ active: hideDoneTasks }"
+          :title="hideDoneTasks ? 'Showing active tasks' : 'Show completed tasks'"
+          @click="hideDoneTasks = !hideDoneTasks"
+        >
+          <CheckCircle2 :size="14" />
         </button>
       </div>
     </div>
@@ -61,50 +95,110 @@
     <div class="mobile-task-list">
       <div v-if="filteredTasks.length === 0" class="empty-state">
         <Inbox :size="48" />
-        <p v-if="activeStatusFilter === 'all'">
+        <p v-if="activeTimeFilter === 'all'">
           No tasks yet
         </p>
         <p v-else>
-          No {{ activeStatusFilter }} tasks
+          No {{ timeFilterLabel }} tasks
         </p>
       </div>
 
-      <SwipeableTaskItem
-        v-for="task in filteredTasks"
-        :key="task.id"
-        :task-id="task.id"
-        @edit="handleEditTask(task)"
-        @delete="handleDeleteTask(task)"
-      >
-        <div
-          class="mobile-task-item"
-          :class="[{ 'timer-active': isTimerActive(task.id) }]"
-          @click="handleTaskClick(task)"
-        >
-          <div class="task-checkbox" @click.stop="toggleTask(task)">
-            <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-              <Check v-if="task.status === 'done'" :size="14" />
-            </div>
+      <!-- TASK-1104: Grouped Task Display -->
+      <template v-if="groupBy !== 'none' && filteredTasks.length > 0">
+        <div v-for="group in groupedTasks" :key="group.key" class="task-group">
+          <div class="group-header">
+            <span v-if="group.color" class="group-color-dot" :style="{ backgroundColor: group.color }" />
+            <span class="group-title">{{ group.title }}</span>
+            <span class="group-count">{{ group.tasks.length }}</span>
           </div>
+          <SwipeableTaskItem
+            v-for="task in group.tasks"
+            :key="task.id"
+            :task-id="task.id"
+            @edit="handleEditTask(task)"
+            @delete="handleDeleteTask(task)"
+          >
+            <div
+              class="mobile-task-item"
+              :class="[{ 'timer-active': isTimerActive(task.id) }]"
+              @click="handleTaskClick(task)"
+            >
+              <div class="task-checkbox" @click.stop="toggleTask(task)">
+                <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
+                  <Check v-if="task.status === 'done'" :size="14" />
+                </div>
+              </div>
 
-          <div class="task-content">
-            <span class="task-title" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-            <div class="task-meta">
-              <span v-if="task.priority" class="priority-badge" :class="[task.priority]">
-                {{ priorityLabel(task.priority || 'none') }}
-              </span>
-              <span v-if="task.dueDate" class="due-date" :class="[{ overdue: isOverdue(task.dueDate) }]">
-                <Calendar :size="12" />
-                {{ formatDueDate(task.dueDate) }}
-              </span>
+              <div class="task-content">
+                <div class="task-title-row">
+                  <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
+                  <span v-if="task.priority && groupBy !== 'priority'" class="priority-badge-inline" :class="[task.priority]">
+                    {{ priorityLabel(task.priority || 'none') }}
+                  </span>
+                </div>
+                <div class="task-meta">
+                  <span v-if="task.dueDate && groupBy !== 'date'" class="due-date" :class="[{ overdue: isOverdue(task.dueDate) }]">
+                    <Calendar :size="12" />
+                    {{ formatDueDate(task.dueDate) }}
+                  </span>
+                  <span v-if="getProjectName(task.projectId) && groupBy !== 'project'" class="project-badge">
+                    {{ getProjectName(task.projectId) }}
+                  </span>
+                </div>
+              </div>
+
+              <button class="timer-btn" @click.stop="startTimer(task)">
+                <Play :size="16" />
+              </button>
             </div>
-          </div>
-
-          <button class="timer-btn" @click.stop="startTimer(task)">
-            <Play :size="16" />
-          </button>
+          </SwipeableTaskItem>
         </div>
-      </SwipeableTaskItem>
+      </template>
+
+      <!-- Flat List (no grouping) -->
+      <template v-else>
+        <SwipeableTaskItem
+          v-for="task in filteredTasks"
+          :key="task.id"
+          :task-id="task.id"
+          @edit="handleEditTask(task)"
+          @delete="handleDeleteTask(task)"
+        >
+          <div
+            class="mobile-task-item"
+            :class="[{ 'timer-active': isTimerActive(task.id) }]"
+            @click="handleTaskClick(task)"
+          >
+            <div class="task-checkbox" @click.stop="toggleTask(task)">
+              <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
+                <Check v-if="task.status === 'done'" :size="14" />
+              </div>
+            </div>
+
+            <div class="task-content">
+              <div class="task-title-row">
+                <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
+                <span v-if="task.priority" class="priority-badge-inline" :class="[task.priority]">
+                  {{ priorityLabel(task.priority || 'none') }}
+                </span>
+              </div>
+              <div class="task-meta">
+                <span v-if="task.dueDate" class="due-date" :class="[{ overdue: isOverdue(task.dueDate) }]">
+                  <Calendar :size="12" />
+                  {{ formatDueDate(task.dueDate) }}
+                </span>
+                <span v-if="getProjectName(task.projectId)" class="project-badge">
+                  {{ getProjectName(task.projectId) }}
+                </span>
+              </div>
+            </div>
+
+            <button class="timer-btn" @click.stop="startTimer(task)">
+              <Play :size="16" />
+            </button>
+          </div>
+        </SwipeableTaskItem>
+      </template>
     </div>
 
     <!-- Quick Add Bar (trigger only) -->
@@ -220,7 +314,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { useTimerStore } from '@/stores/timer'
@@ -231,22 +325,33 @@ import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
 import {
   Plus, Check, Play, Calendar, Inbox,
   Circle, Clock, CheckCircle2, ArrowUpDown,
-  Flag, ChevronDown, Mic, MicOff, X
+  Flag, ChevronDown, Mic, MicOff, X,
+  Layers, CalendarClock, AlertCircle, FolderOpen, ListFilter
 } from 'lucide-vue-next'
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
+import { useHaptics } from '@/composables/useHaptics'
 
 const taskStore = useTaskStore()
 const authStore = useAuthStore()
 const timerStore = useTimerStore()
 const { lastSyncError } = useSupabaseDatabase()
+const { triggerHaptic } = useHaptics()
 
 // State
 const newTaskTitle = ref('')
 const taskInput = ref<HTMLInputElement | null>(null)
 const showDebug = ref(false)
-const activeStatusFilter = ref<string>('active')
 const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
+
+// TASK-1104: Enhanced filtering state
+type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
+type GroupByType = 'none' | 'date' | 'project' | 'priority'
+
+const activeTimeFilter = ref<TimeFilterType>('all')
+const groupBy = ref<GroupByType>('none')
+const hideDoneTasks = ref(true) // Default to hiding done tasks
+const showGroupByDropdown = ref(false)
 
 // Quick-add expanded state
 const isQuickAddExpanded = ref(false)
@@ -470,23 +575,100 @@ const handleDeleteTask = (task: Task) => {
   taskStore.deleteTask(task.id)
 }
 
-// Filter configuration
-const statusFilters = [
-  { value: 'all', label: 'All', icon: Inbox },
-  { value: 'active', label: 'Active', icon: Circle },
-  { value: 'planned', label: 'Planned', icon: Clock },
-  { value: 'done', label: 'Done', icon: CheckCircle2 },
+// TASK-1104: Date helpers
+const getToday = () => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
+const getWeekEnd = () => {
+  const today = getToday()
+  const dayOfWeek = today.getDay()
+  const daysUntilSunday = dayOfWeek === 0 ? 7 : (7 - dayOfWeek)
+  const weekEnd = new Date(today)
+  weekEnd.setDate(today.getDate() + daysUntilSunday)
+  return weekEnd
+}
+
+const isDueToday = (dueDate: string | undefined): boolean => {
+  if (!dueDate) return false
+  const date = new Date(dueDate)
+  date.setHours(0, 0, 0, 0)
+  return date.getTime() === getToday().getTime()
+}
+
+const isDueThisWeek = (dueDate: string | undefined): boolean => {
+  if (!dueDate) return false
+  const date = new Date(dueDate)
+  date.setHours(0, 0, 0, 0)
+  const today = getToday()
+  const weekEnd = getWeekEnd()
+  return date >= today && date < weekEnd
+}
+
+const isTaskOverdue = (dueDate: string | undefined): boolean => {
+  if (!dueDate) return false
+  const date = new Date(dueDate)
+  date.setHours(0, 0, 0, 0)
+  return date < getToday()
+}
+
+// TASK-1104: Time filter configuration with counts
+const timeFilters = computed(() => {
+  const allTasks = taskStore.tasks.filter(t => !hideDoneTasks.value || t.status !== 'done')
+  return [
+    { value: 'all' as const, label: 'All', icon: Inbox, count: allTasks.length },
+    { value: 'today' as const, label: 'Today', icon: Calendar, count: allTasks.filter(t => isDueToday(t.dueDate)).length },
+    { value: 'week' as const, label: 'This Week', icon: CalendarClock, count: allTasks.filter(t => isDueThisWeek(t.dueDate)).length },
+    { value: 'overdue' as const, label: 'Overdue', icon: AlertCircle, count: allTasks.filter(t => isTaskOverdue(t.dueDate) && t.status !== 'done').length },
+  ]
+})
+
+const timeFilterLabel = computed(() => {
+  const labels: Record<TimeFilterType, string> = {
+    all: 'all',
+    today: 'due today',
+    week: 'due this week',
+    overdue: 'overdue'
+  }
+  return labels[activeTimeFilter.value]
+})
+
+// TASK-1104: Group by options
+const groupByOptions = [
+  { value: 'none' as const, label: 'No Grouping', icon: ListFilter },
+  { value: 'date' as const, label: 'By Date', icon: Calendar },
+  { value: 'project' as const, label: 'By Project', icon: FolderOpen },
+  { value: 'priority' as const, label: 'By Priority', icon: Flag },
 ]
 
-// Computed
+const groupByLabel = computed(() => {
+  const option = groupByOptions.find(o => o.value === groupBy.value)
+  return option?.label || 'Group'
+})
+
+// Computed: Filtered tasks
 const filteredTasks = computed(() => {
   let tasks = [...taskStore.tasks]
 
-  // Status filter
-  if (activeStatusFilter.value === 'active') {
+  // Hide done tasks filter
+  if (hideDoneTasks.value) {
     tasks = tasks.filter(t => t.status !== 'done')
-  } else if (activeStatusFilter.value !== 'all') {
-    tasks = tasks.filter(t => t.status === activeStatusFilter.value)
+  }
+
+  // Time-based filter
+  switch (activeTimeFilter.value) {
+    case 'today':
+      tasks = tasks.filter(t => isDueToday(t.dueDate))
+      break
+    case 'week':
+      tasks = tasks.filter(t => isDueThisWeek(t.dueDate))
+      break
+    case 'overdue':
+      tasks = tasks.filter(t => isTaskOverdue(t.dueDate) && t.status !== 'done')
+      break
+    // 'all' shows everything
   }
 
   // Sort
@@ -516,6 +698,123 @@ const filteredTasks = computed(() => {
   return tasks
 })
 
+// TASK-1104: Grouped tasks computed
+interface TaskGroup {
+  key: string
+  title: string
+  color?: string
+  tasks: Task[]
+}
+
+const groupedTasks = computed((): TaskGroup[] => {
+  if (groupBy.value === 'none') return []
+
+  const tasks = filteredTasks.value
+  const groups: Map<string, TaskGroup> = new Map()
+
+  tasks.forEach(task => {
+    let key: string
+    let title: string
+    let color: string | undefined
+
+    switch (groupBy.value) {
+      case 'date': {
+        if (!task.dueDate) {
+          key = 'no-date'
+          title = 'No Due Date'
+        } else if (isTaskOverdue(task.dueDate)) {
+          key = 'overdue'
+          title = 'Overdue'
+          color = '#ef4444'
+        } else if (isDueToday(task.dueDate)) {
+          key = 'today'
+          title = 'Today'
+          color = '#22c55e'
+        } else if (isDueThisWeek(task.dueDate)) {
+          key = 'this-week'
+          title = 'This Week'
+          color = '#3b82f6'
+        } else {
+          key = 'later'
+          title = 'Later'
+          color = '#6b7280'
+        }
+        break
+      }
+      case 'project': {
+        if (!task.projectId) {
+          key = 'no-project'
+          title = 'No Project'
+        } else {
+          const project = taskStore.projects.find(p => p.id === task.projectId)
+          key = task.projectId
+          title = project?.name || 'Unknown Project'
+          // Handle color being string or string[]
+          const projectColor = project?.color
+          color = Array.isArray(projectColor) ? projectColor[0] : projectColor
+        }
+        break
+      }
+      case 'priority': {
+        const priorityColors: Record<string, string> = {
+          critical: '#dc2626',
+          high: '#f97316',
+          medium: '#eab308',
+          low: '#22c55e',
+          none: '#6b7280'
+        }
+        const priorityLabels: Record<string, string> = {
+          critical: 'Critical (P0)',
+          high: 'High (P1)',
+          medium: 'Medium (P2)',
+          low: 'Low (P3)',
+          none: 'No Priority'
+        }
+        const priority = task.priority || 'none'
+        key = priority
+        title = priorityLabels[priority] || 'No Priority'
+        color = priorityColors[priority]
+        break
+      }
+      default:
+        key = 'default'
+        title = 'Tasks'
+    }
+
+    if (!groups.has(key)) {
+      groups.set(key, { key, title, color, tasks: [] })
+    }
+    groups.get(key)!.tasks.push(task)
+  })
+
+  // Sort groups based on groupBy type
+  const sortedGroups = Array.from(groups.values())
+
+  if (groupBy.value === 'date') {
+    const dateOrder = ['overdue', 'today', 'this-week', 'later', 'no-date']
+    sortedGroups.sort((a, b) => dateOrder.indexOf(a.key) - dateOrder.indexOf(b.key))
+  } else if (groupBy.value === 'priority') {
+    const priorityOrder = ['critical', 'high', 'medium', 'low', 'none']
+    sortedGroups.sort((a, b) => priorityOrder.indexOf(a.key) - priorityOrder.indexOf(b.key))
+  } else if (groupBy.value === 'project') {
+    // Sort by project name, with "No Project" at the end
+    sortedGroups.sort((a, b) => {
+      if (a.key === 'no-project') return 1
+      if (b.key === 'no-project') return -1
+      return a.title.localeCompare(b.title)
+    })
+  }
+
+  return sortedGroups
+})
+
+// Helper to get project name
+const getProjectName = (projectId: string | undefined | null): string | null => {
+  if (!projectId) return null
+  const project = taskStore.projects.find(p => p.id === projectId)
+  return project?.name || null
+}
+
 const sortLabel = computed(() => {
   switch (sortBy.value) {
     case 'priority': return 'Priority'
@@ -524,9 +823,18 @@ const sortLabel = computed(() => {
   }
 })
 
-// Actions
-const setStatusFilter = (filter: string) => {
-  activeStatusFilter.value = filter
+// TASK-1104: Filter Actions
+const setTimeFilter = (filter: TimeFilterType) => {
+  activeTimeFilter.value = filter
+}
+
+const toggleGroupByDropdown = () => {
+  showGroupByDropdown.value = !showGroupByDropdown.value
+}
+
+const selectGroupBy = (value: GroupByType) => {
+  groupBy.value = value
+  showGroupByDropdown.value = false
 }
 
 const toggleSort = () => {
@@ -534,6 +842,22 @@ const toggleSort = () => {
   const currentIndex = sortOptions.indexOf(sortBy.value)
   sortBy.value = sortOptions[(currentIndex + 1) % sortOptions.length]
 }
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.group-by-control')) {
+    showGroupByDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 // Quick-add expansion handlers
 const expandQuickAdd = () => {
@@ -752,17 +1076,121 @@ const isOverdue = (dueDate: string | Date): boolean => {
   justify-content: flex-end;
 }
 
+/* TASK-1104: Filter count badge */
+.filter-count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.filter-chip.active .filter-count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* TASK-1104: Controls row (Group By + Sort) */
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.control-btn:active {
+  transform: scale(0.98);
+}
+
+.control-btn .rotated {
+  transform: rotate(180deg);
+}
+
+/* Group By Dropdown */
+.group-by-control {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 150px;
+  background: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dropdown-item:hover {
+  background: var(--surface-secondary);
+}
+
+.dropdown-item.active {
+  background: var(--primary-brand-bg-subtle);
+  color: var(--primary-brand);
+}
+
+/* Hide Done Toggle */
+.hide-done-btn {
+  padding: 8px;
+  min-width: 36px;
+  justify-content: center;
+}
+
+.hide-done-btn.active {
+  background: var(--primary-brand-bg-subtle);
+  border-color: var(--primary-brand);
+  color: var(--primary-brand);
+}
+
 .sort-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
-  border: none;
-  background: var(--surface-tertiary);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-secondary);
   color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sort-btn:active {
+  transform: scale(0.98);
 }
 
 /* Swipe hint banner */
@@ -811,6 +1239,60 @@ const isOverdue = (dueDate: string | Date): boolean => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* TASK-1104: Task Groups */
+.task-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-group:not(:first-child) {
+  margin-top: 16px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.group-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.group-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  background: var(--surface-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Project badge in task meta */
+.project-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-tertiary);
+  color: var(--text-tertiary);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-task-item {
@@ -870,15 +1352,53 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .task-title {
   font-size: 15px;
   color: var(--text-primary);
-  white-space: nowrap;
+  /* Multi-line truncation for RTL/long text */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.4;
+  word-break: break-word;
+  /* RTL support - text aligns based on content direction */
+  text-align: start;
+  unicode-bidi: plaintext;
 }
 
 .task-title.done {
   text-decoration: line-through;
   color: var(--text-muted);
 }
+
+/* Title row with inline priority badge */
+.task-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.task-title-row .task-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Inline priority badge (right side of title) */
+.priority-badge-inline {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 2px; /* Align with first line of title */
+  background: var(--surface-tertiary);
+  color: var(--text-secondary);
+}
+
+.priority-badge-inline.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
+.priority-badge-inline.high { background: var(--warning-bg-subtle); color: var(--warning-text); }
+.priority-badge-inline.medium { background: var(--primary-brand-bg-subtle); color: var(--primary-brand); }
+.priority-badge-inline.low { background: var(--surface-tertiary); color: var(--text-muted); }
 
 .task-meta {
   display: flex;
@@ -1328,5 +1848,56 @@ const isOverdue = (dueDate: string | Date): boolean => {
   color: var(--text-muted);
   font-size: 14px;
   z-index: 1000;
+}
+
+/* RTL Layout Support */
+[dir="rtl"] .mobile-inbox-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .mobile-task-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .task-content {
+  text-align: right;
+}
+
+[dir="rtl"] .task-title-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .task-meta {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .filter-chips {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .controls-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .group-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .quick-add-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .due-date {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+[dir="rtl"] .debug-toggle {
+  right: auto;
+  left: 8px;
 }
 </style>

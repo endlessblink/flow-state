@@ -28,6 +28,28 @@
 
 ---
 
+### ~~BUG-1106~~: Realtime Sync Not Initializing After Sign-In via Modal (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-29)
+
+**Problem**: Canvas realtime sync between localhost and VPS stopped working. Tasks/groups created on one device didn't appear on others.
+
+**Root Causes**:
+1. VPS Caddyfile missing WebSocket upgrade headers for Supabase Realtime
+2. `initRealtimeSubscription` only called in `onMounted`, not re-initialized when user signs in via modal after loading as guest
+
+**Fix Applied**:
+1. Added WebSocket headers to VPS `/etc/caddy/Caddyfile`:
+   ```
+   header_up Connection {header.Connection}
+   header_up Upgrade {header.Upgrade}
+   ```
+2. Added `watch` on `authStore.isAuthenticated` in `useAppInitialization.ts` to re-initialize realtime when user signs in after initial page load
+
+**Files**: `src/composables/app/useAppInitialization.ts`, VPS `/etc/caddy/Caddyfile`
+
+---
+
 ### BUG-1097: Due Date Not Persisting from Edit Modal (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-27)

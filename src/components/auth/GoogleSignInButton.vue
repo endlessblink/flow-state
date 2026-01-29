@@ -73,26 +73,27 @@ const isLoading = ref(false)
 async function handleGoogleSignIn() {
   if (isLoading.value) return
 
-  console.log('🔵 Google Sign-In button clicked')
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] Google Sign-In button clicked')
+  }
   isLoading.value = true
 
   try {
-    console.log('🔵 Calling authStore.signInWithGoogle()...')
     await authStore.signInWithGoogle()
 
-    console.log('✅ Google Sign-In successful, user:', authStore.user?.email)
-    console.log('✅ Emitting success event with user:', authStore.user)
+    if (import.meta.env.DEV) {
+      console.log('[AUTH:UI] Google Sign-In successful, user:', authStore.user?.email)
+    }
 
     // Success - emit event
     if (authStore.user) {
       emit('success', authStore.user as User)
     }
   } catch (error: unknown) {
-    console.error('❌ Google sign-in error:', error)
+    console.error('[AUTH:UI] Google sign-in error:', error)
     emit('error', error as Error)
   } finally {
     isLoading.value = false
-    console.log('🔵 Google Sign-In complete, loading:', isLoading.value)
   }
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="mobile-layout">
+  <div class="mobile-layout" :dir="isRTL ? 'rtl' : 'ltr'">
     <!-- Hide header on full-screen views like Quick Sort -->
     <header v-if="!isFullScreenView" class="mobile-header">
       <h1>FlowState</h1>
@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import MobileNav from '@/mobile/components/MobileNav.vue'
 
@@ -29,6 +29,13 @@ const fullScreenRoutes = ['mobile-quick-sort']
 
 const isFullScreenView = computed(() => {
   return fullScreenRoutes.includes(route.name as string)
+})
+
+// RTL detection based on browser language
+const isRTL = computed(() => {
+  const lang = navigator.language || navigator.languages?.[0] || 'en'
+  // Hebrew language codes
+  return lang.startsWith('he') || lang.startsWith('iw') // 'iw' is legacy code for Hebrew
 })
 
 onMounted(() => {
@@ -81,5 +88,14 @@ onMounted(() => {
 .mobile-content.full-screen {
   padding-bottom: 0;
   overflow: hidden;
+}
+
+/* RTL Layout Adjustments */
+.mobile-layout[dir="rtl"] {
+  text-align: right;
+}
+
+.mobile-layout[dir="rtl"] .mobile-header {
+  direction: ltr; /* Keep header LTR for branding */
 }
 </style>

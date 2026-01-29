@@ -127,7 +127,7 @@
           <CheckCircle :size="14" class="property-icon" />
           <CustomSelect
             v-model="status"
-            :options="statusOptions"
+            :options="(statusOptions as any)"
             class="compact-select"
           />
         </div>

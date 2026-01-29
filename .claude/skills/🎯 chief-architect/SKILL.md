@@ -461,8 +461,28 @@ docker stats
 - `docs/sop/SOP-026-custom-domain-deployment.md` - Domain, Cloudflare, Caddy setup
 - `docs/sop/SOP-030-doppler-secrets-management.md` - Secrets management
 - `docs/sop/SOP-031-cors-configuration.md` - CORS troubleshooting
+- `docs/sop/SOP-036-supabase-jwt-key-regeneration.md` - JWT key regeneration
 - `docs/sop/deployment/VPS-DEPLOYMENT.md` - Full VPS setup guide
 - `docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md` - Pre/post deploy verification
+
+### Domain 7: Supabase JWT Key Management
+
+**CRITICAL:** JWT keys must be signed with the same secret as the Supabase instance.
+
+| Environment | JWT Secret | Keys Location |
+|-------------|-----------|---------------|
+| **Local Supabase** | `super-secret-jwt-token-with-at-least-32-characters-long` | `.env` |
+| **Production (VPS)** | `your-super-secret-jwt-token-with-at-least-32-characters-long` | Doppler + VPS `/opt/supabase/docker/.env` |
+
+**If 401 Unauthorized or JwtSignatureError occurs:**
+1. Keys in Doppler don't match VPS Supabase's JWT_SECRET
+2. Follow SOP-036 to regenerate and deploy matching keys
+3. Update both VPS `.env` AND Doppler secrets
+
+**Key Files:**
+- `/opt/supabase/docker/.env` (VPS) - Contains `JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`
+- `scripts/generate-supabase-keys.cjs` - Generates keys for LOCAL Supabase only
+- For production keys, use SOP-036 Node.js script
 
 ### Domain 8: Canvas Architecture & Geometry Invariants
 **CRITICAL: Canvas Geometry Invariants (TASK-255)**

@@ -53,7 +53,9 @@ const _selectTaskForTesting = async (taskId: string) => {
   selectedTaskId.value = taskId
 
   // Trigger VueFlow selection simulation
-  console.log('🎯 Selecting task for testing:', taskId)
+  if (import.meta.env.DEV) {
+    console.log('[DEBUG:KEYBOARD] Selecting task for testing:', taskId)
+  }
 
   // In real implementation, this would integrate with VueFlow's selection system
   await nextTick()
@@ -93,7 +95,9 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
       throw new Error('Selected task not found in store')
     }
 
-    console.log('🗑️ Testing Shift+Delete on task:', originalTask.title)
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Shift+Delete on task:', originalTask.title)
+    }
 
     // Record state before deletion
     const undoCountBefore = undoHistory.undoCount?.value ?? 0
@@ -115,7 +119,9 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     const undoCountAfter = undoHistory.undoCount?.value ?? 0
     const canUndoAfter = undoHistory.canUndo?.value ?? false
 
-    console.log(`✅ Shift+Delete completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Can undo ${canUndoBefore} → ${canUndoAfter}`)
+    if (import.meta.env.DEV) {
+      console.log(`[DEBUG:KEYBOARD] Shift+Delete completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Can undo ${canUndoBefore} → ${canUndoAfter}`)
+    }
 
     recordTestResult({
       testName,
@@ -130,7 +136,9 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     return true
 
   } catch (error) {
-    console.error('❌ Shift+Delete test failed:', error)
+    if (import.meta.env.DEV) {
+      console.error('[DEBUG:KEYBOARD] Shift+Delete test failed:', error)
+    }
     recordTestResult({
       testName,
       status: 'failed',
@@ -172,7 +180,9 @@ const testDeleteOperation = async (): Promise<boolean> => {
       throw new Error('Task is not on canvas - cannot test canvas deletion')
     }
 
-    console.log('📤 Testing Delete (move to inbox) on task:', originalTask.title)
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Delete (move to inbox) on task:', originalTask.title)
+    }
 
     // Record state before modification
     const undoCountBefore = undoHistory.undoCount?.value ?? 0
@@ -204,7 +214,9 @@ const testDeleteOperation = async (): Promise<boolean> => {
     const undoCountAfter = undoHistory.undoCount?.value ?? 0
     const canUndoAfter = undoHistory.canUndo?.value ?? false
 
-    console.log(`✅ Delete completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Can undo ${canUndoBefore} → ${canUndoAfter}`)
+    if (import.meta.env.DEV) {
+      console.log(`[DEBUG:KEYBOARD] Delete completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Can undo ${canUndoBefore} → ${canUndoAfter}`)
+    }
 
     recordTestResult({
       testName,
@@ -219,7 +231,9 @@ const testDeleteOperation = async (): Promise<boolean> => {
     return true
 
   } catch (error) {
-    console.error('❌ Delete test failed:', error)
+    if (import.meta.env.DEV) {
+      console.error('[DEBUG:KEYBOARD] Delete test failed:', error)
+    }
     recordTestResult({
       testName,
       status: 'failed',
@@ -254,7 +268,9 @@ const testUndoOperation = async (): Promise<boolean> => {
     const undoCountBefore = undoHistory.undoCount?.value ?? 0
     const tasksCountBefore = taskStore.tasks.length
 
-    console.log('↩️ Testing Ctrl+Z undo operation')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Ctrl+Z undo operation')
+    }
 
     // Perform undo
     const undoResult = await undoHistory.undo()
@@ -268,7 +284,9 @@ const testUndoOperation = async (): Promise<boolean> => {
     const undoCountAfter = undoHistory.undoCount?.value ?? 0
     const tasksCountAfter = taskStore.tasks.length
 
-    console.log(`✅ Undo completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Tasks: ${tasksCountBefore} → ${tasksCountAfter}`)
+    if (import.meta.env.DEV) {
+      console.log(`[DEBUG:KEYBOARD] Undo completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Tasks: ${tasksCountBefore} → ${tasksCountAfter}`)
+    }
 
     recordTestResult({
       testName,
@@ -283,7 +301,9 @@ const testUndoOperation = async (): Promise<boolean> => {
     return true
 
   } catch (error) {
-    console.error('❌ Undo test failed:', error)
+    if (import.meta.env.DEV) {
+      console.error('[DEBUG:KEYBOARD] Undo test failed:', error)
+    }
     recordTestResult({
       testName,
       status: 'failed',
@@ -318,7 +338,9 @@ const testRedoOperation = async (): Promise<boolean> => {
     const undoCountBefore = undoHistory.undoCount?.value ?? 0
     const tasksCountBefore = taskStore.tasks.length
 
-    console.log('↪️ Testing Ctrl+Y redo operation')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Ctrl+Y redo operation')
+    }
 
     // Perform redo
     const redoResult = await undoHistory.redo()
@@ -332,7 +354,9 @@ const testRedoOperation = async (): Promise<boolean> => {
     const undoCountAfter = undoHistory.undoCount?.value ?? 0
     const tasksCountAfter = taskStore.tasks.length
 
-    console.log(`✅ Redo completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Tasks: ${tasksCountBefore} → ${tasksCountAfter}`)
+    if (import.meta.env.DEV) {
+      console.log(`[DEBUG:KEYBOARD] Redo completed: Undo count ${undoCountBefore} → ${undoCountAfter}, Tasks: ${tasksCountBefore} → ${tasksCountAfter}`)
+    }
 
     recordTestResult({
       testName,
@@ -347,7 +371,9 @@ const testRedoOperation = async (): Promise<boolean> => {
     return true
 
   } catch (error) {
-    console.error('❌ Redo test failed:', error)
+    if (import.meta.env.DEV) {
+      console.error('[DEBUG:KEYBOARD] Redo test failed:', error)
+    }
     recordTestResult({
       testName,
       status: 'failed',
@@ -365,7 +391,9 @@ const testRedoOperation = async (): Promise<boolean> => {
 // Main test runner
 const runComprehensiveTest = async () => {
   if (isTestRunning.value) {
-    console.warn('Test is already running')
+    if (import.meta.env.DEV) {
+      console.warn('[DEBUG:KEYBOARD] Test is already running')
+    }
     return
   }
 
@@ -376,7 +404,9 @@ const runComprehensiveTest = async () => {
   try {
     // Step 1: Create a test task
     testProgress.value = 'Creating test task...'
-    console.log('🚀 Step 1: Creating test task')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Creating test task')
+    }
 
     const taskId = await createTestTask()
     testTaskId.value = taskId
@@ -386,7 +416,9 @@ const runComprehensiveTest = async () => {
 
     // Step 2: Test Delete operation (move to inbox)
     testProgress.value = 'Testing Delete operation (move to inbox)...'
-    console.log('🚀 Step 2: Testing Delete operation')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Delete operation')
+    }
 
     const deleteSuccess = await testDeleteOperation()
     if (!deleteSuccess) {
@@ -397,7 +429,9 @@ const runComprehensiveTest = async () => {
 
     // Step 3: Test Undo (restore task to canvas)
     testProgress.value = 'Testing Undo operation (Ctrl+Z)...'
-    console.log('🚀 Step 3: Testing Undo operation')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Undo operation')
+    }
 
     const undoSuccess = await testUndoOperation()
     if (!undoSuccess) {
@@ -408,7 +442,9 @@ const runComprehensiveTest = async () => {
 
     // Step 4: Test Redo (move task back to inbox)
     testProgress.value = 'Testing Redo operation (Ctrl+Y)...'
-    console.log('🚀 Step 4: Testing Redo operation')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Redo operation')
+    }
 
     const redoSuccess = await testRedoOperation()
     if (!redoSuccess) {
@@ -419,14 +455,18 @@ const runComprehensiveTest = async () => {
 
     // Step 5: Undo again to restore task for Shift+Delete test
     testProgress.value = 'Restoring task for Shift+Delete test...'
-    console.log('🚀 Step 5: Restoring task for Shift+Delete test')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Restoring task for Shift+Delete test')
+    }
 
     await undoHistory.undo()
     await nextTick()
 
     // Step 6: Test Shift+Delete operation (permanent deletion)
     testProgress.value = 'Testing Shift+Delete operation (permanent deletion)...'
-    console.log('🚀 Step 6: Testing Shift+Delete operation')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Shift+Delete operation')
+    }
 
     const shiftDeleteSuccess = await testShiftDeleteOperation()
     if (!shiftDeleteSuccess) {
@@ -437,7 +477,9 @@ const runComprehensiveTest = async () => {
 
     // Step 7: Test Undo after permanent deletion
     testProgress.value = 'Testing Undo after Shift+Delete...'
-    console.log('🚀 Step 7: Testing Undo after permanent deletion')
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG:KEYBOARD] Testing Undo after permanent deletion')
+    }
 
     const finalUndoSuccess = await testUndoOperation()
     if (!finalUndoSuccess) {
@@ -450,10 +492,14 @@ const runComprehensiveTest = async () => {
 
     testProgress.value = `Test completed: ${passedTests} passed, ${failedTests} failed`
 
-    console.log(`🎉 Comprehensive test completed: ${passedTests}/${testResults.value.length} tests passed`)
+    if (import.meta.env.DEV) {
+      console.log(`[DEBUG:KEYBOARD] Comprehensive test completed: ${passedTests}/${testResults.value.length} tests passed`)
+    }
 
   } catch (error) {
-    console.error('❌ Comprehensive test failed:', error)
+    if (import.meta.env.DEV) {
+      console.error('[DEBUG:KEYBOARD] Comprehensive test failed:', error)
+    }
     testProgress.value = `Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
   } finally {
     isTestRunning.value = false
@@ -467,7 +513,9 @@ const clearResults = () => {
 
 // Initialize component
 onMounted(() => {
-  console.log('🧪 KeyboardDeletionTest component mounted')
+  if (import.meta.env.DEV) {
+    console.log('[DEBUG:KEYBOARD] KeyboardDeletionTest component mounted')
+  }
 })
 </script>
 

@@ -156,4 +156,26 @@ router.beforeEach(async (to, _from, next) => {
   next()
 })
 
+// Handle dynamic import failures gracefully (BUG-1101)
+router.onError((error, to, _from) => {
+  // Check if this is a dynamic import failure
+  if (
+    error.message.includes('Failed to fetch dynamically imported module') ||
+    error.message.includes('Loading chunk') ||
+    error.message.includes('Loading CSS chunk')
+  ) {
+    console.error('🚨 [BUG-1101] Dynamic import failed:', error.message)
+    console.error('🚨 [BUG-1101] Failed route:', to.fullPath)
+
+    // Store the failed route for potential retry
+    sessionStorage.setItem('failedRoute', to.fullPath)
+    sessionStorage.setItem('importError', error.message)
+
+    // Emit custom event for ErrorBoundary to catch
+    window.dispatchEvent(new CustomEvent('route-load-error', {
+      detail: { error, route: to.fullPath }
+    }))
+  }
+})
+
 export default router

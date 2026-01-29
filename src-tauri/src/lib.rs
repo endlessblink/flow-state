@@ -1,5 +1,40 @@
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
+use std::process;
+
+/// Get current process memory usage (for SIGTERM debugging - TASK-1060)
+#[tauri::command]
+fn get_memory_usage() -> Result<String, String> {
+    let pid = process::id();
+
+    // Read from /proc/self/status on Linux
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
+            let mut vm_rss = "unknown".to_string();
+            let mut vm_size = "unknown".to_string();
+
+            for line in status.lines() {
+                if line.starts_with("VmRSS:") {
+                    vm_rss = line.replace("VmRSS:", "").trim().to_string();
+                } else if line.starts_with("VmSize:") {
+                    vm_size = line.replace("VmSize:", "").trim().to_string();
+                }
+            }
+
+            return Ok(format!(
+                r#"{{"pid":{},"rss":"{}","virtual":"{}","platform":"linux"}}"#,
+                pid, vm_rss, vm_size
+            ));
+        }
+    }
+
+    // Fallback for other platforms
+    Ok(format!(
+        r#"{{"pid":{},"rss":"unknown","virtual":"unknown","platform":"other"}}"#,
+        pid
+    ))
+}
 
 /// Check if Docker daemon is running
 #[tauri::command]
@@ -358,6 +393,7 @@ pub fn run() {
             get_supabase_config,
             run_supabase_migrations,
             cleanup_services,
+            get_memory_usage,
         ])
         .setup(|app| {
             // Enable logging in debug mode

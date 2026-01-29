@@ -260,4 +260,13 @@ const handleClearCache = async () => {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* RTL Support */
+[dir="rtl"] .menu-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .menu-header {
+  flex-direction: row-reverse;
+}
 </style>

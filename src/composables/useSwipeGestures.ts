@@ -10,6 +10,7 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue'
+import { useHaptics } from './useHaptics'
 
 export interface SwipeGestureOptions {
   /** Minimum distance (px) for swipe to register */
@@ -112,13 +113,11 @@ export function useSwipeGestures(
   }))
 
   // Haptic feedback
-  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
-    if (!haptics || typeof navigator === 'undefined') return
+  const { triggerHaptic: baseTriggerHaptic } = useHaptics()
 
-    if ('vibrate' in navigator) {
-      const durations = { light: 10, medium: 20, heavy: 40 }
-      navigator.vibrate(durations[type])
-    }
+  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
+    if (!haptics) return
+    baseTriggerHaptic(type)
   }
 
   // Touch handlers

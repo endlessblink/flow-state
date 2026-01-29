@@ -210,14 +210,15 @@ export function useCanvasSync() {
                 }
             }
 
-            // BUG-1047 DEBUG: Log sync positions before PM update
-            const taskUpdates = updates.filter(u => !groups.some(g => g.id === u.id))
-            if (taskUpdates.length > 0) {
-                console.log('🔍 [BUG-1047] syncStoreToCanvas feeding to PM:', taskUpdates.slice(0, 3).map(u => ({
-                    id: u.id.slice(0, 8),
-                    x: Math.round(u.x),
-                    y: Math.round(u.y)
-                })))
+            if (import.meta.env.DEV) {
+                const taskUpdates = updates.filter(u => !groups.some(g => g.id === u.id))
+                if (taskUpdates.length > 0) {
+                    console.log('[CANVAS:SYNC] Feeding to PositionManager:', taskUpdates.slice(0, 3).map(u => ({
+                        id: u.id.slice(0, 8),
+                        x: Math.round(u.x),
+                        y: Math.round(u.y)
+                    })))
+                }
             }
 
             // Commit updates (locks will prevent overwrites of dragged items)
@@ -225,7 +226,7 @@ export function useCanvasSync() {
             const successCount = batchResult?.successCount ?? 0
             const rejectedIds = batchResult?.rejectedIds ?? []
             if (rejectedIds.length > 0) {
-                console.log(`[useCanvasSync] Sync deferred for ${rejectedIds.length} locked nodes (will retry next sync)`)
+                console.log(`[CANVAS:SYNC] Deferred ${rejectedIds.length} locked nodes (will retry next sync)`)
             }
 
             const newNodes: any[] = []
@@ -268,9 +269,11 @@ export function useCanvasSync() {
                     absolutePos = pmNode.position
                 } else if (group.position && typeof group.position.x === 'number' && typeof group.position.y === 'number') {
                     absolutePos = { x: group.position.x, y: group.position.y }
-                    console.log(`⚠️ [SYNC-FALLBACK] Group ${group.id.slice(0, 8)} not in PM, using store position`)
+                    if (import.meta.env.DEV) {
+                        console.log(`[CANVAS:SYNC] Group ${group.id.slice(0, 8)} not in PM, using store position`)
+                    }
                 } else {
-                    console.warn(`⚠️ [SYNC-SKIP] Group ${group.id.slice(0, 8)} has no valid position, skipping`)
+                    console.warn(`[CANVAS:SYNC] Group ${group.id.slice(0, 8)} has no valid position, skipping`)
                     continue
                 }
                 // BUG-1061 FIX: Read parentId from STORE (group), not PM
@@ -296,7 +299,9 @@ export function useCanvasSync() {
                 // FIX: Only set parentNode if parent is VISIBLE (will be rendered in Vue Flow)
                 // If parent exists but is hidden, treat as root node to avoid "Only child nodes can use a parent extent" warning
                 if (parentId && !visibleGroupIds.has(parentId)) {
-                    console.warn(`[SYNC] Parent group ${parentId} is hidden, treating ${group.id} as root node`)
+                    if (import.meta.env.DEV) {
+                        console.warn(`[CANVAS:SYNC] Parent group ${parentId} is hidden, treating ${group.id} as root node`)
+                    }
                     parentId = null
                 }
 
@@ -381,7 +386,9 @@ export function useCanvasSync() {
                     absolutePos = pmNode.position
                 } else if (task.canvasPosition) {
                     absolutePos = { x: task.canvasPosition.x, y: task.canvasPosition.y }
-                    console.log(`⚠️ [SYNC-FALLBACK] Task ${task.id.slice(0, 8)} not in PM, using store position`)
+                    if (import.meta.env.DEV) {
+                        console.log(`[CANVAS:SYNC] Task ${task.id.slice(0, 8)} not in PM, using store position`)
+                    }
                 } else {
                     continue // Already checked canvasPosition at loop start, but safety first
                 }
@@ -418,9 +425,11 @@ export function useCanvasSync() {
                 // we defer rendering until parent group is available. The watcher on
                 // groups.length will trigger another sync when groups load.
                 if (parentId && !visibleGroupIds.has(parentId)) {
-                    console.log(`⏳ [SYNC-DEFERRED] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) deferred - parent ${parentId?.slice(0, 8)} not loaded yet`, {
-                        visibleGroupCount: visibleGroupIds.size
-                    })
+                    if (import.meta.env.DEV) {
+                        console.log(`[CANVAS:SYNC] Task ${task.id.slice(0, 8)}... (${task.title?.slice(0, 20)}) deferred - parent ${parentId?.slice(0, 8)} not loaded yet`, {
+                            visibleGroupCount: visibleGroupIds.size
+                        })
+                    }
                     continue // Skip this task, will be synced when parent loads
                 }
 
@@ -495,18 +504,19 @@ export function useCanvasSync() {
             }
 
             if (isDifferent(newNodes, currentNodes)) {
-                // DRIFT LOGGING: Track when nodes change parent status
-                const taskNodesOld = currentNodes.filter(n => n.type === 'taskNode')
-                const taskNodesNew = newNodes.filter((n: any) => n.type === 'taskNode')
+                if (import.meta.env.DEV) {
+                    const taskNodesOld = currentNodes.filter(n => n.type === 'taskNode')
+                    const taskNodesNew = newNodes.filter((n: any) => n.type === 'taskNode')
 
-                for (const newNode of taskNodesNew) {
-                    const oldNode = taskNodesOld.find((o: any) => o.id === newNode.id)
-                    if (oldNode && oldNode.parentNode !== newNode.parentNode) {
-                        console.warn(`🔀 [SYNC-PARENT-CHANGE] Task ${newNode.id.slice(0, 8)}... parentNode: "${oldNode.parentNode ?? 'root'}" → "${newNode.parentNode ?? 'root'}"`, {
-                            taskTitle: newNode.data?.label?.slice(0, 20),
-                            oldPosition: oldNode.position,
-                            newPosition: newNode.position
-                        })
+                    for (const newNode of taskNodesNew) {
+                        const oldNode = taskNodesOld.find((o: any) => o.id === newNode.id)
+                        if (oldNode && oldNode.parentNode !== newNode.parentNode) {
+                            console.warn(`[CANVAS:SYNC] Task ${newNode.id.slice(0, 8)}... parentNode: "${oldNode.parentNode ?? 'root'}" → "${newNode.parentNode ?? 'root'}"`, {
+                                taskTitle: newNode.data?.label?.slice(0, 20),
+                                oldPosition: oldNode.position,
+                                newPosition: newNode.position
+                            })
+                        }
                     }
                 }
 
@@ -593,7 +603,7 @@ export function useCanvasSync() {
                             const dx = Math.abs((storeAbsolute.x ?? 0) - (nodePosition?.x ?? 0))
                             const dy = Math.abs((storeAbsolute.y ?? 0) - (nodePosition?.y ?? 0))
                             if (dx > DRIFT_EPSILON || dy > DRIFT_EPSILON) {
-                                console.warn('[GEOMETRY-DRIFT]', {
+                                console.warn('[CANVAS:SYNC] Geometry drift detected', {
                                     type: 'task',
                                     id: task.id?.slice(0, 8),
                                     title: task.title?.slice(0, 20),
@@ -620,7 +630,7 @@ export function useCanvasSync() {
                             const dx = Math.abs((storeAbsolute.x ?? 0) - (nodePosition?.x ?? 0))
                             const dy = Math.abs((storeAbsolute.y ?? 0) - (nodePosition?.y ?? 0))
                             if (dx > DRIFT_EPSILON || dy > DRIFT_EPSILON) {
-                                console.warn('[GEOMETRY-DRIFT]', {
+                                console.warn('[CANVAS:SYNC] Geometry drift detected', {
                                     type: 'group',
                                     id: group.id?.slice(0, 8),
                                     name: group.name?.slice(0, 20),
@@ -634,11 +644,12 @@ export function useCanvasSync() {
                     }
                 }
 
-                // DRIFT LOGGING: Log when setNodes is called with position changes
-                console.log(`📍[VUEFLOW-SETNODES] Updating ${newNodes.length} nodes`, {
-                    taskNodes: newNodes.filter((n: any) => n.type === 'taskNode').length,
-                    groupNodes: newNodes.filter((n: any) => n.type === 'sectionNode').length
-                })
+                if (import.meta.env.DEV) {
+                    console.log(`[CANVAS:SYNC] Updating ${newNodes.length} nodes`, {
+                        taskNodes: newNodes.filter((n: any) => n.type === 'taskNode').length,
+                        groupNodes: newNodes.filter((n: any) => n.type === 'sectionNode').length
+                    })
+                }
 
                 // BUG-1062 FIX: Preserve selection state from canvasStore.selectedNodeIds
                 // When setNodes() replaces all nodes, the `selected` property is lost.

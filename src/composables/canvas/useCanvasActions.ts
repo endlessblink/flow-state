@@ -77,11 +77,13 @@ export function useCanvasActions(
     // BUG-208 FIX: Use Pinia store for context menu state
     // Previously local refs were used but CanvasContextMenus.vue reads from the store
     const handleNodeContextMenu = (event: { node: Node; event: MouseEvent | TouchEvent }) => {
-        console.debug('[BUG-251] handleNodeContextMenu called', {
-            nodeId: event.node.id,
-            eventType: event.event.type,
-            isGroupNode: CanvasIds.isGroupNode(event.node.id)
-        })
+        if (import.meta.env.DEV) {
+            console.debug('[CANVAS:ACTIONS] handleNodeContextMenu called', {
+                nodeId: event.node.id,
+                eventType: event.event.type,
+                isGroupNode: CanvasIds.isGroupNode(event.node.id)
+            })
+        }
         event.event.preventDefault()
         event.event.stopPropagation()
 

@@ -1,7 +1,7 @@
 {
   "project": "FlowState",
   "version": "2.2.0",
-  "last_updated": "2026-01-25",
+  "last_updated": "2026-01-29",
   "skills": {
     "dev-maestro": {
       "name": "Dev Maestro",
@@ -670,6 +670,27 @@
         "smart-doc-manager"
       ],
       "description": "Analyze beads and MASTER_PLAN.md to recommend the best task to work on next. Checks both systems, scores by priority (P0-P3), considers IN PROGRESS tasks, blocked dependencies, and quick wins. Use when starting a session or deciding what to tackle."
+    },
+    "save": {
+      "name": "save",
+      "category": "implement",
+      "triggers": [
+        "/save",
+        "save progress",
+        "switch machine",
+        "end session"
+      ],
+      "keywords": [
+        "save",
+        "current",
+        "progress",
+        "push",
+        "remote"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [],
+      "description": "Save current progress and push to remote - like /done but keeps task IN PROGRESS. Use when switching machines, ending session, or backing up work. Triggers on \"/save\", \"save progress\", \"switch machine\", \"end session\"."
     }
   },
   "categories": {

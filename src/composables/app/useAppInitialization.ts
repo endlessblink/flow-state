@@ -24,6 +24,7 @@ export function useAppInitialization() {
     const itpProtection = useSafariITPProtection()
     const activeChannel = ref<any>(null)
     const realtimeInitialized = ref(false)
+    const onMountedCompleted = ref(false)  // BUG-1106: Prevent race condition between watcher and onMounted
 
     onMounted(async () => {
         // MARK: SESSION START for stability guards
@@ -109,17 +110,25 @@ export function useAppInitialization() {
                 (window as any).__FlowStateIsSettling
             ))
 
-            if (isLocked) {
+            console.log('🔄 [HANDLER] onProjectChange called:', {
+                eventType: payload.eventType,
+                isLocked,
+                projectId: payload.new?.id?.substring(0, 8) || payload.old?.id?.substring(0, 8)
+            })
 
+            if (isLocked) {
+                console.log('🔒 [HANDLER] PROJECT change blocked - lock active')
                 return
             }
 
             const { eventType, new: newDoc, old: oldDoc } = payload
             if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                console.log('🗑️ [HANDLER] Removing project from sync')
                 projects.removeProjectFromSync(newDoc?.id || oldDoc?.id)
             } else if (newDoc) {
                 // BUG-FIX: Map raw Supabase data to app format
                 const mappedProject = fromSupabaseProject(newDoc as SupabaseProject)
+                console.log('✅ [HANDLER] Updating project from sync:', mappedProject.name)
                 projects.updateProjectFromSync(mappedProject.id, mappedProject)
             }
         }
@@ -137,28 +146,31 @@ export function useAppInitialization() {
                 (window as any).__FlowStateIsSettling
             ))
 
-            if (isLocked) {
+            const { eventType, new: newDoc, old: oldDoc } = payload
+            const taskId = newDoc?.id || oldDoc?.id
 
+            console.log('🔄 [HANDLER] onTaskChange called:', {
+                eventType,
+                isLocked,
+                taskId: taskId?.substring(0, 8),
+                title: newDoc?.title?.substring(0, 20) || oldDoc?.title?.substring(0, 20)
+            })
+
+            if (isLocked) {
+                console.log('🔒 [HANDLER] TASK change blocked - lock active')
                 return
             }
 
-            const { eventType, new: newDoc, old: oldDoc } = payload
-            const taskId = newDoc?.id || oldDoc?.id
-            if (!taskId) return
+            if (!taskId) {
+                console.log('⚠️ [HANDLER] TASK change skipped - no taskId')
+                return
+            }
 
             // High Severity Issue #7: Skip if task is pending local write (drag in progress)
             if (tasks.isPendingWrite(taskId)) {
-                console.log(`[REALTIME] Skipping task ${taskId.slice(0,8)} - pending local write`)
+                console.log(`🔒 [HANDLER] TASK ${taskId.slice(0,8)} skipped - pending local write`)
                 return
             }
-
-            // BUG-169 DEBUG: Log ALL realtime events to diagnose task disappearance
-            /* console.log(`[REALTIME] Task event:`, {
-                eventType,
-                taskId: taskId?.substring(0, 8),
-                is_deleted: newDoc?.is_deleted,
-                title: newDoc?.title?.substring(0, 20) || oldDoc?.title?.substring(0, 20)
-            }) */
 
             // BUG-169 FIX: Safety guards to prevent spurious task deletions
             // 1. Check for hard DELETE event (eventType === 'DELETE')
@@ -173,17 +185,17 @@ export function useAppInitialization() {
 
                 // Don't process deletions in the first 5 seconds of the session (anti-race guard)
                 if (timeSinceSessionStart < 5000) {
-                    console.warn(`[REALTIME] BLOCKED deletion for task ${taskId.substring(0, 8)} - session just started`)
+                    console.warn(`⚠️ [HANDLER] BLOCKED deletion for task ${taskId.substring(0, 8)} - session just started`)
                     return
                 }
 
-                console.warn(`[REALTIME] Removing task ${taskId.substring(0, 8)}`)
+                console.log(`🗑️ [HANDLER] Removing task ${taskId.substring(0, 8)} from sync`)
                 tasks.updateTaskFromSync(taskId, null, true)
             } else if (newDoc) {
                 // BUG-FIX: Map raw Supabase data to app format
                 // This ensures is_deleted -> _soft_deleted, position -> canvasPosition, etc.
                 const mappedTask = fromSupabaseTask(newDoc as SupabaseTask)
-
+                console.log(`✅ [HANDLER] Updating task ${taskId.substring(0, 8)} from sync:`, mappedTask.title?.substring(0, 20))
                 tasks.updateTaskFromSync(taskId, mappedTask, false)
             }
         }
@@ -200,16 +212,27 @@ export function useAppInitialization() {
                 (window as any).__FlowStateIsSettling
             ))
 
+            const { eventType, new: newDoc, old: oldDoc } = payload
+
+            console.log('🔄 [HANDLER] onGroupChange called:', {
+                eventType,
+                isLocked,
+                groupId: newDoc?.id?.substring(0, 8) || oldDoc?.id?.substring(0, 8),
+                name: newDoc?.name || oldDoc?.name
+            })
+
             if (isLocked) {
+                console.log('🔒 [HANDLER] GROUP change blocked - lock active')
                 return
             }
 
-            const { eventType, new: newDoc, old: oldDoc } = payload
             if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
+                console.log('🗑️ [HANDLER] Removing group from sync')
                 canvas.removeGroupFromSync(newDoc?.id || oldDoc?.id)
             } else if (newDoc) {
                 // Map raw Supabase data to app format
                 // Groups use position field directly, no special mapping needed
+                console.log('✅ [HANDLER] Updating group from sync:', newDoc.name)
                 canvas.updateGroupFromSync(newDoc.id, newDoc)
             }
         }
@@ -239,15 +262,20 @@ export function useAppInitialization() {
         } else {
             console.log('📡 [APP-INIT] No realtime subscription (user not authenticated yet)')
         }
+
+        // BUG-1106: Mark onMounted as complete so watcher knows it can run
+        onMountedCompleted.value = true
     })
 
     // BUG-1106: Re-initialize realtime when user signs in after initial page load
     // This handles the case where user opens the app as guest and later signs in via modal
     watch(() => authStore.isAuthenticated, async (isAuthenticated, wasAuthenticated) => {
-        // Only trigger when going from NOT authenticated to authenticated
-        // AND realtime wasn't already initialized
-        if (isAuthenticated && !wasAuthenticated && !realtimeInitialized.value) {
-            console.log('📡 [APP-INIT] User signed in - initializing realtime subscription...')
+        // Only trigger when:
+        // 1. Going from NOT authenticated to authenticated
+        // 2. Realtime wasn't already initialized
+        // 3. onMounted has completed (to prevent race condition with stored session)
+        if (isAuthenticated && !wasAuthenticated && !realtimeInitialized.value && onMountedCompleted.value) {
+            console.log('📡 [APP-INIT] User signed in after page load - initializing realtime subscription...')
 
             const { initRealtimeSubscription } = useSupabaseDatabase()
 

@@ -180,6 +180,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 // @ts-ignore - Avoid strict type check on imported Task type if causing issues
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import { useMobileFilters, type GroupByType } from '@/composables/mobile/useMobileFilters'
 import TaskEditBottomSheet from '@/mobile/components/TaskEditBottomSheet.vue'
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
 import {
@@ -190,20 +191,29 @@ import {
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
+// Shared mobile filter state (persists across view navigation)
+const {
+  selectedProject,
+  selectedPriority,
+  groupBy,
+  hasActiveFilters,
+  priorityLabel,
+  clearFilters,
+  setProjectFilter,
+  setPriorityFilter,
+  setGroupBy
+} = useMobileFilters()
+
 // Edit sheet state
 const isEditSheetOpen = ref(false)
 const editingTask = ref<Task | null>(null)
 
-// TASK-1104: Filter state
-type GroupByType = 'time' | 'project' | 'priority'
-const selectedProject = ref<string | null>(null)
-const selectedPriority = ref<string | null>(null)
-const groupBy = ref<GroupByType>('time')
+// View-specific dropdown state
 const showProjectDropdown = ref(false)
 const showPriorityDropdown = ref(false)
 const showGroupByDropdown = ref(false)
 
-// Priority options
+// Priority options (for dropdown display)
 const priorityOptions = [
   { value: 'critical', label: 'Critical (P0)' },
   { value: 'high', label: 'High (P1)' },
@@ -211,7 +221,7 @@ const priorityOptions = [
   { value: 'low', label: 'Low (P3)' }
 ]
 
-// Group by options
+// Group by options (Today view uses 'time' instead of 'none')
 const groupByOptions = [
   { value: 'time' as const, label: 'By Time', icon: Clock },
   { value: 'project' as const, label: 'By Project', icon: FolderOpen },
@@ -236,9 +246,7 @@ const groupByLabel = computed(() => {
   return option?.label || 'Group'
 })
 
-const hasActiveFilters = computed(() => {
-  return selectedProject.value !== null || selectedPriority.value !== null
-})
+// hasActiveFilters is now provided by useMobileFilters composable
 
 // Filter actions
 const toggleProjectDropdown = () => {
@@ -260,24 +268,21 @@ const toggleGroupByDropdown = () => {
 }
 
 const selectProject = (projectId: string | null) => {
-  selectedProject.value = projectId
+  setProjectFilter(projectId)
   showProjectDropdown.value = false
 }
 
 const selectPriority = (priority: string | null) => {
-  selectedPriority.value = priority
+  setPriorityFilter(priority)
   showPriorityDropdown.value = false
 }
 
 const selectGroupBy = (value: GroupByType) => {
-  groupBy.value = value
+  setGroupBy(value)
   showGroupByDropdown.value = false
 }
 
-const clearFilters = () => {
-  selectedProject.value = null
-  selectedPriority.value = null
-}
+// clearFilters is now provided by useMobileFilters composable
 
 // Close dropdowns when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
@@ -377,16 +382,7 @@ const getProjectName = (projectId: string | undefined | null): string | null => 
   return project?.name || null
 }
 
-// Priority label helper
-const priorityLabel = (priority: string | null | undefined): string => {
-  const labels: Record<string, string> = {
-    critical: 'P0',
-    high: 'P1',
-    medium: 'P2',
-    low: 'P3'
-  }
-  return labels[priority || ''] || ''
-}
+// priorityLabel is now provided by useMobileFilters composable
 
 // TASK-1104: Grouped tasks based on groupBy mode
 interface TaskGroup {
@@ -400,7 +396,8 @@ const groupedTasks = computed((): TaskGroup[] => {
   const tasks = filteredTodayTasks.value
   const groups: TaskGroup[] = []
 
-  if (groupBy.value === 'time') {
+  // Today view treats 'none' and 'date' the same as 'time' (time-based grouping is the default)
+  if (groupBy.value === 'time' || groupBy.value === 'none' || groupBy.value === 'date') {
     // Time-based grouping (original behavior)
     const overdueFiltered = tasks.filter(t => isOverdue(t.dueDate))
     const morningFiltered = tasks.filter(t => {

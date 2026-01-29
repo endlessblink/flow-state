@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # FlowState Status Line Script
-# Shows worktree name, current task, active port, and Claude Code model
+# Shows worktree name, active port, and Claude Code model
 
 # Read JSON input from Claude Code
 read -r JSON_DATA
@@ -20,85 +20,6 @@ fi
 
 # Extract worktree name from path
 WORKTREE_NAME="${CWD##*/}"
-
-# Get session ID from Claude Code JSON (for per-instance task tracking)
-SESSION_ID=$(echo "$JSON_DATA" | jq -r '.session_id // empty' 2>/dev/null)
-
-# Detect current task - priority order:
-# 1. Per-session task file (.claude/tasks/{session_id}.json)
-# 2. Global current-task.json (.claude/current-task.json)
-# 3. First IN PROGRESS in MASTER_PLAN.md (fallback)
-CURRENT_TASK=""
-TASK_DESC=""
-
-# 1. Parse task ID from zellij tab name (automatic - just name your tab with the task ID)
-if [ -n "$ZELLIJ" ]; then
-  TAB_NAME=$(zellij action dump-layout 2>/dev/null | grep -E 'tab name=.*focus=true' | sed 's/.*tab name="\([^"]*\)".*/\1/')
-  if [ -n "$TAB_NAME" ] && [ "$TAB_NAME" != "Tab #"* ]; then
-    # Try full format first (TASK-XXX, BUG-XXX, etc.)
-    PARSED_TASK=$(echo "$TAB_NAME" | grep -oE "(TASK|BUG|ROAD|IDEA|ISSUE)-[0-9]+" | head -1)
-
-    # Fallback: just a number at the start (e.g., "1091 - description")
-    if [ -z "$PARSED_TASK" ]; then
-      PARSED_NUM=$(echo "$TAB_NAME" | grep -oE "^[0-9]+" | head -1)
-      if [ -n "$PARSED_NUM" ]; then
-        # Guess prefix based on number range (bugs typically 1000+, tasks 100-999)
-        if [ "$PARSED_NUM" -ge 1000 ]; then
-          PARSED_TASK="BUG-$PARSED_NUM"
-        else
-          PARSED_TASK="TASK-$PARSED_NUM"
-        fi
-      fi
-    fi
-
-    if [ -n "$PARSED_TASK" ]; then
-      CURRENT_TASK="$PARSED_TASK"
-      # Use rest of tab name as description (after the number/ID)
-      TASK_DESC=$(echo "$TAB_NAME" | sed 's/^[A-Z]*-*[0-9]*\s*[-:]\?\s*//')
-    fi
-  fi
-fi
-
-# 2. Fallback: Check environment variable (export CLAUDE_TASK="BUG-1091:description")
-if [ -z "$CURRENT_TASK" ] && [ -n "$CLAUDE_TASK" ]; then
-  CURRENT_TASK=$(echo "$CLAUDE_TASK" | cut -d':' -f1)
-  TASK_DESC=$(echo "$CLAUDE_TASK" | cut -d':' -f2-)
-fi
-
-# 2. Check per-session task file (by Claude session ID)
-if [ -z "$CURRENT_TASK" ] && [ -n "$SESSION_ID" ] && [ -f "$CWD/.claude/tasks/${SESSION_ID}.json" ]; then
-  JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/tasks/${SESSION_ID}.json" 2>/dev/null)
-  JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/tasks/${SESSION_ID}.json" 2>/dev/null)
-  if [ -n "$JSON_TASK" ]; then
-    CURRENT_TASK="$JSON_TASK"
-    TASK_DESC="$JSON_DESC"
-  fi
-fi
-
-# 2. Fallback to global current-task.json
-if [ -z "$CURRENT_TASK" ] && [ -f "$CWD/.claude/current-task.json" ]; then
-  JSON_TASK=$(jq -r '.id // ""' "$CWD/.claude/current-task.json" 2>/dev/null)
-  JSON_DESC=$(jq -r '.description // ""' "$CWD/.claude/current-task.json" 2>/dev/null)
-  if [ -n "$JSON_TASK" ]; then
-    CURRENT_TASK="$JSON_TASK"
-    TASK_DESC="$JSON_DESC"
-  fi
-fi
-
-# 3. Fallback to MASTER_PLAN.md (only if no task file exists)
-if [ -z "$CURRENT_TASK" ] && [ -f "$CWD/docs/MASTER_PLAN.md" ]; then
-  # Find task with IN PROGRESS or 🔄 status in the table
-  TASK_LINE=$(grep -E "^\|.*\|.*(IN PROGRESS|🔄)" "$CWD/docs/MASTER_PLAN.md" 2>/dev/null | head -1)
-  if [ -n "$TASK_LINE" ]; then
-    CURRENT_TASK=$(echo "$TASK_LINE" | grep -oE "(TASK|BUG|ROAD|IDEA|ISSUE)-[0-9]+" | head -1)
-    TASK_DESC=$(echo "$TASK_LINE" | cut -d'|' -f3 | sed 's/^\s*\*\*//; s/\*\*\s*$//; s/^\s*//; s/\s*$//')
-  fi
-fi
-
-# Trim description to 30 chars
-if [ ${#TASK_DESC} -gt 30 ]; then
-  TASK_DESC="${TASK_DESC:0:30}…"
-fi
 
 # Try to find actual running Vite port for this worktree
 ACTUAL_PORT=""
@@ -142,15 +63,5 @@ else
   PORT_STATUS="$CONFIG_PORT (config)"
 fi
 
-# Build task display string
-TASK_DISPLAY=""
-if [ -n "$CURRENT_TASK" ]; then
-  if [ -n "$TASK_DESC" ]; then
-    TASK_DISPLAY=" | 🎯 $CURRENT_TASK: $TASK_DESC"
-  else
-    TASK_DISPLAY=" | 🎯 $CURRENT_TASK"
-  fi
-fi
-
 # Output status line
-echo "📍 $WORKTREE_NAME :$PORT_STATUS$TASK_DISPLAY | $MODEL"
+echo "📍 $WORKTREE_NAME :$PORT_STATUS | $MODEL"

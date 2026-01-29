@@ -373,7 +373,7 @@
                 </span>
                 <span
                   class="project-indicator"
-                  :style="{ backgroundColor: project.color }"
+                  :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"
                 >
                   {{ project.emoji || project.name.charAt(0) }}
                 </span>

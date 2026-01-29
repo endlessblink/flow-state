@@ -396,9 +396,9 @@ export class UnifiedTaskService {
 
   // Event handling
   private initializeEventListeners(): void {
-    this.eventBus.on('external:task-created', this.handleExternalTaskCreated.bind(this));
-    this.eventBus.on('external:task-updated', this.handleExternalTaskUpdated.bind(this));
-    this.eventBus.on('external:task-deleted', this.handleExternalTaskDeleted.bind(this));
+    this.eventBus.on('external:task-created', this.handleExternalTaskCreated.bind(this) as any);
+    this.eventBus.on('external:task-updated', this.handleExternalTaskUpdated.bind(this) as any);
+    this.eventBus.on('external:task-deleted', this.handleExternalTaskDeleted.bind(this) as any);
   }
 
   private async handleExternalTaskCreated(event: TaskEvent): Promise<void> {

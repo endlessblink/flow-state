@@ -497,6 +497,15 @@ const startLongBreak = async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* RTL support: inherit document direction */
+  direction: inherit;
+  text-align: start;
+}
+
+/* RTL-specific: Let browser detect text direction */
+:dir(rtl) .timer-task {
+  direction: rtl;
+  unicode-bidi: plaintext;
 }
 
 .timer-controls {

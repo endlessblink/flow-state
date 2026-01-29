@@ -78,22 +78,24 @@ const resetEmail = ref('')
 // Auto-close modal when user becomes authenticated
 // BUG-340: Fixed Tauri WebView reactivity issue - use nextTick + immediate close
 watch(() => authStore.isAuthenticated, async (isAuth, oldIsAuth) => {
-  console.log('👁️ Auth state changed in modal, isAuthenticated:', isAuth, 'was:', oldIsAuth, 'modalOpen:', uiStore.authModalOpen)
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] Auth state changed, isAuthenticated:', isAuth, 'was:', oldIsAuth, 'modalOpen:', uiStore.authModalOpen)
+  }
 
   // Only act on transition from false -> true (sign-in), not on initial load
   if (isAuth && !oldIsAuth && uiStore.authModalOpen) {
-    console.log('✅ User just signed in, auto-closing modal')
     const redirectPath = uiStore.authModalRedirect
 
     // BUG-340: Use nextTick to ensure Vue reactivity catches up in Tauri WebView
     await nextTick()
 
     uiStore.closeAuthModal()
-    console.log('✅ Modal closed, authModalOpen is now:', uiStore.authModalOpen)
 
     // Redirect if needed
     if (redirectPath && router.currentRoute.value && redirectPath !== router.currentRoute.value.fullPath) {
-      console.log('🔄 Redirecting to:', redirectPath)
+      if (import.meta.env.DEV) {
+        console.log('[AUTH:UI] Redirecting to:', redirectPath)
+      }
       router.push(redirectPath)
     }
   }
@@ -105,7 +107,7 @@ watch(
   () => [authStore.isAuthenticated, uiStore.authModalOpen] as const,
   ([isAuth, modalOpen]) => {
     if (isAuth && modalOpen) {
-      console.warn('⚠️ [AuthModal] BUG-1085 fallback: Modal still open after auth, forcing close')
+      console.warn('[AUTH:UI] BUG-1085 fallback: Modal still open after auth, forcing close')
       uiStore.closeAuthModal()
     }
   },
@@ -114,13 +116,9 @@ watch(
 
 // ===== Methods =====
 async function handleAuthSuccess(user: User) {
-  console.log('✅ Authentication successful:', user?.email)
-  console.log('🔍 Auth modal state before close:', {
-    isOpen: uiStore.authModalOpen,
-    redirectPath: uiStore.authModalRedirect,
-    authStoreUser: authStore.user?.email,
-    isAuthenticated: authStore.isAuthenticated
-  })
+  if (import.meta.env.DEV) {
+    console.log('[AUTH:UI] Authentication successful:', user?.email)
+  }
 
   // BUG-340: Use nextTick to ensure Vue reactivity catches up in Tauri WebView
   await nextTick()
@@ -132,14 +130,11 @@ async function handleAuthSuccess(user: User) {
   // BUG-340: Force another tick to ensure UI updates in Tauri
   await nextTick()
 
-  console.log('✅ Auth modal closed. New state:', {
-    isOpen: uiStore.authModalOpen,
-    isAuthenticated: authStore.isAuthenticated
-  })
-
   // Redirect if needed
   if (redirectPath) {
-    console.log('🔄 Redirecting to:', redirectPath)
+    if (import.meta.env.DEV) {
+      console.log('[AUTH:UI] Redirecting to:', redirectPath)
+    }
     await router.push(redirectPath)
   }
 }
@@ -155,7 +150,7 @@ async function handleResetSuccess() {
 }
 
 function handleGoogleError(error: Error) {
-  console.error('Google sign-in error:', error)
+  console.error('[AUTH:UI] Google sign-in error:', error)
   // Error is already handled by GoogleSignInButton and auth store
 }
 

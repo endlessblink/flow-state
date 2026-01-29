@@ -653,31 +653,34 @@ defineExpose({
 }
 
 .priority-btn.active {
-  background: var(--brand-gradient);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--bg-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
 .priority-btn.low.active {
-  background: var(--success);
+  background: transparent;
   border-color: var(--success);
+  color: var(--success);
 }
 
 .priority-btn.medium.active {
-  background: var(--warning);
+  background: transparent;
   border-color: var(--warning);
+  color: var(--warning);
 }
 
 .priority-btn.high.active {
-  background: var(--danger);
+  background: transparent;
   border-color: var(--danger);
+  color: var(--danger);
 }
 
 .date-btn.active {
-  background: var(--brand-gradient);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--bg-primary);
+  color: var(--brand-primary);
 }
 
 .date-btn.clear {
@@ -703,10 +706,10 @@ defineExpose({
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-5);
-  background: var(--brand-gradient);
+  background: transparent;
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-lg);
-  color: var(--bg-primary);
+  color: var(--brand-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   cursor: pointer;
@@ -725,11 +728,11 @@ defineExpose({
 
 .add-task-btn kbd {
   padding: var(--space-0_5) var(--space-1_5);
-  background: var(--overlay-light);
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-family: var(--font-mono);
-  opacity: 0.8;
 }
 
 /* Pending Section */
@@ -779,8 +782,9 @@ defineExpose({
 }
 
 .sort-all-btn:hover {
-  background: var(--brand-gradient);
-  color: var(--bg-primary);
+  background: rgba(78, 205, 196, 0.08);
+  color: var(--brand-hover);
+  border-color: var(--brand-hover);
   transform: translateY(-1px);
 }
 

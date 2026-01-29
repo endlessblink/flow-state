@@ -681,8 +681,9 @@ function handleSwipeEnd() {
 }
 
 .priority-btn.active {
-  background: var(--brand-gradient);
+  background: transparent;
   border-color: var(--brand-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
@@ -778,18 +779,17 @@ function handleSwipeEnd() {
 }
 
 .quick-date-btn.active {
-  background: var(--brand-gradient);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--bg-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--brand-primary-alpha-20);
 }
 
 .quick-date-btn.clear-btn.active {
-  background: var(--danger);
+  background: transparent;
   border-color: var(--danger);
-  color: var(--bg-primary);
+  color: var(--danger);
   font-weight: var(--font-semibold);
 }
 

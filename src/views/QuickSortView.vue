@@ -486,11 +486,10 @@ function formatTime(milliseconds: number): string {
 }
 
 .tab-btn.active {
-  background: var(--brand-gradient);
+  background: transparent;
   border-color: var(--brand-primary);
-  color: var(--bg-primary);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
-  box-shadow: 0 2px 8px var(--brand-primary-alpha-20);
 }
 
 .tab-badge {
@@ -507,7 +506,7 @@ function formatTime(milliseconds: number): string {
 }
 
 .tab-btn.active .tab-badge {
-  background: var(--overlay-light);
+  background: var(--brand-primary);
   color: var(--bg-primary);
 }
 
@@ -517,7 +516,7 @@ function formatTime(milliseconds: number): string {
 }
 
 .tab-btn.active .tab-badge.pending {
-  background: var(--overlay-light);
+  background: var(--warning);
   color: var(--bg-primary);
 }
 

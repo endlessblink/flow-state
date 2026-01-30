@@ -91,9 +91,9 @@
 
 ---
 
-### BUG-1112: No Notification or Audio When Pomodoro Timer Finishes (🔄 IN PROGRESS)
+### BUG-1112: No Notification or Audio When Pomodoro Timer Finishes (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-30)
 
 **Problem**: When the Pomodoro timer finishes a work/break session, there is no notification and no audio alert to inform the user.
 
@@ -108,9 +108,19 @@
 - Check if audio file exists and is being played
 - Review `timer.ts` `onComplete` handler
 
-**Related**: TASK-1009 (Unified Timer Completion Notifications - marked done but may have regressed)
+**Root Cause**:
+1. `silent: true` in Service Worker notification suppressed OS notification sounds
+2. Audio volume was 0.1 (barely audible)
+3. Service Worker disabled in dev mode (`devOptions.enabled: false`)
 
-**Files**: `src/sw.ts`, `src/stores/timer.ts`, `src/composables/useTimerNotifications.ts` (if exists)
+**Fix Applied**:
+1. Changed `silent: false` in `src/sw.ts` and fallback notifications in `timer.ts`
+2. Increased audio volume to 0.25-0.3 with 3-note chime
+3. Enabled Service Worker in dev mode (`vite.config.ts`)
+
+**Verification**: User must test timer completion to confirm system notification + audio works
+
+**Files Changed**: `src/sw.ts`, `src/stores/timer.ts`, `vite.config.ts`
 
 ---
 
@@ -147,9 +157,9 @@
 
 ---
 
-### BUG-1097: Due Date Not Persisting from Edit Modal (🔄 IN PROGRESS)
+### ~~BUG-1097~~: Due Date Not Persisting from Edit Modal (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-27)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-30)
 
 **Symptoms**:
 1. Due date in Edit Task modal shows previous date, not current - even after opening modal on task WITH a date

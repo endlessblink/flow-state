@@ -450,20 +450,25 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### BUG-1115: Tauri App Performance is Slow (📋 PLANNED)
+### BUG-1115: Tauri App Performance is Slow (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
 
 **Problem**: Tauri desktop app feels sluggish compared to web version.
 
-**Investigation**:
-1. Profile WebView rendering performance
-2. Check if hardware acceleration is enabled
-3. Review Vite build optimization for Tauri target
-4. Check if dev tools are accidentally enabled in production build
-5. Monitor memory usage and potential leaks
+**Root Cause Analysis** (completed):
+1. ❌ **Missing release profile optimizations** - No `[profile.release]` in Cargo.toml (no LTO, no strip, default codegen-units)
+2. ❌ **DevTools feature always enabled** - `features = ["devtools"]` compiled into release builds
+3. ⚠️ **9 Tauri plugins loaded** - May slow startup (shell, http, notification, single-instance, updater, dialog, fs, store, log)
+4. ✅ Logging gated by `debug_assertions` - Good
+5. ✅ CSP is null (not blocking) - Good
 
-**Files to Investigate**: `src-tauri/tauri.conf.json`, `vite.config.ts`, app runtime performance
+**Fix Plan**:
+1. Add `[profile.release]` with LTO, codegen-units=1, strip=true
+2. Move devtools to dev feature flag
+3. Consider lazy-loading non-essential plugins
+
+**Files to Modify**: `src-tauri/Cargo.toml`
 
 ---
 
@@ -532,9 +537,9 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-1087: KDE Widget - Task Readability + Active Task Highlight (🔄 IN PROGRESS)
+### ~~TASK-1087~~: KDE Widget - Task Readability + Active Task Highlight (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-26)
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-30)
 
 **Changes Made**:
 - [x] Added `currentTaskId` property for active timer task
@@ -543,7 +548,7 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 - [x] Added active task highlight (accent border + glow + pulse)
 - [x] Added chronometer icon + bold text for active task
 
-**Verification Pending**: Restart Plasma, test RTL Hebrew titles, test active highlighting.
+**Verified**: Plasma restarted, widget displays correctly.
 
 **File**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 

@@ -411,5 +411,14 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        // TASK-1060: Replace panic-inducing .expect() with graceful error handling
+        .unwrap_or_else(|e| {
+            eprintln!("CRITICAL: Tauri application failed to start: {}", e);
+            eprintln!("Possible causes:");
+            eprintln!("  - Display server unavailable (X11/Wayland on Linux)");
+            eprintln!("  - WebKitGTK initialization failure");
+            eprintln!("  - Resource exhaustion (memory, file descriptors)");
+            eprintln!("  - Permission issues with app capabilities");
+            std::process::exit(1);
+        });
 }

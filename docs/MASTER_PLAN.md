@@ -493,19 +493,37 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 **Root Causes Found**:
 1. CI/CD `deploy.yml` was killing System Caddy, starting Docker Caddy (conflict)
 2. SWR cache not invalidated on auth change (fixed in BUG-1056)
+3. Silent session refresh failure didn't set error state (fixed 2026-01-30)
+4. No retry on initial database load (fixed 2026-01-30)
+5. Fetch functions started before auth ready (fixed 2026-01-30)
+6. Tauri `.expect()` panic on startup failure (fixed 2026-01-30)
+7. Circular dependency causing TDZ error in production build (BUG-1099, fixed 2026-01-30)
 
 **Infrastructure Fixes Applied** (2026-01-24):
 - Docker stack stopped, System Caddy re-enabled
 - Fixed `deploy.yml` - static files only, graceful Caddy reload
+
+**Phase 2 Fixes Applied** (2026-01-30):
+- Mark `initializationFailed` when session refresh fails (`auth.ts`)
+- Add retry wrapper (3x with backoff) for initial database load (`useAppInitialization.ts`)
+- Add auth initialization guard to `fetchTasks`, `fetchProjects`, `fetchGroups` (`useSupabaseDatabase.ts`)
+
+**Phase 3 Fixes Applied** (2026-01-30):
+- Replace `.expect()` panic with graceful error handling + helpful messages (`lib.rs`)
+
+**Phase 4 Audit Findings** (2026-01-30):
+- Offline database (`useOfflineDatabase.ts`) is a shell - NOT integrated with Supabase
+- Notification fallback lacks action buttons when SW unavailable
+- SWR cache 3s stale window acceptable but may cause brief position flash
 - Added Caddy systemd auto-restart config
 
 **Remaining Phases** (condensed):
-- [ ] Phase 1.3: Verify JWT keys in `/opt/supabase/docker/.env`
-- [ ] Phase 2: Auth flow audit, WebSocket stability tests
-- [ ] Phase 3: Tauri debug (SIGTERM causes, auth stability)
-- [ ] Phase 4: PWA service worker audit
-- [ ] Phase 5: KDE widget sync verification
-- [ ] Phase 6: Cross-platform E2E matrix test
+- [ ] Phase 1.3: Verify JWT keys in `/opt/supabase/docker/.env` (requires VPS SSH)
+- [x] Phase 2: Auth flow audit + fixes (DONE 2026-01-30)
+- [x] Phase 3: Tauri debug + panic fix (DONE 2026-01-30)
+- [x] Phase 4: PWA service worker audit (DONE 2026-01-30 - offline DB gap identified)
+- [ ] Phase 5: KDE widget sync verification (requires testing)
+- [ ] Phase 6: Cross-platform E2E matrix test (requires testing)
 
 **Success Criteria**: Caddy 24h+ uptime, no 0-task loads, Tauri no SIGTERM, PWA overnight persistence.
 
@@ -727,13 +745,22 @@ User-triggered rotation of day groups (Mon-Sun) with midnight notification.
 
 ---
 
-### FEATURE-1023: Voice Input - Transcription + Task Extraction (📋 PLANNED)
+### ~~FEATURE-1023~~: Voice Input - Transcription + Task Extraction (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-30)
 
-Voice input → Web Speech API → NLP extracts task properties (priority, due date, project). Supports Hebrew + English.
+Voice input → Web Speech API / Whisper → NLP extracts task properties (priority, due date). Supports Hebrew + English.
 
-**Subtasks**: TASK-1024 (Web Speech API), TASK-1025 (Mic Button), TASK-1026 (NLP Parser), TASK-1027 (Commands for Existing Tasks), TASK-1028 (Confirmation UI), TASK-1029 (Whisper Fallback)
+**Implementation**:
+- `useSpeechRecognition.ts` - Web Speech API with language auto-detect
+- `useWhisperSpeech.ts` - Groq Whisper fallback (12x cheaper than OpenAI)
+- `useVoiceNLPParser.ts` - Extracts title, due date, priority from natural language
+- Mic button in Mobile Inbox with AI/Browser mode toggle
+- Integrated NLP parsing in `TaskCreateBottomSheet.vue`
+
+**Completed Subtasks**: ~~TASK-1024~~ (Web Speech API), ~~TASK-1025~~ (Mic Button), ~~TASK-1026~~ (NLP Parser), ~~TASK-1027~~ (Commands), ~~TASK-1028~~ (Confirmation UI), ~~TASK-1029~~ (Whisper Fallback)
+
+**Known Issues**: BUG-1109 (Hebrew voice transcription sometimes outputs Arabic)
 
 ---
 

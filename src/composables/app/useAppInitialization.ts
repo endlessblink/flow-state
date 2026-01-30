@@ -57,11 +57,28 @@ export function useAppInitialization() {
         console.log('🔍 [BUG-339-DEBUG] Starting database load...')
         console.log('🔍 [BUG-339-DEBUG] Auth status:', authStore.isAuthenticated)
 
-        await Promise.all([
-            taskStore.loadFromDatabase(),
-            projectStore.loadProjectsFromDatabase(),
-            canvasStore.loadFromDatabase()
-        ])
+        // TASK-1060: Add retry wrapper for initial load to handle transient auth failures
+        const loadWithRetry = async (maxRetries = 3, delayMs = 1000) => {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    await Promise.all([
+                        taskStore.loadFromDatabase(),
+                        projectStore.loadProjectsFromDatabase(),
+                        canvasStore.loadFromDatabase()
+                    ])
+                    return // Success
+                } catch (error) {
+                    console.warn(`⚠️ [TASK-1060] Database load attempt ${attempt}/${maxRetries} failed:`, error)
+                    if (attempt === maxRetries) {
+                        throw error // Re-throw on final attempt
+                    }
+                    // Exponential backoff
+                    await new Promise(resolve => setTimeout(resolve, delayMs * attempt))
+                }
+            }
+        }
+
+        await loadWithRetry()
 
         console.log('🔍 [BUG-339-DEBUG] Task count after load:', taskStore.tasks.length)
         console.log('🔍 [BUG-339-DEBUG] Raw tasks:', taskStore._rawTasks?.length || 'N/A')

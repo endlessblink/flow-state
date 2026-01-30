@@ -144,6 +144,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import {
   Flag, Calendar, CalendarPlus, CalendarDays, X, Square
 } from 'lucide-vue-next'
+import { useVoiceNLPParser } from '@/composables/useVoiceNLPParser'
 
 interface Props {
   isOpen: boolean
@@ -232,10 +233,35 @@ const hasCustomDate = computed(() => {
   return taskDueDate.value !== null && !isDueToday.value && !isDueTomorrow.value && !isDueNextWeek.value
 })
 
-// Watch for voice transcript
+// NLP Parser for voice transcripts
+const { parseTranscription } = useVoiceNLPParser()
+
+// Watch for voice transcript and parse it with NLP
 watch(() => props.voiceTranscript, (transcript) => {
   if (transcript && transcript.trim()) {
-    taskTitle.value = transcript.trim()
+    // Parse the transcript to extract title, date, priority
+    const parsed = parseTranscription(transcript.trim())
+
+    // Set the cleaned title (with date/priority keywords removed)
+    taskTitle.value = parsed.title
+
+    // Set priority if detected
+    if (parsed.priority) {
+      taskPriority.value = parsed.priority
+    }
+
+    // Set due date if detected
+    if (parsed.dueDate) {
+      const date = new Date(parsed.dueDate + 'T00:00:00')
+      if (!isNaN(date.getTime())) {
+        taskDueDate.value = date
+        taskDueDateInput.value = parsed.dueDate
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      console.log('[VoiceNLP] Parsed:', parsed)
+    }
   }
 })
 

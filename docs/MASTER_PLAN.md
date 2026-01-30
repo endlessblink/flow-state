@@ -172,9 +172,9 @@
 
 ---
 
-### BUG-1099: VPS: Done Tasks Not Filtered Until Refresh - ReferenceError (🔄 IN PROGRESS)
+### ~~BUG-1099~~: VPS: Done Tasks Not Filtered Until Refresh - ReferenceError (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-27)
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-30)
 
 **Problem**: On VPS production (in-theflow.com), completed/done tasks appear on canvas when they should be hidden. They only disappear after a page refresh.
 
@@ -184,19 +184,20 @@ ReferenceError: can't access lexical declaration 'xe' before initialization
     xe https://in-theflow.com/assets/CanvasView-DB2EuB-i.js:27
 ```
 
-**Root Cause Analysis**: The minified CanvasView bundle has a JavaScript initialization error, likely caused by:
-1. Circular dependency between modules
-2. Vite/Rollup minification issue with variable hoisting
-3. Temporal dead zone violation in bundled code
+**Root Cause**: Circular dependency chain causing Temporal Dead Zone (TDZ) error:
+`CanvasView → useCanvasOrchestrator → useCanvasFilteredState → @/stores/tasks → @/stores/canvas → circular!`
 
-**Related Bugs**: BUG-1097 (due date persistence) - may share same root cause with build/sync issues
+Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module evaluation during bundling.
 
-**Investigation Steps**:
-1. Check for circular imports in canvas-related files
-2. Review recent changes to CanvasView.vue and its imports
-3. Test with `npm run build && npm run preview` locally to reproduce
-4. Check if error appears in development mode
-5. Consider using `vite-plugin-circular-dependency` to detect cycles
+**Fix Applied (2026-01-30)**:
+1. Changed type imports in 4 files from `@/stores/tasks` → `@/types/tasks`:
+   - `useCanvasFilteredState.ts`
+   - `useCanvasGroups.ts`
+   - `useCanvasSectionProperties.ts`
+   - `stores/canvas/modals.ts`
+2. Made `tasks.ts` → `canvas.ts` import dynamic to break runtime cycle
+
+**Verification**: Build succeeds, tests pass. Needs VPS deployment + manual testing.
 
 **Files to Investigate**: `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasFilteredState.ts`, `src/composables/canvas/useCanvasOrchestrator.ts`, `vite.config.ts`
 

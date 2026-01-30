@@ -172,9 +172,9 @@
 
 ---
 
-### ~~BUG-1099~~: VPS: Done Tasks Not Filtered Until Refresh - ReferenceError (👀 REVIEW)
+### ~~BUG-1099~~: VPS: Done Tasks Not Filtered Until Refresh - ReferenceError (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-30)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-30)
 
 **Problem**: On VPS production (in-theflow.com), completed/done tasks appear on canvas when they should be hidden. They only disappear after a page refresh.
 

@@ -5,7 +5,8 @@ import { useTaskPersistence } from './tasks/taskPersistence'
 import { useTaskOperations } from './tasks/taskOperations'
 import { useTaskHistory } from './tasks/taskHistory'
 import { useProjectStore } from './projects'
-import { useCanvasStore } from './canvas'
+// BUG-1099: Removed synchronous import of canvas store to break circular dependency
+// Canvas store access is now done via dynamic import in updateTaskFromSync
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
@@ -300,11 +301,14 @@ export const useTaskStore = defineStore('tasks', () => {
             _rawTasks.value[idx] = normalizedTask
 
             // Only trigger canvas sync if there was an actual visual change
+            // BUG-1099: Use dynamic import to avoid circular dependency TDZ error
             if (hasRelevantChange) {
-              try {
-                const canvasStore = useCanvasStore()
-                canvasStore.syncTrigger++
-              } catch { /* Canvas store may not be initialized in all contexts */ }
+              import('./canvas').then(({ useCanvasStore }) => {
+                try {
+                  const canvasStore = useCanvasStore()
+                  canvasStore.syncTrigger++
+                } catch { /* Canvas store may not be initialized in all contexts */ }
+              }).catch(() => { /* Canvas module not available */ })
             }
           }
         } else {

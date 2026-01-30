@@ -1,5 +1,5 @@
 import type { useTaskStore } from '@/stores/tasks'
-import { type Task } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, detectPowerKeyword } from '../useTaskSmartGroups'
 import { resolveDueDate } from '../useGroupSettings'

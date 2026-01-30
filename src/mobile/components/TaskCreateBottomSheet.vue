@@ -486,6 +486,15 @@ function autoResize(event: Event) {
   color: var(--text-muted, rgba(255, 255, 255, 0.4));
 }
 
+/* RTL support for Hebrew/Arabic text */
+.task-text-block[dir="rtl"] {
+  text-align: right;
+}
+
+.task-text-block[dir="rtl"]::placeholder {
+  text-align: right;
+}
+
 /* Compact options at bottom */
 .compact-options {
   display: flex;

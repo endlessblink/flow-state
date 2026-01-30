@@ -686,10 +686,15 @@ function triggerHaptic(duration: number = 10) {
   text-align: right;
 }
 
-[dir="rtl"] .field-input,
-[dir="rtl"] .field-textarea {
+/* RTL support - attribute on the element itself */
+.field-input[dir="rtl"],
+.field-textarea[dir="rtl"] {
   text-align: right;
-  direction: rtl;
+}
+
+.field-input[dir="rtl"]::placeholder,
+.field-textarea[dir="rtl"]::placeholder {
+  text-align: right;
 }
 
 [dir="rtl"] .priority-options,

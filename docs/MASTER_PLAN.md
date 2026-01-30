@@ -91,6 +91,62 @@
 
 ---
 
+### BUG-1112: No Notification or Audio When Pomodoro Timer Finishes (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-30)
+
+**Problem**: When the Pomodoro timer finishes a work/break session, there is no notification and no audio alert to inform the user.
+
+**Expected Behavior** (per TASK-1009 implementation):
+1. Web App: Service Worker notification with "Start Break" / "+5 min" action buttons
+2. KDE Widget: notify-send notification + full-screen overlay
+3. Audio alert sound
+
+**Investigation Needed**:
+- Check if Service Worker notifications are registered and working
+- Verify browser notification permissions
+- Check if audio file exists and is being played
+- Review `timer.ts` `onComplete` handler
+
+**Related**: TASK-1009 (Unified Timer Completion Notifications - marked done but may have regressed)
+
+**Files**: `src/sw.ts`, `src/stores/timer.ts`, `src/composables/useTimerNotifications.ts` (if exists)
+
+---
+
+### BUG-1113: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED | **Parent**: TASK-303
+
+**Problem**: The Dev-Maestro orchestrator creates git worktrees in `.agent-worktrees/` for each task but does not clean them up after completion. These stale directories force Claude Code to load them into context, wasting tokens and causing confusion.
+
+**Evidence** (2026-01-27):
+```
+.agent-worktrees/
+├── orch-audit-task-1/   # Jan 20 - 10+ days old
+├── orch-audit-task-2/
+├── orch-audit-task-3/
+├── orch-task-1/         # Jan 18 - 12+ days old
+├── task-1 through task-18/  # Jan 27 - multiple stale worktrees
+```
+
+**Impact**:
+1. Claude Code loads all these directories into context on startup
+2. Wastes context tokens on stale/irrelevant code
+3. Git worktrees consume disk space (~100MB+ each)
+4. Confuses Claude when it sees duplicate file structures
+
+**Expected Behavior**:
+1. Worktrees should be cleaned up after task completion (merge OR discard)
+2. Automatic cleanup of worktrees older than 24 hours
+3. Manual cleanup command available in UI
+
+**Related**: BUG-1019 (Swarm agent cleanup + OOM prevention)
+
+**Files**: `~/.dev-maestro/server.js` (`cleanupWorktree()`, `createAgentWorktree()`)
+
+---
+
 ### BUG-1097: Due Date Not Persisting from Edit Modal (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-27)
@@ -357,6 +413,55 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
+### TASK-1114: Tauri Auto-Update from GitHub Releases (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Request**: Enable Tauri app to automatically update when new versions are pushed to GitHub releases.
+
+**Implementation**:
+1. Tauri already has `plugins.updater` configured in `tauri.conf.json` pointing to GitHub releases
+2. Need to verify GitHub Actions workflow creates proper `latest.json` with update info
+3. Add UI to show update availability and prompt user to install
+4. Test update flow: old version → detect update → download → install → restart
+
+**Files**: `src-tauri/tauri.conf.json`, `.github/workflows/release.yml`, `src/composables/useTauriUpdater.ts`
+
+---
+
+### BUG-1115: Tauri App Performance is Slow (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Tauri desktop app feels sluggish compared to web version.
+
+**Investigation**:
+1. Profile WebView rendering performance
+2. Check if hardware acceleration is enabled
+3. Review Vite build optimization for Tauri target
+4. Check if dev tools are accidentally enabled in production build
+5. Monitor memory usage and potential leaks
+
+**Files to Investigate**: `src-tauri/tauri.conf.json`, `vite.config.ts`, app runtime performance
+
+---
+
+### BUG-1116: Tauri Mouse Offset During Drag (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: When dragging tasks in Tauri app, the mouse cursor is not positioned correctly above the dragged task - there's an offset.
+
+**Root Cause Analysis**:
+1. Possible WebView coordinate transformation issues
+2. Window scale factor / HiDPI handling
+3. Vue Flow drag offset calculation not accounting for Tauri window chrome
+4. CSS transform origin differences in WebView vs browser
+
+**Files to Investigate**: `src/composables/canvas/useCanvasInteractions.ts`, `src-tauri/tauri.conf.json` (window config)
+
+---
+
 ## Active Tasks (IN PROGRESS)
 
 ### TASK-1060: Infrastructure & E2E Sync Stability (🔄 IN PROGRESS)
@@ -438,6 +543,56 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
 
 QA Supervisor verification of January 20, 2026 Data Crisis. See `docs/reports/2026-01-20-auth-data-loss-analysis.md`.
+
+---
+
+### INQUIRY-1112: Supabase Function Search Path Mutable Warnings (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Supabase Security Advisor shows 7 warnings for "Function Search Path Mutable" on database functions:
+- `public.check_task_ids_availability`
+- `public.create_task_tombstone`
+- `public.safe_create_task`
+- `public.update_updated_at_column`
+- `public.increment_task_position_version`
+- `public.increment_group_position_version`
+- `public.cleanup_expired_tombstones`
+
+**Investigation**: Determine if these warnings pose a real security risk for a personal productivity app and whether to fix them.
+
+---
+
+### ~~INQUIRY-1113~~: Terminal UI Task Picker for Claude Code (✅ DONE)
+
+**Priority**: P3-LOW | **Status**: ✅ DONE (2026-01-30)
+
+**Question**: Can we build an interactive terminal app that works within Claude Code to show scrollable/clickable task options?
+
+**Answer**: YES - Prototype built and working at `tools/task-picker/`
+
+**Research Findings**:
+| Framework | Pros | Cons | Verdict |
+|-----------|------|------|---------|
+| **Ink v6 + @inkjs/ui** | Modern, maintained, used by Claude Code itself | Select has no built-in search | ✅ CHOSEN |
+| **ink-select-input v6** | Lightweight, j/k navigation | No search, basic | Good alternative |
+| **ink-search-select** | Has incremental search | Uses old Ink v2.x (outdated) | ❌ Outdated |
+| **Bubbletea** | Very polished, great ecosystem | Go-only (not Node.js) | N/A for this project |
+
+**Implementation**:
+- Built with: `ink` v5 + `@inkjs/ui` v2 + `tsx` runtime
+- Features: Filter by type, show/hide done, j/k navigation, Enter to select
+- Non-interactive mode: `--list` flag for CI/scripting
+- Location: `tools/task-picker/index.tsx`
+
+**Usage**:
+```bash
+npm run tasks          # Interactive mode (requires TTY)
+npm run tasks:list     # Non-interactive list
+npm run tasks:bugs     # Filter by BUG type
+```
+
+**Sources**: [Ink GitHub](https://github.com/vadimdemedes/ink), [@inkjs/ui](https://github.com/vadimdemedes/ink-ui), [LogRocket TUI Comparison](https://blog.logrocket.com/7-tui-libraries-interactive-terminal-apps/)
 
 ---
 
@@ -610,12 +765,13 @@ Enables Claude agents to implement code changes using git worktrees for isolatio
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| BUG-1113 | P0 | Stale worktrees not cleaned up - forces Claude Code context bloat |
+| BUG-1019 | P0 | Swarm agent cleanup + OOM prevention |
 | TASK-321 | P2 | Test merge/discard workflow E2E |
 | TASK-322 | P2 | Automatic error recovery (exponential backoff, partial progress) |
 | FEATURE-1013 | P2 | Auto-detect data layer (Pinia, Supabase) |
 | FEATURE-1014 | P2 | Smart questions with pros/cons |
 | FEATURE-1015 | P2 | Project context caching |
-| BUG-1019 | P0 | Swarm agent cleanup + OOM prevention |
 
 **Key Files**: `~/.dev-maestro/server.js`, `~/.dev-maestro/kanban/index.html`
 

@@ -319,15 +319,22 @@ Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue 
 
 **Problem**: Hebrew text in "New Task" modal displays left-to-right instead of right-to-left.
 
-**Root Cause**: Textarea and input elements were missing `dir` attribute binding. Pattern already existed in `VoiceTaskConfirmation.vue`.
+**Root Cause**: Two issues:
+1. Textarea/input elements missing `dir` attribute binding
+2. CSS missing `text-align: right` for RTL elements (dir attribute sets direction but not alignment)
 
-**Fix Applied**: Added RTL auto-detection computed property that checks first character against Hebrew/Arabic/Persian/Urdu Unicode ranges. Bound `:dir` attribute to title and description inputs.
+**Fix Applied**:
+1. Added RTL auto-detection computed property (checks first character against Hebrew/Arabic/Persian/Urdu Unicode ranges)
+2. Bound `:dir="titleDirection"` to inputs
+3. Added CSS: `.task-text-block[dir="rtl"] { text-align: right; }`
 
 **Files Changed**:
-- `src/mobile/components/TaskCreateBottomSheet.vue` - Added `titleDirection` computed + `:dir` binding
-- `src/mobile/components/TaskEditBottomSheet.vue` - Added `titleDirection` + `descriptionDirection` computed + `:dir` bindings
+- `src/mobile/components/TaskCreateBottomSheet.vue` - `titleDirection` computed + `:dir` binding + CSS
+- `src/mobile/components/TaskEditBottomSheet.vue` - `titleDirection` + `descriptionDirection` + CSS
 
-**Verification**: User must test on mobile with Hebrew text input.
+**SOP**: `docs/sop/SOP-042-rtl-support-pattern.md`
+
+**Verification**: User must test on mobile with Hebrew text input - text should align right.
 
 ---
 
@@ -582,11 +589,13 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-333: Independent Audit of Crisis Analysis (🔄 IN PROGRESS)
+### ~~TASK-333~~: Independent Audit of Crisis Analysis (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-30)
 
 QA Supervisor verification of January 20, 2026 Data Crisis. See `docs/reports/2026-01-20-auth-data-loss-analysis.md`.
+
+**Audit Result**: All 10 crisis items resolved. All remediation tasks (TASK-329, TASK-330, TASK-332) verified complete. Report created at `docs/reports/2026-01-20-auth-data-loss-analysis.md`.
 
 ---
 
@@ -703,9 +712,9 @@ Record audio → transcription API (Whisper/Deepgram) → create task. Mobile-fi
 
 ---
 
-### TASK-1110: PWA Mobile - Add Re-Record Option in Task Creation (📋 PLANNED)
+### TASK-1110: PWA Mobile - Add Re-Record Option in Task Creation (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-30)
 
 **Feature**: Add ability to re-record voice input from the task creation modal. Currently no way to redo a recording once made.
 

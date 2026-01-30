@@ -225,19 +225,22 @@ ReferenceError: can't access lexical declaration 'xe' before initialization
 
 ---
 
-### BUG-1111: Tauri Desktop App Not Syncing from Main Database (🔄 IN PROGRESS)
+### ~~BUG-1111~~: Tauri Desktop App Not Syncing from Main Database (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-30)
 
 **Problem**: Tauri desktop app doesn't sync data from the main Supabase database. Tasks/groups created on web app don't appear in Tauri app.
 
-**Investigation**:
-1. Check if Tauri app is connecting to correct Supabase URL (local vs production)
-2. Verify auth session is established in Tauri context
-3. Check if realtime subscriptions are initializing
-4. Review CSP headers that might block Supabase connections
+**Root Cause**: `.env.production` had the correct VPS URL but the **wrong ANON_KEY** (demo key instead of production key). When `tauri build` runs, Vite uses `.env.production` which baked the demo JWT into the bundle.
 
-**Files to Investigate**: `src-tauri/tauri.conf.json`, `src/composables/useTauriStartup.ts`, `src/services/auth/supabase.ts`
+**Fix Applied**:
+1. Fixed `.env.production` with correct production ANON_KEY (signed by VPS JWT_SECRET)
+2. Rebuilt Tauri app with `npx tauri build`
+3. Created `FlowState-Dev.desktop` launcher for dev mode workflow
+
+**Files Changed**: `.env.production`, `FlowState-Dev.desktop` (new)
+
+**Dev Workflow Improvement**: Added "FlowState (Dev)" desktop launcher that runs `npm run tauri` directly - no need to rebuild deb for testing
 
 ---
 
@@ -415,11 +418,18 @@ Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue 
 
 ---
 
-### BUG-025: Unrelated Groups Move with Parent (📋 PLANNED)
+### ~~BUG-025~~: Unrelated Groups Move with Parent (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE
 
 Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.ts` parentGroupId logic.
+
+**Resolution** (verified Jan 2026):
+- Original `useCanvasDragDrop.ts` was refactored into `useCanvasInteractions.ts`
+- `collectDescendantGroups()` function now properly filters by `parentGroupId === rootId`
+- Only actual descendants are collected and synced on group drag
+- Cycle protection added via `visited` Set
+- Unrelated groups are never included in descendant collection
 
 ---
 
@@ -610,21 +620,22 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
-### TASK-1111: Sync Design Tokens with Tauri App Dropdowns (🔄 IN PROGRESS)
+### ~~TASK-1111~~: Sync Design Tokens with KDE Widget Dropdowns (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-30)
 
-**Problem**: Tauri desktop app dropdowns (task filter, sort) don't match the main app's design system styling. They appear as basic system dropdowns without the glass morphism and design token styling.
+**Problem**: KDE Plasma widget dropdowns (task filter, sort) used default Qt styling instead of matching the main app's glass morphism design.
 
-**Solution**: Sync design tokens from `src/assets/design-tokens.css` into Tauri app styling to achieve visual consistency.
+**Solution**: Styled QQC2.ComboBox components in the KDE widget with custom glass morphism appearance matching design tokens.
 
-**Tasks**:
-- [ ] Identify Tauri-specific dropdown components
-- [ ] Apply design tokens for glass morphism background, borders, shadows
-- [ ] Match dropdown option hover states and selection styling
-- [ ] Test across all Tauri dropdown instances
+**Implemented**:
+- [x] Custom background with purple-tinted glass morphism (`rgba(28, 25, 45, 0.95)`)
+- [x] Subtle white border with hover state (`rgba(255, 255, 255, 0.12)`)
+- [x] Custom popup with rounded corners and glass styling
+- [x] Hover highlight with teal accent color
+- [x] Custom chevron indicator
 
-**Files to Investigate**: `src-tauri/`, dropdown components, `src/assets/design-tokens.css`
+**File**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 
 ---
 

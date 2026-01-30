@@ -434,9 +434,9 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-1114: Tauri Auto-Update from GitHub Releases (📋 PLANNED)
+### TASK-1114: Tauri Auto-Update from GitHub Releases (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (Started: 2026-01-30)
 
 **Request**: Enable Tauri app to automatically update when new versions are pushed to GitHub releases.
 

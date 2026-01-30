@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=FlowState (Dev)
+Comment=FlowState Development Mode
+Exec=bash -c "cd /media/endlessblink/data/my-projects/ai-development/productivity/flow-state && npm run tauri"
+Icon=/media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src-tauri/icons/icon.png
+Terminal=false
+Type=Application
+Categories=Office;Productivity;
+StartupWMClass=flow-state

@@ -52,6 +52,7 @@
             <textarea
               ref="titleInputRef"
               v-model="taskTitle"
+              :dir="titleDirection"
               class="task-text-block"
               placeholder="What needs to be done?&#10;&#10;Add notes here..."
               @input="autoResize"
@@ -217,6 +218,14 @@ const isDueNextWeek = computed(() => {
   const dueDate = new Date(taskDueDate.value)
   dueDate.setHours(0, 0, 0, 0)
   return dueDate.getTime() === nextWeek.getTime()
+})
+
+// BUG-1108: RTL detection for title text (Hebrew, Arabic, Persian, Urdu)
+const titleDirection = computed(() => {
+  if (!taskTitle.value.trim()) return 'auto'
+  const firstChar = taskTitle.value.trim()[0]
+  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
 })
 
 const hasCustomDate = computed(() => {

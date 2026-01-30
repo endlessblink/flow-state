@@ -1,6 +1,6 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: January 29, 2026
+> **Last Updated**: January 30, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
@@ -159,6 +159,22 @@ ReferenceError: can't access lexical declaration 'xe' before initialization
 
 ---
 
+### BUG-1111: Tauri Desktop App Not Syncing from Main Database (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-30)
+
+**Problem**: Tauri desktop app doesn't sync data from the main Supabase database. Tasks/groups created on web app don't appear in Tauri app.
+
+**Investigation**:
+1. Check if Tauri app is connecting to correct Supabase URL (local vs production)
+2. Verify auth session is established in Tauri context
+3. Check if realtime subscriptions are initializing
+4. Review CSP headers that might block Supabase connections
+
+**Files to Investigate**: `src-tauri/tauri.conf.json`, `src/composables/useTauriStartup.ts`, `src/services/auth/supabase.ts`
+
+---
+
 ### BUG-1086: VPS/PWA Auth Not Persisting + Blank Screen (👀 REVIEW)
 
 **Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-01-26)
@@ -206,6 +222,55 @@ ReferenceError: can't access lexical declaration 'xe' before initialization
 **Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
 
 Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue with `sslip.io`, mobile-specific hardcoded localhost, stricter CORS.
+
+---
+
+### BUG-1107: PWA Mobile - Sync Error fetchGroups Failed to Fetch (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-01-30)
+
+**Problem**: Mobile PWA shows sync error during fetchGroups - `TypeError: Failed to fetch` in fetch → fetchAndCache flow.
+
+**Root Cause**: `fetchGroups()` was missing `withRetry()` wrapper that `fetchTasks()` and `fetchProjects()` have. Network failures on mobile weren't being retried with exponential backoff.
+
+**Fix Applied**: Wrapped `fetchGroups()` Supabase query in `withRetry()` for network resilience.
+
+**File Changed**: `src/composables/useSupabaseDatabase.ts` (line ~1063)
+
+**Note**: Other fetch functions (`fetchTrash`, `fetchNotifications`, `fetchActiveTimerSession`) also lack `withRetry()` - could be standardized in future.
+
+**Verification**: User must test on mobile PWA and confirm sync errors don't recur.
+
+---
+
+### BUG-1108: PWA Mobile - Task Input Needs RTL Support (👀 REVIEW)
+
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-01-30)
+
+**Problem**: Hebrew text in "New Task" modal displays left-to-right instead of right-to-left.
+
+**Root Cause**: Textarea and input elements were missing `dir` attribute binding. Pattern already existed in `VoiceTaskConfirmation.vue`.
+
+**Fix Applied**: Added RTL auto-detection computed property that checks first character against Hebrew/Arabic/Persian/Urdu Unicode ranges. Bound `:dir` attribute to title and description inputs.
+
+**Files Changed**:
+- `src/mobile/components/TaskCreateBottomSheet.vue` - Added `titleDirection` computed + `:dir` binding
+- `src/mobile/components/TaskEditBottomSheet.vue` - Added `titleDirection` + `descriptionDirection` computed + `:dir` bindings
+
+**Verification**: User must test on mobile with Hebrew text input.
+
+---
+
+### BUG-1109: PWA Mobile - Hebrew Voice Transcription Issues (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Voice transcription has multiple issues with Hebrew:
+1. Transcribes Arabic instead of Hebrew
+2. Makes mistakes during regular Hebrew transcription
+3. Problems when mixing Hebrew and English in speech
+
+**Related**: TASK-1002 (Voice Transcription to Task), FEATURE-1023 (Voice Input)
 
 ---
 
@@ -376,6 +441,24 @@ QA Supervisor verification of January 20, 2026 Data Crisis. See `docs/reports/20
 
 ---
 
+### TASK-1111: Sync Design Tokens with Tauri App Dropdowns (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-30)
+
+**Problem**: Tauri desktop app dropdowns (task filter, sort) don't match the main app's design system styling. They appear as basic system dropdowns without the glass morphism and design token styling.
+
+**Solution**: Sync design tokens from `src/assets/design-tokens.css` into Tauri app styling to achieve visual consistency.
+
+**Tasks**:
+- [ ] Identify Tauri-specific dropdown components
+- [ ] Apply design tokens for glass morphism background, borders, shadows
+- [ ] Match dropdown option hover states and selection styling
+- [ ] Test across all Tauri dropdown instances
+
+**Files to Investigate**: `src-tauri/`, dropdown components, `src/assets/design-tokens.css`
+
+---
+
 ## Planned Tasks (NEXT/BACKLOG)
 
 ### ~~TASK-1104~~: Enhanced Task Filtering and Grouping Options (✅ DONE)
@@ -413,6 +496,34 @@ When entering calendar view: default to current day's date and auto-scroll to cu
 Record audio → transcription API (Whisper/Deepgram) → create task. Mobile-first UX.
 
 **Steps**: Research APIs, implement recording, create transcription service, add voice button, test mobile.
+
+---
+
+### TASK-1110: PWA Mobile - Add Re-Record Option in Task Creation (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Feature**: Add ability to re-record voice input from the task creation modal. Currently no way to redo a recording once made.
+
+**Related**: TASK-1002, FEATURE-1023
+
+---
+
+### FEATURE-1111: PWA Mobile - Batch Voice Recording for Multiple Tasks (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Feature**: Record multiple tasks in sequence without leaving the creation flow.
+
+**Proposed UX**:
+1. "Record another task" button after recording
+2. Approve current recording → record next
+3. See all previous recordings in same panel
+4. "Add all" button to create all recorded tasks at once
+
+**Needs**: UX design/breakdown session before implementation
+
+**Related**: TASK-1002, TASK-1110, FEATURE-1023
 
 ---
 

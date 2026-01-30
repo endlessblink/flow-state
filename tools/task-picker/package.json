@@ -1,0 +1,20 @@
+{
+  "name": "flowstate-task-picker",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Interactive terminal task picker for FlowState",
+  "main": "index.tsx",
+  "bin": {
+    "pick-task": "./cli.js"
+  },
+  "scripts": {
+    "start": "npx tsx index.tsx",
+    "dev": "npx tsx --watch index.tsx"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "ink": "^5.0.1",
+    "react": "^18.3.1",
+    "tsx": "^4.19.0"
+  }
+}

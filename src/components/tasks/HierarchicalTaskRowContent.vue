@@ -102,6 +102,7 @@
 
     <!-- Action Buttons -->
     <TaskRowActions
+      :task-title="task.title"
       @start-timer="$emit('startTimer')"
       @edit="$emit('edit')"
       @duplicate="$emit('duplicate')"

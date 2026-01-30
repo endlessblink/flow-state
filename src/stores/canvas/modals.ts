@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Task } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 import type { CanvasSection } from './types'
 
 export const useCanvasModalsStore = defineStore('canvasModals', () => {

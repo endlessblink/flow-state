@@ -1,5 +1,5 @@
 import { nextTick } from 'vue'
-import type { Task } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useCanvasCore } from './useCanvasCore'

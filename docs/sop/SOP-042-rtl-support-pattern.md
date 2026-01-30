@@ -106,21 +106,23 @@ const titleDirection = computed(() => {
    - Text flows right-to-left
 4. Switch to English and verify LTR works
 
-## CSS Considerations
+## CSS Requirements (CRITICAL)
 
-The `dir` attribute handles most styling, but you may need:
+**IMPORTANT**: The `dir="rtl"` attribute sets text **direction** but NOT **alignment**. You MUST add CSS for text alignment:
 
 ```css
-/* Optional: Explicit RTL text alignment */
-[dir="rtl"] {
+/* REQUIRED: RTL text alignment */
+.your-input-class[dir="rtl"] {
   text-align: right;
 }
 
-/* Placeholder alignment */
-textarea[dir="rtl"]::placeholder {
+/* Also align placeholder */
+.your-input-class[dir="rtl"]::placeholder {
   text-align: right;
 }
 ```
+
+Without this CSS, Hebrew text will flow right-to-left but remain LEFT-ALIGNED in the input box.
 
 ## Related Files
 

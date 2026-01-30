@@ -193,6 +193,9 @@ export const useAuthStore = defineStore('auth', () => {
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
             if (refreshError) {
               console.error('[AUTH] Failed to refresh session:', refreshError)
+              // TASK-1060: Mark initialization as failed so UI can show error state
+              error.value = refreshError
+              initializationFailed.value = true
               // Clear stale session - user needs to sign in again
               session.value = null
               user.value = null

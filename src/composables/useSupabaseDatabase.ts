@@ -270,6 +270,12 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     // -- Projects --
 
     const fetchProjects = async (): Promise<Project[]> => {
+        // TASK-1060: Ensure auth is initialized before fetching
+        if (!authStore.isInitialized) {
+            console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
+            await authStore.initialize()
+        }
+
         const userId = getUserIdSafe()
         // BUG-1056: Check if user changed since last fetch - invalidates cache if so
         swrCache.checkUserChange(userId)
@@ -741,6 +747,12 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     // -- Tasks --
 
     const fetchTasks = async (): Promise<Task[]> => {
+        // TASK-1060: Ensure auth is initialized before fetching to avoid stale guest data
+        if (!authStore.isInitialized) {
+            console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
+            await authStore.initialize()
+        }
+
         const userId = getUserIdSafe()
         // BUG-1056: Check if user changed since last fetch - invalidates cache if so
         swrCache.checkUserChange(userId)
@@ -1058,6 +1070,12 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     // -- Groups --
 
     const fetchGroups = async (): Promise<CanvasGroup[]> => {
+        // TASK-1060: Ensure auth is initialized before fetching
+        if (!authStore.isInitialized) {
+            console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
+            await authStore.initialize()
+        }
+
         const userId = getUserIdSafe()
         // BUG-1056: Check if user changed since last fetch - invalidates cache if so
         swrCache.checkUserChange(userId)

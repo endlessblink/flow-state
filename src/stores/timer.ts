@@ -514,6 +514,7 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   // TASK-1009: Service Worker Notification with Action Buttons
+  // BUG-1112: Enhanced to always show notification and log issues
   const showTimerNotification = async (sessionId: string, wasBreak: boolean, taskId: string) => {
     // Get task name for notification body
     let taskName: string | undefined
@@ -521,6 +522,10 @@ export const useTimerStore = defineStore('timer', () => {
       const task = taskStore.tasks.find(t => t.id === taskId)
       taskName = task?.title
     }
+
+    const notificationBody = wasBreak
+      ? (taskName ? `Break finished! Ready to work on "${taskName}"?` : 'Break finished! Ready to work?')
+      : (taskName ? `Great work on "${taskName}"! Time for a break.` : 'Great work! Time for a break.')
 
     // Try Service Worker notification first (supports action buttons)
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
@@ -535,14 +540,40 @@ export const useTimerStore = defineStore('timer', () => {
       return
     }
 
+    // BUG-1112: Log when SW is not available (common in dev mode)
+    console.log('🍅 [TIMER] Service Worker not available, using fallback notification')
+
     // Fallback to basic Notification API (no action buttons)
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (!('Notification' in window)) {
+      console.warn('🍅 [TIMER] Notifications not supported in this browser')
+      return
+    }
+
+    if (Notification.permission === 'granted') {
+      // BUG-1112: Create notification with sound enabled (silent: false is default)
       new Notification('Session Complete! 🍅', {
-        body: wasBreak ? 'Ready to work?' : 'Time for a break!',
+        body: notificationBody,
         icon: '/favicon.ico',
         tag: `timer-complete-${sessionId}`, // Deduplication
-        requireInteraction: true
+        requireInteraction: true,
+        silent: false // BUG-1112: Explicitly enable system notification sound
       })
+      console.log('🍅 [TIMER] Showed fallback notification with sound')
+    } else if (Notification.permission === 'default') {
+      // BUG-1112: Request permission if not yet asked
+      console.log('🍅 [TIMER] Notification permission not granted, requesting...')
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        new Notification('Session Complete! 🍅', {
+          body: notificationBody,
+          icon: '/favicon.ico',
+          tag: `timer-complete-${sessionId}`,
+          requireInteraction: true,
+          silent: false // BUG-1112: Enable system notification sound
+        })
+      }
+    } else {
+      console.warn('🍅 [TIMER] Notification permission denied by user')
     }
   }
 
@@ -588,16 +619,32 @@ export const useTimerStore = defineStore('timer', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
       const audioContext = new AudioContextClass()
+
+      // BUG-1112: Create a quick rising tone to indicate timer start
       const osc = audioContext.createOscillator()
       const gain = audioContext.createGain()
-      osc.connect(gain); gain.connect(audioContext.destination)
-      osc.frequency.setValueAtTime(523, audioContext.currentTime)
-      osc.frequency.setValueAtTime(659, audioContext.currentTime + 0.1)
-      gain.gain.setValueAtTime(0.1, audioContext.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-      osc.start(); osc.stop(audioContext.currentTime + 0.3)
+
+      osc.connect(gain)
+      gain.connect(audioContext.destination)
+
+      osc.type = 'sine'
+      // Rising pitch: C5 to E5
+      osc.frequency.setValueAtTime(523.25, audioContext.currentTime)
+      osc.frequency.linearRampToValueAtTime(659.25, audioContext.currentTime + 0.15)
+
+      // BUG-1112: Increased volume from 0.1 to 0.25 for audibility
+      gain.gain.setValueAtTime(0, audioContext.currentTime)
+      gain.gain.linearRampToValueAtTime(0.25, audioContext.currentTime + 0.02)
+      gain.gain.setValueAtTime(0.25, audioContext.currentTime + 0.1)
+      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
+
+      osc.start()
+      osc.stop(audioContext.currentTime + 0.2)
+
+      // Close audio context after sound completes
+      setTimeout(() => audioContext.close(), 300)
     } catch (_e) {
-      // Silently ignore audio initialization errors
+      console.warn('🍅 [TIMER] Audio playback error:', _e)
     }
   }
 
@@ -607,16 +654,38 @@ export const useTimerStore = defineStore('timer', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
       const audioContext = new AudioContextClass()
-      const osc = audioContext.createOscillator()
-      const gain = audioContext.createGain()
-      osc.connect(gain); gain.connect(audioContext.destination)
-      osc.frequency.setValueAtTime(783, audioContext.currentTime)
-      osc.frequency.setValueAtTime(523, audioContext.currentTime + 0.3)
-      gain.gain.setValueAtTime(0.1, audioContext.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6)
-      osc.start(); osc.stop(audioContext.currentTime + 0.6)
+
+      // BUG-1112: Create a more noticeable completion sound
+      // Play a pleasant 3-note chime that's clearly audible
+      const notes = [523.25, 659.25, 783.99] // C5, E5, G5 (C major chord)
+      const noteDuration = 0.25 // seconds per note
+      const totalDuration = notes.length * noteDuration + 0.3 // Extra time for decay
+
+      notes.forEach((freq, index) => {
+        const osc = audioContext.createOscillator()
+        const gain = audioContext.createGain()
+
+        osc.connect(gain)
+        gain.connect(audioContext.destination)
+
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime)
+
+        const startTime = audioContext.currentTime + (index * noteDuration)
+        // BUG-1112: Increased volume from 0.1 to 0.3 for audibility
+        gain.gain.setValueAtTime(0, startTime)
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02) // Quick attack
+        gain.gain.setValueAtTime(0.3, startTime + noteDuration * 0.7)
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + noteDuration)
+
+        osc.start(startTime)
+        osc.stop(startTime + noteDuration)
+      })
+
+      // Close audio context after sound completes
+      setTimeout(() => audioContext.close(), totalDuration * 1000)
     } catch (_e) {
-      // Silently ignore audio playback errors
+      console.warn('🍅 [TIMER] Audio playback error:', _e)
     }
   }
 

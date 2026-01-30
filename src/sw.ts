@@ -168,13 +168,15 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
     ]
 
   try {
+    // BUG-1112: Use system notification sound by setting silent: false
+    // This allows the OS to play its notification sound (KDE, GNOME, etc.)
     await self.registration.showNotification(title, {
       body,
       icon: '/icons/pwa-192x192.png',
       badge: '/icons/pwa-64x64.png',
       tag: `timer-complete-${sessionId}`, // Deduplication - same sessionId won't show twice
       requireInteraction: true, // Stay visible until user interacts
-      silent: true, // Suppress browser sound - we use our own playEndSound()
+      silent: false, // BUG-1112: Enable system notification sound
       actions,
       data: {
         sessionId,
@@ -182,8 +184,9 @@ async function handleTimerComplete(data: TimerCompleteMessage) {
         taskId,
         taskName,
       } as NotificationData,
-      vibrate: [200, 100, 200], // Vibration pattern for mobile (only if not silent)
+      vibrate: [200, 100, 200], // Vibration pattern for mobile
     } as NotificationOptions & { actions?: NotificationAction[] })
+    console.log('[SW] Timer notification shown successfully')
   } catch (error) {
     console.error('[SW] Failed to show notification:', error)
   }

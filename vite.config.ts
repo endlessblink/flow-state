@@ -61,7 +61,7 @@ export default defineConfig(({ mode }) => ({
         // API caching is handled at the app level via useSupabaseDatabase
       },
       devOptions: {
-        enabled: false, // TASK-272: Disabled in dev to reduce HMR noise/flickering
+        enabled: true, // BUG-1112: Enable for dev to get system notifications
         type: 'module',
       },
     }),

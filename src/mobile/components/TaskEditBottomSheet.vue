@@ -41,6 +41,7 @@
               <input
                 ref="titleInputRef"
                 v-model="editedTitle"
+                :dir="titleDirection"
                 type="text"
                 class="field-input"
                 placeholder="Task title"
@@ -53,6 +54,7 @@
               <label class="field-label">Description</label>
               <textarea
                 v-model="editedDescription"
+                :dir="descriptionDirection"
                 class="field-textarea"
                 placeholder="Add details..."
                 rows="3"
@@ -216,6 +218,21 @@ const hasChanges = computed(() => {
 })
 
 const hasDueDate = computed(() => !!editedDueDate.value)
+
+// BUG-1108: RTL detection for title and description (Hebrew, Arabic, Persian, Urdu)
+const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+
+const titleDirection = computed(() => {
+  if (!editedTitle.value.trim()) return 'auto'
+  const firstChar = editedTitle.value.trim()[0]
+  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+})
+
+const descriptionDirection = computed(() => {
+  if (!editedDescription.value.trim()) return 'auto'
+  const firstChar = editedDescription.value.trim()[0]
+  return rtlRegex.test(firstChar) ? 'rtl' : 'ltr'
+})
 
 const isDueToday = computed(() => {
   if (!editedDueDate.value) return false

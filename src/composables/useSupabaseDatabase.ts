@@ -1062,23 +1062,25 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
-                const { data, error } = await supabase
-                    .from('groups')
-                    .select('*')
-                    .eq('is_deleted', false)
+                // BUG-1107: Wrap in withRetry for mobile PWA network resilience
+                return await withRetry(async () => {
+                    const { data, error } = await supabase
+                        .from('groups')
+                        .select('*')
+                        .eq('is_deleted', false)
 
-                if (error) throw error
-                if (!data) return []
+                    if (error) throw error
+                    if (!data) return []
 
+                    // DEBUG: Log loaded groups and their dimensions
+                    const groups = data as SupabaseGroup[]
+                    groups.forEach((g: any) => {
+                        const pos = g.position_json
+                        console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
+                    })
 
-                // DEBUG: Log loaded groups and their dimensions
-                const groups = data as SupabaseGroup[]
-                groups.forEach((g: any) => {
-                    const pos = g.position_json
-                    console.log(`📦 [GROUP-LOAD] "${g.name}" loaded from Supabase: size=${pos?.width}x${pos?.height}`)
-                })
-
-                return (data as SupabaseGroup[]).map(fromSupabaseGroup)
+                    return (data as SupabaseGroup[]).map(fromSupabaseGroup)
+                }, 'fetchGroups')
             } catch (e: unknown) {
                 handleError(e, 'fetchGroups')
                 return []

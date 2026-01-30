@@ -777,16 +777,19 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const fetchTrash = async (): Promise<Task[]> => {
         try {
-            const { data, error } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('is_deleted', true)
-                .order('deleted_at', { ascending: false })
+            // BUG-1107: Wrap in withRetry for mobile PWA network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .eq('is_deleted', true)
+                    .order('deleted_at', { ascending: false })
 
-            if (error) throw error
-            if (!data) return []
+                if (error) throw error
+                if (!data) return []
 
-            return (data as SupabaseTask[]).map(fromSupabaseTask)
+                return (data as SupabaseTask[]).map(fromSupabaseTask)
+            }, 'fetchTrash')
         } catch (e: unknown) {
             handleError(e, 'fetchTrash')
             return []
@@ -1190,15 +1193,18 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const fetchNotifications = async (): Promise<ScheduledNotification[]> => {
         try {
-            const { data, error } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('is_dismissed', false)
+            // BUG-1107: Wrap in withRetry for mobile PWA network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('notifications')
+                    .select('*')
+                    .eq('is_dismissed', false)
 
-            if (error) throw error
-            if (!data) return []
+                if (error) throw error
+                if (!data) return []
 
-            return (data as SupabaseNotification[]).map(fromSupabaseNotification)
+                return (data as SupabaseNotification[]).map(fromSupabaseNotification)
+            }, 'fetchNotifications')
         } catch (e: unknown) {
             handleError(e, 'fetchNotifications')
             return []
@@ -1259,21 +1265,24 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 return null
             }
 
-            const { data, error } = await supabase
-                .from('timer_sessions')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('is_active', true)
-                .order('updated_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
+            // BUG-1107: Wrap in withRetry for mobile PWA network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('timer_sessions')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('is_active', true)
+                    .order('updated_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
 
-            console.log('🍅 [DB] fetchActiveTimerSession result:', { hasData: !!data, error: error?.message })
+                console.log('🍅 [DB] fetchActiveTimerSession result:', { hasData: !!data, error: error?.message })
 
-            if (error) throw error
-            if (!data) return null
+                if (error) throw error
+                if (!data) return null
 
-            return fromSupabaseTimerSession(data as SupabaseTimerSession)
+                return fromSupabaseTimerSession(data as SupabaseTimerSession)
+            }, 'fetchActiveTimerSession')
         } catch (e: unknown) {
             handleError(e, 'fetchActiveTimerSession')
             return null

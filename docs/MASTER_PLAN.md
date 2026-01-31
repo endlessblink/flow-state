@@ -300,21 +300,25 @@ Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue 
 
 ---
 
-### BUG-1107: PWA Mobile - Sync Error fetchGroups Failed to Fetch (👀 REVIEW)
+### ~~BUG-1107~~: PWA Mobile - Sync Error fetchGroups Failed to Fetch (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW (2026-01-30)
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-31)
 
 **Problem**: Mobile PWA shows sync error during fetchGroups - `TypeError: Failed to fetch` in fetch → fetchAndCache flow.
 
-**Root Cause**: `fetchGroups()` was missing `withRetry()` wrapper that `fetchTasks()` and `fetchProjects()` have. Network failures on mobile weren't being retried with exponential backoff.
+**Root Cause**: Multiple fetch functions were missing `withRetry()` wrapper. Network failures on mobile weren't being retried with exponential backoff.
 
-**Fix Applied**: Wrapped `fetchGroups()` Supabase query in `withRetry()` for network resilience.
+**Fix Applied**: Added `withRetry()` to ALL fetch functions:
+- `fetchGroups()`
+- `fetchActiveTimerSession()`
+- `fetchNotifications()`
+- `fetchTrash()`
 
-**File Changed**: `src/composables/useSupabaseDatabase.ts` (line ~1063)
+**File Changed**: `src/composables/useSupabaseDatabase.ts`
 
-**Note**: Other fetch functions (`fetchTrash`, `fetchNotifications`, `fetchActiveTimerSession`) also lack `withRetry()` - could be standardized in future.
+**SOP**: `docs/sop/SOP-041-mobile-pwa-network-resilience.md`
 
-**Verification**: User must test on mobile PWA and confirm sync errors don't recur.
+**Verified**: User confirmed sync errors resolved on mobile PWA.
 
 ---
 

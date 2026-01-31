@@ -1144,9 +1144,9 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 
 ---
 
-### ~~TASK-1119~~: Remove Web Speech API - Use Whisper Only (✅ DONE)
+### TASK-1119: Remove Web Speech API - Use Whisper Only (👀 REVIEW)
 
-**Priority**: P3-LOW | **Status**: ✅ DONE
+**Priority**: P3-LOW | **Status**: 👀 REVIEW
 
 **Rationale**: Web Speech API has poor quality compared to Whisper:
 - Browser-dependent (different results on Chrome/Firefox/Safari)
@@ -1172,9 +1172,9 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 
 ---
 
-### ~~TASK-1131~~: Offline Voice Queue - Save & Retry When Online (✅ DONE)
+### TASK-1131: Offline Voice Queue - Save & Retry When Online (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: ✅ DONE
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW
 
 **Problem**: With Whisper-only voice input (TASK-1119), offline recording fails silently.
 

@@ -300,45 +300,45 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     document.body.style.userSelect = 'none'
     ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
 
-    const handleMouseMove = async (e: MouseEvent) => {
+    // Track final values to commit on mouseup (don't update store during drag)
+    let finalDuration = originalDuration
+    let finalStartSlot = originalStartSlot
+
+    const handleMouseMove = (e: MouseEvent) => {
       if (!isWeekResizing.value) return // Guard against stale handlers
 
       const deltaY = e.clientY - startY
       const deltaSlots = Math.round(deltaY / HALF_HOUR_HEIGHT)
 
-      let newDuration = originalDuration
-      let newStartSlot = originalStartSlot
-
       if (direction === 'bottom') {
-        newDuration = Math.max(30, originalDuration + (deltaSlots * 30))
+        finalDuration = Math.max(30, originalDuration + (deltaSlots * 30))
       } else {
         const endSlot = originalStartSlot + Math.ceil(originalDuration / 30)
-        newStartSlot = Math.max(0, Math.min(33, originalStartSlot + deltaSlots))
-        newDuration = Math.max(30, (endSlot - newStartSlot) * 30)
-      }
-
-      if (direction === 'bottom') {
-        await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
-          estimatedDuration: newDuration
-        })
-      } else {
-        const newHour = Math.floor(newStartSlot / 2) + WORKING_HOURS_OFFSET
-        const newMinute = (newStartSlot % 2) * 30
-
-        if (newHour >= WORKING_HOURS_OFFSET && newHour < 23) {
-          await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
-            scheduledTime: `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`,
-            estimatedDuration: newDuration
-          })
-        }
+        finalStartSlot = Math.max(0, Math.min(33, originalStartSlot + deltaSlots))
+        finalDuration = Math.max(30, (endSlot - finalStartSlot) * 30)
       }
     }
 
-    const handleMouseUp = () => {
-      // Restore text selection
-      document.body.style.userSelect = ''
-      ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+    const handleMouseUp = async () => {
+      // Clear visual state IMMEDIATELY
       cleanupAllListeners()
+
+      // Commit final values to store (async, after visual cleanup)
+      if (direction === 'bottom') {
+        await taskStore.updateTask(calendarEvent.taskId, {
+          estimatedDuration: finalDuration
+        })
+      } else {
+        const newHour = Math.floor(finalStartSlot / 2) + WORKING_HOURS_OFFSET
+        const newMinute = (finalStartSlot % 2) * 30
+
+        if (newHour >= WORKING_HOURS_OFFSET && newHour < 23) {
+          await taskStore.updateTask(calendarEvent.taskId, {
+            scheduledTime: `${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`,
+            estimatedDuration: finalDuration
+          })
+        }
+      }
     }
 
     const handleKeydown = (e: KeyboardEvent) => {

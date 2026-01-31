@@ -126,7 +126,10 @@ export const useCanvasStore = defineStore('canvas', () => {
         }
       })
 
-      // Versions
+      // Versions - defensive: ensure nodeVersionMap is a Map (can get corrupted during hot reload)
+      if (!(nodeVersionMap.value instanceof Map)) {
+        nodeVersionMap.value = new Map()
+      }
       nodeVersionMap.value.clear()
       loadedGroups.forEach((g: CanvasGroup) => nodeVersionMap.value.set(g.id, g.positionVersion ?? 0))
       if (taskStoreRef.value?.tasks) {

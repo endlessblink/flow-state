@@ -749,13 +749,18 @@ When entering calendar view: default to current day's date and auto-scroll to cu
 
 ---
 
-### TASK-1002: Voice Transcription to Task (📋 NEXT)
+### ~~TASK-1002~~: Voice Transcription to Task (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 NEXT
+**Priority**: P1 | **Status**: ✅ DONE (2026-01-31)
 
 Record audio → transcription API (Whisper/Deepgram) → create task. Mobile-first UX.
 
-**Steps**: Research APIs, implement recording, create transcription service, add voice button, test mobile.
+**Implementation Complete**:
+- Groq Whisper API service (`src/services/groqWhisper.ts`)
+- Recording composable (`src/composables/useGroqWhisper.ts`)
+- NLP parser with Hebrew+English support (`src/composables/useVoiceTaskParser.ts`)
+- Confirmation UI with RTL support (`src/mobile/components/VoiceTaskConfirmation.vue`)
+- Mobile integration (`src/mobile/components/TaskCreateBottomSheet.vue`)
 
 ---
 

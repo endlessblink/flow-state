@@ -1,12 +1,15 @@
 /**
  * Groq Whisper Service
  * TASK-1029: Voice Input - Whisper API Integration
+ * BUG-1109: Fix Hebrew Voice Transcription (Multilingual)
  *
  * Uses Groq's Whisper API for speech-to-text transcription.
  * Much cheaper than OpenAI ($0.04/hour vs $0.36/hour) and very fast.
  *
  * @see https://console.groq.com/docs/speech-text
  */
+
+import { detectScript } from '@/utils/scriptDetection'
 
 export interface GroqWhisperOptions {
   /** Language code (e.g., 'en', 'he') - auto-detected if not specified */
@@ -126,6 +129,48 @@ export async function transcribeAudio(
       error: `Transcription failed: ${message}`
     }
   }
+}
+
+/**
+ * Transcribe audio with automatic retry on Arabic confusion
+ * BUG-1109: Fix Hebrew Voice Transcription (Multilingual)
+ *
+ * Strategy: Let Whisper auto-detect language first. If result contains
+ * Arabic script (likely Hebrew misdetection), retry with language='he'.
+ *
+ * This preserves English and code-switching support while fixing the
+ * common Arabic confusion for Hebrew speakers.
+ *
+ * @param audioBlob - Audio blob (webm, mp3, wav, etc.)
+ * @param options - Transcription options
+ * @returns Transcription result
+ */
+export async function transcribeWithRetry(
+  audioBlob: Blob,
+  options: GroqWhisperOptions = {}
+): Promise<GroqWhisperResult> {
+  // First attempt - let Whisper auto-detect
+  const result = await transcribeAudio(audioBlob, options)
+
+  // Return early if error or language explicitly set
+  if (result.error || options.language) {
+    return result
+  }
+
+  // Check if Arabic was returned (likely Hebrew confusion)
+  if (detectScript(result.text) === 'arabic') {
+    console.warn('[GroqWhisper] Arabic script detected, retrying with Hebrew language hint')
+
+    const hebrewResult = await transcribeAudio(audioBlob, {
+      ...options,
+      language: 'he'
+    })
+
+    // Return Hebrew result if successful, otherwise keep original
+    return hebrewResult.error ? result : hebrewResult
+  }
+
+  return result
 }
 
 /**

@@ -72,12 +72,16 @@
       </span>
     </div>
 
-    <!-- Voice Task Confirmation (TASK-1028) -->
+    <!-- Voice Task Confirmation (TASK-1028) with Re-record support (TASK-1110) -->
     <VoiceTaskConfirmation
       :is-open="showVoiceConfirmation"
       :parsed-task="parsedVoiceTask"
+      :is-recording="isListening"
+      :is-processing="isProcessingVoice"
+      :can-re-record="isVoiceSupported"
       @confirm="handleVoiceTaskConfirm"
       @cancel="handleVoiceTaskCancel"
+      @re-record="handleVoiceReRecord"
     />
   </div>
 
@@ -286,6 +290,26 @@ const handleVoiceTaskConfirm = (task: { title: string; priority: 'high' | 'mediu
 
 const handleVoiceTaskCancel = () => {
   resetVoiceState()
+}
+
+// TASK-1110: Handle re-record request from confirmation modal
+const handleVoiceReRecord = async () => {
+  // If already recording, stop it
+  if (isListening.value) {
+    if (voiceMode.value === 'whisper') {
+      stopWhisper()
+    } else {
+      stopBrowserVoice()
+    }
+    return
+  }
+
+  // Start new recording (keep modal open, will update parsedVoiceTask on result)
+  if (voiceMode.value === 'whisper') {
+    await startWhisper()
+  } else {
+    await startBrowserVoice()
+  }
 }
 
 const resetVoiceState = () => {

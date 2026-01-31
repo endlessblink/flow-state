@@ -6,8 +6,8 @@ description: UNIFIED ARCHITECT - Strategic development orchestrator AND systemat
 
 # Unified Architect - Strategic Orchestrator & Project Planner
 
-**Version:** 4.0.0
-**Last Updated:** January 2026
+**Version:** 4.1.0
+**Last Updated:** January 30, 2026
 **Category:** Meta-Skill / Unified Architect
 **Related Skills:** dev-debugging, qa-testing, codebase-health-auditor, smart-doc-manager, kde-plasma-widget-dev, stress-tester, supabase-debugger, tauri-debugger
 
@@ -21,7 +21,7 @@ The unified architect skill for FlowState personal productivity application deve
 Optimized for single-developer projects serving 10-100 users.
 
 ## Quick Context
-- **Stack**: Vue 3.5+ | Vite 7.3+ | TypeScript 5.9+ | Pinia 3.0+ | Supabase (self-hosted) | Tauri 2.9+
+- **Stack**: Vue 3.5+ | Vite 7.3+ | TypeScript 5.9+ | Pinia 2.1+ | Supabase (self-hosted) | Tauri 2.9+
 - **Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)
 - **Complexity**: Medium-High (Personal app orchestration + planning)
 - **Duration**: Variable (Project lifecycle)
@@ -309,8 +309,8 @@ Present the plan in this structure:
 | `settings` | User preferences | `src/stores/settings.ts` |
 | `ui` | UI state (modals, panels) | `src/stores/ui.ts` |
 | `projects` | Project management | `src/stores/projects.ts` |
-| `groups` | Task grouping/sections | `src/stores/groups.ts` |
-| `undo` | Undo/redo history | `src/stores/undo.ts` |
+| `theme` | Theme management, CSS variables | `src/stores/theme.ts` |
+| `notifications` | Scheduled notifications, reminders | `src/stores/notifications.ts` |
 | `quickSort` | QuickSort session state | `src/stores/quickSort.ts` |
 
 ### Domain 3: Mobile & Desktop (Tauri 2.9+)
@@ -321,9 +321,9 @@ Present the plan in this structure:
 - **Performance**: Battery efficiency and resource optimization
 - **Platform Integration**: Native system notifications and window controls
 
-**Tauri Plugins (8 total):**
+**Tauri Plugins (10 total, from Cargo.toml):**
 - `dialog`, `fs`, `shell`, `process`, `notification`
-- `updater`, `deep-link`, `window-state`
+- `updater`, `store`, `log`, `http`, `single-instance`
 
 **Rust Commands (10 total):**
 - `greet`, `check_docker`, `start_docker`, `stop_docker`, `start_supabase`
@@ -347,11 +347,12 @@ src/composables/useTauriStartup.ts     # Frontend startup sequence
 - **Documentation**: `MASTER_PLAN.md` as central source of truth
 - **Hooks Architecture**: 14 Claude Code hooks for enforcement
 
-**Testing Infrastructure (200+ tests):**
+**Testing Infrastructure (615+ tests):**
 | Type | Framework | Count | Location |
 |------|-----------|-------|----------|
-| Unit | Vitest | ~150 | `tests/unit/` |
-| E2E | Playwright | ~50 | `tests/e2e/` |
+| Unit/Integration | Vitest | ~590 | `tests/`, `src/**/*.spec.ts` |
+| Storybook | Vitest Browser | ~25 | `src/stories/` |
+| E2E | Playwright | varies | `tests/e2e/` |
 | Stress | Custom | ~20 | `stress-tester` skill |
 
 ### Domain 5: User Experience & Productivity
@@ -502,19 +503,33 @@ Position drift and "jumping" tasks occur when multiple code paths mutate geometr
 
 These violated geometry invariants and caused position drift. See ADR comments in each file.
 
-**Canvas Composables** (`src/composables/canvas/`):
+**Canvas Composables** (`src/composables/canvas/` - 29 total):
+
 | Composable | Purpose |
 |------------|---------|
 | `useCanvasSync.ts` | **CRITICAL** - Single source of truth for node sync |
-| `useCanvasInteractions.ts` | Drag-drop, selection, and node interactions |
-| `useCanvasParentChildHelpers.ts` | Parent-child relationship utilities |
+| `useCanvasInteractions.ts` | Drag-drop, selection, position management |
 | `useCanvasEvents.ts` | Vue Flow event handlers |
 | `useCanvasActions.ts` | Task/group CRUD operations |
+| `useCanvasOrchestrator.ts` | Main canvas coordination |
+| `useCanvasCore.ts` | Core canvas functionality |
+| `useNodeSync.ts` | Node synchronization logic |
+| `useCanvasSelection.ts` | Multi-select and selection state |
+| `useCanvasGroupActions.ts` | Group-specific operations |
+| `useCanvasGroupMembership.ts` | Parent-child relationships |
+| `useCanvasTaskActions.ts` | Task-specific canvas operations |
+| `useCanvasOperationState.ts` | Operation state machine |
+| `state-machine.ts` | Canvas state machine definitions |
 
-**PositionManager** (`src/composables/canvas/usePositionManager.ts`):
-- Handles coordinate transforms between Vue Flow and Supabase
-- Manages position snapping and grid alignment
-- Ensures spatial containment for parent-child relationships
+**Additional Canvas Composables:**
+- `useCanvasNavigation.ts`, `useCanvasZoom.ts` - Viewport control
+- `useCanvasModals.ts`, `useCanvasContextMenus.ts` - UI interactions
+- `useCanvasResizeState.ts`, `useCanvasResizeCalculation.ts` - Node resizing
+- `useCanvasEdgeSync.ts`, `useCanvasConnections.ts` - Edge/connection handling
+- `useCanvasAlignment.ts` - Snap-to-grid and alignment
+- `useCanvasHotkeys.ts` - Keyboard shortcuts
+- `useCanvasLifecycle.ts` - Mount/unmount lifecycle
+- `useCanvasFilteredState.ts`, `useCanvasGroups.ts`, `useCanvasSectionProperties.ts` - State filtering
 
 **Smart Groups:**
 - Auto-collect tasks based on rules (due date, status, priority)
@@ -595,9 +610,9 @@ kde-widget/package/contents/ui/main.qml  # KDE Plasma widget
 
 ### Domain 11: Mobile PWA Features
 **Mobile-Specific Composables:**
-- `src/composables/mobile/useMobileGestures.ts` - Touch gestures
-- `src/composables/mobile/useSwipeNavigation.ts` - View swiping
-- `src/composables/mobile/useBottomSheet.ts` - Mobile bottom sheets
+- `src/composables/mobile/useMobileFilters.ts` - Mobile-optimized filter UI
+- `src/composables/useMobileDetection.ts` - Device/viewport detection
+- `src/composables/useLongPress.ts` - Long press gesture handling
 
 **Voice Input (Dual Implementation):**
 | Method | API | Use Case |

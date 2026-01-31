@@ -1,9 +1,37 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import type { Task, TaskType, Status, Priority } from './types.js';
 
 const TASK_HEADER_PATTERN = /^###\s+(~~)?((TASK|BUG|FEATURE|ROAD|IDEA|ISSUE|INQUIRY)-\d+)(~~)?:\s*(.+?)\s*\(([^)]+)\)/;
 const PRIORITY_PATTERN = /\*\*Priority\*\*:\s*(P[0-3]|Critical|High|Medium|Low)/i;
+
+// Find the project root by looking for CLAUDE.md or package.json with "flow-state"
+function findProjectRoot(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+
+  for (let i = 0; i < 10; i++) {
+    const claudeMd = resolve(dir, 'CLAUDE.md');
+    const pkgJson = resolve(dir, 'package.json');
+
+    if (existsSync(claudeMd)) {
+      return dir;
+    }
+
+    if (existsSync(pkgJson)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgJson, 'utf-8'));
+        if (pkg.name === 'flow-state') {
+          return dir;
+        }
+      } catch {}
+    }
+
+    dir = dirname(dir);
+  }
+
+  return process.cwd();
+}
 
 function normalizeStatus(raw: string, hasStrikethrough: boolean): Status {
   if (hasStrikethrough) return 'DONE';
@@ -36,7 +64,8 @@ function normalizePriority(raw: string): Priority | undefined {
 }
 
 export function parseMasterPlan(filePath?: string): Task[] {
-  const masterPlanPath = filePath || resolve(process.cwd(), 'docs/MASTER_PLAN.md');
+  const projectRoot = findProjectRoot();
+  const masterPlanPath = filePath || resolve(projectRoot, 'docs/MASTER_PLAN.md');
 
   let content: string;
   try {

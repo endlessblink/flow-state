@@ -127,14 +127,32 @@
 
       <!-- SORT PHASE -->
       <div v-else-if="!isComplete" class="sort-phase">
-        <!-- Swipe Instructions -->
+        <!-- Process Flow Indicator - Shows clear hierarchy -->
+        <div class="process-flow-indicator">
+          <div class="flow-step">
+            <span class="flow-icon">👆</span>
+            <span class="flow-label">Swipe</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step active">
+            <span class="flow-icon">📁</span>
+            <span class="flow-label">Assign</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span class="flow-icon">✅</span>
+            <span class="flow-label">Sorted!</span>
+          </div>
+        </div>
+
+        <!-- Swipe Instructions - Clear hierarchy explanation -->
         <div v-if="!hasSwipedOnce" class="swipe-hints">
           <div class="hint hint-left">
             <ChevronLeft :size="24" />
-            <span>Delete</span>
+            <span>Done</span>
           </div>
           <div class="hint hint-right">
-            <span>Edit</span>
+            <span>Assign</span>
             <ChevronRight :size="24" />
           </div>
         </div>
@@ -164,14 +182,14 @@
             }"
             :style="cardStyle"
           >
-            <!-- Swipe Indicators -->
+            <!-- Swipe Indicators - Clear action feedback -->
             <div
               class="swipe-indicator left"
               :style="{ opacity: leftOverlayOpacity }"
             >
               <div class="swipe-content">
-                <Trash2 :size="32" />
-                <span>Delete</span>
+                <CheckCircle :size="32" />
+                <span>Done!</span>
               </div>
             </div>
             <div
@@ -179,8 +197,8 @@
               :style="{ opacity: rightOverlayOpacity }"
             >
               <div class="swipe-content">
-                <Edit3 :size="32" />
-                <span>Edit</span>
+                <FolderOpen :size="32" />
+                <span>Assign</span>
               </div>
             </div>
 
@@ -297,15 +315,22 @@
             </div>
           </div>
 
-          <!-- Action Buttons -->
+          <!-- Action Buttons - Three options: Done, Skip, Delete -->
           <div class="action-row">
             <button class="action-btn done" @click="handleMarkDone">
-              <CheckCircle :size="24" />
+              <CheckCircle :size="20" />
               <span>Done</span>
             </button>
+            <button class="action-btn assign" @click="showProjectSheet = true">
+              <FolderOpen :size="20" />
+              <span>Assign</span>
+            </button>
             <button class="action-btn skip" @click="handleSkip">
-              <SkipForward :size="24" />
+              <SkipForward :size="20" />
               <span>Skip</span>
+            </button>
+            <button class="action-btn delete" @click="showDeleteConfirm = true">
+              <Trash2 :size="20" />
             </button>
           </div>
         </div>
@@ -353,22 +378,67 @@
     <!-- Project Selector Bottom Sheet -->
     <Teleport to="body">
       <Transition name="sheet">
-        <div v-if="showProjectSheet" class="sheet-overlay" @click="showProjectSheet = false">
+        <div v-if="showProjectSheet" class="sheet-overlay" @click="showProjectSheet = false; projectSearch = ''">
           <div class="project-sheet" @click.stop>
             <div class="sheet-handle" />
             <h3 class="sheet-title">
-              Assign to Project
+              Where does this belong?
             </h3>
 
+            <!-- Search Input (sticky) -->
+            <div class="project-search-wrapper">
+              <Search :size="16" class="search-icon" />
+              <input
+                v-model="projectSearch"
+                type="text"
+                class="project-search"
+                placeholder="Search projects..."
+              >
+            </div>
+
             <div class="project-list">
+              <!-- Keep in Inbox option - allows sorting without project assignment -->
               <button
-                v-for="{ project, depth } in projectsWithDepth"
+                v-if="!projectSearch"
+                class="project-option inbox-option"
+                @click="handleSortWithoutProject"
+              >
+                <span class="project-indicator inbox-indicator">
+                  📥
+                </span>
+                <span class="project-name">Keep in Inbox</span>
+                <span class="option-hint">Sort without assigning</span>
+              </button>
+
+              <!-- Recent Projects (if no search and has recents) -->
+              <div v-if="!projectSearch && recentProjects.length > 0" class="recent-projects-section">
+                <span class="section-label">Recent</span>
+                <div class="recent-projects-grid">
+                  <button
+                    v-for="project in recentProjects"
+                    :key="project.id"
+                    class="recent-project-chip"
+                    @click="handleAssignProject(project.id)"
+                  >
+                    <span class="chip-emoji">{{ project.emoji || '📁' }}</span>
+                    <span class="chip-name">{{ project.name }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="!projectSearch" class="project-divider">
+                <span>{{ recentProjects.length > 0 ? 'All projects' : 'Or assign to project' }}</span>
+              </div>
+
+              <!-- Filtered/All Projects List -->
+              <button
+                v-for="{ project, depth } in filteredProjects"
                 :key="project.id"
                 class="project-option"
-                :style="{ paddingLeft: `${16 + depth * 24}px` }"
+                :style="{ paddingLeft: `${16 + Math.min(depth, 2) * 24}px` }"
                 @click="handleAssignProject(project.id)"
               >
-                <span v-if="depth > 0" class="hierarchy-line" :style="{ width: `${depth * 24}px` }">
+                <span v-if="depth > 0" class="hierarchy-line" :style="{ width: `${Math.min(depth, 2) * 24}px` }">
                   <span class="hierarchy-connector" />
                 </span>
                 <span
@@ -378,7 +448,13 @@
                   {{ project.emoji || project.name.charAt(0) }}
                 </span>
                 <span class="project-name">{{ project.name }}</span>
+                <span v-if="depth > 2" class="depth-indicator">+{{ depth - 2 }}</span>
               </button>
+
+              <!-- No results message -->
+              <div v-if="projectSearch && filteredProjects.length === 0" class="no-results">
+                No projects match "{{ projectSearch }}"
+              </div>
             </div>
           </div>
         </div>
@@ -474,10 +550,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { useLocalStorage } from '@vueuse/core'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, Flag,
   ChevronLeft, ChevronRight, SkipForward, PartyPopper,
-  ArrowLeft, Trash2, Edit3, FolderOpen
+  ArrowLeft, Trash2, Edit3, FolderOpen, Search
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useSwipeGestures } from '@/composables/useSwipeGestures'
@@ -520,6 +597,10 @@ const newTaskDue = ref<'today' | 'tomorrow' | undefined>()
 const recentlyAdded = ref<Task[]>([])
 const captureInputRef = ref<HTMLInputElement | null>(null)
 
+// Project picker state
+const projectSearch = ref('')
+const recentProjectIds = useLocalStorage<string[]>('quicksort-recent-projects', [])
+
 // Card and swipe refs
 const cardRef = ref<HTMLElement | null>(null)
 const confettiRef = ref<HTMLElement | null>(null)
@@ -552,6 +633,23 @@ const projectsWithDepth = computed(() => {
   return result
 })
 
+// Recent projects (last 4 used)
+const recentProjects = computed(() =>
+  recentProjectIds.value
+    .slice(0, 4)
+    .map(id => projectStore.projects.find(p => p.id === id))
+    .filter((p): p is typeof projectStore.projects[number] => Boolean(p))
+)
+
+// Filtered projects for search
+const filteredProjects = computed(() => {
+  if (!projectSearch.value.trim()) return projectsWithDepth.value
+  const search = projectSearch.value.toLowerCase()
+  return projectsWithDepth.value.filter(({ project }) =>
+    project.name.toLowerCase().includes(search)
+  )
+})
+
 // Uncategorized count
 const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
 
@@ -573,13 +671,14 @@ const {
   haptics: true,
   onSwipeRight: () => {
     hasSwipedOnce.value = true
-    // Show quick edit panel instead of project sheet
-    showQuickEditPanel.value = true
+    // IMPROVED UX: Swipe right = directly show project picker for instant categorization
+    showProjectSheet.value = true
+    triggerHaptic('medium')
   },
   onSwipeLeft: () => {
     hasSwipedOnce.value = true
-    // Show delete confirmation instead of skip
-    showDeleteConfirm.value = true
+    // IMPROVED UX: Swipe left = instant mark done (no confirmation for speed)
+    handleMarkDone()
   },
   onSwipeEnd: () => {
     // Reset card position handled by transition
@@ -700,8 +799,15 @@ async function handleQuickAdd() {
 function handleAssignProject(projectId: string) {
   if (!currentTask.value) return
 
+  // Track as recent project (dedupe, limit 10)
+  recentProjectIds.value = [
+    projectId,
+    ...recentProjectIds.value.filter(id => id !== projectId)
+  ].slice(0, 10)
+
   categorizeTask(currentTask.value.id, projectId)
   showProjectSheet.value = false
+  projectSearch.value = '' // Reset search
 
   // Show celebration
   showCelebration.value = true
@@ -710,6 +816,25 @@ function handleAssignProject(projectId: string) {
   }, 600)
 
   triggerHaptic('heavy')
+}
+
+// Sort task without assigning to a project (keep in inbox)
+function handleSortWithoutProject() {
+  if (!currentTask.value) return
+
+  // Mark as sorted by setting a flag or moving to next without project assignment
+  // We use null/undefined projectId to indicate "sorted but no project"
+  categorizeTask(currentTask.value.id, undefined)
+  showProjectSheet.value = false
+  projectSearch.value = '' // Reset search
+
+  // Show celebration
+  showCelebration.value = true
+  setTimeout(() => {
+    showCelebration.value = false
+  }, 600)
+
+  triggerHaptic('medium')
 }
 
 function handleSkip() {
@@ -964,12 +1089,12 @@ onMounted(() => {
 
 .stat-badge {
   padding: var(--space-1_5) var(--space-3);
-  background: transparent;
-  border: 1px solid var(--brand-primary);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--brand-primary);
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1042,10 +1167,20 @@ onMounted(() => {
 
 .count-badge {
   padding: var(--space-0_5) var(--space-2);
-  background: var(--brand-primary);
-  color: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
   border-radius: var(--radius-full);
   font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+/* When Sort tab is active, make badge more prominent */
+.phase-btn.active .count-badge {
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
 }
 
 /* ================================
@@ -1242,6 +1377,54 @@ onMounted(() => {
   min-height: 0; /* Allow flex shrinking */
 }
 
+/* Process Flow Indicator - Shows sorting hierarchy */
+.process-flow-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-0_5);
+  opacity: 0.5;
+  transition: all 0.2s ease;
+}
+
+.flow-step.active {
+  opacity: 1;
+}
+
+.flow-step.active .flow-label {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.flow-icon {
+  font-size: 1rem;
+}
+
+.flow-label {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.flow-arrow {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  opacity: 0.3;
+}
+
 /* Swipe hints */
 .swipe-hints {
   display: flex;
@@ -1329,14 +1512,16 @@ onMounted(() => {
   z-index: 10; /* Above blurred content */
 }
 
+/* Left swipe = Done (green) */
 .swipe-indicator.left {
-  border: 3px solid var(--color-danger, #ef4444);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.swipe-indicator.right {
   border: 3px solid var(--color-success, #10b981);
   background: rgba(16, 185, 129, 0.1);
+}
+
+/* Right swipe = Assign project (brand teal) */
+.swipe-indicator.right {
+  border: 3px solid var(--brand-primary, #4ecdc4);
+  background: rgba(78, 205, 196, 0.1);
 }
 
 .swipe-content {
@@ -1347,12 +1532,14 @@ onMounted(() => {
   color: inherit;
 }
 
+/* Left swipe content = Done (green) */
 .swipe-indicator.left .swipe-content {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-success, #10b981);
 }
 
+/* Right swipe content = Assign (brand teal) */
 .swipe-indicator.right .swipe-content {
-  color: var(--color-success, #10b981);
+  color: var(--brand-primary, #4ecdc4);
 }
 
 .swipe-content span {
@@ -1546,10 +1733,10 @@ onMounted(() => {
   transform: scale(0.95);
 }
 
-/* Action Row */
+/* Action Row - 4 buttons: Done, Assign, Skip, Delete */
 .action-row {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding-top: var(--space-3);
   margin-top: var(--space-2);
 }
@@ -1560,26 +1747,35 @@ onMounted(() => {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  gap: var(--space-1_5);
+  padding: var(--space-2_5) var(--space-2);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .action-btn.done {
   color: var(--color-success);
-  border-color: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .action-btn.done:active {
   background: rgba(16, 185, 129, 0.15);
+}
+
+.action-btn.assign {
+  color: var(--brand-primary);
+  border-color: rgba(78, 205, 196, 0.3);
+}
+
+.action-btn.assign:active {
+  background: rgba(78, 205, 196, 0.15);
 }
 
 .action-btn.skip {
@@ -1588,6 +1784,17 @@ onMounted(() => {
 
 .action-btn.skip:active {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.action-btn.delete {
+  flex: 0 0 auto;
+  padding: var(--space-2_5);
+  color: var(--color-danger, #ef4444);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.action-btn.delete:active {
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .action-btn:active {
@@ -1742,8 +1949,120 @@ onMounted(() => {
 .sheet-title {
   font-size: 1.125rem;
   font-weight: 700;
-  margin: 0 0 var(--space-5);
+  margin: 0 0 var(--space-4);
   text-align: center;
+}
+
+/* Project Search */
+.project-search-wrapper {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  z-index: 1;
+}
+
+.search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.project-search {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  outline: none;
+}
+
+.project-search::placeholder {
+  color: var(--text-muted);
+}
+
+/* Recent Projects Section */
+.recent-projects-section {
+  margin-bottom: var(--space-3);
+}
+
+.section-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-2);
+}
+
+.recent-projects-grid {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: var(--space-1);
+}
+
+.recent-projects-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.recent-project-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.25);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.recent-project-chip:active {
+  transform: scale(0.95);
+  background: rgba(78, 205, 196, 0.2);
+}
+
+.chip-emoji {
+  font-size: 1rem;
+}
+
+.chip-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Depth indicator for deeply nested items */
+.depth-indicator {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+}
+
+/* No results message */
+.no-results {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .project-list {
@@ -1805,6 +2124,45 @@ onMounted(() => {
 .project-name {
   flex: 1;
   text-align: left;
+}
+
+/* Inbox option - special styling */
+.inbox-option {
+  background: rgba(78, 205, 196, 0.08);
+  border-color: rgba(78, 205, 196, 0.2);
+  flex-wrap: wrap;
+}
+
+.inbox-indicator {
+  background: transparent !important;
+}
+
+.option-hint {
+  width: 100%;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+  padding-left: calc(36px + var(--space-3));
+}
+
+/* Project divider */
+.project-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.project-divider::before,
+.project-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Sheet transition */

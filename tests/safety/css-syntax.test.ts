@@ -217,6 +217,7 @@ describe('CSS Syntax and Design Token Validation', () => {
   function findInvalidCSSProperties(css: string): Array<{ line: number, property: string, value: string }> {
     const lines = css.split('\n')
     const invalidProperties: Array<{ line: number, property: string, value: string }> = []
+    let inMultiLineComment = false
 
     // Common CSS property validation patterns
     const validPropertyPatterns = [
@@ -240,6 +241,19 @@ describe('CSS Syntax and Design Token Validation', () => {
     lines.forEach((line, index) => {
       const lineNumber = index + 1
       const trimmedLine = line.trim()
+
+      // Track multi-line comment state
+      if (trimmedLine.includes('/*') && !trimmedLine.includes('*/')) {
+        inMultiLineComment = true
+        return
+      }
+      if (trimmedLine.includes('*/')) {
+        inMultiLineComment = false
+        return
+      }
+      if (inMultiLineComment) {
+        return
+      }
 
       if (!trimmedLine || trimmedLine.startsWith('/*') || trimmedLine.startsWith('//') || trimmedLine.startsWith('@')) {
         return

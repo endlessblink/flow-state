@@ -1126,9 +1126,9 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 
 ---
 
-### TASK-1119: Remove Web Speech API - Use Whisper Only (📋 PLANNED)
+### ~~TASK-1119~~: Remove Web Speech API - Use Whisper Only (✅ DONE)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED
+**Priority**: P3-LOW | **Status**: ✅ DONE
 
 **Rationale**: Web Speech API has poor quality compared to Whisper:
 - Browser-dependent (different results on Chrome/Firefox/Safari)
@@ -1136,16 +1136,19 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 - No mixed-language (code-switching) support
 - Requires manual language selection
 
-**Proposed Changes**:
-1. Remove `useSpeechRecognition.ts` composable
-2. Remove Browser/AI mode toggle from MobileInboxView
-3. Make Whisper (via Groq) the only voice input method
-4. Simplify voice UI - single mic button, no mode selection
+**Scope**: Mobile only (desktop components still use browser speech as fallback)
 
-**Files to Modify**:
-- `src/composables/useSpeechRecognition.ts` (DELETE)
-- `src/mobile/views/MobileInboxView.vue` (simplify voice UI)
-- `src/components/inbox/unified/UnifiedInboxInput.vue` (if used)
+**Changes Made**:
+1. Removed Browser/AI mode toggle from MobileInboxView
+2. Made Whisper (via Groq) the only voice input method for mobile
+3. Simplified voice UI - single mic button, no mode selection
+4. Simplified cancelVoice to Whisper-only
+5. Removed all `voiceMode`, `voiceLanguage`, `toggleVoiceMode` references
+
+**Files Modified**:
+- `src/mobile/views/MobileInboxView.vue` - Whisper-only voice UI
+
+**Note**: `useSpeechRecognition.ts` kept for desktop components (UnifiedInboxInput, QuickCaptureTab, AppSidebar)
 
 **Related**: ~~FEATURE-1023~~, ~~BUG-1109~~, TASK-1131
 

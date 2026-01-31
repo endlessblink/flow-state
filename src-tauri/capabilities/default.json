@@ -68,6 +68,7 @@
       ]
     },
     "updater:default",
+    "process:default",
     "dialog:default",
     "dialog:allow-save",
     "dialog:allow-open",

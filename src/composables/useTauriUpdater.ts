@@ -94,16 +94,19 @@ export function useTauriUpdater() {
       }
 
       // Download with progress tracking
+      let downloaded = 0
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await update.downloadAndInstall((event: any) => {
         switch (event.event) {
           case 'Started':
             downloadProgress.value = 0
+            downloaded = 0
             break
           case 'Progress':
             if (event.data?.contentLength) {
+              downloaded += event.data?.chunkLength || 0
               downloadProgress.value = Math.round(
-                ((event.data?.chunkLength || 0) / event.data.contentLength) * 100
+                (downloaded / event.data.contentLength) * 100
               )
             }
             break

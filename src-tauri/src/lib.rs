@@ -373,6 +373,7 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -405,8 +406,9 @@ pub fn run() {
                 )?;
             }
 
-            // DevTools: Right-click → Inspect still works (devtools cargo feature enabled)
-            // Auto-open removed to prevent freezing issues
+            // DevTools: Right-click → Inspect works in dev builds only
+            // BUG-1115: devtools feature moved to conditional (tauri.conf.json "features")
+            // Release builds have no devtools overhead
 
             Ok(())
         })

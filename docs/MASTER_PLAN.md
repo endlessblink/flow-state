@@ -784,19 +784,26 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### BUG-1116: Tauri Mouse Offset During Drag (📋 PLANNED)
+### ~~BUG-1116~~: Tauri Mouse Offset During Drag (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-31)
 
-**Problem**: When dragging tasks in Tauri app, the mouse cursor is not positioned correctly above the dragged task - there's an offset.
+**Problem**: When dragging tasks in Tauri app on Linux, there was visible lag - the task would animate to cursor position instead of snapping instantly.
 
-**Root Cause Analysis**:
-1. Possible WebView coordinate transformation issues
-2. Window scale factor / HiDPI handling
-3. Vue Flow drag offset calculation not accounting for Tauri window chrome
-4. CSS transform origin differences in WebView vs browser
+**Root Cause**: CSS transitions on `transform` property in `canvas-view-overrides.css` (line 137) were causing the dragged node to animate to cursor position.
 
-**Files to Investigate**: `src/composables/canvas/useCanvasInteractions.ts`, `src-tauri/tauri.conf.json` (window config)
+**Fix Applied** (`src/assets/vue-flow-overrides.css`):
+```css
+.vue-flow__node.dragging,
+.vue-flow__node.dragging * {
+    transition: none !important;
+    animation: none !important;
+}
+```
+
+**Additional Changes**:
+- Added `isLinuxTauri()`, `getPlatformDiagnostics()`, `getLinuxTauriScaleFactor()` utilities in `src/utils/contextMenuCoordinates.ts`
+- Added diagnostic logging in `useCanvasInteractions.ts` for future debugging
 
 ---
 

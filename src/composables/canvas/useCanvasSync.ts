@@ -166,7 +166,12 @@ export function useCanvasSync() {
         isSyncing.value = true
 
         try {
-            const tasksToSync = tasks || taskStore.tasks.filter(t => t.canvasPosition)
+            // BUG-1176 FIX: Filter out done tasks when hideCanvasDoneTasks is enabled
+            // This prevents done tasks from appearing on canvas even if they have canvasPosition
+            const shouldHideDone = taskStore.hideCanvasDoneTasks
+            const tasksToSync = (tasks || taskStore.tasks)
+                .filter(t => t.canvasPosition)
+                .filter(t => !shouldHideDone || t.status !== 'done')
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
 

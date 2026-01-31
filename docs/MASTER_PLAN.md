@@ -278,24 +278,23 @@
 
 ---
 
-### BUG-1176: Done Tasks Sometimes Remain Visible on Canvas (📋 PLANNED)
+### ~~BUG-1176~~: Done Tasks Sometimes Remain Visible on Canvas (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-01-31)
 
-**Problem**: When a task is marked as "Done", it sometimes remains visible on the canvas instead of being hidden/removed. This appears to be intermittent - not every done task stays visible.
+**Problem**: When a task is marked as "Done", it sometimes remains visible on the canvas instead of being hidden/removed.
 
-**Evidence**: User-provided screenshot shows a task with "Done" status (לעבור על המצגת הקודמת) still displayed on canvas alongside active tasks.
+**Root Cause**: `useCanvasSync.ts` synced ALL tasks with `canvasPosition` regardless of status, bypassing the `hideCanvasDoneTasks` flag that exists in `useCanvasFilteredState.ts`.
 
-**Investigation Needed**:
-- Check canvas sync logic when task status changes to "done"
-- Verify `useCanvasSync.ts` removes/hides done tasks correctly
-- Check if there's a race condition between status update and canvas refresh
-- Look for watchers that should react to status changes but aren't firing
-- Test if this happens on refresh or only in real-time
+**Fix Applied**: Added done-task filter to `syncStoreToCanvas()` function:
+```typescript
+const shouldHideDone = taskStore.hideCanvasDoneTasks
+const tasksToSync = (tasks || taskStore.tasks)
+    .filter(t => t.canvasPosition)
+    .filter(t => !shouldHideDone || t.status !== 'done')
+```
 
-**Expected Behavior**: Tasks marked as "Done" should be hidden from canvas view (or moved to a "completed" area if that feature is enabled).
-
-**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/stores/canvas.ts`, `src/stores/task.ts`
+**Files**: `src/composables/canvas/useCanvasSync.ts`
 
 ---
 

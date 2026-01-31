@@ -470,9 +470,9 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### BUG-1115: Tauri App Performance is Slow (👀 REVIEW)
+### ~~BUG-1115~~: Tauri App Performance is Slow (✅ DONE)
 
-**Priority**: P2 | **Status**: 👀 REVIEW (2026-01-30)
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-31)
 
 **Problem**: Tauri desktop app feels sluggish compared to web version.
 

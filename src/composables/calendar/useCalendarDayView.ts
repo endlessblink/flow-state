@@ -735,7 +735,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
 
     const handleMouseUp = async () => {
-      // Commit final values to store
+      // Clear visual state IMMEDIATELY to prevent stuck appearance
+      resizePreview.value = null
+      cleanupAllListeners()
+
+      // Commit final values to store (async, after cleanup)
       if (direction === 'bottom') {
         await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
           estimatedDuration: finalDuration
@@ -774,11 +778,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           }
         }
       }
-
-      // Clear preview state
-      resizePreview.value = null
-
-      cleanupAllListeners()
     }
 
     const handleKeydown = (e: KeyboardEvent) => {

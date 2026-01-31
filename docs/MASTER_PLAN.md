@@ -278,6 +278,27 @@
 
 ---
 
+### BUG-1176: Done Tasks Sometimes Remain Visible on Canvas (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: When a task is marked as "Done", it sometimes remains visible on the canvas instead of being hidden/removed. This appears to be intermittent - not every done task stays visible.
+
+**Evidence**: User-provided screenshot shows a task with "Done" status (לעבור על המצגת הקודמת) still displayed on canvas alongside active tasks.
+
+**Investigation Needed**:
+- Check canvas sync logic when task status changes to "done"
+- Verify `useCanvasSync.ts` removes/hides done tasks correctly
+- Check if there's a race condition between status update and canvas refresh
+- Look for watchers that should react to status changes but aren't firing
+- Test if this happens on refresh or only in real-time
+
+**Expected Behavior**: Tasks marked as "Done" should be hidden from canvas view (or moved to a "completed" area if that feature is enabled).
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/stores/canvas.ts`, `src/stores/task.ts`
+
+---
+
 ### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (📋 PLANNED)
 
 **Priority**: P1-HIGH | **Status**: 📋 PLANNED
@@ -1150,31 +1171,40 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 
 **Note**: `useSpeechRecognition.ts` kept for desktop components (UnifiedInboxInput, QuickCaptureTab, AppSidebar)
 
-**Related**: ~~FEATURE-1023~~, ~~BUG-1109~~, TASK-1131
+**Related**: ~~FEATURE-1023~~, ~~BUG-1109~~, ~~TASK-1131~~
 
 ---
 
-### TASK-1131: Offline Voice Queue - Save & Retry When Online (📋 PLANNED)
+### ~~TASK-1131~~: Offline Voice Queue - Save & Retry When Online (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE
 
 **Problem**: With Whisper-only voice input (TASK-1119), offline recording fails silently.
 
 **Solution**: Save audio blob to IndexedDB, show badge, auto-transcribe when back online.
 
-**Implementation**:
-1. Create `useOfflineVoiceQueue.ts` composable
-   - Save audio blob to IndexedDB when offline
-   - Use VueUse `useOnline()` for connectivity detection
-   - Watch online status, process queue when reconnected
-2. UI: Small badge on mic button "1 pending" when queue has items
-3. Auto-process queue silently when online, show toast on success
+**Implementation Complete**:
+1. Created `useOfflineVoiceQueue.ts` composable
+   - Saves audio blob to IndexedDB when offline
+   - Uses VueUse `useOnline()` for connectivity detection
+   - Watches online status and processes queue when reconnected
+   - Auto-retries failed transcriptions (max 3 attempts)
+2. Modified `useWhisperSpeech.ts`:
+   - Added `onOfflineRecord` callback option
+   - Added `isQueued` status for UI feedback
+   - Exposed `isOnline` state
+3. Updated `MobileInboxView.vue`:
+   - Badge on mic button shows pending count
+   - Offline indicator when not connected
+   - Voice feedback shows "Saved offline" status
+   - Haptic feedback on queue save
 
-**Files to Create/Modify**:
-- `src/composables/useOfflineVoiceQueue.ts` (CREATE)
-- `src/mobile/views/MobileInboxView.vue` (add badge, integrate queue)
+**Files Created/Modified**:
+- `src/composables/useOfflineVoiceQueue.ts` (CREATE) - IndexedDB queue management
+- `src/composables/useWhisperSpeech.ts` (MODIFY) - Offline callback support
+- `src/mobile/views/MobileInboxView.vue` (MODIFY) - UI integration
 
-**Depends On**: TASK-1119 (Whisper-only simplification)
+**Depends On**: ~~TASK-1119~~ (Whisper-only simplification) ✅
 
 **Effort**: ~2-3 hours
 

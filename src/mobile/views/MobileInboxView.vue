@@ -212,15 +212,16 @@
           @click="openTaskCreateSheet"
         >
 
-        <!-- Mic button -->
+        <!-- Mic button with offline queue badge (TASK-1131) -->
         <button
           v-if="isVoiceSupported"
           class="mic-btn"
-          :class="[{ recording: isListening }]"
+          :class="[{ recording: isListening, offline: !isVoiceOnline }]"
           @click="toggleVoiceInput"
         >
           <Mic v-if="!isListening" :size="20" />
           <MicOff v-else :size="20" />
+          <span v-if="hasVoicePending" class="voice-pending-badge">{{ voicePendingCount }}</span>
         </button>
 
         <button
@@ -232,9 +233,9 @@
       </div>
 
       <!-- Voice feedback (when recording) - Whisper only (TASK-1119) -->
-      <div v-if="isListening || isProcessingVoice" class="voice-feedback">
+      <div v-if="isListening || isProcessingVoice || isVoiceQueued" class="voice-feedback">
         <span class="voice-mode-badge whisper">🤖 AI</span>
-        <div class="voice-waveform">
+        <div class="voice-waveform" :class="{ paused: isVoiceQueued }">
           <span class="wave-bar" />
           <span class="wave-bar" />
           <span class="wave-bar" />
@@ -242,17 +243,20 @@
           <span class="wave-bar" />
         </div>
         <span class="voice-status">
-          <template v-if="isProcessingVoice">Processing...</template>
+          <template v-if="isVoiceQueued">📥 Saved offline - will transcribe when online</template>
+          <template v-else-if="isProcessingVoice">Processing...</template>
           <template v-else>{{ recordingDuration }}s - Speak freely...</template>
         </span>
-        <button class="voice-cancel" @click="cancelVoice">
+        <button v-if="!isVoiceQueued" class="voice-cancel" @click="cancelVoice">
           <X :size="16" />
         </button>
       </div>
 
       <!-- Voice mode indicator when not recording -->
-      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice" class="voice-lang-hint">
+      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice && !isVoiceQueued" class="voice-lang-hint">
+        <span v-if="!isVoiceOnline" class="voice-offline-badge">📴 Offline</span>
         <span class="voice-mode-badge whisper">🤖 AI (auto-detect)</span>
+        <span v-if="hasVoicePending" class="voice-queue-status">{{ voicePendingCount }} queued</span>
       </div>
 
       <!-- Voice error message -->
@@ -304,6 +308,7 @@ import {
 } from 'lucide-vue-next'
 // Web Speech API removed (TASK-1119) - Whisper-only for better Hebrew support
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
+import { useOfflineVoiceQueue } from '@/composables/useOfflineVoiceQueue'
 import { useHaptics } from '@/composables/useHaptics'
 
 const taskStore = useTaskStore()
@@ -362,15 +367,69 @@ const dismissSwipeHint = () => {
   localStorage.setItem(SWIPE_HINT_KEY, 'true')
 }
 
+// TASK-1131: Offline voice queue - transcribe audio function for queue processing
+const getWhisperEndpoint = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+  if (supabaseUrl.startsWith('/')) {
+    return `${window.location.origin}${supabaseUrl}/functions/v1/whisper-transcribe`
+  }
+  return `${supabaseUrl}/functions/v1/whisper-transcribe`
+}
+
+const transcribeAudioForQueue = async (blob: Blob, mimeType: string): Promise<{ text: string; language: string }> => {
+  const formData = new FormData()
+  const extension = mimeType.includes('webm') ? 'webm'
+    : mimeType.includes('mp4') ? 'mp4'
+    : mimeType.includes('wav') ? 'wav'
+    : 'webm'
+
+  formData.append('file', blob, `audio.${extension}`)
+  formData.append('model', 'whisper-large-v3-turbo')
+
+  const response = await fetch(getWhisperEndpoint(), {
+    method: 'POST',
+    body: formData
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error?.message || `API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return { text: data.text || '', language: data.language || 'unknown' }
+}
+
+// TASK-1131: Offline voice queue
+const {
+  pendingCount: voicePendingCount,
+  hasPending: hasVoicePending,
+  isProcessing: isQueueProcessing,
+  enqueue: enqueueVoice
+} = useOfflineVoiceQueue({
+  transcribeAudio: transcribeAudioForQueue,
+  onProcessed: (result) => {
+    console.log('[OfflineVoice] Processed queued audio:', result.transcript)
+    // Open TaskCreateBottomSheet and set transcript
+    finalVoiceTranscript.value = result.transcript.trim()
+    isTaskCreateOpen.value = true
+  },
+  onError: (error, item) => {
+    console.error('[OfflineVoice] Failed to process queued audio:', error, item.id)
+  }
+})
+
 // Voice input - Whisper only (TASK-1119: removed Web Speech API for better Hebrew support)
 const {
   isRecording: isWhisperRecording,
   isProcessing: isWhisperProcessing,
+  isQueued: isWhisperQueued,
   isSupported: isWhisperSupported,
   hasApiKey: hasWhisperApiKey,
   transcript: whisperTranscript,
   error: whisperError,
   recordingDuration,
+  isOnline: isVoiceOnline,
   start: startWhisper,
   stop: stopWhisper,
   cancel: cancelWhisper
@@ -385,12 +444,20 @@ const {
   },
   onError: (err) => {
     console.warn('[Whisper] Error:', err)
+  },
+  // TASK-1131: Handle offline recording
+  onOfflineRecord: async (audioBlob, mimeType) => {
+    console.log('[Whisper] Offline - queuing audio')
+    await enqueueVoice(audioBlob, mimeType)
+    // Show feedback that audio was queued
+    triggerHaptic('medium')
   }
 })
 
-// Voice state - Whisper only (TASK-1119)
+// Voice state - Whisper only (TASK-1119) + offline queue (TASK-1131)
 const isListening = computed(() => isWhisperRecording.value)
-const isProcessingVoice = computed(() => isWhisperProcessing.value)
+const isProcessingVoice = computed(() => isWhisperProcessing.value || isQueueProcessing.value)
+const isVoiceQueued = computed(() => isWhisperQueued.value)
 const isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
 const voiceError = computed(() => whisperError.value)
 
@@ -1716,6 +1783,73 @@ const isOverdue = (dueDate: string | Date): boolean => {
   border-radius: 8px;
   font-size: 13px;
   color: var(--danger-text);
+}
+
+/* TASK-1131: Offline voice queue styles */
+.mic-btn {
+  position: relative;
+}
+
+.mic-btn.offline {
+  opacity: 0.7;
+}
+
+.mic-btn.offline::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background: var(--warning-text);
+  border-radius: 50%;
+  border: 2px solid var(--surface-primary);
+}
+
+.voice-pending-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  background: var(--primary-brand);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.voice-waveform.paused .wave-bar {
+  animation: none;
+  opacity: 0.5;
+}
+
+.voice-offline-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--warning-bg-subtle);
+  color: var(--warning-text);
+}
+
+.voice-queue-status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--primary-brand-bg-subtle);
+  color: var(--primary-brand);
 }
 
 /* Debug Banner */

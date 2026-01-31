@@ -10,8 +10,9 @@
  */
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
+import { useOnline } from '@vueuse/core'
 
-export type WhisperStatus = 'idle' | 'recording' | 'processing' | 'error'
+export type WhisperStatus = 'idle' | 'recording' | 'processing' | 'error' | 'queued'
 
 export interface WhisperResult {
   transcript: string
@@ -28,6 +29,8 @@ export interface UseWhisperSpeechOptions {
   onResult?: (result: WhisperResult) => void
   /** Callback on error */
   onError?: (error: string) => void
+  /** Callback when offline - receives audio blob for queue storage (TASK-1131) */
+  onOfflineRecord?: (audioBlob: Blob, mimeType: string) => void
 }
 
 const DEFAULT_OPTIONS = {
@@ -50,8 +53,12 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     model = DEFAULT_OPTIONS.model,
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
-    onError
+    onError,
+    onOfflineRecord
   } = options
+
+  // Online status for offline queue support (TASK-1131)
+  const isOnline = useOnline()
 
   // State
   const status = ref<WhisperStatus>('idle')
@@ -89,6 +96,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   // Computed
   const isRecording = computed(() => status.value === 'recording')
   const isProcessing = computed(() => status.value === 'processing')
+  const isQueued = computed(() => status.value === 'queued') // TASK-1131: offline queue
   const hasError = computed(() => status.value === 'error')
   const hasApiKey = computed(() => true) // Always true - key is server-side now
 
@@ -238,6 +246,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
   /**
    * Process recorded audio with Whisper API
+   * TASK-1131: Supports offline queuing when onOfflineRecord callback is provided
    */
   const processAudio = async (): Promise<void> => {
     status.value = 'processing'
@@ -248,6 +257,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     try {
       // Create audio blob
       const audioBlob = new Blob(audioChunks, { type: audioChunks[0]?.type || 'audio/webm' })
+      const mimeType = audioChunks[0]?.type || 'audio/webm'
 
       // Check minimum size (Whisper needs some audio)
       if (audioBlob.size < 1000) {
@@ -255,6 +265,22 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
           console.log('[VOICE] Audio too short, skipping')
         }
         status.value = 'idle'
+        return
+      }
+
+      // TASK-1131: Check if offline and queue audio for later
+      if (!isOnline.value && onOfflineRecord) {
+        if (import.meta.env.DEV) {
+          console.log('[VOICE] Offline - queuing audio for later transcription')
+        }
+        onOfflineRecord(audioBlob, mimeType)
+        status.value = 'queued'
+        // Reset to idle after a brief moment to show queued state
+        setTimeout(() => {
+          if (status.value === 'queued') {
+            status.value = 'idle'
+          }
+        }, 1500)
         return
       }
 
@@ -351,10 +377,12 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     isSupported: readonly(isSupported),
     detectedLanguage: readonly(detectedLanguage),
     recordingDuration: readonly(recordingDuration),
+    isOnline: readonly(isOnline), // TASK-1131: expose online status
 
     // Computed
     isRecording,
     isProcessing,
+    isQueued, // TASK-1131: offline queue status
     hasError,
     hasApiKey,
 

@@ -359,21 +359,17 @@
 
 ---
 
-### BUG-1125: Canvas Edge/Cable Connections Between Nodes Broken (📋 PLANNED)
+### ~~BUG-1125~~: Canvas Edge/Cable Connections Between Nodes Broken (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-31)
 
 **Problem**: Connecting cables/edges between nodes on the canvas is broken. Users cannot create new connections between tasks/groups. Affects both local dev and Tauri desktop app.
 
-**Investigation Needed**:
-- Check Vue Flow edge creation handlers in `useCanvasEvents.ts`
-- Verify `onConnect` and `onEdgesChange` callbacks
-- Review edge validation logic in canvas composables
-- Check if recent refactoring broke connection handle visibility or functionality
+**Root Cause**: The `Handle` component from Vue Flow was lazy-loaded with `defineAsyncComponent`, causing timing issues where Vue Flow couldn't register connection handles during node mount in dev/Tauri environments. Production builds worked because bundling made the component available synchronously.
 
-**Related**: Canvas position system, Vue Flow event handlers
+**Fix**: Changed from lazy loading to direct import in `TaskNode.vue`.
 
-**Files**: `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/views/CanvasView.vue`
+**Files**: `src/components/canvas/TaskNode.vue`
 
 ---
 
@@ -394,18 +390,19 @@
 
 ---
 
-### BUG-1127: Cannot Create Group Inside Another Group (Nested Groups) (📋 PLANNED)
+### BUG-1127: Cannot Create Group Inside Another Group (Nested Groups) (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
 
 **Problem**: It's not possible to create a new group inside an existing group. Nested group creation is blocked or ignored.
 
-**Expected Behavior**: Users should be able to create groups inside other groups for hierarchical organization.
+**Root Cause**: The "Create Group" button in `CanvasContextMenu.vue` had `v-if="!contextSection"` which explicitly hid it when right-clicking inside a group.
 
-**Investigation Needed**:
-- Check if group creation logic explicitly prevents nested groups
-- Verify parentId assignment during group creation
-- Review Vue Flow nesting validation
+**Fix Applied**:
+1. Removed `v-if="!contextSection"` from Create Group button
+2. Groups use position-based containment (like tasks) - no parentId needed
+
+**Files Changed**: `src/components/canvas/CanvasContextMenu.vue`
 
 **Files**: `src/composables/canvas/useCanvasGroups.ts`, `src/composables/canvas/useCanvasActions.ts`
 

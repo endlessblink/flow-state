@@ -17,17 +17,34 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2.5.3", features = [] }
 
+[features]
+default = []
+# Enable devtools in dev builds only (cargo build), disabled in release (cargo build --release)
+devtools = ["tauri/devtools"]
+
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.9.5", features = ["devtools"] }
+tauri = { version = "2.9.5", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-http = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 tauri-plugin-dialog = { version = "2.6", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-fs = "2.4"
 tauri-plugin-store = "2"
+
+# BUG-1115: Release profile optimizations for better performance
+[profile.release]
+lto = true           # Link-Time Optimization - smaller binary, better runtime
+codegen-units = 1    # Single codegen unit for better optimization (slower compile)
+strip = true         # Strip symbols from binary
+opt-level = 3        # Maximum optimization
+panic = "abort"      # Abort on panic (smaller binary, no unwinding)
+
+[profile.dev]
+opt-level = 0        # No optimization in dev for faster compilation

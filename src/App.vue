@@ -24,6 +24,8 @@
         <ReloadPrompt v-if="!isTauriApp" />
         <!-- iOS Install Prompt (Mobile Browser Only) -->
         <IOSInstallPrompt v-if="!isTauriApp" />
+        <!-- Tauri Update Notification (Desktop Only) -->
+        <TauriUpdateNotification v-if="isTauriApp" />
       </template>
     </NMessageProvider>
   </NConfigProvider>
@@ -59,6 +61,7 @@ import ModalManager from '@/layouts/ModalManager.vue'
 import FaviconManager from '@/components/common/FaviconManager.vue'
 import ReloadPrompt from '@/components/common/ReloadPrompt.vue'
 import IOSInstallPrompt from '@/components/common/IOSInstallPrompt.vue'
+import TauriUpdateNotification from '@/components/common/TauriUpdateNotification.vue'
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'
 import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'

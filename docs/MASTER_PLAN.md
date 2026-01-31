@@ -117,8 +117,13 @@
 1. Changed `silent: false` in `src/sw.ts` and fallback notifications in `timer.ts`
 2. Increased audio volume to 0.25-0.3 with 3-note chime
 3. Enabled Service Worker in dev mode (`vite.config.ts`)
+4. **Tauri Desktop**: Added native OS notification with `sound: 'default'` using `@tauri-apps/plugin-notification`
+   - Priority: Tauri native → Service Worker → Browser Notification API
+   - Plays native OS notification sound on desktop
 
 **Verification**: User must test timer completion to confirm system notification + audio works
+- Web: Service Worker notification + Web Audio chime
+- Tauri Desktop: Native OS notification + sound + Web Audio chime
 
 **Files Changed**: `src/sw.ts`, `src/stores/timer.ts`, `vite.config.ts`
 
@@ -441,41 +446,54 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-1114: Tauri Auto-Update from GitHub Releases (🔄 IN PROGRESS)
+### ~~TASK-1114~~: Tauri Auto-Update from GitHub Releases (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (Started: 2026-01-30)
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-30)
 
 **Request**: Enable Tauri app to automatically update when new versions are pushed to GitHub releases.
 
 **Implementation**:
-1. Tauri already has `plugins.updater` configured in `tauri.conf.json` pointing to GitHub releases
-2. Need to verify GitHub Actions workflow creates proper `latest.json` with update info
-3. Add UI to show update availability and prompt user to install
-4. Test update flow: old version → detect update → download → install → restart
+1. Added `tauri-plugin-updater` to Cargo.toml
+2. Registered updater plugin in `lib.rs`
+3. Added `updater:default` capability for update permissions
+4. Enhanced `useTauriUpdater.ts` composable with check/download/install flow
+5. Created `TauriUpdateNotification.vue` component with glass morphism styling
+6. Integrated update banner in `App.vue` (Tauri-only, shows when update available)
 
-**Files**: `src-tauri/tauri.conf.json`, `.github/workflows/release.yml`, `src/composables/useTauriUpdater.ts`
+**Files Changed**: `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs`, `src-tauri/capabilities/default.json`, `src/composables/useTauriUpdater.ts`, `src/components/common/TauriUpdateNotification.vue`, `src/App.vue`
+
+**Testing**: Requires GitHub release with higher version number to trigger update flow
 
 ---
 
-### BUG-1115: Tauri App Performance is Slow (🔄 IN PROGRESS)
+### BUG-1115: Tauri App Performance is Slow (👀 REVIEW)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-01-30)
 
 **Problem**: Tauri desktop app feels sluggish compared to web version.
 
-**Root Cause Analysis** (completed):
-1. ❌ **Missing release profile optimizations** - No `[profile.release]` in Cargo.toml (no LTO, no strip, default codegen-units)
-2. ❌ **DevTools feature always enabled** - `features = ["devtools"]` compiled into release builds
-3. ⚠️ **9 Tauri plugins loaded** - May slow startup (shell, http, notification, single-instance, updater, dialog, fs, store, log)
-4. ✅ Logging gated by `debug_assertions` - Good
-5. ✅ CSP is null (not blocking) - Good
+**Root Cause Analysis**:
+1. ✅ **Missing release profile optimizations** - FIXED
+2. ✅ **DevTools feature always enabled** - FIXED (dev-only now)
+3. ⚠️ **10 Tauri plugins loaded** - Minor impact, not addressed
+4. ✅ Logging gated by `debug_assertions` - Already good
+5. ✅ CSP is null (not blocking) - Already good
 
-**Fix Plan**:
-1. Add `[profile.release]` with LTO, codegen-units=1, strip=true
-2. Move devtools to dev feature flag
-3. Consider lazy-loading non-essential plugins
+**Fix Applied**:
+1. Added `[profile.release]` to Cargo.toml:
+   - `lto = true` (Link-Time Optimization)
+   - `codegen-units = 1` (better optimization)
+   - `strip = true` (smaller binary)
+   - `opt-level = 3` (max optimization)
+   - `panic = "abort"` (no unwinding overhead)
+2. Made devtools conditional via `[features]` section
+3. Added `"features": ["devtools"]` to tauri.conf.json (dev builds only)
 
-**Files to Modify**: `src-tauri/Cargo.toml`
+**Expected Improvement**: 10-30% faster startup, smaller binary, snappier UI
+
+**Files Changed**: `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/src/lib.rs`
+
+**Verification**: User must build release (`npm run tauri build`) and compare performance
 
 ---
 
@@ -674,6 +692,31 @@ npm run tasks:bugs     # Filter by BUG type
 
 ## Planned Tasks (NEXT/BACKLOG)
 
+### TASK-1118: Test Suite Cleanup - Reduce 615 Tests to ~100 Essential (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Test suite has grown to 615 tests, many are one-off debug tests that were never cleaned up. This adds maintenance burden and slows test runs.
+
+**Cleanup Targets**:
+- `debug-*.spec.ts` - One-off debugging tests
+- `repro_*.spec.ts` - Bug reproduction tests (bugs already fixed)
+- `quick-*.spec.ts` - Quick check scripts
+- `inspect-*.spec.ts` - Visual inspection tests
+- `verify-*.spec.ts` - One-time verification tests
+
+**Keep (Essential Tests)**:
+- Data persistence / Supabase sync tests
+- Auth flow tests
+- Known bug regression tests
+- Stress tests (`tests/stress/`)
+- Safety tests (`tests/safety/`)
+- Core component integration tests
+
+**Target**: ~100 essential tests with fast execution (<30s)
+
+---
+
 ### ~~TASK-1104~~: Enhanced Task Filtering and Grouping Options (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-01-29)
@@ -750,6 +793,30 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 
 ---
 
+### TASK-1117: Enhance Quick Sort UX on Mobile (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-30)
+
+**Problem**: Mobile Quick Sort has unclear UX hierarchy and confusing swipe interactions:
+1. Sliding right opens Quick Edit modal instead of sorting
+2. Project selection is required before sorting happens
+3. The process flow is not intuitive - users don't understand the hierarchy
+
+**Implementation (Phase 1 Complete)**:
+- [x] Swipe Right = Directly opens project picker (instant categorization)
+- [x] Swipe Left = Mark Done instantly (no confirmation delay)
+- [x] "Keep in Inbox" option allows sorting without project assignment
+- [x] Process flow indicator shows hierarchy: Swipe → Assign → Sorted!
+- [x] Updated swipe indicators: green "Done!" (left), teal "Assign" (right)
+- [x] 4 action buttons in thumb zone: Done, Assign, Skip, Delete
+- [ ] User testing and feedback
+
+**Related**: TASK-359 (Quick Add + Sort desktop), FEATURE-1023 (Voice Input)
+
+**Files Modified**: `src/mobile/views/MobileQuickSortView.vue`
+
+---
+
 ### FEATURE-1048: Canvas Auto-Rotating Day Groups (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED
@@ -776,6 +843,31 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 **Completed Subtasks**: ~~TASK-1024~~ (Web Speech API), ~~TASK-1025~~ (Mic Button), ~~TASK-1026~~ (NLP Parser), ~~TASK-1027~~ (Commands), ~~TASK-1028~~ (Confirmation UI), ~~TASK-1029~~ (Whisper Fallback)
 
 **Known Issues**: BUG-1109 (Hebrew voice transcription sometimes outputs Arabic)
+
+---
+
+### TASK-1119: Remove Web Speech API - Use Whisper Only (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Rationale**: Web Speech API has poor quality compared to Whisper:
+- Browser-dependent (different results on Chrome/Firefox/Safari)
+- Poor Hebrew support
+- No mixed-language (code-switching) support
+- Requires manual language selection
+
+**Proposed Changes**:
+1. Remove `useSpeechRecognition.ts` composable
+2. Remove Browser/AI mode toggle from MobileInboxView
+3. Make Whisper (via Groq) the only voice input method
+4. Simplify voice UI - single mic button, no mode selection
+
+**Files to Modify**:
+- `src/composables/useSpeechRecognition.ts` (DELETE)
+- `src/mobile/views/MobileInboxView.vue` (simplify voice UI)
+- `src/components/inbox/unified/UnifiedInboxInput.vue` (if used)
+
+**Related**: ~~FEATURE-1023~~, BUG-1109
 
 ---
 
@@ -862,9 +954,23 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### ROAD-010: Gamification - "Cyberflow" (⏸️ PAUSED)
+### ROAD-010: Gamification - "Cyberflow" (🔄 IN PROGRESS)
 
-**Priority**: P3 | XP sources, leveling, badges, character avatar.
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-01-30)
+
+**Parent Feature**: FEATURE-1118
+
+**Subtasks**: (Pending design session)
+
+---
+
+### FEATURE-1118: Gamification System - Design & Implementation (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-01-30)
+
+**Goal**: Add game-like elements to FlowState to increase engagement and make productivity feel rewarding.
+
+**Design Session**: In progress...
 
 ---
 

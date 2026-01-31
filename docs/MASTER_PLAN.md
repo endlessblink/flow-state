@@ -180,11 +180,33 @@
 
 ---
 
-### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (📋 PLANNED)
+### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
 
 **Problem**: KDE Plasma widget has lost timer sync with BOTH the web app and Tauri desktop app. Timer state changes are not reflecting across devices.
+
+**Root Cause Identified**:
+1. Timer session in DB has stale leader heartbeat (2+ hours old)
+2. KDE widget only checked `device_leader_id === "kde-widget"` without checking for stale leadership
+3. Web/Tauri follower poll didn't take over when leader heartbeat was stale
+4. All devices stayed as "followers" waiting for a dead leader
+
+**Fix Applied**:
+1. **KDE Widget** (`~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`):
+   - Added stale leadership detection (30 second timeout)
+   - Widget now claims leadership when leader heartbeat is stale
+   - Calls `patchSession()` to update `device_leader_id` to "kde-widget"
+
+2. **Web/Tauri App** (`src/stores/timer.ts`):
+   - Added stale leadership check to follower poll
+   - Follower now claims leadership if heartbeat is older than `DEVICE_LEADER_TIMEOUT_MS` (30s)
+   - Starts heartbeat and stops follower polling after claiming
+
+**Verification Needed**:
+- [ ] Restart KDE widget to pick up changes
+- [ ] Test timer sync between web app and KDE widget
+- [ ] Verify leadership takeover works when one device stops
 
 **Expected Behavior**:
 

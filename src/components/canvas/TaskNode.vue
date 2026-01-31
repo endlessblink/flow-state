@@ -93,8 +93,8 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent, computed, ref, onMounted, onUnmounted } from 'vue'
-import { Position } from '@vue-flow/core'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { Position, Handle } from '@vue-flow/core'
 import type { Task } from '@/types/tasks'
 import { useTaskNodeState } from '@/composables/canvas/node/useTaskNodeState'
 import { useTaskNodeActions } from '@/composables/canvas/node/useTaskNodeActions'
@@ -134,10 +134,9 @@ const isInVueFlowContext = computed(() => {
   }
 })
 
-// Lazy load Handle component
-const Handle = defineAsyncComponent(() =>
-  import('@vue-flow/core').then(mod => mod.Handle)
-)
+// Handle component imported directly (not lazy-loaded)
+// BUG-1125: Lazy loading caused Vue Flow to not register handles properly,
+// breaking edge connections in dev/Tauri but not production builds
 
 interface Props {
   task: Task

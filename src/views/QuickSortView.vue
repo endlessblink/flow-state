@@ -558,7 +558,7 @@ function formatTime(milliseconds: number): string {
 
 .card-container {
   width: 100%;
-  min-height: 350px;
+  min-height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;

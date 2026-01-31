@@ -438,7 +438,7 @@ function handleSwipeEnd() {
   position: relative;
   width: 100%;
   max-width: 600px;
-  min-height: 300px;
+  min-height: 220px;
   background: var(--glass-bg-medium);
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);

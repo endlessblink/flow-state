@@ -45,8 +45,23 @@
         </span>
       </div>
 
-      <!-- INTEGRATED CONTROL PANEL: Clock + Timer -->
+      <!-- INTEGRATED CONTROL PANEL: AI + Clock + Timer -->
       <div class="control-panel">
+        <!-- AI Assistant Toggle (TASK-1120) -->
+        <button
+          class="ai-toggle-btn"
+          :class="{ 'ai-active': aiChatStore.isPanelOpen }"
+          :title="`AI Assistant (Ctrl+/)`"
+          @click="aiChatStore.togglePanel"
+        >
+          <Sparkles :size="18" />
+          <span v-if="aiChatStore.pendingSuggestionCount > 0" class="ai-badge">
+            {{ aiChatStore.pendingSuggestionCount }}
+          </span>
+        </button>
+
+        <div class="control-divider" />
+
         <div class="time-display-container">
           <TimeDisplay />
         </div>
@@ -158,13 +173,15 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import { Timer, Play, Pause, Coffee, Square, User } from 'lucide-vue-next'
+import { useAIChatStore } from '@/stores/aiChat'
+import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
 const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const aiChatStore = useAIChatStore()
 
 // Route name to display title mapping
 const routeNameToTitle = {
@@ -647,5 +664,61 @@ const startLongBreak = async () => {
 .view-tab.active .tab-badge {
   background: linear-gradient(135deg, #60a5fa, #a78bfa);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+/* AI TOGGLE BUTTON (TASK-1120) */
+.ai-toggle-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.ai-toggle-btn:hover {
+  color: var(--accent-primary, #8b5cf6);
+  background: var(--state-hover-bg);
+}
+
+.ai-toggle-btn.ai-active {
+  color: var(--accent-primary, #8b5cf6);
+  background: var(--accent-bg, rgba(139, 92, 246, 0.15));
+}
+
+.ai-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.control-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-subtle, rgba(255, 255, 255, 0.1));
+  margin: 0 var(--space-2);
 }
 </style>

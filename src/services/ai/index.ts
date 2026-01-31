@@ -42,4 +42,24 @@ export {
   OllamaProvider,
   createOllamaProvider,
   autoDetectOllama,
+  ClaudeProvider,
+  createClaudeProvider,
+  DeepSeekProvider,
+  createDeepSeekProvider,
+  autoDetectDeepSeek,
 } from './providers'
+
+// Router
+export {
+  AIRouter,
+  createAIRouter,
+  DEFAULT_ROUTER_CONFIG,
+} from './router'
+
+export type {
+  TaskType,
+  RouterProviderType,
+  RouterConfig,
+  RouterOptions,
+  ProviderCostTracking,
+} from './router'

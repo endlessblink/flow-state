@@ -95,6 +95,7 @@ export const useTimerStore = defineStore('timer', () => {
   }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
   // TASK-1009: Polling fallback for followers (mobile PWA Realtime WebSocket may fail)
+  // BUG-1122: Also check for stale leadership and take over if needed
   // Polls every 3 seconds when not the leader to sync timer state
   const FOLLOWER_POLL_INTERVAL_MS = 3000
   const { pause: pauseFollowerPoll, resume: resumeFollowerPoll } = useIntervalFn(async () => {
@@ -110,6 +111,40 @@ export const useTimerStore = defineStore('timer', () => {
           console.log('🍅 [TIMER] Follower poll: No active session found, clearing local state')
           pauseTimerInterval()
           currentSession.value = null
+        }
+        return
+      }
+
+      // BUG-1122: Check for stale leadership and take over
+      const lastSeen = session.deviceLeaderLastSeen || 0
+      const timeSinceLeaderSeen = Date.now() - lastSeen
+      const leaderIsStale = timeSinceLeaderSeen > DEVICE_LEADER_TIMEOUT_MS
+
+      if (leaderIsStale && session.isActive) {
+        console.log('🍅 [TIMER] Follower poll: Leader heartbeat stale by', Math.floor(timeSinceLeaderSeen / 1000), 'seconds - claiming leadership')
+
+        // Claim leadership
+        isDeviceLeader.value = true
+        crossTabSync.claimTimerLeadership()
+        isLeader.value = true
+
+        // Update local session with drift correction
+        const drift = Math.floor(timeSinceLeaderSeen / 1000)
+        const adjustedTime = session.isPaused ? session.remainingTime : Math.max(0, session.remainingTime - Math.min(drift, 120))
+
+        currentSession.value = {
+          ...session,
+          remainingTime: adjustedTime
+        }
+
+        // Start heartbeat to claim in DB
+        resumeHeartbeat()
+        await saveTimerSessionWithLeadership()
+        pauseFollowerPoll() // Leaders don't poll
+
+        if (session.isActive && !session.isPaused) {
+          resumeTimerInterval()
+          requestWakeLock()
         }
         return
       }

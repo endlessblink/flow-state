@@ -190,25 +190,20 @@
 
 ---
 
-### BUG-1129: Quick Sort Project Buttons Truncating Names on Desktop (📋 PLANNED)
+### ~~BUG-1129~~: Quick Sort Project Buttons Truncating Names on Desktop (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-01-31)
 
 **Problem**: In the Quick Sort view on desktop, project category buttons have fixed width causing long project names to be truncated with ellipsis. Hebrew text "נטלי כה..." and other long names are cut off.
 
-**Screenshot**: Shows "Categorize as:" buttons where project 3 displays "...כה נטלי" (truncated)
+**Fix Applied**:
+1. Changed `.category-grid` from fixed grid to flexbox (`flex-wrap: wrap`)
+2. Added `title` attribute to project names for hover tooltip
+3. Buttons now size to content naturally with `min-width: 120px`
+4. Set `max-width: 250px` on text to prevent overly long names
+5. Mobile responsive: full width buttons on small screens
 
-**Expected Behavior**:
-- Project names should be fully visible or have reasonable truncation with tooltip
-- Buttons should expand to fit content or use flexible width
-- Long names should have tooltip on hover showing full text
-
-**Investigation Needed**:
-- Check Quick Sort component button styling
-- Review flex/grid layout for category buttons
-- Consider `text-overflow: ellipsis` + `title` attribute for accessibility
-
-**Files**: `src/components/layout/CategorySelector.vue`, `src/views/QuickSortView.vue`
+**Files**: `src/components/layout/CategorySelector.vue`
 
 ---
 

@@ -38,7 +38,7 @@
         <span v-else class="color-dot" :style="{ background: getColorValue(node.project.color) }" />
 
         <!-- Project Name -->
-        <span class="project-name">{{ node.project.name }}</span>
+        <span class="project-name" :title="node.project.name">{{ node.project.name }}</span>
       </button>
 
       <!-- Create New Project Button -->
@@ -226,16 +226,18 @@ onUnmounted(() => {
 }
 
 .category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Adjusted for 600px width */
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-bottom: var(--space-5);
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .category-button {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   background: var(--glass-bg-light);
@@ -248,6 +250,8 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-out);
   text-align: left;
+  min-width: 140px; /* Minimum button width - increased for longer names */
+  min-height: 64px; /* Support 2-line text */
 }
 
 .category-button.is-nested {
@@ -288,7 +292,6 @@ onUnmounted(() => {
 }
 
 .shortcut-badge {
-  display: none; /* Hidden as per user request */
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
@@ -330,7 +333,13 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+  word-break: break-word;
+  max-width: 250px; /* Limit maximum text width for very long names */
 }
 
 .helper-text {
@@ -366,7 +375,15 @@ kbd {
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .category-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .category-button {
+    width: 100%;
+  }
+
+  .project-name {
+    max-width: none; /* Full width on mobile */
   }
 
   .shortcut-badge {

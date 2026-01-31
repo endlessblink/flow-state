@@ -306,9 +306,11 @@
       :is-listening="isListening"
       :is-processing="isProcessingVoice"
       :voice-transcript="finalVoiceTranscript || displayTranscript"
+      :can-re-record="isVoiceSupported"
       @close="handleTaskCreateClose"
       @created="handleTaskSheetCreated"
       @stop-recording="stopVoice"
+      @start-recording="handleStartReRecord"
     />
   </div>
 </template>
@@ -513,6 +515,14 @@ const stopVoice = () => {
   } else {
     stopBrowserVoice()
   }
+}
+
+// TASK-1110: Handle re-record request from TaskCreateBottomSheet
+const handleStartReRecord = async () => {
+  // Clear previous transcript
+  finalVoiceTranscript.value = ''
+  // Start new recording
+  await startVoice()
 }
 
 const cancelVoice = () => {

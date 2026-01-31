@@ -24,15 +24,35 @@
 
         <!-- Editable Fields -->
         <div class="confirmation-body">
-          <!-- Title Textarea (RTL-aware) -->
+          <!-- Title Textarea (RTL-aware) with Re-record button (TASK-1110) -->
           <div class="field-section">
-            <label class="field-label">{{ $t?.('task.title') || 'Title' }}</label>
+            <div class="field-label-row">
+              <label class="field-label">{{ $t?.('task.title') || 'Title' }}</label>
+              <!-- Re-record button (TASK-1110) -->
+              <button
+                v-if="canReRecord"
+                class="rerecord-btn"
+                :class="{ recording: isRecording, processing: isProcessing }"
+                :disabled="isProcessing"
+                :title="isRecording ? 'Stop recording' : (isProcessing ? 'Processing...' : 'Re-record')"
+                @click="handleReRecord"
+              >
+                <Loader2 v-if="isProcessing" :size="14" class="spin" />
+                <MicOff v-else-if="isRecording" :size="14" />
+                <Mic v-else :size="14" />
+                <span class="rerecord-label">
+                  {{ isRecording ? 'Stop' : (isProcessing ? 'Processing' : 'Re-record') }}
+                </span>
+              </button>
+            </div>
             <textarea
               ref="titleInputRef"
               v-model="editedTitle"
               :dir="titleDirection"
+              :class="{ 'recording-active': isRecording }"
               class="title-textarea"
-              :placeholder="$t?.('task.titlePlaceholder') || 'Task title...'"
+              :placeholder="isRecording ? 'Listening...' : ($t?.('task.titlePlaceholder') || 'Task title...')"
+              :disabled="isRecording"
               rows="3"
               @keydown.enter.exact.prevent="handleConfirm"
             />
@@ -140,20 +160,29 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { CheckCircle2, X, Flag, Calendar, Plus } from 'lucide-vue-next'
+import { CheckCircle2, X, Flag, Calendar, Plus, Mic, MicOff, Loader2 } from 'lucide-vue-next'
 import BaseModal from '@/components/base/BaseModal.vue'
 import type { ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 
 interface Props {
   isOpen: boolean
   parsedTask: ParsedVoiceTask | null
+  // Re-record props (TASK-1110)
+  isRecording?: boolean
+  isProcessing?: boolean
+  canReRecord?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isRecording: false,
+  isProcessing: false,
+  canReRecord: false
+})
 
 const emit = defineEmits<{
   confirm: [task: { title: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }]
   cancel: []
+  reRecord: []  // TASK-1110: Request re-recording
 }>()
 
 // Refs
@@ -285,6 +314,12 @@ function handleCancel() {
   emit('cancel')
 }
 
+// TASK-1110: Handle re-record button click
+function handleReRecord() {
+  triggerHaptic(20)
+  emit('reRecord')
+}
+
 function triggerHaptic(duration: number = 10) {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
     try {
@@ -371,6 +406,13 @@ function triggerHaptic(duration: number = 10) {
   gap: var(--space-2);
 }
 
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .field-label {
   display: flex;
   align-items: center;
@@ -380,6 +422,72 @@ function triggerHaptic(duration: number = 10) {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Re-record button (TASK-1110) */
+.rerecord-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.rerecord-btn:hover:not(:disabled) {
+  background: var(--glass-bg);
+  border-color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary, #4ECDC4);
+}
+
+.rerecord-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.rerecord-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rerecord-btn.recording {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  animation: pulse-rerecord 1.5s ease-in-out infinite;
+}
+
+.rerecord-btn.processing {
+  background: rgba(78, 205, 196, 0.15);
+  border-color: rgba(78, 205, 196, 0.5);
+  color: var(--brand-primary, #4ECDC4);
+}
+
+.rerecord-label {
+  white-space: nowrap;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-rerecord {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+  }
 }
 
 /* Title Textarea - RTL-aware */
@@ -415,6 +523,27 @@ function triggerHaptic(duration: number = 10) {
 
 .title-textarea[dir="ltr"] {
   text-align: left;
+}
+
+/* Recording active state (TASK-1110) */
+.title-textarea.recording-active {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.05);
+  animation: pulse-textarea 1.5s ease-in-out infinite;
+}
+
+.title-textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes pulse-textarea {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0);
+  }
 }
 
 /* Pill Options */

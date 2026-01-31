@@ -19,6 +19,7 @@ import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coo
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { lockManager } from '@/services/canvas/LockManager'
+import { getPlatformDiagnostics, isLinuxTauri } from '@/utils/contextMenuCoordinates'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -368,6 +369,20 @@ export function useCanvasInteractions(deps?: {
      */
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
+
+        // BUG-1116: Log platform diagnostics on drag start to diagnose WebKitGTK coordinate issues
+        if (import.meta.env.DEV) {
+            const diagnostics = getPlatformDiagnostics()
+            // Always log in DEV mode when Tauri is detected to help diagnose platform detection
+            if (diagnostics.isTauri) {
+                console.log('[BUG-1116:DRAG-DEBUG] Tauri drag start - Platform info:', {
+                    ...diagnostics,
+                    scaleMismatch: Math.abs(diagnostics.devicePixelRatio - diagnostics.screenRatio) > 0.1,
+                    userAgent: navigator.userAgent.slice(0, 100), // First 100 chars for debugging
+                    timestamp: Date.now()
+                })
+            }
+        }
 
         if (import.meta.env.DEV) {
             console.log(`[CANVAS:INTERACT] Drag start - ${involvedNodes.length} nodes`,

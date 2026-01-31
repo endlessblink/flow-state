@@ -8,6 +8,7 @@ import { formatTime } from '@/utils/timer/formatTime'
 import { getCrossTabSync } from '@/composables/useCrossTabSync'
 import { useIntervalFn } from '@vueuse/core'
 import { useWakeLock } from '@/composables/useWakeLock'
+import { isTauri } from '@/composables/useTauriStartup'
 
 /**
  * Timer Session Interface
@@ -199,6 +200,21 @@ export const useTimerStore = defineStore('timer', () => {
   const faviconStatus = computed(() => {
     if (!currentSession.value) return 'inactive'
     return currentSession.value.isBreak ? 'break' : 'work'
+  })
+
+  // BUG-1112: Detect if KDE widget is actively connected (handling notifications)
+  // When the widget is active, it shows its own notifications - we skip Tauri/browser notifications
+  const isKdeWidgetActive = computed(() => {
+    if (!currentSession.value) return false
+    const session = currentSession.value
+    if (session.deviceLeaderId !== 'kde-widget') return false
+
+    // Check heartbeat freshness (< 30 seconds)
+    if (!session.deviceLeaderLastSeen) return false
+    const lastSeen = typeof session.deviceLeaderLastSeen === 'number'
+      ? session.deviceLeaderLastSeen
+      : new Date(session.deviceLeaderLastSeen).getTime()
+    return (Date.now() - lastSeen) < DEVICE_LEADER_TIMEOUT_MS
   })
 
   const tabTitleWithTimer = computed(() => {
@@ -527,7 +543,38 @@ export const useTimerStore = defineStore('timer', () => {
       ? (taskName ? `Break finished! Ready to work on "${taskName}"?` : 'Break finished! Ready to work?')
       : (taskName ? `Great work on "${taskName}"! Time for a break.` : 'Great work! Time for a break.')
 
-    // Try Service Worker notification first (supports action buttons)
+    // Try Tauri native notification first (best UX on desktop with native OS sound)
+    // BUG-1112: Only show Tauri notification when KDE widget is NOT active
+    // When the KDE widget is connected, it handles its own notifications
+    if (isTauri() && !isKdeWidgetActive.value) {
+      try {
+        const { sendNotification, isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification')
+
+        let hasPermission = await isPermissionGranted()
+        if (!hasPermission) {
+          const permission = await requestPermission()
+          hasPermission = permission === 'granted'
+        }
+
+        if (hasPermission) {
+          sendNotification({
+            title: 'Session Complete! 🍅',
+            body: notificationBody,
+            sound: 'default'  // Plays native OS notification sound
+          })
+          console.log('🍅 [TIMER] Showed Tauri native notification with sound')
+          return  // Don't fall through to browser notifications
+        }
+      } catch (err) {
+        console.warn('🍅 [TIMER] Tauri notification failed, falling back:', err)
+        // Fall through to Service Worker / browser notification
+      }
+    } else if (isTauri() && isKdeWidgetActive.value) {
+      console.log('🍅 [TIMER] KDE widget is active, skipping Tauri notification (widget handles it)')
+      return  // KDE widget shows its own notification
+    }
+
+    // Try Service Worker notification (supports action buttons)
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: 'TIMER_COMPLETE',
@@ -907,7 +954,7 @@ export const useTimerStore = defineStore('timer', () => {
 
   return {
     currentSession, completedSessions, sessions, settings,
-    isLeader, isDeviceLeader,
+    isLeader, isDeviceLeader, isKdeWidgetActive,
     isTimerActive, isPaused, currentTaskId, displayTime, currentTaskName,
     sessionTypeIcon, tabDisplayTime, sessionStatusText,
     timerPercentage, faviconStatus, tabTitleWithTimer,

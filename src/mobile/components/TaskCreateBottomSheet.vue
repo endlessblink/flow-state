@@ -132,6 +132,16 @@
                 <span>Stop Recording</span>
               </button>
             </div>
+
+            <!-- Re-record button (TASK-1110) - Shows when voice is supported and not actively recording -->
+            <button
+              v-if="canReRecord && !isListening && !isProcessing"
+              class="rerecord-btn"
+              @click="emit('start-recording')"
+            >
+              <Mic :size="16" />
+              <span>{{ taskTitle.trim() ? 'Re-record' : 'Record' }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -142,7 +152,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import {
-  Flag, Calendar, CalendarPlus, CalendarDays, X, Square
+  Flag, Calendar, CalendarPlus, CalendarDays, X, Square, Mic
 } from 'lucide-vue-next'
 import { useVoiceNLPParser } from '@/composables/useVoiceNLPParser'
 
@@ -151,18 +161,21 @@ interface Props {
   isListening?: boolean
   isProcessing?: boolean
   voiceTranscript?: string
+  canReRecord?: boolean  // TASK-1110: Allow re-recording
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isListening: false,
   isProcessing: false,
-  voiceTranscript: ''
+  voiceTranscript: '',
+  canReRecord: false
 })
 
 const emit = defineEmits<{
   close: []
   created: [data: TaskCreationData]
   'stop-recording': []
+  'start-recording': []  // TASK-1110: Request re-recording
 }>()
 
 interface TaskCreationData {
@@ -688,6 +701,34 @@ function autoResize(event: Event) {
 .stop-recording-btn:active {
   transform: scale(0.96);
   background: rgba(239, 68, 68, 0.25);
+}
+
+/* Re-record button (TASK-1110) */
+.rerecord-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 20px;
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: 20px;
+  color: var(--brand-primary, #4ECDC4);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rerecord-btn:hover {
+  background: rgba(78, 205, 196, 0.2);
+  border-color: rgba(78, 205, 196, 0.5);
+}
+
+.rerecord-btn:active {
+  transform: scale(0.96);
+  background: rgba(78, 205, 196, 0.25);
 }
 
 /* ================================

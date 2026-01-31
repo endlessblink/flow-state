@@ -95,6 +95,8 @@
     "pick:bugs": "cd tools/task-picker-v2 && npx tsx src/index.ts --bugs",
     "pick:progress": "cd tools/task-picker-v2 && npx tsx src/index.ts --progress",
     "pick:all": "cd tools/task-picker-v2 && npx tsx src/index.ts --all",
+    "pick:json": "cd tools/task-picker-v2 && npx tsx src/get-tasks.ts --json",
+    "pick:show": "cd tools/task-picker-v2 && npx tsx src/show-task.ts",
     "backup-tasks": "node scripts/backup-tasks.cjs",
     "restore-tasks": "node scripts/restore-tasks.cjs",
     "checkpoint": "bash scripts/checkpoint-with-backup.sh",

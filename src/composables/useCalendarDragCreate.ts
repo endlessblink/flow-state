@@ -57,9 +57,11 @@ export function useCalendarDragCreate() {
 
     console.log('Started create drag:', slot) // Debug log
 
-    // Add event listeners to document for mouse move and up
+    // Add event listeners to document for mouse move, up, keydown, and window blur
     document.addEventListener('mousemove', handleCreateDragMove, { passive: false })
     document.addEventListener('mouseup', handleCreateDragEnd, { passive: false })
+    document.addEventListener('keydown', handleCreateDragKeydown)
+    window.addEventListener('blur', handleCreateDragBlur)
 
     // Prevent text selection during drag
     document.body.style.userSelect = 'none'
@@ -132,6 +134,17 @@ export function useCalendarDragCreate() {
     resetCreateDrag()
   }
 
+  const handleCreateDragKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      resetCreateDrag()
+    }
+  }
+
+  const handleCreateDragBlur = () => {
+    // Window lost focus - cleanup to prevent stuck state
+    resetCreateDrag()
+  }
+
   const resetCreateDrag = () => {
     isCreatingTask.value = false
     createDragState.isActive = false
@@ -142,10 +155,15 @@ export function useCalendarDragCreate() {
     // Remove event listeners
     document.removeEventListener('mousemove', handleCreateDragMove)
     document.removeEventListener('mouseup', handleCreateDragEnd)
+    document.removeEventListener('keydown', handleCreateDragKeydown)
+    window.removeEventListener('blur', handleCreateDragBlur)
 
     // Restore text selection
     document.body.style.userSelect = ''
       ; (document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+
+    // Clear any stuck selection
+    window.getSelection()?.removeAllRanges()
   }
 
   // Check if slot is in create range for visual feedback

@@ -673,6 +673,16 @@ Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue 
 
 ---
 
+### BUG-1120: Test Environment localStorage Not Available (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+`tests/repro-bug-030.test.ts` fails with localStorage issue - test environment doesn't have localStorage mocked/available. This is a test infrastructure issue, not a code bug.
+
+**Fix**: Add localStorage mock to Vitest setup or the specific test file.
+
+---
+
 ### ~~BUG-025~~: Unrelated Groups Move with Parent (✅ DONE)
 
 **Priority**: P1-HIGH | **Status**: ✅ DONE
@@ -1120,7 +1130,33 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 - `src/mobile/views/MobileInboxView.vue` (simplify voice UI)
 - `src/components/inbox/unified/UnifiedInboxInput.vue` (if used)
 
-**Related**: ~~FEATURE-1023~~, ~~BUG-1109~~
+**Related**: ~~FEATURE-1023~~, ~~BUG-1109~~, TASK-1131
+
+---
+
+### TASK-1131: Offline Voice Queue - Save & Retry When Online (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: With Whisper-only voice input (TASK-1119), offline recording fails silently.
+
+**Solution**: Save audio blob to IndexedDB, show badge, auto-transcribe when back online.
+
+**Implementation**:
+1. Create `useOfflineVoiceQueue.ts` composable
+   - Save audio blob to IndexedDB when offline
+   - Use VueUse `useOnline()` for connectivity detection
+   - Watch online status, process queue when reconnected
+2. UI: Small badge on mic button "1 pending" when queue has items
+3. Auto-process queue silently when online, show toast on success
+
+**Files to Create/Modify**:
+- `src/composables/useOfflineVoiceQueue.ts` (CREATE)
+- `src/mobile/views/MobileInboxView.vue` (add badge, integrate queue)
+
+**Depends On**: TASK-1119 (Whisper-only simplification)
+
+**Effort**: ~2-3 hours
 
 ---
 
@@ -1160,7 +1196,99 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | TASK-065 | P3 | GitHub release (remove hardcoded creds, Docker guide) |
 | TASK-079 | P3 | Tauri mobile (Android/iOS) |
 | TASK-157 | P3 | ADHD-Friendly view redesign (Phases 2-4 pending) |
-| TASK-1120 | P2 | Deep UX/UI analysis and enhancement of catalog views |
+| TASK-1120 | P2 | 🔄 Deep UX/UI analysis and enhancement of catalog views |
+
+---
+
+## System Review 2026-01-31 Findings
+
+> **Source**: Comprehensive system review with 4 parallel agents (Security, Code Quality, Architecture, Health Check)
+> **Validated**: npm test (587 passed), npm audit (16 vulnerabilities), npm outdated, npm run lint (349 errors)
+
+### Security Issues
+
+| ID | Priority | Title | Location |
+|----|----------|-------|----------|
+| **BUG-1131** | P0 | Move all exposed API keys to backend proxy (Groq, DeepSeek, Anthropic, OpenAI) | `src/services/groqWhisper.ts`, `src/services/ai/` |
+| **BUG-1132** | P1 | Allowlist CORS origins (replace dynamic reflection) | Caddy config |
+| **BUG-1133** | P1 | Audit v-html XSS sources (ProjectEmojiIcon SVG) | `src/components/base/ProjectEmojiIcon.vue:21` |
+| **BUG-1134** | P1 | Enable Tauri CSP (currently `"csp": null`) | `src-tauri/tauri.conf.json` |
+| **BUG-1135** | P1 | Restrict Tauri shell permissions (`"args": true` allows arbitrary) | `src-tauri/capabilities/default.json` |
+| **BUG-1136** | P2 | Add entity ownership check to tombstone RLS policy | `supabase/migrations/` |
+| **BUG-1137** | P2 | Add guest session ID for migration (prevent data leaks) | `src/stores/auth.ts:361` |
+| **BUG-1138** | P2 | Remove isAdmin localStorage override in production | `src/stores/auth.ts:122` |
+| **BUG-1139** | P2 | Restrict Tauri filesystem write scope (`$HOME/**` too broad) | `src-tauri/capabilities/default.json` |
+| **BUG-1140** | P3 | Remove Supabase URL console.logs in production | `src/services/auth/supabase.ts` |
+| **BUG-1141** | P3 | Add CSP headers to limit XSS impact | Caddy/Tauri config |
+| **BUG-1142** | P3 | Add rate limiting to API calls | Edge Functions |
+
+### Code Quality Issues
+
+| ID | Priority | Title | Location |
+|----|----------|-------|----------|
+| **BUG-1143** | P0 | Add onUnmounted cleanup to MobileQuickSortView (memory leak) | `src/mobile/views/MobileQuickSortView.vue:979` |
+| **TASK-1144** | P1 | Split MobileQuickSortView.vue (2518→<500 lines) | `src/mobile/views/` |
+| **TASK-1145** | P1 | Split MobileInboxView.vue (1919 lines) | `src/mobile/views/` |
+| **TASK-1146** | P1 | Split useSupabaseDatabase.ts by domain (1736 lines) | `src/composables/` |
+| **TASK-1147** | P1 | Replace 199 `any` types with proper interfaces | 90 files |
+| **TASK-1148** | P1 | Remove 2302 console statements from production | 256 files |
+| **TASK-1149** | P1 | Split timer.ts into 4 services (960 lines) | `src/stores/timer.ts` |
+| **TASK-1150** | P2 | Consolidate formatDueDate/formatDateKey duplicates | 6 locations |
+| **TASK-1151** | P2 | Add cleanup to timer store intervals | `timer.ts:79-154` |
+| **TASK-1152** | P2 | Fix 40 eslint-disable/@ts-ignore suppressions | 17 files |
+| **TASK-1153** | P2 | Remove corrupted files from repo (.dirty, .clean) | `useCalendarDayView.ts.*` |
+| **TASK-1154** | P2 | Standardize error handling (throw vs no-throw) | `useSupabaseDatabase.ts` |
+| **TASK-1155** | P2 | Split AppSidebar.vue (1578 lines) | `src/layouts/` |
+| **TASK-1156** | P2 | Split useBackupSystem.ts (1411 lines) | `src/composables/` |
+| **TASK-1157** | P3 | Extract magic numbers to named constants | Multiple files |
+
+### Architecture Improvements
+
+| ID | Priority | Title | Description |
+|----|----------|-------|-------------|
+| **TASK-1158** | P1 | Resolve tasks.ts ↔ canvas.ts circular dependency | Replace dynamic import workaround |
+| **TASK-1159** | P1 | Implement optimistic updates for task CRUD | UI updates before network |
+| **TASK-1160** | P2 | Add virtualized task lists (@tanstack/vue-virtual) | Scale to 500+ tasks |
+| **TASK-1161** | P2 | Create shared domain layer for mobile | `src/domain/` composables |
+| **FEATURE-1162** | P2 | Add Smart Filters / Saved Views feature | New `saved_filters` table |
+| **FEATURE-1163** | P2 | Add Comments on Tasks feature | New `task_comments` table |
+| **FEATURE-1164** | P3 | Add Habit Tracking mode | Extend recurring tasks |
+| **FEATURE-1165** | P3 | Universal Quick Capture (all platforms) | Menu bar, system tray |
+| **FEATURE-1166** | P3 | Create Public API | REST endpoints |
+| **FEATURE-1167** | P3 | Mobile Canvas (simplified, touch) | Pinch/zoom, drag |
+
+### Testing & Quality
+
+| ID | Priority | Title | Description |
+|----|----------|-------|-------------|
+| **TASK-1168** | P1 | Add unit tests for sync/conflict resolution | Currently 4 unit tests |
+| **TASK-1169** | P1 | Add unit tests for database layer | No dedicated tests |
+| **TASK-1170** | P2 | Add cross-device timer sync tests | Limited coverage |
+| **TASK-1171** | P2 | Add mobile view E2E tests | Some gaps |
+| **TASK-1118** | P3 | Reduce test suite from 615 to ~100 essential | Remove debug tests (already created) |
+
+### Dependencies & Build
+
+| ID | Priority | Title | Description |
+|----|----------|-------|-------------|
+| **TASK-1172** | P2 | Update VueUse 10.11→14.1 (requires Vue 3.5+) | 4 major versions behind |
+| **TASK-1173** | P2 | Replace deprecated crypto-js (CVE-2023-46233) | Use Web Crypto API |
+| **TASK-1174** | P2 | Fix 16 npm audit vulnerabilities (2 high) | `npm audit fix` |
+| **TASK-1175** | P3 | Fix 349 linter errors | `npm run lint --fix` |
+
+### System Review Summary
+
+**Total Issues Found**: 48
+- **P0 (Critical)**: 2 (BUG-1131, BUG-1143)
+- **P1 (High)**: 14
+- **P2 (Medium)**: 19
+- **P3 (Low)**: 13
+
+**Validated Metrics**:
+- Tests: 587 passed, 28 todo (615 total)
+- Linter: 349 errors, 292 warnings
+- npm audit: 16 vulnerabilities (0 critical, 2 high)
+- Codebase: 585 files, 136,067 lines of code
 
 ---
 

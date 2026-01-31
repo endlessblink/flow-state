@@ -48,6 +48,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   // --- MEMORY LEAK FIX: Listener Registry ---
   let currentMouseMoveHandler: ((e: MouseEvent) => void) | null = null
   let currentMouseUpHandler: (() => void) | null = null
+  let currentKeydownHandler: ((e: KeyboardEvent) => void) | null = null
+  let currentBlurHandler: (() => void) | null = null
 
   const cleanupListeners = () => {
     if (currentMouseMoveHandler) {
@@ -60,7 +62,24 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
   }
 
-  onUnmounted(cleanupListeners)
+  const cleanupAllListeners = () => {
+    cleanupListeners()
+    if (currentKeydownHandler) {
+      document.removeEventListener('keydown', currentKeydownHandler)
+      currentKeydownHandler = null
+    }
+    if (currentBlurHandler) {
+      window.removeEventListener('blur', currentBlurHandler)
+      currentBlurHandler = null
+    }
+    // Clear any stuck selection
+    window.getSelection()?.removeAllRanges()
+    // Restore text selection
+    document.body.style.userSelect = ''
+    ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+  }
+
+  onUnmounted(cleanupAllListeners)
   // ------------------------------------------
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
@@ -716,8 +735,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     }
 
     const handleMouseUp = async () => {
-
-
       // Commit final values to store
       if (direction === 'bottom') {
         await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
@@ -761,16 +778,41 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       // Clear preview state
       resizePreview.value = null
 
-      cleanupListeners()
+      cleanupAllListeners()
     }
 
-    // Use registry for cleanup
-    cleanupListeners()
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Cancel resize - don't commit changes
+        resizePreview.value = null
+        cleanupAllListeners()
+      }
+    }
+
+    const handleBlur = () => {
+      // Window lost focus - cleanup to prevent stuck state
+      // Don't commit changes on blur (user might have accidentally clicked away)
+      resizePreview.value = null
+      cleanupAllListeners()
+    }
+
+    // Clean up any existing listeners first
+    cleanupAllListeners()
+
+    // Prevent text selection during resize
+    document.body.style.userSelect = 'none'
+    ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
+
+    // Register all handlers
     currentMouseMoveHandler = handleMouseMove
     currentMouseUpHandler = handleMouseUp
+    currentKeydownHandler = handleKeydown
+    currentBlurHandler = handleBlur
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('keydown', handleKeydown)
+    window.addEventListener('blur', handleBlur)
   }
 
   return {

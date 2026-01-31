@@ -25,6 +25,12 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   // --- MEMORY LEAK FIX: Listener Registry ---
   let currentMouseMoveHandler: ((e: MouseEvent) => void) | null = null
   let currentMouseUpHandler: (() => void) | null = null
+  let currentKeydownHandler: ((e: KeyboardEvent) => void) | null = null
+  let currentBlurHandler: (() => void) | null = null
+
+  // Week resize state - exposed for visual feedback
+  const isWeekResizing = ref(false)
+  const weekResizeTaskId = ref<string | null>(null)
 
   const cleanupListeners = () => {
     if (currentMouseMoveHandler) {
@@ -37,7 +43,27 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     }
   }
 
-  onUnmounted(cleanupListeners)
+  const cleanupAllListeners = () => {
+    cleanupListeners()
+    if (currentKeydownHandler) {
+      document.removeEventListener('keydown', currentKeydownHandler)
+      currentKeydownHandler = null
+    }
+    if (currentBlurHandler) {
+      window.removeEventListener('blur', currentBlurHandler)
+      currentBlurHandler = null
+    }
+    // Reset resize state
+    isWeekResizing.value = false
+    weekResizeTaskId.value = null
+    // Clear any stuck selection
+    window.getSelection()?.removeAllRanges()
+    // Restore text selection
+    document.body.style.userSelect = ''
+    ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+  }
+
+  onUnmounted(cleanupAllListeners)
   // ------------------------------------------
 
   const workingHours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
@@ -258,6 +284,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   // Week resize handlers
   const startWeekResize = (event: MouseEvent, calendarEvent: WeekEvent, direction: 'top' | 'bottom') => {
     event.preventDefault()
+    event.stopPropagation() // Prevent drag events from interfering
+
+    // Set resize state for visual feedback
+    isWeekResizing.value = true
+    weekResizeTaskId.value = calendarEvent.taskId
 
     const startY = event.clientY
     const HALF_HOUR_HEIGHT = 30
@@ -265,7 +296,13 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const originalStartSlot = calendarEvent.startSlot
     const originalDuration = calendarEvent.duration
 
+    // Prevent text selection during resize
+    document.body.style.userSelect = 'none'
+    ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
+
     const handleMouseMove = async (e: MouseEvent) => {
+      if (!isWeekResizing.value) return // Guard against stale handlers
+
       const deltaY = e.clientY - startY
       const deltaSlots = Math.round(deltaY / HALF_HOUR_HEIGHT)
 
@@ -298,16 +335,41 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     }
 
     const handleMouseUp = () => {
-      cleanupListeners()
+      // Restore text selection
+      document.body.style.userSelect = ''
+      ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+      cleanupAllListeners()
     }
 
-    // Use registry for cleanup
-    cleanupListeners()
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Restore text selection
+        document.body.style.userSelect = ''
+        ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+        cleanupAllListeners()
+      }
+    }
+
+    const handleBlur = () => {
+      // Window lost focus - cleanup to prevent stuck state
+      document.body.style.userSelect = ''
+      ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+      cleanupAllListeners()
+    }
+
+    // Clean up any existing listeners first
+    cleanupAllListeners()
+
+    // Register all handlers
     currentMouseMoveHandler = handleMouseMove
     currentMouseUpHandler = handleMouseUp
+    currentKeydownHandler = handleKeydown
+    currentBlurHandler = handleBlur
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('keydown', handleKeydown)
+    window.addEventListener('blur', handleBlur)
   }
 
   // Week drop handlers
@@ -359,6 +421,9 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
 
     // Resize handlers
     startWeekResize,
+    isWeekResizing,
+    weekResizeTaskId,
+    cancelWeekResize: cleanupAllListeners, // Allow external cancellation
 
     // Utilities
     isCurrentWeekTimeCell

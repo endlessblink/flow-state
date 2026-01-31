@@ -251,9 +251,31 @@ export const useTaskStore = defineStore('tasks', () => {
             normalizedTask.parentId = currentTask.parentId
             normalizedTask.positionVersion = localVersion
             normalizedTask.positionFormat = currentTask.positionFormat
-          } else if (localVersion === remoteVersion && currentTask.canvasPosition) {
-            // Same version but local has position - this is likely an echo of our own save
-            // Preserve local to prevent micro-drift from timestamp differences
+          } else if (localVersion === remoteVersion && currentTask.canvasPosition && normalizedTask.canvasPosition) {
+            // BUG-1124 FIX: Same version - compare updatedAt timestamps to determine which is newer
+            // This allows cross-device sync when versions match
+            const localUpdated = new Date(currentTask.updatedAt || 0).getTime()
+            const remoteUpdated = new Date(normalizedTask.updatedAt || 0).getTime()
+
+            if (remoteUpdated > localUpdated) {
+              // Remote is newer - accept remote position (cross-device sync)
+              if (import.meta.env.DEV) {
+                console.log(`[TASKS:POS] Accepting remote position for "${currentTask.title?.slice(0, 20)}"`, {
+                  localVersion,
+                  remoteVersion,
+                  localUpdated: new Date(localUpdated).toISOString(),
+                  remoteUpdated: new Date(remoteUpdated).toISOString(),
+                  action: 'accepting newer remote'
+                })
+              }
+              // Keep normalizedTask position as-is (remote wins)
+            } else {
+              // Local is newer or same - preserve local (likely echo of our own save)
+              normalizedTask.canvasPosition = currentTask.canvasPosition
+              normalizedTask.parentId = currentTask.parentId
+            }
+          } else if (localVersion === remoteVersion && currentTask.canvasPosition && !normalizedTask.canvasPosition) {
+            // Same version, local has position but remote doesn't - preserve local
             normalizedTask.canvasPosition = currentTask.canvasPosition
             normalizedTask.parentId = currentTask.parentId
           }

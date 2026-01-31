@@ -11,7 +11,7 @@ import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { clearGuestData, clearStaleGuestTasks } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
-import { fromSupabaseTask, fromSupabaseProject, type SupabaseTask, type SupabaseProject } from '@/utils/supabaseMappers'
+import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
 
 export function useAppInitialization() {
     const timerStore = useTimerStore()
@@ -247,10 +247,11 @@ export function useAppInitialization() {
                 console.log('🗑️ [HANDLER] Removing group from sync')
                 canvas.removeGroupFromSync(newDoc?.id || oldDoc?.id)
             } else if (newDoc) {
-                // Map raw Supabase data to app format
-                // Groups use position field directly, no special mapping needed
-                console.log('✅ [HANDLER] Updating group from sync:', newDoc.name)
-                canvas.updateGroupFromSync(newDoc.id, newDoc)
+                // BUG-1124 FIX: Map raw Supabase data to app format
+                // Groups need mapping: position_json -> position, and other field transformations
+                const mappedGroup = fromSupabaseGroup(newDoc as SupabaseGroup)
+                console.log('✅ [HANDLER] Updating group from sync:', mappedGroup.name, 'position:', mappedGroup.position)
+                canvas.updateGroupFromSync(mappedGroup.id, mappedGroup)
             }
         }
 

@@ -5,7 +5,8 @@
   "main": "src/main.ts",
   "type": "module",
   "scripts": {
-    "dev": "bash scripts/sync-doppler.sh && npm run verify-auth && node scripts/validate-supabase-keys.cjs && concurrently \"vite --host 0.0.0.0 --port 5546 --strictPort\" \"npm run backup:watch\"",
+    "predev": "bash scripts/kill-flow-state.sh --quiet 2>/dev/null || true",
+    "dev": "bash scripts/sync-doppler.sh && npm run verify-auth && node scripts/validate-supabase-keys.cjs && concurrently --kill-others-on-fail \"vite --host 0.0.0.0 --port 5546 --strictPort\" \"npm run backup:watch\"",
     "sync:doppler": "bash scripts/sync-doppler.sh",
     "verify-auth": "node scripts/verify-auth-user.cjs",
     "generate:keys": "node scripts/generate-supabase-keys.cjs",

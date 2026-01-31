@@ -7,7 +7,7 @@
  */
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
-import { transcribeAudio, isGroqWhisperAvailable } from '@/services/groqWhisper'
+import { transcribeWithRetry, isGroqWhisperAvailable } from '@/services/groqWhisper'
 
 export type WhisperStatus = 'idle' | 'starting' | 'recording' | 'processing' | 'error'
 export type SupportedLanguage = 'he-IL' | 'en-US' | 'auto'
@@ -147,7 +147,9 @@ export function useGroqWhisper(options: UseGroqWhisperOptions = {}) {
           })
         }
 
-        const result = await transcribeAudio(audioBlob, {
+        // BUG-1109: Use transcribeWithRetry for automatic Arabic→Hebrew correction
+        // Only pass language hint if explicitly set (not 'auto')
+        const result = await transcribeWithRetry(audioBlob, {
           language: getGroqLanguage(currentLanguage.value),
           model: 'whisper-large-v3-turbo'
         })

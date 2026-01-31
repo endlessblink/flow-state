@@ -347,14 +347,22 @@ Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue 
 
 ---
 
-### BUG-1109: PWA Mobile - Hebrew Voice Transcription Issues (📋 PLANNED)
+### ~~BUG-1109~~: PWA Mobile - Hebrew Voice Transcription Issues (✅ DONE)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-31)
 
 **Problem**: Voice transcription has multiple issues with Hebrew:
 1. Transcribes Arabic instead of Hebrew
 2. Makes mistakes during regular Hebrew transcription
 3. Problems when mixing Hebrew and English in speech
+
+**Solution**: Auto-detection + Arabic retry strategy. Let Whisper auto-detect first, then if result contains Arabic script (likely Hebrew misdetection), retry with `language='he'`. This preserves English and code-switching support while fixing the Arabic confusion.
+
+**Files Added/Modified**:
+- `src/utils/scriptDetection.ts` - Script detection utility (Hebrew/Arabic/Latin)
+- `src/services/groqWhisper.ts` - Added `transcribeWithRetry()` function
+- `src/composables/useGroqWhisper.ts` - Uses new retry function
+- `tests/unit/script-detection.test.ts` - 11 unit tests
 
 **Related**: TASK-1002 (Voice Transcription to Task), FEATURE-1023 (Voice Input)
 
@@ -851,7 +859,7 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 
 **Completed Subtasks**: ~~TASK-1024~~ (Web Speech API), ~~TASK-1025~~ (Mic Button), ~~TASK-1026~~ (NLP Parser), ~~TASK-1027~~ (Commands), ~~TASK-1028~~ (Confirmation UI), ~~TASK-1029~~ (Whisper Fallback)
 
-**Known Issues**: BUG-1109 (Hebrew voice transcription sometimes outputs Arabic)
+**Known Issues**: ~~BUG-1109~~ (Hebrew voice transcription - FIXED via Arabic retry)
 
 ---
 
@@ -876,7 +884,7 @@ Voice input → Web Speech API / Whisper → NLP extracts task properties (prior
 - `src/mobile/views/MobileInboxView.vue` (simplify voice UI)
 - `src/components/inbox/unified/UnifiedInboxInput.vue` (if used)
 
-**Related**: ~~FEATURE-1023~~, BUG-1109
+**Related**: ~~FEATURE-1023~~, ~~BUG-1109~~
 
 ---
 

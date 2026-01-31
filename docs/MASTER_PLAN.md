@@ -822,7 +822,7 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 - [x] Phase 2: Auth flow audit + fixes (DONE 2026-01-30)
 - [x] Phase 3: Tauri debug + panic fix (DONE 2026-01-30)
 - [x] Phase 4: PWA service worker audit (DONE 2026-01-30 - offline DB gap identified)
-- [ ] Phase 5: KDE widget sync verification (requires testing)
+- [x] Phase 5: KDE widget token refresh on startup (DONE 2026-01-31 - was loading expired tokens)
 - [ ] Phase 6: Cross-platform E2E matrix test (requires testing)
 
 **Success Criteria**: Caddy 24h+ uptime, no 0-task loads, Tauri no SIGTERM, PWA overnight persistence.

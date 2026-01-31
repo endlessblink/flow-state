@@ -129,9 +129,9 @@
 
 ---
 
-### BUG-1113: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (📋 PLANNED)
+### BUG-1113: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED | **Parent**: TASK-303
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS | **Parent**: TASK-303
 
 **Problem**: The Dev-Maestro orchestrator creates git worktrees in `.agent-worktrees/` for each task but does not clean them up after completion. These stale directories force Claude Code to load them into context, wasting tokens and causing confusion.
 
@@ -159,6 +159,236 @@
 **Related**: BUG-1019 (Swarm agent cleanup + OOM prevention)
 
 **Files**: `~/.dev-maestro/server.js` (`cleanupWorktree()`, `createAgentWorktree()`)
+
+---
+
+### BUG-1121: KDE Plasma Widget Dropdown Options Disappearing (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: In the KDE Plasma widget task list, dropdown menus (sort order, filter) are cutting off options. Should show 4 options but some are invisible/unpickable.
+
+**Screenshot Evidence**: User-provided screenshot shows "A-Z" and "Priority" visible but other options missing from the dropdown.
+
+**Investigation Needed**:
+- Check dropdown height/overflow CSS in `main.qml`
+- Verify `ComboBox` model has all 4 items
+- Check if z-index or clipping is hiding options
+- Test with different panel heights/positions
+
+**Files**: `kde-widget/package/contents/ui/main.qml`
+
+---
+
+### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: KDE Plasma widget has lost timer sync with BOTH the web app and Tauri desktop app. Timer state changes are not reflecting across devices.
+
+**Expected Behavior**:
+
+---
+
+### BUG-1129: Quick Sort Project Buttons Truncating Names on Desktop (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: In the Quick Sort view on desktop, project category buttons have fixed width causing long project names to be truncated with ellipsis. Hebrew text "נטלי כה..." and other long names are cut off.
+
+**Screenshot**: Shows "Categorize as:" buttons where project 3 displays "...כה נטלי" (truncated)
+
+**Expected Behavior**:
+- Project names should be fully visible or have reasonable truncation with tooltip
+- Buttons should expand to fit content or use flexible width
+- Long names should have tooltip on hover showing full text
+
+**Investigation Needed**:
+- Check Quick Sort component button styling
+- Review flex/grid layout for category buttons
+- Consider `text-overflow: ellipsis` + `title` attribute for accessibility
+
+**Files**: `src/components/layout/CategorySelector.vue`, `src/views/QuickSortView.vue`
+
+---
+
+### TASK-1130: QuickSort Desktop UX/UI Comprehensive Improvements (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Desktop QuickSort view has multiple UX issues preventing efficient task categorization:
+1. Cannot view as "one-pager" - requires scrolling (850-1050px content vs 900px viewport)
+2. Task titles scroll out of view when viewing project options (context loss)
+3. Project names truncated, especially Hebrew/RTL text ("נטלי כה...")
+4. Keyboard shortcuts (1-9) exist but badges are hidden (`display: none`)
+
+**Root Causes Identified**:
+- `.card-container` has `min-height: 350px` (excessive)
+- `.category-grid` uses `minmax(180px, 1fr)` (too narrow for long names)
+- `.project-name` has `white-space: nowrap` (forces truncation)
+- Header + progress + tabs consume ~240px before content
+- Gaps/padding total ~128px additional
+
+**Improvement Plan (3 Phases)**:
+
+**Phase 1 - Quick Wins** (Solves scrolling + truncation):
+- [ ] Add `max-height: 240px; overflow-y: auto` to `.category-grid`
+- [ ] Change `.project-name` to `white-space: normal; -webkit-line-clamp: 2`
+- [ ] Increase grid minimum from `180px` to `200px`
+- [ ] Reduce `.quick-sort-card` min-height from `300px` to `200px`
+- [ ] Unhide `.shortcut-badge` (remove `display: none`)
+
+**Phase 2 - Layout Compression** (Fits in 700px viewport):
+- [ ] Compress header: inline title, hide subtitle, reduce font size
+- [ ] Move tab navigation inline with header using CSS grid
+- [ ] Single-line inline progress indicator
+- [ ] Reduce container padding from 64px to 40px
+
+**Phase 3 - Mobile Feature Parity**:
+- [ ] Add project search/filter (like `MobileQuickSortView.vue`)
+- [ ] Add recent projects section (4 most-used)
+- [ ] Add "Keep in Inbox" option
+- [ ] Add colored left border to project buttons for visual scanning
+
+**Target Metrics**:
+- Total height: 744-964px (fits 1080p without scroll)
+- Hebrew name visibility: 95% fully readable
+- Keyboard shortcut discovery: Visible badges
+
+**Related**: BUG-1129 (project button truncation)
+
+**Files**: `src/views/QuickSortView.vue`, `src/components/QuickSortCard.vue`, `src/components/layout/CategorySelector.vue`
+
+---
+
+### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: KDE Plasma widget has lost timer sync with BOTH the web app and Tauri desktop app.
+
+**Expected Behavior**:
+- KDE widget, web app, and Tauri app should share timer state via Supabase Realtime
+- Timer start/pause/reset on any device should reflect on all others
+- Device leadership model should coordinate which device "leads" the countdown
+
+**Investigation Needed**:
+- Check if KDE widget Supabase credentials are still valid
+- Verify Realtime WebSocket connection in KDE widget
+- Check device leadership heartbeat mechanism
+- Compare timer session IDs across all three apps
+- Verify KDE widget is polling/subscribing to correct Supabase endpoint
+
+**Related**: TASK-1009 (Timer Sync), SOP-038 (KDE Widget Supabase Config)
+
+**Files**: `kde-widget/package/contents/ui/main.qml`, `src/stores/timer.ts`
+
+---
+
+### BUG-1123: Tauri Desktop App Performance Issues (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Performance issues reported in Tauri desktop application.
+
+**Investigation Needed**:
+- Identify specific performance bottlenecks (startup time, UI responsiveness, memory usage)
+- Check if issue is Rust backend, frontend rendering, or IPC communication
+- Compare performance between Tauri app and PWA version
+- Review release profile optimizations from BUG-1115
+
+**Related**: BUG-1115 (release profile optimizations)
+
+**Files**: `src-tauri/`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`
+
+---
+
+### BUG-1124: Task Positions Don't Sync Between Tauri App and Web App (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Task positions on canvas don't sync correctly between the production Tauri desktop app and the web app (PWA). Changes made in one don't reflect properly in the other.
+
+**Investigation Needed**:
+- Identify which app's positions are being overwritten
+- Check Supabase Realtime subscription differences between Tauri and PWA
+- Review canvas position persistence logic in `useCanvasSync.ts`
+- Verify device leadership model isn't conflicting with position updates
+
+**Related**: TASK-131 (position reset issues), TASK-142 (positions reset on refresh)
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/stores/canvas.ts`, `src/composables/useSupabaseDatabase.ts`
+
+---
+
+### BUG-1125: Canvas Edge/Cable Connections Between Nodes Broken (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Connecting cables/edges between nodes on the canvas is broken. Users cannot create new connections between tasks/groups. Affects both local dev and Tauri desktop app.
+
+**Investigation Needed**:
+- Check Vue Flow edge creation handlers in `useCanvasEvents.ts`
+- Verify `onConnect` and `onEdgesChange` callbacks
+- Review edge validation logic in canvas composables
+- Check if recent refactoring broke connection handle visibility or functionality
+
+**Related**: Canvas position system, Vue Flow event handlers
+
+**Files**: `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasInteractions.ts`, `src/views/CanvasView.vue`
+
+---
+
+### BUG-1126: Group Created at Wrong Location (Not Where Clicked) (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+
+**Problem**: When right-clicking on the canvas to create a new group, the group does not appear at the clicked location. It appears at a different position instead.
+
+**Expected Behavior**: New group should be created at the exact canvas coordinates where the user right-clicked.
+
+**Investigation Needed**:
+- Check context menu coordinate capture in canvas right-click handler
+- Verify coordinate transformation from screen/viewport to canvas coordinates
+- Review group creation in `useCanvasActions.ts` or `useCanvasGroups.ts`
+
+**Files**: `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasActions.ts`, `src/composables/canvas/useCanvasGroups.ts`
+
+---
+
+### BUG-1127: Cannot Create Group Inside Another Group (Nested Groups) (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: It's not possible to create a new group inside an existing group. Nested group creation is blocked or ignored.
+
+**Expected Behavior**: Users should be able to create groups inside other groups for hierarchical organization.
+
+**Investigation Needed**:
+- Check if group creation logic explicitly prevents nested groups
+- Verify parentId assignment during group creation
+- Review Vue Flow nesting validation
+
+**Files**: `src/composables/canvas/useCanvasGroups.ts`, `src/composables/canvas/useCanvasActions.ts`
+
+---
+
+### TASK-1128: Add "Create Group From Selection" Context Menu Option (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Feature**: When multiple tasks are selected on canvas, right-click should show "Add to New Group" option that:
+1. Creates a new group at the bounding box location of selected tasks
+2. Automatically parents all selected tasks to the new group
+3. Sizes the group to contain all selected tasks with padding
+
+**Implementation**:
+- Add context menu option when `selectedNodes.length > 1`
+- Calculate bounding box of selected nodes
+- Create group with appropriate position and dimensions
+- Update selected tasks' parentId to new group
+
+**Files**: `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasActions.ts`, `src/components/canvas/CanvasContextMenu.vue`
 
 ---
 
@@ -772,11 +1002,17 @@ Record audio → transcription API (Whisper/Deepgram) → create task. Mobile-fi
 
 ---
 
-### TASK-1110: PWA Mobile - Add Re-Record Option in Task Creation (🔄 IN PROGRESS)
+### ~~TASK-1110~~: PWA Mobile - Add Re-Record Option in Task Creation (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-01-30)
+**Priority**: P2 | **Status**: ✅ DONE (2026-01-31)
 
 **Feature**: Add ability to re-record voice input from the task creation modal. Currently no way to redo a recording once made.
+
+**Implementation**:
+- Desktop: Added re-record props and button to `VoiceTaskConfirmation.vue`
+- Mobile: Added re-record button to `TaskCreateBottomSheet.vue`
+- Button shows "Record" when empty, "Re-record" when has existing text
+- Fixed bug where button disappeared when clearing text
 
 **Related**: TASK-1002, FEATURE-1023
 
@@ -924,6 +1160,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | TASK-065 | P3 | GitHub release (remove hardcoded creds, Docker guide) |
 | TASK-079 | P3 | Tauri mobile (Android/iOS) |
 | TASK-157 | P3 | ADHD-Friendly view redesign (Phases 2-4 pending) |
+| TASK-1120 | P2 | Deep UX/UI analysis and enhancement of catalog views |
 
 ---
 

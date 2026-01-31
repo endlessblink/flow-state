@@ -148,6 +148,12 @@ self.addEventListener('message', (event) => {
  * Show timer completion notification with action buttons
  */
 async function handleTimerComplete(data: TimerCompleteMessage) {
+  // Check notification permission before attempting to show
+  if (Notification.permission !== 'granted') {
+    console.warn('[SW] Cannot show notification - permission not granted:', Notification.permission)
+    return
+  }
+
   const { sessionId, wasBreak, taskId, taskName } = data
 
   // Determine notification content based on session type

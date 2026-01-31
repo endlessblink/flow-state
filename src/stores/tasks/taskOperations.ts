@@ -4,6 +4,8 @@ import type { Task, Subtask, TaskInstance } from '@/types/tasks'
 // TASK-127: Removed taskDisappearanceLogger (PouchDB-era debugging tool)
 import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
+// FEATURE-1118: Gamification hooks for task completion
+import { useGamificationHooks } from '@/composables/useGamificationHooks'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -247,6 +249,19 @@ export function useTaskOperations(
                 if (wasNotDone && isNowDone) {
                     updates.completedAt = new Date()
                     console.log(`✅ [DONE-ZONE] Task "${task.title?.slice(0, 30)}" marked done, completedAt set`)
+
+                    // FEATURE-1118: Award XP for task completion
+                    try {
+                        const gamificationHooks = useGamificationHooks()
+                        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date()
+                        gamificationHooks.onTaskCompleted(task, {
+                            wasOverdue: isOverdue,
+                            createdAt: task.createdAt
+                        }).catch(e => console.warn('[Gamification] Task completion hook failed:', e))
+                    } catch (e) {
+                        // Gamification is non-critical, don't break task flow
+                        console.warn('[Gamification] Hook error:', e)
+                    }
 
                     // AUTO-ARCHIVE: Move done tasks off canvas to inbox
                     // This prevents position/sync issues with done tasks on canvas

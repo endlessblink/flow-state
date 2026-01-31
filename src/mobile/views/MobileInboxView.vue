@@ -231,43 +231,20 @@
         </button>
       </div>
 
-      <!-- Voice feedback (when recording) -->
+      <!-- Voice feedback (when recording) - Whisper only (TASK-1119) -->
       <div v-if="isListening || isProcessingVoice" class="voice-feedback">
-        <!-- Whisper mode: AI indicator + duration -->
-        <template v-if="voiceMode === 'whisper'">
-          <span class="voice-mode-badge whisper">🤖 AI</span>
-          <div class="voice-waveform">
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-          </div>
-          <span class="voice-status">
-            <template v-if="isProcessingVoice">Processing...</template>
-            <template v-else>{{ recordingDuration }}s - Speak freely...</template>
-          </span>
-        </template>
-
-        <!-- Browser mode: Language toggle + waveform -->
-        <template v-else>
-          <button
-            class="voice-lang-toggle"
-            :title="voiceLanguage === 'he-IL' ? 'Switch to English' : 'Switch to Hebrew'"
-            @click="toggleVoiceLanguage"
-          >
-            {{ voiceLanguage === 'he-IL' ? 'עב' : 'EN' }}
-          </button>
-          <div class="voice-waveform">
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-            <span class="wave-bar" />
-          </div>
-          <span class="voice-status">{{ displayTranscript || (voiceLanguage === 'he-IL' ? 'דבר עכשיו...' : 'Speak now...') }}</span>
-        </template>
-
+        <span class="voice-mode-badge whisper">🤖 AI</span>
+        <div class="voice-waveform">
+          <span class="wave-bar" />
+          <span class="wave-bar" />
+          <span class="wave-bar" />
+          <span class="wave-bar" />
+          <span class="wave-bar" />
+        </div>
+        <span class="voice-status">
+          <template v-if="isProcessingVoice">Processing...</template>
+          <template v-else>{{ recordingDuration }}s - Speak freely...</template>
+        </span>
         <button class="voice-cancel" @click="cancelVoice">
           <X :size="16" />
         </button>
@@ -275,13 +252,7 @@
 
       <!-- Voice mode indicator when not recording -->
       <div v-if="isVoiceSupported && !isListening && !isProcessingVoice" class="voice-lang-hint">
-        <button class="voice-mode-btn" @click="toggleVoiceMode">
-          {{ voiceMode === 'whisper' ? '🤖 AI (auto-detect)' : '🌐 Browser' }}
-        </button>
-        <!-- Language toggle only shown in browser mode -->
-        <button v-if="voiceMode === 'browser'" class="voice-lang-btn" @click="toggleVoiceLanguage">
-          {{ voiceLanguage === 'he-IL' ? '🇮🇱 Hebrew' : '🇺🇸 English' }}
-        </button>
+        <span class="voice-mode-badge whisper">🤖 AI (auto-detect)</span>
       </div>
 
       <!-- Voice error message -->
@@ -305,7 +276,7 @@
       :is-open="isTaskCreateOpen"
       :is-listening="isListening"
       :is-processing="isProcessingVoice"
-      :voice-transcript="finalVoiceTranscript || displayTranscript"
+      :voice-transcript="finalVoiceTranscript || whisperTranscript"
       :can-re-record="isVoiceSupported"
       @close="handleTaskCreateClose"
       @created="handleTaskSheetCreated"
@@ -331,7 +302,7 @@ import {
   Flag, ChevronDown, Mic, MicOff, X,
   Layers, CalendarClock, AlertCircle, FolderOpen, ListFilter
 } from 'lucide-vue-next'
-import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
+// Web Speech API removed (TASK-1119) - Whisper-only for better Hebrew support
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useHaptics } from '@/composables/useHaptics'
 
@@ -391,17 +362,7 @@ const dismissSwipeHint = () => {
   localStorage.setItem(SWIPE_HINT_KEY, 'true')
 }
 
-// Voice mode: 'whisper' (AI auto-detect) or 'browser' (Web Speech API)
-const voiceMode = ref<'whisper' | 'browser'>('whisper')
-
-// Voice language toggle - detect from browser or default to English (for browser mode)
-const getDefaultVoiceLanguage = (): 'he-IL' | 'en-US' => {
-  const browserLang = navigator.language || navigator.languages?.[0] || 'en-US'
-  return browserLang.startsWith('he') ? 'he-IL' : 'en-US'
-}
-const voiceLanguage = ref<'he-IL' | 'en-US'>(getDefaultVoiceLanguage())
-
-// Whisper-based voice input (AI auto-detect, supports mixed languages)
+// Voice input - Whisper only (TASK-1119: removed Web Speech API for better Hebrew support)
 const {
   isRecording: isWhisperRecording,
   isProcessing: isWhisperProcessing,
@@ -427,94 +388,19 @@ const {
   }
 })
 
-// Browser-based voice input (Web Speech API, single language)
-const {
-  isListening: isBrowserListening,
-  isSupported: isBrowserVoiceSupported,
-  displayTranscript: browserDisplayTranscript,
-  error: browserVoiceError,
-  start: startBrowserVoice,
-  stop: stopBrowserVoice,
-  cancel: cancelBrowserVoice,
-  setLanguage
-} = useSpeechRecognition({
-  language: voiceLanguage.value,
-  interimResults: true,
-  silenceTimeout: 2500,
-  onResult: (result) => {
-    if (result.isFinal && result.transcript.trim()) {
-      // Keep TaskCreateBottomSheet open - transcript flows via voiceTranscript prop
-      finalVoiceTranscript.value = result.transcript.trim()
-    }
-  },
-  onError: (err) => {
-    console.warn('[BrowserVoice] Error:', err)
-  }
-})
-
-// Unified voice state (combines both modes)
-const isListening = computed(() =>
-  voiceMode.value === 'whisper'
-    ? isWhisperRecording.value
-    : isBrowserListening.value
-)
+// Voice state - Whisper only (TASK-1119)
+const isListening = computed(() => isWhisperRecording.value)
 const isProcessingVoice = computed(() => isWhisperProcessing.value)
-const isVoiceSupported = computed(() =>
-  voiceMode.value === 'whisper'
-    ? isWhisperSupported.value && hasWhisperApiKey.value
-    : isBrowserVoiceSupported.value
-)
-const displayTranscript = computed(() =>
-  voiceMode.value === 'whisper'
-    ? whisperTranscript.value
-    : browserDisplayTranscript.value
-)
-const voiceError = computed(() =>
-  voiceMode.value === 'whisper'
-    ? whisperError.value
-    : browserVoiceError.value
-)
+const isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
+const voiceError = computed(() => whisperError.value)
 
-// Auto-select mode based on API key availability
-if (!hasWhisperApiKey.value && isBrowserVoiceSupported.value) {
-  voiceMode.value = 'browser'
-}
-
-// Toggle voice mode
-const toggleVoiceMode = () => {
-  if (voiceMode.value === 'whisper' && isBrowserVoiceSupported.value) {
-    voiceMode.value = 'browser'
-  } else if (hasWhisperApiKey.value) {
-    voiceMode.value = 'whisper'
-  }
-  triggerHaptic('light')
-}
-
-// Toggle voice language (only for browser mode)
-const toggleVoiceLanguage = async () => {
-  const oldLang = voiceLanguage.value
-  voiceLanguage.value = voiceLanguage.value === 'he-IL' ? 'en-US' : 'he-IL'
-  console.log('[Voice] 🌐 Language switched:', oldLang, '→', voiceLanguage.value)
-  await setLanguage(voiceLanguage.value)
-  triggerHaptic('light')
-}
-
-// Unified voice control functions
+// Voice control functions - Whisper only
 const startVoice = async () => {
-  if (voiceMode.value === 'whisper') {
-    await startWhisper()
-  } else {
-    setLanguage(voiceLanguage.value)
-    await startBrowserVoice()
-  }
+  await startWhisper()
 }
 
 const stopVoice = () => {
-  if (voiceMode.value === 'whisper') {
-    stopWhisper()
-  } else {
-    stopBrowserVoice()
-  }
+  stopWhisper()
 }
 
 // TASK-1110: Handle re-record request from TaskCreateBottomSheet
@@ -526,11 +412,7 @@ const handleStartReRecord = async () => {
 }
 
 const cancelVoice = () => {
-  if (voiceMode.value === 'whisper') {
-    cancelWhisper()
-  } else {
-    cancelBrowserVoice()
-  }
+  cancelWhisper()
 }
 
 // Toggle voice recording

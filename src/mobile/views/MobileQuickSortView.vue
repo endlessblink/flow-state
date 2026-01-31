@@ -1926,11 +1926,7 @@ onMounted(() => {
 .project-sheet {
   width: 100%;
   max-height: 70vh;
-  background: linear-gradient(
-    180deg,
-    hsl(240, 20%, 12%) 0%,
-    hsl(240, 18%, 10%) 100%
-  );
+  background: var(--surface-primary);
   border-top-left-radius: var(--radius-2xl);
   border-top-right-radius: var(--radius-2xl);
   padding: var(--space-4) var(--space-5);
@@ -1941,7 +1937,7 @@ onMounted(() => {
 .sheet-handle {
   width: 40px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--glass-border-strong, rgba(255, 255, 255, 0.4));
   border-radius: var(--radius-full);
   margin: 0 auto var(--space-5);
 }
@@ -1962,9 +1958,9 @@ onMounted(() => {
   gap: var(--space-2);
   padding: var(--space-3);
   margin-bottom: var(--space-3);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg-medium, rgba(45, 40, 70, 0.15));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md);
   z-index: 1;
 }
 
@@ -1993,8 +1989,8 @@ onMounted(() => {
 
 .section-label {
   display: block;
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -2021,20 +2017,22 @@ onMounted(() => {
   gap: var(--space-2);
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
-  background: rgba(78, 205, 196, 0.1);
-  border: 1px solid rgba(78, 205, 196, 0.25);
+  background: var(--brand-bg-subtle, rgba(78, 205, 196, 0.1));
+  border: 1px solid var(--brand-border-subtle, rgba(78, 205, 196, 0.2));
   border-radius: var(--radius-full);
   color: var(--text-primary);
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: var(--text-sm, 0.8125rem);
+  font-weight: var(--font-medium, 500);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.08));
 }
 
 .recent-project-chip:active {
   transform: scale(0.95);
-  background: rgba(78, 205, 196, 0.2);
+  background: var(--brand-bg-medium, rgba(78, 205, 196, 0.2));
+  box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .chip-emoji {
@@ -2049,20 +2047,23 @@ onMounted(() => {
 
 /* Depth indicator for deeply nested items */
 .depth-indicator {
-  font-size: 0.625rem;
+  font-size: var(--text-xs, 0.75rem);
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 2px 6px;
+  background: var(--glass-bg-light, rgba(255, 255, 255, 0.05));
+  padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
   margin-left: auto;
 }
 
 /* No results message */
 .no-results {
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-sm, 0.875rem);
+  background: var(--glass-bg-subtle, rgba(45, 40, 70, 0.02));
+  border-radius: var(--radius-lg);
+  margin: var(--space-4) 0;
 }
 
 .project-list {
@@ -2075,16 +2076,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
-  padding-right: var(--space-4);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  background: var(--glass-bg-weak, rgba(45, 40, 70, 0.04));
+  border: 1px solid var(--glass-border-light, rgba(255, 255, 255, 0.06));
+  border-radius: var(--radius-xl);
   color: var(--text-primary);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: var(--font-medium, 500);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
 }
 
@@ -2100,14 +2100,14 @@ onMounted(() => {
 
 .hierarchy-connector {
   width: 12px;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.15);
+  height: 1px;
+  background: var(--border-subtle, rgba(255, 255, 255, 0.08));
   margin-left: auto;
   border-radius: 1px;
 }
 
 .project-option:active {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-bg-light, rgba(45, 40, 70, 0.08));
   transform: scale(0.98);
 }
 
@@ -2117,7 +2117,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-size: 1.25rem;
 }
 
@@ -2128,8 +2128,8 @@ onMounted(() => {
 
 /* Inbox option - special styling */
 .inbox-option {
-  background: rgba(78, 205, 196, 0.08);
-  border-color: rgba(78, 205, 196, 0.2);
+  background: var(--brand-bg-subtle, rgba(78, 205, 196, 0.08));
+  border-color: var(--brand-border-subtle, rgba(78, 205, 196, 0.2));
   flex-wrap: wrap;
 }
 
@@ -2139,7 +2139,7 @@ onMounted(() => {
 
 .option-hint {
   width: 100%;
-  font-size: 0.6875rem;
+  font-size: var(--text-xs, 0.75rem);
   color: var(--text-muted);
   margin-top: var(--space-1);
   padding-left: calc(36px + var(--space-3));
@@ -2152,7 +2152,7 @@ onMounted(() => {
   gap: var(--space-3);
   margin: var(--space-4) 0;
   color: var(--text-muted);
-  font-size: 0.6875rem;
+  font-size: var(--text-xs, 0.75rem);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -2162,7 +2162,7 @@ onMounted(() => {
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--border-subtle, rgba(255, 255, 255, 0.08));
 }
 
 /* Sheet transition */

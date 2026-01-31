@@ -248,6 +248,21 @@ export function useCanvasOrchestrator() {
         actions.createTaskInGroup(groupOrId, screenPos)
     }
 
+    // Wrapper for createGroup to use stored context menu position
+    // BUG-1126 FIX: This ensures groups are created at the right-click location, not viewport center
+    const createGroup = () => {
+        const screenPos = {
+            x: events.canvasContextMenuX.value,
+            y: events.canvasContextMenuY.value
+        }
+        console.log('[BUG-1126] createGroup wrapper called', {
+            storedContextMenuX: events.canvasContextMenuX.value,
+            storedContextMenuY: events.canvasContextMenuY.value,
+            screenPos
+        })
+        actions.createGroup(screenPos)
+    }
+
     // Hotkeys
     const { handleKeyDown } = useCanvasHotkeys({
         isBulkDeleteModalOpen: modals.isBulkDeleteModalOpen,
@@ -637,6 +652,7 @@ export function useCanvasOrchestrator() {
         ...actions,
         createTaskHere, // Override to use stored context menu position
         createTaskInGroup, // Override to use stored context menu position (TASK-288 fix)
+        createGroup, // Override to use stored context menu position (BUG-1126 fix)
         ...modals,
         closeSectionSettingsModal: actions.closeGroupEditModal,
         handleSectionSettingsSave: actions.handleGroupEditSave,

@@ -28,6 +28,9 @@
         </transition>
       </router-view>
     </main>
+
+    <!-- AI CHAT PANEL (TASK-1120) -->
+    <AIChatPanel />
   </div>
 </template>
 
@@ -38,6 +41,7 @@ import { useDirection } from '@/i18n/useDirection'
 import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
+import { AIChatPanel } from '@/components/ai'
 
 const uiStore = useUIStore()
 const { direction } = useDirection()

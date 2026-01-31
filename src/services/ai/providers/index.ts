@@ -40,6 +40,19 @@ export {
   autoDetectOllama,
 } from './ollama'
 
+// Claude/Anthropic
+export {
+  ClaudeProvider,
+  createClaudeProvider,
+} from './claude'
+
+// DeepSeek
+export {
+  DeepSeekProvider,
+  createDeepSeekProvider,
+  autoDetectDeepSeek,
+} from './deepseek'
+
 // Re-export commonly used types from @/types/ai for convenience
 export type {
   AIProvider,

@@ -25,3 +25,16 @@
     -webkit-font-smoothing: subpixel-antialiased !important;
     -moz-osx-font-smoothing: auto !important;
 }
+
+/* 3. BUG-1116: Disable ALL transitions during drag to prevent lag
+ * Vue Flow adds .dragging class to nodes being dragged.
+ * CSS transitions on transform cause perceived lag as the node
+ * "animates" to cursor position instead of snapping instantly. */
+.vue-flow__node.dragging,
+.vue-flow__node.dragging *,
+.vue-flow__node.selected.dragging,
+.vue-flow__node.selected.dragging * {
+    transition: none !important;
+    /* Also disable any animations */
+    animation: none !important;
+}

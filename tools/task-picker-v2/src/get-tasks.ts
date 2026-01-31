@@ -5,7 +5,7 @@ import type { Status, FilterOptions } from './types.js';
 
 const args = process.argv.slice(2);
 const options: FilterOptions = { excludeDone: true };
-let limit = 4;
+let limit = 15;  // Default higher to show PLANNED tasks
 let outputFormat: 'json' | 'simple' = 'simple';
 
 for (const arg of args) {
@@ -13,16 +13,20 @@ for (const arg of args) {
   if (arg === '--all') options.excludeDone = false;
   if (arg === '--bugs') options.type = ['BUG'];
   if (arg === '--progress') options.status = ['IN_PROGRESS'];
+  if (arg === '--planned') options.status = ['PLANNED'];
+  if (arg === '--review') options.status = ['REVIEW'];
+  if (arg === '--active') options.status = ['IN_PROGRESS', 'REVIEW'];  // Active work only
   if (arg.startsWith('--limit=')) limit = parseInt(arg.split('=')[1], 10);
 }
 
 const tasks = parseMasterPlan();
 const filtered = filterTasks(tasks, options);
 
+// PLANNED first (what to start next), then REVIEW, then active work
 const statusOrder: Record<Status, number> = {
-  'IN_PROGRESS': 0,
+  'PLANNED': 0,
   'REVIEW': 1,
-  'PLANNED': 2,
+  'IN_PROGRESS': 2,
   'PAUSED': 3,
   'DONE': 4,
 };

@@ -1221,93 +1221,590 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 > **Source**: Comprehensive system review with 4 parallel agents (Security, Code Quality, Architecture, Health Check)
 > **Validated**: npm test (587 passed), npm audit (16 vulnerabilities), npm outdated, npm run lint (349 errors)
+> **Total Issues**: 48 (P0: 2, P1: 14, P2: 19, P3: 13)
 
-### Security Issues
+---
 
-| ID | Priority | Title | Location |
-|----|----------|-------|----------|
-| **BUG-1131** | P0 | Move all exposed API keys to backend proxy (Groq, DeepSeek, Anthropic, OpenAI) | `src/services/groqWhisper.ts`, `src/services/ai/` |
-| **BUG-1132** | P1 | Allowlist CORS origins (replace dynamic reflection) | Caddy config |
-| **BUG-1133** | P1 | Audit v-html XSS sources (ProjectEmojiIcon SVG) | `src/components/base/ProjectEmojiIcon.vue:21` |
-| **BUG-1134** | P1 | Enable Tauri CSP (currently `"csp": null`) | `src-tauri/tauri.conf.json` |
-| **BUG-1135** | P1 | Restrict Tauri shell permissions (`"args": true` allows arbitrary) | `src-tauri/capabilities/default.json` |
-| **BUG-1136** | P2 | Add entity ownership check to tombstone RLS policy | `supabase/migrations/` |
-| **BUG-1137** | P2 | Add guest session ID for migration (prevent data leaks) | `src/stores/auth.ts:361` |
-| **BUG-1138** | P2 | Remove isAdmin localStorage override in production | `src/stores/auth.ts:122` |
-| **BUG-1139** | P2 | Restrict Tauri filesystem write scope (`$HOME/**` too broad) | `src-tauri/capabilities/default.json` |
-| **BUG-1140** | P3 | Remove Supabase URL console.logs in production | `src/services/auth/supabase.ts` |
-| **BUG-1141** | P3 | Add CSP headers to limit XSS impact | Caddy/Tauri config |
-| **BUG-1142** | P3 | Add rate limiting to API calls | Edge Functions |
+### BUG-1131: Move All Exposed API Keys to Backend Proxy (📋 PLANNED)
 
-### Code Quality Issues
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
 
-| ID | Priority | Title | Location |
-|----|----------|-------|----------|
-| **BUG-1143** | P0 | Add onUnmounted cleanup to MobileQuickSortView (memory leak) | `src/mobile/views/MobileQuickSortView.vue:979` |
-| **TASK-1144** | P1 | Split MobileQuickSortView.vue (2518→<500 lines) | `src/mobile/views/` |
-| **TASK-1145** | P1 | Split MobileInboxView.vue (1919 lines) | `src/mobile/views/` |
-| **TASK-1146** | P1 | Split useSupabaseDatabase.ts by domain (1736 lines) | `src/composables/` |
-| **TASK-1147** | P1 | Replace 199 `any` types with proper interfaces | 90 files |
-| **TASK-1148** | P1 | Remove 2302 console statements from production | 256 files |
-| **TASK-1149** | P1 | Split timer.ts into 4 services (960 lines) | `src/stores/timer.ts` |
-| **TASK-1150** | P2 | Consolidate formatDueDate/formatDateKey duplicates | 6 locations |
-| **TASK-1151** | P2 | Add cleanup to timer store intervals | `timer.ts:79-154` |
-| **TASK-1152** | P2 | Fix 40 eslint-disable/@ts-ignore suppressions | 17 files |
-| **TASK-1153** | P2 | Remove corrupted files from repo (.dirty, .clean) | `useCalendarDayView.ts.*` |
-| **TASK-1154** | P2 | Standardize error handling (throw vs no-throw) | `useSupabaseDatabase.ts` |
-| **TASK-1155** | P2 | Split AppSidebar.vue (1578 lines) | `src/layouts/` |
-| **TASK-1156** | P2 | Split useBackupSystem.ts (1411 lines) | `src/composables/` |
-| **TASK-1157** | P3 | Extract magic numbers to named constants | Multiple files |
+**Problem**: API keys with `VITE_*` prefix are bundled into client JavaScript by Vite, making them visible to anyone who inspects the bundle:
+- `VITE_GROQ_API_KEY` - Groq Whisper for voice transcription
+- `VITE_DEEPSEEK_API_KEY` - DeepSeek AI chat
+- `VITE_ANTHROPIC_API_KEY` - Anthropic Claude API
+- `VITE_OPENAI_API_KEY` - OpenAI API
 
-### Architecture Improvements
+**Root Cause**: Using `import.meta.env.VITE_*` to access API keys. Even when stored in Doppler, the VITE_ prefix causes client bundling.
 
-| ID | Priority | Title | Description |
-|----|----------|-------|-------------|
-| **TASK-1158** | P1 | Resolve tasks.ts ↔ canvas.ts circular dependency | Replace dynamic import workaround |
-| **TASK-1159** | P1 | Implement optimistic updates for task CRUD | UI updates before network |
-| **TASK-1160** | P2 | Add virtualized task lists (@tanstack/vue-virtual) | Scale to 500+ tasks |
-| **TASK-1161** | P2 | Create shared domain layer for mobile | `src/domain/` composables |
-| **FEATURE-1162** | P2 | Add Smart Filters / Saved Views feature | New `saved_filters` table |
-| **FEATURE-1163** | P2 | Add Comments on Tasks feature | New `task_comments` table |
-| **FEATURE-1164** | P3 | Add Habit Tracking mode | Extend recurring tasks |
-| **FEATURE-1165** | P3 | Universal Quick Capture (all platforms) | Menu bar, system tray |
-| **FEATURE-1166** | P3 | Create Public API | REST endpoints |
-| **FEATURE-1167** | P3 | Mobile Canvas (simplified, touch) | Pinch/zoom, drag |
+**Solution**: Create Supabase Edge Functions as backend proxies:
+1. Create `supabase/functions/ai-proxy/` for all AI API calls
+2. Move API keys to Supabase Edge Function secrets (not VITE_ prefixed)
+3. Update frontend services to call Edge Functions instead of direct API calls
 
-### Testing & Quality
+**Files**: `src/services/groqWhisper.ts`, `src/services/ai/deepseek.ts`, `src/services/ai/anthropic.ts`, `src/services/ai/openai.ts`
 
-| ID | Priority | Title | Description |
-|----|----------|-------|-------------|
-| **TASK-1168** | P1 | Add unit tests for sync/conflict resolution | Currently 4 unit tests |
-| **TASK-1169** | P1 | Add unit tests for database layer | No dedicated tests |
-| **TASK-1170** | P2 | Add cross-device timer sync tests | Limited coverage |
-| **TASK-1171** | P2 | Add mobile view E2E tests | Some gaps |
-| **TASK-1118** | P3 | Reduce test suite from 615 to ~100 essential | Remove debug tests (already created) |
+---
 
-### Dependencies & Build
+### BUG-1132: Allowlist CORS Origins - Replace Dynamic Reflection (📋 PLANNED)
 
-| ID | Priority | Title | Description |
-|----|----------|-------|-------------|
-| **TASK-1172** | P2 | Update VueUse 10.11→14.1 (requires Vue 3.5+) | 4 major versions behind |
-| **TASK-1173** | P2 | Replace deprecated crypto-js (CVE-2023-46233) | Use Web Crypto API |
-| **TASK-1174** | P2 | Fix 16 npm audit vulnerabilities (2 high) | `npm audit fix` |
-| **TASK-1175** | P3 | Fix 349 linter errors | `npm run lint --fix` |
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Current CORS configuration reflects any origin back, which is insecure. Should use explicit allowlist.
+
+**Solution**: Configure explicit allowed origins in Caddy:
+```
+header Access-Control-Allow-Origin "https://in-theflow.com"
+```
+
+**Files**: VPS `/etc/caddy/Caddyfile`
+
+---
+
+### BUG-1133: Audit v-html XSS Sources (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: `v-html` directive used with potentially untrusted SVG content in ProjectEmojiIcon component.
+
+**Investigation Needed**:
+- Check if SVG content comes from user input or trusted source
+- Add DOMPurify sanitization if user-generated
+- Consider using `v-text` or component-based rendering
+
+**Files**: `src/components/base/ProjectEmojiIcon.vue:21`
+
+---
+
+### BUG-1134: Enable Tauri CSP (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Tauri Content Security Policy is disabled (`"csp": null`), allowing any scripts to execute.
+
+**Solution**: Enable CSP with appropriate policy:
+```json
+"csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+```
+
+**Files**: `src-tauri/tauri.conf.json`
+
+---
+
+### BUG-1135: Restrict Tauri Shell Permissions (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Shell capability has `"args": true` which allows arbitrary command execution.
+
+**Solution**: Replace with explicit command allowlist.
+
+**Files**: `src-tauri/capabilities/default.json`
+
+---
+
+### BUG-1136: Add Entity Ownership Check to Tombstone RLS (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Tombstone soft-delete RLS policy may not verify entity ownership before allowing operations.
+
+**Solution**: Ensure RLS policies check `auth.uid() = user_id` before soft delete operations.
+
+**Files**: `supabase/migrations/`
+
+---
+
+### BUG-1137: Add Guest Session ID for Migration (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: When guest user signs up, their guest data may leak or not migrate properly.
+
+**Solution**: Generate and store unique guest session ID, use it to migrate guest data on sign-up.
+
+**Files**: `src/stores/auth.ts:361`
+
+---
+
+### BUG-1138: Remove isAdmin localStorage Override in Production (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Admin status can be overridden via localStorage, security risk in production.
+
+**Solution**: Remove localStorage override or restrict to development mode only.
+
+**Files**: `src/stores/auth.ts:122`
+
+---
+
+### BUG-1139: Restrict Tauri Filesystem Write Scope (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Tauri filesystem capability allows writes to `$HOME/**` which is overly broad.
+
+**Solution**: Restrict to specific directories: `$APPDATA/**`, `$DOCUMENT/FlowState/**`
+
+**Files**: `src-tauri/capabilities/default.json`
+
+---
+
+### BUG-1140: Remove Supabase URL Console Logs in Production (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Problem**: Supabase configuration URLs logged to console in production builds.
+
+**Solution**: Wrap console.log statements with `if (import.meta.env.DEV)` check.
+
+**Files**: `src/services/auth/supabase.ts`
+
+---
+
+### BUG-1141: Add CSP Headers to Limit XSS Impact (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Problem**: No Content Security Policy headers configured.
+
+**Solution**: Add CSP headers to Caddy and Tauri config.
+
+**Files**: `/etc/caddy/Caddyfile`, `src-tauri/tauri.conf.json`
+
+---
+
+### BUG-1142: Add Rate Limiting to API Calls (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Problem**: No rate limiting on API endpoints, vulnerable to abuse.
+
+**Solution**: Implement rate limiting in Supabase Edge Functions or Caddy.
+
+**Files**: Edge Functions, Caddy config
+
+---
+
+### BUG-1143: Add onUnmounted Cleanup to MobileQuickSortView (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+
+**Problem**: Memory leak - MobileQuickSortView creates intervals/subscriptions but never cleans them up.
+
+**Solution**: Add proper cleanup in onUnmounted lifecycle hook.
+
+**Files**: `src/mobile/views/MobileQuickSortView.vue:979`
+
+---
+
+### TASK-1144: Split MobileQuickSortView.vue (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: File is 2518 lines, exceeding 500-line limit. Hard to maintain and test.
+
+**Solution**: Extract into composables and sub-components:
+- `useMobileQuickSortLogic.ts` - business logic
+- `MobileQuickSortCard.vue` - card component
+- `MobileQuickSortFilters.vue` - filter UI
+
+**Files**: `src/mobile/views/MobileQuickSortView.vue`
+
+---
+
+### TASK-1145: Split MobileInboxView.vue (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: File is 1919 lines, exceeding 500-line limit.
+
+**Solution**: Extract into composables and sub-components.
+
+**Files**: `src/mobile/views/MobileInboxView.vue`
+
+---
+
+### TASK-1146: Split useSupabaseDatabase.ts by Domain (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: File is 1736 lines with mixed concerns (tasks, groups, projects, settings).
+
+**Solution**: Split into domain-specific composables:
+- `useSupabaseTasks.ts`
+- `useSupabaseGroups.ts`
+- `useSupabaseProjects.ts`
+- `useSupabaseSettings.ts`
+
+**Files**: `src/composables/useSupabaseDatabase.ts`
+
+---
+
+### TASK-1147: Replace 199 `any` Types with Proper Interfaces (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: 199 instances of `any` type across 90 files weaken type safety.
+
+**Solution**: Audit and replace with proper TypeScript interfaces.
+
+**Files**: 90 files throughout codebase
+
+---
+
+### TASK-1148: Remove 2302 Console Statements from Production (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: 2302 console statements across 256 files pollute production logs.
+
+**Solution**: Configure Vite to strip console in production, replace critical logs with logger service.
+
+**Files**: 256 files, `vite.config.ts`
+
+---
+
+### TASK-1149: Split timer.ts into 4 Services (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Timer store is 960 lines with mixed concerns.
+
+**Solution**: Split into focused services:
+- `useTimerState.ts` - core timer state
+- `useTimerSync.ts` - cross-device sync
+- `useTimerAudio.ts` - sound playback
+- `useTimerNotifications.ts` - notification handling
+
+**Files**: `src/stores/timer.ts`
+
+---
+
+### TASK-1150: Consolidate formatDueDate/formatDateKey Duplicates (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Date formatting functions duplicated in 6 locations.
+
+**Solution**: Create single `src/utils/dateFormatters.ts` utility.
+
+**Files**: Multiple files with date formatting
+
+---
+
+### TASK-1151: Add Cleanup to Timer Store Intervals (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Timer store creates intervals that may not be properly cleaned up.
+
+**Solution**: Track all interval IDs and clear in cleanup function.
+
+**Files**: `src/stores/timer.ts:79-154`
+
+---
+
+### TASK-1152: Fix 40 eslint-disable/@ts-ignore Suppressions (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: 40 eslint-disable and @ts-ignore comments indicate tech debt.
+
+**Solution**: Audit each suppression and fix underlying issues.
+
+**Files**: 17 files with suppressions
+
+---
+
+### TASK-1153: Remove Corrupted Files from Repo (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Corrupted backup files (`.dirty`, `.clean`) exist in repo.
+
+**Solution**: `git rm useCalendarDayView.ts.dirty useCalendarDayView.ts.clean`
+
+**Files**: `useCalendarDayView.ts.*`
+
+---
+
+### TASK-1154: Standardize Error Handling Pattern (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Inconsistent error handling - some functions throw, others return null.
+
+**Solution**: Standardize to Result type pattern or consistent throw behavior.
+
+**Files**: `src/composables/useSupabaseDatabase.ts`
+
+---
+
+### TASK-1155: Split AppSidebar.vue (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: File is 1578 lines, exceeding 500-line limit.
+
+**Solution**: Extract sections into sub-components.
+
+**Files**: `src/layouts/AppSidebar.vue`
+
+---
+
+### TASK-1156: Split useBackupSystem.ts (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: File is 1411 lines, exceeding 500-line limit.
+
+**Solution**: Split into backup strategy composables.
+
+**Files**: `src/composables/useBackupSystem.ts`
+
+---
+
+### TASK-1157: Extract Magic Numbers to Named Constants (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Problem**: Magic numbers scattered throughout code.
+
+**Solution**: Create `src/constants/` directory with named constants.
+
+**Files**: Multiple files
+
+---
+
+### TASK-1158: Resolve tasks.ts ↔ canvas.ts Circular Dependency (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Circular import between tasks.ts and canvas.ts requires dynamic import workaround.
+
+**Solution**: Extract shared types to `src/types/`, restructure imports.
+
+**Related**: BUG-1099 (TDZ error from circular deps)
+
+**Files**: `src/stores/tasks.ts`, `src/stores/canvas.ts`
+
+---
+
+### TASK-1159: Implement Optimistic Updates for Task CRUD (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: UI waits for network response before updating, causing perceived lag.
+
+**Solution**: Update UI immediately, sync to server in background, rollback on failure.
+
+**Files**: `src/stores/tasks.ts`, `src/composables/useSupabaseDatabase.ts`
+
+---
+
+### TASK-1160: Add Virtualized Task Lists (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Rendering 500+ tasks causes performance issues.
+
+**Solution**: Implement `@tanstack/vue-virtual` for Board and Calendar views.
+
+**Files**: Board view, Calendar view components
+
+---
+
+### TASK-1161: Create Shared Domain Layer for Mobile (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Mobile views duplicate logic from desktop views.
+
+**Solution**: Create `src/domain/` with shared composables.
+
+**Files**: `src/domain/` (new), mobile views
+
+---
+
+### FEATURE-1162: Smart Filters / Saved Views (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Feature**: Allow users to save filter combinations as named views.
+
+**Implementation**:
+1. Create `saved_filters` Supabase table
+2. Add filter save/load UI
+3. Quick access dropdown
+
+**Files**: New migration, new components
+
+---
+
+### FEATURE-1163: Comments on Tasks (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Feature**: Allow users to add comments/notes to tasks.
+
+**Implementation**:
+1. Create `task_comments` Supabase table with RLS
+2. Add comments UI in task detail view
+3. Show comment count on task cards
+
+**Files**: New migration, new components
+
+---
+
+### FEATURE-1164: Habit Tracking Mode (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Feature**: Extend recurring tasks to support habit tracking with streaks and statistics.
+
+**Files**: Task types, new views
+
+---
+
+### FEATURE-1165: Universal Quick Capture (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Feature**: System-wide task capture via menu bar (Mac), system tray (Windows/Linux).
+
+**Files**: Tauri system tray, platform-specific implementations
+
+---
+
+### FEATURE-1166: Create Public API (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Feature**: REST API for external integrations (Zapier, IFTTT, custom scripts).
+
+**Files**: New Edge Functions, API documentation
+
+---
+
+### FEATURE-1167: Mobile Canvas (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Feature**: Simplified canvas for mobile with touch gestures (pinch-zoom, drag).
+
+**Files**: New mobile canvas component
+
+---
+
+### TASK-1168: Add Unit Tests for Sync/Conflict Resolution (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: Sync and conflict resolution logic has only 4 unit tests, high risk area.
+
+**Solution**: Add comprehensive test coverage for sync edge cases.
+
+**Files**: `tests/unit/sync/`
+
+---
+
+### TASK-1169: Add Unit Tests for Database Layer (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Problem**: No dedicated tests for database composable.
+
+**Solution**: Add tests with mocked Supabase client.
+
+**Files**: `tests/unit/composables/useSupabaseDatabase.spec.ts`
+
+---
+
+### TASK-1170: Add Cross-Device Timer Sync Tests (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Timer sync between devices has limited test coverage.
+
+**Solution**: Add tests for device leadership, heartbeat, and state sync.
+
+**Files**: `tests/unit/stores/timer.spec.ts`
+
+---
+
+### TASK-1171: Add Mobile View E2E Tests (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: Mobile views have E2E test coverage gaps.
+
+**Solution**: Add Playwright tests for mobile viewport.
+
+**Files**: `tests/e2e/mobile/`
+
+---
+
+### TASK-1172: Update VueUse 10.11 → 14.1 (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: VueUse is 4 major versions behind.
+
+**Prerequisites**: Requires Vue 3.5+ upgrade first.
+
+**Files**: `package.json`
+
+---
+
+### TASK-1173: Replace Deprecated crypto-js (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: crypto-js has CVE-2023-46233 vulnerability and is deprecated.
+
+**Solution**: Replace with Web Crypto API or modern alternative.
+
+**Files**: Files using crypto-js
+
+---
+
+### TASK-1174: Fix 16 npm Audit Vulnerabilities (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem**: 16 vulnerabilities (0 critical, 2 high, 14 moderate).
+
+**Solution**: Run `npm audit fix` and address remaining issues.
+
+**Files**: `package.json`, `package-lock.json`
+
+---
+
+### TASK-1175: Fix 349 Linter Errors (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Problem**: 349 ESLint errors and 292 warnings.
+
+**Solution**: Run `npm run lint --fix` and manually fix remaining issues.
+
+**Files**: Multiple files
+
+---
 
 ### System Review Summary
 
-**Total Issues Found**: 48
-- **P0 (Critical)**: 2 (BUG-1131, BUG-1143)
-- **P1 (High)**: 14
-- **P2 (Medium)**: 19
-- **P3 (Low)**: 13
-
-**Validated Metrics**:
+**Metrics**:
 - Tests: 587 passed, 28 todo (615 total)
 - Linter: 349 errors, 292 warnings
 - npm audit: 16 vulnerabilities (0 critical, 2 high)
 - Codebase: 585 files, 136,067 lines of code
 
+
 ---
+
 
 ## Dev-Maestro Orchestrator (TASK-303)
 

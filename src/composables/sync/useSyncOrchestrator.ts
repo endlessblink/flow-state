@@ -45,7 +45,8 @@ import {
   markFailed as _markFailed,
   markConflict as _markConflict,
   cleanupCompleted as _cleanupCompleted,
-  getStats as _getStats
+  getStats as _getStats,
+  getFailedOperations as _getFailedOperations
 } from '@/services/offline/writeQueueDB'
 
 // Wrapped functions that handle missing IndexedDB gracefully
@@ -99,6 +100,11 @@ const getStats: typeof _getStats = async () => {
     completedCount: 0,
     conflictCount: 0
   }
+}
+
+const getFailedOperations: typeof _getFailedOperations = async () => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.getFailedOperations() : []
 }
 import {
   calculateNextRetryTime,
@@ -162,6 +168,13 @@ async function updateStatus() {
 
   state.value.pendingCount = stats.pendingCount + stats.syncingCount
   state.value.failedCount = stats.failedCount
+
+  // TASK-1177: Populate failedOperations array for UI display
+  if (stats.failedCount > 0) {
+    state.value.failedOperations = await getFailedOperations()
+  } else {
+    state.value.failedOperations = []
+  }
 
   if (!state.value.isOnline) {
     state.value.status = 'offline'

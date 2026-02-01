@@ -284,6 +284,18 @@ export async function getFailedCount(): Promise<number> {
 }
 
 /**
+ * Get all failed operations for display in UI
+ */
+export async function getFailedOperations(): Promise<WriteOperation[]> {
+  const db = getWriteQueueDB()
+
+  return db.operations
+    .where('status')
+    .equals('failed')
+    .toArray()
+}
+
+/**
  * Get all conflicts for resolution
  */
 export async function getConflicts(): Promise<WriteConflict[]> {

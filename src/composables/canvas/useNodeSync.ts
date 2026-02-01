@@ -167,8 +167,9 @@ export function useNodeSync(
             // ================================================================
             // We wrap Supabase call in a timeout to prevent infinite hanging
             // which causes the "stops syncing after a while" bug.
+            // Increased timeout for production VPS latency (BUG-1116)
 
-            const SYNC_TIMEOUT_MS = 10000 // 10s timeout
+            const SYNC_TIMEOUT_MS = 20000 // 20s timeout for VPS latency
             const timeoutPromise = new Promise<{ timeout: true }>((resolve) =>
                 setTimeout(() => resolve({ timeout: true }), SYNC_TIMEOUT_MS)
             )

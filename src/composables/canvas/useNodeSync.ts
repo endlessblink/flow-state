@@ -249,9 +249,15 @@ export function useNodeSync(
             console.error('❌ [NODE-SYNC] Failed:', err)
             syncError.value = err.message || 'Sync failed'
 
-            // Only show toast for persistent errors, not just one timeout
-            if (!err.message?.includes('timed out')) {
-                const { showToast } = useToast()
+            const { showToast } = useToast()
+
+            // TASK-1177: Show toast for ALL errors including timeouts
+            // Previously timeouts were silenced, leading to silent data loss
+            if (err.message?.includes('timed out')) {
+                // Show warning toast for timeouts - changes will be retried
+                showToast('Sync timed out - changes will retry automatically', 'warning')
+            } else {
+                // Show error toast for other failures
                 showToast(`Sync Failed: ${syncError.value}`, 'error')
             }
             return false

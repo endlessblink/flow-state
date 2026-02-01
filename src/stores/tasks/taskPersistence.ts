@@ -208,12 +208,14 @@ export function useTaskPersistence(
 
             // BUG-169 FIX: Safety guard - don't overwrite existing tasks with empty array
             // This prevents data loss from race conditions during auth propagation
+            // TASK-1177: Extended from 10 seconds to 60 seconds for better protection
             if (loadedTasks.length === 0 && _rawTasks.value.length > 0) {
                 const sessionStart = typeof window !== 'undefined' ? (window as any).FlowStateSessionStart || 0 : 0
                 const timeSinceSessionStart = Date.now() - sessionStart
 
-                // In the first 10 seconds, don't overwrite existing tasks with empty
-                if (timeSinceSessionStart < 10000) {
+                // In the first 60 seconds, don't overwrite existing tasks with empty
+                // This gives plenty of time for network issues to resolve
+                if (timeSinceSessionStart < 60000) {
                     console.warn(`🛡️ [TASK-LOAD] BLOCKED empty overwrite - ${_rawTasks.value.length} existing tasks would be lost (session ${timeSinceSessionStart}ms old)`)
                     return
                 }
@@ -270,20 +272,31 @@ export function useTaskPersistence(
                     // Mark as processed so we don't add it again in step 3
                     remoteMap.delete(localTask.id)
                 } else {
-                    // Task exists ONLY locally.
-                    // Case A: Created locally recently -> Keep (Optimistic Create)
-                    // Case B: Deleted remotely -> Drop (Remote Delete)
+                    // TASK-1177 FIX: NEVER drop local-only tasks automatically
+                    // Previous behavior dropped tasks older than 5 minutes, causing DATA LOSS
+                    // when sync failed and user refreshed.
+                    //
+                    // New behavior: ALWAYS preserve local tasks and queue for sync retry.
+                    // The offline-first sync system (useSyncOrchestrator) handles retries.
 
-                    const localCreated = localTask.createdAt instanceof Date ? localTask.createdAt.getTime() : new Date(localTask.createdAt).getTime()
-                    const timeSinceCreation = Date.now() - localCreated
+                    console.log(`🛡️ [SMART-MERGE] Preserving local-only task "${localTask.title?.slice(0, 15)}" - will sync when online`)
+                    mergedTasks.push(localTask)
 
-                    if (timeSinceCreation < 300000) { // Created in last 5 minutes (P0-1 fix: was 60s, too short for network issues)
-                        console.log(`🛡️ [SMART-MERGE] Preserving optimistic create "${localTask.title?.slice(0, 15)}"`)
-                        mergedTasks.push(localTask)
-                    } else {
-                        // Assume it was deleted on remote long ago
-                        // console.log(`🗑️ [SMART-MERGE] Dropping deleted task "${localTask.title?.slice(0, 15)}"`)
-                    }
+                    // Queue the task for sync retry via the offline sync system
+                    // This is async and non-blocking - the task stays in memory regardless
+                    import('@/composables/sync/useSyncOrchestrator').then(({ useSyncOrchestrator }) => {
+                        const sync = useSyncOrchestrator()
+                        sync.enqueue({
+                            entityType: 'task',
+                            operation: 'create',
+                            entityId: localTask.id,
+                            payload: localTask as unknown as Record<string, unknown>
+                        }).catch(e => {
+                            console.warn(`[SMART-MERGE] Failed to queue sync for "${localTask.title?.slice(0, 15)}":`, e)
+                        })
+                    }).catch(() => {
+                        // Sync orchestrator not available - task is still preserved in memory
+                    })
                 }
             }
 

@@ -3,7 +3,7 @@
     <button
       class="task-row__action-btn"
       title="Start Timer"
-      aria-label="Start timer"
+      :aria-label="`Start timer for ${taskTitle}`"
       @click.stop="$emit('startTimer')"
     >
       <Play :size="14" />
@@ -11,7 +11,7 @@
     <button
       class="task-row__action-btn"
       title="Edit Task"
-      aria-label="Edit task"
+      :aria-label="`Edit task ${taskTitle}`"
       @click.stop="$emit('edit')"
     >
       <Edit :size="14" />
@@ -19,7 +19,7 @@
     <button
       class="task-row__action-btn"
       title="Duplicate Task"
-      aria-label="Duplicate task"
+      :aria-label="`Duplicate task ${taskTitle}`"
       @click.stop="$emit('duplicate')"
     >
       <Copy :size="14" />
@@ -29,6 +29,10 @@
 
 <script setup lang="ts">
 import { Play, Edit, Copy } from 'lucide-vue-next'
+
+defineProps<{
+  taskTitle: string
+}>()
 
 defineEmits<{
   (e: 'startTimer'): void

@@ -6,6 +6,8 @@ import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
 // FEATURE-1118: Gamification hooks for task completion
 import { useGamificationHooks } from '@/composables/useGamificationHooks'
+// TASK-1177: Offline-first sync queue integration
+import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -117,6 +119,39 @@ export function useTaskOperations(
             }
 
             _rawTasks.value.push(newTask)
+
+            // TASK-1177: Queue for offline-first sync
+            // This ensures the task persists in IndexedDB even if network fails
+            try {
+                const syncOrchestrator = useSyncOrchestrator()
+                await syncOrchestrator.enqueue({
+                    entityType: 'task',
+                    operation: 'create',
+                    entityId: newTask.id,
+                    payload: {
+                        id: newTask.id,
+                        title: newTask.title,
+                        description: newTask.description,
+                        status: newTask.status,
+                        priority: newTask.priority,
+                        progress: newTask.progress,
+                        completed_pomodoros: newTask.completedPomodoros,
+                        due_date: newTask.dueDate,
+                        project_id: newTask.projectId,
+                        is_in_inbox: newTask.isInInbox,
+                        canvas_position: newTask.canvasPosition,
+                        position_version: newTask.positionVersion,
+                        parent_id: newTask.parentId,
+                        created_at: newTask.createdAt.toISOString(),
+                        updated_at: newTask.updatedAt.toISOString()
+                    },
+                    baseVersion: 0
+                })
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue create, falling back to direct save:', queueError)
+            }
+
+            // Also attempt direct save (for immediate sync when online)
             await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
 
             // Trigger canvas sync for Tauri reactivity
@@ -289,9 +324,42 @@ export function useTaskOperations(
             // TASK-1177: Capture previous state for rollback on failure
             const previousState = { ...task }
 
-            // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
+            // TASK-1177: Queue for offline-first sync FIRST
+            // This ensures the update persists in IndexedDB even if network fails
+            const updatedTask = _rawTasks.value[index]
             try {
-                await saveSpecificTasks([_rawTasks.value[index]], `updateTask-${taskId}`)
+                const syncOrchestrator = useSyncOrchestrator()
+                await syncOrchestrator.enqueue({
+                    entityType: 'task',
+                    operation: 'update',
+                    entityId: taskId,
+                    payload: {
+                        title: updatedTask.title,
+                        description: updatedTask.description,
+                        status: updatedTask.status,
+                        priority: updatedTask.priority,
+                        progress: updatedTask.progress,
+                        completed_pomodoros: updatedTask.completedPomodoros,
+                        due_date: updatedTask.dueDate,
+                        project_id: updatedTask.projectId,
+                        is_in_inbox: updatedTask.isInInbox,
+                        canvas_position: updatedTask.canvasPosition,
+                        position_version: updatedTask.positionVersion,
+                        parent_id: updatedTask.parentId,
+                        completed_at: updatedTask.completedAt instanceof Date
+                            ? updatedTask.completedAt.toISOString()
+                            : updatedTask.completedAt,
+                        updated_at: updatedTask.updatedAt.toISOString()
+                    },
+                    baseVersion: currentVersion
+                })
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', queueError)
+            }
+
+            // BUG-060 FIX: Also attempt direct save for immediate sync when online
+            try {
+                await saveSpecificTasks([updatedTask], `updateTask-${taskId}`)
 
                 // DRIFT FIX: REMOVED triggerCanvasSync() - this was causing sync loops!
                 // When Smart-Group applied properties → updateTask → triggerCanvasSync →
@@ -303,7 +371,8 @@ export function useTaskOperations(
 
                 // TASK-1177: ROLLBACK on failure - restore previous state to prevent memory/DB divergence
                 // This is critical for data integrity when sync fails
-                console.log(`🔄 [ROLLBACK] Restoring task ${taskId} to previous state after save failure`)
+                // Note: The operation is still queued in IndexedDB and will retry
+                console.log(`🔄 [ROLLBACK] Restoring task ${taskId} to previous state after save failure (queued for retry)`)
                 _rawTasks.value[index] = {
                     ...previousState,
                     updatedAt: previousState.updatedAt // Keep original updatedAt
@@ -325,6 +394,22 @@ export function useTaskOperations(
         manualOperationInProgress.value = true
 
         try {
+            // TASK-1177: Queue deletion for offline-first sync FIRST
+            // This ensures the delete persists in IndexedDB even if network fails
+            try {
+                const syncOrchestrator = useSyncOrchestrator()
+                await syncOrchestrator.enqueue({
+                    entityType: 'task',
+                    operation: 'delete',
+                    entityId: taskId,
+                    payload: { id: taskId },
+                    baseVersion: deletedTask.positionVersion || 0
+                })
+            } catch (queueError) {
+                console.warn('[SYNC-QUEUE] Failed to queue delete, falling back to direct delete:', queueError)
+            }
+
+            // Also attempt direct delete for immediate sync when online
             // BUGFIX: Persist deletion to Supabase FIRST (soft delete)
             // This ensures task won't reappear on refresh
             await deleteTaskFromStorage(taskId)

@@ -20,16 +20,86 @@ import type {
   SyncOperationType,
   SyncResult
 } from '@/types/sync'
+
+// TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
+const hasIndexedDB = typeof indexedDB !== 'undefined'
+
+// Lazy import to prevent IndexedDB errors in test environment
+let writeQueueModule: typeof import('@/services/offline/writeQueueDB') | null = null
+async function getWriteQueueModule() {
+  if (!hasIndexedDB) {
+    return null
+  }
+  if (!writeQueueModule) {
+    writeQueueModule = await import('@/services/offline/writeQueueDB')
+  }
+  return writeQueueModule
+}
+
+// Re-export types and stub functions for when IndexedDB is unavailable
 import {
-  enqueueOperation,
-  getPendingOperations,
-  markSyncing,
-  markCompleted,
-  markFailed,
-  markConflict,
-  cleanupCompleted,
-  getStats
+  enqueueOperation as _enqueueOperation,
+  getPendingOperations as _getPendingOperations,
+  markSyncing as _markSyncing,
+  markCompleted as _markCompleted,
+  markFailed as _markFailed,
+  markConflict as _markConflict,
+  cleanupCompleted as _cleanupCompleted,
+  getStats as _getStats
 } from '@/services/offline/writeQueueDB'
+
+// Wrapped functions that handle missing IndexedDB gracefully
+const enqueueOperation: typeof _enqueueOperation = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (!mod) {
+    console.warn('[SYNC] IndexedDB not available - operation not queued')
+    return { ...args[0], id: Date.now(), status: 'pending' as const, retryCount: 0, createdAt: Date.now() }
+  }
+  return mod.enqueueOperation(...args)
+}
+
+const getPendingOperations: typeof _getPendingOperations = async (...args) => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.getPendingOperations(...args) : []
+}
+
+const markSyncing: typeof _markSyncing = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (mod) await mod.markSyncing(...args)
+}
+
+const markCompleted: typeof _markCompleted = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (mod) await mod.markCompleted(...args)
+}
+
+const markFailed: typeof _markFailed = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (mod) await mod.markFailed(...args)
+}
+
+const markConflict: typeof _markConflict = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (!mod) throw new Error('IndexedDB not available')
+  return mod.markConflict(...args)
+}
+
+const cleanupCompleted: typeof _cleanupCompleted = async () => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.cleanupCompleted() : 0
+}
+
+const getStats: typeof _getStats = async () => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.getStats() : {
+    totalOperations: 0,
+    pendingCount: 0,
+    syncingCount: 0,
+    failedCount: 0,
+    completedCount: 0,
+    conflictCount: 0
+  }
+}
 import {
   calculateNextRetryTime,
   shouldRetry,

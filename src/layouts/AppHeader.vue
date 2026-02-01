@@ -45,8 +45,13 @@
         </span>
       </div>
 
-      <!-- INTEGRATED CONTROL PANEL: AI + Clock + Timer -->
+      <!-- INTEGRATED CONTROL PANEL: Sync + AI + Clock + Timer -->
       <div class="control-panel">
+        <!-- TASK-1177: Sync Status Indicator -->
+        <SyncStatusIndicator />
+
+        <div class="control-divider" />
+
         <!-- AI Assistant Toggle (TASK-1120) -->
         <button
           class="ai-toggle-btn"
@@ -177,6 +182,7 @@ import { useAIChatStore } from '@/stores/aiChat'
 import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
 
 const router = useRouter()
 const taskStore = useTaskStore()

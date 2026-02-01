@@ -253,7 +253,7 @@ export function useTaskOperations(
                     // FEATURE-1118: Award XP for task completion
                     try {
                         const gamificationHooks = useGamificationHooks()
-                        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date()
+                        const isOverdue = !!(task.dueDate && new Date(task.dueDate) < new Date())
                         gamificationHooks.onTaskCompleted(task, {
                             wasOverdue: isOverdue,
                             createdAt: task.createdAt
@@ -286,6 +286,9 @@ export function useTaskOperations(
                 updatedAt: new Date()
             }
 
+            // TASK-1177: Capture previous state for rollback on failure
+            const previousState = { ...task }
+
             // BUG-060 FIX: Save immediately to prevent data loss on quick refresh
             try {
                 await saveSpecificTasks([_rawTasks.value[index]], `updateTask-${taskId}`)
@@ -297,7 +300,17 @@ export function useTaskOperations(
                 // not on every task property update. Vue reactivity handles UI updates.
             } catch (error) {
                 console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
-                // Note: We don't rollback memory state here to preserve UX, relying on "last write wins" locally
+
+                // TASK-1177: ROLLBACK on failure - restore previous state to prevent memory/DB divergence
+                // This is critical for data integrity when sync fails
+                console.log(`🔄 [ROLLBACK] Restoring task ${taskId} to previous state after save failure`)
+                _rawTasks.value[index] = {
+                    ...previousState,
+                    updatedAt: previousState.updatedAt // Keep original updatedAt
+                }
+
+                // Re-throw so callers can handle the error (e.g., show toast)
+                throw error
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false

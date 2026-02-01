@@ -385,8 +385,10 @@ export const useTaskStore = defineStore('tasks', () => {
   // High Severity Issue #7: Pending-write registry helpers
   const addPendingWrite = (taskId: string) => {
     pendingWrites.value.add(taskId)
-    // Auto-clear after 5 seconds as safety net
-    setTimeout(() => pendingWrites.value.delete(taskId), 5000)
+    // TASK-1177: Extended from 5 seconds to 30 seconds
+    // 5 seconds was too short - VPS latency can be 20s (see useNodeSync timeout)
+    // This caused pending writes to be cleared before sync completed
+    setTimeout(() => pendingWrites.value.delete(taskId), 30000)
   }
 
   const removePendingWrite = (taskId: string) => {

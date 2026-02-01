@@ -91,6 +91,72 @@
 
 ---
 
+### TASK-1177: Offline-First Sync System to Prevent Data Loss (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-01)
+
+**Problem**: User lost significant work on production (in-theflow.com) due to silent sync failures.
+
+**Root Causes Identified** (6 agents investigated):
+1. **Silent error swallowing** (`taskOperations.ts:290-301`) - Save failures logged but not retried
+2. **Smart merge drops tasks** (`taskPersistence.ts:272-287`) - Local-only tasks dropped after 5 min
+3. **No write queue** - Failed writes lost forever
+4. **Optimistic UI no rollback** - updateTask has no rollback on failure
+5. **Sync timeout silent** (`useNodeSync.ts:252-256`) - Timeout errors explicitly silenced
+6. **No beforeunload** - Can close tab with unsaved data
+
+**Solution Architecture (Offline-First)**:
+
+1. **Phase 1: Write Queue with IndexedDB** (P0)
+   - All writes go to IndexedDB FIRST, then sync to Supabase
+   - Retry with exponential backoff: 1s, 2s, 4s, 8s... up to 60s max
+   - 10 retry attempts before marking as "failed" (requires manual retry)
+   - Never discard operations - persist until confirmed synced
+
+2. **Phase 2: Sync Status Indicator** (P0)
+   - Visual indicator in AppHeader.vue control panel
+   - States: Synced (green), Syncing (blue), Pending (amber), Error (red), Offline (gray)
+   - Error state NEVER auto-dismisses
+
+3. **Phase 3: Fix Smart Merge Logic** (P0)
+   - NEVER drop local-only tasks automatically
+   - Queue for sync retry instead
+
+4. **Phase 4: Add Rollback to updateTask** (P1)
+   - Capture previous state before update
+   - Rollback local state on failure
+
+5. **Phase 5: beforeunload Protection** (P1)
+   - Warn user before closing tab with unsaved changes
+
+**Files to Create**:
+- `src/types/sync.ts` - WriteOperation, WriteConflict, SyncStatus types
+- `src/services/offline/writeQueueDB.ts` - Dexie.js IndexedDB schema
+- `src/services/offline/operationSorter.ts` - Create→Update→Delete ordering
+- `src/services/offline/operationCoalescer.ts` - Merge multiple updates
+- `src/services/offline/retryStrategy.ts` - Exponential backoff calculation
+- `src/composables/sync/useSyncOrchestrator.ts` - Main queue processing
+- `src/stores/syncStatus.ts` - Pinia store for sync state
+- `src/components/sync/SyncStatusIndicator.vue` - Header indicator
+- `src/components/sync/SyncErrorPopover.vue` - Error details popover
+- `src/composables/useBeforeUnload.ts` - Page close protection
+
+**Files to Modify**:
+- `src/stores/tasks/taskOperations.ts` - Use sync queue, add rollback
+- `src/stores/tasks/taskPersistence.ts` - Fix smart merge, extend protection
+- `src/stores/tasks.ts` - Fix 5s pending timeout
+- `src/layouts/AppHeader.vue` - Add SyncStatusIndicator
+
+**Success Criteria**:
+- [ ] User NEVER loses data, even with network failures
+- [ ] User ALWAYS sees current sync status
+- [ ] User CANNOT close tab with unsaved changes (without warning)
+- [ ] Failed syncs retry automatically with backoff
+- [ ] Offline edits persist across browser sessions
+- [ ] Smart merge NEVER drops local-only tasks
+
+---
+
 ### BUG-1112: No Notification or Audio When Pomodoro Timer Finishes (👀 REVIEW)
 
 **Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-30)

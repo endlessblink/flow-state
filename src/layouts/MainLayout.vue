@@ -38,6 +38,7 @@
 import { ref } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
+import { useBeforeUnload } from '@/composables/useBeforeUnload'
 import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
@@ -45,6 +46,9 @@ import { AIChatPanel } from '@/components/ai'
 
 const uiStore = useUIStore()
 const { direction } = useDirection()
+
+// TASK-1177: Protect against closing tab with unsaved changes
+useBeforeUnload()
 
 const appSidebar = ref<InstanceType<typeof AppSidebar> | null>(null)
 

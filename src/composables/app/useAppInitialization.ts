@@ -6,12 +6,18 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
 import { useAuthStore } from '@/stores/auth'
+import { useGamificationStore } from '@/stores/gamification'
 import { useSupabaseDatabase, invalidateCache } from '@/composables/useSupabaseDatabase'
 import { useSafariITPProtection } from '@/utils/safariITPProtection'
 import { initGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { clearGuestData, clearStaleGuestTasks } from '@/utils/guestModeStorage'
 // BUG-FIX: Import mappers to properly convert realtime data
 import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
+// FEATURE-1118: Gamification hooks
+import { useGamificationHooks } from '@/composables/useGamificationHooks'
+// TASK-1177: Offline-first sync system
+import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
+import { useBeforeUnload } from '@/composables/useBeforeUnload'
 
 export function useAppInitialization() {
     const timerStore = useTimerStore()
@@ -21,6 +27,7 @@ export function useAppInitialization() {
     const uiStore = useUIStore()
     const notificationStore = useNotificationStore()
     const authStore = useAuthStore()
+    const gamificationStore = useGamificationStore()
     const itpProtection = useSafariITPProtection()
     const activeChannel = ref<any>(null)
     const realtimeInitialized = ref(false)
@@ -83,7 +90,16 @@ export function useAppInitialization() {
         console.log('🔍 [BUG-339-DEBUG] Task count after load:', taskStore.tasks.length)
         console.log('🔍 [BUG-339-DEBUG] Raw tasks:', taskStore._rawTasks?.length || 'N/A')
 
-
+        // FEATURE-1118: Initialize gamification system
+        try {
+            await gamificationStore.initialize()
+            // Record daily activity and update streak
+            const gamificationHooks = useGamificationHooks()
+            await gamificationHooks.onAppInitialized()
+            console.log('🎮 [GAMIFICATION] Initialized successfully')
+        } catch (error) {
+            console.warn('⚠️ Gamification system initialization failed:', error)
+        }
 
         // Initialize notification system
         try {
@@ -109,6 +125,31 @@ export function useAppInitialization() {
 
         // Initialize global keyboard shortcuts
         await initGlobalKeyboardShortcuts()
+
+        // TASK-1177: Initialize offline-first sync system
+        // This starts the background queue processor and sets up online/offline listeners
+        try {
+            const syncOrchestrator = useSyncOrchestrator()
+            console.log('🔄 [SYNC] Offline-first sync system initialized')
+
+            // Process any pending operations from IndexedDB (queued while offline)
+            const stats = await syncOrchestrator.getQueueStats()
+            if (stats.pendingCount > 0) {
+                console.log(`📤 [SYNC] Found ${stats.pendingCount} pending operations - syncing...`)
+                // The orchestrator will auto-process these in the background
+            }
+        } catch (error) {
+            console.warn('⚠️ [SYNC] Sync system initialization failed (non-critical):', error)
+        }
+
+        // TASK-1177: Initialize beforeunload protection
+        // This warns users if they try to close the tab with unsaved changes
+        try {
+            useBeforeUnload()
+            console.log('🛡️ [SYNC] Page close protection enabled')
+        } catch (error) {
+            console.warn('⚠️ [SYNC] beforeunload protection failed (non-critical):', error)
+        }
 
         // 3. Initialize Realtime Subscriptions
         const { initRealtimeSubscription } = useSupabaseDatabase()

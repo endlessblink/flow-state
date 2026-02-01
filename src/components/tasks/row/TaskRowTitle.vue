@@ -1,6 +1,6 @@
 <template>
   <div class="task-row__title">
-    <span
+    <button
       class="task-row__title-text"
       :class="[
         titleAlignmentClasses,
@@ -11,9 +11,10 @@
         }
       ]"
       :title="title"
+      type="button"
     >
       {{ title }}
-    </span>
+    </button>
     <span
       v-if="hasSubtasks"
       class="subtask-count"
@@ -59,6 +60,24 @@ defineProps<{
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1; /* Ensure text takes available space */
+  /* Reset button styles */
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+.task-row__title-text:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .task-row__title-text--completed {

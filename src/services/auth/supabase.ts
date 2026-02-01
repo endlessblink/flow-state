@@ -13,48 +13,28 @@ const envUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 // Supabase JS client requires full URL (not relative path)
-// If envUrl is relative (starts with /), prepend current origin
-// BUG-1064: Tauri now connects to VPS Supabase (same as web) for cross-platform sync
+// BUG-1064: Tauri ALWAYS connects to VPS for reliable cross-platform sync
+// Local Supabase is only used for backup, not for the main app connection
 function resolveSupabaseUrl(): string {
-    // BUG-1094: Add diagnostic logging for Tauri connection issues
-    const useLocalSupabase = import.meta.env.VITE_USE_LOCAL_SUPABASE === 'true'
+    // Production VPS URL - hardcoded for reliability
+    const VPS_URL = 'https://api.in-theflow.com'
 
-    console.log('[Supabase] Resolving URL:', {
-        isTauri,
-        envUrl,
-        useLocalSupabase,
-        VITE_USE_LOCAL_SUPABASE: import.meta.env.VITE_USE_LOCAL_SUPABASE,
-    })
-
-    // Check for explicit local mode (for development/testing)
-    if (useLocalSupabase) {
-        console.log('[Supabase] Using LOCAL Supabase (VITE_USE_LOCAL_SUPABASE=true)')
-        return 'http://127.0.0.1:54321'
-    }
-
-    // Tauri: Use full VPS URL directly (WebView can't use relative paths)
+    // Tauri: ALWAYS use VPS (no local mode complexity)
     if (isTauri) {
-        // envUrl should be the full VPS URL like 'https://api.in-theflow.com'
-        // If it's relative, we can't use it in Tauri - need explicit URL
-        if (envUrl.startsWith('/')) {
-            console.warn('[Supabase] Tauri requires full URL, not relative path. Check VITE_SUPABASE_URL')
-            // Fallback to production VPS
-            console.log('[Supabase] Using VPS fallback: https://api.in-theflow.com')
-            return 'https://api.in-theflow.com'
-        }
-        console.log('[Supabase] Using envUrl for Tauri:', envUrl)
-        return envUrl
+        console.log('[Supabase] Tauri → VPS:', VPS_URL)
+        return VPS_URL
     }
 
-    // Web/PWA: Convert relative path to full URL if needed
+    // Web/PWA: Use env var or resolve relative path
     if (envUrl.startsWith('/') && typeof window !== 'undefined') {
-        // e.g., '/supabase' becomes 'https://in-theflow.com/supabase'
         const resolved = `${window.location.origin}${envUrl}`
-        console.log('[Supabase] Web/PWA resolved URL:', resolved)
+        console.log('[Supabase] Web/PWA:', resolved)
         return resolved
     }
-    console.log('[Supabase] Using envUrl as-is:', envUrl)
-    return envUrl
+
+    // Default: use env URL as-is
+    console.log('[Supabase] Using:', envUrl || VPS_URL)
+    return envUrl || VPS_URL
 }
 
 const supabaseUrl = resolveSupabaseUrl()

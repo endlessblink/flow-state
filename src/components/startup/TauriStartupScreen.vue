@@ -6,8 +6,9 @@
  * Manages Docker and Supabase startup sequence.
  */
 
-import { onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useTauriStartup, isTauri } from '@/composables/useTauriStartup'
+import TauriModeSelector from './TauriModeSelector.vue'
 
 const emit = defineEmits<{
   ready: []
@@ -25,6 +26,10 @@ const {
   registerCloseHandler
 } = useTauriStartup()
 
+// Mode selection state
+const showModeSelector = ref(false)
+const selectedMode = ref<'cloud' | 'local' | null>(null)
+
 // Watch for ready state and emit event
 watch(isReady, async (ready) => {
   if (ready) {
@@ -36,17 +41,30 @@ watch(isReady, async (ready) => {
 })
 
 onMounted(async () => {
-  // BUG-1064: Check if using VPS Supabase (no local Docker needed)
-  const useLocalSupabase = import.meta.env.VITE_USE_LOCAL_SUPABASE === 'true'
+  // Tauri ALWAYS connects to VPS - skip Docker/Supabase orchestration entirely
+  // Local Supabase is only used for backup (separate from app connection)
+  skipStartup()
+})
 
-  // Only run Docker/Supabase startup sequence if using local Supabase
-  if (isTauri() && useLocalSupabase) {
-    await runStartupSequence()
+async function onModeSelected(mode: 'cloud' | 'local') {
+  selectedMode.value = mode
+  showModeSelector.value = false
+  await startWithMode(mode)
+}
+
+async function startWithMode(mode: 'cloud' | 'local') {
+  if (mode === 'local') {
+    // Local Mode: run Docker/Supabase startup sequence
+    if (isTauri()) {
+      await runStartupSequence()
+    } else {
+      skipStartup()
+    }
   } else {
-    // VPS mode or browser: skip Docker/Supabase checks
+    // Cloud Mode: skip Docker/Supabase checks, connect to VPS
     skipStartup()
   }
-})
+}
 
 function openDockerDownload() {
   window.open('https://docker.com/products/docker-desktop', '_blank')
@@ -58,8 +76,15 @@ function openSupabaseInstall() {
 </script>
 
 <template>
+  <!-- Mode Selector (first time only) -->
+  <TauriModeSelector
+    v-if="showModeSelector"
+    @select="onModeSelected"
+  />
+
+  <!-- Startup Progress (for Local Mode only) -->
   <Transition name="fade">
-    <div v-if="isLoading || hasError" class="startup-screen">
+    <div v-if="!showModeSelector && (isLoading || hasError)" class="startup-screen">
       <div class="startup-content">
         <!-- Logo -->
         <div class="logo-container">

@@ -20,9 +20,6 @@
       '--indent-level': indentLevel
     }"
     draggable="true"
-    tabindex="0"
-    role="button"
-    :aria-label="`Select task: ${task.title}`"
     @dragstart="$emit('dragstart', $event)"
     @dragend="$emit('dragend', $event)"
     @dragover.prevent="$emit('dragover', $event)"

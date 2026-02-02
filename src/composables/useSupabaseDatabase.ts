@@ -462,6 +462,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
         try {
             // Try to use the RPC function if available (more efficient)
+            // TASK-1183: Sanitize project_id - 'uncategorized' is not a valid UUID
+            const sanitizedProjectId = task.projectId === 'uncategorized' || task.projectId === '1'
+                ? null
+                : (task.projectId || null)
+
             const { data: rpcResult, error: rpcError } = await supabase.rpc('safe_create_task', {
                 p_task_id: task.id,
                 p_user_id: userId,
@@ -470,7 +475,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 p_status: task.status || 'planned',
                 p_priority: task.priority || 'medium',
                 p_due_date: task.dueDate || null,
-                p_project_id: task.projectId || 'uncategorized',
+                p_project_id: sanitizedProjectId,
                 p_position: task.canvasPosition ? JSON.stringify(task.canvasPosition) : null,
                 p_tags: task.tags || [],
                 p_is_in_inbox: task.isInInbox !== false,

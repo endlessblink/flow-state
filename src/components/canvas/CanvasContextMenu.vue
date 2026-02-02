@@ -85,9 +85,8 @@
       <span class="menu-text">Create Task Here</span>
     </button>
 
-    <!-- Create Group (unified modal) -->
+    <!-- Create Group (unified modal) - BUG-1127: Allow nested groups -->
     <button
-      v-if="!contextSection"
       class="menu-item"
       @click="handleCreateGroup"
     >

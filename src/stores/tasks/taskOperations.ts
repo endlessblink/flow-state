@@ -124,27 +124,40 @@ export function useTaskOperations(
             // This ensures the task persists in IndexedDB even if network fails
             try {
                 const syncOrchestrator = useSyncOrchestrator()
+                // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
+                // BUGFIX: Use JSON.parse/stringify to strip Vue reactivity (Proxy objects can't be cloned to IndexedDB)
+                const payload: Record<string, unknown> = {
+                    id: newTask.id,
+                    title: newTask.title,
+                    description: newTask.description,
+                    status: newTask.status,
+                    priority: newTask.priority,
+                    progress: newTask.progress,
+                    completed_pomodoros: newTask.completedPomodoros,
+                    is_in_inbox: newTask.isInInbox,
+                    position_version: newTask.positionVersion,
+                    created_at: newTask.createdAt.toISOString(),
+                    updated_at: newTask.updatedAt.toISOString()
+                }
+                // Only add optional fields if they have values (not undefined/null)
+                if (newTask.dueDate) payload.due_date = newTask.dueDate
+                if (newTask.projectId) payload.project_id = newTask.projectId
+                if (newTask.parentId) payload.parent_id = newTask.parentId
+                // Strip reactivity from complex objects - use 'position' column (not 'canvas_position')
+                if (newTask.canvasPosition) {
+                    payload.position = {
+                        x: newTask.canvasPosition.x,
+                        y: newTask.canvasPosition.y,
+                        parentId: newTask.parentId,
+                        format: 'absolute'
+                    }
+                }
+
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
                     operation: 'create',
                     entityId: newTask.id,
-                    payload: {
-                        id: newTask.id,
-                        title: newTask.title,
-                        description: newTask.description,
-                        status: newTask.status,
-                        priority: newTask.priority,
-                        progress: newTask.progress,
-                        completed_pomodoros: newTask.completedPomodoros,
-                        due_date: newTask.dueDate,
-                        project_id: newTask.projectId,
-                        is_in_inbox: newTask.isInInbox,
-                        canvas_position: newTask.canvasPosition,
-                        position_version: newTask.positionVersion,
-                        parent_id: newTask.parentId,
-                        created_at: newTask.createdAt.toISOString(),
-                        updated_at: newTask.updatedAt.toISOString()
-                    },
+                    payload: JSON.parse(JSON.stringify(payload)), // Strip all reactivity
                     baseVersion: 0
                 })
             } catch (queueError) {
@@ -329,32 +342,58 @@ export function useTaskOperations(
             const updatedTask = _rawTasks.value[index]
             try {
                 const syncOrchestrator = useSyncOrchestrator()
+                // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
+                // BUGFIX: Use JSON.parse/stringify to strip Vue reactivity (Proxy objects can't be cloned to IndexedDB)
+                const payload: Record<string, unknown> = {
+                    title: updatedTask.title,
+                    description: updatedTask.description,
+                    status: updatedTask.status,
+                    priority: updatedTask.priority,
+                    progress: updatedTask.progress,
+                    completed_pomodoros: updatedTask.completedPomodoros,
+                    is_in_inbox: updatedTask.isInInbox,
+                    position_version: updatedTask.positionVersion,
+                    updated_at: updatedTask.updatedAt.toISOString()
+                }
+                // Only add optional fields if they have values (not undefined/null)
+                // Use explicit null for fields that need to be cleared
+                if (updatedTask.dueDate !== undefined) {
+                    payload.due_date = updatedTask.dueDate || null
+                }
+                if (updatedTask.projectId !== undefined) {
+                    payload.project_id = updatedTask.projectId || null
+                }
+                if (updatedTask.parentId !== undefined) {
+                    payload.parent_id = updatedTask.parentId || null
+                }
+                if (updatedTask.canvasPosition !== undefined) {
+                    // Use 'position' column (not 'canvas_position') - format as DB expects
+                    payload.position = updatedTask.canvasPosition
+                        ? {
+                            x: updatedTask.canvasPosition.x,
+                            y: updatedTask.canvasPosition.y,
+                            parentId: updatedTask.parentId,
+                            format: 'absolute'
+                        }
+                        : null
+                }
+                if (updatedTask.completedAt !== undefined) {
+                    payload.completed_at = updatedTask.completedAt instanceof Date
+                        ? updatedTask.completedAt.toISOString()
+                        : (updatedTask.completedAt || null)
+                }
+
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
                     operation: 'update',
                     entityId: taskId,
-                    payload: {
-                        title: updatedTask.title,
-                        description: updatedTask.description,
-                        status: updatedTask.status,
-                        priority: updatedTask.priority,
-                        progress: updatedTask.progress,
-                        completed_pomodoros: updatedTask.completedPomodoros,
-                        due_date: updatedTask.dueDate,
-                        project_id: updatedTask.projectId,
-                        is_in_inbox: updatedTask.isInInbox,
-                        canvas_position: updatedTask.canvasPosition,
-                        position_version: updatedTask.positionVersion,
-                        parent_id: updatedTask.parentId,
-                        completed_at: updatedTask.completedAt instanceof Date
-                            ? updatedTask.completedAt.toISOString()
-                            : updatedTask.completedAt,
-                        updated_at: updatedTask.updatedAt.toISOString()
-                    },
+                    payload: JSON.parse(JSON.stringify(payload)), // Strip all reactivity
                     baseVersion: currentVersion
                 })
             } catch (queueError) {
-                console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', queueError)
+                const errorMsg = queueError instanceof Error ? queueError.message : String(queueError)
+                const errorStack = queueError instanceof Error ? queueError.stack : ''
+                console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', errorMsg, errorStack)
             }
 
             // BUG-060 FIX: Also attempt direct save for immediate sync when online

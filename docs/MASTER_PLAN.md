@@ -278,6 +278,37 @@
 
 ---
 
+### BUG-1178: Break Button in Timer Notification Doesn't Start Break Timer (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
+
+**Problem**: User reports two issues on Linux desktop:
+1. Clicking "Break" button in work-complete notification doesn't start break timer
+2. After break completes, no popup appears with "Start Work" / "+5 min" options
+
+**Root Cause Analysis**:
+The notification with action buttons comes from Service Worker (not Tauri native). Flow:
+1. Work timer completes → `showTimerNotification()` in timer.ts
+2. Posts 'TIMER_COMPLETE' to Service Worker
+3. SW shows notification with [☕ Break] [+5 min] actions
+4. User clicks "Break" → SW notificationclick handler fires
+5. SW posts `{ type: 'START_BREAK' }` to client
+6. **BUG**: timer.ts `handleServiceWorkerMessage()` not receiving messages
+
+**Likely causes**:
+1. SW message listener registered before SW controller is ready
+2. Race condition: message sent before window focused
+
+**Fix Plan**:
+1. Add debug logging to identify exact failure point
+2. Wait for `navigator.serviceWorker.ready` before registering listener
+3. Add small delay after focusing window before sending message
+4. Add URL query param fallback for when postMessage fails
+
+**Files**: `src/stores/timer.ts`, `src/sw.ts`
+
+---
+
 ### ~~BUG-1129~~: Quick Sort Project Buttons Truncating Names on Desktop (✅ DONE)
 
 **Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-01-31)
@@ -406,21 +437,26 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### BUG-1124: Task Positions Don't Sync Between Tauri App and Web App (📋 PLANNED)
+### ~~BUG-1124~~: Task Positions Don't Sync Between Tauri App and Web App (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-02)
 
-**Problem**: Task positions on canvas don't sync correctly between the production Tauri desktop app and the web app (PWA). Changes made in one don't reflect properly in the other.
+**Problem**: Task positions on canvas didn't sync correctly between the production Tauri desktop app and the web app (PWA). Changes made in one didn't reflect properly in the other.
 
-**Investigation Needed**:
-- Identify which app's positions are being overwritten
-- Check Supabase Realtime subscription differences between Tauri and PWA
-- Review canvas position persistence logic in `useCanvasSync.ts`
-- Verify device leadership model isn't conflicting with position updates
+**Root Causes Found**:
+1. Group realtime handler wasn't using `fromSupabaseGroup` mapper - `position_json` from DB was passed as-is instead of mapped to `position`
+2. Task position version logic blocked cross-device sync - when versions matched, local was always preserved instead of comparing timestamps
+
+**Fixes Applied**:
+1. Added `fromSupabaseGroup` mapper to realtime handler in `useAppInitialization.ts`
+2. Updated position version logic in `tasks.ts` to compare `updatedAt` timestamps when versions equal
+3. Extended pending write timeout from 5s to 30s to handle VPS latency
+
+**SOP**: `docs/sop/SOP-040-cross-device-position-sync.md`
 
 **Related**: TASK-131 (position reset issues), TASK-142 (positions reset on refresh)
 
-**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/stores/canvas.ts`, `src/composables/useSupabaseDatabase.ts`
+**Files Changed**: `src/composables/app/useAppInitialization.ts`, `src/stores/tasks.ts`
 
 ---
 

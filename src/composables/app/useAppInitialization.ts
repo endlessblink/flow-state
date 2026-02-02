@@ -126,6 +126,44 @@ export function useAppInitialization() {
         // Initialize global keyboard shortcuts
         await initGlobalKeyboardShortcuts()
 
+        // BUG-1178: Handle timer action from URL query params (fallback when SW postMessage fails)
+        // This handles the case where user clicks notification action but window wasn't ready
+        // The SW opens a new window with action in URL: /?action=START_BREAK&taskId=xxx
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search)
+            const action = urlParams.get('action')
+            const taskIdFromUrl = urlParams.get('taskId')
+
+            if (action) {
+                console.log('🍅 [APP-INIT] Timer action from URL:', action, taskIdFromUrl)
+
+                // Small delay to ensure timer store is ready
+                setTimeout(() => {
+                    const settings = timerStore.settings
+
+                    switch (action) {
+                        case 'START_BREAK':
+                            timerStore.startTimer('break', settings.shortBreakDuration, true)
+                            break
+                        case 'START_WORK': {
+                            const taskId = taskIdFromUrl && taskIdFromUrl !== 'break' ? taskIdFromUrl : 'general'
+                            timerStore.startTimer(taskId, settings.workDuration, false)
+                            break
+                        }
+                        case 'POSTPONE_5MIN': {
+                            const postponeTaskId = taskIdFromUrl || 'general'
+                            const isBreak = postponeTaskId === 'break'
+                            timerStore.startTimer(postponeTaskId, 5 * 60, isBreak) // 5 minutes
+                            break
+                        }
+                    }
+
+                    // Clear the URL params after handling (to prevent re-triggering on refresh)
+                    window.history.replaceState({}, document.title, window.location.pathname)
+                }, 100)
+            }
+        }
+
         // TASK-1177: Initialize offline-first sync system
         // This starts the background queue processor and sets up online/offline listeners
         try {

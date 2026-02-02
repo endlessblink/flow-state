@@ -106,6 +106,14 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
   const mod = await getWriteQueueModule()
   return mod ? mod.getFailedOperations() : []
 }
+
+const clearFailedOperations = async (): Promise<number> => {
+  const mod = await getWriteQueueModule()
+  if (!mod) return 0
+  const count = await mod.clearFailedOperations()
+  await updateStatus()
+  return count
+}
 import {
   calculateNextRetryTime,
   shouldRetry,
@@ -167,7 +175,8 @@ async function updateStatus() {
   const stats = await getStats()
 
   state.value.pendingCount = stats.pendingCount + stats.syncingCount
-  state.value.failedCount = stats.failedCount
+  // BUG-1179: Include conflicts in error count so UI shows correct number
+  state.value.failedCount = stats.failedCount + stats.conflictCount
 
   // TASK-1177: Populate failedOperations array for UI display
   if (stats.failedCount > 0) {
@@ -216,7 +225,15 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       }
 
       case 'update': {
-        // Update with optimistic locking if version is available
+        // TASK-1183: Auto-resolve version conflicts with Last-Write-Wins (LWW)
+        // For personal productivity apps, LWW is sufficient - no multi-user collaboration
+        //
+        // Strategy:
+        // 1. Try update with optimistic lock first
+        // 2. If 0 rows returned (version conflict), fetch server state
+        // 3. If server timestamp < our timestamp, force update (our change wins)
+        // 4. If server timestamp > our timestamp, server wins - discard our change
+
         let query = supabase.from(tableName).update(payload).eq('id', entityId)
 
         if (operation.baseVersion !== undefined) {
@@ -228,12 +245,58 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
         // Check for version conflict (no rows updated)
         if (!result.error && (!result.data || result.data.length === 0)) {
-          // Conflict detected
-          return {
-            success: false,
-            operation,
-            isConflict: true,
-            error: 'Version conflict - entity was modified by another device'
+          console.log(`⚠️ [SYNC] Version conflict detected for ${entityType}:${entityId}, attempting LWW resolution`)
+
+          // Fetch current server state
+          const serverState = await supabase
+            .from(tableName)
+            .select('*')
+            .eq('id', entityId)
+            .single()
+
+          if (serverState.error) {
+            // Entity might be deleted - treat as permanent failure
+            if (serverState.error.code === 'PGRST116') {
+              console.log(`🗑️ [SYNC] Entity ${entityId} not found on server (deleted?), discarding update`)
+              return {
+                success: true, // Mark as success to remove from queue
+                operation
+              }
+            }
+            throw serverState.error
+          }
+
+          // Last-Write-Wins: Compare timestamps
+          const serverUpdatedAt = new Date(serverState.data.updated_at).getTime()
+          const localUpdatedAt = payload.updated_at
+            ? new Date(payload.updated_at as string).getTime()
+            : Date.now()
+
+          if (localUpdatedAt >= serverUpdatedAt) {
+            // Our change is newer - force update without version check
+            console.log(`✅ [SYNC] LWW: Local wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
+
+            const forceResult = await supabase
+              .from(tableName)
+              .update(payload)
+              .eq('id', entityId)
+              .select()
+
+            if (forceResult.error) {
+              throw forceResult.error
+            }
+
+            result = forceResult
+          } else {
+            // Server change is newer - accept server version (our change is stale)
+            console.log(`📥 [SYNC] LWW: Server wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
+
+            // Mark as success - don't retry, server has newer data
+            return {
+              success: true,
+              operation,
+              serverData: serverState.data
+            }
           }
         }
         break
@@ -269,7 +332,23 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       newVersion
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    // Handle different error types - Supabase errors have a message property
+    let errorMessage: string
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      // Supabase/Postgrest errors have message property
+      errorMessage = String((error as { message: unknown }).message)
+    } else if (error && typeof error === 'object') {
+      // Try to stringify the object
+      try {
+        errorMessage = JSON.stringify(error)
+      } catch {
+        errorMessage = 'Unknown error (object)'
+      }
+    } else {
+      errorMessage = String(error)
+    }
     const classification = classifyError(error)
     const retryConfig = getRetryConfigForError(classification)
 
@@ -508,6 +587,7 @@ export function useSyncOrchestrator() {
     // Actions
     enqueue,
     retryFailed,
+    clearFailed: clearFailedOperations,
     getQueueStats,
     forceSync: processQueue
   }

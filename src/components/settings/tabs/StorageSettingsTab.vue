@@ -20,7 +20,7 @@ import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 import { isTauri, getTauriMode, setTauriMode } from '@/composables/useTauriStartup'
 import { useTaskStore } from '@/stores/tasks'
-import { clearAllOperations } from '@/services/offline/writeQueueDB'
+import { clearAll as clearAllOperations } from '@/services/offline/writeQueueDB'
 
 const {
   config,

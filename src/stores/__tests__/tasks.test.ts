@@ -230,7 +230,7 @@ describe('TaskStore', () => {
 
       expect(store.projects.find(p => p.id === project.id)).toBeUndefined()
       const movedTask = store.tasks.find(t => t.id === task.id)
-      expect(movedTask?.projectId).toBe('uncategorized') // Moved to uncategorized
+      expect(movedTask?.projectId).toBeNull() // TASK-1183: Must be null (valid UUID) not 'uncategorized' string
     })
 
     it('prevents deletion of default project', async () => {

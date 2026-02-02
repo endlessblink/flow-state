@@ -11,6 +11,14 @@ import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
+// BUG-1184: Helper to check if a string is a valid UUID (for parent_id column)
+// Group IDs like "group-xxx" should NOT be saved to parent_id (UUID column)
+const isValidUUID = (str: string | null | undefined): boolean => {
+    if (!str) return false
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(str)
+}
+
 // =============================================================================
 // GEOMETRY WRITE SOURCE (TASK-255 Geometry Invariants)
 // =============================================================================
@@ -142,7 +150,11 @@ export function useTaskOperations(
                 // Only add optional fields if they have values (not undefined/null)
                 if (newTask.dueDate) payload.due_date = newTask.dueDate
                 if (newTask.projectId) payload.project_id = newTask.projectId
-                if (newTask.parentId) payload.parent_id = newTask.parentId
+                // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
+                // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
+                if (newTask.parentId && isValidUUID(newTask.parentId)) {
+                    payload.parent_id = newTask.parentId
+                }
                 // Strip reactivity from complex objects - use 'position' column (not 'canvas_position')
                 if (newTask.canvasPosition) {
                     payload.position = {
@@ -357,14 +369,19 @@ export function useTaskOperations(
                 }
                 // Only add optional fields if they have values (not undefined/null)
                 // Use explicit null for fields that need to be cleared
+                // BUGFIX: Check for "null" string which causes Postgres timestamp parse error
                 if (updatedTask.dueDate !== undefined) {
-                    payload.due_date = updatedTask.dueDate || null
+                    const dueDate = updatedTask.dueDate
+                    payload.due_date = (!dueDate || dueDate === 'null' || dueDate === 'undefined') ? null : dueDate
                 }
                 if (updatedTask.projectId !== undefined) {
                     payload.project_id = updatedTask.projectId || null
                 }
+                // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
+                // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
+                // Canvas group association is stored in position.parentId (JSONB), not parent_id (UUID)
                 if (updatedTask.parentId !== undefined) {
-                    payload.parent_id = updatedTask.parentId || null
+                    payload.parent_id = isValidUUID(updatedTask.parentId) ? updatedTask.parentId : null
                 }
                 if (updatedTask.canvasPosition !== undefined) {
                     // Use 'position' column (not 'canvas_position') - format as DB expects
@@ -378,9 +395,12 @@ export function useTaskOperations(
                         : null
                 }
                 if (updatedTask.completedAt !== undefined) {
-                    payload.completed_at = updatedTask.completedAt instanceof Date
-                        ? updatedTask.completedAt.toISOString()
-                        : (updatedTask.completedAt || null)
+                    const completedAt = updatedTask.completedAt
+                    if (completedAt instanceof Date) {
+                        payload.completed_at = completedAt.toISOString()
+                    } else {
+                        payload.completed_at = (!completedAt || completedAt === 'null' || completedAt === 'undefined') ? null : completedAt
+                    }
                 }
 
                 await syncOrchestrator.enqueue({

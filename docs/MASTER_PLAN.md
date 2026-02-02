@@ -299,6 +299,99 @@ The notification with action buttons comes from Service Worker (not Tauri native
 
 ---
 
+### BUG-1179: Supabase Realtime Connection Drops (CHANNEL_ERROR/CLOSED) (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
+
+**Problem**: Production console shows repeated realtime connection drops:
+```
+📡 [REALTIME] Connection dropped (CHANNEL_ERROR): unknown reason
+📡 [REALTIME] Connection dropped (CLOSED): unknown reason
+```
+
+**Impact**: Causes `saveTasks` failures and potential data loss if writes happen during disconnect.
+
+**Investigation Needed**:
+1. Check if reconnection logic in `useRealtimeSync.ts` is working
+2. Verify VPS Caddy WebSocket headers are still correct
+3. Check Cloudflare WebSocket settings (not proxying WS correctly?)
+4. Add connection state monitoring to SyncStatusIndicator
+
+**Related**: TASK-1177 (Offline-First Sync), BUG-1106 (Realtime Init)
+
+**Files**: `src/composables/sync/useRealtimeSync.ts`, `src/stores/syncStatus.ts`
+
+---
+
+### BUG-1180: Ollama Localhost CORS Errors in Production (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
+
+**Problem**: Production site (`in-theflow.com`) attempts to call `localhost:11434` (Ollama), which fails with CORS:
+```
+Cross-Origin Request Blocked: http://localhost:11434/api/tags
+(Reason: CORS header 'Access-Control-Allow-Origin' missing). Status code: 403.
+```
+
+**Root Cause**: AI provider detection runs in browser, checks if Ollama is available locally. Works on localhost dev, but CORS blocks it from production domain.
+
+**Fix Options**:
+1. **User-side**: Configure Ollama with `OLLAMA_ORIGINS=https://in-theflow.com`
+2. **App-side**: Route Ollama calls through Supabase Edge Function proxy
+3. **App-side**: Skip Ollama detection in production (only check on localhost)
+
+**Recommended**: Option 3 (skip detection) + Option 2 (proxy) for users who want production Ollama access.
+
+**Files**: `src/services/ai/providers/index.ts`, `src/services/ai/router.ts`
+
+---
+
+### BUG-1181: Cloudflare Insights SRI Hash Mismatch (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED (2026-02-02)
+
+**Problem**: Console shows integrity hash mismatch for Cloudflare beacon script:
+```
+None of the "sha512" hashes in the integrity attribute match the content of the subresource at
+"https://static.cloudflareinsights.com/beacon.min.js/..."
+```
+
+**Root Cause**: Cloudflare updates their beacon.min.js periodically, but the HTML references a cached integrity hash.
+
+**Impact**: Low - Cloudflare analytics may not load, but app functionality unaffected.
+
+**Fix**: Remove integrity attribute from Cloudflare script tag, or let Cloudflare CDN handle it automatically.
+
+**Files**: `index.html` or Cloudflare dashboard Web Analytics settings
+
+---
+
+### BUG-1182: saveTasks Fails After Realtime Disconnect (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
+
+**Problem**: After realtime connection drops (BUG-1179), task save operations fail:
+```
+i@.../index-CAXNPz-Z.js:144:4526
+saveTasks@.../index-CAXNPz-Z.js:144:14019
+```
+
+**Root Cause**: Likely the optimistic update happens but Supabase write fails silently. No retry or rollback.
+
+**Impact**: User thinks task is saved, but it's lost on refresh.
+
+**Fix**: This is addressed by TASK-1177 (Offline-First Sync) which adds:
+- Write queue with IndexedDB persistence
+- Automatic retry with exponential backoff
+- Visual sync status indicator
+- Rollback on failure
+
+**Blocked By**: TASK-1177
+
+**Files**: `src/stores/tasks/taskOperations.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
 ### ~~BUG-1129~~: Quick Sort Project Buttons Truncating Names on Desktop (✅ DONE)
 
 **Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-01-31)
@@ -377,21 +470,28 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### BUG-1123: Tauri Desktop App Performance Issues (📋 PLANNED)
+### ~~BUG-1123~~: Tauri Desktop App Performance Issues (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-02)
 
-**Problem**: Performance issues reported in Tauri desktop application.
+**Problem**: Performance issues reported in Tauri desktop application. Main bundle was 1.9MB monolithic file.
 
-**Investigation Needed**:
-- Identify specific performance bottlenecks (startup time, UI responsiveness, memory usage)
-- Check if issue is Rust backend, frontend rendering, or IPC communication
-- Compare performance between Tauri app and PWA version
-- Review release profile optimizations from BUG-1115
+**Root Cause**: No vendor chunking in vite.config.ts - all dependencies bundled into single index.js
 
-**Related**: BUG-1115 (release profile optimizations)
+**Fix Applied**:
+- Added `manualChunks` configuration to vite.config.ts
+- Split vendors: vue-vendor, naive-ui, tiptap, supabase, vueuse, date-fns, tauri
+- Main bundle reduced from 1.9MB → 729KB (61% reduction)
 
-**Files**: `src-tauri/`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`
+**Results**:
+| Bundle | Before | After |
+|--------|--------|-------|
+| index.js | 1.9MB | 729KB |
+| vue-vendor | - | 758KB |
+| naive-ui | - | 433KB |
+| tiptap | - | 392KB |
+
+**Files Changed**: `vite.config.ts`
 
 ---
 

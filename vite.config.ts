@@ -112,9 +112,41 @@ export default defineConfig(({ mode }) => ({
       ],
       output: {
         format: 'es', // Workers MUST be 'es' format
+        // BUG-1123: Split vendor chunks to reduce main bundle size (was 1.9MB)
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // ... existing chunks
+            // Vue ecosystem - core framework
+            if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
+              return 'vue-vendor'
+            }
+            // Vue Flow - large canvas library
+            if (id.includes('@vue-flow')) {
+              return 'vue-flow'
+            }
+            // Naive UI - component library
+            if (id.includes('naive-ui')) {
+              return 'naive-ui'
+            }
+            // Supabase - backend SDK
+            if (id.includes('@supabase')) {
+              return 'supabase'
+            }
+            // VueUse - composables
+            if (id.includes('@vueuse')) {
+              return 'vueuse'
+            }
+            // Date utilities
+            if (id.includes('date-fns')) {
+              return 'date-fns'
+            }
+            // TipTap editor
+            if (id.includes('tiptap') || id.includes('prosemirror')) {
+              return 'tiptap'
+            }
+            // Tauri APIs
+            if (id.includes('@tauri-apps')) {
+              return 'tauri'
+            }
           }
         }
       }

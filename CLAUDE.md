@@ -113,6 +113,22 @@ src/composables/useTauriStartup.ts     # Frontend startup sequence
 .github/workflows/release.yml          # CI/CD release workflow
 ```
 
+### Local Tauri Build & Install (MANDATORY for Testing)
+
+**After implementing features, ALWAYS build and provide install command:**
+
+```bash
+# Build production Tauri app
+npm run build && npx tauri build
+
+# Install the .deb package (Linux)
+sudo dpkg -i /media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src-tauri/target/release/bundle/deb/FlowState_*.deb
+```
+
+**Output location:** `src-tauri/target/release/bundle/deb/FlowState_X.X.X_amd64.deb`
+
+Then launch **FlowState** from the app menu to test in production.
+
 ## VPS Production Deployment (Contabo)
 
 FlowState runs as a **PWA on a Contabo VPS** at `in-theflow.com` with self-hosted Supabase. This is separate from the Tauri desktop distribution.

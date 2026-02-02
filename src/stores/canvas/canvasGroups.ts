@@ -50,7 +50,8 @@ export const useCanvasGroups = (
             id: crypto.randomUUID(), // TASK-1183: Use proper UUID for Supabase compatibility
             isVisible: true,
             isCollapsed: false,
-            parentGroupId: null,
+            // BUG-1127 FIX: Preserve parentGroupId for nested groups
+            parentGroupId: groupData.parentGroupId || null,
             positionVersion: 1,
             positionFormat: 'absolute'
         }

@@ -296,6 +296,48 @@ export async function getFailedOperations(): Promise<WriteOperation[]> {
 }
 
 /**
+ * Clear all failed operations (for corrupted entries that can't be fixed)
+ * Also clears conflict and permanently stuck operations
+ */
+export async function clearFailedOperations(): Promise<number> {
+  const db = getWriteQueueDB()
+
+  // Get ALL non-completed operations to see what's in the queue
+  const allOps = await db.operations.toArray()
+  console.log('[SYNC-CLEAR] All operations in queue:', allOps.map(op => ({
+    id: op.id,
+    status: op.status,
+    entityType: op.entityType,
+    retryCount: op.retryCount
+  })))
+
+  // Clear failed, conflict, AND any stuck operations with high retry counts
+  const toDelete = allOps.filter(op =>
+    op.status === 'failed' ||
+    op.status === 'conflict' ||
+    op.retryCount >= 10 // Also clear anything stuck after 10+ retries
+  )
+
+  console.log('[SYNC-CLEAR] Operations to delete:', toDelete.length)
+
+  if (toDelete.length > 0) {
+    const ids = toDelete.map(op => op.id!).filter(id => id !== undefined)
+    console.log('[SYNC-CLEAR] Deleting IDs:', ids)
+    await db.operations.bulkDelete(ids)
+    console.log('[SYNC-CLEAR] Deleted successfully')
+  }
+
+  // BUG-1179: Also clear the conflicts table to reset error state
+  const conflictCount = await db.conflicts.count()
+  if (conflictCount > 0) {
+    console.log('[SYNC-CLEAR] Clearing', conflictCount, 'conflicts')
+    await db.conflicts.clear()
+  }
+
+  return toDelete.length + conflictCount
+}
+
+/**
  * Get all conflicts for resolution
  */
 export async function getConflicts(): Promise<WriteConflict[]> {

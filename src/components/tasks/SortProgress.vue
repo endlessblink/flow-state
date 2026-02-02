@@ -3,13 +3,13 @@
     <!-- Progress Header -->
     <div class="progress-header">
       <div class="progress-info">
-        <span class="progress-count">{{ current }} of {{ total }}</span>
-        <span class="progress-label">tasks sorted</span>
+        <span class="progress-count">{{ current }}/{{ total }}</span>
+        <span class="progress-label">sorted</span>
       </div>
 
       <div v-if="streak > 0" class="streak-info">
         <span class="streak-icon">🔥</span>
-        <span class="streak-count">{{ streak }} day streak</span>
+        <span class="streak-count">{{ streak }} day{{ streak > 1 ? 's' : '' }}</span>
       </div>
     </div>
 
@@ -29,10 +29,6 @@
       </div>
     </div>
 
-    <!-- Motivational Message -->
-    <div class="motivational-message" aria-live="polite">
-      {{ message }}
-    </div>
   </div>
 </template>
 
@@ -42,7 +38,7 @@ import { computed } from 'vue'
 interface Props {
   current: number
   total: number
-  message: string
+  message?: string  // Kept for API compatibility, but no longer displayed
   streak?: number
 }
 
@@ -62,7 +58,7 @@ const percentage = computed(() => {
   max-width: 600px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
   background: transparent !important; /* Override global tauri styles */
 }
 
@@ -80,8 +76,8 @@ const percentage = computed(() => {
 }
 
 .progress-count {
-  font-size: var(--text-2xl);
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: 600;
   color: var(--color-text-primary, #ffffff);
   line-height: 1;
 }
@@ -118,7 +114,7 @@ const percentage = computed(() => {
 
 .progress-bar-track {
   position: relative;
-  height: 12px;
+  height: 8px;
   background: var(--glass-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -140,22 +136,10 @@ const percentage = computed(() => {
   right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
-  font-size: var(--text-xs);
+  font-size: 9px;
   font-weight: 700;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.motivational-message {
-  text-align: center;
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--color-text-primary, #ffffff);
-  padding: var(--space-3) var(--space-5);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: var(--radius-lg);
-  backdrop-filter: blur(10px);
 }
 
 /* Animations */
@@ -184,10 +168,6 @@ const percentage = computed(() => {
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .progress-count {
-    font-size: var(--text-xl);
-  }
-
-  .motivational-message {
     font-size: var(--text-base);
   }
 }

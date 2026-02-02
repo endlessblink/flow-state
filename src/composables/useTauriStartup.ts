@@ -66,6 +66,24 @@ export function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI__' in window
 }
 
+/**
+ * Get current Tauri mode (cloud or local)
+ */
+export function getTauriMode(): 'cloud' | 'local' {
+  if (typeof window === 'undefined') return 'cloud'
+  const savedMode = localStorage.getItem('flowstate-tauri-mode')
+  return (savedMode === 'local' ? 'local' : 'cloud') as 'cloud' | 'local'
+}
+
+/**
+ * Set Tauri mode
+ */
+export function setTauriMode(mode: 'cloud' | 'local'): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('flowstate-tauri-mode', mode)
+  }
+}
+
 export function useTauriStartup() {
   const state = ref<StartupState>({
     step: 'checking_docker',

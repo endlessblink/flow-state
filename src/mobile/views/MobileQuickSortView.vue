@@ -998,13 +998,7 @@ onMounted(() => {
   height: 100dvh; /* Dynamic viewport height - accounts for iOS browser chrome */
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    165deg,
-    hsl(230, 20%, 8%) 0%,
-    hsl(245, 25%, 11%) 30%,
-    hsl(250, 22%, 9%) 70%,
-    hsl(230, 18%, 7%) 100%
-  );
+  background: var(--app-background-gradient);
   color: var(--text-primary);
   overflow: hidden;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -1030,7 +1024,7 @@ onMounted(() => {
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   padding-top: calc(var(--space-4) + env(safe-area-inset-top));
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);

@@ -219,8 +219,11 @@ self.addEventListener('notificationclick', (event) => {
   } else if (action === 'postpone') {
     messageType = 'POSTPONE_5MIN'
   } else {
-    // Body click - default action based on session type
-    messageType = data?.wasBreak ? 'START_WORK' : 'START_BREAK'
+    // BUG-1185: Body click should NOT auto-start a session
+    // Previously, clicking the notification body would start the opposite session type,
+    // which caused unexpected timer starts when users clicked to dismiss the notification
+    // Just focus the app window without starting a timer
+    messageType = ''
   }
 
   // BUG-1178: Send message to all open clients with improved reliability
@@ -239,20 +242,24 @@ self.addEventListener('notificationclick', (event) => {
           // BUG-1178: Add small delay to ensure window is fully focused and ready to receive messages
           await new Promise(resolve => setTimeout(resolve, 100))
 
-          console.log('[SW] Sending message to client:', messageType)
-          client.postMessage({
-            type: messageType,
-            taskId: data?.taskId,
-            taskName: data?.taskName,
-          })
-          console.log('[SW] Message sent successfully:', messageType)
+          if (messageType) {
+            console.log('[SW] Sending message to client:', messageType)
+            client.postMessage({
+              type: messageType,
+              taskId: data?.taskId,
+              taskName: data?.taskName,
+            })
+            console.log('[SW] Message sent successfully:', messageType)
+          } else {
+            console.log('[SW] Body click - just focusing window, no timer action')
+          }
           return
         }
       }
 
       // No existing window - open a new one with action in URL (fallback)
       console.log('[SW] No existing window, opening new with action in URL')
-      if (self.clients.openWindow) {
+      if (messageType && self.clients.openWindow) {
         const actionUrl = `/?action=${messageType}&taskId=${encodeURIComponent(data?.taskId || '')}`
         await self.clients.openWindow(actionUrl)
       }

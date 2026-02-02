@@ -147,6 +147,17 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
     await orchestrator.forceSync()
   }
 
+  /**
+   * Clear all failed operations (for corrupted entries)
+   */
+  const clearFailed = async () => {
+    const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+    const orchestrator = useSyncOrchestrator()
+    const count = await orchestrator.clearFailed()
+    console.log(`[SYNC] Cleared ${count} failed operations`)
+    return count
+  }
+
   return {
     // State
     status,
@@ -170,6 +181,7 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
 
     // Actions
     retryFailed,
-    forceSync
+    forceSync,
+    clearFailed
   }
 })

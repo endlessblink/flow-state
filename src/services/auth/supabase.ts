@@ -68,6 +68,18 @@ try {
             // Combined with proactive token refresh in auth.ts for session persistence
             storage: typeof window !== 'undefined' ? localStorage : undefined,
         },
+        // BUG-1179: Configure Realtime to prevent connection drops
+        // Cloudflare has 100-second idle timeout, so we send heartbeats more frequently
+        // See: https://supabase.com/docs/guides/troubleshooting/realtime-heartbeat-messages
+        realtime: {
+            heartbeatIntervalMs: 15000,  // Send heartbeat every 15s (default: 25s) - keeps connection alive
+            reconnectAfterMs: (tries: number) => {
+                // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+                return Math.min(1000 * Math.pow(2, tries), 30000)
+            },
+            // Enable logging in development for debugging connection issues
+            log_level: import.meta.env.DEV ? 'info' : 'error',
+        },
         // TASK-1083: Prevent browser HTTP caching of Supabase responses
         // Note: Cannot add Cache-Control/Pragma headers - Supabase CORS doesn't allow them
         // Using cache: 'no-store' fetch option only (this is a Request option, not a header)

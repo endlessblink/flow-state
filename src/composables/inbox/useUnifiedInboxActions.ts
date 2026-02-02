@@ -1,14 +1,23 @@
 import { ref, computed } from 'vue'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { useToast } from '@/composables/useToast'
+import {
+    findMatchingGroupForDueDate,
+    calculatePositionInGroup,
+    getPlacementLabel
+} from '@/composables/canvas/useSmartGroupMatcher'
 
 export function useUnifiedInboxActions(
     inboxTasks: { value: Task[] },
     context: string
 ) {
     const taskStore = useTaskStore()
-    const { createTaskWithUndo } = useUnifiedUndoRedo()
+    const canvasStore = useCanvasStore()
+    const { createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
+    const { showToast } = useToast()
 
     // Multi-select state (Actions)
     const selectedTaskIds = ref<Set<string>>(new Set())
@@ -180,6 +189,132 @@ export function useUnifiedInboxActions(
         document.documentElement.removeAttribute('data-dragging-task-id')
     }
 
+    // --- Send to Canvas ---
+
+    /**
+     * GEOMETRY WRITER: Sends a task from inbox to canvas (TASK-255 compliant)
+     *
+     * This is an ALLOWED geometry write because:
+     * 1. Explicit user action (button click)
+     * 2. One-time placement at send time (not reactive)
+     * 3. Single atomic write (parentId + canvasPosition together)
+     *
+     * If task has a dueDate, matches it to a Smart Group (Today, Tomorrow, etc.)
+     * Otherwise places at canvas root.
+     */
+    const sendToCanvas = async (taskId: string) => {
+        const task = taskStore.getTask(taskId)
+        if (!task) {
+            console.warn('[sendToCanvas] Task not found:', taskId)
+            return
+        }
+
+        // Find matching group based on task's dueDate
+        const allGroups = canvasStore._rawGroups || []
+        const targetGroup = findMatchingGroupForDueDate(task.dueDate, allGroups)
+
+        let canvasPosition: { x: number; y: number }
+        let parentId: string | undefined
+
+        if (targetGroup) {
+            parentId = targetGroup.id
+            canvasPosition = calculatePositionInGroup(targetGroup, taskStore.tasks)
+            console.log(`[sendToCanvas] Task "${task.title}" matched to group "${targetGroup.name}"`, {
+                taskId,
+                dueDate: task.dueDate,
+                groupId: parentId,
+                position: canvasPosition
+            })
+        } else {
+            // Fallback: place at root with default position
+            // Position will be spread based on existing root-level tasks
+            const rootTasks = taskStore.tasks.filter(t =>
+                !t.parentId && t.canvasPosition && !t.isInInbox
+            )
+            const offsetY = rootTasks.length * 100
+            canvasPosition = { x: 200, y: 200 + offsetY }
+            console.log(`[sendToCanvas] Task "${task.title}" placed at root (no matching group)`, {
+                taskId,
+                dueDate: task.dueDate,
+                position: canvasPosition
+            })
+        }
+
+        try {
+            // Single atomic update - GEOMETRY WRITER
+            await updateTaskWithUndo(taskId, {
+                canvasPosition,
+                parentId,
+                isInInbox: false
+            })
+
+            return { success: true, groupName: targetGroup?.name || 'Canvas' }
+        } catch (error) {
+            console.error('[sendToCanvas] Failed to send task to canvas:', error)
+            showToast('Failed to send task to canvas', 'error')
+            return { success: false }
+        }
+    }
+
+    /**
+     * Send a single task to canvas with toast notification
+     */
+    const sendTaskToCanvas = async (task: Task) => {
+        const allGroups = canvasStore._rawGroups || []
+        const placementLabel = getPlacementLabel(task.dueDate, allGroups)
+
+        const result = await sendToCanvas(task.id)
+
+        if (result?.success) {
+            showToast(`Sent to ${placementLabel}`, 'success', { duration: 2000 })
+        }
+    }
+
+    /**
+     * Send all selected tasks to canvas
+     * Each task is matched individually to its appropriate group
+     */
+    const sendSelectedToCanvas = async () => {
+        if (selectedTaskIds.value.size === 0) return
+
+        const taskIds = Array.from(selectedTaskIds.value)
+        const allGroups = canvasStore._rawGroups || []
+        let successCount = 0
+        const groupCounts = new Map<string, number>()
+
+        for (const taskId of taskIds) {
+            const task = taskStore.getTask(taskId)
+            if (!task) continue
+
+            const result = await sendToCanvas(taskId)
+            if (result?.success) {
+                successCount++
+                const groupName = result.groupName || 'Canvas'
+                groupCounts.set(groupName, (groupCounts.get(groupName) || 0) + 1)
+            }
+        }
+
+        clearSelection()
+
+        // Show summary toast
+        if (successCount > 0) {
+            if (groupCounts.size === 1) {
+                const [groupName, count] = [...groupCounts.entries()][0]
+                showToast(
+                    `Sent ${count} task${count > 1 ? 's' : ''} to ${groupName}`,
+                    'success',
+                    { duration: 2500 }
+                )
+            } else {
+                showToast(
+                    `Sent ${successCount} tasks to canvas`,
+                    'success',
+                    { duration: 2500 }
+                )
+            }
+        }
+    }
+
     return {
         // State
         selectedTaskIds,
@@ -194,6 +329,10 @@ export function useUnifiedInboxActions(
         handleTaskKeydown,
         handleTaskContextMenu,
         onDragStart,
-        onDragEnd
+        onDragEnd,
+
+        // Send to Canvas
+        sendTaskToCanvas,
+        sendSelectedToCanvas
     }
 }

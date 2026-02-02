@@ -3,28 +3,22 @@
  *
  * This module provides a unified interface for interacting with various AI providers:
  * - Ollama (local, privacy-focused)
- * - Anthropic (Claude)
- * - OpenAI (GPT)
- * - Google Gemini
+ * - Groq (via proxy - Llama, Mixtral, Gemma)
+ * - OpenRouter (via proxy - Claude, GPT-4, Llama, etc.)
+ *
+ * BUG-1131: Cloud providers now use Supabase Edge Function proxies to keep API keys server-side.
  *
  * Usage:
  * ```typescript
- * import { BaseAIProvider, AIProviderInterface } from '@/services/ai/providers'
- * import { AIProvider, AIProviderConfig } from '@/types/ai'
+ * import { createGroqProxyProvider, createOpenRouterProxyProvider } from '@/services/ai/providers'
  *
- * // Create a concrete provider implementation
- * class OllamaProvider extends BaseAIProvider {
- *   readonly provider = AIProvider.OLLAMA
- *   // ... implement abstract methods
- * }
- *
- * // Use the provider
- * const provider = new OllamaProvider()
- * await provider.initialize(config)
- * const response = await provider.complete(messages)
+ * // Use proxy providers (recommended - API keys stay server-side)
+ * const groq = createGroqProxyProvider()
+ * const openrouter = createOpenRouterProxyProvider()
  * ```
  *
  * @see ROAD-011 in MASTER_PLAN.md - AI-Powered Features Roadmap
+ * @see BUG-1131 in MASTER_PLAN.md - Move All Exposed API Keys to Backend Proxy
  */
 
 // Core interface and types
@@ -40,18 +34,45 @@ export {
   autoDetectOllama,
 } from './ollama'
 
-// Claude/Anthropic
+// ============================================================================
+// Proxy Providers (BUG-1131 - API keys server-side)
+// ============================================================================
+
+// Groq Proxy (Llama, Mixtral, Gemma via Edge Function)
+export {
+  GroqProxyProvider,
+  createGroqProxyProvider,
+} from './groqProxy'
+
+// OpenRouter Proxy (Claude, GPT-4, Llama, etc. via Edge Function)
+export {
+  OpenRouterProxyProvider,
+  createOpenRouterProxyProvider,
+} from './openrouterProxy'
+
+// ============================================================================
+// Legacy Direct Providers (for reference/testing only - expose API keys)
+// ============================================================================
+
+// Claude/Anthropic (DEPRECATED - use OpenRouter proxy instead)
 export {
   ClaudeProvider,
   createClaudeProvider,
 } from './claude'
 
-// DeepSeek
+// DeepSeek (DEPRECATED - use Groq proxy instead)
 export {
   DeepSeekProvider,
   createDeepSeekProvider,
   autoDetectDeepSeek,
 } from './deepseek'
+
+// Groq Direct (DEPRECATED - use GroqProxyProvider instead)
+export {
+  GroqProvider,
+  createGroqProvider,
+  autoDetectGroq,
+} from './groq'
 
 // Re-export commonly used types from @/types/ai for convenience
 export type {

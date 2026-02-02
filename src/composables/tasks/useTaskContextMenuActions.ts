@@ -32,12 +32,17 @@ export function useTaskContextMenuActions(
     }
 
     const setDueDate = async (dateType: string, customDate?: string) => {
+        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        // When emit('close') is called, parent sets props to null, making currentTask.value null
+        const taskId = currentTask.value?.id
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
-        if (!currentTask.value) return
+        if (!taskId) return
 
-        if (isBatchOperation.value) {
+        if (isBatch) {
             emit('setDueDate', dateType as any)
             return
         }
@@ -45,9 +50,9 @@ export function useTaskContextMenuActions(
         // Handle custom date from date picker
         if (dateType === 'custom' && customDate) {
             try {
-                await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: customDate })
+                await taskStore.updateTaskWithUndo(taskId, { dueDate: customDate })
                 canvasStore.requestSync('user:context-menu')
-                flashTaskCard(currentTask.value.id)
+                flashTaskCard(taskId)
             } catch (error) {
                 console.error('Error updating task due date:', error)
             }
@@ -110,9 +115,9 @@ export function useTaskContextMenuActions(
             try {
                 // Use ISO date format (YYYY-MM-DD) for Supabase compatibility
                 const formattedDate = dueDate.toISOString().split('T')[0]
-                await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: formattedDate })
+                await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
                 canvasStore.requestSync('user:context-menu')
-                flashTaskCard(currentTask.value.id)
+                flashTaskCard(taskId)
             } catch (error) {
                 console.error('Error setting due date:', error)
             }
@@ -120,14 +125,18 @@ export function useTaskContextMenuActions(
     }
 
     const setPriority = async (priority: 'high' | 'medium' | 'low') => {
+        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        const taskId = currentTask.value?.id
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
-        if (isBatchOperation.value) {
+        if (isBatch) {
             emit('setPriority', priority)
-        } else if (currentTask.value) {
+        } else if (taskId) {
             try {
-                await taskStore.updateTaskWithUndo(currentTask.value.id, { priority })
+                await taskStore.updateTaskWithUndo(taskId, { priority })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
                 console.error('Error setting priority:', error)
@@ -136,14 +145,18 @@ export function useTaskContextMenuActions(
     }
 
     const setStatus = async (status: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold') => {
+        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        const taskId = currentTask.value?.id
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
-        if (isBatchOperation.value) {
+        if (isBatch) {
             emit('setStatus', status as any)
-        } else if (currentTask.value) {
+        } else if (taskId) {
             try {
-                await taskStore.updateTaskWithUndo(currentTask.value.id, { status })
+                await taskStore.updateTaskWithUndo(taskId, { status })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
                 console.error('Error setting status:', error)
@@ -152,15 +165,18 @@ export function useTaskContextMenuActions(
     }
 
     const setDuration = async (duration: number | null) => {
+        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        const taskId = currentTask.value?.id
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" submenu
-        // The async operation should not block the UI
         emit('close')
 
-        if (isBatchOperation.value) {
+        if (isBatch) {
             emit('setDuration', duration)
-        } else if (currentTask.value) {
+        } else if (taskId) {
             try {
-                await taskStore.updateTaskWithUndo(currentTask.value.id, { estimatedDuration: duration ?? undefined })
+                await taskStore.updateTaskWithUndo(taskId, { estimatedDuration: duration ?? undefined })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
                 console.error('Error setting estimated duration:', error)
@@ -169,15 +185,20 @@ export function useTaskContextMenuActions(
     }
 
     const toggleDone = async () => {
+        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        const taskId = currentTask.value?.id
+        const currentStatus = currentTask.value?.status
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
-        if (isBatchOperation.value) {
+        if (isBatch) {
             emit('setStatus', 'done')
-        } else if (currentTask.value) {
-            const newStatus = currentTask.value.status === 'done' ? 'planned' : 'done'
+        } else if (taskId) {
+            const newStatus = currentStatus === 'done' ? 'planned' : 'done'
             try {
-                await taskStore.updateTaskWithUndo(currentTask.value.id, { status: newStatus })
+                await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
                 console.error('Error toggling done status:', error)
@@ -265,16 +286,25 @@ export function useTaskContextMenuActions(
     }
 
     const duplicateTask = async () => {
+        // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        const taskData = currentTask.value ? {
+            title: currentTask.value.title,
+            description: currentTask.value.description,
+            status: currentTask.value.status,
+            priority: currentTask.value.priority
+        } : null
+        const isBatch = isBatchOperation.value
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
-        if (currentTask.value && !isBatchOperation.value) {
+        if (taskData && !isBatch) {
             try {
                 await taskStore.createTaskWithUndo({
-                    title: currentTask.value.title + ' (Copy)',
-                    description: currentTask.value.description,
-                    status: currentTask.value.status,
-                    priority: currentTask.value.priority
+                    title: taskData.title + ' (Copy)',
+                    description: taskData.description,
+                    status: taskData.status,
+                    priority: taskData.priority
                 })
             } catch (error) {
                 console.error('Error duplicating task:', error)

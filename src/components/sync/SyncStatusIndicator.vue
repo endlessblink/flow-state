@@ -23,6 +23,7 @@
       :errors="failedOperations"
       :last-error="lastError"
       @retry="handleRetry"
+      @clear="handleClear"
       @close="showPopover = false"
     />
   </div>
@@ -132,6 +133,12 @@ const handleClick = async () => {
 const handleRetry = async () => {
   showPopover.value = false
   await syncStore.retryFailed()
+}
+
+// Handle clear from popover
+const handleClear = async () => {
+  showPopover.value = false
+  await syncStore.clearFailed()
 }
 </script>
 

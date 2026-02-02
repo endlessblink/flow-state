@@ -604,6 +604,11 @@ watch(() => props.group, (newGroup) => {
 // Focus input when modal opens
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
+    console.log('[BUG-1126] UnifiedGroupModal opened with position:', {
+      x: props.position.x,
+      y: props.position.y,
+      isEditing: !!props.group
+    })
     await nextTick()
     nameInput.value?.focus()
   } else {

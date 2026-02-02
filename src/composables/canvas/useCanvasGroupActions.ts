@@ -53,6 +53,11 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     // --- Actions ---
 
     const createGroup = async (screenPos?: { x: number; y: number }) => {
+        console.log('[BUG-1126] useCanvasGroupActions.createGroup called', {
+            screenPos,
+            hasState: !!deps.state,
+            hasGroupModalPosition: !!deps.state?.groupModalPosition
+        })
 
         const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
         // Relaxed check: Logic doesn't strict depend on this being present for state update
@@ -66,10 +71,13 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
                 x: -viewport.x / viewport.zoom + (window.innerWidth / 2) / viewport.zoom,
                 y: -viewport.y / viewport.zoom + (window.innerHeight / 2) / viewport.zoom
             }
+            console.log('[BUG-1126] No screenPos provided, using viewport center:', flowCoords)
         } else {
             flowCoords = deps.screenToFlowCoordinate(screenPos)
+            console.log('[BUG-1126] screenPos provided, converted to flow coords:', { screenPos, flowCoords })
         }
 
+        console.log('[BUG-1126] Setting groupModalPosition to:', flowCoords)
         groupModalPosition.value = flowCoords
         selectedGroup.value = null // Ensure create mode
 

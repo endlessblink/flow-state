@@ -37,6 +37,8 @@ import type {
   DbShopItem,
   DbUserPurchase,
   DbUserStats,
+} from '@/types/gamification'
+import {
   XP_VALUES,
   XP_MULTIPLIERS,
   STREAK_CONFIG,

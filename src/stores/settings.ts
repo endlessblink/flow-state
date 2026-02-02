@@ -25,6 +25,12 @@ export interface AppSettings {
     // Feedback
     showUndoRedoToasts: boolean
 
+    // FEATURE-1118: Gamification Settings
+    gamificationEnabled: boolean
+    showXpNotifications: boolean
+    showAchievementNotifications: boolean
+    gamificationIntensity: 'minimal' | 'moderate' | 'intense'
+
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
     kanbanSettings?: Record<string, unknown>
@@ -58,6 +64,12 @@ export const useSettingsStore = defineStore('settings', {
 
         // Feedback defaults
         showUndoRedoToasts: true,
+
+        // FEATURE-1118: Gamification defaults
+        gamificationEnabled: true,
+        showXpNotifications: true,
+        showAchievementNotifications: true,
+        gamificationIntensity: 'moderate',
 
         // Miscellaneous defaults
         sidebarCollapsed: false,

@@ -38,6 +38,27 @@ const sanitizeUUID = (value: string | null | undefined): string | null => {
     return value
 }
 
+/**
+ * Sanitize timestamp/date values to prevent "null" string errors in Postgres
+ */
+const sanitizeTimestamp = (value: string | Date | null | undefined): string | null => {
+    // Handle null/undefined
+    if (value === null || value === undefined) return null
+    // Handle string literals that should be null
+    if (value === 'undefined' || value === 'null' || value === '') return null
+    // Handle Date objects
+    if (value instanceof Date) {
+        return isNaN(value.getTime()) ? null : value.toISOString()
+    }
+    // Handle ISO string - validate it's a real date
+    try {
+        const date = new Date(value)
+        return isNaN(date.getTime()) ? null : date.toISOString()
+    } catch {
+        return null
+    }
+}
+
 // -- Types matching the Supabase Schema --
 
 export interface SupabaseProject {
@@ -367,7 +388,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         completed_pomodoros: task.completedPomodoros,
         estimated_pomodoros: task.estimatedPomodoros,
 
-        due_date: task.dueDate || null,
+        due_date: sanitizeTimestamp(task.dueDate),
         due_time: task.dueTime || null,
         estimated_duration: task.estimatedDuration,
 
@@ -396,18 +417,18 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         is_in_inbox: task.isInInbox || false,
 
         // BUG-1051: Add missing scheduled fields
-        scheduled_date: task.scheduledDate || null,
+        scheduled_date: sanitizeTimestamp(task.scheduledDate),
         scheduled_time: task.scheduledTime || null,
         is_uncategorized: task.isUncategorized || false,
 
         is_deleted: task._soft_deleted || false,
-        deleted_at: task.deletedAt ? new Date(task.deletedAt).toISOString() : null,
-        completed_at: task.completedAt ? new Date(task.completedAt).toISOString() : null,
+        deleted_at: sanitizeTimestamp(task.deletedAt),
+        completed_at: sanitizeTimestamp(task.completedAt),
 
         // "Done for now" feature
-        done_for_now_until: task.doneForNowUntil || null,
+        done_for_now_until: sanitizeTimestamp(task.doneForNowUntil),
 
-        created_at: task.createdAt instanceof Date ? task.createdAt.toISOString() : (task.createdAt || now),
+        created_at: sanitizeTimestamp(task.createdAt) || now,
         updated_at: now
     }
 }

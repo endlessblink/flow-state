@@ -316,9 +316,9 @@ The notification with action buttons comes from Service Worker (not Tauri native
 
 ---
 
-### TASK-1130: QuickSort Desktop UX/UI Comprehensive Improvements (📋 PLANNED)
+### ~~TASK-1130~~: QuickSort Desktop UX/UI Comprehensive Improvements (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-02)
 
 **Problem**: Desktop QuickSort view has multiple UX issues preventing efficient task categorization:
 1. Cannot view as "one-pager" - requires scrolling (850-1050px content vs 900px viewport)
@@ -326,40 +326,14 @@ The notification with action buttons comes from Service Worker (not Tauri native
 3. Project names truncated, especially Hebrew/RTL text ("נטלי כה...")
 4. Keyboard shortcuts (1-9) exist but badges are hidden (`display: none`)
 
-**Root Causes Identified**:
-- `.card-container` has `min-height: 350px` (excessive)
-- `.category-grid` uses `minmax(180px, 1fr)` (too narrow for long names)
-- `.project-name` has `white-space: nowrap` (forces truncation)
-- Header + progress + tabs consume ~240px before content
-- Gaps/padding total ~128px additional
-
-**Improvement Plan (3 Phases)**:
-
-**Phase 1 - Quick Wins** (Solves scrolling + truncation):
-- [ ] Add `max-height: 240px; overflow-y: auto` to `.category-grid`
-- [ ] Change `.project-name` to `white-space: normal; -webkit-line-clamp: 2`
-- [ ] Increase grid minimum from `180px` to `200px`
-- [ ] Reduce `.quick-sort-card` min-height from `300px` to `200px`
-- [ ] Unhide `.shortcut-badge` (remove `display: none`)
-
-**Phase 2 - Layout Compression** (Fits in 700px viewport):
-- [ ] Compress header: inline title, hide subtitle, reduce font size
-- [ ] Move tab navigation inline with header using CSS grid
-- [ ] Single-line inline progress indicator
-- [ ] Reduce container padding from 64px to 40px
-
-**Phase 3 - Mobile Feature Parity**:
-- [ ] Add project search/filter (like `MobileQuickSortView.vue`)
-- [ ] Add recent projects section (4 most-used)
-- [ ] Add "Keep in Inbox" option
-- [ ] Add colored left border to project buttons for visual scanning
-
-**Target Metrics**:
-- Total height: 744-964px (fits 1080p without scroll)
-- Hebrew name visibility: 95% fully readable
-- Keyboard shortcut discovery: Visible badges
-
-**Related**: BUG-1129 (project button truncation)
+**Solution Applied - Single-Column Focus Layout** (2026-02-02):
+Instead of the original 3-phase plan, implemented a radical simplification:
+- [x] Converted from 2-column to single-column centered layout (max 600px)
+- [x] Combined priority + date shortcuts into one compact row
+- [x] Moved action buttons (Done/Skip/Edit/Undo) to consolidated bottom row
+- [x] Removed redundant metadata display and "MOVE TO PROJECT" header
+- [x] Simplified date shortcuts: Tomorrow → +1, Next Week → +7, removed Weekend
+- [x] Task title is now the hero element with clear vertical flow
 
 **Files**: `src/views/QuickSortView.vue`, `src/components/QuickSortCard.vue`, `src/components/layout/CategorySelector.vue`
 

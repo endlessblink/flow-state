@@ -1,9 +1,5 @@
 <template>
   <div class="category-selector">
-    <h3 class="selector-title">
-      Categorize as:
-    </h3>
-
     <div class="category-grid">
       <button
         v-for="(node, index) in availableProjects"
@@ -55,10 +51,6 @@
       </button>
     </div>
 
-    <!-- Helper Text -->
-    <div class="helper-text">
-      <kbd>1-9</kbd> to select • <kbd>Space</kbd> to skip • <kbd>Esc</kbd> to exit
-    </div>
   </div>
 </template>
 
@@ -213,16 +205,8 @@ onUnmounted(() => {
 <style scoped>
 .category-selector {
   width: 100%;
-  max-width: 600px; /* Match QuickSortCard width */
   background: transparent !important; /* Override global tauri styles */
   box-shadow: none !important;
-}
-
-.selector-title {
-  font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--space-5) 0;
 }
 
 .category-grid {
@@ -342,27 +326,16 @@ onUnmounted(() => {
   max-width: 250px; /* Limit maximum text width for very long names */
 }
 
-.helper-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  padding: var(--space-3);
-}
-
 kbd {
   display: inline-block;
-  padding: var(--space-1) var(--space-2);
-  background: var(--glass-bg-medium);
+  padding: var(--space-0_5) var(--space-1_5);
+  background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-family: monospace;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
+  font-size: 10px;
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
 }
 
 /* Reduce motion for accessibility */

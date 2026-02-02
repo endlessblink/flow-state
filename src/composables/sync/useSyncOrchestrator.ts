@@ -111,7 +111,22 @@ const clearFailedOperations = async (): Promise<number> => {
   const mod = await getWriteQueueModule()
   if (!mod) return 0
   const count = await mod.clearFailedOperations()
-  await updateStatus()
+
+  // BUG-1179: Force clear all error state immediately
+  state.value.lastError = undefined
+  state.value.failedCount = 0
+  state.value.failedOperations = []
+
+  // Then verify with fresh stats
+  const stats = await getStats()
+
+  // Only set to synced if truly clean
+  if (stats.failedCount === 0 && stats.conflictCount === 0 && stats.pendingCount === 0 && stats.syncingCount === 0) {
+    state.value.status = 'synced'
+  } else {
+    await updateStatus()
+  }
+
   return count
 }
 import {
@@ -407,18 +422,23 @@ async function processQueue(): Promise<void> {
   }
 
   isProcessing.value = true
-  state.value.status = 'syncing'
 
   try {
-    // Get pending operations
+    // Get pending operations FIRST before setting status
     const operations = await getPendingOperations()
 
     if (operations.length === 0) {
-      // Clean up completed operations
+      // Clean up completed operations (silent, don't change status)
       await cleanupCompleted()
-      await updateStatus()
+      // Only update status if currently in error or syncing state
+      if (state.value.status === 'syncing' || state.value.status === 'error') {
+        await updateStatus()
+      }
       return
     }
+
+    // Only set syncing if we actually have operations to process
+    state.value.status = 'syncing'
 
     // Sort operations for correct execution order
     const sorted = sortOperations(operations)

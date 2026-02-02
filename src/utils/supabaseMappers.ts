@@ -229,12 +229,18 @@ export interface SupabaseQuickSortSession {
 // -- Mappers --
 
 export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGroup {
-    // SAFETY: Sanitize parent_group_id (though groups table uses text type, still good to sanitize)
-    const sanitizedParentGroupId = group.parentGroupId &&
-        group.parentGroupId !== 'undefined' &&
-        group.parentGroupId !== 'null'
-        ? group.parentGroupId
-        : null
+    // TASK-1183: Validate group ID is valid UUID - reject legacy timestamp IDs
+    if (!isValidUUID(group.id)) {
+        console.error(`[SUPABASE-MAPPER] Group "${group.name}" has invalid ID: "${group.id}" - cannot save to Supabase`)
+        throw new Error(`Invalid group ID format: ${group.id}. Groups require UUID IDs.`)
+    }
+
+    // SAFETY: Sanitize parent_group_id - must be valid UUID or null
+    const sanitizedParentGroupId = sanitizeUUID(group.parentGroupId)
+
+    if (group.parentGroupId && !sanitizedParentGroupId) {
+        console.warn(`[SUPABASE-MAPPER] Group "${group.name}" had invalid parentGroupId: "${group.parentGroupId}", sanitized to null`)
+    }
 
     return {
         id: group.id,
@@ -397,10 +403,11 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         depends_on: sanitizedDependsOn.length > 0 ? sanitizedDependsOn : null,
 
         // JSONB mappings
+        // TASK-1183: Sanitize parentId in position - must be valid UUID (group IDs) or undefined
         position: task.canvasPosition ? {
             x: task.canvasPosition.x,
             y: task.canvasPosition.y,
-            parentId: task.parentId, // Serialize parentId into position JSON
+            parentId: sanitizeUUID(task.parentId) ?? undefined, // Only valid UUID group IDs, not legacy timestamp IDs
             format: 'absolute' // Default for existing tasks during migration
         } : null,
         // Note: position_version is managed by DB triggers, not sent on update

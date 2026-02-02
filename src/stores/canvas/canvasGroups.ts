@@ -47,7 +47,7 @@ export const useCanvasGroups = (
         applySmartGroupNormalizations(groupData)
         const newGroup: CanvasGroup = {
             ...groupData,
-            id: `group-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            id: crypto.randomUUID(), // TASK-1183: Use proper UUID for Supabase compatibility
             isVisible: true,
             isCollapsed: false,
             parentGroupId: null,

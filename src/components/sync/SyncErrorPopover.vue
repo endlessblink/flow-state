@@ -12,7 +12,12 @@
           </div>
           <div class="header-content">
             <h3 class="header-title">Sync Errors</h3>
-            <p class="header-subtitle">{{ errors.length }} operation{{ errors.length !== 1 ? 's' : '' }} failed</p>
+            <p class="header-subtitle">
+              {{ errors.length }} error{{ errors.length !== 1 ? 's' : '' }}
+              <template v-if="permanentCount > 0">
+                ({{ permanentCount }} corrupted - click Clear All)
+              </template>
+            </p>
           </div>
           <button class="close-btn" @click="$emit('close')">
             <X :size="16" />
@@ -32,23 +37,28 @@
               v-for="error in displayedErrors"
               :key="error.id"
               class="error-item"
+              :class="{ 'permanent-error': isPermanentError(error) }"
             >
               <div class="error-entity">
                 <component :is="getEntityIcon(error.entityType)" :size="14" />
                 <span class="entity-type">{{ formatEntityType(error.entityType) }}</span>
                 <span class="entity-id">{{ error.entityId.slice(0, 8) }}...</span>
+                <span v-if="isPermanentError(error)" class="permanent-badge">
+                  <Ban :size="10" /> Corrupted
+                </span>
               </div>
               <div class="error-operation">
                 {{ formatOperation(error.operation) }}
               </div>
               <div v-if="error.lastError" class="error-detail">
-                {{ error.lastError }}
+                {{ formatErrorMessage(error.lastError) }}
               </div>
               <div class="error-meta">
                 <span class="retry-count">Attempt {{ error.retryCount + 1 }}</span>
                 <span v-if="error.lastAttemptAt" class="last-attempt">
                   {{ formatTime(error.lastAttemptAt) }}
                 </span>
+                <span v-if="isPermanentError(error)" class="no-retry-hint">Cannot retry</span>
               </div>
             </div>
           </div>
@@ -64,9 +74,13 @@
 
         <!-- Actions -->
         <div class="popover-footer">
-          <button class="retry-btn" @click="$emit('retry')">
+          <button v-if="showRetryButton" class="retry-btn" @click="$emit('retry')">
             <RefreshCw :size="16" />
-            Retry All
+            Retry {{ retryableCount === errors.length ? 'All' : retryableCount }}
+          </button>
+          <button class="clear-btn" @click="$emit('clear')">
+            <Trash2 :size="16" />
+            Clear All
           </button>
           <button class="dismiss-btn" @click="$emit('close')">
             Dismiss
@@ -80,6 +94,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { WriteOperation, SyncEntityType, SyncOperationType } from '@/types/sync'
+import { classifyError } from '@/services/offline/retryStrategy'
 import {
   AlertTriangle,
   X,
@@ -88,7 +103,9 @@ import {
   CheckSquare,
   FolderKanban,
   Folder,
-  Timer
+  Timer,
+  Trash2,
+  Ban
 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -98,10 +115,29 @@ const props = defineProps<{
 
 defineEmits<{
   retry: []
+  clear: []
   close: []
 }>()
 
 const showAll = ref(false)
+
+// TASK-1183: Check if an error is permanent (cannot be retried)
+const isPermanentError = (error: WriteOperation): boolean => {
+  if (!error.lastError) return false
+  return classifyError(error.lastError) === 'permanent'
+}
+
+// Count retryable vs permanent errors
+const retryableCount = computed(() => {
+  return props.errors.filter(e => !isPermanentError(e)).length
+})
+
+const permanentCount = computed(() => {
+  return props.errors.filter(e => isPermanentError(e)).length
+})
+
+// Hide retry button if ALL errors are permanent
+const showRetryButton = computed(() => retryableCount.value > 0)
 
 // Only show first 3 errors unless expanded
 const displayedErrors = computed(() => {
@@ -155,6 +191,20 @@ const formatOperation = (operation: SyncOperationType): string => {
     default:
       return operation
   }
+}
+
+// Format error message (handles legacy [object Object] from before fix)
+const formatErrorMessage = (error: string): string => {
+  if (!error) return 'Unknown error'
+  // Handle legacy corrupted entries stored before error handling fix
+  if (error === '[object Object]') {
+    return 'Error details unavailable (legacy entry - consider clearing)'
+  }
+  // Truncate very long error messages
+  if (error.length > 150) {
+    return error.slice(0, 147) + '...'
+  }
+  return error
 }
 
 // Format timestamp
@@ -313,6 +363,30 @@ const formatTime = (timestamp: number): string => {
   color: var(--text-muted, #9ca3af);
 }
 
+/* TASK-1183: Permanent/corrupted error styling */
+.permanent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: var(--danger-bg-subtle, rgba(239, 68, 68, 0.15));
+  color: var(--color-danger, #ef4444);
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--font-medium, 500);
+  border-radius: var(--radius-sm, 4px);
+  margin-left: auto;
+}
+
+.permanent-error {
+  border-color: var(--color-danger, #ef4444);
+  border-style: dashed;
+}
+
+.no-retry-hint {
+  color: var(--color-danger, #ef4444);
+  font-style: italic;
+}
+
 .error-operation {
   font-size: var(--text-sm, 14px);
   color: var(--text-muted, #9ca3af);
@@ -389,6 +463,25 @@ const formatTime = (timestamp: number): string => {
 
 .retry-btn:hover {
   background: var(--color-primary-hover, #2563eb);
+}
+
+.clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2_5, 10px) var(--space-4, 16px);
+  background: var(--color-danger, #ef4444);
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  color: white;
+  font-weight: var(--font-medium, 500);
+  cursor: pointer;
+  transition: all var(--duration-fast, 100ms);
+}
+
+.clear-btn:hover {
+  background: var(--color-danger-hover, #dc2626);
 }
 
 .dismiss-btn {

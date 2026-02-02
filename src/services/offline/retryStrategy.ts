@@ -168,16 +168,20 @@ export function classifyError(error: unknown): ErrorClassification {
     return 'conflict'
   }
 
-  // Permanent errors - don't retry
+  // Permanent errors - don't retry (data validation, auth, not found)
   if (
     lowerMessage.includes('401') ||
     lowerMessage.includes('403') ||
     lowerMessage.includes('404') ||
+    lowerMessage.includes('400') ||  // Bad request (validation errors)
     lowerMessage.includes('not found') ||
     lowerMessage.includes('unauthorized') ||
     lowerMessage.includes('forbidden') ||
     lowerMessage.includes('invalid') ||
-    lowerMessage.includes('malformed')
+    lowerMessage.includes('malformed') ||
+    lowerMessage.includes('syntax') ||  // "invalid input syntax for type uuid"
+    lowerMessage.includes('violates') || // constraint violations
+    lowerMessage.includes('schema cache') // schema mismatch
   ) {
     return 'permanent'
   }

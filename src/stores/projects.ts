@@ -142,7 +142,7 @@ export const useProjectStore = defineStore('projects', () => {
                 for (const task of taskStore._rawTasks) {
                     if (task.projectId === projectId) {
                         await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
-                            projectId: 'uncategorized',
+                            projectId: null, // TASK-1183: Must be null (valid UUID) not 'uncategorized' string
                             isUncategorized: true
                         })
                     }
@@ -195,7 +195,7 @@ export const useProjectStore = defineStore('projects', () => {
             for (const task of taskStore._rawTasks) {
                 if (projectIdSet.has(task.projectId)) {
                     await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
-                        projectId: 'uncategorized',
+                        projectId: null, // TASK-1183: Must be null (valid UUID) not 'uncategorized' string
                         isUncategorized: true
                     })
                 }

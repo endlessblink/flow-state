@@ -157,41 +157,36 @@
 
 ---
 
-### BUG-1112: No Notification or Audio When Pomodoro Timer Finishes (👀 REVIEW)
+### ~~BUG-1112~~: No Notification or Audio When Pomodoro Timer Finishes (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-30)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-02)
 
 **Problem**: When the Pomodoro timer finishes a work/break session, there is no notification and no audio alert to inform the user.
-
-**Expected Behavior** (per TASK-1009 implementation):
-1. Web App: Service Worker notification with "Start Break" / "+5 min" action buttons
-2. KDE Widget: notify-send notification + full-screen overlay
-3. Audio alert sound
-
-**Investigation Needed**:
-- Check if Service Worker notifications are registered and working
-- Verify browser notification permissions
-- Check if audio file exists and is being played
-- Review `timer.ts` `onComplete` handler
 
 **Root Cause**:
 1. `silent: true` in Service Worker notification suppressed OS notification sounds
 2. Audio volume was 0.1 (barely audible)
 3. Service Worker disabled in dev mode (`devOptions.enabled: false`)
+4. KDE Widget used pw-play which didn't work reliably
 
 **Fix Applied**:
 1. Changed `silent: false` in `src/sw.ts` and fallback notifications in `timer.ts`
 2. Increased audio volume to 0.25-0.3 with 3-note chime
 3. Enabled Service Worker in dev mode (`vite.config.ts`)
 4. **Tauri Desktop**: Added native OS notification with `sound: 'default'` using `@tauri-apps/plugin-notification`
-   - Priority: Tauri native → Service Worker → Browser Notification API
-   - Plays native OS notification sound on desktop
+5. **KDE Widget (Plasma 6)**: System notification with FUNCTIONAL action buttons
+   - Removed in-widget popup completely (user only wants system notification)
+   - **Key fix**: Must use `Plasma5Support.DataSource` not `PlasmaCore.DataSource` for Plasma 6
+   - Buttons call Supabase API directly to start next session
+   - Bell sound via `paplay` (more reliable than `pw-play`)
+   - Added `isKdeWidgetActive` computed in timer.ts to skip Tauri notification when widget active
 
-**Verification**: User must test timer completion to confirm system notification + audio works
-- Web: Service Worker notification + Web Audio chime
-- Tauri Desktop: Native OS notification + sound + Web Audio chime
+**Files Changed**:
+- `src/sw.ts`, `src/stores/timer.ts`, `vite.config.ts`
+- `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+- `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/scripts/notify.sh`
 
-**Files Changed**: `src/sw.ts`, `src/stores/timer.ts`, `vite.config.ts`
+**SOP Created**: `docs/sop/SOP-043-kde-plasma6-notifications.md`
 
 ---
 

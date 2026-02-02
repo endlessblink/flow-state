@@ -148,6 +148,11 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         section: CanvasSection,
         allGroups?: CanvasGroup[]
     ): Partial<Task> => {
+        // Safety check: section must exist and have an id
+        if (!section || !section.id) {
+            return {}
+        }
+
         // If no allGroups provided, use single-section behavior (backward compatible)
         if (!allGroups || allGroups.length === 0) {
             return getSingleSectionProperties(section)
@@ -166,7 +171,9 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         // Process from ROOT to CHILD (reverse) so child overwrites parent
         // This ensures child properties take precedence
         for (let i = chain.length - 1; i >= 0; i--) {
-            const props = getSingleSectionProperties(chain[i] as CanvasSection)
+            const group = chain[i]
+            if (!group || !group.name) continue // Safety: skip invalid groups
+            const props = getSingleSectionProperties(group as CanvasSection)
             Object.assign(mergedUpdates, props)
         }
 

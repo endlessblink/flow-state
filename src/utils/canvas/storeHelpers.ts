@@ -212,6 +212,11 @@ export function getParentChain(
     groups: CanvasGroup[],
     maxDepth: number = 10
 ): CanvasGroup[] {
+    // Safety check: require valid groupId and groups array
+    if (!groupId || !groups || groups.length === 0) {
+        return []
+    }
+
     const chain: CanvasGroup[] = []
     const visited = new Set<string>()
     let current = groups.find(g => g.id === groupId)

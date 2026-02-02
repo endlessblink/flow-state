@@ -45,8 +45,52 @@
         </span>
       </div>
 
-      <!-- INTEGRATED CONTROL PANEL: Sync + AI + Clock + Timer -->
+      <!-- INTEGRATED CONTROL PANEL: Gamification + Sync + AI + Clock + Timer -->
       <div class="control-panel">
+        <!-- FEATURE-1118: Gamification Widgets -->
+        <template v-if="settingsStore.gamificationEnabled">
+          <div class="gamification-widgets">
+            <button
+              class="gamification-trigger"
+              title="Open Gamification Panel"
+              @click="showGamificationPanel = !showGamificationPanel"
+            >
+              <LevelBadge />
+              <XpBar class="header-xp-bar" />
+              <StreakCounter />
+            </button>
+
+            <!-- Gamification Panel Dropdown -->
+            <div
+              v-if="showGamificationPanel"
+              class="gamification-dropdown"
+            >
+              <GamificationPanel
+                @open-achievements="showAchievementsModal = true; showGamificationPanel = false"
+                @open-shop="showShopModal = true; showGamificationPanel = false"
+              />
+            </div>
+
+            <!-- Click outside to close -->
+            <div
+              v-if="showGamificationPanel"
+              class="gamification-backdrop"
+              @click="showGamificationPanel = false"
+            />
+          </div>
+          <div class="control-divider" />
+
+          <!-- Modals -->
+          <AchievementsModal
+            v-if="showAchievementsModal"
+            @close="showAchievementsModal = false"
+          />
+          <ShopModal
+            v-if="showShopModal"
+            @close="showShopModal = false"
+          />
+        </template>
+
         <!-- TASK-1177: Sync Status Indicator -->
         <SyncStatusIndicator />
 
@@ -174,20 +218,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
+import { useSettingsStore } from '@/stores/settings'
 import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
+import { LevelBadge, XpBar, StreakCounter, GamificationPanel, AchievementsModal, ShopModal } from '@/components/gamification'
 
 const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
+const settingsStore = useSettingsStore()
+
+// FEATURE-1118: Gamification panel/modal states
+const showGamificationPanel = ref(false)
+const showAchievementsModal = ref(false)
+const showShopModal = ref(false)
 
 // Route name to display title mapping
 const routeNameToTitle = {
@@ -726,5 +778,59 @@ const startLongBreak = async () => {
   height: 24px;
   background: var(--border-subtle, rgba(255, 255, 255, 0.1));
   margin: 0 var(--space-2);
+}
+
+/* GAMIFICATION WIDGETS (FEATURE-1118) */
+.gamification-widgets {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  position: relative;
+}
+
+.gamification-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.gamification-trigger:hover {
+  background: var(--state-hover-bg);
+}
+
+.header-xp-bar {
+  width: 100px;
+}
+
+.gamification-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 100;
+  min-width: 320px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gamification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
 }
 </style>

@@ -228,31 +228,31 @@
 
 ---
 
-### BUG-1121: KDE Plasma Widget Dropdown Options Disappearing (🔄 IN PROGRESS)
+### ~~BUG-1121~~: KDE Plasma Widget Dropdown Options Disappearing (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-02)
 
-**Problem**: In the KDE Plasma widget task list, dropdown menus (sort order, filter) are cutting off options. Should show 4 options but some are invisible/unpickable.
+**Problem**: In the KDE Plasma widget task list, dropdown menus (sort order, filter) were cutting off options. Only 2 of 4 options were visible/pickable.
 
-**Screenshot Evidence**: User-provided screenshot shows "A-Z" and "Priority" visible but other options missing from the dropdown.
+**Root Cause**: Using `QQC2.ComboBox` (Qt Quick Controls 2) in Plasma widgets causes popup clipping issues because the widget's `fullRepresentation` is not a top-level window. The popup gets clipped by parent container boundaries.
 
-**Investigation Needed**:
-- Check dropdown height/overflow CSS in `main.qml`
-- Verify `ComboBox` model has all 4 items
-- Check if z-index or clipping is hiding options
-- Test with different panel heights/positions
+**Solution**: Replace `QQC2.ComboBox` with `PlasmaComponents.ComboBox` which is specifically designed for Plasma widgets and handles popup positioning correctly. Custom styling (background, contentItem, indicator) can still be applied for glass morphism look.
 
-**Files**: `kde-widget/package/contents/ui/main.qml`
+**Key Learning**: In KDE Plasma 6 widgets, always use `PlasmaComponents.ComboBox` instead of `QQC2.ComboBox` for dropdowns to ensure proper popup handling.
+
+**SOP Created**: `docs/sop/SOP-041-kde-widget-combobox-popup.md`
+
+**Files**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 
 ---
 
-### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (🔄 IN PROGRESS)
+### ~~BUG-1122~~: KDE Widget Lost Timer Sync with Web App and Tauri (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-02)
 
 **Problem**: KDE Plasma widget has lost timer sync with BOTH the web app and Tauri desktop app. Timer state changes are not reflecting across devices.
 
-**Root Cause Identified**:
+**Root Cause**:
 1. Timer session in DB has stale leader heartbeat (2+ hours old)
 2. KDE widget only checked `device_leader_id === "kde-widget"` without checking for stale leadership
 3. Web/Tauri follower poll didn't take over when leader heartbeat was stale
@@ -269,12 +269,7 @@
    - Follower now claims leadership if heartbeat is older than `DEVICE_LEADER_TIMEOUT_MS` (30s)
    - Starts heartbeat and stops follower polling after claiming
 
-**Verification Needed**:
-- [ ] Restart KDE widget to pick up changes
-- [ ] Test timer sync between web app and KDE widget
-- [ ] Verify leadership takeover works when one device stops
-
-**Expected Behavior**:
+**Files Changed**: `src/stores/timer.ts`, `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 
 ---
 
@@ -395,21 +390,15 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### BUG-1122: KDE Widget Lost Timer Sync with Web App and Tauri (📋 PLANNED)
+### ~~BUG-1122~~: KDE Widget Lost Timer Sync with Web App and Tauri (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-02)
 
 **Problem**: KDE Plasma widget has lost timer sync with BOTH the web app and Tauri desktop app.
 
-**Expected Behavior**:
-- KDE widget, web app, and Tauri app should share timer state via Supabase Realtime
-- Timer start/pause/reset on any device should reflect on all others
-- Device leadership model should coordinate which device "leads" the countdown
+**Root Cause**: Timer session had stale leader heartbeat (2+ hours), all devices stayed as "followers" waiting for dead leader. Fixed by adding stale leadership detection (30s timeout) to both KDE widget and web/Tauri app.
 
-**Investigation Needed**:
-- Check if KDE widget Supabase credentials are still valid
-- Verify Realtime WebSocket connection in KDE widget
-- Check device leadership heartbeat mechanism
+**Files Changed**: `src/stores/timer.ts`, `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 - Compare timer session IDs across all three apps
 - Verify KDE widget is polling/subscribing to correct Supabase endpoint
 

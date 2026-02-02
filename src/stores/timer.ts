@@ -9,6 +9,8 @@ import { getCrossTabSync } from '@/composables/useCrossTabSync'
 import { useIntervalFn } from '@vueuse/core'
 import { useWakeLock } from '@/composables/useWakeLock'
 import { isTauri } from '@/composables/useTauriStartup'
+// FEATURE-1118: Gamification hooks for pomodoro completion
+import { useGamificationHooks } from '@/composables/useGamificationHooks'
 
 /**
  * Timer Session Interface
@@ -546,6 +548,19 @@ export const useTimerStore = defineStore('timer', () => {
           completedPomodoros: newCount,
           progress: Math.min(100, Math.round((newCount / (task.estimatedPomodoros || 1)) * 100))
         })
+
+        // FEATURE-1118: Award XP for pomodoro completion
+        try {
+          const gamificationHooks = useGamificationHooks()
+          const durationMinutes = Math.round(session.duration / 60)
+          gamificationHooks.onPomodoroCompleted(session.taskId, {
+            consecutiveSessions: newCount,
+            durationMinutes
+          }).catch(e => console.warn('[Gamification] Pomodoro completion hook failed:', e))
+        } catch (e) {
+          // Gamification is non-critical, don't break timer flow
+          console.warn('[Gamification] Hook error:', e)
+        }
       }
     }
 
@@ -660,11 +675,18 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   // TASK-1009: Handle messages from Service Worker (notification action clicks)
+  // BUG-1178: Enhanced with detailed logging to debug message delivery issues
   const handleServiceWorkerMessage = (event: MessageEvent) => {
+    console.log('🍅 [TIMER] SW MESSAGE RAW:', {
+      data: event.data,
+      origin: event.origin,
+      source: event.source ? 'has source' : 'no source'
+    })
+
     const data = event.data
     if (!data || !data.type) return
 
-    console.log('🍅 [TIMER] Received SW message:', data.type, data)
+    console.log('🍅 [TIMER] Processing SW message:', data.type, data)
 
     switch (data.type) {
       case 'START_BREAK':
@@ -690,10 +712,32 @@ export const useTimerStore = defineStore('timer', () => {
     }
   }
 
-  // Register SW message listener on store initialization
-  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage)
+  // BUG-1178: Setup Service Worker message listener with proper initialization
+  // Previous code registered listener before SW was ready, causing messages to be missed
+  const setupServiceWorkerListener = async () => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      console.log('🍅 [TIMER] Service Worker not available')
+      return
+    }
+
+    try {
+      // Wait for SW to be ready (guarantees controller is available)
+      const registration = await navigator.serviceWorker.ready
+      console.log('🍅 [TIMER] SW ready, registering message listener', {
+        scope: registration.scope,
+        active: !!registration.active
+      })
+
+      // Register the message listener
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage)
+      console.log('🍅 [TIMER] SW message listener registered successfully')
+    } catch (err) {
+      console.error('🍅 [TIMER] Failed to setup SW listener:', err)
+    }
   }
+
+  // Initialize SW listener on store creation
+  setupServiceWorkerListener()
 
   const playStartSound = () => {
     if (!settings.playNotificationSounds) return

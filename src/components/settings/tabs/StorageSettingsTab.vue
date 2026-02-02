@@ -1,21 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { 
-  Database, 
-  Download, 
-  Upload, 
-  ShieldCheck, 
-  AlertTriangle, 
+import { ref, onMounted, computed } from 'vue'
+import {
+  Database,
+  Download,
+  Upload,
+  ShieldCheck,
+  AlertTriangle,
   RotateCcw,
   Clock,
   History,
   CloudLightning,
-  RefreshCw
+  RefreshCw,
+  Cloud,
+  HardDrive
 } from 'lucide-vue-next'
 import useBackupSystem from '@/composables/useBackupSystem'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
+import { isTauri, getTauriMode, setTauriMode } from '@/composables/useTauriStartup'
+import { useTaskStore } from '@/stores/tasks'
+import { clearAllOperations } from '@/services/offline/writeQueueDB'
 
 const {
   config,
@@ -39,6 +44,10 @@ const showValidation = ref(false)
 const isScanningShadow = ref(false)
 const goldenRotation = ref<any[]>([])
 
+// Tauri mode state (only shown in Tauri desktop app)
+const showTauriMode = computed(() => isTauri())
+const currentTauriMode = ref<'cloud' | 'local'>(getTauriMode())
+
 const backupIntervals = [
   { value: 60000, label: '1 min' },
   { value: 300000, label: '5 min' },
@@ -52,6 +61,14 @@ const historySizes = [
   { value: 25, label: '25' },
   { value: 50, label: '50' }
 ]
+
+const handleModeChange = (mode: 'cloud' | 'local') => {
+  currentTauriMode.value = mode
+  setTauriMode(mode)
+
+  // Warn user they need to restart the app
+  alert(`Mode changed to ${mode === 'cloud' ? 'Cloud' : 'Local'}. Please restart the app for changes to take effect.`)
+}
 
 const handleCreateBackup = async () => {
   await createBackup('manual')
@@ -110,6 +127,52 @@ const handleGoldenRestore = async (index: number) => {
   }
 }
 
+// TASK-1183: Data cleanup handlers
+const taskStore = useTaskStore()
+const isCleaningUp = ref(false)
+const isClearingSyncQueue = ref(false)
+const cleanupResult = ref<{ success: boolean; message: string } | null>(null)
+
+const handleCleanupTasks = async () => {
+  isCleaningUp.value = true
+  cleanupResult.value = null
+  try {
+    const fixed = await taskStore.cleanupCorruptedTasks()
+    cleanupResult.value = {
+      success: true,
+      message: fixed > 0 ? `Fixed ${fixed} corrupted task(s)` : 'No corrupted tasks found'
+    }
+  } catch (e) {
+    cleanupResult.value = {
+      success: false,
+      message: `Error: ${e instanceof Error ? e.message : 'Unknown error'}`
+    }
+  } finally {
+    isCleaningUp.value = false
+  }
+}
+
+const handleClearSyncQueue = async () => {
+  if (!confirm('This will clear all pending sync operations. Continue?')) return
+
+  isClearingSyncQueue.value = true
+  cleanupResult.value = null
+  try {
+    await clearAllOperations()
+    cleanupResult.value = {
+      success: true,
+      message: 'Sync queue cleared successfully'
+    }
+  } catch (e) {
+    cleanupResult.value = {
+      success: false,
+      message: `Error: ${e instanceof Error ? e.message : 'Unknown error'}`
+    }
+  } finally {
+    isClearingSyncQueue.value = false
+  }
+}
+
 onMounted(async () => {
     // Initial checks
     validationInfo.value = await getGoldenBackupValidation()
@@ -120,6 +183,66 @@ onMounted(async () => {
 
 <template>
   <div class="storage-settings-tab">
+    <!-- Tauri Desktop Mode Selector (only shown in desktop app) -->
+    <SettingsSection v-if="showTauriMode" title="💻 Desktop Connection Mode">
+      <div class="mode-selector-panel">
+        <p class="mode-description">
+          Choose how your desktop app connects to your data
+        </p>
+
+        <div class="mode-options">
+          <button
+            class="mode-option"
+            :class="{ active: currentTauriMode === 'cloud' }"
+            @click="handleModeChange('cloud')"
+          >
+            <div class="mode-option-icon">
+              <Cloud :size="24" />
+            </div>
+            <div class="mode-option-content">
+              <h4 class="mode-option-title">
+                Cloud Mode
+                <span v-if="currentTauriMode === 'cloud'" class="mode-badge">Active</span>
+              </h4>
+              <p class="mode-option-desc">Connect to in-theflow.com (VPS)</p>
+              <ul class="mode-option-features">
+                <li>✓ Sync across devices</li>
+                <li>✓ No local setup required</li>
+                <li>✓ Automatic backups</li>
+              </ul>
+            </div>
+          </button>
+
+          <button
+            class="mode-option"
+            :class="{ active: currentTauriMode === 'local' }"
+            @click="handleModeChange('local')"
+          >
+            <div class="mode-option-icon">
+              <HardDrive :size="24" />
+            </div>
+            <div class="mode-option-content">
+              <h4 class="mode-option-title">
+                Local Mode
+                <span v-if="currentTauriMode === 'local'" class="mode-badge">Active</span>
+              </h4>
+              <p class="mode-option-desc">Run your own database (Docker)</p>
+              <ul class="mode-option-features">
+                <li>✓ Full data control</li>
+                <li>✓ Works offline</li>
+                <li>⚠️ Requires Docker setup</li>
+              </ul>
+            </div>
+          </button>
+        </div>
+
+        <p class="mode-help-text">
+          <AlertTriangle :size="14" />
+          Changing modes requires an app restart. Your data will not be lost.
+        </p>
+      </div>
+    </SettingsSection>
+
     <SettingsSection title="🛡️ Backup Strategy">
       <SettingsToggle
         label="Auto-Backup Enabled"
@@ -303,6 +426,28 @@ onMounted(async () => {
         </div>
       </div>
     </SettingsSection>
+
+    <!-- TASK-1183: Data Cleanup Section -->
+    <SettingsSection title="🧹 Data Cleanup">
+      <div class="cleanup-section">
+        <p class="cleanup-description">
+          Fix corrupted data that may cause sync errors. Run this if you see sync errors about invalid UUIDs.
+        </p>
+        <div class="cleanup-actions">
+          <button class="cleanup-btn" @click="handleCleanupTasks" :disabled="isCleaningUp">
+            <RefreshCw :size="16" :class="{ spinning: isCleaningUp }" />
+            {{ isCleaningUp ? 'Cleaning...' : 'Fix Corrupted Tasks' }}
+          </button>
+          <button class="cleanup-btn secondary" @click="handleClearSyncQueue" :disabled="isClearingSyncQueue">
+            <RotateCcw :size="16" />
+            {{ isClearingSyncQueue ? 'Clearing...' : 'Clear Sync Queue' }}
+          </button>
+        </div>
+        <p v-if="cleanupResult" class="cleanup-result" :class="{ success: cleanupResult.success }">
+          {{ cleanupResult.message }}
+        </p>
+      </div>
+    </SettingsSection>
   </div>
 </template>
 
@@ -311,6 +456,122 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* Tauri Mode Selector */
+.mode-selector-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.mode-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.mode-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-3);
+}
+
+.mode-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 2px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+  text-align: left;
+}
+
+.mode-option:hover {
+  border-color: var(--glass-border-strong);
+  background: var(--glass-bg-medium);
+  transform: translateY(-1px);
+}
+
+.mode-option.active {
+  border-color: var(--color-success);
+  background: rgba(var(--color-success-rgb, 16, 185, 129), 0.1);
+}
+
+.mode-option-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+}
+
+.mode-option.active .mode-option-icon {
+  background: var(--color-success);
+  color: white;
+}
+
+.mode-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mode-option-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mode-badge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-success);
+  background: rgba(var(--color-success-rgb, 16, 185, 129), 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.mode-option-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.mode-option-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mode-option-features li {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.mode-help-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  background: rgba(var(--color-warning-rgb, 245, 158, 11), 0.1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  margin: 0;
 }
 
 .action-grid {
@@ -758,5 +1019,72 @@ onMounted(async () => {
 @keyframes rotation {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* TASK-1183: Data Cleanup Section */
+.cleanup-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cleanup-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.cleanup-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.cleanup-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-4);
+  background: var(--color-warning);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.cleanup-btn:hover:not(:disabled) {
+  background: var(--color-warning-hover, #d97706);
+  transform: translateY(-1px);
+}
+
+.cleanup-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cleanup-btn.secondary {
+  background: var(--glass-bg-medium);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.cleanup-btn.secondary:hover:not(:disabled) {
+  background: var(--glass-bg-strong);
+  border-color: var(--glass-border-strong);
+}
+
+.cleanup-result {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg-subtle);
+  color: var(--color-danger);
+}
+
+.cleanup-result.success {
+  background: var(--success-bg-subtle, rgba(16, 185, 129, 0.1));
+  color: var(--color-success, #10b981);
 }
 </style>

@@ -73,7 +73,6 @@
       >
 
       <!-- Schedule Section -->
-      <span class="section-label">Schedule</span>
       <div class="date-time-row">
         <!-- Date Picker -->
         <div class="date-picker-section">
@@ -120,7 +119,6 @@
       </div>
 
       <!-- Details Section -->
-      <span class="section-label">Details</span>
       <div class="properties-row">
         <!-- Status Dropdown -->
         <div class="property-select">
@@ -391,6 +389,20 @@ watch(() => _props.isOpen, (isOpen) => {
   display: flex;
   gap: var(--space-2);
   align-items: center;
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.title-row:hover {
+  border-color: var(--border-medium);
+}
+
+.title-row:focus-within {
+  border-color: var(--purple-border-medium);
+  box-shadow: var(--purple-glow-subtle);
 }
 
 .title-input {
@@ -401,16 +413,16 @@ watch(() => _props.isOpen, (isOpen) => {
   color: var(--text-primary);
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
-  padding: var(--space-2) 0;
+  padding: 0;
   outline: none;
 }
 
 .title-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.6;
+  color: var(--text-tertiary);
+  opacity: 0.8;
 }
 
-/* Mic Button */
+/* Mic Button - Progressive Disclosure */
 .mic-btn {
   width: 36px;
   height: 36px;
@@ -423,12 +435,20 @@ watch(() => _props.isOpen, (isOpen) => {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  opacity: 0.5;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+.title-row:hover .mic-btn,
+.title-row:focus-within .mic-btn {
+  opacity: 1;
 }
 
 .mic-btn:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.15);
-  color: rgb(165, 180, 252);
+  background: var(--purple-bg-subtle);
+  color: var(--text-primary);
 }
 
 .mic-btn:active:not(:disabled) {
@@ -441,14 +461,16 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .mic-btn.recording {
-  background: var(--danger-text, #ef4444);
+  background: var(--danger-gradient-start);
   color: white;
+  opacity: 1;
   animation: pulse-recording 1.5s ease-in-out infinite;
 }
 
 .mic-btn.processing {
-  background: rgba(99, 102, 241, 0.9);
+  background: var(--purple-gradient-start);
   color: white;
+  opacity: 1;
 }
 
 .spin {
@@ -469,15 +491,15 @@ watch(() => _props.isOpen, (isOpen) => {
   }
 }
 
-/* Voice feedback panel - purple tinted */
+/* Voice feedback panel */
 .voice-feedback {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--glass-bg-light);
   border-radius: var(--radius-md);
-  border: 1px solid var(--purple-border-subtle, rgba(99, 102, 241, 0.15));
+  border: 1px solid var(--purple-border-subtle);
 }
 
 .voice-waveform {
@@ -490,7 +512,7 @@ watch(() => _props.isOpen, (isOpen) => {
 .wave-bar {
   width: 3px;
   height: 6px;
-  background: var(--danger-text, #ef4444);
+  background: var(--danger-text);
   border-radius: 2px;
   animation: wave 0.8s ease-in-out infinite;
 }
@@ -531,77 +553,72 @@ watch(() => _props.isOpen, (isOpen) => {
 
 .voice-cancel:hover {
   background: var(--glass-bg);
-  color: var(--danger-text, #ef4444);
+  color: var(--danger-text);
 }
 
+/* Description Input - Glass Container */
 .description-input {
   width: 100%;
-  background: transparent;
-  border: none;
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  padding: var(--space-2) 0;
+  padding: var(--space-3);
   outline: none;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.description-input:hover {
+  border-color: var(--border-medium);
+}
+
+.description-input:focus {
+  border-color: var(--purple-border-medium);
+  box-shadow: var(--purple-glow-subtle);
 }
 
 .description-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.5;
+  color: var(--text-tertiary);
+  opacity: 0.8;
 }
 
-/* Section Labels */
-.section-label {
-  display: block;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: var(--space-2);
-  margin-top: var(--space-2);
-  opacity: 0.7;
-}
-
-/* Date & Time Section - purple tinted glass */
+/* Date & Time Section - NO Container Background */
 .date-time-row {
   display: flex;
-  gap: var(--space-4);
-  margin-bottom: var(--space-2);
-  padding: var(--space-4);
-  background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.08) 0%,
-    rgba(79, 70, 229, 0.05) 100%);
-  border: 1px solid var(--purple-border-subtle, rgba(99, 102, 241, 0.15));
-  border-radius: var(--radius-lg);
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
 }
 
 .date-picker-section {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .date-display {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--glass-bg-tint);
-  border: 1px solid var(--glass-border);
+  padding: var(--space-3);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: all var(--duration-fast) var(--ease-out);
   position: relative;
 }
 
-.date-display:hover,
-.date-display:focus-within {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: var(--purple-border-medium, rgba(99, 102, 241, 0.3));
+.date-display:hover {
+  border-color: var(--border-medium);
 }
 
 .date-display:focus-within {
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  border-color: var(--purple-border-medium);
+  box-shadow: var(--purple-glow-subtle);
 }
 
 .date-input-hidden {
@@ -609,8 +626,8 @@ watch(() => _props.isOpen, (isOpen) => {
   opacity: 0;
   width: 100%;
   height: 100%;
-  top: 0;
-  left: 0;
+  inset-block-start: 0;
+  inset-inline-start: 0;
   cursor: pointer;
 }
 
@@ -618,8 +635,8 @@ watch(() => _props.isOpen, (isOpen) => {
   position: absolute;
   width: 100%;
   height: 100%;
-  top: 0;
-  left: 0;
+  inset-block-start: 0;
+  inset-inline-start: 0;
   cursor: pointer;
   opacity: 0;
 }
@@ -627,37 +644,36 @@ watch(() => _props.isOpen, (isOpen) => {
 .quick-date-shortcuts {
   display: flex;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .quick-date-btn {
   padding: var(--space-1) var(--space-2);
-  background: transparent;
+  background: var(--glass-bg-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .quick-date-btn:hover {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.25);
+  background: var(--glass-bg-light);
+  border-color: var(--border-medium);
   color: var(--text-secondary);
 }
 
 .quick-date-btn.active {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: var(--purple-border-medium, rgba(99, 102, 241, 0.3));
-  color: rgb(165, 180, 252); /* indigo-300 */
+  background: var(--purple-bg-subtle);
+  border-color: var(--purple-border-medium);
+  color: var(--text-primary);
 }
 
 /* Properties Row */
 .properties-row {
   display: flex;
   gap: var(--space-2);
-  margin-bottom: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -673,7 +689,7 @@ watch(() => _props.isOpen, (isOpen) => {
   color: var(--text-muted);
   flex-shrink: 0;
   position: absolute;
-  left: var(--space-3);
+  inset-inline-start: var(--space-3);
   z-index: 1;
   pointer-events: none;
 }
@@ -684,23 +700,25 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .compact-select :deep(.select-trigger) {
-  padding: var(--space-2) var(--space-3);
-  padding-left: calc(var(--space-3) + 14px + var(--space-2));
+  padding: var(--space-3);
+  padding-inline-start: calc(var(--space-3) + 14px + var(--space-2));
   min-height: auto;
-  background: var(--glass-bg-tint);
-  border-color: var(--glass-border);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .compact-select :deep(.select-trigger:hover) {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: var(--glass-bg-light);
+  border-color: var(--border-medium);
   box-shadow: none;
 }
 
 .compact-select :deep(.select-trigger:focus),
 .compact-select :deep(.select-trigger.is-open) {
-  border-color: var(--purple-border-medium, rgba(99, 102, 241, 0.3));
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  border-color: var(--purple-border-medium);
+  box-shadow: var(--purple-glow-subtle);
 }
 
 .compact-select :deep(.select-icon.is-open) {
@@ -712,47 +730,43 @@ watch(() => _props.isOpen, (isOpen) => {
   display: flex;
   gap: var(--space-3);
   justify-content: flex-end;
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--border-subtle);
 }
 
 .cancel-btn {
   background: transparent;
-  border: 1px solid var(--glass-border-hover);
+  border: 1px solid var(--border-medium);
   color: var(--text-secondary);
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .cancel-btn:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: var(--glass-bg-light);
+  border-color: var(--border-strong);
 }
 
 .create-btn {
-  background: linear-gradient(135deg,
-    rgba(99, 102, 241, 0.9) 0%,
-    rgba(79, 70, 229, 0.85) 100%);
-  border: 1px solid var(--purple-border-medium, rgba(99, 102, 241, 0.3));
+  background: var(--purple-gradient-start);
+  border: 1px solid var(--purple-border-medium);
   color: white;
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .create-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg,
-    rgba(109, 112, 251, 0.95) 0%,
-    rgba(89, 80, 239, 0.9) 100%);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  background: var(--purple-gradient-hover-start);
+  border-color: var(--purple-border-strong);
+  box-shadow: var(--purple-shadow-medium);
 }
 
 .create-btn:disabled {
@@ -762,10 +776,6 @@ watch(() => _props.isOpen, (isOpen) => {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .date-time-row {
-    flex-direction: column;
-  }
-
   .properties-row {
     flex-direction: column;
   }

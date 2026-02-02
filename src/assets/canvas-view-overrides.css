@@ -60,6 +60,9 @@
     /* z-index is now controlled by node.style.zIndex for proper nested group layering */
     /* Allow section wrapper to be interactive */
     pointer-events: auto !important;
+    /* TASK-1177 FIX: Prevent parent group's backdrop-filter from blurring child groups */
+    /* Each group gets its own compositing layer so children render cleanly on top */
+    isolation: isolate;
 }
 
 /* Section node content should NOT block resize handles at edges */

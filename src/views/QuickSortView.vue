@@ -4,7 +4,7 @@
     <header class="quick-sort-header">
       <div class="header-content--quicksort">
         <h1 class="view-title">
-          <Zap :size="32" />
+          <Zap :size="24" />
           Quick Sort
         </h1>
         <p class="view-subtitle">
@@ -52,104 +52,127 @@
 
         <!-- SORT TAB -->
         <div v-else key="sort" class="sort-tab-content">
-          <!-- Progress Indicator -->
+          <!-- Progress Indicator - Full width -->
           <SortProgress
             v-if="!isComplete"
             :current="progress.current"
             :total="progress.total"
             :message="motivationalMessage"
             :streak="currentStreak"
+            class="sort-progress-bar"
           />
 
-          <!-- Task Card or Completion -->
-          <div class="card-container">
-            <!-- Active Task Card -->
+          <!-- Single-Column Layout -->
+          <div v-if="currentTask && !isComplete" class="sort-single-column">
+            <!-- Task Card (centered, simplified) -->
             <Transition name="card-slide" mode="out-in">
               <QuickSortCard
-                v-if="currentTask && !isComplete"
                 :key="currentTask.id"
                 :task="currentTask"
                 @update-task="handleTaskUpdate"
-                @mark-done="handleMarkDone"
-                @edit-task="handleEditTask"
-                @mark-done-and-delete="handleMarkDoneAndDelete"
               />
-
-              <!-- Empty State -->
-              <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
-                <CheckCircle :size="64" />
-                <h2>All Caught Up!</h2>
-                <p>You have no uncategorized tasks.</p>
-                <button class="primary-button" @click="handleExit">
-                  Return to Tasks
-                </button>
-              </div>
-
-              <!-- Completion State -->
-              <div v-else-if="isComplete" class="completion-state">
-                <div class="celebration-icon">
-                  🎉
-                </div>
-                <h2>Amazing Work!</h2>
-                <p class="completion-message">
-                  You've sorted all your tasks!
-                </p>
-
-                <div v-if="sessionSummary" class="session-stats">
-                  <div class="stat-card">
-                    <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
-                    <span class="stat-label">Tasks Sorted</span>
-                  </div>
-
-                  <div class="stat-card">
-                    <span class="stat-value">{{ formatTime(sessionSummary.timeSpent) }}</span>
-                    <span class="stat-label">Time Taken</span>
-                  </div>
-
-                  <div class="stat-card">
-                    <span class="stat-value">{{ sessionSummary.efficiency.toFixed(1) }}</span>
-                    <span class="stat-label">Tasks/Min</span>
-                  </div>
-
-                  <div v-if="sessionSummary.streakDays > 0" class="stat-card streak-card">
-                    <span class="stat-value">🔥 {{ sessionSummary.streakDays }}</span>
-                    <span class="stat-label">Day Streak</span>
-                  </div>
-                </div>
-
-                <button class="primary-button" @click="handleExit">
-                  <CheckCircle :size="20" />
-                  Done
-                </button>
-              </div>
             </Transition>
+
+            <!-- Project Selector (full width) -->
+            <CategorySelector
+              @select="handleCategorize"
+              @skip="handleSkip"
+              @create-new="showProjectModal = true"
+            />
+
+            <!-- Consolidated Action Row -->
+            <div class="action-row">
+              <button
+                class="action-btn done"
+                aria-label="Mark task as done"
+                @click="handleMarkDone"
+              >
+                <CheckCircle :size="18" />
+                Done
+                <kbd>D</kbd>
+              </button>
+
+              <button
+                class="action-btn skip"
+                aria-label="Skip this task"
+                @click="handleSkip"
+              >
+                <SkipForward :size="18" />
+                Skip
+                <kbd>Space</kbd>
+              </button>
+
+              <button
+                class="action-btn edit"
+                aria-label="Edit task"
+                @click="handleEditTask"
+              >
+                <Edit :size="18" />
+                Edit
+                <kbd>E</kbd>
+              </button>
+
+              <button
+                v-if="canUndo"
+                class="action-btn undo"
+                aria-label="Undo last action"
+                @click="handleUndo"
+              >
+                <Undo2 :size="18" />
+              </button>
+            </div>
+
+            <!-- Helper Hint -->
+            <div class="helper-hint">
+              1-9 to select project • Esc to exit
+            </div>
           </div>
 
-          <!-- Category Selector -->
-          <CategorySelector
-            v-if="!isComplete && currentTask"
-            @select="handleCategorize"
-            @skip="handleSkip"
-            @create-new="showProjectModal = true"
-          />
-
-          <!-- Action Buttons -->
-          <div v-if="!isComplete && currentTask" class="action-buttons">
-            <button
-              class="action-button"
-              :disabled="!canUndo"
-              aria-label="Undo last categorization"
-              @click="handleUndo"
-            >
-              <Undo2 :size="20" />
-              Undo
-              <kbd v-if="canUndo">Ctrl+Z</kbd>
+          <!-- Empty State (centered, full width) -->
+          <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
+            <CheckCircle :size="64" />
+            <h2>All Caught Up!</h2>
+            <p>You have no uncategorized tasks.</p>
+            <button class="primary-button" @click="handleExit">
+              Return to Tasks
             </button>
+          </div>
 
-            <button class="action-button" aria-label="Skip this task" @click="handleSkip">
-              <SkipForward :size="20" />
-              Skip
-              <kbd>Space</kbd>
+          <!-- Completion State (centered, full width) -->
+          <div v-else-if="isComplete" class="completion-state">
+            <div class="celebration-icon">
+              🎉
+            </div>
+            <h2>Amazing Work!</h2>
+            <p class="completion-message">
+              You've sorted all your tasks!
+            </p>
+
+            <div v-if="sessionSummary" class="session-stats">
+              <div class="stat-card">
+                <span class="stat-value">{{ sessionSummary.tasksProcessed }}</span>
+                <span class="stat-label">Tasks Sorted</span>
+              </div>
+
+              <div class="stat-card">
+                <span class="stat-value">{{ formatTime(sessionSummary.timeSpent) }}</span>
+                <span class="stat-label">Time Taken</span>
+              </div>
+
+              <div class="stat-card">
+                <span class="stat-value">{{ sessionSummary.efficiency.toFixed(1) }}</span>
+                <span class="stat-label">Tasks/Min</span>
+              </div>
+
+              <div v-if="sessionSummary.streakDays > 0" class="stat-card streak-card">
+                <span class="stat-value">🔥 {{ sessionSummary.streakDays }}</span>
+                <span class="stat-label">Day Streak</span>
+              </div>
+            </div>
+
+            <button class="primary-button" @click="handleExit">
+              <CheckCircle :size="20" />
+              Done
             </button>
           </div>
         </div>
@@ -178,7 +201,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward, Plus } from 'lucide-vue-next'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
@@ -398,10 +421,10 @@ function formatTime(milliseconds: number): string {
 .quick-sort-view {
   height: 100%;
   min-height: 0; /* Allow flexbox shrinking */
-  padding: var(--space-8);
+  padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-3);
   overflow-y: auto; /* Enable scrolling if content exceeds */
   position: relative; /* Establish positioning context for celebration overlay */
 }
@@ -409,8 +432,8 @@ function formatTime(milliseconds: number): string {
 .quick-sort-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-6);
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .header-content--quicksort {
@@ -420,17 +443,24 @@ function formatTime(milliseconds: number): string {
 .view-title {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-4xl);
+  gap: var(--space-2);
+  font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   color: var(--text-primary);
-  margin: 0 0 var(--space-2) 0;
+  margin: 0;
 }
 
 .view-subtitle {
-  font-size: var(--text-base);
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
   margin: 0;
+  display: none; /* Hide on desktop to save space */
+}
+
+@media (max-width: 1024px) {
+  .view-subtitle {
+    display: block;
+  }
 }
 
 .close-button {
@@ -524,8 +554,24 @@ function formatTime(milliseconds: number): string {
 .sort-tab-content {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+/* Progress bar spans full width */
+.sort-progress-bar {
+  max-width: 100%;
+}
+
+/* Single-Column Layout */
+.sort-single-column {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-8);
+  max-width: 600px;
+  margin: 0 auto;
+  gap: var(--space-5);
   width: 100%;
 }
 
@@ -549,19 +595,9 @@ function formatTime(milliseconds: number): string {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-8);
-  max-width: 800px;
-  margin: 0 auto;
+  align-items: stretch;
+  gap: var(--space-4);
   width: 100%;
-}
-
-.card-container {
-  width: 100%;
-  min-height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .empty-state,
@@ -643,19 +679,20 @@ function formatTime(milliseconds: number): string {
   letter-spacing: 0.5px;
 }
 
-.action-buttons {
+/* Consolidated Action Row */
+.action-row {
   display: flex;
   gap: var(--space-3);
   justify-content: center;
   flex-wrap: wrap;
 }
 
-.action-button {
+.action-btn {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
-  background: var(--glass-bg-medium);
+  padding: var(--space-2_5) var(--space-4);
+  background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
@@ -665,23 +702,80 @@ function formatTime(milliseconds: number): string {
   transition: all var(--duration-normal);
 }
 
-.action-button:hover:not(:disabled) {
-  background: var(--glass-bg-heavy);
-  border-color: var(--glass-border-hover);
+.action-btn:hover {
+  background: var(--glass-bg-medium);
   transform: translateY(-2px);
 }
 
-.action-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.action-button kbd {
-  margin-left: var(--space-2);
-  padding: var(--space-1) var(--space-1_5);
-  background: var(--glass-bg-heavy);
+.action-btn kbd {
+  padding: var(--space-0_5) var(--space-1_5);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
+  font-family: var(--font-mono);
+}
+
+.action-btn.done {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.action-btn.done:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: var(--success);
+}
+
+.action-btn.skip {
+  border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+}
+
+.action-btn.skip:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.action-btn.edit {
+  border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+}
+
+.action-btn.edit:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.action-btn.undo {
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+  padding: var(--space-2_5);
+}
+
+.action-btn.undo:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+/* Helper Hint */
+.helper-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+  opacity: 0.7;
+}
+
+.helper-hint kbd {
+  display: inline-block;
+  padding: var(--space-0_5) var(--space-1);
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 10px;
 }
 
 .primary-button {

@@ -31,6 +31,9 @@
 
     <!-- AI CHAT PANEL (TASK-1120) -->
     <AIChatPanel />
+
+    <!-- GAMIFICATION TOASTS (FEATURE-1118) -->
+    <GamificationToasts />
   </div>
 </template>
 
@@ -43,6 +46,7 @@ import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
 import { AIChatPanel } from '@/components/ai'
+import { GamificationToasts } from '@/components/gamification'
 
 const uiStore = useUIStore()
 const { direction } = useDirection()

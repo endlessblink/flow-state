@@ -397,6 +397,30 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const isPendingWrite = (taskId: string) => pendingWrites.value.has(taskId)
 
+  // TASK-1183: Cleanup corrupted tasks with invalid parentId (legacy group IDs)
+  const cleanupCorruptedTasks = async () => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    let fixed = 0
+
+    for (const task of _rawTasks.value) {
+      // Check if parentId exists but is NOT a valid UUID (e.g., "group-1234567890-abc")
+      if (task.parentId && !uuidRegex.test(task.parentId)) {
+        console.log(`[TASK-CLEANUP] Task "${task.title}" (${task.id.slice(0, 8)}) has invalid parentId: "${task.parentId}", removing`)
+        task.parentId = undefined
+        fixed++
+        // Save the fixed task
+        try {
+          await operations.updateTask(task.id, { parentId: undefined })
+        } catch (e) {
+          console.warn(`[TASK-CLEANUP] Failed to save fixed task ${task.id}:`, e)
+        }
+      }
+    }
+
+    console.log(`[TASK-CLEANUP] Fixed ${fixed} corrupted tasks`)
+    return fixed
+  }
+
   return {
     ...states,
     ...persistence,
@@ -454,7 +478,10 @@ export const useTaskStore = defineStore('tasks', () => {
     // High Severity Issue #7: Pending-write registry API
     addPendingWrite,
     removePendingWrite,
-    isPendingWrite
+    isPendingWrite,
+
+    // TASK-1183: Cleanup corrupted data
+    cleanupCorruptedTasks
   }
 })
 

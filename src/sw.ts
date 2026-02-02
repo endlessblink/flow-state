@@ -223,26 +223,38 @@ self.addEventListener('notificationclick', (event) => {
     messageType = data?.wasBreak ? 'START_WORK' : 'START_BREAK'
   }
 
-  // Send message to all open clients
+  // BUG-1178: Send message to all open clients with improved reliability
+  // Previous code had race condition: message sent before window fully focused
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+      console.log('[SW] Found clients:', clientList.length)
+
       // Try to focus an existing window first
       for (const client of clientList) {
         // WindowClient type check
         if ('focus' in client && typeof (client as WindowClient).focus === 'function') {
+          console.log('[SW] Focusing client:', client.url)
           await (client as WindowClient).focus()
+
+          // BUG-1178: Add small delay to ensure window is fully focused and ready to receive messages
+          await new Promise(resolve => setTimeout(resolve, 100))
+
+          console.log('[SW] Sending message to client:', messageType)
           client.postMessage({
             type: messageType,
             taskId: data?.taskId,
             taskName: data?.taskName,
           })
+          console.log('[SW] Message sent successfully:', messageType)
           return
         }
       }
 
-      // No existing window - open a new one
+      // No existing window - open a new one with action in URL (fallback)
+      console.log('[SW] No existing window, opening new with action in URL')
       if (self.clients.openWindow) {
-        await self.clients.openWindow('/')
+        const actionUrl = `/?action=${messageType}&taskId=${encodeURIComponent(data?.taskId || '')}`
+        await self.clients.openWindow(actionUrl)
       }
     })
   )

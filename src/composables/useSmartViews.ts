@@ -108,11 +108,6 @@ export const useSmartViews = () => {
       }
     }
 
-    // Tasks currently in progress should be included in today filter
-    if (task.status === 'in_progress') {
-      return true
-    }
-
     // Only include tasks created today if they have NO date information at all
     // (prevents tasks with future dates from appearing in Today)
     // BUG-1185: Must also check scheduledDate and instances, not just dueDate
@@ -202,11 +197,6 @@ export const useSmartViews = () => {
       }
     }
 
-    // Tasks currently in progress should be included in week filter
-    if (task.status === 'in_progress') {
-      return true
-    }
-
     // Only include tasks created today if they have NO date information at all
     // (prevents tasks with future dates from appearing in This Week)
     // BUG-1185: Must also check scheduledDate and instances, not just dueDate
@@ -268,11 +258,6 @@ export const useSmartViews = () => {
       if (normalizedScheduledDate && normalizedScheduledDate <= monthEndStr) {
         return true
       }
-    }
-
-    // Tasks currently in progress should be included
-    if (task.status === 'in_progress') {
-      return true
     }
 
     // Only include tasks created today if they have NO date information at all

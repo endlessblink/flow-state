@@ -190,9 +190,9 @@
 
 ---
 
-### TASK-1183: Fix Tauri Production Sync Version Conflicts (👀 REVIEW)
+### ~~TASK-1183~~: Fix Tauri Production Sync Version Conflicts (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-02)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-02)
 
 **Problem**: Tauri desktop app in production shows "Sync Errors - Version conflict - entity was modified by another device" when syncing with Supabase.
 
@@ -225,6 +225,13 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 **Files Changed**:
 - `src/composables/sync/useSyncOrchestrator.ts` - Added LWW resolution logic
 - `src/types/sync.ts` - Added `serverData` to SyncResult type
+- `src/stores/canvas/canvasGroups.ts` - Fixed group IDs to use proper UUIDs
+- `src/utils/supabaseMappers.ts` - Added UUID validation for groups and task parentId
+- `src/stores/projects.ts` - Fixed 'uncategorized' → null for projectId
+- `src/services/offline/retryStrategy.ts` - Permanent error classification for data validation
+- `src/components/sync/SyncErrorPopover.vue` - "Corrupted" badge, smart Retry button
+- `src/stores/tasks.ts` - Added cleanupCorruptedTasks()
+- `src/components/settings/tabs/StorageSettingsTab.vue` - Data Cleanup section
 
 **Related**: BUG-1179 (Realtime Drops) - should still be fixed to reduce conflicts
 

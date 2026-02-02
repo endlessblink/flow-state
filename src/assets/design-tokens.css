@@ -1427,6 +1427,121 @@ WHEN TO USE WHAT:
 - Status: var(--color-success/warning/danger)
 - Spacing: var(--space-*)
 - Typography: var(--text-*) + var(--font-*)
+- Gamification: var(--neon-*), var(--xp-*), var(--tier-*)
 */
+
+/* ===== GAMIFICATION "CYBERFLOW" TOKENS (FEATURE-1118) ===== */
+:root {
+  /* Neon Colors (RGB for glow effects) */
+  --neon-cyan: 0, 255, 255;
+  --neon-magenta: 255, 0, 255;
+  --neon-lime: 57, 255, 20;
+  --neon-orange: 255, 107, 53;
+  --neon-purple: 138, 43, 226;
+
+  /* Neon Glow Effects */
+  --neon-glow-cyan: 0 0 8px rgba(var(--neon-cyan), 0.6),
+                    0 0 16px rgba(var(--neon-cyan), 0.3),
+                    0 0 32px rgba(var(--neon-cyan), 0.15);
+  --neon-glow-magenta: 0 0 8px rgba(var(--neon-magenta), 0.6),
+                        0 0 16px rgba(var(--neon-magenta), 0.3),
+                        0 0 32px rgba(var(--neon-magenta), 0.15);
+  --neon-glow-lime: 0 0 8px rgba(var(--neon-lime), 0.6),
+                    0 0 16px rgba(var(--neon-lime), 0.3);
+
+  /* XP Bar Styling */
+  --xp-bar-height: 8px;
+  --xp-bar-border-radius: 4px;
+  --xp-bar-bg: rgba(var(--color-slate-800), 0.8);
+  --xp-bar-gradient: linear-gradient(90deg,
+    rgba(var(--neon-cyan), 0.9),
+    rgba(var(--neon-magenta), 0.9));
+  --xp-bar-glow: 0 0 12px rgba(var(--neon-cyan), 0.5);
+
+  /* Achievement Tier Colors (RGB) */
+  --tier-bronze: 205, 127, 50;
+  --tier-silver: 192, 192, 192;
+  --tier-gold: 255, 215, 0;
+  --tier-platinum: 229, 228, 226;
+
+  /* Tier Glow Effects */
+  --tier-glow-bronze: 0 0 8px rgba(var(--tier-bronze), 0.6);
+  --tier-glow-silver: 0 0 8px rgba(var(--tier-silver), 0.6);
+  --tier-glow-gold: 0 0 12px rgba(var(--tier-gold), 0.7),
+                    0 0 24px rgba(var(--tier-gold), 0.3);
+  --tier-glow-platinum: 0 0 12px rgba(var(--tier-platinum), 0.8),
+                        0 0 24px rgba(var(--tier-platinum), 0.4);
+
+  /* Gamification Component Tokens */
+  --gamification-panel-bg: rgba(var(--color-slate-900), 0.95);
+  --gamification-panel-border: rgba(var(--neon-cyan), 0.3);
+  --gamification-card-bg: rgba(var(--color-slate-800), 0.8);
+  --gamification-text-primary: rgb(var(--color-slate-100));
+  --gamification-text-secondary: rgb(var(--color-slate-400));
+
+  /* Level Badge */
+  --level-badge-size: 48px;
+  --level-badge-font-size: 1.25rem;
+  --level-badge-bg: linear-gradient(135deg,
+    rgba(var(--neon-cyan), 0.2),
+    rgba(var(--neon-magenta), 0.2));
+  --level-badge-border: 2px solid rgba(var(--neon-cyan), 0.5);
+  --level-badge-glow: var(--neon-glow-cyan);
+
+  /* Streak Counter */
+  --streak-flame-color: rgb(255, 107, 53);
+  --streak-text-color: rgb(var(--color-slate-100));
+  --streak-glow: 0 0 8px rgba(255, 107, 53, 0.5);
+
+  /* Toast Notifications */
+  --toast-xp-bg: rgba(var(--color-slate-900), 0.95);
+  --toast-xp-border: rgba(var(--neon-cyan), 0.5);
+  --toast-achievement-border: rgba(var(--tier-gold), 0.5);
+  --toast-animation-duration: 0.3s;
+}
+
+/* Gamification Animations */
+@keyframes xpPopIn {
+  0% { transform: scale(0) translateY(20px); opacity: 0; }
+  60% { transform: scale(1.2) translateY(-5px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes xpGlow {
+  0%, 100% { box-shadow: var(--neon-glow-cyan); }
+  50% { box-shadow: var(--neon-glow-magenta); }
+}
+
+@keyframes levelUpPulse {
+  0%, 100% { transform: scale(1); box-shadow: var(--level-badge-glow); }
+  50% { transform: scale(1.1); box-shadow: var(--neon-glow-magenta); }
+}
+
+@keyframes achievementUnlock {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60% { transform: scale(1.2) rotate(10deg); }
+  80% { transform: scale(0.95) rotate(-5deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes streakFlame {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.05); }
+}
+
+@keyframes xpBarFill {
+  from { width: var(--xp-bar-start, 0%); }
+  to { width: var(--xp-bar-end, 100%); }
+}
+
+@keyframes rainbowGlow {
+  0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.6); }
+  16% { box-shadow: 0 0 10px rgba(255, 165, 0, 0.6); }
+  33% { box-shadow: 0 0 10px rgba(255, 255, 0, 0.6); }
+  50% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.6); }
+  66% { box-shadow: 0 0 10px rgba(0, 0, 255, 0.6); }
+  83% { box-shadow: 0 0 10px rgba(75, 0, 130, 0.6); }
+  100% { box-shadow: 0 0 10px rgba(238, 130, 238, 0.6); }
+}
 
 /* Cache bust: 1761553951 */

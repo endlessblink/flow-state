@@ -368,34 +368,21 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1178: Break Button in Timer Notification Doesn't Start Break Timer (🔄 IN PROGRESS)
+### ~~BUG-1178~~: Break Button in Timer Notification Doesn't Start Break Timer (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-02)
 
-**Problem**: User reports two issues on Linux desktop:
-1. Clicking "Break" button in work-complete notification doesn't start break timer
-2. After break completes, no popup appears with "Start Work" / "+5 min" options
+**Problem**: Clicking "Break" button in work-complete notification doesn't start break timer. After break completes, no popup with "Start Work" / "+5 min".
 
-**Root Cause Analysis**:
-The notification with action buttons comes from Service Worker (not Tauri native). Flow:
-1. Work timer completes → `showTimerNotification()` in timer.ts
-2. Posts 'TIMER_COMPLETE' to Service Worker
-3. SW shows notification with [☕ Break] [+5 min] actions
-4. User clicks "Break" → SW notificationclick handler fires
-5. SW posts `{ type: 'START_BREAK' }` to client
-6. **BUG**: timer.ts `handleServiceWorkerMessage()` not receiving messages
+**Root Cause**: SW message listener registered before SW controller was ready + race condition where message sent before window fully focused.
 
-**Likely causes**:
-1. SW message listener registered before SW controller is ready
-2. Race condition: message sent before window focused
+**Fix Applied**:
+1. Wait for `navigator.serviceWorker.ready` before registering message listener (`timer.ts`)
+2. Add 100ms delay after focusing window before sending message (`sw.ts`)
+3. URL query param fallback when opening new window (`useAppInitialization.ts`)
+4. Enhanced debug logging throughout SW message flow
 
-**Fix Plan**:
-1. Add debug logging to identify exact failure point
-2. Wait for `navigator.serviceWorker.ready` before registering listener
-3. Add small delay after focusing window before sending message
-4. Add URL query param fallback for when postMessage fails
-
-**Files**: `src/stores/timer.ts`, `src/sw.ts`
+**Files Changed**: `src/stores/timer.ts`, `src/sw.ts`, `src/composables/app/useAppInitialization.ts`
 
 ---
 

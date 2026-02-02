@@ -18,10 +18,12 @@
     </header>
 
     <!-- Tab Navigation -->
-    <div class="tab-navigation">
+    <div class="tab-navigation" role="tablist">
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'sort' }"
+        role="tab"
+        :aria-selected="activeTab === 'sort'"
         @click="activeTab = 'sort'"
       >
         <Zap :size="18" />
@@ -31,6 +33,8 @@
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'capture' }"
+        role="tab"
+        :aria-selected="activeTab === 'capture'"
         @click="activeTab = 'capture'"
       >
         <Plus :size="18" />

@@ -91,7 +91,11 @@
           <label class="edit-label">Due Date:</label>
 
           <!-- Clickable Date Display with Hidden Input -->
-          <div class="date-input-wrapper" @click="openDatePicker">
+          <div
+            class="date-input-wrapper"
+            :class="{ 'has-focus': isDateInputFocused }"
+            @click="openDatePicker"
+          >
             <Calendar :size="16" class="date-icon" />
             <span class="date-display">{{ formattedDueDate }}</span>
             <input
@@ -99,8 +103,11 @@
               type="date"
               class="date-input-hidden"
               :value="dueDateValue"
+              aria-label="Change due date"
               @change="updateDueDate"
               @click.stop
+              @focus="isDateInputFocused = true"
+              @blur="isDateInputFocused = false"
             >
           </div>
 
@@ -211,6 +218,7 @@ const projectVisual = computed(() =>
 
 // Date picker ref
 const dateInputRef = ref<HTMLInputElement | null>(null)
+const isDateInputFocused = ref(false)
 
 // Swipe handling
 const isSwiping = ref(false)
@@ -704,6 +712,11 @@ function handleSwipeEnd() {
 .date-input-wrapper:hover {
   background: var(--glass-bg-medium);
   border-color: var(--glass-border-hover);
+}
+
+.date-input-wrapper.has-focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
 }
 
 .date-icon {

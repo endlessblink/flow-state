@@ -725,7 +725,15 @@ export function useCanvasInteractions(deps?: {
                             console.log(`[CANVAS:INTERACT] Smart updates:`, smartUpdates)
                         }
                         // Filter out updates where the task already has the same value
+                        // TASK-1177 FIX: Also skip empty/null dueDate values to prevent DB errors
                         for (const [key, value] of Object.entries(smartUpdates)) {
+                            // Skip invalid dueDate values (empty string, null, undefined, "null" string)
+                            if (key === 'dueDate' && (!value || value === 'null')) {
+                                if (import.meta.env.DEV) {
+                                    console.log(`[CANVAS:INTERACT] Skipping invalid dueDate: "${value}"`)
+                                }
+                                continue
+                            }
                             const taskKey = key as keyof typeof task
                             if (task[taskKey] !== value) {
                                 dragUpdates[key] = value

@@ -1,6 +1,6 @@
 # FlowState MASTER_PLAN.md
 
-> **Last Updated**: January 30, 2026
+> **Last Updated**: February 2, 2026
 > **Token Target**: <25,000 (condensed from ~50,000)
 > **Archive**: `docs/archive/MASTER_PLAN_JAN_2026.md`
 
@@ -1277,6 +1277,26 @@ npm run tasks:bugs     # Filter by BUG type
 ```
 
 **Sources**: [Ink GitHub](https://github.com/vadimdemedes/ink), [@inkjs/ui](https://github.com/vadimdemedes/ink-ui), [LogRocket TUI Comparison](https://blog.logrocket.com/7-tui-libraries-interactive-terminal-apps/)
+
+---
+
+### ~~INQUIRY-1184~~: Safe Due Date → Group Assignment on Send to Canvas (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-02)
+
+**Feature**: Added "Send to Canvas" button to inbox task cards. When clicked, tasks are automatically placed in matching Smart Groups based on their due date:
+- Tasks with due dates are placed in matching groups (Today, Tomorrow, This Week, day-of-week)
+- Tasks without due dates default to the Today group
+- Supports multi-select batch operations for sending multiple tasks at once
+
+**Implementation**:
+- [x] NEW: `src/composables/canvas/useSmartGroupMatcher.ts` - Smart group matching logic
+- [x] Modified: `src/composables/inbox/useUnifiedInboxActions.ts` - Action handler for send to canvas
+- [x] Modified: `src/components/inbox/unified/UnifiedInboxTaskCard.vue` - Button UI in task cards
+- [x] Modified: `src/components/inbox/unified/UnifiedInboxList.vue` - Multi-select support
+- [x] Modified: `src/components/inbox/UnifiedInboxPanel.vue` - Integration with panel
+
+**Testing**: User tested "Send to Canvas" flow with various due dates and verified smart group assignment works correctly.
 
 ---
 

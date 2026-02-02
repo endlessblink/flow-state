@@ -537,6 +537,21 @@ export const useTimerStore = defineStore('timer', () => {
     const completedSession = { ...session, isActive: false, completedAt: new Date() }
     completedSessions.value.push(completedSession)
 
+    // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
+    // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase
+    try {
+      const completedForDb: PomodoroSession = {
+        ...completedSession,
+        startTime: completedSession.startTime instanceof Date
+          ? completedSession.startTime
+          : new Date(completedSession.startTime),
+      }
+      await saveActiveTimerSession(completedForDb, deviceId)
+      console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+    } catch (e) {
+      console.warn('🍅 [TIMER] completeSession: Failed to save to DB (session may reappear on sync):', e)
+    }
+
     const wasBreak = session.isBreak
     const lastTaskId = session.taskId
 

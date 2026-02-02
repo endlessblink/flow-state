@@ -113,9 +113,13 @@ export const useSmartViews = () => {
       return true
     }
 
-    // Only include tasks created today if they have NO due date
-    // (prevents tasks with future due dates from appearing in Today)
-    if (!task.dueDate && task.createdAt) {
+    // Only include tasks created today if they have NO date information at all
+    // (prevents tasks with future dates from appearing in Today)
+    // BUG-1185: Must also check scheduledDate and instances, not just dueDate
+    const hasScheduledDate = task.scheduledDate && task.scheduledDate.trim() !== ''
+    const hasScheduledInstances = task.instances && task.instances.some(inst => inst?.scheduledDate)
+
+    if (!task.dueDate && !hasScheduledDate && !hasScheduledInstances && task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
         createdDate.setHours(0, 0, 0, 0)
@@ -203,9 +207,13 @@ export const useSmartViews = () => {
       return true
     }
 
-    // Only include tasks created today if they have NO due date
-    // (prevents tasks with future due dates from appearing in This Week)
-    if (!task.dueDate && task.createdAt) {
+    // Only include tasks created today if they have NO date information at all
+    // (prevents tasks with future dates from appearing in This Week)
+    // BUG-1185: Must also check scheduledDate and instances, not just dueDate
+    const hasScheduledDate = task.scheduledDate && task.scheduledDate.trim() !== ''
+    const hasScheduledInstances = task.instances && task.instances.some(inst => inst?.scheduledDate)
+
+    if (!task.dueDate && !hasScheduledDate && !hasScheduledInstances && task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
         createdDate.setHours(0, 0, 0, 0)
@@ -267,8 +275,12 @@ export const useSmartViews = () => {
       return true
     }
 
-    // Only include tasks created today if they have NO due date
-    if (!task.dueDate && task.createdAt) {
+    // Only include tasks created today if they have NO date information at all
+    // BUG-1185: Must also check scheduledDate and instances, not just dueDate
+    const hasScheduledDate = task.scheduledDate && task.scheduledDate.trim() !== ''
+    const hasScheduledInstances = task.instances && task.instances.some(inst => inst?.scheduledDate)
+
+    if (!task.dueDate && !hasScheduledDate && !hasScheduledInstances && task.createdAt) {
       const createdDate = new Date(task.createdAt)
       if (!isNaN(createdDate.getTime())) {
         createdDate.setHours(0, 0, 0, 0)

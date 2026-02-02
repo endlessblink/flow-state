@@ -16,6 +16,10 @@
     <!-- Selection Bar -->
     <div v-if="multiSelectMode" class="selection-bar">
       <span class="selection-count">{{ selectedCount }} selected</span>
+      <button class="selection-action canvas-action" title="Send selected to Canvas" @click="$emit('sendSelectedToCanvas')">
+        <Layout :size="14" />
+        Canvas
+      </button>
       <button class="selection-action delete-action" title="Delete selected tasks" @click="$emit('deleteSelected')">
         <Trash2 :size="14" />
         Delete
@@ -53,6 +57,7 @@
             @task-contextmenu="$emit('taskContextmenu', $event, task)"
             @task-keydown="$emit('taskKeydown', $event, task)"
             @start-timer="$emit('startTimer', task)"
+            @send-to-canvas="$emit('sendToCanvas', task)"
           />
         </div>
       </div>
@@ -72,6 +77,7 @@
         @task-contextmenu="$emit('taskContextmenu', $event, task)"
         @task-keydown="$emit('taskKeydown', $event, task)"
         @start-timer="$emit('startTimer', task)"
+        @send-to-canvas="$emit('sendToCanvas', task)"
       />
     </template>
   </div>
@@ -80,7 +86,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useVirtualList } from '@vueuse/core'
-import { Trash2, X } from 'lucide-vue-next'
+import { Trash2, X, Layout } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 import UnifiedInboxTaskCard from './UnifiedInboxTaskCard.vue'
 
@@ -100,6 +106,8 @@ const props = defineProps<{
   (e: 'taskContextmenu', event: MouseEvent, task: Task): void
   (e: 'taskKeydown', event: KeyboardEvent, task: Task): void
   (e: 'startTimer', task: Task): void
+  (e: 'sendToCanvas', task: Task): void
+  (e: 'sendSelectedToCanvas'): void
   (e: 'deleteSelected'): void
   (e: 'clearSelection'): void
 }>() ;// Virtual scrolling constants
@@ -259,5 +267,9 @@ defineExpose({ scrollTo })
 
 .delete-action:hover {
   background: var(--color-error);
+}
+
+.canvas-action:hover {
+  background: var(--color-success, #22c55e);
 }
 </style>

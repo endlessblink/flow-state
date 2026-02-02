@@ -113,19 +113,17 @@ export default defineConfig(({ mode }) => ({
       output: {
         format: 'es', // Workers MUST be 'es' format
         // BUG-1123: Split vendor chunks to reduce main bundle size (was 1.9MB)
+        // BUG-1183: Fixed circular dependency - naive-ui must be in vue-vendor chunk
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Vue ecosystem - core framework
-            if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
+            // Vue ecosystem - core framework + Naive UI (BUG-1183: naive-ui depends on Vue)
+            // Must be in same chunk to prevent "can't access lexical declaration" errors
+            if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router') || id.includes('naive-ui')) {
               return 'vue-vendor'
             }
             // Vue Flow - large canvas library
             if (id.includes('@vue-flow')) {
               return 'vue-flow'
-            }
-            // Naive UI - component library
-            if (id.includes('naive-ui')) {
-              return 'naive-ui'
             }
             // Supabase - backend SDK
             if (id.includes('@supabase')) {

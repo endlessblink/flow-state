@@ -96,6 +96,8 @@
       @task-contextmenu="handleTaskContextMenu"
       @task-keydown="handleTaskKeydown"
       @start-timer="handleStartTimer"
+      @send-to-canvas="handleSendToCanvas"
+      @send-selected-to-canvas="sendSelectedToCanvas"
       @delete-selected="deleteSelectedTasks"
       @clear-selection="clearSelection"
     />
@@ -173,7 +175,9 @@ const {
   handleTaskKeydown,
   handleTaskContextMenu,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  sendTaskToCanvas,
+  sendSelectedToCanvas
 } = useUnifiedInboxActions(inboxTasks, props.context)
 
 // Handlers that require window/store access directly
@@ -181,6 +185,17 @@ const handleTaskDoubleClick = (task: Task) => {
   window.dispatchEvent(new CustomEvent('open-task-edit', {
     detail: { taskId: task.id }
   }))
+}
+
+// Send to Canvas handler - respects multi-select
+const handleSendToCanvas = (task: Task) => {
+  // If task is part of a multi-selection, send all selected tasks
+  if (selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1) {
+    sendSelectedToCanvas()
+  } else {
+    // Single task send
+    sendTaskToCanvas(task)
+  }
 }
 
 const handleStartTimer = async (task: Task) => {

@@ -10,10 +10,13 @@
  *
  * Routing Priority:
  * 1. Ollama (local) - Privacy-focused, free, fast for simple tasks
- * 2. DeepSeek - Cost-effective cloud, good for moderate tasks
- * 3. Claude (Anthropic) - Premium cloud, best for complex reasoning
+ * 2. Groq (proxy) - Fast cloud inference via Supabase Edge Function
+ * 3. OpenRouter (proxy) - Access to premium models (Claude, GPT-4) via proxy
+ *
+ * BUG-1131: All cloud API keys are kept server-side via Supabase Edge Functions.
  *
  * @see ROAD-011 in MASTER_PLAN.md - AI-Powered Features Roadmap
+ * @see BUG-1131 in MASTER_PLAN.md - Move All Exposed API Keys to Backend Proxy
  */
 
 import type {
@@ -33,8 +36,9 @@ import {
 import {
   OllamaProvider,
 } from './providers/ollama'
-import { DeepSeekProvider } from './providers/deepseek'
-import { ClaudeProvider } from './providers/claude'
+// BUG-1131: Proxy providers for secure API key handling (keys stay server-side)
+import { createGroqProxyProvider } from './providers/groqProxy'
+import { createOpenRouterProxyProvider } from './providers/openrouterProxy'
 
 // ============================================================================
 // Task Types - Determine routing strategy
@@ -43,7 +47,7 @@ import { ClaudeProvider } from './providers/claude'
 /**
  * Task type determines which provider is preferred.
  * Local tasks (chat, parsing) prefer Ollama.
- * Cloud tasks (complex reasoning) prefer Claude/DeepSeek.
+ * Cloud tasks (complex reasoning) prefer Groq/OpenRouter.
  */
 export type TaskType =
   | 'chat'              // General chat - prefers local
@@ -55,9 +59,12 @@ export type TaskType =
   | 'general'           // No preference
 
 /**
- * Router-specific provider type (extends AIProviderType).
+ * Router-specific provider type.
+ * - ollama: Local inference (free, private)
+ * - groq: Fast cloud inference via proxy (Llama, Mixtral)
+ * - openrouter: Premium models via proxy (Claude, GPT-4, etc.)
  */
-export type RouterProviderType = 'ollama' | 'deepseek' | 'claude'
+export type RouterProviderType = 'ollama' | 'groq' | 'openrouter'
 
 // ============================================================================
 // Router Configuration
@@ -91,9 +98,10 @@ export interface RouterConfig {
 
 /**
  * Default router configuration.
+ * Priority: Ollama (local) → Groq (fast cloud) → OpenRouter (premium fallback)
  */
 export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
-  providers: ['ollama', 'deepseek', 'claude'],
+  providers: ['ollama', 'groq', 'openrouter'],
   fallbackEnabled: true,
   preferLocal: true,
   maxRetries: 2,
@@ -139,11 +147,12 @@ export interface ProviderCostTracking {
 
 /**
  * Pricing per provider (per 1M tokens).
+ * OpenRouter pricing varies by model - using Claude 3.5 Sonnet as reference.
  */
 const PROVIDER_PRICING: Record<RouterProviderType, { input: number; output: number }> = {
-  ollama: { input: 0, output: 0 },        // Free (local)
-  deepseek: { input: 0.14, output: 0.28 }, // $0.14/$0.28 per 1M tokens
-  claude: { input: 3.00, output: 15.00 }   // Claude 3 Sonnet pricing
+  ollama: { input: 0, output: 0 },           // Free (local)
+  groq: { input: 0.59, output: 0.79 },       // Llama 3.3 70B pricing
+  openrouter: { input: 3.00, output: 15.00 } // Claude 3.5 Sonnet via OpenRouter
 }
 
 // ============================================================================
@@ -271,11 +280,11 @@ export class AIRouter {
       case 'ollama':
         return await this.createOllamaProvider()
 
-      case 'deepseek':
-        return await this.createDeepSeekProvider()
+      case 'groq':
+        return await this.createGroqProvider()
 
-      case 'claude':
-        return await this.createClaudeProvider()
+      case 'openrouter':
+        return await this.createOpenRouterProvider()
 
       default:
         this.log(`Unknown provider type: ${providerType}`)
@@ -285,9 +294,27 @@ export class AIRouter {
 
   /**
    * Create Ollama provider instance.
+   * BUG-1180: Skip detection on production domains to avoid CORS errors.
+   * Users can still use Ollama from production if they configure OLLAMA_ORIGINS.
    */
   private async createOllamaProvider(): Promise<OllamaProvider | null> {
     try {
+      // BUG-1180: Skip Ollama detection on production domains
+      // Localhost calls from production trigger CORS errors (localhost doesn't set Access-Control-Allow-Origin)
+      // Users who want Ollama from production must:
+      // 1. Set OLLAMA_ORIGINS=https://in-theflow.com (or *)
+      // 2. Set VITE_OLLAMA_HOST env var to enable detection
+      const isProduction = typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost') &&
+        !window.location.hostname.includes('127.0.0.1')
+
+      const forceOllama = !!import.meta.env.VITE_OLLAMA_HOST
+
+      if (isProduction && !forceOllama) {
+        this.log('Skipping Ollama detection on production domain (BUG-1180)')
+        return null
+      }
+
       // Check environment variable for Ollama URL
       const host = import.meta.env.VITE_OLLAMA_HOST || DEFAULT_OLLAMA_CONFIG.host
       const port = import.meta.env.VITE_OLLAMA_PORT
@@ -317,55 +344,48 @@ export class AIRouter {
   }
 
   /**
-   * Create DeepSeek provider instance.
+   * Create Groq provider instance.
+   * BUG-1131: Uses proxy to keep API key server-side.
    */
-  private async createDeepSeekProvider(): Promise<AIProvider | null> {
-    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY
-
-    if (!apiKey) {
-      this.log('DeepSeek API key not found (VITE_DEEPSEEK_API_KEY)')
-      return null
-    }
-
+  private async createGroqProvider(): Promise<AIProvider | null> {
     try {
-      const provider = new DeepSeekProvider({ apiKey })
-      const success = await provider.initialize()
+      this.log('Creating Groq proxy provider')
+      const proxyProvider = createGroqProxyProvider()
+      const proxySuccess = await proxyProvider.initialize()
 
-      if (!success) {
-        this.log('DeepSeek initialization failed')
-        return null
+      if (proxySuccess) {
+        this.log('Groq proxy provider initialized successfully')
+        return proxyProvider
       }
 
-      return provider
+      this.log('Groq proxy initialization failed - Edge Function may not be deployed or API key not configured')
+      return null
     } catch (error) {
-      this.log('Failed to create DeepSeek provider', error)
+      this.log('Failed to create Groq proxy provider', error)
       return null
     }
   }
 
   /**
-   * Create Claude (Anthropic) provider instance.
+   * Create OpenRouter provider instance.
+   * BUG-1131: Uses proxy to keep API key server-side.
+   * OpenRouter provides access to premium models (Claude, GPT-4, etc.)
    */
-  private async createClaudeProvider(): Promise<AIProvider | null> {
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-
-    if (!apiKey) {
-      this.log('Anthropic API key not found (VITE_ANTHROPIC_API_KEY)')
-      return null
-    }
-
+  private async createOpenRouterProvider(): Promise<AIProvider | null> {
     try {
-      const provider = new ClaudeProvider({ apiKey })
-      const success = await provider.initialize()
+      this.log('Creating OpenRouter proxy provider')
+      const proxyProvider = createOpenRouterProxyProvider()
+      const proxySuccess = await proxyProvider.initialize()
 
-      if (!success) {
-        this.log('Claude initialization failed')
-        return null
+      if (proxySuccess) {
+        this.log('OpenRouter proxy provider initialized successfully')
+        return proxyProvider
       }
 
-      return provider
+      this.log('OpenRouter proxy initialization failed - Edge Function may not be deployed or API key not configured')
+      return null
     } catch (error) {
-      this.log('Failed to create Claude provider', error)
+      this.log('Failed to create OpenRouter proxy provider', error)
       return null
     }
   }
@@ -433,38 +453,83 @@ export class AIRouter {
     this.ensureInitialized()
 
     const taskType = options.taskType ?? 'general'
-    const provider = await this.selectProvider(taskType, options)
 
-    if (!provider) {
-      throw new Error('No healthy AI providers available')
-    }
+    // Get ordered list of providers to try
+    const providerOrder = options.forceProvider
+      ? [options.forceProvider]
+      : this.getProviderOrder(taskType)
 
-    // Merge options with defaults
-    const generateOptions: GenerateOptions = {
-      model: options.model ?? (provider.type === 'ollama' ? 'llama3.2' : 'gpt-4'),
-      temperature: options.temperature,
-      maxTokens: options.maxTokens,
-      stopSequences: options.stopSequences,
-      systemPrompt: options.systemPrompt,
-      stream: true,
-      timeout: options.timeout,
-    }
+    let lastError: Error | null = null
 
-    try {
-      // Track that we started a request
-      const providerType = this.getProviderType(provider)
-      const tracking = this.costTracking.get(providerType)
-      if (tracking) {
-        tracking.totalRequests++
+    // Try each provider in order until one succeeds
+    for (const providerType of providerOrder) {
+      const provider = this.providers.get(providerType)
+      if (!provider) continue
+
+      // Check health before trying
+      const health = await this.getProviderHealth(providerType)
+      if (!health.isHealthy) {
+        this.log(`Skipping unhealthy provider: ${providerType}`)
+        continue
       }
 
-      for await (const chunk of provider.generateStream(messages, generateOptions)) {
-        yield chunk
+      // Merge options with defaults
+      const generateOptions: GenerateOptions = {
+        model: options.model ?? this.getDefaultModelForProvider(providerType),
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
+        stopSequences: options.stopSequences,
+        systemPrompt: options.systemPrompt,
+        stream: true,
+        timeout: options.timeout,
       }
-    } catch (error) {
-      // Note: Fallback is more complex for streams - not implemented yet
-      // Would need to restart the stream from the beginning
-      throw error
+
+      try {
+        this.log(`Trying streaming with provider: ${providerType}`)
+
+        // Track that we started a request
+        const tracking = this.costTracking.get(providerType)
+        if (tracking) {
+          tracking.totalRequests++
+        }
+
+        for await (const chunk of provider.generateStream(messages, generateOptions)) {
+          yield chunk
+        }
+
+        // If we got here, streaming succeeded - exit the loop
+        return
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        this.log(`Streaming failed for ${providerType}: ${lastError.message}`)
+
+        // If fallback is disabled, throw immediately
+        if (options.disableFallback) {
+          throw lastError
+        }
+
+        // Otherwise continue to next provider
+        continue
+      }
+    }
+
+    // All providers failed
+    throw lastError ?? new Error('All providers failed')
+  }
+
+  /**
+   * Get default model for a provider type.
+   */
+  private getDefaultModelForProvider(providerType: RouterProviderType): string {
+    switch (providerType) {
+      case 'ollama':
+        return 'llama3.2'
+      case 'groq':
+        return 'llama-3.3-70b-versatile'
+      case 'openrouter':
+        return 'anthropic/claude-3.5-sonnet'
+      default:
+        return 'llama3.2'
     }
   }
 

@@ -514,17 +514,13 @@ const saveGroup = async () => {
       const parentGroup = containingGroups[0]
       parentGroupId = parentGroup.id
 
-      // Convert absolute position to relative (relative to parent's top-left)
-      const parentX = parentGroup.position?.x ?? 0
-      const parentY = parentGroup.position?.y ?? 0
-      finalPosition = {
-        x: props.position.x - parentX,
-        y: props.position.y - parentY
-      }
-
-      console.log(`[BUG-153] Creating nested group inside "${parentGroup.name}" (${parentGroupId})`, {
+      // BUG-1127 FIX: Store ABSOLUTE position (not relative)
+      // The "Fully Absolute Architecture" stores absolute coordinates in DB
+      // Vue Flow conversion to relative happens in groupPositionToVueFlow()
+      // So we keep finalPosition as the absolute click position
+      console.log(`[BUG-1127] Creating nested group inside "${parentGroup.name}" (${parentGroupId})`, {
         absolutePos: { x: props.position.x, y: props.position.y },
-        relativePos: finalPosition
+        parentPos: { x: parentGroup.position?.x, y: parentGroup.position?.y }
       })
     }
 

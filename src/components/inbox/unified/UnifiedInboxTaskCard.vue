@@ -69,6 +69,13 @@
     <!-- Quick Actions (hover) -->
     <div class="task-actions">
       <button
+        class="action-btn send-to-canvas-btn"
+        title="Send to Canvas"
+        @click.stop="$emit('sendToCanvas')"
+      >
+        <Layout :size="12" />
+      </button>
+      <button
         class="action-btn"
         :title="`Start timer for ${task.title}`"
         @click.stop="$emit('startTimer')"
@@ -88,7 +95,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Timer, Calendar, Clock, Play, Edit2, CheckCircle2 } from 'lucide-vue-next'
+import { Timer, Calendar, Clock, Play, Edit2, CheckCircle2, Layout } from 'lucide-vue-next'
 // ADHD-friendly: Removed NTag - redundant with priority stripe
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
@@ -108,6 +115,7 @@ defineEmits<{
   (e: 'taskContextmenu', event: MouseEvent): void
   (e: 'taskKeydown', event: KeyboardEvent): void
   (e: 'startTimer'): void
+  (e: 'sendToCanvas'): void
 }>()
 
 const taskStore = useTaskStore()

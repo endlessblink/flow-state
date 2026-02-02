@@ -230,6 +230,66 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
+### BUG-1185: Timer Auto-Continues After Session Completes (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-02)
+
+**Problem**: Timer automatically starts a new 25-minute session after break/work completes, without waiting for user to choose "Start Work" or "+5 min".
+
+**Root Causes Found**:
+1. `completeSession()` in `timer.ts` did NOT save `is_active=false` to Supabase — session stayed active in DB, could be picked up by sync
+2. Service Worker notification body click auto-started opposite session type — accidental clicks triggered new sessions
+
+**Fix**:
+- Added DB save in `completeSession()` to mark session inactive (matching `stopTimer()` behavior)
+- Changed notification body click to only focus window, not start a timer (action buttons still work)
+
+**Files**: `src/stores/timer.ts`, `src/sw.ts`
+
+---
+
+### BUG-1184: Production Site Down - Chunk Load Failure + Network Errors (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
+
+**Problem**: Production site at `in-theflow.com` is broken with two critical issues:
+
+1. **Chunk Load Failure**:
+   ```
+   error loading dynamically imported module: https://in-theflow.com/assets/AllTasksView-BA62OH4U.js
+   ```
+
+2. **Network Errors on All Sync Operations**:
+   - `fetchActiveTimerSession`: NetworkError
+   - `fetchGroups`: NetworkError
+   - `fetchTasks`: NetworkError
+   - `fetchProjects`: NetworkError
+   - `fetchNotifications`: NetworkError
+   - `fetchQuickSortHistory`: NetworkError
+
+**Symptoms**:
+- UI loads but shows "No tasks yet"
+- Multiple sync error popups appear
+- All Supabase API calls fail with "NetworkError when attempting to fetch resource"
+
+**Likely Causes**:
+1. Stale build deployed - chunk hash mismatch between index.html and actual assets
+2. VPS Supabase service down or unreachable
+3. CORS misconfiguration after recent changes
+4. Caddy reverse proxy issue
+
+**Investigation Steps**:
+- [ ] Check if VPS is reachable: `ssh root@84.46.253.137`
+- [ ] Check Caddy status: `systemctl status caddy`
+- [ ] Check Supabase status: `cd /opt/supabase/docker && docker compose ps`
+- [ ] Check if chunk file exists: `ls -la /var/www/flowstate/assets/AllTasksView*`
+- [ ] Check CORS headers: `curl -I https://api.in-theflow.com/rest/v1/`
+- [ ] Redeploy if needed: `doppler run -- npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/`
+
+**Files**: VPS `/var/www/flowstate/`, `/etc/caddy/Caddyfile`, `/opt/supabase/docker/`
+
+---
+
 ### BUG-1113: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS | **Parent**: TASK-303

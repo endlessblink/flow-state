@@ -100,6 +100,9 @@ api.in-theflow.com {
         reverse_proxy localhost:8000 {
             header_up X-Forwarded-Proto https
             header_up X-Forwarded-Host api.in-theflow.com
+            # CRITICAL: WebSocket support for Supabase Realtime (BUG-1179)
+            header_up Connection {header.Connection}
+            header_up Upgrade {header.Upgrade}
             # CRITICAL: Remove Kong's CORS headers to prevent duplicates
             header_down -Access-Control-Allow-Origin
             header_down -Access-Control-Allow-Methods

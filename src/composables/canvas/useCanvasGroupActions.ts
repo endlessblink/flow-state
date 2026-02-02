@@ -60,12 +60,11 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         })
 
         const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
-        // Relaxed check: Logic doesn't strict depend on this being present for state update
+        const viewport = deps.viewport?.value || { x: 0, y: 0, zoom: 1 }
 
         // If no position provided, use viewport center
         let flowCoords: { x: number; y: number }
         if (!screenPos) {
-            const viewport = deps.viewport?.value || { x: 0, y: 0, zoom: 1 }
             // Note: Simplistic viewport center calculation if screenPos is missing
             flowCoords = {
                 x: -viewport.x / viewport.zoom + (window.innerWidth / 2) / viewport.zoom,
@@ -73,8 +72,29 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
             }
             console.log('[BUG-1126] No screenPos provided, using viewport center:', flowCoords)
         } else {
-            flowCoords = deps.screenToFlowCoordinate(screenPos)
-            console.log('[BUG-1126] screenPos provided, converted to flow coords:', { screenPos, flowCoords })
+            // BUG-1126 FIX: Manual coordinate conversion to ensure accuracy
+            // screenToFlowCoordinate may have issues with container offset detection
+            if (vueFlowElement) {
+                const containerRect = vueFlowElement.getBoundingClientRect()
+                // Convert screen coords to container-relative, then to flow coords
+                const containerX = screenPos.x - containerRect.left
+                const containerY = screenPos.y - containerRect.top
+                flowCoords = {
+                    x: (containerX - viewport.x) / viewport.zoom,
+                    y: (containerY - viewport.y) / viewport.zoom
+                }
+                console.log('[BUG-1126] Manual conversion:', {
+                    screenPos,
+                    containerRect: { left: containerRect.left, top: containerRect.top },
+                    containerRelative: { x: containerX, y: containerY },
+                    viewport,
+                    flowCoords
+                })
+            } else {
+                // Fallback to Vue Flow's built-in conversion
+                flowCoords = deps.screenToFlowCoordinate(screenPos)
+                console.log('[BUG-1126] Fallback to screenToFlowCoordinate:', { screenPos, flowCoords })
+            }
         }
 
         console.log('[BUG-1126] Setting groupModalPosition to:', flowCoords)

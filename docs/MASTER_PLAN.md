@@ -190,6 +190,37 @@
 
 ---
 
+### TASK-1183: Fix Tauri Production Sync Version Conflicts (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
+
+**Problem**: Tauri desktop app in production shows "Sync Errors - Version conflict - entity was modified by another device" when syncing with Supabase.
+
+**Requirements**:
+- **Bidirectional sync**: Tauri ↔ VPS ↔ Web (changes flow both directions)
+- **Single source of truth**: VPS Supabase is authoritative
+- **Multi-device support**: Same user on multiple devices must stay in sync
+
+**Symptoms**:
+- "0 operations failed" but shows version conflict error
+- Occurs when same user is on multiple devices/instances
+- Retry All button present but root cause needs fixing
+
+**Root Cause Analysis** (2026-02-02):
+1. Optimistic locking uses `position_version` column
+2. Conflict detected when UPDATE returns 0 rows (version mismatch)
+3. Error generated in `useSyncOrchestrator.ts:237-245`
+
+**Investigation Areas**:
+1. Is `position_version` incremented properly by DB trigger?
+2. Is Tauri getting stale versions due to realtime drops (see BUG-1179)?
+3. Are offline queue operations using outdated `baseVersion` values?
+4. Race condition between realtime updates and local writes?
+
+**Related**: TASK-1177 (Offline-First Sync), BUG-1179 (Realtime Drops)
+
+---
+
 ### BUG-1113: Stale Worktrees Not Cleaned Up - Forces Claude Code Context Bloat (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS | **Parent**: TASK-303
@@ -299,9 +330,9 @@ The notification with action buttons comes from Service Worker (not Tauri native
 
 ---
 
-### BUG-1179: Supabase Realtime Connection Drops (CHANNEL_ERROR/CLOSED) (📋 PLANNED)
+### BUG-1179: Supabase Realtime Connection Drops (CHANNEL_ERROR/CLOSED) (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-02)
 
 **Problem**: Production console shows repeated realtime connection drops:
 ```
@@ -311,21 +342,41 @@ The notification with action buttons comes from Service Worker (not Tauri native
 
 **Impact**: Causes `saveTasks` failures and potential data loss if writes happen during disconnect.
 
-**Investigation Needed**:
-1. Check if reconnection logic in `useRealtimeSync.ts` is working
-2. Verify VPS Caddy WebSocket headers are still correct
-3. Check Cloudflare WebSocket settings (not proxying WS correctly?)
-4. Add connection state monitoring to SyncStatusIndicator
+**Root Cause Found** (2026-02-02):
+VPS Caddy config is **missing WebSocket upgrade headers**. Compare:
+- SOP-023 (local tunnel): Has `header_up Connection` + `header_up Upgrade`
+- SOP-031 (VPS production): Missing these headers
+
+Without upgrade headers, Caddy doesn't properly pass WebSocket handshake to Supabase Realtime.
+
+**Fix Required** (VPS action):
+SSH into VPS and add to `/etc/caddy/Caddyfile` under the `reverse_proxy` block:
+```caddyfile
+reverse_proxy localhost:8000 {
+    header_up X-Forwarded-Proto https
+    header_up X-Forwarded-Host api.in-theflow.com
+    # ADD THESE TWO LINES:
+    header_up Connection {header.Connection}
+    header_up Upgrade {header.Upgrade}
+    # ... existing header_down lines
+}
+```
+
+Then: `systemctl reload caddy`
+
+**Also Check**:
+- Cloudflare WebSocket support (should be enabled by default for proxied domains)
+- Cloudflare idle timeout is 100 seconds - may need Supabase heartbeat config
 
 **Related**: TASK-1177 (Offline-First Sync), BUG-1106 (Realtime Init)
 
-**Files**: `src/composables/sync/useRealtimeSync.ts`, `src/stores/syncStatus.ts`
+**Files**: VPS `/etc/caddy/Caddyfile`, `docs/sop/SOP-031-cors-configuration.md`
 
 ---
 
-### BUG-1180: Ollama Localhost CORS Errors in Production (📋 PLANNED)
+### BUG-1180: Ollama Localhost CORS Errors in Production (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-02)
 
 **Problem**: Production site (`in-theflow.com`) attempts to call `localhost:11434` (Ollama), which fails with CORS:
 ```
@@ -335,14 +386,15 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 
 **Root Cause**: AI provider detection runs in browser, checks if Ollama is available locally. Works on localhost dev, but CORS blocks it from production domain.
 
-**Fix Options**:
-1. **User-side**: Configure Ollama with `OLLAMA_ORIGINS=https://in-theflow.com`
-2. **App-side**: Route Ollama calls through Supabase Edge Function proxy
-3. **App-side**: Skip Ollama detection in production (only check on localhost)
+**Fix Applied** (2026-02-02):
+- Added production domain check in `createOllamaProvider()` - skips Ollama detection when:
+  - Running on non-localhost domain AND
+  - `VITE_OLLAMA_HOST` env var is NOT set
+- Users who want Ollama from production can set `OLLAMA_ORIGINS=https://in-theflow.com` on their Ollama instance AND set `VITE_OLLAMA_HOST` to enable detection
 
-**Recommended**: Option 3 (skip detection) + Option 2 (proxy) for users who want production Ollama access.
+**Files Changed**: `src/services/ai/router.ts`
 
-**Files**: `src/services/ai/providers/index.ts`, `src/services/ai/router.ts`
+**Awaiting**: User verification on production
 
 ---
 
@@ -1029,6 +1081,26 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 **Verified**: Plasma restarted, widget displays correctly.
 
 **File**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+
+---
+
+### ~~TASK-1121~~: QuickTaskCreateModal UI/UX Redesign (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-02)
+
+**Problem**: Modal had inconsistent styling - inputs had no visible borders, multiple different border-radii (6px/8px/16px), hardcoded rgba colors violating design token system, low placeholder contrast failing WCAG, and inconsistent visual hierarchy between sections.
+
+**Changes Made**:
+- Unified all inputs with glass container styling (visible borders + rounded corners)
+- Standardized ALL border-radii to `var(--radius-md)` (8px)
+- Replaced 10+ hardcoded rgba() colors with `--purple-*` and `--glass-*` tokens
+- Fixed placeholder contrast (opacity 0.5 → 0.8, color to `--text-tertiary`)
+- Removed "SCHEDULE" / "DETAILS" section labels (visual noise)
+- Progressive voice disclosure (mic button fades in on focus/hover)
+- RTL support with logical CSS properties (`inset-inline-start`, etc.)
+- Removed purple gradient box around Schedule section (equal visual weight)
+
+**Files**: `src/components/tasks/QuickTaskCreateModal.vue`
 
 ---
 

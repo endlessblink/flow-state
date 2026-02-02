@@ -5,7 +5,7 @@
     :description="message"
     size="sm"
     variant="danger"
-    :show-footer="false"
+    :show-footer="true"
     close-on-overlay-click
     close-on-escape
     submit-on-enter
@@ -134,6 +134,8 @@ const handleAfterOpen = () => {
   padding: var(--space-4);
   margin-bottom: var(--space-6);
   text-align: left;
+  max-height: 40vh;
+  overflow-y: auto;
 }
 
 /* Center the main modal message content */

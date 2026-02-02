@@ -195,6 +195,7 @@
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
+    "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-notification": "^2.3.3",
@@ -241,7 +242,12 @@
     "vue-cal": "^4.10.2",
     "vue-i18n": "^9.14.5",
     "vue-router": "^4.6.4",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "workbox-expiration": "^7.4.0",
+    "workbox-precaching": "^7.4.0",
+    "workbox-routing": "^7.4.0",
+    "workbox-strategies": "^7.4.0",
+    "workbox-window": "^7.4.0"
   },
   "devDependencies": {
     "@intlify/unplugin-vue-i18n": "^11.0.1",

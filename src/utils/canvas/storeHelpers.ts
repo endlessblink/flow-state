@@ -195,6 +195,40 @@ export const getTaskCountInGroupRecursive = (groupId: string, groups: CanvasGrou
 }
 
 /**
+ * Get parent chain for a group (bottom-up: child -> parent -> grandparent)
+ * Cycle-safe via visited set.
+ *
+ * TASK-1177: Used for property inheritance in nested groups.
+ * When a task is dropped into a child group, we traverse up the chain
+ * to collect properties from all ancestor groups.
+ *
+ * @param groupId - The starting group ID
+ * @param groups - All canvas groups
+ * @param maxDepth - Maximum depth to traverse (default: 10)
+ * @returns Array of groups from child to root [child, parent, grandparent, ...]
+ */
+export function getParentChain(
+    groupId: string,
+    groups: CanvasGroup[],
+    maxDepth: number = 10
+): CanvasGroup[] {
+    const chain: CanvasGroup[] = []
+    const visited = new Set<string>()
+    let current = groups.find(g => g.id === groupId)
+
+    while (current && chain.length < maxDepth) {
+        if (visited.has(current.id)) break // Cycle detected
+        visited.add(current.id)
+        chain.push(current)
+
+        if (!current.parentGroupId || current.parentGroupId === 'NONE') break
+        current = groups.find(g => g.id === current!.parentGroupId)
+    }
+
+    return chain // [child, parent, grandparent, ...]
+}
+
+/**
  * Get all descendant group IDs for a given root group (depth-first)
  */
 export const getAllDescendantGroupIds = (rootGroupId: string, groups: CanvasGroup[]): string[] => {

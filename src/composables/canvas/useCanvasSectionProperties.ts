@@ -1,10 +1,12 @@
 import type { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
+import type { CanvasGroup } from '@/types/canvas'
 import { type CanvasSection } from '@/stores/canvas'
 import { shouldUseSmartGroupLogic, detectPowerKeyword } from '../useTaskSmartGroups'
 import { resolveDueDate } from '../useGroupSettings'
 import { formatDateKey } from '@/utils/dateUtils'
 import { DURATION_DEFAULTS, type DurationCategory } from '@/utils/durationCategories'
+import { getParentChain } from '@/utils/canvas/storeHelpers'
 
 interface SectionPropertiesDeps {
     taskStore: ReturnType<typeof useTaskStore>
@@ -14,9 +16,11 @@ interface SectionPropertiesDeps {
 export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
     const { taskStore, getAllContainingSections } = deps
 
-    // Helper: Get properties from a single section based on its name/settings
+    // ================================================================
+    // Helper: Get properties from a SINGLE section based on its name/settings
     // TASK-283 FIX: Always detect from section name FIRST, then let assignOnDrop override
-    const getSectionProperties = (section: CanvasSection): Partial<Task> => {
+    // ================================================================
+    const getSingleSectionProperties = (section: CanvasSection): Partial<Task> => {
         const updates: Partial<Task> = {}
         const today = new Date()
         const lowerName = section.name.toLowerCase().trim()
@@ -132,6 +136,48 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         }
 
         return updates
+    }
+
+    // ================================================================
+    // TASK-1177: Get section properties WITH parent chain inheritance
+    // When a task is dropped into a nested child group, properties are
+    // inherited from ALL ancestors (root → parent → child).
+    // Child properties override parent properties.
+    // ================================================================
+    const getSectionProperties = (
+        section: CanvasSection,
+        allGroups?: CanvasGroup[]
+    ): Partial<Task> => {
+        // If no allGroups provided, use single-section behavior (backward compatible)
+        if (!allGroups || allGroups.length === 0) {
+            return getSingleSectionProperties(section)
+        }
+
+        // Build parent chain and merge properties (root -> child order)
+        // getParentChain returns [child, parent, grandparent, ...]
+        const chain = getParentChain(section.id, allGroups)
+
+        if (chain.length === 0) {
+            return getSingleSectionProperties(section)
+        }
+
+        const mergedUpdates: Partial<Task> = {}
+
+        // Process from ROOT to CHILD (reverse) so child overwrites parent
+        // This ensures child properties take precedence
+        for (let i = chain.length - 1; i >= 0; i--) {
+            const props = getSingleSectionProperties(chain[i] as CanvasSection)
+            Object.assign(mergedUpdates, props)
+        }
+
+        if (import.meta.env.DEV && chain.length > 1) {
+            console.log(`[CANVAS:SECTION-PROPS] Inherited from ${chain.length} levels:`,
+                chain.map(g => g.name).reverse().join(' → '),
+                mergedUpdates
+            )
+        }
+
+        return mergedUpdates
     }
 
     // Helper: Apply properties from ALL containing sections (nested group inheritance)

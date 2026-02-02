@@ -710,11 +710,17 @@ export function useCanvasInteractions(deps?: {
 
                     // 6. Collect Smart Section Properties (Today, Tomorrow, Priorities, etc.)
                     // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
+                    // TASK-1177: Pass allGroups to enable parent chain property inheritance
                     if (targetGroup) {
                         if (import.meta.env.DEV) {
                             console.log(`[CANVAS:INTERACT] Smart Group check - Group: "${targetGroup.name}", Task: "${task.title}"`)
                         }
-                        const smartUpdates = getSectionProperties(targetGroup as CanvasSection)
+                        // TASK-1177: Pass allGroups to getSectionProperties for parent chain inheritance
+                        // This allows child groups to inherit properties (like dueDate) from parent groups
+                        const smartUpdates = getSectionProperties(
+                            targetGroup as CanvasSection,
+                            taskAllGroups as CanvasGroup[]
+                        )
                         if (import.meta.env.DEV) {
                             console.log(`[CANVAS:INTERACT] Smart updates:`, smartUpdates)
                         }

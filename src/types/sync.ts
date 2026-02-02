@@ -183,6 +183,9 @@ export interface SyncResult {
 
   /** Whether we should retry */
   shouldRetry?: boolean
+
+  /** Server data (returned when LWW resolves in server's favor) */
+  serverData?: Record<string, unknown>
 }
 
 /**

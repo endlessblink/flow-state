@@ -190,9 +190,9 @@
 
 ---
 
-### TASK-1183: Fix Tauri Production Sync Version Conflicts (🔄 IN PROGRESS)
+### TASK-1183: Fix Tauri Production Sync Version Conflicts (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-02)
 
 **Problem**: Tauri desktop app in production shows "Sync Errors - Version conflict - entity was modified by another device" when syncing with Supabase.
 
@@ -201,23 +201,32 @@
 - **Single source of truth**: VPS Supabase is authoritative
 - **Multi-device support**: Same user on multiple devices must stay in sync
 
-**Symptoms**:
-- "0 operations failed" but shows version conflict error
-- Occurs when same user is on multiple devices/instances
-- Retry All button present but root cause needs fixing
+**Root Cause Found** (2026-02-02):
+1. **BUG-1179** (Realtime drops) causes local `positionVersion` to become stale
+2. Code uses **local cached version** (`task.positionVersion || 0`) at `taskOperations.ts:285`
+3. When realtime drops, Device B has stale version (e.g., 4) while server has 5
+4. UPDATE with `WHERE position_version = 4` returns 0 rows → false conflict
 
-**Root Cause Analysis** (2026-02-02):
-1. Optimistic locking uses `position_version` column
-2. Conflict detected when UPDATE returns 0 rows (version mismatch)
-3. Error generated in `useSyncOrchestrator.ts:237-245`
+**Fix Applied** (2026-02-02):
+Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrchestrator.ts`:
 
-**Investigation Areas**:
-1. Is `position_version` incremented properly by DB trigger?
-2. Is Tauri getting stale versions due to realtime drops (see BUG-1179)?
-3. Are offline queue operations using outdated `baseVersion` values?
-4. Race condition between realtime updates and local writes?
+1. Try UPDATE with optimistic lock first (existing behavior)
+2. If 0 rows returned (conflict), fetch current server state
+3. Compare timestamps: `local.updated_at` vs `server.updated_at`
+4. If local timestamp ≥ server: Force update without version check (local wins)
+5. If server timestamp > local: Accept server version (stale local discarded)
 
-**Related**: TASK-1177 (Offline-First Sync), BUG-1179 (Realtime Drops)
+**Benefits**:
+- No user-facing "version conflict" errors
+- Bidirectional sync works correctly
+- Single source of truth (VPS) respected
+- Handles offline/reconnect scenarios gracefully
+
+**Files Changed**:
+- `src/composables/sync/useSyncOrchestrator.ts` - Added LWW resolution logic
+- `src/types/sync.ts` - Added `serverData` to SyncResult type
+
+**Related**: BUG-1179 (Realtime Drops) - should still be fixed to reduce conflicts
 
 ---
 
@@ -342,35 +351,32 @@ The notification with action buttons comes from Service Worker (not Tauri native
 
 **Impact**: Causes `saveTasks` failures and potential data loss if writes happen during disconnect.
 
-**Root Cause Found** (2026-02-02):
-VPS Caddy config is **missing WebSocket upgrade headers**. Compare:
-- SOP-023 (local tunnel): Has `header_up Connection` + `header_up Upgrade`
-- SOP-031 (VPS production): Missing these headers
+**Investigation Results** (2026-02-02):
+1. ✅ VPS Caddy WebSocket headers already correct (checked `/etc/caddy/Caddyfile`)
+2. 🔍 Supabase Realtime logs show: `Killing X transport pids with no channels open`
+3. 🔍 Cloudflare has 100-second idle timeout for WebSockets
+4. ❌ Supabase client had NO realtime configuration (using defaults)
 
-Without upgrade headers, Caddy doesn't properly pass WebSocket handshake to Supabase Realtime.
+**Root Cause**: Default Supabase heartbeat interval (25s) may be too infrequent, and idle connections are being killed by Supabase Realtime garbage collection.
 
-**Fix Required** (VPS action):
-SSH into VPS and add to `/etc/caddy/Caddyfile` under the `reverse_proxy` block:
-```caddyfile
-reverse_proxy localhost:8000 {
-    header_up X-Forwarded-Proto https
-    header_up X-Forwarded-Host api.in-theflow.com
-    # ADD THESE TWO LINES:
-    header_up Connection {header.Connection}
-    header_up Upgrade {header.Upgrade}
-    # ... existing header_down lines
+**Fix Applied** (2026-02-02):
+Added realtime configuration to Supabase client in `src/services/auth/supabase.ts`:
+```typescript
+realtime: {
+    heartbeatIntervalMs: 15000,  // More frequent heartbeats (was 25s)
+    reconnectAfterMs: (tries) => Math.min(1000 * Math.pow(2, tries), 30000),
+    log_level: import.meta.env.DEV ? 'info' : 'error',
 }
 ```
 
-Then: `systemctl reload caddy`
-
-**Also Check**:
-- Cloudflare WebSocket support (should be enabled by default for proxied domains)
-- Cloudflare idle timeout is 100 seconds - may need Supabase heartbeat config
+**Awaiting**: User verification - monitor console for connection drops after refresh
 
 **Related**: TASK-1177 (Offline-First Sync), BUG-1106 (Realtime Init)
 
-**Files**: VPS `/etc/caddy/Caddyfile`, `docs/sop/SOP-031-cors-configuration.md`
+**Files Changed**: `src/services/auth/supabase.ts`
+
+**Sources**:
+- [Supabase Realtime Heartbeat Docs](https://supabase.com/docs/guides/troubleshooting/realtime-heartbeat-messages)
 
 ---
 
@@ -441,6 +447,30 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Blocked By**: TASK-1177
 
 **Files**: `src/stores/tasks/taskOperations.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
+### ~~BUG-1183~~: Production App Crash - Circular Dependency in Vite Chunks (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-02)
+
+**Problem**: Production app crashes on load with error:
+```
+ReferenceError: can't access lexical declaration 'Ie' before initialization
+    Ye vue-vendor-DkWNH6qz.js:2
+    <anonymous> naive-ui-CbR0xL5r.js:33
+```
+
+**Root Cause**: Vite's manualChunks split `naive-ui` and `vue-vendor` into separate chunks. When loaded in parallel, naive-ui tried to access Vue before it was initialized.
+
+**Fix Applied**: Combined naive-ui into vue-vendor chunk in `vite.config.ts`:
+```typescript
+if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router') || id.includes('naive-ui')) {
+  return 'vue-vendor'
+}
+```
+
+**Files Changed**: `vite.config.ts`
 
 ---
 

@@ -674,20 +674,20 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### BUG-1126: Group Created at Wrong Location (Not Where Clicked) (🔄 IN PROGRESS)
+### ~~BUG-1126~~: Group Created at Wrong Location (Not Where Clicked) (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-02)
 
-**Problem**: When right-clicking on the canvas to create a new group, the group does not appear at the clicked location. It appears at a different position instead.
+**Problem**: When right-clicking on the canvas to create a new group, the group does not appear at the clicked location.
 
-**Expected Behavior**: New group should be created at the exact canvas coordinates where the user right-clicked.
+**Root Cause**: `screenToFlowCoordinate` had issues with container offset detection. Also, `canvasGroups.ts` was hardcoding `parentGroupId: null` and `UnifiedGroupModal.vue` was converting to relative coords instead of keeping absolute (violating Fully Absolute Architecture).
 
-**Investigation Needed**:
-- Check context menu coordinate capture in canvas right-click handler
-- Verify coordinate transformation from screen/viewport to canvas coordinates
-- Review group creation in `useCanvasActions.ts` or `useCanvasGroups.ts`
+**Fix**:
+- Manual coordinate conversion using `getBoundingClientRect()` in `useCanvasGroupActions.ts`
+- Preserved `parentGroupId` from groupData in `canvasGroups.ts`
+- Kept absolute position for nested groups in `UnifiedGroupModal.vue`
 
-**Files**: `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasActions.ts`, `src/composables/canvas/useCanvasGroups.ts`
+**Files**: `src/composables/canvas/useCanvasGroupActions.ts`, `src/stores/canvas/canvasGroups.ts`, `src/components/canvas/UnifiedGroupModal.vue`
 
 ---
 

@@ -9,7 +9,9 @@ import XpBar from './XpBar.vue'
 import LevelBadge from './LevelBadge.vue'
 import StreakCounter from './StreakCounter.vue'
 import AchievementBadge from './AchievementBadge.vue'
-import { Trophy, ShoppingBag, ChevronRight, Sparkles } from 'lucide-vue-next'
+import { Trophy, ShoppingBag, ChevronRight, Sparkles, HelpCircle, ChevronDown } from 'lucide-vue-next'
+
+const showHelp = ref(false)
 
 const emit = defineEmits<{
   openAchievements: []
@@ -112,6 +114,66 @@ const totalCount = computed(() => gamificationStore.achievements.length)
           class="empty-icon"
         />
         <span>Complete tasks to earn achievements!</span>
+      </div>
+    </div>
+
+    <!-- How It Works Section -->
+    <div class="panel-section help-section">
+      <button
+        class="help-toggle"
+        @click="showHelp = !showHelp"
+      >
+        <HelpCircle :size="16" />
+        <span>How to Earn XP</span>
+        <ChevronDown
+          :size="14"
+          class="help-chevron"
+          :class="{ 'rotated': showHelp }"
+        />
+      </button>
+
+      <div v-if="showHelp" class="help-content">
+        <div class="help-category">
+          <span class="help-category-title">🎯 Tasks</span>
+          <ul class="help-list">
+            <li><span class="xp-badge">+10 XP</span> Complete any task</li>
+            <li><span class="xp-badge bonus">+50%</span> High priority tasks</li>
+            <li><span class="xp-badge bonus">+25%</span> Medium priority tasks</li>
+            <li><span class="xp-badge penalty">-10%</span> Overdue tasks</li>
+          </ul>
+        </div>
+
+        <div class="help-category">
+          <span class="help-category-title">🍅 Pomodoros</span>
+          <ul class="help-list">
+            <li><span class="xp-badge">+25 XP</span> Complete a Pomodoro</li>
+            <li><span class="xp-badge bonus">+10%</span> Each consecutive session (max +50%)</li>
+          </ul>
+        </div>
+
+        <div class="help-category">
+          <span class="help-category-title">🔥 Streaks</span>
+          <ul class="help-list">
+            <li><span class="xp-badge">+50 XP</span> 7-day streak</li>
+            <li><span class="xp-badge">+150 XP</span> 30-day streak</li>
+            <li><span class="xp-badge">+300 XP</span> 100-day streak</li>
+            <li><span class="xp-badge">+500 XP</span> 365-day streak</li>
+          </ul>
+        </div>
+
+        <div class="help-category">
+          <span class="help-category-title">🏆 Achievements</span>
+          <ul class="help-list">
+            <li><span class="xp-badge bronze">+50 XP</span> Bronze tier</li>
+            <li><span class="xp-badge silver">+150 XP</span> Silver tier</li>
+            <li><span class="xp-badge gold">+300 XP</span> Gold tier</li>
+            <li><span class="xp-badge platinum">+500 XP</span> Platinum tier</li>
+          </ul>
+        </div>
+
+        <p class="help-tip">
+          💡 Spend XP in the <strong>Shop</strong> to unlock themes and cosmetics!
+        </p>
       </div>
     </div>
   </div>
@@ -263,5 +325,155 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
 .empty-icon {
   color: rgba(var(--neon-cyan), 0.4);
+}
+
+/* Help Section */
+.help-section {
+  border-top: 1px solid rgba(var(--color-slate-600), 0.3);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.help-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--gamification-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.help-toggle:hover {
+  background: rgba(var(--color-slate-700), 0.3);
+  color: var(--gamification-text-primary);
+}
+
+.help-chevron {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.help-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: rgba(var(--color-slate-800), 0.4);
+  border-radius: var(--radius-md);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.help-category {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.help-category-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--gamification-text-primary);
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.help-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--gamification-text-secondary);
+}
+
+.xp-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: rgba(var(--neon-cyan), 0.15);
+  border: 1px solid rgba(var(--neon-cyan), 0.3);
+  border-radius: var(--radius-sm);
+  color: rgba(var(--neon-cyan), 0.9);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  min-width: 50px;
+  justify-content: center;
+}
+
+.xp-badge.bonus {
+  background: rgba(var(--neon-lime), 0.15);
+  border-color: rgba(var(--neon-lime), 0.3);
+  color: rgba(var(--neon-lime), 0.9);
+}
+
+.xp-badge.penalty {
+  background: rgba(255, 100, 100, 0.15);
+  border-color: rgba(255, 100, 100, 0.3);
+  color: rgba(255, 100, 100, 0.9);
+}
+
+.xp-badge.bronze {
+  background: rgba(var(--tier-bronze), 0.15);
+  border-color: rgba(var(--tier-bronze), 0.3);
+  color: rgb(var(--tier-bronze));
+}
+
+.xp-badge.silver {
+  background: rgba(var(--tier-silver), 0.15);
+  border-color: rgba(var(--tier-silver), 0.3);
+  color: rgb(var(--tier-silver));
+}
+
+.xp-badge.gold {
+  background: rgba(var(--tier-gold), 0.15);
+  border-color: rgba(var(--tier-gold), 0.3);
+  color: rgb(var(--tier-gold));
+}
+
+.xp-badge.platinum {
+  background: rgba(var(--tier-platinum), 0.15);
+  border-color: rgba(var(--tier-platinum), 0.3);
+  color: rgb(var(--tier-platinum));
+}
+
+.help-tip {
+  margin: 0;
+  padding: var(--space-2);
+  background: rgba(var(--neon-magenta), 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--gamification-text-secondary);
+}
+
+.help-tip strong {
+  color: rgba(var(--neon-magenta), 0.9);
 }
 </style>

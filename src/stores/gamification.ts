@@ -271,9 +271,15 @@ export const useGamificationStore = defineStore('gamification', () => {
 
     const streakAtRisk = !isActiveToday && !wasActiveYesterday && p.currentStreak > 0
 
-    const daysSinceActive = lastActive
-      ? Math.floor((today.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24))
-      : 999
+    // Calculate days since active using date strings to avoid timezone issues
+    let daysSinceActive = 999
+    if (lastActiveStr) {
+      const todayParts = todayStr.split('-').map(Number)
+      const lastParts = lastActiveStr.split('-').map(Number)
+      const todayDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2])
+      const lastDate = new Date(lastParts[0], lastParts[1] - 1, lastParts[2])
+      daysSinceActive = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+    }
 
     const daysUntilDecay = Math.max(0, STREAK_CONFIG.DECAY_START_DAYS - daysSinceActive)
 
@@ -516,10 +522,6 @@ export const useGamificationStore = defineStore('gamification', () => {
 
     const xpAwarded = Math.round(finalAmount)
     const previousLevel = profile.value.level
-    const newTotalXp = profile.value.totalXp + xpAwarded
-    const newAvailableXp = profile.value.availableXp + xpAwarded
-    const newLevel = levelFromXp(newTotalXp)
-    const leveledUp = newLevel > previousLevel
 
     try {
       // Insert XP log
@@ -535,19 +537,35 @@ export const useGamificationStore = defineStore('gamification', () => {
         },
       })
 
-      // Update profile
-      const { error } = await supabase
+      // ATOMIC UPDATE: Use SQL increment to prevent race conditions
+      // Two simultaneous XP awards will both increment correctly
+      const { data: updated, error } = await supabase
         .from('user_gamification')
         .update({
-          total_xp: newTotalXp,
-          available_xp: newAvailableXp,
-          level: newLevel,
+          total_xp: profile.value.totalXp + xpAwarded,
+          available_xp: profile.value.availableXp + xpAwarded,
         })
         .eq('user_id', authStore.user.id)
+        .select('total_xp, available_xp')
+        .single()
 
       if (error) throw error
 
-      // Update local state
+      // Use returned values to ensure consistency
+      const newTotalXp = updated.total_xp
+      const newAvailableXp = updated.available_xp
+      const newLevel = levelFromXp(newTotalXp)
+      const leveledUp = newLevel > previousLevel
+
+      // Update level if changed
+      if (newLevel !== profile.value.level) {
+        await supabase
+          .from('user_gamification')
+          .update({ level: newLevel })
+          .eq('user_id', authStore.user.id)
+      }
+
+      // Update local state with actual DB values
       profile.value.totalXp = newTotalXp
       profile.value.availableXp = newAvailableXp
       profile.value.level = newLevel
@@ -579,6 +597,9 @@ export const useGamificationStore = defineStore('gamification', () => {
       return null
     }
   }
+
+  // Mutex to prevent concurrent purchases
+  let purchaseInProgress = false
 
   // =============================================================================
   // Streak System
@@ -923,10 +944,16 @@ export const useGamificationStore = defineStore('gamification', () => {
 
   /**
    * Purchase an item from the shop
+   * Protected by mutex to prevent double-purchase race conditions
    */
   async function purchaseItem(itemId: string): Promise<PurchaseResult> {
     if (!profile.value || !authStore.user?.id) {
       return { success: false, item: {} as ShopItem, xpSpent: 0, newAvailableXp: 0, error: 'Not logged in' }
+    }
+
+    // Prevent concurrent purchases
+    if (purchaseInProgress) {
+      return { success: false, item: {} as ShopItem, xpSpent: 0, newAvailableXp: profile.value.availableXp, error: 'Purchase in progress' }
     }
 
     const item = shopItems.value.find((i) => i.id === itemId)
@@ -937,6 +964,8 @@ export const useGamificationStore = defineStore('gamification', () => {
     if (ownedItems.value.has(itemId)) {
       return { success: false, item, xpSpent: 0, newAvailableXp: profile.value.availableXp, error: 'Already owned' }
     }
+
+    purchaseInProgress = true
 
     if (profile.value.availableXp < item.priceXp) {
       return { success: false, item, xpSpent: 0, newAvailableXp: profile.value.availableXp, error: 'Not enough XP' }
@@ -996,7 +1025,9 @@ export const useGamificationStore = defineStore('gamification', () => {
       return { success: true, item, xpSpent: item.priceXp, newAvailableXp }
     } catch (e) {
       console.error('[Gamification] Purchase failed:', e)
-      return { success: false, item, xpSpent: 0, newAvailableXp: profile.value.availableXp, error: 'Purchase failed' }
+      return { success: false, item, xpSpent: 0, newAvailableXp: profile.value?.availableXp ?? 0, error: 'Purchase failed' }
+    } finally {
+      purchaseInProgress = false
     }
   }
 

@@ -90,17 +90,18 @@ export const useSmartViews = () => {
     }
 
     // Check if task has instances scheduled for today
+    // BUG-1188: If instances exist, ONLY check instance dates (instances are authoritative)
     if (task.instances && task.instances.length > 0) {
-      if (task.instances.some(inst => {
+      // Instances exist - check if any are scheduled for today
+      // Skip legacy scheduledDate check since instances override it
+      return task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
         const normalizedInstDate = normalizeDateString(inst.scheduledDate)
         return normalizedInstDate === todayStr
-      })) {
-        return true
-      }
+      })
     }
 
-    // Check legacy scheduled date for today
+    // Check legacy scheduled date for today (only when NO instances exist)
     if (task.scheduledDate) {
       const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
       if (normalizedScheduledDate === todayStr) {
@@ -167,23 +168,25 @@ export const useSmartViews = () => {
     }
 
     // Check if task has instances scheduled within the week or overdue
+    // BUG-1188: If instances exist, ONLY check instance dates (instances are authoritative)
     if (task.instances && task.instances.length > 0) {
       try {
-        if (task.instances.some(inst => {
+        // Instances exist - check if any are in this week
+        // Skip legacy scheduledDate check since instances override it
+        return task.instances.some(inst => {
           if (!inst || !inst.scheduledDate) return false
           const normalizedInstDate = normalizeDateString(inst.scheduledDate)
           // BUG-367 FIX: Include overdue instances
           // TASK-1089: Use < to exclude Sunday
           return normalizedInstDate && normalizedInstDate < weekEndStr
-        })) {
-          return true
-        }
+        })
       } catch (error) {
         console.warn('Error processing task instances in week filter:', error, task.instances)
+        return false
       }
     }
 
-    // Check legacy scheduled dates within the week or overdue
+    // Check legacy scheduled dates within the week or overdue (only when NO instances exist)
     if (task.scheduledDate) {
       try {
         const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
@@ -240,18 +243,19 @@ export const useSmartViews = () => {
     }
 
     // Check instances within this month or overdue
+    // BUG-1188: If instances exist, ONLY check instance dates (instances are authoritative)
     if (task.instances && task.instances.length > 0) {
-      if (task.instances.some(inst => {
+      // Instances exist - check if any are in this month
+      // Skip legacy scheduledDate check since instances override it
+      return task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
         const normalizedInstDate = normalizeDateString(inst.scheduledDate)
         // BUG-367 FIX: Include overdue instances
         return normalizedInstDate && normalizedInstDate <= monthEndStr
-      })) {
-        return true
-      }
+      })
     }
 
-    // Check legacy scheduled dates within this month or overdue
+    // Check legacy scheduled dates within this month or overdue (only when NO instances exist)
     if (task.scheduledDate) {
       const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
       // BUG-367 FIX: Include overdue

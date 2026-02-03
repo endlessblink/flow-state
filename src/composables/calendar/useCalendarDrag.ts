@@ -357,9 +357,12 @@ export function useCalendarDrag() {
       })
 
       if (instance) {
+        // BUG-1188: Clear legacy scheduledDate/scheduledTime fields since instances are now authoritative
         // Only remove from inbox if instance creation succeeded
         await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
-          isInInbox: false
+          isInInbox: false,
+          scheduledDate: undefined, // BUG-1188: Clear legacy field
+          scheduledTime: undefined  // BUG-1188: Clear legacy field
         })
       } else {
       }
@@ -371,8 +374,11 @@ export function useCalendarDrag() {
       })
 
       if (instance) {
+        // BUG-1188: Clear legacy scheduledDate/scheduledTime fields since instances are now authoritative
         await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
-          isInInbox: false
+          isInInbox: false,
+          scheduledDate: undefined, // BUG-1188: Clear legacy field
+          scheduledTime: undefined  // BUG-1188: Clear legacy field
         })
       } else {
       }

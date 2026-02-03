@@ -253,23 +253,26 @@ export const useGamificationStore = defineStore('gamification', () => {
       }
     }
 
+    // Use local date strings to avoid timezone issues
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
     const lastActive = p.lastActivityDate
-    const lastActiveDay = lastActive ? new Date(lastActive) : null
-    lastActiveDay?.setHours(0, 0, 0, 0)
+    const lastActiveStr = lastActive
+      ? `${lastActive.getFullYear()}-${String(lastActive.getMonth() + 1).padStart(2, '0')}-${String(lastActive.getDate()).padStart(2, '0')}`
+      : null
 
-    const isActiveToday = lastActiveDay?.getTime() === today.getTime()
+    const isActiveToday = lastActiveStr === todayStr
 
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    const wasActiveYesterday = lastActiveDay?.getTime() === yesterday.getTime()
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+    const wasActiveYesterday = lastActiveStr === yesterdayStr
 
     const streakAtRisk = !isActiveToday && !wasActiveYesterday && p.currentStreak > 0
 
-    const daysSinceActive = lastActiveDay
-      ? Math.floor((today.getTime() - lastActiveDay.getTime()) / (1000 * 60 * 60 * 24))
+    const daysSinceActive = lastActive
+      ? Math.floor((today.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24))
       : 999
 
     const daysUntilDecay = Math.max(0, STREAK_CONFIG.DECAY_START_DAYS - daysSinceActive)
@@ -587,36 +590,41 @@ export const useGamificationStore = defineStore('gamification', () => {
   async function recordDailyActivity(): Promise<StreakUpdateResult | null> {
     if (!profile.value || !authStore.user?.id) return null
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().split('T')[0]
+    // Use date strings for comparison to avoid timezone issues
+    // getLocalDateString returns "YYYY-MM-DD" in local timezone
+    const todayStr = getLocalDateString(new Date())
 
     const lastActive = profile.value.lastActivityDate
-    const lastActiveDay = lastActive ? new Date(lastActive) : null
-    lastActiveDay?.setHours(0, 0, 0, 0)
+    const lastActiveStr = lastActive ? getLocalDateString(lastActive) : null
 
-    // Already recorded today
-    if (lastActiveDay?.getTime() === today.getTime()) {
+    // Already recorded today - compare strings, not timestamps
+    if (lastActiveStr === todayStr) {
+      console.log('[Gamification] Already recorded activity for today:', todayStr)
       return null
     }
 
+    console.log('[Gamification] Recording activity. Last:', lastActiveStr, 'Today:', todayStr)
+
+    // Calculate yesterday's date string
+    const today = new Date()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    const wasActiveYesterday = lastActiveDay?.getTime() === yesterday.getTime()
+    const yesterdayStr = getLocalDateString(yesterday)
+    const wasActiveYesterday = lastActiveStr === yesterdayStr
 
     let newStreak = profile.value.currentStreak
     let streakBroken = false
     let freezeUsed = false
     let streakMilestone: number | null = null
 
-    if (wasActiveYesterday || !lastActiveDay) {
+    if (wasActiveYesterday || !lastActiveStr) {
       // Continue or start streak
       newStreak = wasActiveYesterday ? newStreak + 1 : 1
     } else {
       // Streak broken - check for freeze
-      const daysMissed = Math.floor(
-        (today.getTime() - (lastActiveDay?.getTime() || 0)) / (1000 * 60 * 60 * 24)
-      )
+      const daysMissed = lastActive
+        ? Math.floor((today.getTime() - new Date(lastActive).getTime()) / (1000 * 60 * 60 * 24))
+        : 999
 
       if (daysMissed <= 2 && profile.value.streakFreezes > 0) {
         // Use freeze
@@ -1103,6 +1111,17 @@ export const useGamificationStore = defineStore('gamification', () => {
 
   function camelToSnake(str: string): string {
     return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+  }
+
+  /**
+   * Get date string in YYYY-MM-DD format using LOCAL timezone
+   * This avoids timezone issues when comparing dates
+   */
+  function getLocalDateString(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
   // =============================================================================

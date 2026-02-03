@@ -295,16 +295,25 @@ export class AIRouter {
   /**
    * Create Ollama provider instance.
    * BUG-1180: Skip detection on production domains to avoid CORS errors.
+   * TASK-1186: Always attempt detection in Tauri desktop app (uses plugin-http for CORS-free requests).
    * Users can still use Ollama from production if they configure OLLAMA_ORIGINS.
    */
   private async createOllamaProvider(): Promise<OllamaProvider | null> {
     try {
-      // BUG-1180: Skip Ollama detection on production domains
+      // TASK-1186: Detect Tauri environment - Tauri injects __TAURI__ or __TAURI_INTERNALS__
+      // In Tauri, we ALWAYS attempt Ollama detection because:
+      // 1. Tauri plugin-http can make CORS-free requests
+      // 2. Desktop users are likely to have Ollama running locally
+      const isTauri = typeof window !== 'undefined' &&
+        ('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
+
+      // BUG-1180: Skip Ollama detection on production domains (web only)
       // Localhost calls from production trigger CORS errors (localhost doesn't set Access-Control-Allow-Origin)
       // Users who want Ollama from production must:
       // 1. Set OLLAMA_ORIGINS=https://in-theflow.com (or *)
       // 2. Set VITE_OLLAMA_HOST env var to enable detection
       const isProduction = typeof window !== 'undefined' &&
+        !isTauri &&  // TASK-1186: Tauri is never considered "production" for this check
         !window.location.hostname.includes('localhost') &&
         !window.location.hostname.includes('127.0.0.1')
 
@@ -313,6 +322,11 @@ export class AIRouter {
       if (isProduction && !forceOllama) {
         this.log('Skipping Ollama detection on production domain (BUG-1180)')
         return null
+      }
+
+      // TASK-1186: Log Tauri detection for debugging
+      if (isTauri) {
+        this.log('Tauri environment detected - attempting Ollama detection (TASK-1186)')
       }
 
       // Check environment variable for Ollama URL

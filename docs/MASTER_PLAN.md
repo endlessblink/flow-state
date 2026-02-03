@@ -255,6 +255,48 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
+### BUG-1186: Tauri Today Group Not Counting Tasks or Moving Children (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-03)
+
+**Problem**: In Tauri desktop app, the "Today" smart group has two issues:
+1. **Badge not counting tasks** - The task count badge stopped showing the correct number
+2. **Children don't move with group** - When dragging the Today group, child tasks don't follow
+
+**Context**: This is Tauri-specific - may be related to recent sync changes or group handling differences between web and desktop.
+
+**Investigation Steps**:
+- [ ] Check if Today group exists and has correct `filter_type`
+- [ ] Verify task-to-group relationship (parentId matching)
+- [ ] Compare behavior between web and Tauri builds
+- [ ] Check console for errors when dragging group
+
+**Files to Investigate**:
+- `src/stores/canvas/canvasGroups.ts` - Group logic
+- `src/composables/canvas/useCanvasSync.ts` - Sync handling
+- `src/components/canvas/GroupNode.vue` - Badge display
+
+---
+
+### BUG-1187: "Done for now" Badge Resets and Doesn't Persist (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-03)
+
+**Problem**: The "Done for now" badge on tasks gets reset automatically and doesn't persist across sessions or refreshes.
+
+**Investigation Steps**:
+- [ ] Find where "done for now" badge state is stored
+- [ ] Check if it's being saved to Supabase
+- [ ] Verify if realtime sync is overwriting local state
+- [ ] Check for any auto-reset logic that clears the badge
+
+**Files to Investigate**:
+- `src/stores/tasks.ts` - Task state management
+- `src/stores/tasks/taskOperations.ts` - Task CRUD operations
+- `src/composables/sync/useSyncOrchestrator.ts` - Sync logic
+
+---
+
 ### BUG-1184: Production Site Down - Chunk Load Failure + Network Errors (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
@@ -393,9 +435,9 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1179: Supabase Realtime Connection Drops (CHANNEL_ERROR/CLOSED) (🔄 IN PROGRESS)
+### ~~BUG-1179~~: Supabase Realtime Connection Drops (CHANNEL_ERROR/CLOSED) (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-02)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-03)
 
 **Problem**: Production console shows repeated realtime connection drops:
 ```
@@ -434,9 +476,9 @@ realtime: {
 
 ---
 
-### BUG-1180: Ollama Localhost CORS Errors in Production (🔄 IN PROGRESS)
+### ~~BUG-1180~~: Ollama Localhost CORS Errors in Production (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-02)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-03)
 
 **Problem**: Production site (`in-theflow.com`) attempts to call `localhost:11434` (Ollama), which fails with CORS:
 ```
@@ -455,6 +497,44 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 **Files Changed**: `src/services/ai/router.ts`
 
 **Awaiting**: User verification on production
+
+---
+
+### TASK-1186: Make AI Accessible in Tauri App (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-03)
+
+**Problem**: AI features (Ollama local, Groq/OpenRouter cloud) reliability in Tauri desktop context is unknown. Key concerns:
+1. **Ollama detection skipped** on "production domains" (BUG-1180) - may incorrectly skip in Tauri
+2. **Cloud AI requires internet** + Supabase Edge Functions - not offline-capable
+3. **No CORS-free HTTP** - Browser fetch in Tauri WebView has same CORS restrictions
+
+**Current Architecture**:
+| Provider | Method | Works Offline? |
+|----------|--------|----------------|
+| Ollama | localhost:11434 | Yes (if running) |
+| Groq | Edge Function proxy | No |
+| OpenRouter | Edge Function proxy | No |
+
+**Solution**:
+1. **Phase 1: Fix Tauri Detection** - Add `window.__TAURI__` check to router.ts
+2. **Phase 2: Tauri HTTP Plugin** - Use `@tauri-apps/plugin-http` for CORS-free Ollama requests
+3. **Phase 3: (Future) Direct API Option** - Store API keys locally for offline cloud AI
+
+**Files to Modify**:
+- `src/services/ai/router.ts` - Add Tauri detection, fix BUG-1180 for Tauri
+- `src/services/ai/providers/ollama.ts` - Use Tauri HTTP plugin for CORS-free requests
+
+**Files to Create**:
+- `src/services/ai/utils/tauriHttp.ts` - Wrapper for Tauri HTTP plugin with browser fallback
+
+**Success Criteria**:
+- [ ] Ollama detected reliably when running in Tauri
+- [ ] AI works offline if Ollama available
+- [ ] Cloud fallback works when online
+- [ ] Clear "AI unavailable" message when all providers fail
+
+**Related**: BUG-1180 (Ollama CORS in production)
 
 ---
 

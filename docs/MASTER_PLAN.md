@@ -278,22 +278,46 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1187: "Done for now" Badge Resets and Doesn't Persist (📋 PLANNED)
+### BUG-1187: "Done for now" Badge Resets and Doesn't Persist (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-03)
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-03)
 
 **Problem**: The "Done for now" badge on tasks gets reset automatically and doesn't persist across sessions or refreshes.
 
-**Investigation Steps**:
-- [ ] Find where "done for now" badge state is stored
-- [ ] Check if it's being saved to Supabase
-- [ ] Verify if realtime sync is overwriting local state
-- [ ] Check for any auto-reset logic that clears the badge
+**Root Cause**: The `doneForNowUntil` field was NOT included in the sync payload sent to Supabase. When the page refreshed, the null value from Supabase overwrote the local state.
 
-**Files to Investigate**:
-- `src/stores/tasks.ts` - Task state management
-- `src/stores/tasks/taskOperations.ts` - Task CRUD operations
-- `src/composables/sync/useSyncOrchestrator.ts` - Sync logic
+**Fix Applied**:
+- [x] Added `done_for_now_until` to updateTask sync payload (`taskOperations.ts:419-423`)
+- [x] Added `done_for_now_until` to createTask sync payload (`taskOperations.ts:179-182`)
+
+**Verification**: User should test by:
+1. Right-click a task → "Done for now"
+2. Verify amber badge appears
+3. Refresh the page
+4. Badge should still be visible
+
+**Files Changed**:
+- `src/stores/tasks/taskOperations.ts` - Added `done_for_now_until` to sync payloads
+
+---
+
+### ~~BUG-1188~~: Today View Shows Non-Today Tasks Due to Hidden Hour Data (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-03)
+
+**Problem**: Tasks scheduled for future dates were incorrectly appearing in the "Today" smart view due to stale legacy `scheduledDate` field values conflicting with the newer instances-based scheduling system.
+
+**Root Cause**: The smart view filters checked BOTH `task.instances[].scheduledDate` (new system, authoritative) AND `task.scheduledDate` (legacy field, may have stale data). When a task had instances with future dates but the legacy `scheduledDate` field contained "today", the filter incorrectly included the task.
+
+**Fix Applied**:
+- [x] Fixed `isTodayTask()` in `useSmartViews.ts` - When instances exist, ONLY check instance dates (skip legacy scheduledDate)
+- [x] Fixed `isWeekTask()` in `useSmartViews.ts` - Same fix, instances are authoritative
+- [x] Fixed `isThisMonthTask()` in `useSmartViews.ts` - Same fix, instances are authoritative
+- [x] Fixed `useCalendarDrag.ts` - Clear legacy `scheduledDate`/`scheduledTime` when creating instances to prevent future stale data
+
+**Files Changed**:
+- `src/composables/useSmartViews.ts` - Prioritize instances over legacy field in all smart view filters
+- `src/composables/calendar/useCalendarDrag.ts` - Clear legacy fields when creating instances
 
 ---
 

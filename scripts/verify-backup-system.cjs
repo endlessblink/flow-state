@@ -345,7 +345,12 @@ function ensureTestArtifacts() {
 
       // Create dummy JSON first
       const dummyData = {
-        tasks: [{ id: 'dummy-task-1', title: 'Dummy Task', status: 'todo' }],
+        tasks: [{
+          id: 'dummy-task-1',
+          title: 'Dummy Task',
+          status: 'todo',
+          created_at: new Date().toISOString()
+        }],
         groups: [],
         projects: [],
         timestamp: Date.now(),

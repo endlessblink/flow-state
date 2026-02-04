@@ -3,11 +3,12 @@
     {
       "id": "dummy-task-1",
       "title": "Dummy Task",
-      "status": "todo"
+      "status": "todo",
+      "created_at": "2026-02-04T06:14:25.624Z"
     }
   ],
   "groups": [],
   "projects": [],
-  "timestamp": 1770185399160,
-  "checksum": "da2be5f31398e1fa"
+  "timestamp": 1770185665624,
+  "checksum": "03c39aa5e225a8f2"
 }

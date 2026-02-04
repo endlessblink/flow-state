@@ -237,9 +237,9 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1185: Timer Auto-Continues After Session Completes (🔄 IN PROGRESS)
+### ~~BUG-1185~~: Timer Auto-Continues After Session Completes (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-02)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-04)
 
 **Problem**: Timer automatically starts a new 25-minute session after break/work completes, without waiting for user to choose "Start Work" or "+5 min".
 

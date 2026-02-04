@@ -20,10 +20,11 @@
 
       <!-- Combined Priority + Date Controls (single row) -->
       <div class="quick-controls-row">
-        <div class="priority-buttons">
+        <div class="priority-buttons" role="group" aria-label="Set priority">
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
+            aria-label="Set priority to Low"
             @click="updatePriority('low')"
           >
             Low
@@ -31,6 +32,7 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
+            aria-label="Set priority to Medium"
             @click="updatePriority('medium')"
           >
             Med
@@ -38,16 +40,18 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
+            aria-label="Set priority to High"
             @click="updatePriority('high')"
           >
             High
           </button>
         </div>
 
-        <div class="date-shortcuts">
+        <div class="date-shortcuts" role="group" aria-label="Quick reschedule">
           <button
             class="quick-date-btn"
             :class="{ active: isToday }"
+            aria-label="Set due date to Today"
             @click.stop="setToday"
           >
             Today
@@ -55,6 +59,7 @@
           <button
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
+            aria-label="Set due date to Tomorrow"
             @click.stop="setTomorrow"
           >
             +1
@@ -62,6 +67,7 @@
           <button
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
+            aria-label="Set due date to Next Week"
             @click.stop="setNextWeek"
           >
             +7
@@ -69,6 +75,7 @@
           <button
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
+            aria-label="Clear due date"
             @click.stop="clearDate"
           >
             Clear

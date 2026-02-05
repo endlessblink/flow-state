@@ -669,9 +669,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-1191: Overdue Badge Logic Inverted for Today Group Tasks (📋 PLANNED)
+### BUG-1191: Overdue Badge Logic Inverted for Today Group Tasks (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-05)
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
 
 **Problem**: Overdue badges on tasks have inverted behavior related to the Today group:
 1. **Tasks staying in Today group** that become overdue → badge does NOT appear (should show)
@@ -1328,6 +1328,30 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 **Additional Changes**:
 - Added `isLinuxTauri()`, `getPlatformDiagnostics()`, `getLinuxTauriScaleFactor()` utilities in `src/utils/contextMenuCoordinates.ts`
 - Added diagnostic logging in `useCanvasInteractions.ts` for future debugging
+
+---
+
+### ~~BUG-1195~~: Pomoflow Widget syncTimer polls every 2s even when idle (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-05)
+
+**Problem**: The KDE Pomoflow widget's syncTimer fires HTTP requests every 2 seconds unconditionally when authenticated, even with no active timer session. This wastes bandwidth and battery.
+
+**File**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml` (line ~1204)
+
+**Fix Applied**: Changed `interval: 2000` to `interval: root.hasActiveSession ? 2000 : 30000` for adaptive polling.
+
+---
+
+### ~~BUG-1196~~: Pomoflow Widget filterMenu/sortMenu undefined references (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-05)
+
+**Problem**: `onExpandedChanged` handler references `filterMenu` and `sortMenu` objects that don't exist in the QML, causing runtime errors when the popup closes.
+
+**File**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml` (line ~1853)
+
+**Fix Applied**: Added `typeof` and truthiness guards before accessing menu properties.
 
 ---
 
@@ -2296,6 +2320,39 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 **Feature**: Simplified canvas for mobile with touch gestures (pinch-zoom, drag).
 
 **Files**: New mobile canvas component
+
+---
+
+### FEATURE-1194: Tauri In-App Auto-Updater via VPS (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-05)
+
+**Feature**: "Update App" button inside FlowState that checks VPS for newer builds, downloads, and installs them automatically - no terminal or `dpkg -i` needed.
+
+**Architecture**:
+1. **VPS endpoint** (`in-theflow.com/updates/`) - Caddy serves update manifest JSON + binary bundles
+2. **Tauri updater plugin** (`@tauri-apps/plugin-updater`) - built-in self-update mechanism
+3. **CI/CD pipeline** - GitHub Actions builds multi-platform Tauri binaries on push/tag, rsyncs to VPS
+4. **App UI** - "Check for Updates" button in Settings, notification on app launch when update available
+
+**Implementation Steps**:
+- [x] Configure `@tauri-apps/plugin-updater` in `tauri.conf.json` with VPS update endpoint
+- [ ] Set up VPS directory structure (`/var/www/flowstate/updates/`) with Caddy serving
+- [x] Create update manifest generation script (`scripts/generate-update-manifest.cjs`)
+- [x] Modify GitHub Actions release workflow to build + upload binaries to VPS
+- [x] Code-signing already configured (existing signing keys + pubkey)
+- [x] Add "Check for Updates" UI in Settings > About tab
+- [x] Auto-check on app launch with non-intrusive notification (existing `TauriUpdateNotification.vue`)
+- [ ] Test full update cycle: build → upload → detect → download → install → restart
+
+**Key Files**:
+- `src-tauri/tauri.conf.json` - Updater plugin config (endpoint: `in-theflow.com/updates/latest.json`)
+- `.github/workflows/release.yml` - CI/CD for multi-platform builds + VPS deploy
+- `scripts/generate-update-manifest.cjs` - Generates `latest.json` from build artifacts
+- `src/components/settings/tabs/AboutSettingsTab.vue` - Update UI in Settings
+- `src/composables/useTauriUpdater.ts` - Updater composable
+- `src/components/common/TauriUpdateNotification.vue` - Launch notification
+- VPS `/var/www/flowstate/updates/` - Hosted binaries + manifest
 
 ---
 

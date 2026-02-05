@@ -63,3 +63,15 @@ export type {
   RouterOptions,
   ProviderCostTracking,
 } from './router'
+
+// TASK-1186: Tauri HTTP utilities for CORS-free requests
+export {
+  tauriFetch,
+  tauriFetchWithTimeout,
+  isTauriEnvironment,
+  isServiceReachable,
+} from './utils/tauriHttp'
+
+export type {
+  TauriFetchOptions,
+} from './utils/tauriHttp'

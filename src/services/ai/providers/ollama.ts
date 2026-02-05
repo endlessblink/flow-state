@@ -26,6 +26,8 @@ import type {
   ModelCapability,
 } from '../types'
 import { DEFAULT_OLLAMA_CONFIG } from '../types'
+// TASK-1186: Use Tauri HTTP for CORS-free requests in desktop app
+import { tauriFetchWithTimeout, isTauriEnvironment } from '../utils/tauriHttp'
 
 // ============================================================================
 // Ollama API Types
@@ -591,12 +593,20 @@ export class OllamaProvider implements AIProvider {
 
   /**
    * Fetch with timeout support.
+   * TASK-1186: Uses Tauri HTTP plugin in desktop for CORS-free local requests.
    */
   private async fetchWithTimeout(
     url: string,
     options: RequestInit,
     timeout: number = this.config.timeout || 60000
   ): Promise<Response> {
+    // TASK-1186: Use Tauri HTTP for CORS-free requests in desktop app
+    // This allows Ollama detection to work without CORS issues
+    if (isTauriEnvironment()) {
+      return tauriFetchWithTimeout(url, options, timeout)
+    }
+
+    // Browser: standard fetch with AbortController timeout
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
 

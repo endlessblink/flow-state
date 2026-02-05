@@ -91,6 +91,22 @@
 
 ---
 
+### BUG-1191: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
+
+**Problem**: Dragging a group (e.g., "Wednesday") on the canvas also drags tasks that don't belong to that group.
+
+**Root Cause**: Tasks can have stale `parentId` pointing to a group they're no longer spatially inside. `syncStoreToCanvas` blindly sets Vue Flow `parentNode` from `task.parentId` without spatial validation. When the group is dragged, Vue Flow includes all nodes with matching `parentNode` — including stale children — moving them to wrong positions.
+
+**Fix (Two-Part)**:
+1. **Sync spatial validation** (`useCanvasSync.ts`): Before setting `parentNode`, validate task's center is actually inside claimed parent group. If outside, treat as root node.
+2. **Drag stale detection** (`useCanvasInteractions.ts`): In `onNodeDragStop`, detect when `node.parentNode` doesn't match `task.parentId`. Restore correct position and skip processing.
+
+**Files**: `src/composables/canvas/useCanvasSync.ts`, `src/composables/canvas/useCanvasInteractions.ts`
+
+---
+
 ### TASK-1177: Offline-First Sync System to Prevent Data Loss (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-01)
@@ -592,7 +608,52 @@ i@.../index-CAXNPz-Z.js:144:4526
 saveTasks@.../index-CAXNPz-Z.js:144:14019
 ```
 
+---
+
+### BUG-1189: Can't Drag Tasks from Overdue Swimlane in My Projects (👀 REVIEW)
+
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-04)
+
+**Problem**: In the Board view (Date view), tasks cannot be dragged from the "Overdue" column to other columns. The task appears to move but snaps back to Overdue.
+
+**Root Cause Found**:
+1. `moveTaskToDate()` only updated `instances`, not `dueDate`
+2. `groupTasksByDate()` checks BOTH `task.dueDate` AND `instances` for overdue status
+3. If a task had a past `dueDate`, it stayed stuck in Overdue even after updating instances
+4. Missing handling for 'inbox' and 'noDate' columns in `moveTaskToDate()`
+
+**Fix Applied**:
+- [x] Added handling for 'inbox' column (sets `isInInbox: true`, clears dates)
+- [x] Added handling for 'noDate' column (clears all date info)
+- [x] When moving a task with an overdue `dueDate`, update `dueDate` to the target date
+
+**Files Changed**:
+- `src/stores/tasks/taskOperations.ts` - Fixed `moveTaskToDate()` function
+
+**Verification**: User should test by:
+1. Switch to Board view → Due Date view
+2. Find a task in the "Overdue" column
+3. Drag it to "Today" or "Tomorrow"
+4. Task should move and STAY in the target column
+5. Also test dragging to "Inbox" and "No Date" columns
+
 **Root Cause**: Likely the optimistic update happens but Supabase write fails silently. No retry or rollback.
+
+---
+
+### BUG-1190: Subtasks Not Saved, Poor Design, Missing Badge (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-05)
+
+**Problem**: Three subtask-related issues:
+1. **Subtasks not saved** - After editing a main task and pressing Save, subtasks are not persisted
+2. **Poor subtask design** - The subtask UI in the main task editing panel needs visual improvement
+3. **Missing subtask badge** - Tasks with subtasks show no indicator/badge in the UI (Board, Canvas, Calendar views)
+
+**Success Criteria**:
+- [ ] Subtasks persist correctly when saving the parent task
+- [ ] Subtask section in task editor has clean, polished design
+- [ ] Tasks with subtasks show a badge/count indicator across all views
 
 **Impact**: User thinks task is saved, but it's lost on refresh.
 
@@ -605,6 +666,64 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Blocked By**: TASK-1177
 
 **Files**: `src/stores/tasks/taskOperations.ts`, `src/composables/sync/useSyncOrchestrator.ts`
+
+---
+
+### BUG-1191: Overdue Badge Logic Inverted for Today Group Tasks (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-05)
+
+**Problem**: Overdue badges on tasks have inverted behavior related to the Today group:
+1. **Tasks staying in Today group** that become overdue → badge does NOT appear (should show)
+2. **Tasks moved OUT of Today group** that are overdue → badge does NOT appear (should show)
+3. **Tasks returned TO Today group** → badge DOES appear (should NOT, because the due date should be updated to today on move)
+
+**Expected Behavior**:
+- Overdue badge appears on any task whose due date is in the past
+- Moving a task into Today group updates its due date to today (removing overdue status)
+- Tasks that remain overdue (in any group) should always show the badge
+
+**Success Criteria**:
+- [ ] Tasks with past due dates show overdue badge regardless of group location
+- [ ] Moving task into Today group updates due date → no overdue badge
+- [ ] Tasks staying in Today group past midnight show overdue badge next day
+- [ ] Moving task out of Today group preserves its due date and badge state
+
+**Files**: TBD (needs investigation of overdue badge logic and Today group move handlers)
+
+---
+
+### BUG-1192: Canvas Inbox Double-Click Opens Selection Instead of Edit Menu (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-05)
+
+**Problem**: Three issues with canvas inbox task interactions:
+1. **Double-click** on a task in the canvas inbox should open the edit menu — currently triggers selection
+2. **Ctrl+Click** should toggle multi-selection — currently not the trigger for selection toolbar
+3. **Multi-selection toolbar** styling doesn't use design tokens — needs sync with visual system
+
+**Success Criteria**:
+- [ ] Double-clicking a task in canvas inbox opens the task edit panel
+- [ ] Ctrl+Click toggles task selection (shows multi-selection toolbar)
+- [ ] Multi-selection toolbar uses design tokens (colors, spacing, border-radius)
+- [ ] Regular single-click still works for basic selection/focus
+
+**Files**: TBD (needs investigation of canvas inbox click handlers)
+
+---
+
+### BUG-1193: Kanban Drag-and-Drop Deep Regression - Drags Wrong Tasks, Groups Don't Move Children (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
+
+**Problem**: Deep regression in Kanban/Board view drag-and-drop:
+1. Dragging a task in kanban drags unrelated tasks instead
+2. Group drag doesn't move child tasks
+3. Tauri app and main app don't sync at all
+
+**Root Cause**: TBD (under investigation)
+
+**Fix Applied**: TBD
 
 ---
 
@@ -807,9 +926,9 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### TASK-1128: Add "Create Group From Selection" Context Menu Option (📋 PLANNED)
+### TASK-1128: Add "Create Group From Selection" Context Menu Option (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-04)
 
 **Feature**: When multiple tasks are selected on canvas, right-click should show "Add to New Group" option that:
 1. Creates a new group at the bounding box location of selected tasks
@@ -817,12 +936,18 @@ const tasksToSync = (tasks || taskStore.tasks)
 3. Sizes the group to contain all selected tasks with padding
 
 **Implementation**:
-- Add context menu option when `selectedNodes.length > 1`
-- Calculate bounding box of selected nodes
-- Create group with appropriate position and dimensions
-- Update selected tasks' parentId to new group
+- [x] Add context menu option when `selectedNodes.length > 1`
+- [x] Calculate bounding box of selected nodes
+- [x] Create group with appropriate position and dimensions
+- [x] Update selected tasks' parentId to new group
 
-**Files**: `src/views/CanvasView.vue`, `src/composables/canvas/useCanvasActions.ts`, `src/components/canvas/CanvasContextMenu.vue`
+**Awaiting**: User verification
+
+**Files Changed**:
+- `src/components/canvas/CanvasContextMenu.vue` - Added "Add to New Group" menu option
+- `src/components/canvas/CanvasContextMenus.vue` - Event forwarding
+- `src/composables/canvas/useCanvasActions.ts` - `createGroupFromSelection()` implementation
+- `src/views/CanvasView.vue` - Wired up event handler
 
 ---
 

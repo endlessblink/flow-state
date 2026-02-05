@@ -45,8 +45,9 @@ jobs:
       #   run: npx vitest run tests/safety/ --config vitest.ci.config.ts
 
       # Stress tests for backup system integrity (TASK-338)
+      # Must use :create to generate shadow.db in fresh CI environment
       - name: Verify backup system
-        run: npm run test:backup
+        run: npm run test:backup:create
         continue-on-error: false
 
       - name: Verify restore capability

@@ -25,8 +25,9 @@ jobs:
         uses: dopplerhq/cli-action@v3
 
       # Fetch secrets from Doppler if available
+      # Using .env ensures scripts like shadow-mirror.cjs can find keys
       - name: Fetch Build Secrets
-        run: doppler secrets download --no-file --format env > .env.production
+        run: doppler secrets download --no-file --format env > .env
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 

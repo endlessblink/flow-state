@@ -25,8 +25,9 @@ jobs:
         uses: dopplerhq/cli-action@v3
 
       # Fetch secrets from Doppler if available
+      # Using .env ensures scripts like shadow-mirror.cjs can find keys
       - name: Fetch Build Secrets
-        run: doppler secrets download --no-file --format env > .env.production
+        run: doppler secrets download --no-file --format env > .env
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
@@ -45,8 +46,9 @@ jobs:
       #   run: npx vitest run tests/safety/ --config vitest.ci.config.ts
 
       # Stress tests for backup system integrity (TASK-338)
+      # Must use :create to generate shadow.db in fresh CI environment
       - name: Verify backup system
-        run: npm run test:backup
+        run: npm run test:backup:create
         continue-on-error: false
 
       - name: Verify restore capability

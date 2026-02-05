@@ -2,8 +2,8 @@
   <div class="compact-actions" role="group" aria-label="Task actions">
     <button
       class="action-btn timer-btn"
-      title="Start Pomodoro Timer"
-      aria-label="Start Pomodoro timer for this task"
+      title="Start Pomodoro Timer (T)"
+      aria-label="Start Pomodoro timer for this task (Press T)"
       type="button"
       tabindex="-1"
       @click.stop="$emit('startTimer')"
@@ -12,8 +12,8 @@
     </button>
     <button
       class="action-btn edit-btn"
-      title="Edit Task"
-      aria-label="Edit this task"
+      title="Edit Task (E)"
+      aria-label="Edit this task (Press E)"
       type="button"
       tabindex="-1"
       @click.stop="$emit('edit')"

@@ -1333,6 +1333,20 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ## Active Tasks (IN PROGRESS)
 
+### ~~TASK-1194~~: Improve Accessibility for Icon-Only Buttons (✅ DONE)
+
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-05)
+
+**Problem**: `BaseIconButton` lacks visible focus indicators, making keyboard navigation difficult. Task card actions (Edit/Timer) lack discoverable keyboard shortcuts.
+
+**Fix Applied**:
+- Added `:focus-visible` styles to `BaseIconButton.vue` (matching `BaseButton.vue` focus ring)
+- Added keyboard shortcut hints "(T)" and "(E)" to `TaskCardActions.vue` tooltips and aria-labels
+
+**Files**: `src/components/base/BaseIconButton.vue`, `src/components/kanban/card/TaskCardActions.vue`
+
+---
+
 ### TASK-1060: Infrastructure & E2E Sync Stability (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (Started: 2026-01-24)

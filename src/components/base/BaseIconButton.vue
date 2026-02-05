@@ -79,6 +79,14 @@ defineEmits<{
   transform: scale(0.95);
 }
 
+/* Focus state with visible indicator */
+.base-icon-button:focus-visible {
+  outline: 2px solid var(--color-work);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+  z-index: 10;
+}
+
 .base-icon-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.13",
-  "notes": "Auto-updater signing fix, progress tracking improvement",
-  "pub_date": "2026-02-06T14:35:18.018Z",
+  "version": "1.2.15",
+  "notes": "FlowState v1.2.15",
+  "pub_date": "2026-02-06T18:31:05.846Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSV2JXSllNVUduNXVUc1R6MjhyVlZkMG5MZ0JhQnpLSlUvT2xsVXMzZXNkK3FHSnNmUWVOakJ4TWRnTnNqK0djcFdmL3h2L0FrYS8yMEczQk5RT1pxSUZ3MUh1T0crVUFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwMzg4NDg3CWZpbGU6Rmxvd1N0YXRlXzEuMi4xM19hbWQ2NC5BcHBJbWFnZS50YXIuZ3oKcW9hNVBrc0J3MDV4WXBvMmpMdVdrY1VLYm9IVkgyTEZRWERmc0llazA2aWJjU1BXeElMRHlmaHVEenBwQ1hFS2g0Y0NwYUpXZ3lPM3dUTmpQYm1GQXc9PQo=",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.13_amd64.AppImage.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSV2JXSllNVUduNWxGb0xtOHc4Vzl6RTRkR1BRbGpRVHFtamJiR1hyTzFhTGNMK3R3bkJpYk1rcEpzeCt4MVZxWE5pMlhMSTJIS1NHQzBzRm5iVy9XeURyaDVPdSsyTHdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDAyMTM4CWZpbGU6Rmxvd1N0YXRlXzEuMi4xNF9hbWQ2NC5BcHBJbWFnZS50YXIuZ3oKbEFucWNobU5DV1VWcWZaSk1WTjF4YzVHQmxHb0sxNnVtTVZ2VUg5Ykl4cG9kZ0phR3FpdXlGRVZtS0ZiQk05SE5iVnJ3MDFBL3cxTUhKMk5uYTVIQ2c9PQo=",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.14_amd64.AppImage.tar.gz"
     }
   }
 }

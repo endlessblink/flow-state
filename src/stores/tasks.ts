@@ -106,16 +106,28 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // BUG-1207: Moved addPendingWrite here (before useTaskOperations) so it can be passed as parameter.
   // Previously defined later in the file, causing "used before declaration" error.
+  const _pendingWriteTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
   const addPendingWrite = (taskId: string) => {
     pendingWrites.value.add(taskId)
-    // TASK-1177: Extended from 5 seconds to 30 seconds
-    // 5 seconds was too short - VPS latency can be 20s (see useNodeSync timeout)
-    // This caused pending writes to be cleared before sync completed
-    setTimeout(() => pendingWrites.value.delete(taskId), 30000)
+    // BUG-1207 FIX (Fix 2.1): Don't auto-expire on short timeout.
+    // Previously 30s was too short — VPS latency + sync queue processing can exceed that.
+    // Now: removePendingWrite() is called explicitly when the sync queue confirms success.
+    // 120s is an absolute safety fallback (e.g., if sync queue hangs or network dies).
+    const existingTimeout = _pendingWriteTimeouts.get(taskId)
+    if (existingTimeout) clearTimeout(existingTimeout)
+    _pendingWriteTimeouts.set(taskId, setTimeout(() => {
+      pendingWrites.value.delete(taskId)
+      _pendingWriteTimeouts.delete(taskId)
+    }, 120000))
   }
 
   const removePendingWrite = (taskId: string) => {
     pendingWrites.value.delete(taskId)
+    const existingTimeout = _pendingWriteTimeouts.get(taskId)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+      _pendingWriteTimeouts.delete(taskId)
+    }
   }
 
   const isPendingWrite = (taskId: string) => pendingWrites.value.has(taskId)

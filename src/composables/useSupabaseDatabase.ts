@@ -770,6 +770,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                         .from('tasks')
                         .select('*')
                         .eq('is_deleted', false)
+                        .order('order', { ascending: true })
+                        .order('created_at', { ascending: true })
 
                     if (error) throw error
                     if (!data) return []
@@ -1585,12 +1587,16 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                         setTimeout(() => {
                             retryCount++
                             setupSubscription().then(() => {
-                                // On successful reconnect setup, we might want to reload data
-                                if (onRecovery) {
+                                // BUG-1207 FIX: Apply same cooldown as visibility/online handlers
+                                // to prevent recovery from clobbering recent user edits
+                                const timeSinceInteraction = Date.now() - lastUserInteraction
+                                if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
                                     console.log('📡 [REALTIME] Triggering recovery data reload...')
                                     // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
                                     invalidateCache.all()
                                     onRecovery().catch(e => console.error('Recovery failed:', e))
+                                } else if (onRecovery) {
+                                    console.log(`📡 [REALTIME] Skipping reconnect recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
                                 }
                             })
                         }, delay)
@@ -1609,11 +1615,12 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         // In Tauri/WebKitGTK, visibility changes fire aggressively (notifications, tray, focus loss),
         // triggering full DB reloads that overwrite unsaved local state.
         let lastUserInteraction = Date.now()
-        const RECOVERY_COOLDOWN_MS = 30000 // 30 seconds
+        const RECOVERY_COOLDOWN_MS = 60000 // 60 seconds
         const trackUserInteraction = () => { lastUserInteraction = Date.now() }
         document.addEventListener('click', trackUserInteraction, { passive: true })
         document.addEventListener('keydown', trackUserInteraction, { passive: true })
         document.addEventListener('pointerdown', trackUserInteraction, { passive: true })
+        document.addEventListener('input', trackUserInteraction, { passive: true })
 
         // VISIBILITY RESUME (Handle Background Tab Throttling)
         const onVisibilityChange = async () => {
@@ -1690,6 +1697,10 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                     }
                 }
                 document.removeEventListener('visibilitychange', onVisibilityChange)
+                document.removeEventListener('click', trackUserInteraction)
+                document.removeEventListener('keydown', trackUserInteraction)
+                document.removeEventListener('pointerdown', trackUserInteraction)
+                document.removeEventListener('input', trackUserInteraction)
                 window.removeEventListener('online', onOnline)
             }
         }

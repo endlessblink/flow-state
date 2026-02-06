@@ -90,6 +90,10 @@ export function useAppInitialization() {
 
         await loadWithRetry()
 
+        // BUG-1207: Tell auth store that app init has loaded stores
+        // This prevents the SIGNED_IN handler from doing a redundant double-load
+        authStore.markAppInitLoadComplete()
+
         console.log('🔍 [BUG-339-DEBUG] Task count after load:', taskStore.tasks.length)
         console.log('🔍 [BUG-339-DEBUG] Raw tasks:', taskStore._rawTasks?.length || 'N/A')
 
@@ -402,7 +406,13 @@ export function useAppInitialization() {
                 const canvas = useCanvasStore()
                 const projects = useProjectStore()
                 const tasks = useTaskStore()
-                const isLocked = canvas.isDragging || tasks.manualOperationInProgress
+
+                // BUG-1207: Add missing window flag checks (match primary handler)
+                const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                    (window as any).__FlowStateIsDragging ||
+                    (window as any).__FlowStateIsResizing ||
+                    (window as any).__FlowStateIsSettling
+                ))
                 if (isLocked) return
 
                 const { eventType, new: newDoc, old: oldDoc } = payload
@@ -417,7 +427,13 @@ export function useAppInitialization() {
             const onTaskChange = (payload: any) => {
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
-                const isLocked = canvas.isDragging || tasks.manualOperationInProgress
+
+                // BUG-1207: Add missing window flag checks (match primary handler)
+                const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                    (window as any).__FlowStateIsDragging ||
+                    (window as any).__FlowStateIsResizing ||
+                    (window as any).__FlowStateIsSettling
+                ))
                 if (isLocked) return
 
                 const { eventType, new: newDoc, old: oldDoc } = payload
@@ -438,14 +454,22 @@ export function useAppInitialization() {
             const onGroupChange = (payload: any) => {
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
-                const isLocked = canvas.isDragging || tasks.manualOperationInProgress
+
+                // BUG-1207: Add missing window flag checks (match primary handler)
+                const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
+                    (window as any).__FlowStateIsDragging ||
+                    (window as any).__FlowStateIsResizing ||
+                    (window as any).__FlowStateIsSettling
+                ))
                 if (isLocked) return
 
                 const { eventType, new: newDoc, old: oldDoc } = payload
                 if (eventType === 'DELETE' || (newDoc && newDoc.is_deleted)) {
                     canvas.removeGroupFromSync(newDoc?.id || oldDoc?.id)
                 } else if (newDoc) {
-                    canvas.updateGroupFromSync(newDoc.id, newDoc)
+                    // BUG-1207 FIX: Use fromSupabaseGroup mapper (was passing raw data)
+                    const mappedGroup = fromSupabaseGroup(newDoc as SupabaseGroup)
+                    canvas.updateGroupFromSync(mappedGroup.id, mappedGroup)
                 }
             }
 

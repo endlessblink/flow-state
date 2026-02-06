@@ -757,23 +757,14 @@ export function useCanvasSync() {
             isSyncing.value = false
         }
 
-        // BUG-1203: Process stale parentId cleanups AFTER sync completes.
-        // BUG-1209: Use setTimeout(500ms) instead of nextTick to avoid triggering an immediate
-        // re-sync cascade. The nextTick approach fired within the same reactive batch, causing
-        // syncTrigger++ → new sync → potential feedback loop. 500ms gives Vue Flow time to
-        // stabilize and ensures the re-sync triggered by the cleanup reads fully consistent state.
-        if (staleParentCleanups.length > 0) {
-            const cleanups = [...staleParentCleanups]
-            setTimeout(() => {
-                for (const { taskId, oldParentId } of cleanups) {
-                    if (import.meta.env.DEV) {
-                        console.log(`[BUG-1203] Deferred parentId cleanup: task ${taskId.slice(0, 8)}... clearing stale parentId ${oldParentId.slice(0, 8)}`)
-                    }
-                    // GEOMETRY WRITER: Stale parentId cleanup (controlled exception to TASK-255)
-                    // Safe because: (1) only clears parentId, never sets, (2) next sync finds no stale → stable
-                    taskStore.updateTask(taskId, { parentId: undefined }, 'STALE-CLEANUP' as any)
-                }
-            }, 500)
+        // BUG-1207 Fix 5.1: Removed sync write-back for stale parent cleanup.
+        // Writing to taskStore from sync violates the read-only invariant (TASK-255)
+        // and can cause feedback loops. Stale parent cleanup is handled by drag handlers
+        // in useCanvasInteractions where geometry writes ARE allowed.
+        if (staleParentCleanups.length > 0 && import.meta.env.DEV) {
+            for (const { taskId, oldParentId } of staleParentCleanups) {
+                console.warn(`[BUG-1207] Stale parentId detected: task ${taskId.slice(0, 8)}... has parentId ${oldParentId.slice(0, 8)} but is outside group bounds. Will be cleaned up on next drag interaction.`)
+            }
         }
     }
 

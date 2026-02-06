@@ -159,6 +159,18 @@ const wipStatusClass = computed(() => {
 
 const taskStore = useTaskStore()
 
+/**
+ * Recalculate order values for all tasks in localTasks based on their current array position.
+ * Uses simple integer indexing (0, 1, 2, ...) and persists via updateTask.
+ */
+const persistOrderForColumn = () => {
+  localTasks.value.forEach((task, index) => {
+    if (task.order !== index) {
+      taskStore.updateTask(task.id, { order: index })
+    }
+  })
+}
+
 const handleDragChange = async (event: any) => {
   if (event.added) {
     try {
@@ -174,12 +186,20 @@ const handleDragChange = async (event: any) => {
         // Status columns (default): update task status
         await taskStore.moveTaskWithUndo(taskId, props.status)
       }
+
+      // Persist order for all tasks in this column after cross-column move
+      persistOrderForColumn()
     } catch (error) {
       console.error('Failed to move task:', error)
       window.dispatchEvent(new CustomEvent('flowstate:error', {
         detail: { message: 'Failed to move task. Please try again.' }
       }))
     }
+  }
+
+  if (event.moved) {
+    // Within-column reorder: persist new order values
+    persistOrderForColumn()
   }
 }
 </script>

@@ -97,9 +97,14 @@ async function initializeApp() {
   // Create Pinia with cross-tab state synchronization
   // ROLLBACK: Remove PiniaSharedState plugin and revert to: app.use(createPinia())
   const pinia = createPinia()
+  // BUG-1207 Fix 5.2: Disable PiniaSharedState globally.
+  // Stores that handle their own sync (tasks, canvas, projects, timer, gamification)
+  // must NOT use BroadcastChannel cross-tab sync - it fights with Supabase Realtime
+  // and causes state overwrites. Individual UI-only stores can opt in via
+  // share: { enable: true } in their store options if needed.
   pinia.use(
     PiniaSharedState({
-      enable: true,       // Enable cross-tab sync globally
+      enable: false,      // BUG-1207: Disabled globally - stores opt in individually
       initialize: false,  // FIXED: Disable auto-hydration to prevent "ghost data" flash (BUG-037)
       type: 'native',     // Use BroadcastChannel API (fastest, best support)
     })

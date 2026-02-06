@@ -119,6 +119,16 @@ export const getNextMonday = (base: Date) => {
     return monday
 }
 
+/** Sort tasks by order (ascending), then by createdAt as tiebreaker */
+function sortByOrder(tasks: Task[]): Task[] {
+    return tasks.sort((a, b) => {
+        const orderA = a.order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.order ?? Number.MAX_SAFE_INTEGER
+        if (orderA !== orderB) return orderA - orderB
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    })
+}
+
 export function groupTasksByStatus(tasks: Task[]) {
     const result: Record<string, Task[]> = {
         planned: [],
@@ -132,6 +142,9 @@ export function groupTasksByStatus(tasks: Task[]) {
             result[task.status].push(task)
         }
     })
+    for (const key of Object.keys(result)) {
+        sortByOrder(result[key])
+    }
     return result
 }
 
@@ -148,6 +161,9 @@ export function groupTasksByPriority(tasks: Task[]) {
             result[p].push(task)
         }
     })
+    for (const key of Object.keys(result)) {
+        sortByOrder(result[key])
+    }
     return result
 }
 
@@ -236,6 +252,10 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
                 result.noDate.push(task)
             }
         })
+    }
+
+    for (const key of Object.keys(result)) {
+        sortByOrder(result[key])
     }
 
     return result

@@ -20,7 +20,7 @@ describe('High Severity Issue #7: Pending-Write Registry', () => {
     expect(taskStore.isPendingWrite(taskId)).toBe(false)
   })
 
-  it('should auto-clear pending writes after 30 seconds (TASK-1177)', async () => {
+  it('should auto-clear pending writes after 120 seconds safety fallback (BUG-1207)', async () => {
     const taskStore = useTaskStore()
     const taskId = 'test-task-456'
 
@@ -30,12 +30,12 @@ describe('High Severity Issue #7: Pending-Write Registry', () => {
     taskStore.addPendingWrite(taskId)
     expect(taskStore.isPendingWrite(taskId)).toBe(true)
 
-    // Fast-forward 25 seconds (still pending - TASK-1177 increased to 30s)
-    vi.advanceTimersByTime(25000)
+    // Fast-forward 60 seconds (still pending - BUG-1207 increased to 120s safety fallback)
+    vi.advanceTimersByTime(60000)
     expect(taskStore.isPendingWrite(taskId)).toBe(true)
 
-    // Fast-forward 10 more seconds (total 35 seconds, should be cleared)
-    vi.advanceTimersByTime(10000)
+    // Fast-forward 65 more seconds (total 125 seconds, should be cleared)
+    vi.advanceTimersByTime(65000)
     expect(taskStore.isPendingWrite(taskId)).toBe(false)
 
     vi.useRealTimers()

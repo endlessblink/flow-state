@@ -31,7 +31,7 @@ Examples:
 
 Prerequisites:
   1. Signing keys configured (see docs/sop/SOP-011-tauri-distribution.md)
-  2. Set "createUpdaterArtifacts": "v1Compatible" in tauri.conf.json
+  2. Set "createUpdaterArtifacts": true in tauri.conf.json
   3. Run "npm run tauri build" with signing enabled
 
 Documentation:
@@ -90,11 +90,11 @@ function getVersion() {
 }
 
 // Platform mapping for Tauri updater
+// Order matters: first match wins per platform, so prefer AppImage over .deb
 const PLATFORM_MAPPING = {
   'linux-x86_64': {
     patterns: [
-      /FlowState_.*_amd64\.AppImage\.tar\.gz$/,
-      /FlowState_.*_amd64\.deb\.tar\.gz$/,
+      /FlowState_.*_amd64\.AppImage$/,
     ],
   },
   'windows-x86_64': {
@@ -115,7 +115,7 @@ const PLATFORM_MAPPING = {
   },
 };
 
-// Find updater artifacts (tar.gz and zip files with .sig)
+// Find updater artifacts (binaries with .sig signature files)
 function findUpdaterArtifacts() {
   const bundleDir = path.join(__dirname, '../src-tauri/target/release/bundle');
 
@@ -139,7 +139,7 @@ function findUpdaterArtifacts() {
 
       if (entry.isDirectory()) {
         scanDirectory(fullPath);
-      } else if (entry.isFile() && (entry.name.endsWith('.tar.gz') || entry.name.endsWith('.zip'))) {
+      } else if (entry.isFile() && (entry.name.endsWith('.tar.gz') || entry.name.endsWith('.zip') || entry.name.endsWith('.AppImage') || entry.name.endsWith('.deb'))) {
         const sigPath = fullPath + '.sig';
         if (fs.existsSync(sigPath)) {
           foundFiles.push({
@@ -155,11 +155,11 @@ function findUpdaterArtifacts() {
   scanDirectory(bundleDir);
 
   if (foundFiles.length === 0) {
-    console.error('❌ No signed updater artifacts found (.tar.gz.sig or .zip.sig)');
+    console.error('❌ No signed updater artifacts found (.sig files)');
     console.error('');
     console.error('   Updater artifacts are created when you:');
     console.error('   1. Have signing keys configured');
-    console.error('   2. Set "createUpdaterArtifacts": "v1Compatible" in tauri.conf.json');
+    console.error('   2. Set "createUpdaterArtifacts": true in tauri.conf.json');
     console.error('   3. Run "npm run tauri build"');
     console.error('');
     console.error('   If you just built without signing, this is expected.');
@@ -167,9 +167,18 @@ function findUpdaterArtifacts() {
     process.exit(1);
   }
 
-  // Map files to platforms
+  // Map files to platforms (only match current version)
+  const currentVersion = getVersion();
+  const versionEscaped = currentVersion.replace(/\./g, '\\.');
+
   for (const file of foundFiles) {
     let matched = false;
+
+    // Skip files that don't match the current version
+    const versionPattern = new RegExp(`FlowState[_-]${versionEscaped}[_-]`);
+    if (!versionPattern.test(file.filename)) {
+      continue;
+    }
 
     for (const [platform, { patterns }] of Object.entries(PLATFORM_MAPPING)) {
       if (matched) break;

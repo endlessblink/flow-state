@@ -115,7 +115,7 @@ export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$SIGNING_PASSWORD"
 npx tauri build
 
 # Verify signature was generated
-APPIMAGE_SIG=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage.tar.gz.sig" 2>/dev/null | head -1)
+APPIMAGE_SIG=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage.sig" 2>/dev/null | head -1)
 if [[ -z "$APPIMAGE_SIG" ]]; then
   echo -e "${RED}ERROR: No signed artifacts found. Build may have failed to sign.${NC}"
   exit 1
@@ -148,7 +148,7 @@ fi
 # --- Deploy to VPS ---
 echo -e "${YELLOW}[5/6] Uploading to VPS...${NC}"
 
-APPIMAGE_ARCHIVE=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage.tar.gz" ! -name "*.sig" 2>/dev/null | head -1)
+APPIMAGE_ARCHIVE=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage" ! -name "*.sig" 2>/dev/null | head -1)
 
 if [[ -z "$APPIMAGE_ARCHIVE" ]]; then
   echo -e "${RED}ERROR: AppImage archive not found.${NC}"

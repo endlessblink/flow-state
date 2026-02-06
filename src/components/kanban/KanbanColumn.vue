@@ -18,7 +18,7 @@
     <div class="tasks-container">
       <draggable
         v-model="localTasks"
-        group="tasks"
+        :group="dragGroup"
         item-key="id"
         class="drag-area"
         :animation="200"
@@ -37,6 +37,8 @@
         :disabled="false"
         easing="cubic-bezier(0.25, 0.46, 0.45, 0.94)"
         tag="div"
+        @start="onDragStart"
+        @end="onDragEnd"
         @change="handleDragChange"
       >
         <template #item="{ element: task }">
@@ -67,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -81,11 +83,13 @@ interface Props {
   tasks: Task[]
   wipLimit?: number
   columnType?: 'status' | 'priority' | 'date'
+  swimlaneId?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   wipLimit: 10,
-  columnType: 'status'
+  columnType: 'status',
+  swimlaneId: 'default'
 })
 
 defineEmits<{
@@ -97,8 +101,39 @@ defineEmits<{
   contextMenu: [event: MouseEvent, task: Task]
 }>()
 
+// BUG-1193: Track drag state to prevent reactive overwrites during drag
+const isDragActive = ref(false)
+
 const localTasks = ref([...props.tasks])
-watch(() => props.tasks, (newTasks) => { localTasks.value = [...newTasks] })
+watch(() => props.tasks, (newTasks) => {
+  // BUG-1193: Don't overwrite localTasks during active drag operation
+  // vuedraggable manages the array during drag - reactive updates cause desync
+  // where the wrong task element gets associated with the drag ghost
+  if (!isDragActive.value) {
+    localTasks.value = [...newTasks]
+  }
+})
+
+// BUG-1193: Scope drag group per swimlane to prevent cross-project drag confusion
+// Without this, all columns across all swimlanes share group="tasks" and
+// vuedraggable can move tasks between unrelated projects
+const dragGroup = computed(() => ({
+  name: `tasks-${props.swimlaneId}`,
+  pull: true,
+  put: true
+}))
+
+const onDragStart = () => {
+  isDragActive.value = true
+}
+
+const onDragEnd = () => {
+  isDragActive.value = false
+  // Sync localTasks with store state after drag completes
+  nextTick(() => {
+    localTasks.value = [...props.tasks]
+  })
+}
 
 const taskCount = computed(() => props.tasks.length)
 

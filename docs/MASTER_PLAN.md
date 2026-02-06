@@ -610,9 +610,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-1189: Can't Drag Tasks from Overdue Swimlane in My Projects (👀 REVIEW)
+### ~~BUG-1189~~: Can't Drag Tasks from Overdue Swimlane in My Projects (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-04)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: In the Board view (Date view), tasks cannot be dragged from the "Overdue" column to other columns. The task appears to move but snaps back to Overdue.
 

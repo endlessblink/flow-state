@@ -228,11 +228,13 @@ export interface SupabaseQuickSortSession {
 
 // -- Mappers --
 
-export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGroup {
-    // TASK-1183: Validate group ID is valid UUID - reject legacy timestamp IDs
+export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGroup | null {
+    // BUG-1184: Validate group ID is valid UUID - skip legacy timestamp IDs gracefully
+    // Legacy groups created before UUID requirement have IDs like "group-1768138473081-54fxz7t"
+    // These can't sync to Supabase but shouldn't break user's workflow
     if (!isValidUUID(group.id)) {
-        console.error(`[SUPABASE-MAPPER] Group "${group.name}" has invalid ID: "${group.id}" - cannot save to Supabase`)
-        throw new Error(`Invalid group ID format: ${group.id}. Groups require UUID IDs.`)
+        console.warn(`[SUPABASE-MAPPER] Group "${group.name}" has legacy ID: "${group.id}" - skipping Supabase sync (local only)`)
+        return null
     }
 
     // SAFETY: Sanitize parent_group_id - must be valid UUID or null

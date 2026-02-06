@@ -1734,6 +1734,32 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
+### ~~TASK-1213~~: MASTER_PLAN.md → Beads One-Way Sync (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (Completed: 2026-02-06)
+
+**Goal**: Automate bead creation/updates from MASTER_PLAN.md so agents can use `bd ready`, `bd blocked`, and task claiming without maintaining two systems manually.
+
+**Implementation**:
+- Created `scripts/sync-masterplan-to-beads.cjs` (~220 LOC)
+- Added npm scripts: `mp:sync`, `mp:sync:dry`, `mp:sync:force`
+- Updated CLAUDE.md with beads coordination documentation
+- Created optional hook: `.claude/hooks/masterplan-beads-sync.sh`
+
+**Features**:
+- Parses MASTER_PLAN.md task headers (`### TASK-XXX: Title (STATUS)`)
+- Uses `--external-ref` for cross-referencing (TASK-123 → flow-state-abc)
+- Status mapping: PLANNED→open, IN PROGRESS→in_progress, DONE→closed
+- Priority mapping: P0-P4 → 0-4
+- Idempotent sync (145 tasks synced, detects unchanged)
+
+**Verification**:
+- `bd ready` shows prioritized unblocked tasks
+- `bd show <id> --json` confirms external_ref mapping
+- `npm run mp:sync:dry` previews changes
+
+---
+
 ## Planned Tasks (NEXT/BACKLOG)
 
 ### TASK-1118: Test Suite Cleanup - Reduce 615 Tests to ~100 Essential (📋 PLANNED)

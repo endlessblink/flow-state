@@ -2771,7 +2771,17 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 **Parent Feature**: FEATURE-1118
 
-**Subtasks**: (Pending design session)
+**Completed Sub-Features**:
+- ~~FEATURE-1132~~: AI Game Master Challenge System (✅ DONE 2026-02-06)
+  - Database migration: `user_challenges`, `challenge_history` tables
+  - Types: `src/types/challenges.ts`
+  - Store: `src/stores/challenges.ts`
+  - AI Game Master: `src/services/ai/gamemaster.ts`, `challengeTemplates.ts`
+  - UI: CorruptionOverlay, ChallengeCard, DailyChallengesPanel, BossFightPanel
+  - Integration: `useGamificationHooks.ts` tracks challenge progress
+  - Skill: `.claude/skills/cyberflow-rpg/SKILL.md`
+
+**Remaining**: Apply migration to production database (see BUG-1204)
 
 ---
 

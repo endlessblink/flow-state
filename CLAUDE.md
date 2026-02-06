@@ -809,6 +809,35 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 **Lock files**: `.claude/locks/TASK-XXX.lock`
 **Lock expiry**: 4 hours (stale locks auto-cleaned)
 
+## Beads Agent Coordination
+
+MASTER_PLAN.md auto-syncs to beads for multi-agent coordination.
+
+**Sync Commands:**
+```bash
+npm run mp:sync           # Full sync MASTER_PLAN → beads
+npm run mp:sync:dry       # Preview changes without applying
+npm run mp:sync:force     # Force sync (ignore change detection)
+```
+
+**For Agents:**
+| Command | Purpose |
+|---------|---------|
+| `bd ready` | Find unblocked tasks to work on |
+| `bd update <id> --status=in_progress` | Claim a task |
+| `bd blocked` | See what's waiting on dependencies |
+| `bd show <id>` | View task details |
+| `bd close <id>` | Mark task complete |
+
+**Architecture:**
+- MASTER_PLAN.md is the **source of truth**
+- Beads are created with `--external-ref TASK-XXX` for cross-referencing
+- Dependencies (`**Blocked By**:`) sync to beads dependency graph
+- Status mapping: PLANNED→open, IN PROGRESS→in_progress, DONE→closed
+- Auto-sync hook triggers on MASTER_PLAN.md edits
+
+**Never create beads manually** - the sync script manages them from MASTER_PLAN.md.
+
 ## Extended Documentation
 
 Detailed docs available in `docs/claude-md-extension/`:

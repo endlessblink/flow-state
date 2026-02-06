@@ -129,17 +129,51 @@
 
 ---
 
-### BUG-1205: "This Week" Sidebar Filter Includes Sunday (Next Week) (🔄 IN PROGRESS)
+### ~~BUG-1205~~: "This Week" Sidebar Filter Includes Sunday (Next Week) (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: The "This Week" sidebar filter count includes tasks due on Sunday, but Sunday is the start of next week. The sidebar's `weekTaskCount` in `useSidebarManagement.ts` uses `<=` comparison instead of `<`, which includes Sunday in the week boundary.
 
 **Root Cause**: `useSidebarManagement.ts` duplicates week-end logic from `useSmartViews.ts` but uses `<= weekEndStr` (includes Sunday) instead of `< weekEndStr` (excludes Sunday, consistent with the centralized `isWeekTask` filter).
 
-**Fix**: Change `<=` to `<` in all three date comparisons (dueDate, instances, scheduledDate) within `weekTaskCount` computed property.
+**Fix**: Changed `<=` to `<` in all three date comparisons (dueDate, instances, scheduledDate) within `weekTaskCount` computed property. User confirmed working 2026-02-06.
 
 **Files**: `src/composables/app/useSidebarManagement.ts`
+
+---
+
+### BUG-1206: Task Details Not Saved When Pressing Save in Canvas (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-06)
+
+**Problem**: After editing task details in the canvas view and pressing Save, the changes are not persisted. Data is lost on close/refresh.
+
+**Files to investigate**: `src/composables/canvas/`, task edit modal, `useSupabaseDatabase.ts`
+
+---
+
+### BUG-1208: Task Edit Modal Closes on Text Selection Release (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-06)
+
+**Problem**: When selecting all text in the task details modal (e.g., triple-click or Ctrl+A on title field) and releasing the mouse, the modal closes unexpectedly. The `@click` handler on the overlay fires when `mouseup` from a text selection lands on the overlay backdrop.
+
+**Root Cause**: `TaskEditModal.vue` line 4 uses `@click="$emit('close')"` on the overlay. When text selection starts inside `.modal-content` but the mouseup drifts onto the overlay, the browser fires a click event on the overlay, closing the modal.
+
+**Fix**: Replace `@click` with `@mousedown.self` — only closes when the press *starts* on the overlay itself.
+
+**Files**: `src/components/tasks/TaskEditModal.vue`
+
+---
+
+### BUG-1207: Task Changes Reset in Tauri App (Board Position, Edits) (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+
+**Problem**: Changes made to tasks in the Tauri desktop app (e.g., board position/order, edits) get reverted/reset. Broader than canvas-only position drift (BUG-1203) — affects task mutations across views.
+
+**Investigation**: Checking sync layer, Supabase persistence, and Tauri-specific code paths.
 
 ---
 
@@ -1986,6 +2020,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |------|----------|-------------|
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
+| BUG-1206 | P0 | Task details not saved when pressing Save in canvas |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
 | FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |

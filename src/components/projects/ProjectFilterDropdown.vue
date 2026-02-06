@@ -298,19 +298,27 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
+/* Dropdown panel - Dark glass morphism matching app theme */
 .dropdown-panel {
   position: absolute;
   top: calc(100% + var(--space-2));
   left: 0;
-  background: var(--surface-primary);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
-  z-index: 1000;
+  z-index: 99999;
   min-width: 200px;
   max-width: 300px;
   max-height: 400px;
   overflow: hidden;
+
+  /* Glass morphism - dark purple-tinted */
+  background-color: var(--surface-primary, #1c192d); /* Solid fallback */
+  background: var(--overlay-component-bg, rgba(28, 25, 45, 0.95));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 .project-list {
@@ -326,7 +334,7 @@ onUnmounted(() => {
   padding: var(--space-3) var(--space-4);
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
   font-size: var(--text-sm);
   text-align: left;
   cursor: pointer;
@@ -335,13 +343,13 @@ onUnmounted(() => {
 }
 
 .project-item:hover {
-  background: var(--surface-hover);
+  background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.08));
   color: var(--text-primary);
 }
 
 .project-item.active {
-  background: var(--state-active-bg);
-  color: var(--state-active-text);
+  background: var(--brand-primary-bg-subtle, rgba(78, 205, 196, 0.1));
+  color: var(--brand-primary, #4ecdc4);
   font-weight: var(--font-semibold);
 }
 

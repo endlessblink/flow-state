@@ -267,7 +267,10 @@ export function useTaskEditActions(
                 updates.dueDate = editedTask.value.dueDate
             }
 
-            taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
+            // BUG-1206 FIX: Await updateTask to ensure store + sync queue are updated
+            // before closing the modal. updateTask no longer rolls back on direct save failure
+            // (sync queue retries), so this won't block the UI on network errors.
+            await taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
 
             // BUG-1097 DEBUG: Log what's in store after update
             const afterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)

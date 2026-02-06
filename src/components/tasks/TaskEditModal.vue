@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal" appear>
-      <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+      <div v-if="isOpen" class="modal-overlay" @mousedown.self="$emit('close')">
         <div class="modal-content" @click.stop>
           <!-- Header -->
           <div class="modal-header">

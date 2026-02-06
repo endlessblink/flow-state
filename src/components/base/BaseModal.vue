@@ -8,7 +8,7 @@
     :aria-modal="isOpen"
     :aria-labelledby="titleId"
     :aria-describedby="descriptionId"
-    @click="handleOverlayClick"
+    @mousedown.self="handleOverlayClick"
     @keydown="handleEscapeKey"
   >
     <div

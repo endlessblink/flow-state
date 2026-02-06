@@ -54,7 +54,8 @@ export function useTaskOperations(
     deleteTaskFromStorage: (taskId: string) => Promise<void>,
     bulkDeleteTasksFromStorage: (taskIds: string[]) => Promise<void>,  // BUG-025: Atomic bulk delete
     persistFilters: () => void,
-    _runAllTaskMigrations: () => void
+    _runAllTaskMigrations: () => void,
+    addPendingWrite: (taskId: string) => void
 ) {
     const projectStore = useProjectStore()
 
@@ -234,6 +235,11 @@ export function useTaskOperations(
         const wasManualInProgress = manualOperationInProgress.value
         if (!wasManualInProgress) manualOperationInProgress.value = true
 
+        // BUG-1207 FIX: Register pending write to suppress realtime echo from own save.
+        // Without this, Supabase fires a realtime event back for our own write,
+        // and the echo can overwrite newer local state (especially during rapid edits).
+        addPendingWrite(taskId)
+
         try {
             const task = _rawTasks.value[index]
 
@@ -368,9 +374,6 @@ export function useTaskOperations(
                 updatedAt: new Date()
             }
 
-            // TASK-1177: Capture previous state for rollback on failure
-            const previousState = { ...task }
-
             // TASK-1177: Queue for offline-first sync FIRST
             // This ensures the update persists in IndexedDB even if network fails
             const updatedTask = _rawTasks.value[index]
@@ -457,17 +460,16 @@ export function useTaskOperations(
             } catch (error) {
                 console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
 
-                // TASK-1177: ROLLBACK on failure - restore previous state to prevent memory/DB divergence
-                // This is critical for data integrity when sync fails
-                // Note: The operation is still queued in IndexedDB and will retry
-                console.log(`🔄 [ROLLBACK] Restoring task ${taskId} to previous state after save failure (queued for retry)`)
-                _rawTasks.value[index] = {
-                    ...previousState,
-                    updatedAt: previousState.updatedAt // Keep original updatedAt
-                }
+                // BUG-1206 FIX: Do NOT rollback the store when the sync queue has the operation.
+                // The old rollback caused data loss: saveTask() doesn't await updateTask(),
+                // so the modal closes with "saved successfully" but the async rollback
+                // silently reverts the store. The user re-opens and sees old data.
+                // The sync queue (IndexedDB) will retry and eventually persist the change.
+                // Keeping the optimistic update is the correct offline-first behavior.
+                console.warn(`⚠️ [BUG-1206] Direct save failed for task ${taskId}, but sync queue will retry. Store keeps optimistic update.`)
 
-                // Re-throw so callers can handle the error (e.g., show toast)
-                throw error
+                // Do NOT re-throw - the operation is queued and will retry.
+                // Callers (like saveTask) already closed the modal optimistically.
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false
@@ -718,7 +720,7 @@ export function useTaskOperations(
         await updateTask(taskId, { instances: [newInstance], status: 'in_progress' })
     }
 
-    const moveTaskToSmartGroup = (taskId: string, type: string) => {
+    const moveTaskToSmartGroup = async (taskId: string, type: string) => {
         const today = new Date()
         let dueDate = ''
         switch (type.toLowerCase()) {
@@ -754,10 +756,10 @@ export function useTaskOperations(
                 console.warn(`⚠️ [TASK-114] Unknown smart group type: "${type}" - no update performed`)
                 return
         }
-        updateTask(taskId, { dueDate })
+        await updateTask(taskId, { dueDate })
     }
 
-    const moveTaskToDate = (taskId: string, dateColumn: string) => {
+    const moveTaskToDate = async (taskId: string, dateColumn: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const today = new Date(); today.setHours(0, 0, 0, 0)
@@ -765,12 +767,12 @@ export function useTaskOperations(
 
         // BUG-1189: Handle 'inbox' and 'noDate' columns
         if (dateColumn === 'inbox') {
-            updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: true })
+            await updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: true })
             return
         }
 
         if (dateColumn === 'noDate') {
-            updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: false })
+            await updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: false })
             return
         }
 
@@ -805,15 +807,15 @@ export function useTaskOperations(
                 updates.dueDate = targetDateStr
             }
         }
-        updateTask(taskId, updates)
+        await updateTask(taskId, updates)
     }
 
-    const unscheduleTask = (taskId: string) => {
-        updateTask(taskId, { instances: [], isInInbox: true })
+    const unscheduleTask = async (taskId: string) => {
+        await updateTask(taskId, { instances: [], isInInbox: true })
     }
 
-    const moveTaskToPriority = (taskId: string, priority: Task['priority'] | 'no_priority') => {
-        updateTask(taskId, { priority: priority === 'no_priority' ? null : priority })
+    const moveTaskToPriority = async (taskId: string, priority: Task['priority'] | 'no_priority') => {
+        await updateTask(taskId, { priority: priority === 'no_priority' ? null : priority })
     }
 
     const setActiveProject = (projectId: string | null) => {

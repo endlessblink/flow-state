@@ -104,6 +104,22 @@ export const useTaskStore = defineStore('tasks', () => {
   // High Severity Issue #7: Pending-write registry to prevent drag/sync race conditions
   const pendingWrites = ref<Set<string>>(new Set())
 
+  // BUG-1207: Moved addPendingWrite here (before useTaskOperations) so it can be passed as parameter.
+  // Previously defined later in the file, causing "used before declaration" error.
+  const addPendingWrite = (taskId: string) => {
+    pendingWrites.value.add(taskId)
+    // TASK-1177: Extended from 5 seconds to 30 seconds
+    // 5 seconds was too short - VPS latency can be 20s (see useNodeSync timeout)
+    // This caused pending writes to be cleared before sync completed
+    setTimeout(() => pendingWrites.value.delete(taskId), 30000)
+  }
+
+  const removePendingWrite = (taskId: string) => {
+    pendingWrites.value.delete(taskId)
+  }
+
+  const isPendingWrite = (taskId: string) => pendingWrites.value.has(taskId)
+
   // 2. Initialize Persistence
   // BUG-057: Pass syncInProgress to prevent saves during sync operations
   // SAFETY: Pass _rawTasks for load/save operations
@@ -121,7 +137,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const operations = useTaskOperations(
     _rawTasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
     activeDurationFilter, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
-    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations
+    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations, addPendingWrite
   )
 
   // 4. Initialize History
@@ -381,21 +397,6 @@ export const useTaskStore = defineStore('tasks', () => {
       syncInProgress.value = false
     }
   }
-
-  // High Severity Issue #7: Pending-write registry helpers
-  const addPendingWrite = (taskId: string) => {
-    pendingWrites.value.add(taskId)
-    // TASK-1177: Extended from 5 seconds to 30 seconds
-    // 5 seconds was too short - VPS latency can be 20s (see useNodeSync timeout)
-    // This caused pending writes to be cleared before sync completed
-    setTimeout(() => pendingWrites.value.delete(taskId), 30000)
-  }
-
-  const removePendingWrite = (taskId: string) => {
-    pendingWrites.value.delete(taskId)
-  }
-
-  const isPendingWrite = (taskId: string) => pendingWrites.value.has(taskId)
 
   // TASK-1183: Cleanup corrupted tasks with invalid parentId (legacy group IDs)
   const cleanupCorruptedTasks = async () => {

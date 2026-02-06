@@ -1,6 +1,6 @@
 [package]
 name = "flow-state"
-version = "1.2.10"
+version = "1.2.12"
 description = "FlowState - Productivity app with task management and pomodoro timer"
 authors = ["EndlessBlink"]
 license = "MIT"

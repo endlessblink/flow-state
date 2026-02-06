@@ -16,6 +16,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { createAIRouter, type TaskType, type RouterProviderType } from '@/services/ai'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
+import { parseToolCalls, executeTool, buildToolsPrompt, type ToolResult } from '@/services/ai/tools'
 
 // ============================================================================
 // Types
@@ -153,9 +154,10 @@ export function useAIChat() {
   function buildSystemPrompt(ctx: ChatContext): string {
     const parts: string[] = [
       'You are FlowState AI, a helpful assistant for a productivity app.',
-      'You help users organize tasks, break down complex work, and suggest canvas groupings.',
-      'Be concise and actionable in your responses.',
-      'When suggesting actions, be specific about what will happen.',
+      'You can help users organize tasks, create groups, and manage their work.',
+      'Be concise and helpful.',
+      '',
+      buildToolsPrompt(),
       ''
     ]
 
@@ -229,6 +231,35 @@ export function useAIChat() {
       })) {
         store.appendStreamingContent(chunk.content)
         fullContent += chunk.content
+      }
+
+      // Check for and execute tool calls
+      const toolCalls = parseToolCalls(fullContent)
+      const toolResults: ToolResult[] = []
+
+      if (toolCalls.length > 0) {
+        for (const call of toolCalls) {
+          console.log('[AIChat] Executing tool:', call.tool, call.parameters)
+          const result = await executeTool(call)
+          toolResults.push(result)
+          console.log('[AIChat] Tool result:', result)
+        }
+
+        // If tools were executed, append a summary to the content
+        if (toolResults.length > 0) {
+          const successfulTools = toolResults.filter(r => r.success)
+          const failedTools = toolResults.filter(r => !r.success)
+
+          if (failedTools.length > 0) {
+            // Append error info to the streamed content for visibility
+            store.appendStreamingContent('\n\n---\n' + failedTools.map(r => `Error: ${r.message}`).join('\n'))
+          }
+
+          // Log for debugging
+          if (successfulTools.length > 0) {
+            console.log('[AIChat] Tools executed successfully:', successfulTools.map(r => r.message))
+          }
+        }
       }
 
       // Complete the message

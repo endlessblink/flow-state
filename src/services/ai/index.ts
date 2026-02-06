@@ -75,3 +75,17 @@ export {
 export type {
   TauriFetchOptions,
 } from './utils/tauriHttp'
+
+// AI Tools for tool execution
+export {
+  AI_TOOLS,
+  executeTool,
+  parseToolCalls,
+  buildToolsPrompt,
+} from './tools'
+
+export type {
+  ToolDefinition,
+  ToolCall,
+  ToolResult,
+} from './tools'

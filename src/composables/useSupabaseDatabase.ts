@@ -1605,6 +1605,16 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         // Start initial connection
         setupSubscription()
 
+        // BUG-1207 FIX: Track last user interaction to prevent recovery from clobbering recent edits.
+        // In Tauri/WebKitGTK, visibility changes fire aggressively (notifications, tray, focus loss),
+        // triggering full DB reloads that overwrite unsaved local state.
+        let lastUserInteraction = Date.now()
+        const RECOVERY_COOLDOWN_MS = 30000 // 30 seconds
+        const trackUserInteraction = () => { lastUserInteraction = Date.now() }
+        document.addEventListener('click', trackUserInteraction, { passive: true })
+        document.addEventListener('keydown', trackUserInteraction, { passive: true })
+        document.addEventListener('pointerdown', trackUserInteraction, { passive: true })
+
         // VISIBILITY RESUME (Handle Background Tab Throttling)
         const onVisibilityChange = async () => {
             if (document.visibilityState === 'visible') {
@@ -1626,10 +1636,17 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                     }
                     retryCount = 0
                     setupSubscription()
-                    if (onRecovery) {
+
+                    // BUG-1207 FIX: Skip recovery reload if user was recently active.
+                    // This prevents the "edit task → lose focus briefly → recovery clobbers edit" pattern
+                    // that is especially common in Tauri/WebKitGTK.
+                    const timeSinceInteraction = Date.now() - lastUserInteraction
+                    if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
                         // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
                         invalidateCache.all()
                         onRecovery()
+                    } else if (onRecovery) {
+                        console.log(`👀 [REALTIME] Skipping recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
                     }
                 } else {
                     // Pulse check - verify we are actually connected

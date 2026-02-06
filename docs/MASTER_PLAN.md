@@ -91,7 +91,7 @@
 
 ---
 
-### BUG-1191: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)
+### BUG-1197: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
 
@@ -669,27 +669,28 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-1191: Overdue Badge Logic Inverted for Today Group Tasks (🔄 IN PROGRESS)
+### ~~BUG-1191~~: Overdue Badge Logic Inverted for Today Group Tasks (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: Overdue badges on tasks have inverted behavior related to the Today group:
 1. **Tasks staying in Today group** that become overdue → badge does NOT appear (should show)
 2. **Tasks moved OUT of Today group** that are overdue → badge does NOT appear (should show)
 3. **Tasks returned TO Today group** → badge DOES appear (should NOT, because the due date should be updated to today on move)
 
-**Expected Behavior**:
-- Overdue badge appears on any task whose due date is in the past
-- Moving a task into Today group updates its due date to today (removing overdue status)
-- Tasks that remain overdue (in any group) should always show the badge
+**Root Cause**: `new Date()` inside Vue `computed()` is NOT a reactive dependency. Computeds cache results until reactive dependencies change. Since time isn't reactive, overdue badges never update when midnight passes.
 
-**Success Criteria**:
-- [ ] Tasks with past due dates show overdue badge regardless of group location
-- [ ] Moving task into Today group updates due date → no overdue badge
-- [ ] Tasks staying in Today group past midnight show overdue badge next day
-- [ ] Moving task out of Today group preserves its due date and badge state
+**Fix Applied**:
+- Created `src/composables/useReactiveDate.ts` with reactive `reactiveToday` ref that updates every 60 seconds
+- Updated all overdue computations to depend on `reactiveToday.value` (creates reactive dependency)
+- At midnight, ref updates → all overdue computeds re-evaluate → badges appear/disappear correctly
 
-**Files**: TBD (needs investigation of overdue badge logic and Today group move handlers)
+**Files Changed**:
+- `src/composables/useReactiveDate.ts` (NEW)
+- `src/composables/canvas/node/useTaskNodeState.ts`
+- `src/components/kanban/card/TaskCardBadges.vue`
+- `src/components/inbox/unified/UnifiedInboxTaskCard.vue`
+- `src/components/inbox/calendar/CalendarTaskCard.vue`
 
 ---
 

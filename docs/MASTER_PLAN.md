@@ -1588,6 +1588,28 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
+### TASK-1214: Child Groups Inherit Parent Group Properties (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (Started: 2026-02-06)
+
+**Problem**: When dropping a task into a nested child group, the task only inherits properties from the immediate child group. Parent group properties (especially dates like "Today") are NOT inherited.
+
+**Expected Behavior**: Task dropped into child group → inherits date from parent group + any properties from child group (child overrides parent for conflicts).
+
+**Solution Implemented**:
+1. Added `getParentChain()` utility in `storeHelpers.ts` - traverses from child to parent groups
+2. Modified `getSectionProperties()` to traverse parent chain and merge properties (root → child order)
+3. Updated `useCanvasInteractions.ts` to pass `allGroups` for inheritance
+
+**Current Status**: Enhanced debug logging added to diagnose why inheritance isn't working in all cases. Testing in progress.
+
+**Key Files**:
+- `src/utils/canvas/storeHelpers.ts` - `getParentChain()` function
+- `src/composables/canvas/useCanvasSectionProperties.ts` - Parent chain traversal
+- `src/composables/canvas/useCanvasInteractions.ts` - Passes allGroups to enable inheritance
+
+---
+
 ### ~~TASK-1087~~: KDE Widget - Task Readability + Active Task Highlight (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-01-30)

@@ -316,9 +316,47 @@ export interface DbUserGamificationChallengeFields {
   daily_challenges_completed: number
   weekly_challenges_completed: number
   boss_fights_won: number
-  total_challenges_completed: number
   last_daily_generation: string | null
   last_weekly_generation: string | null
+}
+
+// Challenge history entry (app type)
+export interface ChallengeHistoryEntry {
+  id: string
+  userId: string
+  challengeId?: string
+  challengeType: ChallengeType
+  objectiveType: ChallengeObjective
+  difficulty: ChallengeDifficulty
+  status: 'completed' | 'failed' | 'expired'
+  xpEarned: number
+  xpLost: number
+  objectiveTarget: number
+  objectiveAchieved: number
+  completionRate: number
+  generatedAt?: Date
+  resolvedAt: Date
+}
+
+/**
+ * Map database history row to ChallengeHistoryEntry
+ */
+export function mapDbChallengeHistory(row: DbChallengeHistory & { objective_target?: number; objective_achieved?: number }): ChallengeHistoryEntry {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    challengeType: row.challenge_type,
+    objectiveType: row.objective_type,
+    difficulty: row.difficulty,
+    status: row.status,
+    xpEarned: row.xp_earned,
+    xpLost: row.xp_lost,
+    objectiveTarget: row.objective_target || 0,
+    objectiveAchieved: row.objective_achieved || 0,
+    completionRate: row.completion_rate || 0,
+    generatedAt: row.generated_at ? new Date(row.generated_at) : undefined,
+    resolvedAt: new Date(row.resolved_at),
+  }
 }
 
 // =============================================================================

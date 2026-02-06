@@ -3,6 +3,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
 import type { Project } from '@/types/tasks'
+import { useSmartViews } from '@/composables/useSmartViews'
 
 /**
  * Sidebar Management State Management Composable
@@ -31,6 +32,7 @@ export function useSidebarManagement() {
   const taskStore = useTaskStore()
   const uiStore = useUIStore()
   const { isDurationSectionExpanded, expandedProjectIds: expandedProjects } = toRefs(uiStore)
+  const { isTodayTask, isWeekTask } = useSmartViews()
 
   const router = useRouter()
 
@@ -105,108 +107,23 @@ export function useSidebarManagement() {
   }
 
   // Smart View Counts
+  // BUG-1210: Use centralized useSmartViews instead of duplicated logic.
+  // Previously had divergent logic (e.g., including all in_progress tasks
+  // regardless of date, excluding overdue) causing count/filter mismatches.
   const todayTaskCount = computed(() => {
-    const todayStr = new Date().toISOString().split('T')[0]
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
     return taskStore.tasks.filter(task => {
-      // BUG-FIX: Exclude soft-deleted tasks
       if (task._soft_deleted) return false
-      // Exclude done tasks from today count (matches filteredTasks logic)
-      if (task.status === 'done') {
-        return false
-      }
-
-      // Check if task is due today (matches filteredTasks logic)
-      if (task.dueDate && task.dueDate === todayStr) {
-        return true
-      }
-
-      // Check if task has instances scheduled for today (matches filteredTasks logic)
-      if (task.instances && task.instances.length > 0) {
-        const hasTodayInstance = task.instances.some(inst =>
-          inst && inst.scheduledDate === todayStr
-        )
-        if (hasTodayInstance) {
-          return true
-        }
-      }
-
-      // Check legacy scheduled date for today (matches filteredTasks logic)
-      if (task.scheduledDate && task.scheduledDate === todayStr) {
-        return true
-      }
-
-      // Tasks currently in progress (matches filteredTasks logic)
-      if (task.status === 'in_progress') {
-        return true
-      }
-
-      return false
+      return isTodayTask(task)
     }).length
   })
 
+  // BUG-1210: Use centralized useSmartViews instead of duplicated logic.
+  // Previously had divergent logic (e.g., including all in_progress tasks
+  // regardless of date, excluding overdue) causing count/filter mismatches.
   const weekTaskCount = computed(() => {
-    // Calculate tasks for the current week (today through Sunday) using same logic as store
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayStr = today.toISOString().split('T')[0]
-
-    // Calculate end of current week (Sunday)
-    const weekEnd = new Date(today)
-    const dayOfWeek = today.getDay()
-    const daysUntilSunday = (7 - dayOfWeek) % 7 || 7 // If today is Sunday (0), daysUntilSunday = 7
-    weekEnd.setDate(today.getDate() + daysUntilSunday)
-    const weekEndStr = weekEnd.toISOString().split('T')[0]
-
     return taskStore.tasks.filter(task => {
-      // BUG-FIX: Exclude soft-deleted tasks
       if (task._soft_deleted) return false
-      // Exclude done tasks from week count (matches filteredTasks logic)
-      if (task.status === 'done') {
-        return false
-      }
-
-      // BUG-1205: Include tasks due within the current week (today through Saturday)
-      // Use < (not <=) to exclude Sunday, consistent with useSmartViews.isWeekTask
-      if (task.dueDate && task.dueDate >= todayStr && task.dueDate < weekEndStr) {
-        return true
-      }
-
-      // Check if task has instances scheduled within the week (matches filteredTasks logic)
-      if (task.instances && task.instances.length > 0) {
-        const hasWeekInstance = task.instances.some(inst =>
-          inst && inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr
-        )
-        if (hasWeekInstance) {
-          return true
-        }
-      }
-
-      // Check legacy scheduled dates within the week (matches filteredTasks logic)
-      if (task.scheduledDate && task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr) {
-        return true
-      }
-
-      // Tasks currently in progress (matches filteredTasks logic)
-      if (task.status === 'in_progress') {
-        return true
-      }
-
-      // FIX (Dec 5, 2025): Include tasks created today (matches useSmartViews.isWeekTask)
-      // This ensures new tasks appear in "This Week" until scheduled
-      if (task.createdAt) {
-        const createdDate = new Date(task.createdAt)
-        if (!isNaN(createdDate.getTime())) {
-          createdDate.setHours(0, 0, 0, 0)
-          if (createdDate.getTime() === today.getTime()) {
-            return true
-          }
-        }
-      }
-
-      return false
+      return isWeekTask(task)
     }).length
   })
 

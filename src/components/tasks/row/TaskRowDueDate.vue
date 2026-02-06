@@ -214,7 +214,7 @@ onUnmounted(() => {
   border-color: rgba(84, 160, 255, 0.5);
 }
 
-/* Due Date Dropdown - Glass morphism matching other dropdowns */
+/* Due Date Dropdown - Dark glass morphism */
 .due-date-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -222,14 +222,15 @@ onUnmounted(() => {
   transform: translateX(-50%);
   z-index: 99999;
 
-  /* Glass morphism - purple-tinted */
-  background: rgba(35, 32, 50, 0.65);
+  /* Glass morphism - dark purple-tinted with solid fallback */
+  background-color: #1c192d !important;
+  background: rgba(28, 25, 45, 0.95) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   border-radius: var(--radius-md);
 
   min-width: 120px;
@@ -238,7 +239,6 @@ onUnmounted(() => {
   padding: var(--space-1);
 
   isolation: isolate;
-  transform: translateX(-50%) translateZ(0);
 }
 
 .due-date-dropdown__item {
@@ -248,9 +248,10 @@ onUnmounted(() => {
   gap: var(--space-2);
   width: 100%;
   padding: var(--space-1_5) var(--space-2);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-primary);
+  border: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
@@ -262,7 +263,8 @@ onUnmounted(() => {
 }
 
 .due-date-dropdown__item:hover {
-  background: var(--surface-hover);
+  background: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .due-date-dropdown__item.is-active {

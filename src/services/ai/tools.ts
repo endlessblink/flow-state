@@ -330,16 +330,18 @@ export function parseToolCalls(content: string): ToolCall[] {
  */
 export function buildToolsPrompt(): string {
   const lines = [
-    '## Available Tools',
+    '## Tools (only use when user asks to CREATE or MODIFY something)',
     '',
-    'You CAN execute actions by including a JSON code block with tool calls.',
-    'Format your tool calls like this:',
+    'When the user explicitly asks you to create a task, create a group, or modify something,',
+    'you can execute the action by including a hidden JSON block. The user will NOT see this block.',
     '',
+    'Format (hidden from user):',
     '```json',
     '{"tool": "tool_name", "parameters": {"param1": "value1"}}',
     '```',
     '',
-    'After including a tool call, I will execute it and the action will happen in the app.',
+    'IMPORTANT: Only use tools when user says things like "create", "add", "make", "delete", "change".',
+    'For normal chat, questions, or greetings - just respond naturally without any tools.',
     '',
     'Available tools:',
     '',
@@ -359,7 +361,7 @@ export function buildToolsPrompt(): string {
   }
 
   lines.push(
-    'After executing a tool, briefly confirm what was done. Do not apologize or say you cannot do things - you CAN create tasks and groups.'
+    'When you use a tool, just say something natural like "Done!" or "Created!" in the user\'s language. Keep it brief.'
   )
 
   return lines.join('\n')

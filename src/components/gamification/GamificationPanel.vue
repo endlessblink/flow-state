@@ -9,6 +9,7 @@ import XpBar from './XpBar.vue'
 import LevelBadge from './LevelBadge.vue'
 import StreakCounter from './StreakCounter.vue'
 import AchievementBadge from './AchievementBadge.vue'
+import DailyChallengesPanel from './DailyChallengesPanel.vue'
 import { Trophy, ShoppingBag, ChevronRight, Sparkles, HelpCircle, ChevronDown } from 'lucide-vue-next'
 
 const showHelp = ref(false)
@@ -71,6 +72,11 @@ const totalCount = computed(() => gamificationStore.achievements.length)
     <!-- Streak -->
     <div class="panel-section">
       <StreakCounter :show-freezes="true" />
+    </div>
+
+    <!-- Daily Challenges (FEATURE-1132) -->
+    <div class="panel-section">
+      <DailyChallengesPanel :compact="true" />
     </div>
 
     <!-- Recent Achievements -->

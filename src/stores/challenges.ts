@@ -638,18 +638,17 @@ export const useChallengesStore = defineStore('challenges', () => {
 
     const { error } = await supabase.from('challenge_history').insert({
       user_id: authStore.user.id,
+      challenge_id: challenge.id,
       challenge_type: challenge.challengeType,
       objective_type: challenge.objectiveType,
       difficulty: challenge.difficulty,
       status,
       xp_earned: status === 'completed' ? challenge.rewardXp : 0,
       xp_lost: status !== 'completed' ? challenge.penaltyXp : 0,
-      completion_rate: completionRate,
+      objective_target: challenge.objectiveTarget,
+      objective_achieved: challenge.objectiveCurrent,
       generated_at: challenge.generatedAt.toISOString(),
       resolved_at: now.toISOString(),
-      time_to_complete_minutes: status === 'completed' && challenge.completedAt
-        ? Math.round((challenge.completedAt.getTime() - challenge.generatedAt.getTime()) / 60000)
-        : null,
     })
 
     if (error) {

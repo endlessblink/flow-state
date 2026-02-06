@@ -1,17 +1,21 @@
 /**
  * Gamification Hooks Composable
  * FEATURE-1118: Integration hooks for task and timer stores
+ * FEATURE-1132: Challenge progress tracking integration
  *
  * This composable provides methods to award XP and track stats
  * when tasks are completed, pomodoros finish, etc.
+ * Also integrates with challenge progress tracking.
  */
 
 import { useGamificationStore } from '@/stores/gamification'
+import { useChallengesStore } from '@/stores/challenges'
 import { XP_VALUES } from '@/types/gamification'
 import type { Task } from '@/types/tasks'
 
 export function useGamificationHooks() {
   const gamificationStore = useGamificationStore()
+  const challengesStore = useChallengesStore()
 
   /**
    * Called when a task is marked as completed
@@ -55,11 +59,59 @@ export function useGamificationHooks() {
     }
 
     // Award XP
-    return await gamificationStore.awardXp(XP_VALUES.TASK_COMPLETE_BASE, 'task_complete', {
+    const result = await gamificationStore.awardXp(XP_VALUES.TASK_COMPLETE_BASE, 'task_complete', {
       taskId: task.id,
       priority: task.priority,
       isOverdue: options?.wasOverdue,
     })
+
+    // FEATURE-1132: Track challenge progress
+    if (challengesStore.isInitialized) {
+      // Complete tasks challenge
+      await challengesStore.checkChallengeProgress({
+        type: 'complete_tasks',
+        context: { projectId: task.projectId, priority: task.priority ?? undefined },
+      })
+
+      // High priority challenge
+      if (task.priority === 'high') {
+        await challengesStore.checkChallengeProgress({
+          type: 'complete_high_priority',
+          context: { priority: 'high' },
+        })
+      }
+
+      // Clear overdue challenge
+      if (options?.wasOverdue) {
+        await challengesStore.checkChallengeProgress({
+          type: 'clear_overdue',
+          context: { wasOverdue: true },
+        })
+      }
+
+      // Project-specific challenge
+      if (task.projectId) {
+        await challengesStore.checkChallengeProgress({
+          type: 'complete_project_tasks',
+          context: { projectId: task.projectId },
+        })
+      }
+
+      // Complete before hour challenge
+      const currentHour = new Date().getHours()
+      await challengesStore.checkChallengeProgress({
+        type: 'complete_before_hour',
+        context: { hour: currentHour },
+      })
+
+      // Variety challenge (complete in different projects)
+      await challengesStore.checkChallengeProgress({
+        type: 'complete_variety',
+        context: { projectId: task.projectId },
+      })
+    }
+
+    return result
   }
 
   /**
@@ -79,10 +131,28 @@ export function useGamificationHooks() {
     }
 
     // Award XP with consecutive bonus
-    return await gamificationStore.awardXp(XP_VALUES.POMODORO_COMPLETE_BASE, 'pomodoro_complete', {
+    const result = await gamificationStore.awardXp(XP_VALUES.POMODORO_COMPLETE_BASE, 'pomodoro_complete', {
       taskId: taskId || undefined,
       consecutivePomodoros: options?.consecutiveSessions,
     })
+
+    // FEATURE-1132: Track challenge progress
+    if (challengesStore.isInitialized) {
+      // Pomodoro challenge
+      await challengesStore.checkChallengeProgress({
+        type: 'complete_pomodoros',
+      })
+
+      // Focus time challenge
+      if (options?.durationMinutes) {
+        await challengesStore.checkChallengeProgress({
+          type: 'focus_time_minutes',
+          amount: options.durationMinutes,
+        })
+      }
+    }
+
+    return result
   }
 
   /**

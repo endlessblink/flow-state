@@ -91,6 +91,14 @@ export function useTaskNodeActions(
         // Get fresh task from store (source of truth) instead of stale node data
         const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
 
+        // BUG-1206 DEBUG: Log description when opening edit
+        console.log('🐛 [BUG-1206] TRIGGER EDIT - description from store:', {
+            taskId: freshTask.id?.slice(0, 8),
+            descLength: freshTask.description?.length,
+            descPreview: freshTask.description?.slice(0, 50),
+            usedFallback: !taskStore.tasks.find(t => t.id === task.id)
+        })
+
         if (props.editCallback) {
             // Use callback prop (works in Vue Flow custom nodes)
             props.editCallback(freshTask)

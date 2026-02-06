@@ -181,6 +181,14 @@ export function useTaskEditState(
                     dueDate: freshTask.dueDate,
                     scheduledDate: freshTask.scheduledDate
                 })
+                // BUG-1206 DEBUG: Log description when modal opens
+                console.log('🐛 [BUG-1206] MODAL OPEN - fresh task description:', {
+                    taskId: freshTask.id?.slice(0, 8),
+                    descLength: freshTask.description?.length,
+                    descPreview: freshTask.description?.slice(0, 50),
+                    propsTaskDescLength: props.task?.description?.length,
+                    propsTaskDescPreview: props.task?.description?.slice(0, 50)
+                })
 
                 const newTaskState = {
                     ...freshTask,

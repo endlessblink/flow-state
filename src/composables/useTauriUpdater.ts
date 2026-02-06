@@ -122,11 +122,9 @@ export function useTauriUpdater() {
             downloaded = 0
             break
           case 'Progress':
-            if (event.data?.contentLength) {
-              downloaded += event.data?.chunkLength || 0
-              downloadProgress.value = Math.round(
-                (downloaded / event.data.contentLength) * 100
-              )
+            downloaded += event.data?.chunkLength || 0
+            if (totalSize > 0) {
+              downloadProgress.value = Math.round((downloaded / totalSize) * 100)
               if (downloadProgress.value % 10 === 0) {
                 console.log('[Updater] Progress:', downloadProgress.value + '%')
               }

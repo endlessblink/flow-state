@@ -36,7 +36,6 @@ const {
   setProvider,
   setModel,
   refreshOllamaModels,
-  togglePanel,
   closePanel,
   sendMessage,
   clearMessages,

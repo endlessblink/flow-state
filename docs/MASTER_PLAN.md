@@ -153,9 +153,9 @@
 
 ---
 
-### BUG-1208: Task Edit Modal Closes on Text Selection Release (🔄 IN PROGRESS)
+### ~~BUG-1208~~: Task Edit Modal Closes on Text Selection Release (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: When selecting all text in the task details modal (e.g., triple-click or Ctrl+A on title field) and releasing the mouse, the modal closes unexpectedly. The `@click` handler on the overlay fires when `mouseup` from a text selection lands on the overlay backdrop.
 
@@ -167,9 +167,9 @@
 
 ---
 
-### BUG-1207: Task Changes Reset in Tauri App (Board Position, Edits) (🔄 IN PROGRESS)
+### BUG-1207: Task Changes Reset in Tauri App (Board Position, Edits) (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
 
 **Problem**: Changes made to tasks in the Tauri desktop app (e.g., board position/order, edits) get reverted/reset. Broader than canvas-only position drift (BUG-1203) — affects task mutations across views.
 

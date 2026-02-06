@@ -1,4 +1,6 @@
 # Ideas
+where can I manage recurring tasks? how can I know which are recurring? When I mark a task as done and it's recurring what happens?
+גיימיפיקציה לאפליקציה לקבוע תאריך ביצוע וכל דחייה מורידה נקודות
 
 
 

@@ -13,7 +13,7 @@
  */
 
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { X, Send, Sparkles, Loader2, Trash2 } from 'lucide-vue-next'
+import { X, Send, Sparkles, Loader2, Trash2, Settings } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import ChatMessage from './ChatMessage.vue'
 
@@ -28,6 +28,14 @@ const {
   isGenerating,
   canSend,
   error,
+  activeProvider,
+  selectedProvider,
+  selectedModel,
+  availableOllamaModels,
+  isLoadingModels,
+  setProvider,
+  setModel,
+  refreshOllamaModels,
   togglePanel,
   closePanel,
   sendMessage,
@@ -43,6 +51,7 @@ const {
 
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLTextAreaElement | null>(null)
+const showSettings = ref(false)
 
 // ============================================================================
 // Auto-scroll
@@ -134,8 +143,78 @@ onUnmounted(() => {
         <div class="header-title">
           <Sparkles class="header-icon" :size="18" />
           <span>AI Assistant</span>
+          <span v-if="activeProvider" class="provider-badge" :class="'provider-' + activeProvider">
+            {{ activeProvider === 'ollama' ? 'Local' : activeProvider === 'groq' ? 'Groq' : activeProvider === 'openrouter' ? 'OpenRouter' : activeProvider }}
+          </span>
         </div>
         <div class="header-actions">
+          <!-- Settings dropdown -->
+          <div class="settings-container">
+            <button
+              class="header-btn settings-btn"
+              :class="{ active: showSettings }"
+              title="AI Settings"
+              @click="showSettings = !showSettings"
+            >
+              <Settings :size="16" />
+            </button>
+
+            <Transition name="dropdown">
+              <div v-if="showSettings" class="settings-dropdown">
+                <div class="settings-section">
+                  <label class="settings-label">Provider</label>
+                  <div class="provider-options">
+                    <button
+                      class="provider-option"
+                      :class="{ active: selectedProvider === 'auto' }"
+                      @click="setProvider('auto')"
+                    >
+                      Auto
+                    </button>
+                    <button
+                      class="provider-option"
+                      :class="{ active: selectedProvider === 'groq' }"
+                      @click="setProvider('groq')"
+                    >
+                      Groq
+                    </button>
+                    <button
+                      class="provider-option"
+                      :class="{ active: selectedProvider === 'ollama' }"
+                      @click="setProvider('ollama')"
+                    >
+                      Local
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="selectedProvider === 'ollama' || (selectedProvider === 'auto' && activeProvider === 'ollama')" class="settings-section">
+                  <div class="settings-label-row">
+                    <label class="settings-label">Local Model</label>
+                    <button
+                      class="refresh-btn"
+                      title="Refresh models"
+                      :disabled="isLoadingModels"
+                      @click="refreshOllamaModels"
+                    >
+                      <Loader2 v-if="isLoadingModels" class="spin" :size="12" />
+                      <span v-else>&#x21bb;</span>
+                    </button>
+                  </div>
+                  <select
+                    class="model-select"
+                    :value="selectedModel || ''"
+                    @change="setModel(($event.target as HTMLSelectElement).value || null)"
+                  >
+                    <option value="">Default (llama3.2)</option>
+                    <option v-for="model in availableOllamaModels" :key="model" :value="model">
+                      {{ model }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </Transition>
+          </div>
           <button
             v-if="visibleMessages.length > 1"
             class="header-btn"
@@ -285,6 +364,32 @@ onUnmounted(() => {
   color: var(--accent-primary, #8b5cf6);
 }
 
+.provider-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 9999px);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.provider-ollama {
+  background: rgba(34, 197, 94, 0.15);
+  color: rgb(74, 222, 128);
+}
+
+.provider-groq {
+  background: rgba(249, 115, 22, 0.15);
+  color: rgb(251, 146, 60);
+}
+
+.provider-openrouter {
+  background: rgba(59, 130, 246, 0.15);
+  color: rgb(96, 165, 250);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -313,6 +418,149 @@ onUnmounted(() => {
 .close-btn:hover {
   background: var(--error-bg, rgba(239, 68, 68, 0.1));
   color: var(--error, #ef4444);
+}
+
+/* ============================================================================
+   Settings Dropdown
+   ============================================================================ */
+
+.settings-container {
+  position: relative;
+}
+
+.settings-btn.active {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--accent-primary, #8b5cf6);
+}
+
+.settings-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-2, 8px);
+  min-width: 200px;
+  background: var(--overlay-component-bg, rgba(24, 24, 28, 0.98));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-3, 12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.settings-section {
+  margin-bottom: var(--space-3, 12px);
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  margin-bottom: var(--space-2, 8px);
+}
+
+.settings-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2, 8px);
+}
+
+.settings-label-row .settings-label {
+  margin-bottom: 0;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #fff);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.provider-options {
+  display: flex;
+  gap: var(--space-1, 4px);
+  background: var(--bg-input, rgba(0, 0, 0, 0.2));
+  border-radius: var(--radius-md, 8px);
+  padding: 2px;
+}
+
+.provider-option {
+  flex: 1;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.provider-option:hover {
+  color: var(--text-primary, #fff);
+}
+
+.provider-option.active {
+  background: var(--accent-primary, #8b5cf6);
+  color: white;
+}
+
+.model-select {
+  width: 100%;
+  padding: var(--space-2, 8px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  background: var(--bg-input, rgba(0, 0, 0, 0.2));
+  color: var(--text-primary, #fff);
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: var(--accent-primary, #8b5cf6);
+}
+
+.model-select option {
+  background: var(--bg-elevated, #1a1a1e);
+  color: var(--text-primary, #fff);
+}
+
+/* Dropdown animation */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 /* ============================================================================

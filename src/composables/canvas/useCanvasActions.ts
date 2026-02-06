@@ -2,9 +2,10 @@ import { type Ref, ref } from 'vue'
 import { useVueFlow, type Node } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useCanvasContextMenuStore } from '@/stores/canvas/contextMenus'
-import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { CANVAS } from '@/constants/canvas'
+import { useTaskStore } from '@/stores/tasks'
+import type { CanvasGroup } from '@/types/canvas'
 
 // Imported Composables
 import { useCanvasGroupActions } from './useCanvasGroupActions'
@@ -41,6 +42,7 @@ export function useCanvasActions(
 ) {
     const canvasStore = useCanvasStore()
     const contextMenuStore = useCanvasContextMenuStore()
+    const taskStore = useTaskStore()
     const { getSelectedNodes, screenToFlowCoordinate, removeNodes } = useVueFlow()
 
     // --- Instantiate Sub-Composables ---
@@ -148,6 +150,96 @@ export function useCanvasActions(
         closeNodeContextMenu()
     }
 
+    /**
+     * TASK-1128: Create a new group from currently selected nodes
+     *
+     * 1. Gets all selected task nodes (ignores group nodes)
+     * 2. Calculates bounding box of selected nodes
+     * 3. Creates a new group that contains all selected tasks
+     * 4. Updates task parentIds to the new group
+     */
+    const createGroupFromSelection = async () => {
+        const selectedNodes = getSelectedNodes.value
+        console.log('📦 [TASK-1128] createGroupFromSelection called', { selectedCount: selectedNodes.length })
+
+        // Filter to only task nodes (exclude group nodes)
+        const taskNodes = selectedNodes.filter(node => CanvasIds.isTaskNode(node.id))
+
+        if (taskNodes.length < 2) {
+            console.warn('📦 [TASK-1128] Need at least 2 tasks selected to create a group')
+            return
+        }
+
+        // Calculate bounding box of selected task nodes
+        const PADDING = 40 // Padding around the group
+        const NODE_WIDTH = 280 // Approximate task card width
+        const NODE_HEIGHT = 80 // Approximate task card height
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+
+        for (const node of taskNodes) {
+            const x = node.position.x
+            const y = node.position.y
+            minX = Math.min(minX, x)
+            minY = Math.min(minY, y)
+            maxX = Math.max(maxX, x + NODE_WIDTH)
+            maxY = Math.max(maxY, y + NODE_HEIGHT)
+        }
+
+        // Add padding to the bounding box
+        const groupPosition = {
+            x: minX - PADDING,
+            y: minY - PADDING,
+            width: (maxX - minX) + (PADDING * 2),
+            height: (maxY - minY) + (PADDING * 2)
+        }
+
+        console.log('📦 [TASK-1128] Creating group at:', groupPosition, 'for', taskNodes.length, 'tasks')
+
+        // Create the group data
+        const groupData: Omit<CanvasGroup, 'id'> = {
+            name: 'New Group',
+            type: 'custom',
+            position: groupPosition,
+            color: '#6366f1', // Default indigo color
+            layout: 'freeform',
+            isVisible: true,
+            isCollapsed: false
+        }
+
+        try {
+            // Create the group via canvas store
+            const newGroup = await canvasStore.createGroup(groupData)
+
+            if (newGroup) {
+                console.log('📦 [TASK-1128] Group created:', newGroup.id, '- updating task parentIds')
+
+                // Update all selected tasks to have this group as their parent
+                for (const node of taskNodes) {
+                    const taskId = node.id
+                    const task = taskStore.tasks.find(t => t.id === taskId)
+
+                    if (task) {
+                        // Update task with new parentId
+                        await taskStore.updateTask(taskId, {
+                            parentId: newGroup.id
+                        }, 'USER')
+                    }
+                }
+
+                // Sync the canvas
+                deps.batchedSyncNodes('high')
+
+                console.log('📦 [TASK-1128] Successfully created group with', taskNodes.length, 'tasks')
+            }
+        } catch (error) {
+            console.error('📦 [TASK-1128] Failed to create group from selection:', error)
+        }
+
+        // Close context menu
+        deps.closeCanvasContextMenu()
+    }
+
     // --- Re-Export Everything ---
     return {
         // Group Actions & State
@@ -193,6 +285,8 @@ export function useCanvasActions(
         handleNodeContextMenu,
         closeNodeContextMenu,
         deleteNode,
+        // TASK-1128: Create group from selected tasks
+        createGroupFromSelection,
 
         selectedNode,
         showNodeContextMenu,

@@ -30,6 +30,7 @@
     @open-group-settings="(section) => $emit('openGroupSettings', section)"
     @toggle-power-mode="(section) => $emit('togglePowerMode', section)"
     @collect-tasks="(section) => $emit('collectTasks', section)"
+    @create-group-from-selection="$emit('createGroupFromSelection')"
   />
 
   <!-- Edge Context Menu -->
@@ -84,6 +85,8 @@ defineEmits<{
   (e: 'openGroupSettings', section: CanvasSection): void
   (e: 'togglePowerMode', section: CanvasSection): void
   (e: 'collectTasks', section: CanvasSection): void
+  // TASK-1128: Create group from selected tasks
+  (e: 'createGroupFromSelection'): void
 }>()
 const canvasStore = useCanvasStore()
 const contextMenus = useCanvasContextMenuStore()

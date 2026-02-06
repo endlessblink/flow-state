@@ -9,12 +9,12 @@
  * @see TASK-1120 in MASTER_PLAN.md
  */
 
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAIChatStore, type ChatAction, type ChatContext } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
-import { createAIRouter, type TaskType } from '@/services/ai'
+import { createAIRouter, type TaskType, type RouterProviderType } from '@/services/ai'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 
 // ============================================================================
@@ -47,6 +47,29 @@ async function getRouter() {
   }
   await routerInitPromise
   return routerInstance
+}
+
+// Active provider tracking
+const activeProviderRef = ref<string | null>(null)
+
+// Provider/model selection state
+const selectedProvider = ref<'ollama' | 'groq' | 'auto'>('auto')
+const selectedModel = ref<string | null>(null)
+const availableOllamaModels = ref<string[]>([])
+const isLoadingModels = ref(false)
+
+/**
+ * Fetch available models from local Ollama instance.
+ */
+async function fetchOllamaModels(): Promise<string[]> {
+  try {
+    const response = await fetch('http://localhost:11434/api/tags')
+    if (!response.ok) return []
+    const data = await response.json()
+    return data.models?.map((m: { name: string }) => m.name) || []
+  } catch {
+    return []
+  }
 }
 
 // ============================================================================
@@ -200,7 +223,9 @@ export function useAIChat() {
       let fullContent = ''
       for await (const chunk of router.chatStream(aiMessages, {
         taskType,
-        systemPrompt: options.systemPrompt
+        systemPrompt: options.systemPrompt,
+        forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+        model: selectedModel.value || undefined
       })) {
         store.appendStreamingContent(chunk.content)
         fullContent += chunk.content
@@ -359,6 +384,35 @@ export function useAIChat() {
   // ============================================================================
 
   /**
+   * Refresh available Ollama models.
+   */
+  async function refreshOllamaModels() {
+    isLoadingModels.value = true
+    try {
+      availableOllamaModels.value = await fetchOllamaModels()
+    } finally {
+      isLoadingModels.value = false
+    }
+  }
+
+  /**
+   * Set the active provider (auto, groq, or ollama).
+   */
+  function setProvider(provider: 'ollama' | 'groq' | 'auto') {
+    selectedProvider.value = provider
+    if (provider === 'ollama' && availableOllamaModels.value.length === 0) {
+      refreshOllamaModels()
+    }
+  }
+
+  /**
+   * Set the model to use (null = default for provider).
+   */
+  function setModel(model: string | null) {
+    selectedModel.value = model
+  }
+
+  /**
    * Initialize the AI chat system.
    */
   async function initialize() {
@@ -366,7 +420,11 @@ export function useAIChat() {
 
     // Pre-initialize the router
     try {
-      await getRouter()
+      const routerInstance = await getRouter()
+      const provider = await routerInstance!.getActiveProvider()
+      activeProviderRef.value = provider
+      // Fetch available Ollama models
+      availableOllamaModels.value = await fetchOllamaModels()
     } catch (err) {
       console.warn('[AIChat] Router initialization failed, will retry on first use:', err)
     }
@@ -386,6 +444,16 @@ export function useAIChat() {
     context,
     pendingSuggestionCount,
     error,
+    activeProvider: activeProviderRef,
+
+    // Provider/model selection
+    selectedProvider,
+    selectedModel,
+    availableOllamaModels,
+    isLoadingModels,
+    setProvider,
+    setModel,
+    refreshOllamaModels,
 
     // Computed
     visibleMessages,

@@ -98,6 +98,16 @@
     <template v-if="hasSelectedTasks && selectedCount >= 1 && !contextSection">
       <div class="menu-divider" />
 
+      <!-- TASK-1128: Create Group From Selection (2+ tasks) -->
+      <button
+        v-if="selectedCount >= 2"
+        class="menu-item"
+        @click="handleCreateGroupFromSelection"
+      >
+        <Group :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Add to New Group</span>
+      </button>
+
       <!-- Move to Inbox -->
       <button
         class="menu-item"
@@ -283,6 +293,8 @@ const emit = defineEmits<{
   openGroupSettings: [section: CanvasSection]
   togglePowerMode: [section: CanvasSection]
   collectTasks: [section: CanvasSection]
+  // TASK-1128: Create group from selected tasks
+  createGroupFromSelection: []
 }>()
 
 const menuRef = ref<HTMLElement | null>(null)
@@ -418,6 +430,13 @@ const handleDeleteGroup = () => {
     emit('deleteGroup', props.contextSection)
     emit('close')
   }
+}
+
+// TASK-1128: Handle create group from selection
+const handleCreateGroupFromSelection = () => {
+  console.log('📦 CanvasContextMenu: Create Group From Selection clicked')
+  emit('createGroupFromSelection')
+  emit('close')
 }
 
 // Handle move to inbox

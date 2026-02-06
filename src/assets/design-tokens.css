@@ -112,13 +112,19 @@
   --canvas-group-border: rgba(255, 255, 255, 0.30);
   /* Group border */
 
-  /* Text Hierarchy - Authentic Web Mappings */
-  --text-primary: hsl(var(--slate-100));
-  --text-secondary: hsl(var(--slate-200));
-  --text-tertiary: hsl(var(--slate-400));
-  --text-muted: hsl(215, 16%, 60%);
-  --text-subtle: hsl(215, 16%, 45%);
-  --text-disabled: hsl(var(--slate-600));
+  /* Text Hierarchy - Opacity modulation for premium dark mode */
+  /* Primary: full brightness for titles and key content */
+  --text-primary: rgba(241, 245, 249, 1.0);
+  /* Secondary: 80% for supporting text, metadata labels */
+  --text-secondary: rgba(241, 245, 249, 0.80);
+  /* Tertiary: 60% for timestamps, counts, secondary metadata */
+  --text-tertiary: rgba(241, 245, 249, 0.60);
+  /* Muted: 45% for placeholders, disabled-adjacent text */
+  --text-muted: rgba(241, 245, 249, 0.45);
+  /* Subtle: 35% for decorative text, separators */
+  --text-subtle: rgba(241, 245, 249, 0.35);
+  /* Disabled: 25% for truly disabled content */
+  --text-disabled: rgba(241, 245, 249, 0.25);
 
   /* Border Colors - Edge definitions */
   --border-subtle: rgba(255, 255, 255, 0.08);
@@ -331,8 +337,8 @@
   --due-date-text: #94a3b8;
 
   /* TaskCard-specific sizing */
-  --task-card-min-height: 2.5rem;
-  /* 40px - Compact card height */
+  --task-card-min-height: 3.25rem;
+  /* 52px - Comfortable card height */
   --task-card-min-width: 0;
   /* Fully responsive - no minimum width constraint */
   --task-card-max-width: 100%;
@@ -378,6 +384,8 @@
   /* Font sizes */
   --text-xs: 0.75rem;
   /* 12px */
+  --text-meta: 0.8125rem;
+  /* 13px - metadata, badges, secondary info */
   --text-sm: 0.875rem;
   /* 14px */
   --text-base: 1rem;
@@ -1034,11 +1042,11 @@
   --glass-border: rgba(0, 0, 0, 0.1);
   --glass-border-hover: rgba(0, 0, 0, 0.15);
 
-  /* Text adjustments */
-  --text-primary: hsl(220, 13%, 9%);
-  --text-secondary: hsl(220, 13%, 18%);
-  --text-tertiary: hsl(220, 13%, 28%);
-  --text-muted: hsl(220, 9%, 46%);
+  /* Text Hierarchy - Opacity modulation for light mode */
+  --text-primary: rgba(15, 23, 42, 1.0);
+  --text-secondary: rgba(15, 23, 42, 0.75);
+  --text-tertiary: rgba(15, 23, 42, 0.55);
+  --text-muted: rgba(15, 23, 42, 0.40);
   --text-subtle: hsl(220, 9%, 60%);
   --text-disabled: hsl(220, 9%, 70%);
 

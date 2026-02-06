@@ -253,6 +253,7 @@
       @collect-tasks="handleCollectTasksFromMenu"
       @disconnect-edge="disconnectEdge"
       @delete-node="deleteNode"
+      @create-group-from-selection="createGroupFromSelection"
     />
   </div>
 </template>
@@ -315,7 +316,7 @@ const {
   // BUG-208: Canvas context menu state now comes from contextMenuStore, not orchestrator
   createTaskHere, createGroup, editGroup, deleteGroup,
   moveSelectedTasksToInbox, doneForNowSelectedTasks, deleteSelectedTasks, createTaskInGroup,
-  deleteNode,
+  deleteNode, createGroupFromSelection,
   isSectionSettingsOpen, editingSection,
   handleQuickTaskCreate,
   handleBatchEditApplied, handleSectionSettingsSave,

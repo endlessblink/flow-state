@@ -33,6 +33,7 @@ export type GeometryWriteSource = 'DRAG' | 'RECONCILE' | 'USER' | 'SYNC' | 'SMAR
 
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
+import { useAuthStore } from '../auth'
 
 export function useTaskOperations(
     // SAFETY: Named _rawTasks to indicate this is the raw array for mutations
@@ -97,6 +98,7 @@ export function useTaskOperations(
                 })
             }
 
+            // Keep 'uncategorized' as frontend placeholder, sanitize to null when sending to DB
             let projectId = taskData.projectId || 'uncategorized'
             if (taskData.parentTaskId) {
                 const parentTask = _rawTasks.value.find(t => t.id === taskData.parentTaskId)
@@ -132,10 +134,23 @@ export function useTaskOperations(
             // This ensures the task persists in IndexedDB even if network fails
             try {
                 const syncOrchestrator = useSyncOrchestrator()
+                const authStore = useAuthStore()
+                // BUG-1184: CRITICAL - user_id is REQUIRED for RLS policy
+                // authStore exports `user` not `userId` - must use user?.id
+                const userId = authStore.user?.id
+                if (!userId) {
+                    // BUG-1193: Don't throw - task was already added to local store above
+                    // Throwing here would break the entire createTask flow and prevent
+                    // the task from appearing in the UI. Direct save below will handle sync.
+                    console.warn('[SYNC] Skipping sync queue: user not authenticated (direct save will handle sync)')
+                    // Skip enqueueing but still attempt direct save below
+                    throw new Error('SKIP_QUEUE_NO_AUTH')
+                }
                 // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
                 // BUGFIX: Use JSON.parse/stringify to strip Vue reactivity (Proxy objects can't be cloned to IndexedDB)
                 const payload: Record<string, unknown> = {
                     id: newTask.id,
+                    user_id: userId, // Required for RLS - MUST be valid UUID
                     title: newTask.title,
                     description: newTask.description,
                     status: newTask.status,
@@ -149,7 +164,10 @@ export function useTaskOperations(
                 }
                 // Only add optional fields if they have values (not undefined/null)
                 if (newTask.dueDate) payload.due_date = newTask.dueDate
-                if (newTask.projectId) payload.project_id = newTask.projectId
+                // BUG-1184: Only set project_id for valid UUIDs - 'uncategorized' is NOT a valid UUID
+                if (newTask.projectId && isValidUUID(newTask.projectId)) {
+                    payload.project_id = newTask.projectId
+                }
                 // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
                 // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
                 if (newTask.parentId && isValidUUID(newTask.parentId)) {
@@ -163,6 +181,10 @@ export function useTaskOperations(
                         parentId: newTask.parentId,
                         format: 'absolute'
                     }
+                }
+                // BUG-1187: Include doneForNowUntil in sync payload
+                if (newTask.doneForNowUntil) {
+                    payload.done_for_now_until = newTask.doneForNowUntil
                 }
 
                 await syncOrchestrator.enqueue({
@@ -374,8 +396,9 @@ export function useTaskOperations(
                     const dueDate = updatedTask.dueDate
                     payload.due_date = (!dueDate || dueDate === 'null' || dueDate === 'undefined') ? null : dueDate
                 }
+                // BUG-1184: Only set project_id for valid UUIDs - 'uncategorized' is NOT a valid UUID
                 if (updatedTask.projectId !== undefined) {
-                    payload.project_id = updatedTask.projectId || null
+                    payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
                 // BUG-1184: Only set parent_id for valid UUIDs (sub-tasks)
                 // Group IDs like "group-xxx" are NOT valid UUIDs and cause Postgres errors
@@ -401,6 +424,12 @@ export function useTaskOperations(
                     } else {
                         payload.completed_at = (!completedAt || completedAt === 'null' || completedAt === 'undefined') ? null : completedAt
                     }
+                }
+                // BUG-1187: Include doneForNowUntil in sync payload
+                // Without this, the "Done for now" badge resets on page refresh
+                if (updatedTask.doneForNowUntil !== undefined) {
+                    const doneForNowUntil = updatedTask.doneForNowUntil
+                    payload.done_for_now_until = (!doneForNowUntil || doneForNowUntil === 'null' || doneForNowUntil === 'undefined') ? null : doneForNowUntil
                 }
 
                 await syncOrchestrator.enqueue({
@@ -732,6 +761,19 @@ export function useTaskOperations(
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const today = new Date(); today.setHours(0, 0, 0, 0)
+        const todayStr = formatDateKey(today)
+
+        // BUG-1189: Handle 'inbox' and 'noDate' columns
+        if (dateColumn === 'inbox') {
+            updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: true })
+            return
+        }
+
+        if (dateColumn === 'noDate') {
+            updateTask(taskId, { instances: [], dueDate: undefined, isInInbox: false })
+            return
+        }
+
         let target: Date | null = null
         switch (dateColumn) {
             case 'overdue': target = new Date(today); target.setDate(today.getDate() - 1); break
@@ -742,16 +784,26 @@ export function useTaskOperations(
             case 'later': target = new Date(today); target.setDate(today.getDate() + 30); break
         }
 
+        // BUG-1189: Also clear/update dueDate to prevent task from staying in Overdue
+        // If task has a past dueDate, clear it so it doesn't stay stuck in Overdue column
+        const hasOverdueDueDate = task.dueDate && task.dueDate < todayStr
+
         const updates: Partial<Task> = { instances: [], isInInbox: false }
         if (target) {
+            const targetDateStr = formatDateKey(target)
             updates.instances = [{
                 id: `instance-${taskId}-${Date.now()}`,
-                scheduledDate: formatDateKey(target),
+                scheduledDate: targetDateStr,
                 scheduledTime: '09:00',
                 duration: task.estimatedDuration || 60,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 isLater: dateColumn === 'later'
             } as any]
+
+            // If dueDate was causing overdue status, update it to the target date
+            if (hasOverdueDueDate) {
+                updates.dueDate = targetDateStr
+            }
         }
         updateTask(taskId, updates)
     }

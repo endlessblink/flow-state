@@ -115,7 +115,7 @@ FlowState is distributed as a native desktop app via Tauri. The app auto-orchest
 **Signing Keys:**
 - **Private key**: `~/.tauri/flow-state.key` (NEVER commit)
 - **Public key**: Embedded in `tauri.conf.json` under `plugins.updater.pubkey`
-- **CRITICAL**: Use `@tauri-apps/cli@2.8.0` (version 2.9.6 has a signing bug)
+- **CLI**: Use `@tauri-apps/cli@2.10.0`
 
 **Build with signing:**
 ```bash
@@ -890,5 +890,5 @@ Detailed docs available in `docs/claude-md-extension/`:
 ---
 
 **Last Updated**: February 5, 2026
-**Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.9.5, **tauri-cli 2.8.0** (2.9.6 has signing bug)
+**Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.10, tauri-cli 2.10.0
 **Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)

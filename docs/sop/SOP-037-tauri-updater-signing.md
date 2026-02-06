@@ -76,33 +76,6 @@ FlowState uses the Tauri 2.x updater plugin to check a self-hosted VPS endpoint 
 
 ## Signing Key Management
 
-### CRITICAL BUG: tauri-cli 2.9.6 Signing is Broken
-
-**Problem:** `@tauri-apps/cli@2.9.6` has a critical bug where signing **ALWAYS fails** with:
-
-```
-incorrect updater private key password: Wrong password for that key
-```
-
-This happens with **ALL** combinations:
-- `--ci` flag with env vars
-- Empty passwords (`""`)
-- Real passwords
-- File paths vs key content
-- Both local builds and CI/CD
-
-**Root Cause:** Bug in tauri-cli 2.9.6's key handling logic (confirmed by testing multiple scenarios).
-
-**WORKAROUND (MANDATORY):**
-
-```bash
-npm install -D @tauri-apps/cli@2.8.0
-```
-
-**Verification:** tauri-cli 2.8.0 has been confirmed working and generates valid `.sig` files that pass signature verification.
-
-**DO NOT upgrade to 2.9.6** until the bug is fixed upstream.
-
 ### Key Generation
 
 **Generate signing key pair:**
@@ -330,38 +303,12 @@ Signature verification failed
 [profile.release]
 lto = true           # Link-Time Optimization - smaller binary, better runtime
 codegen-units = 1    # Single codegen unit for better optimization
-strip = "symbols"    # Strip debug symbols but preserve string data
+strip = false        # Required - strip = true removes __TAURI_BUNDLE_TYPE symbol needed by updater
 opt-level = 3        # Maximum optimization
 panic = "abort"      # Abort on panic (smaller binary, no unwinding)
 ```
 
-### __TAURI_BUNDLE_TYPE Warning (Safe to Ignore)
-
-**You may see this warning during build:**
-
-```
-WARN tauri_bundler::bundle::linux::appimage: Failed to add bundler type to the binary: ...
-```
-
-**What it means:**
-- Tauri tries to patch the binary to embed `__TAURI_BUNDLE_TYPE` symbol
-- With `strip = "symbols"`, this symbol gets removed → warning appears
-
-**Is this a problem?**
-- **NO** - This is a WARNING, not an error
-- The updater does NOT rely on `__TAURI_BUNDLE_TYPE` symbol
-- Updater uses JSON manifest (`latest.json`) and cryptographic signatures
-- The build is still valid and updater will work correctly
-
-**Why does Tauri do this?**
-- `__TAURI_BUNDLE_TYPE` is used for runtime detection of bundle format (AppImage vs deb vs rpm)
-- Some features check this symbol to adjust behavior
-- But the updater plugin doesn't need it
-
-**If you want to silence the warning:**
-- Change `strip = "symbols"` to `strip = false` in Cargo.toml
-- Tradeoff: Larger binary size (~30-50% bigger) due to debug symbols
-- **Recommendation**: Keep `strip = "symbols"` and ignore the warning (smaller binaries are better)
+**IMPORTANT:** `strip` must be `false`. Setting `strip = true` or `strip = "symbols"` removes the `__TAURI_BUNDLE_TYPE` symbol that the Tauri updater needs to detect the bundle format (AppImage vs deb vs rpm). Without it, the updater may not function correctly.
 
 ## VPS Deployment
 
@@ -840,13 +787,12 @@ Error checking for updates: error decoding response body: missing field `version
 Error: incorrect updater private key password: Wrong password for that key
 ```
 
-**Cause:** tauri-cli 2.9.6 bug (see "CRITICAL BUG" section above).
+**Cause:** Wrong password or env var misconfiguration.
 
 **Fix:**
-```bash
-npm install -D @tauri-apps/cli@2.8.0
-npm run build && npx tauri build
-```
+1. Verify the password is correct: `secret-tool lookup service flowstate type signing-key`
+2. Ensure `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` is set correctly (not empty string)
+3. For passwordless keys, omit `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` entirely
 
 **Verify:** Check that `.sig` files are generated:
 ```bash
@@ -883,13 +829,9 @@ WARN tauri_updater: Public key in tauri.conf.json does not match signing key
 WARN tauri_bundler::bundle::linux::appimage: Failed to add bundler type to the binary
 ```
 
-**Cause:** `strip = "symbols"` in `Cargo.toml` removes debug symbols.
+**Cause:** `strip = true` or `strip = "symbols"` in `Cargo.toml` removes the required symbol.
 
-**Impact:** **NONE** - This is a harmless warning. The updater works correctly.
-
-**Fix (optional):** Change `Cargo.toml` to `strip = false` (increases binary size ~30-50%).
-
-**Recommendation:** Ignore the warning. Smaller binaries are better for download speed.
+**Fix:** Set `strip = false` in `src-tauri/Cargo.toml` (this is the current correct setting).
 
 ### Issue: "No such device or address"
 
@@ -1058,12 +1000,14 @@ vite.config.ts                                        # Injects __APP_VERSION__ 
 
 **Build Output:**
 ```
-src-tauri/target/release/bundle/appimage/*.AppImage      # Linux update binary
-src-tauri/target/release/bundle/appimage/*.AppImage.sig  # Linux signature
-src-tauri/target/release/bundle/msi/*.msi                # Windows installer
-src-tauri/target/release/bundle/msi/*.msi.sig            # Windows signature
-src-tauri/target/release/bundle/dmg/*.dmg                # macOS disk image
-src-tauri/target/release/bundle/dmg/*.dmg.sig            # macOS signature
+src-tauri/target/release/bundle/appimage/*.AppImage       # Linux update binary
+src-tauri/target/release/bundle/appimage/*.AppImage.sig   # Linux signature
+src-tauri/target/release/bundle/deb/*.deb                 # Linux deb package
+src-tauri/target/release/bundle/deb/*.deb.sig             # Linux deb signature
+src-tauri/target/release/bundle/nsis/*.nsis.zip           # Windows NSIS installer
+src-tauri/target/release/bundle/nsis/*.nsis.zip.sig       # Windows NSIS signature
+src-tauri/target/release/bundle/macos/*.app.tar.gz        # macOS app bundle
+src-tauri/target/release/bundle/macos/*.app.tar.gz.sig    # macOS signature
 ```
 
 ## Security Considerations

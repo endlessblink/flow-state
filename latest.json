@@ -1,11 +1,11 @@
 {
-  "version": "1.2.15",
-  "notes": "FlowState v1.2.15 - Updater fixes",
-  "pub_date": "2026-02-06T18:37:59.829Z",
+  "version": "1.2.16",
+  "notes": "v1.2.16: E2E updater test",
+  "pub_date": "2026-02-06T21:03:03.275Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSV2JXSllNVUduNWp1amVWMHZ3dWw4UkE3dkV6N0Jsc2F6NjV5cW80Q2RFS1IzWU1nVkorWnVnWFJQSTZwL0o0NzhiOGV6Ymc1V3J0MFh5cmdvdWhmTCtXTURxTUVKQ1FVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDAyOTY3CWZpbGU6Rmxvd1N0YXRlXzEuMi4xNV9hbWQ2NC5BcHBJbWFnZS50YXIuZ3oKVW9pMlJUNnA4ajAzNVBWRVBLR09SL2NQS2xoMFliVjhPNGVDdUF5akdnRzFod2hSTmg4TUpQUGFWMEdBZGZ5ZG5sYkNVUnFNKzJJSVAydVB4ejJ0RHc9PQo=",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.15_amd64.AppImage.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXgxOGhDRkRQTHQyVURPS2pIaFFPeFo2cFJrRklsZnovOTlMOTlJUzFtSVdMNFFoNGtPZi9mN2xvVUsvU0ZzbTNuME1sclpLSU55VW93Q1BFa3d4VUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDExNzgzCWZpbGU6Rmxvd1N0YXRlXzEuMi4xNl9hbWQ2NC5BcHBJbWFnZQpwNTMyZHJ1YWx1SEtMeWMrZnduS2J6SXFPNHAwQTZQVUc2bUdCS1I2N3ZyY0VTSzBpQTNKcHRnbTJ5WHZtS0d0aW4zcitMbmRBeHVEN3dpYW1QMEdEZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.16_amd64.AppImage"
     }
   }
 }

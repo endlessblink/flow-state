@@ -2681,31 +2681,34 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### FEATURE-1194: Tauri In-App Auto-Updater via VPS (🔄 IN PROGRESS)
+### ~~FEATURE-1194~~: Tauri In-App Auto-Updater via VPS (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-05)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-06)
 
 **Feature**: "Update App" button inside FlowState that checks VPS for newer builds, downloads, and installs them automatically - no terminal or `dpkg -i` needed.
 
 **Architecture**:
-1. **VPS endpoint** (`in-theflow.com/updates/`) - Caddy serves update manifest JSON + binary bundles
-2. **Tauri updater plugin** (`@tauri-apps/plugin-updater`) - built-in self-update mechanism
+1. **VPS endpoint** (`in-theflow.com/updates/`) - Caddy serves update manifest JSON + AppImage binaries
+2. **Tauri updater plugin** (`@tauri-apps/plugin-updater@2.10.0`) - built-in self-update mechanism
 3. **CI/CD pipeline** - GitHub Actions builds multi-platform Tauri binaries on push/tag, rsyncs to VPS
 4. **App UI** - "Check for Updates" button in Settings, notification on app launch when update available
+5. **AppImage ONLY** - .deb installs cannot self-update (Tauri limitation). User runs AppImage from `~/Applications/`
 
 **Implementation Steps**:
 - [x] Configure `@tauri-apps/plugin-updater` in `tauri.conf.json` with VPS update endpoint
 - [x] Set up VPS directory structure (`/var/www/flowstate/updates/`) with Caddy serving
 - [x] Create update manifest generation script (`scripts/generate-update-manifest.cjs`)
 - [x] Modify GitHub Actions release workflow to build + upload binaries to VPS
-- [x] Code-signing already configured (existing signing keys + pubkey)
+- [x] Code-signing configured (signing keys + pubkey, password in KWallet)
 - [x] Add "Check for Updates" UI in Settings > About tab
 - [x] Auto-check on app launch with non-intrusive notification (existing `TauriUpdateNotification.vue`)
-- [x] Create npm scripts for automated release workflow (`tauri:build:signed`, `tauri:upload-update`, `tauri:release`)
-- [x] Fix TTY signing bug with `echo '' |` workaround for non-interactive environments
-- [ ] Test full update cycle: build → upload → detect → download → install → restart
+- [x] Automated deploy script (`scripts/deploy-tauri-update.sh`)
+- [x] Fix `createUpdaterArtifacts` from "v1Compatible" to `true` (v2 format)
+- [x] Fix manifest generator to filter by current version (was picking up old artifacts)
+- [x] Bump tauri crate to 2.10, plugin-updater to 2.10.0
+- [x] Test full update cycle: build → upload → detect → download → install → restart ✅ VERIFIED
 
-**Progress (2026-02-06):** VPS endpoint configured with Caddy (Content-Type, CORS headers). Created automated release scripts with TTY workaround for signing in non-interactive shells. CI/CD excludes `/updates/` from rsync delete. Ready for first production upload - need to build current version and upload to test full cycle.
+**Completed (2026-02-06):** Full E2E update cycle verified: v1.2.15 AppImage detected v1.2.16 on VPS, downloaded, installed, and restarted successfully. Key fixes: switched to v2 artifact format, fixed manifest generator version filtering, regenerated signing keys, updated all documentation.
 
 **Key Files**:
 - `src-tauri/tauri.conf.json` - Updater plugin config (endpoint: `in-theflow.com/updates/latest.json`)

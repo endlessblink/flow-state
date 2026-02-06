@@ -4,12 +4,14 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useVueFlow } from '@vue-flow/core'
 import {
-    sanitizePosition
+    sanitizePosition,
+    getGroupAbsolutePosition
 } from '@/utils/canvas/coordinates'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
+import { isNodeCompletelyInside, DEFAULT_TASK_WIDTH, DEFAULT_TASK_HEIGHT } from '@/utils/canvas/spatialContainment'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -404,6 +406,38 @@ export function useCanvasSync() {
                 // Store is always updated by realtime sync, so it's the source of truth for parentId.
                 // PM is only authoritative for x/y position during drag operations.
                 let parentId = (task.parentId && task.parentId !== 'NONE') ? task.parentId : null
+
+                // BUG-1191 FIX: Validate parentId spatially before using it
+                // Tasks with stale parentId (pointing to group they're outside of) would be dragged with wrong group
+                if (parentId) {
+                    const parentGroup = groups.find(g => g.id === parentId)
+                    if (parentGroup) {
+                        const parentAbsolutePos = getGroupAbsolutePosition(parentId, groups)
+                        const parentBounds = {
+                            position: parentAbsolutePos,
+                            width: parentGroup.position.width,
+                            height: parentGroup.position.height
+                        }
+                        const taskSpatial = {
+                            position: absolutePos,
+                            width: DEFAULT_TASK_WIDTH,
+                            height: DEFAULT_TASK_HEIGHT
+                        }
+                        // Use 0 padding to be permissive (only check center containment)
+                        if (!isNodeCompletelyInside(taskSpatial, parentBounds, 0)) {
+                            if (import.meta.env.DEV) {
+                                console.warn(`[BUG-1191] Task "${task.title?.slice(0, 25)}" has stale parentId ${parentId.slice(0, 8)} - not spatially inside. Treating as root.`)
+                            }
+                            parentId = null
+                        }
+                    } else {
+                        // Parent group doesn't exist - clear parentId
+                        if (import.meta.env.DEV) {
+                            console.warn(`[BUG-1191] Task "${task.title?.slice(0, 25)}" parentId ${parentId.slice(0, 8)} not found. Treating as root.`)
+                        }
+                        parentId = null
+                    }
+                }
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos

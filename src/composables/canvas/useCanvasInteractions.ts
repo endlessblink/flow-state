@@ -57,14 +57,30 @@ function collectDescendantGroups(
 function collectDescendantTasks(rootId: string, tasks: Task[], groups: CanvasGroup[]): Task[] {
     const descendants: Task[] = []
 
-    // Direct tasks in this group
-    const directTasks = tasks.filter(t => t.parentId === rootId)
+    // Helper: check if task is spatially inside a group (BUG-1191)
+    const isTaskInsideGroup = (task: Task, groupId: string): boolean => {
+        if (!task.canvasPosition) return false
+        const group = groups.find(g => g.id === groupId)
+        if (!group) return false
+        const groupAbsPos = getGroupAbsolutePosition(groupId, groups)
+        const taskCenterX = task.canvasPosition.x + DEFAULT_TASK_WIDTH / 2
+        const taskCenterY = task.canvasPosition.y + DEFAULT_TASK_HEIGHT / 2
+        return (
+            taskCenterX >= groupAbsPos.x &&
+            taskCenterX <= groupAbsPos.x + group.position.width &&
+            taskCenterY >= groupAbsPos.y &&
+            taskCenterY <= groupAbsPos.y + group.position.height
+        )
+    }
+
+    // Direct tasks in this group (with spatial validation)
+    const directTasks = tasks.filter(t => t.parentId === rootId && isTaskInsideGroup(t, rootId))
     descendants.push(...directTasks)
 
-    // Tasks in ALL descendant groups (recursive)
+    // Tasks in ALL descendant groups (recursive, with spatial validation)
     const descendantGroups = collectDescendantGroups(rootId, groups)
     for (const group of descendantGroups) {
-        const groupTasks = tasks.filter(t => t.parentId === group.id)
+        const groupTasks = tasks.filter(t => t.parentId === group.id && isTaskInsideGroup(t, group.id))
         descendants.push(...groupTasks)
     }
 
@@ -583,6 +599,35 @@ export function useCanvasInteractions(deps?: {
                     // Use _rawGroups to include hidden groups in lookups
                     const taskAllGroups = canvasStore._rawGroups || canvasStore.groups || []
 
+                    // BUG-1191: Detect stale parentNode - task was dragged with wrong group
+                    // Compare Vue Flow's parentNode with store's parentId
+                    const vfParentGroupId = node.parentNode
+                        ? (node.parentNode.startsWith('section-') ? node.parentNode.replace('section-', '') : node.parentNode)
+                        : null
+                    const storeParentId = task.parentId ?? null
+
+                    if (vfParentGroupId !== storeParentId) {
+                        if (import.meta.env.DEV) {
+                            console.warn(`[BUG-1191] Stale parentNode for "${task.title?.slice(0, 25)}": VF=${vfParentGroupId?.slice(0, 8)}, Store=${storeParentId?.slice(0, 8) ?? 'null'}. Restoring position.`)
+                        }
+                        // Fix Vue Flow node to match store
+                        node.parentNode = storeParentId ? CanvasIds.groupNodeId(storeParentId) : undefined
+                        // Restore position from store (undo the wrong visual move)
+                        if (task.canvasPosition) {
+                            if (storeParentId) {
+                                const correctParentAbsolute = getGroupAbsolutePosition(storeParentId, taskAllGroups)
+                                node.position = {
+                                    x: task.canvasPosition.x - correctParentAbsolute.x,
+                                    y: task.canvasPosition.y - correctParentAbsolute.y
+                                }
+                            } else {
+                                node.position = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+                            }
+                        }
+                        setNodeState(task.id, NodeState.IDLE)
+                        continue
+                    }
+
                     // 1. Compute ABSOLUTE position for containment check
                     // When node has parentNode, node.position is RELATIVE, not absolute
                     // computedPosition is preferred; fallback calculates from parent's absolute
@@ -988,6 +1033,46 @@ export function useCanvasInteractions(deps?: {
         }
         // NOTE: When deltaX === 0 && deltaY === 0 (bottom-right resize only),
         // no child sync is needed because child absolute positions don't change.
+
+        // ================================================================
+        // BUG-1191 FIX: Reconcile parentId after resize
+        // ================================================================
+        // When a group is resized smaller, tasks that were inside may now
+        // be outside the new bounds. Clear their parentId to prevent them
+        // from being dragged with the group.
+        const allTasks = taskStore.tasks
+        const resizedGroup = canvasStore.groups.find(g => g.id === sectionId)
+        if (resizedGroup) {
+            const groupAbsPos = getGroupAbsolutePosition(sectionId, canvasStore.groups)
+            const tasksInGroup = allTasks.filter(t => t.parentId === sectionId)
+            for (const task of tasksInGroup) {
+                if (!task.canvasPosition) continue
+                const taskCenterX = task.canvasPosition.x + DEFAULT_TASK_WIDTH / 2
+                const taskCenterY = task.canvasPosition.y + DEFAULT_TASK_HEIGHT / 2
+                const isInside = (
+                    taskCenterX >= groupAbsPos.x &&
+                    taskCenterX <= groupAbsPos.x + validatedWidth &&
+                    taskCenterY >= groupAbsPos.y &&
+                    taskCenterY <= groupAbsPos.y + validatedHeight
+                )
+                if (!isInside) {
+                    if (import.meta.env.DEV) {
+                        console.log(`[BUG-1191] Task "${task.title?.slice(0, 25)}" outside resized group "${resizedGroup.name}". Clearing parentId.`)
+                    }
+                    // Clear parentId in store and DB
+                    taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as any)
+                    // Fix Vue Flow node
+                    const taskNode = findNode(task.id)
+                    if (taskNode) {
+                        taskNode.parentNode = undefined
+                        // Convert to absolute position (already stored as absolute)
+                        if (task.canvasPosition) {
+                            taskNode.position = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+                        }
+                    }
+                }
+            }
+        }
 
         // TASK-213: Release Locks
         lockManager.release(sectionId, 'user-resize')

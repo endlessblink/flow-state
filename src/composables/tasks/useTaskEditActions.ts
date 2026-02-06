@@ -205,7 +205,8 @@ export function useTaskEditActions(
                 scheduledDate: editedTask.value.scheduledDate,
                 scheduledTime: editedTask.value.scheduledTime,
                 estimatedDuration: editedTask.value.estimatedDuration,
-                recurrence: editedTask.value.recurrence
+                recurrence: editedTask.value.recurrence,
+                subtasks: editedTask.value.subtasks
             }
 
             if (originalCanvasPosition !== undefined) {
@@ -338,23 +339,7 @@ export function useTaskEditActions(
                 }
             }
 
-            // Sync Subtasks
-            const originalSubtasks = props.task.subtasks || []
-
-            originalSubtasks.forEach(originalSt => {
-                const exists = editedTask.value.subtasks.find(st => st.id === originalSt.id)
-                if (!exists) {
-                    taskStore.deleteSubtaskWithUndo(editedTask.value.id, originalSt.id)
-                }
-            })
-
-            editedTask.value.subtasks.forEach(subtask => {
-                if (originalSubtasks.find(st => st.id === subtask.id)) {
-                    taskStore.updateSubtaskWithUndo(editedTask.value.id, subtask.id, subtask)
-                } else {
-                    taskStore.createSubtaskWithUndo(editedTask.value.id, subtask)
-                }
-            })
+            // Subtasks are included in the main updateTask call above (no separate sync needed)
 
             // NOTE: emit('close') already called above for instant feedback
         } catch (error) {

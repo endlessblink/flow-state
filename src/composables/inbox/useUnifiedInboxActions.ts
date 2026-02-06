@@ -22,7 +22,10 @@ export function useUnifiedInboxActions(
     // Multi-select state (Actions)
     const selectedTaskIds = ref<Set<string>>(new Set())
     const lastSelectedTaskId = ref<string | null>(null)
-    const multiSelectMode = computed(() => selectedTaskIds.value.size > 0)
+    // BUG-1192: Only show selection bar when user explicitly multi-selects (Ctrl/Shift+Click)
+    // Single click highlights a task but does NOT show the selection bar
+    const multiSelectActive = ref(false)
+    const multiSelectMode = computed(() => multiSelectActive.value && selectedTaskIds.value.size > 0)
     const draggingTaskId = ref<string | null>(null)
 
     // --- Task Operations ---
@@ -70,13 +73,15 @@ export function useUnifiedInboxActions(
         selectedTaskIds.value.clear()
         selectedTaskIds.value = new Set()
         lastSelectedTaskId.value = null
+        multiSelectActive.value = false
     }
 
     const handleTaskClick = (event: MouseEvent, task: Task) => {
         if (draggingTaskId.value) return
 
-        // Shift+Click (Range Selection)
+        // BUG-1192: Shift+Click (Range Selection) — activates multi-select bar
         if (event.shiftKey) {
+            multiSelectActive.value = true
             if (!lastSelectedTaskId.value) {
                 selectedTaskIds.value = new Set([task.id])
                 lastSelectedTaskId.value = task.id
@@ -105,13 +110,18 @@ export function useUnifiedInboxActions(
             return
         }
 
-        // Ctrl/Cmd+Click (Toggle)
+        // BUG-1192: Ctrl/Cmd+Click (Toggle) — activates multi-select bar
         if (event.ctrlKey || event.metaKey) {
+            multiSelectActive.value = true
             const newSet = new Set(selectedTaskIds.value)
             if (newSet.has(task.id)) {
                 newSet.delete(task.id)
                 if (task.id === lastSelectedTaskId.value) {
                     lastSelectedTaskId.value = null
+                }
+                // If all deselected, deactivate bar
+                if (newSet.size === 0) {
+                    multiSelectActive.value = false
                 }
             } else {
                 newSet.add(task.id)
@@ -121,7 +131,8 @@ export function useUnifiedInboxActions(
             return
         }
 
-        // Single Click
+        // BUG-1192: Single Click — highlight task only, NO selection bar
+        multiSelectActive.value = false
         selectedTaskIds.value = new Set([task.id])
         lastSelectedTaskId.value = task.id
     }
@@ -278,7 +289,6 @@ export function useUnifiedInboxActions(
         if (selectedTaskIds.value.size === 0) return
 
         const taskIds = Array.from(selectedTaskIds.value)
-        const allGroups = canvasStore._rawGroups || []
         let successCount = 0
         const groupCounts = new Map<string, number>()
 

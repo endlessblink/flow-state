@@ -4,7 +4,7 @@
     class="task-card"
     :class="[
       { 'collapsed': progressiveDisclosureEnabled && !isExpanded },
-      { 'completed': task.progress === 100 },
+      { 'completed': task.status === 'done' },
       { 'focused': isFocused },
       { 'selected': isSelected },
       { 'timer-active': isTimerActive },
@@ -41,7 +41,7 @@
         <h3
           :id="`task-title-${task.id}`"
           class="task-title"
-          :class="[titleAlignmentClasses, { 'completed-title': task.progress === 100 }]"
+          :class="[titleAlignmentClasses, { 'completed-title': task.status === 'done' }]"
           :dir="isRtl ? 'rtl' : 'ltr'"
         >
           {{ task.title }}

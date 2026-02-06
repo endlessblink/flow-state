@@ -2,6 +2,8 @@
 
 A sophisticated Vue 3 productivity application combining Pomodoro timer functionality with task management across multiple views.
 
+**Live demo:** [in-theflow.com](https://in-theflow.com)
+
 ## Features
 
 - **8 Task Views**: Board, Calendar, Canvas, Focus, QuickSort, AllTasks, CalendarVueCal, Performance
@@ -11,6 +13,8 @@ A sophisticated Vue 3 productivity application combining Pomodoro timer function
 - **Cloud Sync**: Supabase (PostgreSQL) with RLS and automatic backup
 - **Glass Morphism UI**: Modern design system with dark/light themes
 - **PWA (Mobile Support)**: Installable on iOS/Android with offline support and screen wake lock for timers
+- **Gamification**: XP, achievements, streaks, and a cosmetic shop
+- **Desktop App**: Native Tauri builds for Linux, macOS, and Windows
 
 ## Quick Start
 
@@ -18,10 +22,22 @@ A sophisticated Vue 3 productivity application combining Pomodoro timer function
 # Install dependencies
 npm install
 
+# Start local Supabase (requires Docker)
+npx supabase start
+
+# Copy environment config
+cp .env.example .env.local
+# Edit .env.local with values from `npx supabase status`
+
 # Start development server
 npm run dev
 # Open http://localhost:5546
+# Login: dev@flowstate.local / dev123
 ```
+
+## Self-Hosting
+
+Want to run FlowState on your own machine? See **[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)** for the full guide covering local Supabase, Tauri desktop builds, and AI chat setup.
 
 ## Cloud Sync (Supabase)
 
@@ -67,6 +83,7 @@ npm run lint:fix     # Fix linting issues
 - **Canvas**: Vue Flow (@vue-flow/core)
 - **Calendar**: vue-cal
 - **Storage**: Supabase (PostgreSQL) with RLS
+- **Desktop**: Tauri 2.x (Linux, macOS, Windows)
 - **Build**: Vite 7.3.1
 - **Testing**: Vitest + Playwright
 
@@ -75,9 +92,10 @@ npm run lint:fix     # Fix linting issues
 ```
 src/
 ├── views/           # 8 application views
-├── components/      # Reusable UI components (10 directories)
-├── stores/          # 12 Pinia stores
-├── composables/     # 56 Vue 3 composables
+├── components/      # Reusable UI components (22 directories)
+├── stores/          # 14 Pinia stores (+canvas, tasks substores)
+├── composables/     # ~130 Vue 3 composables
+├── services/        # Backend services (auth, AI, sync, data)
 ├── assets/          # Styles and design tokens
 └── utils/           # Utility functions
 ```
@@ -86,6 +104,7 @@ src/
 
 - **CLAUDE.md** - Development guidance and patterns
 - **docs/MASTER_PLAN.md** - Project roadmap and architecture
+- **docs/SELF-HOSTING.md** - Self-hosting guide
 
 ## License
 

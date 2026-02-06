@@ -15,6 +15,8 @@ import { clearGuestData, clearStaleGuestTasks } from '@/utils/guestModeStorage'
 import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, type SupabaseTask, type SupabaseProject, type SupabaseGroup } from '@/utils/supabaseMappers'
 // FEATURE-1118: Gamification hooks
 import { useGamificationHooks } from '@/composables/useGamificationHooks'
+// FEATURE-1132: Challenge system
+import { useChallengesStore } from '@/stores/challenges'
 // TASK-1177: Offline-first sync system
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
@@ -28,6 +30,7 @@ export function useAppInitialization() {
     const notificationStore = useNotificationStore()
     const authStore = useAuthStore()
     const gamificationStore = useGamificationStore()
+    const challengesStore = useChallengesStore()
     const itpProtection = useSafariITPProtection()
     const activeChannel = ref<any>(null)
     const realtimeInitialized = ref(false)
@@ -99,6 +102,14 @@ export function useAppInitialization() {
             console.log('🎮 [GAMIFICATION] Initialized successfully')
         } catch (error) {
             console.warn('⚠️ Gamification system initialization failed:', error)
+        }
+
+        // FEATURE-1132: Initialize challenge system
+        try {
+            await challengesStore.initialize()
+            console.log('🎯 [CHALLENGES] Initialized successfully')
+        } catch (error) {
+            console.warn('⚠️ Challenge system initialization failed:', error)
         }
 
         // Initialize notification system

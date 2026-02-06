@@ -1,0 +1,239 @@
+/**
+ * Corruption Visual System Tokens
+ * FEATURE-1132: Cyberflow RPG - Visual decay/rust based on corruption level
+ *
+ * These CSS custom properties are dynamically updated by the challenges store
+ * based on the user's corruption level (0-100).
+ *
+ * Corruption Tiers:
+ * - Clean (0-20): Normal neon glow, full saturation
+ * - Mild (21-40): Slight desaturation, occasional glitch
+ * - Moderate (41-60): Noise overlay, badges dim
+ * - Heavy (61-80): Rust texture, sepia, stutter animations
+ * - Critical (81-100): Red scan lines, warning pulse, major degradation
+ */
+
+:root {
+  /* Core corruption level (0-100) */
+  --corruption-level: 0;
+
+  /* Filter applied to corruption overlay */
+  --corruption-filter: none;
+
+  /* Noise overlay opacity (0-0.4) */
+  --corruption-noise-opacity: 0;
+
+  /* Scan line overlay opacity (0-0.3) */
+  --corruption-scanline-opacity: 0;
+
+  /* Glitch animation intensity (0-1) */
+  --corruption-glitch-intensity: 0;
+
+  /* Derived colors based on corruption */
+  --corruption-glow-color: var(--color-primary-500);
+  --corruption-warning-color: rgba(255, 60, 60, 0.5);
+  --corruption-rust-color: rgba(139, 69, 19, 0.2);
+}
+
+/* =============================================================================
+   Corruption Tier Presets (for reference - applied dynamically by store)
+   ============================================================================= */
+
+/* Clean (0-20) - These are the defaults above */
+
+/* Mild (21-40) */
+/*
+--corruption-filter: saturate(0.85);
+--corruption-noise-opacity: 0.05;
+--corruption-scanline-opacity: 0;
+--corruption-glitch-intensity: 0.1;
+*/
+
+/* Moderate (41-60) */
+/*
+--corruption-filter: saturate(0.7);
+--corruption-noise-opacity: 0.15;
+--corruption-scanline-opacity: 0.05;
+--corruption-glitch-intensity: 0.3;
+*/
+
+/* Heavy (61-80) */
+/*
+--corruption-filter: saturate(0.6) sepia(0.2);
+--corruption-noise-opacity: 0.25;
+--corruption-scanline-opacity: 0.1;
+--corruption-glitch-intensity: 0.5;
+*/
+
+/* Critical (81-100) */
+/*
+--corruption-filter: saturate(0.5) sepia(0.4) hue-rotate(-15deg);
+--corruption-noise-opacity: 0.35;
+--corruption-scanline-opacity: 0.2;
+--corruption-glitch-intensity: 0.8;
+*/
+
+/* =============================================================================
+   Corruption Animations
+   ============================================================================= */
+
+/* Glitch effect - horizontal displacement */
+@keyframes corruption-glitch {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(calc(var(--corruption-glitch-intensity) * 2px));
+  }
+  20% {
+    transform: translateX(calc(var(--corruption-glitch-intensity) * -2px));
+  }
+  30% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(calc(var(--corruption-glitch-intensity) * 1px));
+  }
+  50% {
+    transform: translateX(calc(var(--corruption-glitch-intensity) * -1px));
+  }
+  60%, 100% {
+    transform: translateX(0);
+  }
+}
+
+/* Scan line animation - vertical sweep */
+@keyframes corruption-scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* Warning pulse for critical corruption */
+@keyframes corruption-warning-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--corruption-warning-color);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px var(--corruption-warning-color);
+  }
+}
+
+/* Flicker effect for badges/icons */
+@keyframes corruption-flicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  51% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.85;
+  }
+}
+
+/* Rust creep effect */
+@keyframes corruption-rust-creep {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+/* =============================================================================
+   Corruption-Aware Component Styles
+   ============================================================================= */
+
+/* Elements that should show corruption effects */
+.corruption-aware {
+  transition: filter 0.5s ease-out;
+}
+
+/* When corruption is moderate+ (41+), badges flicker */
+.corruption-badge {
+  animation: corruption-flicker 3s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+/* Enable flicker when corruption is high enough */
+:root:has([data-corruption-tier="moderate"]),
+:root:has([data-corruption-tier="heavy"]),
+:root:has([data-corruption-tier="critical"]) {
+  .corruption-badge {
+    animation-play-state: running;
+  }
+}
+
+/* Glitch effect for text at high corruption */
+.corruption-text {
+  position: relative;
+}
+
+.corruption-text::before,
+.corruption-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:root:has([data-corruption-tier="heavy"]),
+:root:has([data-corruption-tier="critical"]) {
+  .corruption-text::before {
+    left: calc(var(--corruption-glitch-intensity) * 1px);
+    color: var(--color-accent-cyan);
+    opacity: 0.8;
+    animation: corruption-glitch 0.3s ease-in-out infinite;
+  }
+
+  .corruption-text::after {
+    left: calc(var(--corruption-glitch-intensity) * -1px);
+    color: var(--color-accent-magenta);
+    opacity: 0.8;
+    animation: corruption-glitch 0.3s ease-in-out infinite reverse;
+  }
+}
+
+/* Critical corruption warning border */
+.corruption-warning-border {
+  position: relative;
+}
+
+:root:has([data-corruption-tier="critical"]) {
+  .corruption-warning-border {
+    animation: corruption-warning-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* =============================================================================
+   Reduced Motion Support
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .corruption-badge,
+  .corruption-text::before,
+  .corruption-text::after,
+  .corruption-warning-border {
+    animation: none !important;
+  }
+
+  .corruption-overlay {
+    transition: none !important;
+  }
+
+  .corruption-overlay::before,
+  .corruption-overlay::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}

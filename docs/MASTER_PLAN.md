@@ -107,6 +107,42 @@
 
 ---
 
+### BUG-1203: Canvas Position Drift in Tauri Desktop App (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+
+**Problem**: Task positions drift/shift on the canvas in the Tauri desktop app. Positions change unexpectedly, causing tasks to end up in wrong locations.
+
+**Investigation**: TBD - checking canvas sync, drag handlers, and geometry invariant violations.
+
+---
+
+### BUG-1204: Challenges Table 404 / Initialization Failure (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-06)
+
+**Problem**: Console errors show `user_challenges` table returning 404 and `[Challenges] Initialization failed`. The challenges migration (`20260206070234_challenges.sql`) exists but table may not be applied to the database.
+
+**Errors**:
+- `Failed to load resource: 404 (Not Found) (user_challenges)`
+- `[Challenges] Initialization failed`
+
+---
+
+### BUG-1205: "This Week" Sidebar Filter Includes Sunday (Next Week) (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-06)
+
+**Problem**: The "This Week" sidebar filter count includes tasks due on Sunday, but Sunday is the start of next week. The sidebar's `weekTaskCount` in `useSidebarManagement.ts` uses `<=` comparison instead of `<`, which includes Sunday in the week boundary.
+
+**Root Cause**: `useSidebarManagement.ts` duplicates week-end logic from `useSmartViews.ts` but uses `<= weekEndStr` (includes Sunday) instead of `< weekEndStr` (excludes Sunday, consistent with the centralized `isWeekTask` filter).
+
+**Fix**: Change `<=` to `<` in all three date comparisons (dueDate, instances, scheduledDate) within `weekTaskCount` computed property.
+
+**Files**: `src/composables/app/useSidebarManagement.ts`
+
+---
+
 ### TASK-1177: Offline-First Sync System to Prevent Data Loss (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-01)
@@ -1838,10 +1874,121 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
+### FEATURE-1198: Task Image Attachments with Cloud Storage and Compression (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Feature**: Allow users to attach images to tasks. Images should be compressed client-side before upload to reduce storage. Optionally store images in Google Drive or Dropbox so the VPS doesn't run out of disk space.
+
+**Requirements**:
+- [ ] Image upload UI in task editor (drag-drop + file picker)
+- [ ] Client-side image compression before upload (e.g., browser-image-compression)
+- [ ] Cloud storage integration (Google Drive and/or Dropbox) to offload VPS storage
+- [ ] Fallback to Supabase Storage if no cloud provider configured
+- [ ] Image preview/gallery in task detail view
+- [ ] Max file size limit and format validation
+
+**Investigation Needed**:
+- Google Drive API vs Dropbox API for image storage
+- Supabase Storage bucket as default backend
+- Compression ratio targets (quality vs size tradeoff)
+- Tauri desktop: local file access vs cloud sync
+
+---
+
+### BUG-1199: Canvas Inbox Right-Click Acts as Ctrl+Click (👀 REVIEW)
+
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-06)
+
+**Problem**: Right-clicking on a task in the canvas inbox behaves as if Ctrl+Click was pressed (multi-select behavior) instead of opening a context menu or doing nothing.
+
+**Root Cause**: The native `@click` event fires for ALL mouse buttons (left=0, right=2). When right-clicking, `@click` fires first (running selection logic), then `@contextmenu` fires. Canvas nodes don't have this issue because Vue Flow's `@node-click` filters by button internally.
+
+**Fix Applied**: Added `event.button !== 0` early return in `handleTaskClick()` so only left-clicks trigger selection logic. Right-clicks now only fire the `@contextmenu` handler.
+
+**Files Changed**:
+- `src/composables/inbox/useUnifiedInboxActions.ts` - Added button check (1 line)
+
+---
+
+### FEATURE-1200: Quick Add Full RTL Support + Auto-Expand for Long Tasks (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Feature**: Two improvements to the Quick Add input in the main sidebar:
+
+1. **Full RTL support**: The quick add input should properly support RTL text (Hebrew). Text direction should auto-detect or follow app locale.
+2. **Auto-expand to fullscreen**: When typing a long task title that exceeds the input width, automatically open a fullscreen task creator popup/modal so the user has more space to write.
+
+**Requirements**:
+- [ ] Add `dir="auto"` or RTL detection to quick add input
+- [ ] RTL-aware placeholder text and icons
+- [ ] Character/width threshold to trigger fullscreen expansion
+- [ ] Smooth transition from inline input to fullscreen modal
+- [ ] Carry over typed text to the fullscreen creator
+- [ ] Fullscreen creator should also be fully RTL-aware
+
+**Files to Investigate**:
+- Quick add component in sidebar
+- `TaskEditModal.vue` or equivalent fullscreen creator
+
+---
+
+### FEATURE-1201: Intro/Onboarding Page for Guest and Signed-In Users (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Feature**: Add an intro/onboarding page when users first enter the app, both in guest mode and after signing in. Need to decide what content belongs on each.
+
+**Design Decisions Needed**:
+- [ ] What to show guest users (feature highlights, sign-up CTA, quick tour?)
+- [ ] What to show signed-in users on first visit (workspace setup, quick tutorial, keyboard shortcuts?)
+- [ ] Should it be a single splash page, multi-step wizard, or dismissable overlay?
+- [ ] Should it reappear after major updates?
+
+**Requirements**:
+- [ ] Guest mode intro: explain app capabilities, encourage sign-up
+- [ ] Signed-in intro: workspace orientation, key features walkthrough
+- [ ] "Don't show again" option
+- [ ] Mobile-responsive design
+- [ ] Matches glass morphism design system
+
+---
+
+### FEATURE-1202: Google Auth Sign-In (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Feature**: Add Google OAuth sign-in as an authentication option alongside existing email/password auth.
+
+**Requirements**:
+- [ ] Configure Google OAuth provider in Supabase Dashboard
+- [ ] Add "Sign in with Google" button to login/signup UI
+- [ ] Handle OAuth callback flow
+- [ ] Link Google accounts with existing email accounts (if same email)
+- [ ] Test on both PWA and Tauri desktop
+
+**Files to Modify**:
+- `src/services/auth/supabase.ts` - Add Google OAuth method
+- `src/stores/auth.ts` - Handle OAuth flow state
+- Login/signup components - Add Google button
+
+**Supabase Setup**:
+- Enable Google provider in Supabase Auth settings
+- Configure OAuth credentials in Google Cloud Console
+- Set redirect URLs for both PWA and Tauri
+
+---
+
 ### Other Planned Tasks
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
+| BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
+| FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
+| FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
+| FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |
 | TASK-293 | P2 | Canvas viewport - center on Today + persist position |

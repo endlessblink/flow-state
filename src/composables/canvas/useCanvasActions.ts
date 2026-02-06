@@ -170,7 +170,9 @@ export function useCanvasActions(
             return
         }
 
-        // Calculate bounding box of selected task nodes
+        // Calculate bounding box of selected task nodes using ABSOLUTE positions
+        // BUG-1203 FIX: node.position is relative when task has a parent group.
+        // Using computedPosition (absolute) prevents wrong bounding box calculation.
         const PADDING = 40 // Padding around the group
         const NODE_WIDTH = 280 // Approximate task card width
         const NODE_HEIGHT = 80 // Approximate task card height
@@ -178,8 +180,14 @@ export function useCanvasActions(
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
 
         for (const node of taskNodes) {
-            const x = node.position.x
-            const y = node.position.y
+            // BUG-1203: Use computedPosition (absolute) instead of position (may be relative)
+            const vfNode = node as any
+            const x = (vfNode.computedPosition?.x != null && isFinite(vfNode.computedPosition.x))
+                ? vfNode.computedPosition.x
+                : node.position.x
+            const y = (vfNode.computedPosition?.y != null && isFinite(vfNode.computedPosition.y))
+                ? vfNode.computedPosition.y
+                : node.position.y
             minX = Math.min(minX, x)
             minY = Math.min(minY, y)
             maxX = Math.max(maxX, x + NODE_WIDTH)

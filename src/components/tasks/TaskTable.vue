@@ -603,12 +603,14 @@ onUnmounted(() => {
   border-color: var(--glass-border-hover);
 }
 
+/* ADHD-friendly: Taller rows with more breathing room for easier scanning */
 .table-row {
   display: grid;
   grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
   position: relative;
   padding: var(--space-3) var(--space-4);
+  min-height: 52px; /* Match research recommendation for comfortable row height */
   border-bottom: 1px solid var(--glass-border);
   transition: background-color var(--duration-fast) ease;
   cursor: pointer;
@@ -624,23 +626,26 @@ onUnmounted(() => {
   border-left: 2px solid var(--brand-primary);
 }
 
-/* Density Variants */
+/* ADHD-friendly Density Variants - Research-backed row heights */
 .task-table--compact .table-header,
 .task-table--compact .table-row {
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
+  min-height: 44px; /* Compact but still scannable */
 }
 
 .task-table--comfortable .table-header,
 .task-table--comfortable .table-row {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-base);
+  min-height: 52px; /* Optimal for scanning */
 }
 
 .task-table--spacious .table-header,
 .task-table--spacious .table-row {
   padding: var(--space-4) var(--space-5);
   font-size: var(--text-base);
+  min-height: 64px; /* Maximum breathing room */
 }
 
 /* Table Cells */

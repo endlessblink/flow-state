@@ -168,15 +168,16 @@ export function useSidebarManagement() {
         return false
       }
 
-      // Include tasks due within the current week (today through Sunday)
-      if (task.dueDate && task.dueDate >= todayStr && task.dueDate <= weekEndStr) {
+      // BUG-1205: Include tasks due within the current week (today through Saturday)
+      // Use < (not <=) to exclude Sunday, consistent with useSmartViews.isWeekTask
+      if (task.dueDate && task.dueDate >= todayStr && task.dueDate < weekEndStr) {
         return true
       }
 
       // Check if task has instances scheduled within the week (matches filteredTasks logic)
       if (task.instances && task.instances.length > 0) {
         const hasWeekInstance = task.instances.some(inst =>
-          inst && inst.scheduledDate >= todayStr && inst.scheduledDate <= weekEndStr
+          inst && inst.scheduledDate >= todayStr && inst.scheduledDate < weekEndStr
         )
         if (hasWeekInstance) {
           return true
@@ -184,7 +185,7 @@ export function useSidebarManagement() {
       }
 
       // Check legacy scheduled dates within the week (matches filteredTasks logic)
-      if (task.scheduledDate && task.scheduledDate >= todayStr && task.scheduledDate <= weekEndStr) {
+      if (task.scheduledDate && task.scheduledDate >= todayStr && task.scheduledDate < weekEndStr) {
         return true
       }
 

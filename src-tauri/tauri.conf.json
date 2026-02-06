@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowState",
-  "version": "1.2.7",
+  "version": "1.2.10",
   "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",
@@ -48,7 +48,7 @@
       "endpoints": [
         "https://in-theflow.com/updates/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk0ODVDNjBEQTVDQTVDRDMKUldUVFhNcWxEY2FGbFBaMmdvNnp1MXVCeG1NdUE1OE9tTmtpdjdrY3lZNnlCdWFsVERDSkkzRVMK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJERjNGMDYxREY0QjkwREEKUldUYWtFdmZZZkR6dlhrMUJjaFR2MFBTVmZ2ZjVCb3c3QzBtQ1hJNGs4bkFFaE1tUGVUMTI1Z1QK"
     }
   }
 }

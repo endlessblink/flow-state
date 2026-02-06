@@ -691,6 +691,41 @@
       "last_used": null,
       "related_skills": [],
       "description": "Save current progress and push to remote - like /done but keeps task IN PROGRESS. Use when switching machines, ending session, or backing up work. Triggers on \"/save\", \"save progress\", \"switch machine\", \"end session\"."
+    },
+    "cyberflow-rpg": {
+      "name": "Cyberflow RPG",
+      "category": "create",
+      "triggers": [
+        "challenge",
+        "boss fight",
+        "corruption",
+        "ARIA",
+        "game master",
+        "RPG",
+        "cyberflow",
+        "daily mission",
+        "weekly boss",
+        "gamification rpg"
+      ],
+      "keywords": [
+        "challenge",
+        "boss",
+        "corruption",
+        "ARIA",
+        "game master",
+        "RPG",
+        "mission",
+        "cyberflow"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "dev-debugging",
+        "dev-implement-ui-ux",
+        "chief-architect",
+        "qa-testing"
+      ],
+      "description": "Cyberflow RPG Game Master skill — AI-driven challenge system for FlowState gamification. Use for developing, debugging, or extending the RPG challenge engine, ARIA game master, corruption system, boss fights, and narrative features."
     }
   },
   "categories": {

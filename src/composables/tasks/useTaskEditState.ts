@@ -72,6 +72,7 @@ export function useTaskEditState(
             subtasks: task.subtasks?.map(st => ({
                 id: st.id,
                 title: st.title,
+                description: st.description,
                 isCompleted: st.isCompleted
             }))
         })

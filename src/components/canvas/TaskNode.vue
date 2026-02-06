@@ -64,6 +64,8 @@
         :is-done="task?.status === 'done'"
         :is-overdue="isOverdue"
         :done-for-now-until="task?.doneForNowUntil"
+        :subtask-count="task?.subtasks?.length || 0"
+        :completed-subtask-count="task?.subtasks?.filter(st => st.isCompleted).length || 0"
         @reschedule="handleReschedule"
         @clear-done-for-now="handleClearDoneForNow"
       />

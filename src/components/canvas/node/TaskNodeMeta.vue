@@ -43,6 +43,12 @@
       {{ formattedDuration }}
     </span>
 
+    <!-- Subtasks -->
+    <span v-if="subtaskCount && subtaskCount > 0" class="subtask-badge" :class="{ 'subtask-complete': completedSubtaskCount === subtaskCount }" :title="`Subtasks: ${completedSubtaskCount}/${subtaskCount}`">
+      <ListChecks :size="12" />
+      {{ completedSubtaskCount }}/{{ subtaskCount }}
+    </span>
+
     <!-- Done Indicator -->
     <span v-if="isDone" class="done-badge" title="Completed">
       <Check :size="12" />
@@ -53,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Calendar, Check, Clock } from 'lucide-vue-next'
+import { Calendar, Check, Clock, ListChecks } from 'lucide-vue-next'
 import OverdueBadge from './OverdueBadge.vue'
 
 const props = defineProps<{
@@ -71,12 +77,14 @@ const props = defineProps<{
   isDone: boolean
   isOverdue: boolean
   doneForNowUntil?: string | null
+  subtaskCount?: number
+  completedSubtaskCount?: number
 }>()
 
-// Show "Done for now" badge when dueDate matches doneForNowUntil
-// Badge resets when user changes dueDate to something else
+// BUG-1187: Show "Done for now" badge when doneForNowUntil has a value
+// Badge only clears when user explicitly clicks it (clearDoneForNow event)
 const isDoneForNow = computed(() => {
-  return props.doneForNowUntil && props.dueDate === props.doneForNowUntil
+  return !!props.doneForNowUntil
 })
 
 defineEmits<{
@@ -93,7 +101,7 @@ defineEmits<{
   align-items: center;
 }
 
-.status-badge, .due-date-badge, .schedule-badge, .duration-badge, .done-badge, .done-for-now-badge {
+.status-badge, .due-date-badge, .schedule-badge, .duration-badge, .done-badge, .done-for-now-badge, .subtask-badge {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -135,4 +143,15 @@ defineEmits<{
 .duration-short { color: var(--color-info); border-color: var(--color-info-dim); }
 .duration-medium { color: var(--color-warning); border-color: var(--color-warning-dim); }
 .duration-long { color: var(--color-error); border-color: var(--color-error-dim); }
+
+/* Subtask Badge Styles */
+.subtask-badge {
+  color: var(--text-secondary);
+}
+
+.subtask-complete {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
 </style>

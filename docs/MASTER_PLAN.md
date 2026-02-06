@@ -2098,6 +2098,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | BUG-1206 | P0 | Task details not saved when pressing Save in canvas |
+| ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |

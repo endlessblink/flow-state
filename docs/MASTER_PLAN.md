@@ -2683,18 +2683,25 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 **Implementation Steps**:
 - [x] Configure `@tauri-apps/plugin-updater` in `tauri.conf.json` with VPS update endpoint
-- [ ] Set up VPS directory structure (`/var/www/flowstate/updates/`) with Caddy serving
+- [x] Set up VPS directory structure (`/var/www/flowstate/updates/`) with Caddy serving
 - [x] Create update manifest generation script (`scripts/generate-update-manifest.cjs`)
 - [x] Modify GitHub Actions release workflow to build + upload binaries to VPS
 - [x] Code-signing already configured (existing signing keys + pubkey)
 - [x] Add "Check for Updates" UI in Settings > About tab
 - [x] Auto-check on app launch with non-intrusive notification (existing `TauriUpdateNotification.vue`)
+- [x] Create npm scripts for automated release workflow (`tauri:build:signed`, `tauri:upload-update`, `tauri:release`)
+- [x] Fix TTY signing bug with `echo '' |` workaround for non-interactive environments
 - [ ] Test full update cycle: build → upload → detect → download → install → restart
+
+**Progress (2026-02-06):** VPS endpoint configured with Caddy (Content-Type, CORS headers). Created automated release scripts with TTY workaround for signing in non-interactive shells. CI/CD excludes `/updates/` from rsync delete. Ready for first production upload - need to build current version and upload to test full cycle.
 
 **Key Files**:
 - `src-tauri/tauri.conf.json` - Updater plugin config (endpoint: `in-theflow.com/updates/latest.json`)
 - `.github/workflows/release.yml` - CI/CD for multi-platform builds + VPS deploy
+- `.github/workflows/deploy.yml` - Modified to exclude `/updates/` from rsync delete
 - `scripts/generate-update-manifest.cjs` - Generates `latest.json` from build artifacts
+- `scripts/tauri-build-signed.sh` - Build script with signing key loading
+- `scripts/tauri-upload-update.sh` - Upload artifacts to VPS
 - `src/components/settings/tabs/AboutSettingsTab.vue` - Update UI in Settings
 - `src/composables/useTauriUpdater.ts` - Updater composable
 - `src/components/common/TauriUpdateNotification.vue` - Launch notification

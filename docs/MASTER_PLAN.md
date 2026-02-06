@@ -712,18 +712,26 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-1193: Kanban Drag-and-Drop Deep Regression - Drags Wrong Tasks, Groups Don't Move Children (🔄 IN PROGRESS)
+### ~~BUG-1193~~: Kanban Drag-and-Drop Deep Regression - Drags Wrong Tasks, Groups Don't Move Children (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
 
 **Problem**: Deep regression in Kanban/Board view drag-and-drop:
 1. Dragging a task in kanban drags unrelated tasks instead
 2. Group drag doesn't move child tasks
 3. Tauri app and main app don't sync at all
 
-**Root Cause**: TBD (under investigation)
+**Root Cause**:
+1. `group="tasks"` was a static string shared across ALL swimlanes - vuedraggable allowed cross-project drag
+2. `localTasks` watch fired during drag, overwriting vuedraggable's internal state causing wrong element selection
+3. `createTask` sync threw error when auth unavailable, breaking entire task creation
+4. Legacy canvas groups with `group-xxx` IDs threw error on sync instead of gracefully skipping
 
-**Fix Applied**: TBD
+**Fix Applied**:
+- **KanbanColumn.vue**: Scoped drag group per swimlane (`:group="dragGroup"` with `tasks-{projectId}`), added `isDragActive` guard to prevent reactive overwrites during drag, added `@start`/`@end` handlers
+- **KanbanSwimlane.vue**: Pass `:swimlane-id="project.id"` to all KanbanColumn instances
+- **taskOperations.ts**: Changed auth check from throw to graceful skip for sync queue, fixed TypeScript errors (`dueDate: undefined` instead of `null`)
+- **supabaseMappers.ts**: Changed `toSupabaseGroup` to return `null` and warn for legacy IDs instead of throwing
 
 ---
 

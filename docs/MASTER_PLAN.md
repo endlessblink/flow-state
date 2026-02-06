@@ -176,15 +176,23 @@
 
 ---
 
-### BUG-1210: "This Week" Filter Shows Tasks From Next Week (📋 PLANNED)
+### BUG-1210: "This Week" Filter Shows Tasks From Next Week (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
 
-**Problem**: The "This Week" view/filter still displays tasks that are due after Saturday 23:59 (i.e., next week). BUG-1205 fixed the sidebar **count** but the actual task list filter logic still includes next-week tasks.
+**Problem**: The "This Week" view/filter displays tasks due after Saturday 23:59 (next week). Two root causes:
 
-**Related**: ~~BUG-1205~~ (sidebar count fix only — this is the remaining filter bug)
+**Root Cause 1**: `useTaskFiltering.ts` nested task bypass — child/subtasks added back WITHOUT re-applying smart view filter. Parent due this week pulled in ALL children regardless of dates.
 
-**Files to investigate**: `src/composables/app/useSmartViews.ts`, `src/composables/app/useSidebarManagement.ts`, any view-level week filtering
+**Root Cause 2**: `useSidebarManagement.ts` duplicated `weekTaskCount`/`todayTaskCount` with divergent logic (included all `in_progress` regardless of date, excluded overdue).
+
+**Fix (code committed)**:
+1. `useTaskFiltering.ts`: Apply `applySmartViewFilter()` to nested tasks before merging
+2. `useSidebarManagement.ts`: Replaced duplicated count logic with centralized `useSmartViews` calls
+
+**Pending**: Tauri auto-updater deploy (signing key password mismatch)
+
+**Files**: `src/composables/tasks/useTaskFiltering.ts`, `src/composables/app/useSidebarManagement.ts`
 
 ---
 
@@ -2823,8 +2831,8 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 **Parent Feature**: FEATURE-1118
 
-**Completed Sub-Features**:
-- ~~FEATURE-1132~~: AI Game Master Challenge System (✅ DONE 2026-02-06)
+**Sub-Features**:
+- FEATURE-1132: AI Game Master Challenge System (🔄 IN PROGRESS)
   - Database migration: `user_challenges`, `challenge_history` tables
   - Types: `src/types/challenges.ts`
   - Store: `src/stores/challenges.ts`
@@ -2833,7 +2841,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
   - Integration: `useGamificationHooks.ts` tracks challenge progress
   - Skill: `.claude/skills/cyberflow-rpg/SKILL.md`
 
-**Remaining**: Apply migration to production database (see BUG-1204)
+**Blocking**: BUG-1204 - Apply migration to database (table returns 404)
 
 ---
 

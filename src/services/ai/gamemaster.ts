@@ -342,7 +342,7 @@ export async function generateDailyChallenges(
       ]
 
       const response = await options.chat(messages, { taskType: 'planning' })
-      const parsed = parseAIResponse(response.content) as AIGenerateChallengesResponse
+      const parsed = parseAIResponse(response.content) as { daily_missions?: unknown[] }
 
       if (parsed.daily_missions && Array.isArray(parsed.daily_missions)) {
         const validated = parsed.daily_missions

@@ -60,6 +60,12 @@
           {{ task.estimatedDuration }}m
         </span>
 
+        <!-- Subtask Badge -->
+        <span v-if="totalSubtasks > 0" class="metadata-badge subtask-badge" :class="{ 'subtask-complete': completedSubtasks === totalSubtasks }" :title="`Subtasks: ${completedSubtasks}/${totalSubtasks}`">
+          <ListChecks :size="12" />
+          {{ completedSubtasks }}/{{ totalSubtasks }}
+        </span>
+
         <!-- Status Indicator -->
         <span class="metadata-badge status-badge" :class="`status-${task.status}`">
           {{ statusEmoji(task.status) }}
@@ -90,10 +96,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { type Task } from '@/stores/tasks'
-import { Play, Edit2, Timer, Calendar, Clock } from 'lucide-vue-next'
+import { Play, Edit2, Timer, Calendar, Clock, ListChecks } from 'lucide-vue-next'
 import { NTag } from 'naive-ui'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useTaskStore } from '@/stores/tasks'
+import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 
 const props = defineProps<{
   task: Task
@@ -113,9 +120,17 @@ defineEmits<{
 
 const taskStore = useTaskStore()
 
-const projectVisual = computed(() => 
+// BUG-1191: Ensure date timer is running for reactive overdue detection
+ensureDateTimer()
+
+const projectVisual = computed(() =>
   taskStore.getProjectVisual(props.task.projectId)
 )
+
+const completedSubtasks = computed(() =>
+  props.task.subtasks?.filter(st => st.isCompleted).length || 0
+)
+const totalSubtasks = computed(() => props.task.subtasks?.length || 0)
 
 const statusEmoji = (status: string) => {
   const emojis: Record<string, string> = {
@@ -128,7 +143,10 @@ const statusEmoji = (status: string) => {
   return emojis[status] || '❓'
 }
 
+// BUG-1191: Due badge class with reactive date dependency
 const getDueBadgeClass = (dueDate: string) => {
+  // BUG-1191: Reactive dependency - ensures re-evaluation at midnight
+  const _todayTrigger = reactiveToday.value
   const today = new Date().toISOString().split('T')[0]
   if (dueDate < today) return 'due-badge-overdue'
   if (dueDate === today) return 'due-badge-today'
@@ -213,6 +231,16 @@ const formatDueDateLabel = (dueDate: string) => {
 .due-badge-today { color: var(--status-warning); }
 
 .status-badge { opacity: 0.8; }
+
+.subtask-badge {
+  color: var(--text-secondary);
+}
+
+.subtask-complete {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+}
 
 .task-actions {
   position: absolute;

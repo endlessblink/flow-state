@@ -101,6 +101,7 @@ import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 
 const props = defineProps<{
   task: Task
@@ -120,6 +121,9 @@ defineEmits<{
 
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+
+// BUG-1191: Ensure date timer is running for reactive overdue detection
+ensureDateTimer()
 
 // Computeds
 const projectVisual = computed(() => {
@@ -143,8 +147,11 @@ const formatHumanDate = (dateStr: string) => {
   return date.toLocaleDateString('en', { month: 'short', day: 'numeric' })
 }
 
+// BUG-1191: Due status with reactive date dependency
 const dueStatus = computed(() => {
   const task = props.task
+  // BUG-1191: Reactive dependency - ensures re-evaluation at midnight
+  const _todayTrigger = reactiveToday.value
   const today = new Date().toISOString().split('T')[0]
 
   if (task.dueDate) {

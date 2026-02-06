@@ -5,11 +5,15 @@ import { useTaskStore } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { Timer, Zap, Clock } from 'lucide-vue-next'
+import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 
 export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
     const timerStore = useTimerStore()
     const taskStore = useTaskStore()
     const { getAlignmentClasses } = useHebrewAlignment()
+
+    // BUG-1191: Ensure date timer is running for reactive overdue detection
+    ensureDateTimer()
 
     // BUG-291 FIX: Read task from STORE (reactive) instead of PROPS (snapshot)
     // This ensures the node updates instantly when task properties change
@@ -95,10 +99,13 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
         }
     })
 
-    // TASK-282: Overdue detection
+    // TASK-282 + BUG-1191: Overdue detection with reactive date trigger
     const isOverdue = computed(() => {
         if (!task.value?.dueDate) return false
         if (task.value.status === 'done') return false // Completed tasks aren't overdue
+        // BUG-1191: Access reactiveToday to create reactive dependency on date changes
+        // Without this, new Date() inside computed is NOT reactive and badges won't update at midnight
+        const _todayTrigger = reactiveToday.value
         try {
             const dueDate = new Date(task.value.dueDate)
             dueDate.setHours(23, 59, 59, 999) // End of due date day

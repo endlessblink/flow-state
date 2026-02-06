@@ -43,6 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
+import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 
 const props = defineProps<{
   task: Task
@@ -55,9 +56,14 @@ const props = defineProps<{
   projectVisual: any
 }>()
 
-// Highlight overdue or today's tasks
+// BUG-1191: Ensure date timer is running for reactive overdue detection
+ensureDateTimer()
+
+// BUG-1191: Highlight overdue or today's tasks (reactive to date changes)
 const dueDateClass = computed(() => {
   if (!props.task.dueDate) return ''
+  // BUG-1191: Reactive dependency - ensures re-evaluation at midnight
+  const _todayTrigger = reactiveToday.value
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const due = new Date(props.task.dueDate)
@@ -84,16 +90,16 @@ const dueDateClass = computed(() => {
 .meta-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   white-space: nowrap;
 }
 
 /* Dot separator between badges */
 .badge-separator {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 12px;
+  color: var(--text-subtle);
+  font-size: 13px;
   margin: 0 var(--space-1);
   user-select: none;
 }

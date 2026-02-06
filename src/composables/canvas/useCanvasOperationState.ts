@@ -51,9 +51,18 @@ export function useCanvasOperationState() {
             window.clearTimeout(state.value.settleTimeout as any)
         }
 
+        // BUG-1209: Set window flag so realtime handlers block during settling
+        if (typeof window !== 'undefined') {
+            ;(window as any).__FlowStateIsSettling = true
+        }
+
         const settleTimeout = window.setTimeout(() => {
             if (state.value.type === 'drag-settling') {
                 state.value = { type: 'idle' }
+                // BUG-1209: Clear settling flag when returning to idle
+                if (typeof window !== 'undefined') {
+                    ;(window as any).__FlowStateIsSettling = false
+                }
                 // Process any queued updates after settling completes
                 const updates = [...pendingUpdates.value]
                 pendingUpdates.value = []
@@ -73,9 +82,18 @@ export function useCanvasOperationState() {
     const endResize = (groupId: string) => {
         if (state.value.type !== 'resizing') return
 
+        // BUG-1209: Set window flag so realtime handlers block during settling
+        if (typeof window !== 'undefined') {
+            ;(window as any).__FlowStateIsSettling = true
+        }
+
         const settleTimeout = window.setTimeout(() => {
             if (state.value.type === 'resize-settling') {
                 state.value = { type: 'idle' }
+                // BUG-1209: Clear settling flag when returning to idle
+                if (typeof window !== 'undefined') {
+                    ;(window as any).__FlowStateIsSettling = false
+                }
                 // Process any queued updates after settling completes
                 const updates = [...pendingUpdates.value]
                 pendingUpdates.value = []
@@ -102,6 +120,10 @@ export function useCanvasOperationState() {
     const resetToIdle = () => {
         if ('settleTimeout' in state.value) {
             window.clearTimeout(state.value.settleTimeout as any)
+        }
+        // BUG-1209: Clear settling flag on any reset
+        if (typeof window !== 'undefined') {
+            ;(window as any).__FlowStateIsSettling = false
         }
         state.value = { type: 'idle' }
     }
@@ -153,6 +175,22 @@ export function useCanvasOperationState() {
     }
 
     /**
+     * BUG-1209: Unified guard that checks ALL position modification locks.
+     * Use this single function instead of checking individual flags separately.
+     * Returns true if positions should NOT be modified by remote/sync operations.
+     */
+    const isPositionModificationBlocked = computed(() => {
+        // State machine checks (dragging, settling, resizing, editing)
+        if (shouldBlockUpdates.value) return true
+        // Window-level flags (set by other subsystems)
+        if (typeof window !== 'undefined') {
+            const w = window as any
+            if (w.__FlowStateIsDragging || w.__FlowStateIsResizing || w.__FlowStateIsSettling) return true
+        }
+        return false
+    })
+
+    /**
      * Get debug info for troubleshooting
      */
     const getDebugInfo = () => ({
@@ -183,6 +221,7 @@ export function useCanvasOperationState() {
         resetToIdle,
         isSettling,
         shouldBlockUpdates,
+        isPositionModificationBlocked,
         queueUpdate,
         getDebugInfo
     }

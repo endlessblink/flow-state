@@ -103,6 +103,10 @@ export function getGroupAbsolutePosition(
 ): Position {
   const group = allGroups.find(g => g.id === groupId)
   if (!group || !group.position) {
+    // BUG-1209: Log warning instead of silently returning origin.
+    // Returning {0,0} for a missing group causes children to compute
+    // abs = relative + {0,0} = relative, teleporting them near origin.
+    console.warn(`[COORDINATES] getGroupAbsolutePosition: group ${groupId.slice(0, 8)} not found in ${allGroups.length} groups — returning {0,0}. This WILL cause drift if used for coordinate conversion.`)
     return { x: 0, y: 0 }
   }
 

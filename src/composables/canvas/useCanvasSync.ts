@@ -758,13 +758,13 @@ export function useCanvasSync() {
         }
 
         // BUG-1203: Process stale parentId cleanups AFTER sync completes.
-        // This eliminates the split-brain where store says parentId=groupA but Vue Flow shows root.
-        // Without this fix, the drag handler detects the mismatch → snaps task to wrong position → drift.
-        // Using nextTick ensures isSyncing is false, so the triggered sync won't be blocked.
-        // The next sync reads updated parentId=null → no stale detection → idempotence check → stable.
+        // BUG-1209: Use setTimeout(500ms) instead of nextTick to avoid triggering an immediate
+        // re-sync cascade. The nextTick approach fired within the same reactive batch, causing
+        // syncTrigger++ → new sync → potential feedback loop. 500ms gives Vue Flow time to
+        // stabilize and ensures the re-sync triggered by the cleanup reads fully consistent state.
         if (staleParentCleanups.length > 0) {
             const cleanups = [...staleParentCleanups]
-            nextTick(() => {
+            setTimeout(() => {
                 for (const { taskId, oldParentId } of cleanups) {
                     if (import.meta.env.DEV) {
                         console.log(`[BUG-1203] Deferred parentId cleanup: task ${taskId.slice(0, 8)}... clearing stale parentId ${oldParentId.slice(0, 8)}`)
@@ -773,7 +773,7 @@ export function useCanvasSync() {
                     // Safe because: (1) only clears parentId, never sets, (2) next sync finds no stale → stable
                     taskStore.updateTask(taskId, { parentId: undefined }, 'STALE-CLEANUP' as any)
                 }
-            })
+            }, 500)
         }
     }
 

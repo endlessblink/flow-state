@@ -143,11 +143,16 @@ class PositionManager {
         }
 
         const parentNode = this.positions.get(node.parentId)
-        // If parent is missing (race condition?), treat as absolute or 0?
-        // Treating as absolute is safer than crashing
-        const parentPos = parentNode ? parentNode.position : { x: 0, y: 0 }
+        if (!parentNode) {
+            // BUG-1209: Parent missing from PositionManager (race during load or parent deleted).
+            // Using {0,0} as parent pos would compute relative = absolute - 0 = absolute,
+            // then Vue Flow interprets as relative to actual parent → node at parent.pos + absolute.pos
+            // (double offset). Instead, return absolute position to render correctly as a root node.
+            console.warn(`[PositionManager] getRelativePosition: parent ${node.parentId.slice(0, 8)} missing for node ${nodeId.slice(0, 8)} — returning absolute position to prevent double-offset drift`)
+            return { ...node.position }
+        }
 
-        return toRelativePosition(node.position, parentPos)
+        return toRelativePosition(node.position, parentNode.position)
     }
 
     /**

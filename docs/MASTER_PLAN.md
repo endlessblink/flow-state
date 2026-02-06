@@ -91,6 +91,22 @@
 
 ---
 
+### BUG-1211: Tasks Disappearing Across Platforms (PWA/Tauri/Web) (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+
+**Problem**: Tasks may still be disappearing across platforms — PWA on mobile, Tauri desktop app, and web. A task created or edited on one platform can vanish when synced to another. This is the highest severity data loss bug possible.
+
+**Investigation Areas**:
+1. Sync orchestrator — LWW conflict resolution, offline queue replay
+2. Tombstones — incorrect soft-delete propagation across devices
+3. Realtime subscriptions — DELETE events from other devices
+4. Store initialization — race conditions loading tasks before auth ready
+5. Cross-platform sync — Tauri vs PWA vs web state divergence
+6. BUG-1207 regression — task changes resetting in Tauri app
+
+---
+
 ### BUG-1197: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
@@ -140,6 +156,50 @@
 **Fix**: Changed `<=` to `<` in all three date comparisons (dueDate, instances, scheduledDate) within `weekTaskCount` computed property. User confirmed working 2026-02-06.
 
 **Files**: `src/composables/app/useSidebarManagement.ts`
+
+---
+
+### BUG-1210: "This Week" Filter Shows Tasks From Next Week (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-06)
+
+**Problem**: The "This Week" view/filter still displays tasks that are due after Saturday 23:59 (i.e., next week). BUG-1205 fixed the sidebar **count** but the actual task list filter logic still includes next-week tasks.
+
+**Related**: ~~BUG-1205~~ (sidebar count fix only — this is the remaining filter bug)
+
+**Files to investigate**: `src/composables/app/useSmartViews.ts`, `src/composables/app/useSidebarManagement.ts`, any view-level week filtering
+
+---
+
+### BUG-1209: Comprehensive Canvas Position Drift - All Causes (👀 REVIEW)
+
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
+
+**Problem**: Task positions still drift when moving tasks on canvas. 47 drift vectors identified across 6 subsystems. Subsumes BUG-1203, relates to BUG-1197.
+
+**Root Cause (Systemic)**: Three position authorities (Vue Flow nodes, PositionManager, Pinia store) updated non-atomically through async operations, with 5 unsynchronized guard mechanisms.
+
+**P0 Fixes (6)**:
+1. `isDragging=false` moved to finally block — closes realtime overwrite window (`useCanvasInteractions.ts`)
+2. Vue Flow node updates moved BEFORE store write — prevents sync reading inconsistent state (`useCanvasInteractions.ts`)
+3. Position set BEFORE parentNode for tasks — eliminates micro-tick flash (`useCanvasInteractions.ts`)
+4. `__FlowStateIsSettling` flag set in operationState — realtime handlers now block during settling (`useCanvasOperationState.ts`)
+5. Online resume cooldown added — WiFi flickers no longer clobber in-flight drags (`useSupabaseDatabase.ts`)
+6. PositionManager missing parent → return absolute — prevents double-offset drift (`PositionManager.ts`)
+
+**P1 Fixes (4)**:
+7. Grid-aligned positions — `Math.round()` before saving to prevent 16px snap accumulation (`useCanvasInteractions.ts`)
+8. `isPendingWrite` check in `updateTaskFromSync` — defense-in-depth against recovery/merge bypassing realtime guard (`tasks.ts`)
+9. Stale parentId cleanup uses `setTimeout(500ms)` instead of `nextTick` — breaks sync feedback loop (`useCanvasSync.ts`)
+10. Unified `isPositionModificationBlocked` computed — single guard checking all state sources (`useCanvasOperationState.ts`)
+
+**P2 Fixes (3)**:
+11. `taskAllGroups` re-snapshot per iteration in multi-node drag loop (`useCanvasInteractions.ts`)
+12. `await nextTick()` before descendant sync for fresh computedPosition (`useCanvasInteractions.ts`)
+13. `removePendingWrite` delayed 3s to catch Supabase realtime echo (`useCanvasInteractions.ts`)
+
+**Files Modified**: `useCanvasInteractions.ts`, `useCanvasOperationState.ts`, `useSupabaseDatabase.ts`, `PositionManager.ts`, `coordinates.ts`, `useCanvasSync.ts`, `tasks.ts`
+**Tests**: 95/95 files pass, 616/616 tests pass
 
 ---
 

@@ -235,6 +235,16 @@ export const useTaskStore = defineStore('tasks', () => {
             return
           }
 
+          // BUG-1209: Skip sync if task has a pending local write (drag in progress)
+          // This is defense-in-depth — isPendingWrite is also checked in the realtime handler,
+          // but some code paths (recovery reload, smart merge) can reach here without that check.
+          if (isPendingWrite(taskId)) {
+            if (import.meta.env.DEV) {
+              console.log(`[TASKS:SYNC] Skipping sync for "${taskId.slice(0, 8)}" - pending local write`)
+            }
+            return
+          }
+
           // BUG-1091: Fix cross-browser sync - when timestamps are equal, ACCEPT remote (DB is source of truth)
           // Previous code used >= which caused split-brain when both browsers had same timestamp
           // Only skip if local is STRICTLY newer (not equal)
@@ -319,6 +329,19 @@ export const useTaskStore = defineStore('tasks', () => {
                 versions: { local: currentTask.positionVersion ?? 0, remote: normalizedTask.positionVersion ?? 0 }
               })
             }
+          }
+
+          // BUG-1206 DEBUG: Log description changes from sync
+          if (currentTask.description !== normalizedTask.description) {
+            console.warn('🐛 [BUG-1206] SYNC OVERWRITE - description changed!', {
+              taskId: taskId.slice(0, 8),
+              localDescLength: currentTask.description?.length,
+              localDescPreview: currentTask.description?.slice(0, 50),
+              remoteDescLength: normalizedTask.description?.length,
+              remoteDescPreview: normalizedTask.description?.slice(0, 50),
+              localUpdatedAt: currentTask.updatedAt,
+              remoteUpdatedAt: normalizedTask.updatedAt
+            })
           }
 
           // Update existing task

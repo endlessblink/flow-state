@@ -31,6 +31,9 @@ export interface AppSettings {
     showAchievementNotifications: boolean
     gamificationIntensity: 'minimal' | 'moderate' | 'intense'
 
+    // FEATURE-1194: Auto-updater
+    autoUpdateEnabled: boolean
+
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
     kanbanSettings?: Record<string, unknown>
@@ -70,6 +73,9 @@ export const useSettingsStore = defineStore('settings', {
         showXpNotifications: true,
         showAchievementNotifications: true,
         gamificationIntensity: 'moderate',
+
+        // FEATURE-1194: Auto-updater defaults
+        autoUpdateEnabled: false,
 
         // Miscellaneous defaults
         sidebarCollapsed: false,

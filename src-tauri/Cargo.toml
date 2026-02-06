@@ -1,6 +1,6 @@
 [package]
 name = "flow-state"
-version = "0.1.0"
+version = "1.2.7"
 description = "FlowState - Productivity app with task management and pomodoro timer"
 authors = ["EndlessBlink"]
 license = "MIT"
@@ -28,7 +28,7 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.9.5", features = [] }
 tauri-plugin-log = "2"
-tauri-plugin-http = "2"
+tauri-plugin-http = "2.5.7"
 tauri-plugin-shell = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
@@ -42,7 +42,7 @@ tauri-plugin-store = "2"
 [profile.release]
 lto = true           # Link-Time Optimization - smaller binary, better runtime
 codegen-units = 1    # Single codegen unit for better optimization (slower compile)
-strip = true         # Strip symbols from binary
+strip = "symbols"    # Strip debug symbols but preserve string data for Tauri bundler patching
 opt-level = 3        # Maximum optimization
 panic = "abort"      # Abort on panic (smaller binary, no unwinding)
 

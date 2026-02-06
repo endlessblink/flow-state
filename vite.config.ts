@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 // @ts-ignore
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -24,7 +25,15 @@ const isTauri =
   process.env.TAURI_ENV_PLATFORM !== undefined ||
   process.env.TAURI_DEV !== undefined
 
+// FEATURE-1194: Read version from package.json for injection into app
+const packageVersion = JSON.parse(
+  readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf-8')
+).version
+
 export default defineConfig(({ mode }) => ({
+  define: {
+    '__APP_VERSION__': JSON.stringify(packageVersion),
+  },
   plugins: [
     vue(),
     // PWA Plugin - ROAD-004 (disabled for Tauri builds - service workers don't work with tauri:// protocol)

@@ -10,7 +10,39 @@
     "shell:allow-kill",
     "notification:default",
     {
-      "identifier": "http:default",
+      "identifier": "http:allow-fetch",
+      "allow": [
+        { "url": "http://127.0.0.1:**" },
+        { "url": "http://localhost:**" },
+        { "url": "https://**" }
+      ]
+    },
+    {
+      "identifier": "http:allow-fetch-cancel",
+      "allow": [
+        { "url": "http://127.0.0.1:**" },
+        { "url": "http://localhost:**" },
+        { "url": "https://**" }
+      ]
+    },
+    {
+      "identifier": "http:allow-fetch-cancel-body",
+      "allow": [
+        { "url": "http://127.0.0.1:**" },
+        { "url": "http://localhost:**" },
+        { "url": "https://**" }
+      ]
+    },
+    {
+      "identifier": "http:allow-fetch-read-body",
+      "allow": [
+        { "url": "http://127.0.0.1:**" },
+        { "url": "http://localhost:**" },
+        { "url": "https://**" }
+      ]
+    },
+    {
+      "identifier": "http:allow-fetch-send",
       "allow": [
         { "url": "http://127.0.0.1:**" },
         { "url": "http://localhost:**" },
@@ -68,6 +100,8 @@
       ]
     },
     "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
     "process:default",
     "dialog:default",
     "dialog:allow-save",

@@ -162,6 +162,16 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         // getParentChain returns [child, parent, grandparent, ...]
         const chain = getParentChain(section.id, allGroups)
 
+        if (import.meta.env.DEV) {
+            const sectionInGroups = allGroups.find(g => g.id === section.id)
+            console.log(`[CANVAS:SECTION-PROPS] getParentChain for "${section.name}" (${section.id.slice(0, 8)}):`, {
+                chainLength: chain.length,
+                chainNames: chain.map(g => g.name),
+                sectionParentGroupId: sectionInGroups?.parentGroupId ?? 'NOT FOUND',
+                allGroupsCount: allGroups.length
+            })
+        }
+
         if (chain.length === 0) {
             return getSingleSectionProperties(section)
         }

@@ -1124,6 +1124,12 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
             const payload = toSupabaseGroup(group, userId)
 
+            // BUG-1184: Skip groups with legacy non-UUID IDs gracefully
+            if (!payload) {
+                console.debug(`⏭️ [LEGACY-GROUP] Skipping save for group "${group.name}" - has legacy ID format`)
+                return
+            }
+
             // TASK-142 FIX: Add .select() and check data.length to detect RLS silent failures
             // BUG FIX: Use position_json (actual DB column name), not position
             await withRetry(async () => {

@@ -294,26 +294,24 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1187: "Done for now" Badge Resets and Doesn't Persist (🔄 IN PROGRESS)
+### ~~BUG-1187~~: "Done for now" Badge Resets and Doesn't Persist (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-03)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: The "Done for now" badge on tasks gets reset automatically and doesn't persist across sessions or refreshes.
 
-**Root Cause**: The `doneForNowUntil` field was NOT included in the sync payload sent to Supabase. When the page refreshed, the null value from Supabase overwrote the local state.
+**Root Causes Found**:
+1. The `doneForNowUntil` field was NOT included in the sync payload sent to Supabase
+2. Badge display logic (`dueDate === doneForNowUntil`) was fragile - any dueDate change hid it
 
 **Fix Applied**:
-- [x] Added `done_for_now_until` to updateTask sync payload (`taskOperations.ts:419-423`)
-- [x] Added `done_for_now_until` to createTask sync payload (`taskOperations.ts:179-182`)
-
-**Verification**: User should test by:
-1. Right-click a task → "Done for now"
-2. Verify amber badge appears
-3. Refresh the page
-4. Badge should still be visible
+- [x] Added `done_for_now_until` to updateTask sync payload (`taskOperations.ts`)
+- [x] Added `done_for_now_until` to createTask sync payload (`taskOperations.ts`)
+- [x] Changed badge logic to show when `doneForNowUntil` has any value, not just matching dates (`TaskNodeMeta.vue`)
 
 **Files Changed**:
 - `src/stores/tasks/taskOperations.ts` - Added `done_for_now_until` to sync payloads
+- `src/components/canvas/node/TaskNodeMeta.vue` - Badge shows when `doneForNowUntil` exists
 
 ---
 

@@ -220,13 +220,20 @@
 
 ---
 
-### BUG-1206: Task Details Not Saved When Pressing Save in Canvas (📋 PLANNED)
+### BUG-1206: Task Details Not Saved When Pressing Save in Canvas (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
 
-**Problem**: After editing task details in the canvas view and pressing Save, the changes are not persisted. Data is lost on close/refresh.
+**Problem**: After editing task details (description) in the canvas edit modal and pressing Save, data appears lost when re-opening the modal. Save itself works (data persists in Supabase after full refresh). Bug is Tauri-specific - does NOT reproduce in browser/PWA guest mode.
 
-**Files to investigate**: `src/composables/canvas/`, task edit modal, `useSupabaseDatabase.ts`
+**Root Cause Analysis** (3 vectors identified):
+- **A (FIXED)**: Async rollback after modal close - removed rollback, added await (commit 0c92101)
+- **B (Low risk)**: Realtime echo outside pendingWrites window - mitigated by timestamp checks
+- **C (Most likely)**: Visibility change recovery clobber in Tauri/WebKitGTK - `loadFromDatabase()` smart merge may overwrite local with stale remote data when app loses/regains focus
+
+**Progress (2026-02-06):** Added debug logging across 7 files to trace description data through save→sync→reopen cycle. Awaiting Tauri console output to pinpoint exact root cause.
+
+**Files modified**: `useTaskEditActions.ts`, `tasks.ts`, `taskPersistence.ts`, `useTaskNodeActions.ts`, `useTaskEditState.ts`, `useAppInitialization.ts`, `taskOperations.ts`
 
 ---
 
@@ -2123,7 +2130,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |------|----------|-------------|
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
-| BUG-1206 | P0 | Task details not saved when pressing Save in canvas |
+| BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |

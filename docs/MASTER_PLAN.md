@@ -641,9 +641,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-1190: Subtasks Not Saved, Poor Design, Missing Badge (📋 PLANNED)
+### ~~BUG-1190~~: Subtasks Not Saved, Poor Design, Missing Badge (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-05)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: Three subtask-related issues:
 1. **Subtasks not saved** - After editing a main task and pressing Save, subtasks are not persisted

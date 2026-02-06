@@ -73,7 +73,7 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
 
     // Accessibility
     const taskAriaLabel = computed(() => {
-        const status = props.task.progress === 100 ? 'completed' : 'pending'
+        const status = props.task.status === 'done' ? 'completed' : 'pending'
         const priority = props.task.priority || 'medium'
         const selectedStatus = isSelected.value ? ', selected' : ''
         return `Task: ${props.task.title}, ${status}, priority ${priority}${selectedStatus}`

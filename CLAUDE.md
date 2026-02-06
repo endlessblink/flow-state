@@ -120,7 +120,7 @@ FlowState is distributed as a native desktop app via Tauri. The app auto-orchest
 **Build with signing:**
 ```bash
 export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="flowstate2026"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<your-signing-password>"
 npm run build && npx tauri build
 ```
 
@@ -137,21 +137,39 @@ src/composables/useTauriUpdater.ts     # Updater composable
 scripts/generate-update-manifest.cjs   # Generates latest.json from build artifacts
 ```
 
-### Local Tauri Build & Install (MANDATORY for Testing)
+### Tauri Build & Auto-Updater Delivery (MANDATORY)
 
-**After implementing features, ALWAYS build and provide install command:**
+**After implementing features, the user MUST be able to receive the update via the Tauri in-app auto-updater.** Do NOT just run `npm run dev` or provide a local `dpkg -i` command. The auto-updater is the primary delivery mechanism.
 
+**Automated deploy script (preferred — can be called from Claude Code):**
 ```bash
-# Build production Tauri app
-npm run build && npx tauri build
-
-# Install the .deb package (Linux)
-sudo dpkg -i /media/endlessblink/data/my-projects/ai-development/productivity/flow-state/src-tauri/target/release/bundle/deb/FlowState_*.deb
+./scripts/deploy-tauri-update.sh --notes "Brief description of changes"
 ```
 
-**Output location:** `src-tauri/target/release/bundle/deb/FlowState_X.X.X_amd64.deb`
+This script handles everything non-interactively:
+1. Retrieves signing password from system keyring (KWallet via `secret-tool`)
+2. Builds Vue frontend + signed Tauri app
+3. Generates update manifest (`latest.json`)
+4. Uploads artifacts + manifest to VPS via SCP
+5. Verifies deployment
 
-Then launch **FlowState** from the app menu to test in production.
+**One-time setup (user must do this once):**
+```bash
+sudo apt-get install -y libsecret-tools
+secret-tool store --label="FlowState Tauri Signing Key" service flowstate type signing-key
+# ↑ Enter signing password when prompted — stored securely in KWallet
+```
+
+**Script options:**
+- `--notes "text"` — Release notes for the manifest
+- `--skip-deploy` — Build + sign only, don't upload to VPS
+- `--dry-run` — Preview what would happen
+
+**Fallback (local install only, no auto-updater):**
+```bash
+sudo dpkg -i src-tauri/target/release/bundle/deb/FlowState_*.deb
+```
+Use fallback only if user explicitly asks for local-only testing without auto-updater.
 
 ## Tauri In-App Auto-Updater (FEATURE-1194)
 
@@ -362,6 +380,7 @@ docker exec supabase-db pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
 9. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
 10. **Completion Protocol** - NEVER claim "done" without artifacts + user verification (see below)
 11. **Version Bump Protocol** - When releasing: update 3 files (package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml) + create git tag
+12. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"` to build, sign, and deploy to VPS so the user receives the update via Tauri's in-app auto-updater. Never just offer `npm run dev` or local `dpkg -i` as the final delivery. See SOP-037 for details.
 
 ## Completion Protocol (MANDATORY - TASK-334)
 
@@ -408,8 +427,16 @@ EXAMPLE:
 ```
 ├── Git diff (what changed)
 ├── Test output (existing tests pass)
+├── Auto-updater deploy (run ./scripts/deploy-tauri-update.sh)
 └── Verification instructions (how USER can test it)
 ```
+
+**Auto-Updater Deploy (MANDATORY for all code changes):**
+After tests pass, run the deploy script so the user can receive the update in-app:
+```bash
+./scripts/deploy-tauri-update.sh --notes "TASK-XXX: Brief description"
+```
+This builds, signs, and deploys to VPS in one step. If the script fails (e.g., keyring not set up), provide the manual commands from the "Tauri Build & Auto-Updater Delivery" section above.
 
 ### Completion Phrase (Layer 4: User Confirmation)
 

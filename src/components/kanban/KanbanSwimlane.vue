@@ -204,8 +204,8 @@ const handleAddTask = (columnKey: string) => {
 const handleGroupContextMenu = (event: MouseEvent) => {
   try {
     emit('groupContextMenu', event, props.project)
-  } catch (_error) {
-    // Error emitting groupContextMenu
+  } catch (error) {
+    console.error('Failed to open context menu:', error)
   }
 }
 

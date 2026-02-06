@@ -86,6 +86,9 @@ token-migration-report.json
 # External widget
 kde-widget/
 
+# Shadow backup snapshots (user-specific data)
+public/shadow-latest.json
+
 # Large backup files (exceed GitHub 100MB limit)
 backups/shadow.db
 backups/shadow.db-shm

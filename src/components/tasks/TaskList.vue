@@ -167,27 +167,33 @@ defineExpose({
 .task-list {
   display: flex;
   flex-direction: column;
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  gap: var(--space-2); /* ADHD: Small gap between groups */
+  background: transparent; /* Remove container background - groups have their own */
+  border: none; /* Remove container border - groups are self-contained */
+  border-radius: 0;
+  padding: var(--space-2); /* Inner breathing room */
   contain: layout style; /* Performance optimization */
 }
 
+/* ADHD-friendly: Visual chunking with whitespace between project groups */
 .project-group {
-  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: var(--space-4); /* 16px gap between groups for breathing room */
+  background: var(--glass-bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
 }
 
 .project-group:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .project-header {
   display: flex;
   align-items: center;
-  gap: var(--space-1_5);
-  padding: var(--space-1) var(--space-2);
-  background-color: transparent;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3); /* Increased padding for breathing room */
+  background-color: var(--glass-bg-heavy); /* Slightly darker header for contrast */
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;

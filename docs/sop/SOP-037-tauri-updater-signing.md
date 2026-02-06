@@ -110,7 +110,7 @@ npm install -D @tauri-apps/cli@2.8.0
 ```bash
 npx tauri signer generate -w ~/.tauri/flow-state.key --force
 # Prompt: "Enter a password to encrypt the secret key (optional, press enter for no password):"
-# Type password (e.g., flowstate2026)
+# Type password (e.g., <your-signing-password>)
 # Press Enter to confirm
 ```
 
@@ -140,7 +140,7 @@ npx tauri signer generate -w ~/.tauri/flow-state.key --force
 
 ```bash
 export TAURI_SIGNING_PRIVATE_KEY="$(cat $HOME/.tauri/flow-state.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="flowstate2026"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<your-signing-password>"
 npx tauri build
 ```
 
@@ -163,7 +163,68 @@ npx tauri build
 - File paths only work in interactive mode (prompts for password)
 - CI/CD has no TTY for password prompts → must use env vars with key content
 
-## Build Process
+## Automated Deploy Script (PREFERRED)
+
+### `scripts/deploy-tauri-update.sh`
+
+**One-command build, sign, and deploy to VPS.** This is the preferred method for all Claude Code instances and local development.
+
+```bash
+./scripts/deploy-tauri-update.sh --notes "BUG-1205: Fix This Week filter"
+```
+
+**What it does (6 steps):**
+1. Retrieves signing password from system keyring (KWallet via `secret-tool`)
+2. Builds Vue frontend (`npm run build`)
+3. Builds signed Tauri app (`npx tauri build` with signing env vars)
+4. Generates update manifest (`latest.json`)
+5. Uploads artifacts + manifest to VPS via SCP
+6. Verifies deployment (checks remote manifest version matches)
+
+**Options:**
+| Flag | Purpose |
+|------|---------|
+| `--notes "text"` | Release notes for the manifest |
+| `--skip-deploy` | Build + sign only, don't upload to VPS |
+| `--dry-run` | Preview what would happen without changes |
+
+### One-Time Setup (Prerequisites)
+
+```bash
+# 1. Install secret-tool (libsecret CLI for KWallet)
+sudo apt-get install -y libsecret-tools
+
+# 2. Store signing password in system keyring
+secret-tool store --label="FlowState Tauri Signing Key" service flowstate type signing-key
+# ↑ Enter your signing password when prompted — stored securely in KWallet
+
+# 3. Verify it's stored correctly
+secret-tool lookup service flowstate type signing-key
+# Should output your password (don't share it!)
+```
+
+**Security:** Password is stored in KWallet (encrypted by your session keyring). Never on disk in plaintext. Only accessible when your desktop session is unlocked.
+
+**Re-storing password (if wrong):**
+```bash
+secret-tool clear service flowstate type signing-key
+secret-tool store --label="FlowState Tauri Signing Key" service flowstate type signing-key
+```
+
+### Claude Code Integration
+
+**This script is designed to be called non-interactively by Claude Code.** After implementing features:
+
+```bash
+# Claude Code runs this automatically as part of completion workflow
+./scripts/deploy-tauri-update.sh --notes "TASK-XXX: Feature description"
+```
+
+No interactive prompts — the signing password is retrieved from the keyring automatically.
+
+---
+
+## Manual Build Process
 
 ### Local Build (Linux)
 
@@ -175,7 +236,7 @@ npm run build
 
 # Step 2: Set signing env vars
 export TAURI_SIGNING_PRIVATE_KEY="$(cat $HOME/.tauri/flow-state.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="flowstate2026"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<your-signing-password>"
 
 # Step 3: Build Tauri app
 npx tauri build
@@ -842,7 +903,7 @@ Error: No such device or address (os error 6)
 **Fix:** Set environment variables before build:
 ```bash
 export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="flowstate2026"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<your-signing-password>"
 npx tauri build
 ```
 
@@ -939,7 +1000,7 @@ Error: Invalid signature for update
 - [ ] **Build with signing**
   ```bash
   export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
-  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="flowstate2026"
+  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<your-signing-password>"
   npm run build && npx tauri build
   ```
 
@@ -1042,6 +1103,6 @@ src-tauri/target/release/bundle/dmg/*.dmg.sig            # macOS signature
 
 ---
 
-**Last Updated:** 2026-02-05
+**Last Updated:** 2026-02-06
 **Status:** Active
 **Related Feature:** FEATURE-1194 (Tauri In-App Auto-Updater)

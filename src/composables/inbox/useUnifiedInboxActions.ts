@@ -77,6 +77,8 @@ export function useUnifiedInboxActions(
     }
 
     const handleTaskClick = (event: MouseEvent, task: Task) => {
+        // BUG-1199: Right-click fires @click before @contextmenu — ignore non-left-clicks
+        if (event.button !== 0) return
         if (draggingTaskId.value) return
 
         // BUG-1192: Shift+Click (Range Selection) — activates multi-select bar

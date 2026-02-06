@@ -128,7 +128,7 @@ VALUES ('717f5209-42d8-4bb9-8781-740107a384e5', 'endlessblink@gmail.com', ...);
 ### 2. seed.sql Updated
 - Added `endlessblink@gmail.com` with stable UUID
 - Now survives Supabase restarts
-- Password: `FlowState2026!`
+- Password: `<redacted>`
 
 ### 3. shadow-mirror.cjs Enhanced
 - Added auth.users backup via Docker SQL query
@@ -251,7 +251,7 @@ UNION ALL SELECT 'projects', count(*) FROM projects;"
 
 | File | Change |
 |------|--------|
-| `supabase/seed.sql` | Added endlessblink@gmail.com user with password `FlowState2026!` |
+| `supabase/seed.sql` | Added endlessblink@gmail.com user with password `<redacted>` |
 | `scripts/shadow-mirror.cjs` | Added auth.users, user_settings, timer_sessions backup |
 | `scripts/shadow-mirror.cjs` | Fixed IS_SERVICE_ROLE detection |
 | `scripts/restore-recovery.cjs` | Created for Jan 15 backup restore |

@@ -34,6 +34,16 @@
 
     <!-- GAMIFICATION TOASTS (FEATURE-1118) -->
     <GamificationToasts />
+
+    <!-- CORRUPTION OVERLAY (FEATURE-1132) -->
+    <CorruptionOverlay />
+
+    <!-- WELCOME MODAL (first launch) -->
+    <WelcomeModal
+      :is-open="showWelcomeModal"
+      @close="dismissWelcomeModal"
+      @show-settings="dismissWelcomeModal"
+    />
   </div>
 </template>
 
@@ -46,10 +56,24 @@ import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
 import { AIChatPanel } from '@/components/ai'
-import { GamificationToasts } from '@/components/gamification'
+import { GamificationToasts, CorruptionOverlay } from '@/components/gamification'
+import WelcomeModal from '@/components/ui/WelcomeModal.vue'
 
 const uiStore = useUIStore()
 const { direction } = useDirection()
+
+// Welcome modal — show on first launch
+const WELCOME_KEY = 'flowstate-welcome-seen'
+const welcomeSeen = localStorage.getItem(WELCOME_KEY)
+const showWelcomeModal = ref(!welcomeSeen)
+if (!welcomeSeen) {
+  console.log('[WelcomeModal] First launch detected — showing welcome modal')
+}
+
+const dismissWelcomeModal = () => {
+  showWelcomeModal.value = false
+  localStorage.setItem(WELCOME_KEY, 'true')
+}
 
 // TASK-1177: Protect against closing tab with unsaved changes
 useBeforeUnload()

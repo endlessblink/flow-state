@@ -167,6 +167,10 @@ export function useCanvasSync() {
         if (isSyncing.value) return
         isSyncing.value = true
 
+        // BUG-1203: Collect stale parentId detections for deferred cleanup.
+        // Declared outside try so it's accessible in the post-sync cleanup below.
+        const staleParentCleanups: Array<{taskId: string, oldParentId: string}> = []
+
         try {
             // BUG-1176 FIX: Filter out done tasks when hideCanvasDoneTasks is enabled
             // This prevents done tasks from appearing on canvas even if they have canvasPosition
@@ -426,15 +430,19 @@ export function useCanvasSync() {
                         // Use 0 padding to be permissive (only check center containment)
                         if (!isNodeCompletelyInside(taskSpatial, parentBounds, 0)) {
                             if (import.meta.env.DEV) {
-                                console.warn(`[BUG-1191] Task "${task.title?.slice(0, 25)}" has stale parentId ${parentId.slice(0, 8)} - not spatially inside. Treating as root.`)
+                                console.warn(`[BUG-1203] Task "${task.title?.slice(0, 25)}" has stale parentId ${parentId.slice(0, 8)} - not spatially inside. Clearing.`)
                             }
+                            // BUG-1203: Queue deferred store cleanup to eliminate split-brain
+                            staleParentCleanups.push({ taskId: task.id, oldParentId: parentId })
                             parentId = null
                         }
                     } else {
                         // Parent group doesn't exist - clear parentId
                         if (import.meta.env.DEV) {
-                            console.warn(`[BUG-1191] Task "${task.title?.slice(0, 25)}" parentId ${parentId.slice(0, 8)} not found. Treating as root.`)
+                            console.warn(`[BUG-1203] Task "${task.title?.slice(0, 25)}" parentId ${parentId.slice(0, 8)} not found. Clearing.`)
                         }
+                        // BUG-1203: Queue deferred store cleanup
+                        staleParentCleanups.push({ taskId: task.id, oldParentId: parentId })
                         parentId = null
                     }
                 }
@@ -747,6 +755,25 @@ export function useCanvasSync() {
             }
         } finally {
             isSyncing.value = false
+        }
+
+        // BUG-1203: Process stale parentId cleanups AFTER sync completes.
+        // This eliminates the split-brain where store says parentId=groupA but Vue Flow shows root.
+        // Without this fix, the drag handler detects the mismatch → snaps task to wrong position → drift.
+        // Using nextTick ensures isSyncing is false, so the triggered sync won't be blocked.
+        // The next sync reads updated parentId=null → no stale detection → idempotence check → stable.
+        if (staleParentCleanups.length > 0) {
+            const cleanups = [...staleParentCleanups]
+            nextTick(() => {
+                for (const { taskId, oldParentId } of cleanups) {
+                    if (import.meta.env.DEV) {
+                        console.log(`[BUG-1203] Deferred parentId cleanup: task ${taskId.slice(0, 8)}... clearing stale parentId ${oldParentId.slice(0, 8)}`)
+                    }
+                    // GEOMETRY WRITER: Stale parentId cleanup (controlled exception to TASK-255)
+                    // Safe because: (1) only clears parentId, never sets, (2) next sync finds no stale → stable
+                    taskStore.updateTask(taskId, { parentId: undefined }, 'STALE-CLEANUP' as any)
+                }
+            })
         }
     }
 

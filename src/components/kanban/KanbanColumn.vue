@@ -174,8 +174,11 @@ const handleDragChange = async (event: any) => {
         // Status columns (default): update task status
         await taskStore.moveTaskWithUndo(taskId, props.status)
       }
-    } catch (_error) {
-      // Error moving task
+    } catch (error) {
+      console.error('Failed to move task:', error)
+      window.dispatchEvent(new CustomEvent('flowstate:error', {
+        detail: { message: 'Failed to move task. Please try again.' }
+      }))
     }
   }
 }

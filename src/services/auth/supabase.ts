@@ -19,10 +19,11 @@ function resolveSupabaseUrl(): string {
     // Production VPS URL - hardcoded for reliability
     const VPS_URL = 'https://api.in-theflow.com'
 
-    // Tauri: ALWAYS use VPS (no local mode complexity)
+    // Tauri: Use env var if set (self-hosted builds), fall back to VPS (official builds)
     if (isTauri) {
-        console.log('[Supabase] Tauri → VPS:', VPS_URL)
-        return VPS_URL
+        const url = envUrl || VPS_URL
+        console.log('[Supabase] Tauri →', url)
+        return url
     }
 
     // Web/PWA: Use env var or resolve relative path

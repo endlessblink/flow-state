@@ -213,10 +213,10 @@
     border-left-color: var(--status-on-hold-border);
 }
 
-/* Lean row height (32px) */
+/* ADHD-friendly: Taller row height for easier scanning (44-52px based on research) */
 .task-row {
-    min-height: 32px;
-    padding: var(--space-0_5) var(--space-2);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-2);
 }
 
 /* No progress indicator styling */

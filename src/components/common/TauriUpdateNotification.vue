@@ -13,6 +13,7 @@ import { Download, X, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-vue-ne
 import { NButton, NCard, NText, NProgress } from 'naive-ui'
 import { useTauriUpdater, type UpdateStatus } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
+import { useSettingsStore } from '@/stores/settings'
 
 // --- State ---
 const {
@@ -122,6 +123,12 @@ onMounted(async () => {
     const hasNewVersion = await checkForUpdates()
     if (hasNewVersion) {
       console.log('[TauriUpdater] Update available:', updateInfo.value?.version)
+      // FEATURE-1194: Auto-download if enabled in settings
+      const settingsStore = useSettingsStore()
+      if (settingsStore.autoUpdateEnabled) {
+        console.log('[TauriUpdater] Auto-update enabled, downloading...')
+        await downloadAndInstall()
+      }
     } else if (status.value === 'error') {
       // Don't show error notification for "no releases yet" - this is expected
       // when there's no published release or latest.json doesn't exist

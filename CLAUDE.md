@@ -30,16 +30,19 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 
 | Component | Status |
 |-----------|--------|
-| Canvas | ✅ Working (groups, nesting, drag-drop) |
-| Board | ✅ Working (Kanban swimlanes) |
+| Canvas | ⚠️ Partial (P0 drag bugs: BUG-1191, BUG-1193) |
+| Board | ⚠️ Regression (P0: BUG-1193 drag-drop) |
 | Calendar | ⚠️ Partial (resize issues) |
-| Supabase Sync | ✅ Working (RLS enabled) |
+| Supabase Sync | ⚠️ Working (offline-first in progress: TASK-1177) |
 | Backup System | ✅ Hardened (Smart Layers 1-3) |
-| Timer Sync | ✅ Working (cross-device, KDE widget) |
-| KDE Widget | ✅ Working (`kde-widget/`) |
+| Timer Sync | ✅ Working (cross-device via Supabase Realtime) |
+| KDE Widget | ✅ Working (separate repo: `pomoflow-kde`) |
 | Tauri Desktop | ✅ Working (Linux/Win/Mac releases) |
 | VPS Production | ✅ Live at in-theflow.com (Contabo) |
 | Build/CI | ✅ Passing |
+| AI Chat | ✅ Working (Groq/Ollama, Tauri-aware) |
+| Gamification | ✅ Working (XP, achievements, shop) |
+| Offline Sync | 🔄 In Progress (TASK-1177) |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
 
@@ -54,6 +57,10 @@ npm run test         # Run tests
 npm run lint         # Lint code
 npm run storybook    # Component docs (port 6006)
 npm run generate:keys  # Regenerate Supabase JWT keys if they drift
+
+# Tauri Desktop
+npm run tauri build  # Build desktop app with signing (requires env vars)
+npm run tauri:update-manifest  # Generate latest.json for auto-updater
 
 # Deployment (auto via CI/CD on push to master)
 # Manual deploy: npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/
@@ -100,17 +107,34 @@ FlowState is distributed as a native desktop app via Tauri. The app auto-orchest
 
 | Command | Purpose |
 |---------|---------|
-| `npm run tauri build` | Build desktop app locally |
+| `npm run tauri build` | Build desktop app locally (requires signing env vars) |
 | `npm run tauri dev` | Run in Tauri dev mode |
 
-**Release workflow:** Push a git tag (`v0.1.0`) to trigger GitHub Actions multi-platform builds.
+**Release workflow:** Push a git tag (`v1.2.5`) to trigger GitHub Actions multi-platform builds.
+
+**Signing Keys:**
+- **Private key**: `~/.tauri/flow-state.key` (NEVER commit)
+- **Public key**: Embedded in `tauri.conf.json` under `plugins.updater.pubkey`
+- **CRITICAL**: Use `@tauri-apps/cli@2.8.0` (version 2.9.6 has a signing bug)
+
+**Build with signing:**
+```bash
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="flowstate2026"
+npm run build && npx tauri build
+```
+
+**Auto-updater endpoint:** `https://in-theflow.com/updates/latest.json`
 
 **Key Files:**
 ```
-src-tauri/tauri.conf.json              # App config, version, updater
+~/.tauri/flow-state.key                # Signing private key (NEVER commit)
+src-tauri/tauri.conf.json              # App config, version, updater endpoint, pubkey
 src-tauri/src/lib.rs                   # Rust commands (Docker/Supabase orchestration)
 src/composables/useTauriStartup.ts     # Frontend startup sequence
-.github/workflows/release.yml          # CI/CD release workflow
+src/composables/useTauriUpdater.ts     # Updater composable
+.github/workflows/release.yml          # CI/CD release workflow with signing
+scripts/generate-update-manifest.cjs   # Generates latest.json from build artifacts
 ```
 
 ### Local Tauri Build & Install (MANDATORY for Testing)
@@ -128,6 +152,42 @@ sudo dpkg -i /media/endlessblink/data/my-projects/ai-development/productivity/fl
 **Output location:** `src-tauri/target/release/bundle/deb/FlowState_X.X.X_amd64.deb`
 
 Then launch **FlowState** from the app menu to test in production.
+
+## Tauri In-App Auto-Updater (FEATURE-1194)
+
+FlowState desktop app checks for updates from the VPS and can download + install them in-app.
+
+**Architecture:**
+- Update manifest hosted at `https://in-theflow.com/updates/latest.json`
+- Tauri updater plugin checks on app launch (3s delay)
+- Users see a toast notification with "Download" button when an update is available
+- Optional auto-update toggle in Settings > About
+
+**Key Files:**
+```
+src-tauri/tauri.conf.json                           # Updater endpoint + signing pubkey
+src/composables/useTauriUpdater.ts                  # Updater composable (check/download/restart)
+src/components/common/TauriUpdateNotification.vue   # Launch notification toast
+src/components/settings/tabs/AboutSettingsTab.vue    # Settings UI (Check for Updates + auto toggle)
+scripts/generate-update-manifest.cjs                # Generates latest.json from build artifacts
+.github/workflows/release.yml                       # CI/CD builds + deploys to VPS
+```
+
+**Release Workflow:**
+1. Bump version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`
+2. `git tag vX.X.X && git push --tags`
+3. CI/CD builds, signs, generates manifest, and rsyncs to VPS automatically
+4. Users see "Update Available" notification in the app
+
+**Manual Release (without CI):**
+```bash
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
+npm run build && npx tauri build
+npm run tauri:update-manifest
+# Upload artifacts + latest.json to VPS /var/www/flowstate/updates/
+```
+
+**Signing Key Location:** `~/.tauri/flow-state.key` (private), `~/.tauri/flow-state.key.pub` (public)
 
 ## VPS Production Deployment (Contabo)
 
@@ -224,7 +284,7 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 - Cannot scale RAM/CPU independently (must upgrade entire plan)
 
 **Security Hardening (Already Applied):**
-- SSH on custom port (not 22)
+- SSH on default port 22
 - UFW firewall enabled (80, 443, SSH only)
 - Fail2Ban monitoring SSH
 - Root login disabled
@@ -233,7 +293,7 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 **Maintenance Commands:**
 ```bash
 # SSH into VPS
-ssh root@84.46.253.137 -p <custom-port>
+ssh -i ~/.ssh/id_ed25519 root@84.46.253.137
 
 # Check Caddy status
 systemctl status caddy
@@ -301,6 +361,7 @@ docker exec supabase-db pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
 8. **Atomic Tasks** - ALWAYS break broad requests into single-action steps (see below)
 9. **Canvas Geometry Invariants** - Only drag handlers may change positions/parents. Sync is read-only. (see below)
 10. **Completion Protocol** - NEVER claim "done" without artifacts + user verification (see below)
+11. **Version Bump Protocol** - When releasing: update 3 files (package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml) + create git tag
 
 ## Completion Protocol (MANDATORY - TASK-334)
 
@@ -458,13 +519,34 @@ border-radius: 12px;              border-radius: var(--radius-lg);
 - Auth via `src/services/auth/supabase.ts` + `src/stores/auth.ts`
 
 **Tables (with RLS enabled):**
+
+*Core Application:*
 - `tasks` - Task data with user isolation
 - `groups` - Canvas groups/sections
 - `projects` - Project organization
-- `timer_sessions` - Pomodoro session history
+- `timer_sessions` - Active Pomodoro sessions
+- `pomodoro_history` - Completed Pomodoro session history
 - `notifications` - Scheduled notifications
 - `user_settings` - User preferences
 - `quick_sort_sessions` - QuickSort session data
+
+*Data Integrity:*
+- `tombstones` - Permanent deletion tracking (prevents zombie data on restore)
+- `task_dedup_audit` - Task ID deduplication audit log
+
+*Gamification (FEATURE-1118 "Cyberflow"):*
+- `user_gamification` - XP, levels, streaks, equipped cosmetics
+- `xp_logs` - XP transaction audit trail
+- `achievements` - Achievement definitions
+- `user_achievements` - User progress toward achievements
+- `shop_items` - Cosmetic items (themes, animations)
+- `user_purchases` - User's purchased items
+- `user_stats` - Aggregate counters for achievement tracking
+
+**Database Access Patterns:**
+- **Core app tables** → `useSupabaseDatabase.ts` (centralized composable)
+- **Gamification tables** → `src/stores/gamification.ts` (domain-specific, intentional bypass)
+- **Offline sync** → `src/composables/sync/useSyncOrchestrator.ts` (infrastructure layer)
 
 **Key Files:**
 ```
@@ -472,6 +554,8 @@ src/composables/useSupabaseDatabase.ts   # Main database composable
 src/utils/supabaseMappers.ts              # Type conversion
 src/services/auth/supabase.ts             # Supabase client init
 src/stores/auth.ts                        # Auth state management
+src/stores/gamification.ts                # Gamification data access (bypasses useSupabaseDatabase)
+src/composables/sync/useSyncOrchestrator.ts  # Offline-first sync queue
 ```
 
 ## Timer Cross-Device Sync
@@ -481,7 +565,7 @@ src/stores/auth.ts                        # Auth state management
 | Device | Role | Sync Method |
 |--------|------|-------------|
 | Vue App | Leader-capable | Supabase Realtime (WebSocket) |
-| KDE Widget | Follower | REST API polling (2s interval) |
+| KDE Widget (pomoflow-kde) | Follower | REST API polling (2s interval) |
 
 **Key Rules:**
 - Leader sends heartbeat every 10 seconds (`device_leader_last_seen`)
@@ -508,7 +592,7 @@ watch(
 **Key Files:**
 ```
 src/stores/timer.ts                      # Timer state + leadership logic
-kde-widget/package/contents/ui/main.qml  # KDE Plasma widget
+# KDE Widget is in separate repo: pomoflow-kde (not in this repo)
 ```
 
 ## Timer Active Task Highlighting
@@ -562,7 +646,7 @@ When connecting to production (`api.in-theflow.com`), validation is skipped:
 
 **If production auth fails (401 errors):**
 1. Check that Doppler has correct keys: `doppler secrets get VITE_SUPABASE_ANON_KEY`
-2. Verify VPS Supabase has matching keys: `ssh root@84.46.253.137 "grep ANON_KEY /opt/supabase/docker/.env"`
+2. Verify VPS Supabase has matching keys: `ssh -i ~/.ssh/id_ed25519 root@84.46.253.137 "grep ANON_KEY /opt/supabase/docker/.env"`
 3. If mismatched, follow **SOP-036** to regenerate keys
 
 **Full SOP:** [`docs/sop/SOP-036-supabase-jwt-key-regeneration.md`](docs/sop/SOP-036-supabase-jwt-key-regeneration.md)
@@ -594,11 +678,19 @@ When connecting to production (`api.in-theflow.com`), validation is skipped:
 **Canvas Composables** (`src/composables/canvas/`):
 | Composable | Purpose |
 |------------|---------|
-| `useCanvasSync.ts` | **CRITICAL** - Single source of truth for node sync |
-| `useCanvasInteractions.ts` | Drag-drop, selection, and node interactions |
-| `useCanvasParentChildHelpers.ts` | Parent-child relationship utilities |
+| `useCanvasSync.ts` | **CRITICAL** - Single source of truth for node sync (READ-ONLY) |
+| `useCanvasInteractions.ts` | Drag-drop, selection, node interactions, parent-child logic |
 | `useCanvasEvents.ts` | Vue Flow event handlers |
 | `useCanvasActions.ts` | Task/group CRUD operations |
+| `useCanvasOrchestrator.ts` | Canvas initialization and lifecycle orchestration |
+| `useCanvasCore.ts` | Core canvas state and utilities |
+| `useCanvasGroups.ts` | Group management and membership |
+| `useCanvasSelection.ts` | Selection handling and multi-select |
+| `useCanvasHotkeys.ts` | Keyboard shortcuts |
+| `useCanvasConnections.ts` | Task dependency connections |
+| `useCanvasZoom.ts` | Zoom and viewport controls |
+
+*32 total composables in `src/composables/canvas/` - see full list via `ls src/composables/canvas/`*
 
 ## Canvas Geometry Invariants (CRITICAL - TASK-255)
 
@@ -708,16 +800,26 @@ Detailed docs available in `docs/claude-md-extension/`:
 | File | Contents |
 |------|----------|
 | [`SOP-011-tauri-distribution.md`](docs/sop/SOP-011-tauri-distribution.md) | Tauri builds, signing, GitHub Actions releases |
+| [`SOP-013-immutable-task-ids.md`](docs/sop/SOP-013-immutable-task-ids.md) | Task ID system architecture, deduplication |
 | [`SOP-026-custom-domain-deployment.md`](docs/sop/SOP-026-custom-domain-deployment.md) | VPS domain, Cloudflare, Caddy setup |
 | [`SOP-030-doppler-secrets-management.md`](docs/sop/SOP-030-doppler-secrets-management.md) | Doppler secrets for CI/CD and VPS |
 | [`SOP-031-cors-configuration.md`](docs/sop/SOP-031-cors-configuration.md) | CORS headers for self-hosted Supabase |
+| [`SOP-032-store-auth-initialization.md`](docs/sop/SOP-032-store-auth-initialization.md) | Store auth-wait pattern, initialization order |
+| [`SOP-035-auth-initialization-race-fix.md`](docs/sop/SOP-035-auth-initialization-race-fix.md) | Triple initialization bug fix |
+| [`SOP-037-tauri-updater-signing.md`](docs/sop/SOP-037-tauri-updater-signing.md) | Tauri updater signing, VPS deployment, key management, version bump protocol |
+| [`SOP-040-cross-device-position-sync.md`](docs/sop/SOP-040-cross-device-position-sync.md) | Cross-device canvas position sync (Tauri+PWA) |
 | [`deployment/VPS-DEPLOYMENT.md`](docs/sop/deployment/VPS-DEPLOYMENT.md) | Full VPS setup and deployment guide |
 | [`deployment/PWA-DEPLOYMENT-CHECKLIST.md`](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md) | Pre/post deploy verification checklist |
 | [`active/UNDO-system-architecture.md`](docs/sop/active/UNDO-system-architecture.md) | Undo/redo system with operation-scoped selective restoration (BUG-309-B) |
 | [`active/TIMER-sync-architecture.md`](docs/sop/active/TIMER-sync-architecture.md) | Cross-device timer sync (Vue app + KDE widget) |
+| [`active/SOP-016-guest-mode-auth-flow.md`](docs/sop/active/SOP-016-guest-mode-auth-flow.md) | Guest vs authenticated mode flows |
 | [`active/SOP-022-skills-config-sync.md`](docs/sop/active/SOP-022-skills-config-sync.md) | Skills config auto-sync and maintenance |
+| [`active/SYNC-system-consolidation.md`](docs/sop/active/SYNC-system-consolidation.md) | Primary sync systems reference guide |
 | [`canvas/README.md`](docs/sop/canvas/README.md) | Canvas system documentation index |
 | [`canvas/CANVAS-POSITION-SYSTEM.md`](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md) | Canvas position/coordinate system, geometry invariants |
+| [`canvas/CANVAS-DRAG-DROP.md`](docs/sop/canvas/CANVAS-DRAG-DROP.md) | Canvas drag-drop interaction patterns |
+| [`canvas/CANVAS-DEBUGGING.md`](docs/sop/canvas/CANVAS-DEBUGGING.md) | Canvas debugging guide |
+| [`canvas/CANVAS-DUPLICATE-DETECTION.md`](docs/sop/canvas/CANVAS-DUPLICATE-DETECTION.md) | Canvas duplicate node detection |
 
 ## Skills Maintenance
 
@@ -731,6 +833,6 @@ Detailed docs available in `docs/claude-md-extension/`:
 
 ---
 
-**Last Updated**: January 25, 2026
-**Stack**: Vue 3.4.0, Vite 7.2.4, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.9.5
+**Last Updated**: February 5, 2026
+**Stack**: Vue 3.5.26, Vite 7.3.1, TypeScript 5.9.3, Supabase (self-hosted), Tauri 2.9.5, **tauri-cli 2.8.0** (2.9.6 has signing bug)
 **Production**: in-theflow.com (Contabo VPS, Ubuntu 22.04)

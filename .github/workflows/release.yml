@@ -73,9 +73,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Doppler-first with GitHub secrets fallback
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: npm run tauri
           tagName: v__VERSION__
@@ -84,6 +82,151 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # Deploy updater artifacts to VPS
+  deploy-updates:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download release artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the tag name
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "Downloading artifacts for release: $TAG_NAME"
+
+          # Wait for release to be created (tauri-action may still be finalizing)
+          echo "Waiting for release to be ready..."
+          sleep 30
+
+          # Download all release assets
+          mkdir -p update-artifacts
+          gh release download "$TAG_NAME" \
+            --dir update-artifacts \
+            --pattern "*.tar.gz" \
+            --pattern "*.sig" \
+            --pattern "*.zip" \
+            --pattern "*.AppImage" \
+            --pattern "*.deb" \
+            --pattern "*.msi" \
+            --pattern "*.dmg" \
+            --repo ${{ github.repository }} || true
+
+          # List downloaded files
+          echo "Downloaded artifacts:"
+          ls -la update-artifacts/
+
+      - name: Generate update manifest
+        run: |
+          # Extract version from tag
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION="${TAG_NAME#v}"
+          echo "Generating manifest for version: $VERSION"
+
+          # Generate latest.json from downloaded artifacts
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const dir = 'update-artifacts';
+            const tagName = process.env.TAG_NAME;
+            const version = tagName.startsWith('v') ? tagName.slice(1) : tagName;
+            const platforms = {};
+
+            if (!fs.existsSync(dir)) {
+              console.error('Artifacts directory not found');
+              process.exit(1);
+            }
+
+            const files = fs.readdirSync(dir);
+            console.log('Processing files:', files);
+
+            // Match artifacts with their signatures
+            for (const file of files) {
+              if (!file.endsWith('.sig')) continue;
+              const artifactFile = file.replace('.sig', '');
+              const artifactPath = path.join(dir, artifactFile);
+              const sigPath = path.join(dir, file);
+
+              if (!fs.existsSync(artifactPath)) {
+                console.warn('Artifact not found for signature:', file);
+                continue;
+              }
+
+              const sig = fs.readFileSync(sigPath, 'utf-8').trim();
+              const url = \`https://in-theflow.com/updates/\${artifactFile}\`;
+
+              // Map files to platform identifiers
+              if (file.includes('amd64') && (file.includes('.deb') || file.includes('.AppImage'))) {
+                platforms['linux-x86_64'] = { signature: sig, url };
+                console.log('Mapped Linux x86_64:', artifactFile);
+              } else if (file.includes('x64') && (file.includes('.nsis') || file.includes('.msi'))) {
+                platforms['windows-x86_64'] = { signature: sig, url };
+                console.log('Mapped Windows x86_64:', artifactFile);
+              } else if (file.includes('aarch64') && file.includes('.app')) {
+                platforms['darwin-aarch64'] = { signature: sig, url };
+                console.log('Mapped macOS aarch64:', artifactFile);
+              } else if (file.includes('x64') && file.includes('.app')) {
+                platforms['darwin-x86_64'] = { signature: sig, url };
+                console.log('Mapped macOS x86_64:', artifactFile);
+              } else {
+                console.warn('Unmatched artifact:', file);
+              }
+            }
+
+            if (Object.keys(platforms).length === 0) {
+              console.error('No platforms found! Check artifact naming.');
+              process.exit(1);
+            }
+
+            const manifest = {
+              version,
+              notes: \`FlowState \${tagName} release\`,
+              pub_date: new Date().toISOString(),
+              platforms
+            };
+
+            fs.writeFileSync(path.join(dir, 'latest.json'), JSON.stringify(manifest, null, 2));
+            console.log('Generated latest.json with', Object.keys(platforms).length, 'platforms');
+          "
+
+          echo "=== Generated latest.json ==="
+          cat update-artifacts/latest.json
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+
+      - name: Deploy to VPS
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Create updates directory on VPS if it doesn't exist
+          echo "Creating updates directory on VPS..."
+          ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" "mkdir -p /var/www/flowstate/updates"
+
+          # Upload all artifacts + manifest
+          echo "Uploading artifacts to VPS..."
+          rsync -avz --progress update-artifacts/ "$VPS_USER@$VPS_HOST:/var/www/flowstate/updates/"
+
+          echo "✅ Update artifacts deployed to VPS"
+          echo "📍 Manifest URL: https://in-theflow.com/updates/latest.json"
 
   # Linux-only quick build for testing
   build-linux:

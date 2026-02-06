@@ -702,7 +702,7 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 
 ### TASK-1186: Make AI Accessible in Tauri App (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-03)
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-06)
 
 **Problem**: AI features (Ollama local, Groq/OpenRouter cloud) reliability in Tauri desktop context is unknown. Key concerns:
 1. **Ollama detection skipped** on "production domains" (BUG-1180) - may incorrectly skip in Tauri
@@ -713,25 +713,32 @@ Cross-Origin Request Blocked: http://localhost:11434/api/tags
 | Provider | Method | Works Offline? |
 |----------|--------|----------------|
 | Ollama | localhost:11434 | Yes (if running) |
-| Groq | Edge Function proxy | No |
+| Groq | Direct API | No |
 | OpenRouter | Edge Function proxy | No |
 
+**Progress (2026-02-06)**:
+- ✅ **Groq Provider Added** - Direct API calls to `api.groq.com` (no edge function needed)
+- ✅ **Provider Visibility Badge** - Shows "Local"/"Groq"/"OpenRouter" in chat header
+- ✅ **Provider/Model Switcher** - Settings dropdown to switch between Auto/Groq/Local + model picker
+- ✅ **Tool Execution System** - AI can create groups, tasks, list items via `src/services/ai/tools.ts`
+- ✅ **Hebrew Language Support** - AI responds in user's language
+- ✅ **Conversational Behavior** - Only uses tools when user explicitly asks to create/modify
+
 **Solution**:
-1. **Phase 1: Fix Tauri Detection** - Add `window.__TAURI__` check to router.ts
+1. ~~**Phase 1: Fix Tauri Detection**~~ - ✅ DONE - Removed hard block, graceful Ollama detection
 2. **Phase 2: Tauri HTTP Plugin** - Use `@tauri-apps/plugin-http` for CORS-free Ollama requests
 3. **Phase 3: (Future) Direct API Option** - Store API keys locally for offline cloud AI
 
-**Files to Modify**:
-- `src/services/ai/router.ts` - Add Tauri detection, fix BUG-1180 for Tauri
-- `src/services/ai/providers/ollama.ts` - Use Tauri HTTP plugin for CORS-free requests
+**Files Modified**:
+- `src/services/ai/router.ts` - Groq provider, removed production hard-block for Ollama
+- `src/services/ai/providers/groq.ts` - NEW: Groq provider implementation
+- `src/services/ai/tools.ts` - NEW: Tool definitions and execution
+- `src/composables/useAIChat.ts` - Provider/model state, tool execution, improved prompts
+- `src/components/ai/AIChatPanel.vue` - Provider badge, settings dropdown, model selector
 
-**Files to Create**:
-- `src/services/ai/utils/tauriHttp.ts` - Wrapper for Tauri HTTP plugin with browser fallback
-
-**Success Criteria**:
-- [ ] Ollama detected reliably when running in Tauri
-- [ ] AI works offline if Ollama available
-- [ ] Cloud fallback works when online
+**Remaining**:
+- [ ] Test Ollama in Tauri with `OLLAMA_ORIGINS` configured
+- [ ] Tauri HTTP plugin for CORS-free requests (Phase 2)
 - [ ] Clear "AI unavailable" message when all providers fail
 
 **Related**: BUG-1180 (Ollama CORS in production)

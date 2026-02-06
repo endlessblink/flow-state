@@ -1,0 +1,11 @@
+{
+  "version": "1.2.12",
+  "notes": "BUG-1206: Fix task details lost when re-opening edit modal in canvas",
+  "pub_date": "2026-02-06T13:37:43.274Z",
+  "platforms": {
+    "linux-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUYWtFdmZZZkR6dlRFdlpaL1preDdBT1FieUhaY1NmeGFxN0o1MmczdmVPN1gwL3NIZDV0RjZyb1BLVExNNWpYVjQ1SXFxaFdRNkx5WXJTRXNOVXhLd2xWTFVnM3kxK2drPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwMzg1MDYzCWZpbGU6Rmxvd1N0YXRlXzEuMi4xMl9hbWQ2NC5BcHBJbWFnZS50YXIuZ3oKbXJFcG1sWWMrZm1vSEdkbUdCRkd5TGN2SFdhZGtyMEpJYTV2aFBhUzNmck5lWXYwaElYa3prYWcyYnVQVGNiWHlUSmtSSzRJNlZremdxcWptanlTRFE9PQo=",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.12_amd64.AppImage.tar.gz"
+    }
+  }
+}

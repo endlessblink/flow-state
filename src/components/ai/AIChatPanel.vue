@@ -167,14 +167,14 @@ onUnmounted(() => {
                     <button
                       class="provider-option"
                       :class="{ active: selectedProvider === 'auto' }"
-                      @click="setProvider('auto')"
+                      @click="setProvider('auto'); showSettings = false"
                     >
                       Auto
                     </button>
                     <button
                       class="provider-option"
                       :class="{ active: selectedProvider === 'groq' }"
-                      @click="setProvider('groq')"
+                      @click="setProvider('groq'); showSettings = false"
                     >
                       Groq
                     </button>

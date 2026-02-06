@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.2.10",
+  "version": "1.2.12",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "main": "src/main.ts",
   "type": "module",
@@ -109,6 +109,9 @@
     "db:backup": "bash scripts/backup-db.sh",
     "db:backup:data": "bash scripts/backup-db.sh --data-only",
     "db:backup:tasks": "bash scripts/backup-db.sh --tables tasks,groups",
+    "mp:sync": "node scripts/sync-masterplan-to-beads.cjs",
+    "mp:sync:dry": "node scripts/sync-masterplan-to-beads.cjs --dry-run",
+    "mp:sync:force": "node scripts/sync-masterplan-to-beads.cjs --force",
     "clean:preview": "node scripts/clean-root.js --dry-run",
     "clean:tests": "node scripts/clean-root.js --type=tests",
     "clean:builds": "node scripts/clean-root.js --type=builds",

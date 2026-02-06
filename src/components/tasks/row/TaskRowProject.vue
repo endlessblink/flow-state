@@ -192,22 +192,23 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-/* Project Selector Dropdown - Glass morphism matching CustomSelect */
+/* Project Selector Dropdown - Using design tokens for consistency */
 .project-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 4px); /* ADHD: Position ABOVE the trigger, not buried below */
   left: 50%;
   transform: translateX(-50%);
-  z-index: 99999;
+  z-index: 99999; /* High z-index to ensure visibility */
 
-  /* Glass morphism - purple-tinted matching CustomSelect */
-  background: rgba(35, 32, 50, 0.65);
+  /* Glass morphism - using design tokens with solid fallback */
+  background-color: var(--surface-primary, #1c192d); /* Solid fallback */
+  background: var(--overlay-component-bg, rgba(28, 25, 45, 0.95));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    0 -8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   border-radius: var(--radius-md);
 
   min-width: 160px;
@@ -215,9 +216,8 @@ onUnmounted(() => {
   max-height: 240px;
   overflow: hidden;
 
-  /* Ensure backdrop-filter works */
+  /* Ensure backdrop-filter works and dropdown appears above other elements */
   isolation: isolate;
-  transform: translateX(-50%) translateZ(0);
 }
 
 .project-dropdown__list {
@@ -286,7 +286,7 @@ onUnmounted(() => {
   z-index: 999;
 }
 
-/* Dropdown transitions */
+/* Dropdown transitions - slides down from above */
 .dropdown-slide-enter-active,
 .dropdown-slide-leave-active {
   transition: all var(--duration-fast) ease;
@@ -294,12 +294,12 @@ onUnmounted(() => {
 
 .dropdown-slide-enter-from {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(4px); /* Slide down from above */
 }
 
 .dropdown-slide-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(4px);
 }
 
 /* Custom scrollbar for dropdown list */

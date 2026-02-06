@@ -588,3 +588,44 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     color: var(--text-primary, rgba(255, 255, 255, 0.95)) !important;
     background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.08)) !important;
 }
+
+/* =============================================================================
+   GLOBAL DROPDOWN DARK MODE FIX (TASK-1120)
+   Ensures ALL dropdowns/popovers use dark glass morphism background
+   ============================================================================= */
+
+/* Catch-all for any dropdown/popover with light backgrounds */
+[class*="dropdown"],
+[class*="popover"],
+[class*="select-dropdown"],
+[class*="project-dropdown"],
+[class*="dropdown-panel"],
+.dropdown-panel,
+.project-dropdown,
+.priority-dropdown {
+    background-color: #1c192d !important; /* Solid dark fallback */
+    background: rgba(28, 25, 45, 0.95) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-primary, rgba(255, 255, 255, 0.9)) !important;
+}
+
+/* Ensure dropdown items have proper dark styling */
+[class*="dropdown"] button,
+[class*="dropdown"] [class*="item"],
+[class*="popover"] button,
+.dropdown-panel button,
+.project-dropdown button,
+.project-dropdown__item,
+.priority-dropdown__item {
+    background: transparent !important;
+    color: var(--text-primary, rgba(255, 255, 255, 0.9)) !important;
+}
+
+[class*="dropdown"] button:hover,
+[class*="dropdown"] [class*="item"]:hover,
+.project-dropdown__item:hover,
+.priority-dropdown__item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}

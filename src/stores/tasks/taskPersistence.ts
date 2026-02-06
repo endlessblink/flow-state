@@ -257,9 +257,12 @@ export function useTaskPersistence(
                     const localVer = localTask.positionVersion ?? 0
                     const remoteVer = remoteTask.positionVersion ?? 0
 
-                    // Win Condition 3: Local updated very recently (< 5s ago) - likely active editing
+                    // Win Condition 3: Local updated very recently - likely active editing
+                    // BUG-1207 FIX: Extended from 5s to 30s to match pendingWrites timeout.
+                    // 5s was too narrow — tasks edited 6s ago could be clobbered by recovery reload
+                    // if the sync queue hadn't processed them yet (VPS latency can be 20s+).
                     const now = Date.now()
-                    const isVeryRecent = (now - localTime) < 5000
+                    const isVeryRecent = (now - localTime) < 30000
 
                     if (localVer > remoteVer || localTime > remoteTime || isVeryRecent) {
                         console.log(`🛡️ [SMART-MERGE] Preserving local task "${localTask.title?.slice(0, 15)}" (Local v${localVer} > Remote v${remoteVer} || Local newer)`)

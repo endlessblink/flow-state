@@ -1657,14 +1657,18 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         document.addEventListener('visibilitychange', onVisibilityChange)
 
         // ONLINE RESUME
+        // BUG-1209: Add same cooldown as visibility handler to prevent clobbering in-flight drags
         const onOnline = () => {
             console.log('🌐 [REALTIME] Online event detected. Reconnecting...')
             retryCount = 0
             setupSubscription()
-            if (onRecovery) {
+            const timeSinceInteraction = Date.now() - lastUserInteraction
+            if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
                 // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
                 invalidateCache.all()
                 onRecovery()
+            } else if (onRecovery) {
+                console.log(`🌐 [REALTIME] Skipping online recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
             }
         }
         window.addEventListener('online', onOnline)

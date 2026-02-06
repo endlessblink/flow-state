@@ -1,4 +1,4 @@
-import { ref, reactive, type Ref, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, nextTick, type Ref, onMounted, onUnmounted } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -487,7 +487,9 @@ export function useCanvasInteractions(deps?: {
         }
 
         const { nodes: involvedNodes } = event
-        canvasStore.isDragging = false
+        // BUG-1209: Do NOT set isDragging=false here — it opens a window where realtime
+        // handlers see "not dragging" while async save is still in progress.
+        // Moved to the finally block below, after all saves complete.
 
         if (import.meta.env.DEV) {
             const callId = Math.random().toString(36).slice(2, 8)
@@ -508,7 +510,9 @@ export function useCanvasInteractions(deps?: {
                     if (!group) continue
 
                     // Compute absolute position for the group
-                    const absolutePos = computeNodeAbsolutePosition(node, allGroups)
+                    // BUG-1209: Round to prevent cumulative micro-drift from snap-to-grid
+                    const rawAbsolutePos = computeNodeAbsolutePosition(node, allGroups)
+                    const absolutePos = { x: Math.round(rawAbsolutePos.x), y: Math.round(rawAbsolutePos.y) }
                     const groupWidth = group.position.width
                     const groupHeight = group.position.height
 
@@ -568,6 +572,10 @@ export function useCanvasInteractions(deps?: {
                     const descendantTasks = collectDescendantTasks(groupId, taskStore.tasks, updatedAllGroups)
                     const descendantGroups = collectDescendantGroups(groupId, updatedAllGroups)
 
+                    // BUG-1209: Wait for Vue Flow to re-render with parent's new position
+                    // so computedPosition is fresh for descendant position calculations.
+                    await nextTick()
+
                     // Sync descendant GROUPS first (parents before their children)
                     for (const descendantGroup of descendantGroups) {
                         const childNodeId = CanvasIds.groupNodeId(descendantGroup.id)
@@ -596,7 +604,8 @@ export function useCanvasInteractions(deps?: {
                     const task = taskStore.getTask(node.id)
                     if (!task) continue
 
-                    // Use _rawGroups to include hidden groups in lookups
+                    // BUG-1209: Re-snapshot groups per iteration to pick up any changes
+                    // from prior iterations (e.g., sibling that modified group positions)
                     const taskAllGroups = canvasStore._rawGroups || canvasStore.groups || []
 
                     // BUG-1191: Detect stale parentNode - task was dragged with wrong group
@@ -631,7 +640,10 @@ export function useCanvasInteractions(deps?: {
                     // 1. Compute ABSOLUTE position for containment check
                     // When node has parentNode, node.position is RELATIVE, not absolute
                     // computedPosition is preferred; fallback calculates from parent's absolute
-                    const absolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
+                    const rawAbsolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
+                    // BUG-1209: Round to grid to prevent cumulative micro-drift from snap-to-grid
+                    // (CanvasView uses 16px grid — store should always save grid-aligned values)
+                    const absolutePos = { x: Math.round(rawAbsolutePos.x), y: Math.round(rawAbsolutePos.y) }
 
                     // 2. Build spatial task with explicit dimensions for center-based containment
                     const spatialTask = {
@@ -681,8 +693,8 @@ export function useCanvasInteractions(deps?: {
                                         }, 'DRAG-FOLLOW-PARENT' as any)
                                         positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
                                     } finally {
-                                        // High Severity Issue #7: Clear pending write
-                                        taskStore.removePendingWrite(task.id)
+                                        // BUG-1209: Delay clearing pendingWrite to catch realtime echo
+                                        setTimeout(() => taskStore.removePendingWrite(task.id), 3000)
                                     }
                                 }
                                 setNodeState(task.id, NodeState.IDLE)
@@ -789,6 +801,32 @@ export function useCanvasInteractions(deps?: {
                         }
                     }
 
+                    // BUG-1209 FIX: Update Vue Flow node and PositionManager BEFORE the store write.
+                    // Previously, the store write was first (line ~797), which triggered reactive
+                    // watchers → syncStoreToCanvas() → read inconsistent state (new store parentId,
+                    // old VF parentNode). By updating VF first, any sync triggered by the store
+                    // write sees consistent VF state.
+
+                    // 5. Update Vue Flow parentNode AND position to match new containment
+                    // BUG FIX: Set position BEFORE parentNode to avoid a micro-tick where
+                    // the old position is interpreted as relative to the new parent.
+                    if (newParentId) {
+                        // Convert absolute position to relative position for new parent
+                        const newParentAbsolute = getGroupAbsolutePosition(newParentId, taskAllGroups)
+                        node.position = {
+                            x: absolutePos.x - newParentAbsolute.x,
+                            y: absolutePos.y - newParentAbsolute.y
+                        }
+                        node.parentNode = CanvasIds.groupNodeId(newParentId)
+                    } else {
+                        // Root node: position is absolute (same as world position)
+                        node.position = { x: absolutePos.x, y: absolutePos.y }
+                        node.parentNode = undefined
+                    }
+
+                    // TASK-213: Update PositionManager (before store write for consistency)
+                    positionManager.updatePosition(task.id, absolutePos, 'user-drag', newParentId ?? null)
+
                     // High Severity Issue #7: Mark task as pending write before save
                     taskStore.addPendingWrite(task.id)
 
@@ -796,8 +834,10 @@ export function useCanvasInteractions(deps?: {
                         // SINGLE atomic save with all updates
                         await taskStore.updateTask(task.id, dragUpdates, 'DRAG') // BUG-1051: AWAIT to ensure persistence
                     } finally {
-                        // High Severity Issue #7: Clear pending write after save completes
-                        taskStore.removePendingWrite(task.id)
+                        // BUG-1209: Delay clearing pendingWrite by 3s so the Supabase realtime echo
+                        // (arriving 100ms-2s later) is still blocked by isPendingWrite().
+                        // Previously cleared immediately, allowing echo to overwrite position.
+                        setTimeout(() => taskStore.removePendingWrite(task.id), 3000)
                     }
 
                     if (oldParentId !== newParentId) {
@@ -807,40 +847,14 @@ export function useCanvasInteractions(deps?: {
                         updateSectionTaskCounts(oldParentId || undefined, newParentId || undefined)
                     }
 
-                    // TASK-213: Update PositionManager
-                    positionManager.updatePosition(task.id, absolutePos, 'user-drag', newParentId ?? null)
-
-                    // 5. Update Vue Flow parentNode AND position to match new containment
-                    // BUG FIX: When parent changes, we must also update node.position
-                    // Vue Flow interprets node.position as RELATIVE to parentNode.
-                    // If we only change parentNode without updating position, Vue Flow
-                    // will interpret the old relative position as relative to the NEW parent,
-                    // causing the task to visually "drift" to the wrong location.
-                    if (newParentId) {
-                        node.parentNode = CanvasIds.groupNodeId(newParentId)
-                        // Convert absolute position to relative position for new parent
-                        const newParentAbsolute = getGroupAbsolutePosition(newParentId, taskAllGroups)
-                        node.position = {
-                            x: absolutePos.x - newParentAbsolute.x,
-                            y: absolutePos.y - newParentAbsolute.y
-                        }
-                    } else {
-                        node.parentNode = undefined
-                        // Root node: position is absolute (same as world position)
-                        node.position = { x: absolutePos.x, y: absolutePos.y }
-                    }
-
-                    // 7. Position sync is now handled by taskStore.updateTask() above (line ~570)
-                    // REMOVED: syncNodePosition was redundant and caused version conflicts:
-                    // - taskStore.updateTask() saves position with incremented version
-                    // - Smart Group's updateTask() triggers DB → version increments again
-                    // - syncNodePosition tried with stale version → always failed
-                    // The fix is to let taskStore.updateTask() handle all persistence.
                     setNodeState(task.id, NodeState.IDLE)
                 }
             }
 
         } finally {
+            // BUG-1209: Set isDragging=false AFTER all async saves complete,
+            // so realtime handlers don't overwrite positions mid-save.
+            canvasStore.isDragging = false
             // TASK-213: Release Locks
             // FIX: Use raw ID (not Vue Flow node ID) to match the ID used during acquire
             involvedNodes.forEach(node => {

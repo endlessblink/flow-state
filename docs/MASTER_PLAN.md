@@ -133,6 +133,23 @@
 
 ---
 
+### BUG-1212: Sync Queue CREATE Retry Causes "Duplicate Key" Corruption (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-06)
+
+**Problem**: When a task CREATE operation fails in the offline sync queue (network issue, timeout), retries attempt `.insert()` again. If the original insert actually succeeded server-side before the client detected the error, the retry hits `duplicate key value violates unique constraint "tasks_pkey"`. The operation gets stuck as "corrupted" in the sync queue — cannot retry, cannot auto-resolve.
+
+**Root Cause**: `useSyncOrchestrator.ts` line ~238 uses raw `.insert()` for CREATE operations with no conflict handling. Retries blindly re-insert instead of using `.upsert()`.
+
+**Fix (3 layers)**:
+1. **Make CREATE idempotent** — Change `.insert()` to `.upsert({ onConflict: 'id' })` in `executeOperation()`
+2. **Pre-retry existence check** — Before retrying a CREATE, query if entity already exists → mark completed if so
+3. **Smarter error classification** — Treat duplicate key errors on CREATE as "conflict-resolved" (success) not "permanent failure"
+
+**Files**: `src/composables/sync/useSyncOrchestrator.ts`, `src/services/offline/retryStrategy.ts`
+
+---
+
 ### BUG-1204: Challenges Table 404 / Initialization Failure (📋 PLANNED)
 
 **Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-06)
@@ -2081,6 +2098,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | BUG-1206 | P0 | Task details not saved when pressing Save in canvas |
+| BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
 | FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |

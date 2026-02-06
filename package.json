@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.2.13",
+  "version": "1.2.15",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "main": "src/main.ts",
   "type": "module",
@@ -262,7 +262,7 @@
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.10",
-    "@tauri-apps/cli": "^2.8.0",
+    "@tauri-apps/cli": "^2.9.5",
     "@types/crypto-js": "^4.2.2",
     "@types/dompurify": "^3.2.0",
     "@types/jszip": "^3.4.0",

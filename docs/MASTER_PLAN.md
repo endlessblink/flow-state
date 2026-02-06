@@ -693,22 +693,30 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### BUG-1192: Canvas Inbox Double-Click Opens Selection Instead of Edit Menu (📋 PLANNED)
+### ~~BUG-1192~~: Canvas Inbox Double-Click Opens Selection Instead of Edit Menu (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-05)
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: Three issues with canvas inbox task interactions:
 1. **Double-click** on a task in the canvas inbox should open the edit menu — currently triggers selection
 2. **Ctrl+Click** should toggle multi-selection — currently not the trigger for selection toolbar
 3. **Multi-selection toolbar** styling doesn't use design tokens — needs sync with visual system
 
-**Success Criteria**:
-- [ ] Double-clicking a task in canvas inbox opens the task edit panel
-- [ ] Ctrl+Click toggles task selection (shows multi-selection toolbar)
-- [ ] Multi-selection toolbar uses design tokens (colors, spacing, border-radius)
-- [ ] Regular single-click still works for basic selection/focus
+**Solution**:
+- Added `multiSelectActive` flag to separate "highlighted" (single click) from "multi-selected" (Ctrl/Shift click)
+- Single click now highlights task visually but does NOT show selection bar
+- Ctrl+Click and Shift+Click activate multi-select mode and show the selection bar
+- Updated selection bar CSS to use glass morphism design tokens instead of solid brand-primary
 
-**Files**: TBD (needs investigation of canvas inbox click handlers)
+**Success Criteria**:
+- [x] Double-clicking a task in canvas inbox opens the task edit panel
+- [x] Ctrl+Click toggles task selection (shows multi-selection toolbar)
+- [x] Multi-selection toolbar uses design tokens (colors, spacing, border-radius)
+- [x] Regular single-click highlights task without showing selection bar
+
+**Files**:
+- `src/composables/inbox/useUnifiedInboxActions.ts` - Click behavior logic
+- `src/components/inbox/unified/UnifiedInboxList.vue` - Selection bar CSS
 
 ---
 

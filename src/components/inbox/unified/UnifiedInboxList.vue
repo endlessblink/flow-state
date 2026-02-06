@@ -223,18 +223,21 @@ defineExpose({ scrollTo })
 /* Selection Bar */
 .selection-bar {
   position: sticky;
-  top: -var(--space-2);
-  z-index: 10;
+  top: calc(-1 * var(--space-2));
+  z-index: var(--z-dropdown, 10);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: var(--brand-primary);
-  color: white;
+  gap: var(--space-2);
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text-primary);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-lg);
   margin-bottom: var(--space-2);
-  box-shadow: var(--shadow-md);
-  animation: slide-in 0.2s ease-out;
+  box-shadow: var(--state-selected-shadow);
+  animation: slide-in var(--duration-normal) var(--ease-out);
 }
 
 @keyframes slide-in {
@@ -245,12 +248,14 @@ defineExpose({ scrollTo })
 .selection-count {
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
+  color: var(--brand-primary);
+  white-space: nowrap;
 }
 
 .selection-action {
-  background: var(--border-hover);
-  border: none;
-  color: white;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   display: flex;
@@ -258,18 +263,25 @@ defineExpose({ scrollTo })
   gap: var(--space-1);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition: background var(--duration-normal);
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
 }
 
 .selection-action:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--glass-bg-medium);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .delete-action:hover {
-  background: var(--color-error);
+  background: var(--danger-bg-light, rgba(239, 68, 68, 0.15));
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .canvas-action:hover {
-  background: var(--color-success, #22c55e);
+  background: var(--state-active-bg);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 </style>

@@ -164,10 +164,20 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
 
         if (import.meta.env.DEV) {
             const sectionInGroups = allGroups.find(g => g.id === section.id)
-            console.log(`[CANVAS:SECTION-PROPS] getParentChain for "${section.name}" (${section.id.slice(0, 8)}):`, {
+            // TASK-1177 DEBUG: Comprehensive logging to diagnose inheritance
+            console.log(`[CANVAS:SECTION-PROPS] TASK-1177 DEBUG for "${section.name}" (${section.id.slice(0, 8)}):`, {
                 chainLength: chain.length,
                 chainNames: chain.map(g => g.name),
-                sectionParentGroupId: sectionInGroups?.parentGroupId ?? 'NOT FOUND',
+                // The section object passed to this function
+                sectionDirectParentGroupId: section.parentGroupId ?? 'UNDEFINED',
+                // The same section looked up from allGroups
+                sectionInGroupsParentGroupId: sectionInGroups?.parentGroupId ?? 'NOT IN ARRAY',
+                // All groups that have parentGroupId set
+                groupsWithParents: allGroups.filter(g => g.parentGroupId && g.parentGroupId !== 'NONE').map(g => ({
+                    name: g.name,
+                    id: g.id.slice(0, 8),
+                    parentGroupId: g.parentGroupId?.slice(0, 8)
+                })),
                 allGroupsCount: allGroups.length
             })
         }
@@ -184,6 +194,12 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             const group = chain[i]
             if (!group || !group.name) continue // Safety: skip invalid groups
             const props = getSingleSectionProperties(group as CanvasSection)
+            if (import.meta.env.DEV) {
+                console.log(`[CANVAS:SECTION-PROPS] Chain[${i}] "${group.name}":`, {
+                    props,
+                    hasDateKeyword: detectPowerKeyword(group.name)?.category === 'date'
+                })
+            }
             Object.assign(mergedUpdates, props)
         }
 

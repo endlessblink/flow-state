@@ -170,6 +170,14 @@ export const useTaskFiltering = (
                     if (task.status === 'done' && activeSmartView.value === 'today') return false
                     return true
                 })
+
+            // BUG-1210: Apply smart view filter to nested tasks too.
+            // Without this, child tasks bypass the date-based filter and appear
+            // even when their dates are outside the active view (e.g., next-week
+            // tasks showing in "This Week" because their parent matched).
+            if (activeSmartView.value) {
+                nestedTasks = applySmartViewFilter(nestedTasks, activeSmartView.value)
+            }
         } catch {
             nestedTasks = []
         }

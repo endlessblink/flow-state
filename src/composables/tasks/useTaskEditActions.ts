@@ -196,6 +196,13 @@ export function useTaskEditActions(
                 isInInbox: originalIsInInbox
             })
 
+            // BUG-1206 DEBUG: Log description at save time
+            console.log('🐛 [BUG-1206] SAVE - description being saved:', {
+                taskId: editedTask.value.id?.slice(0, 8),
+                descriptionLength: editedTask.value.description?.length,
+                descriptionPreview: editedTask.value.description?.slice(0, 50)
+            })
+
             const updates: Record<string, unknown> = {
                 title: editedTask.value.title,
                 description: editedTask.value.description,
@@ -278,6 +285,12 @@ export function useTaskEditActions(
                 taskId: editedTask.value.id.slice(0, 8),
                 storePosition: afterUpdate?.canvasPosition,
                 storeDueDate: afterUpdate?.dueDate
+            })
+            // BUG-1206 DEBUG: Log description in store after save
+            console.log('🐛 [BUG-1206] AFTER SAVE - store description:', {
+                taskId: editedTask.value.id?.slice(0, 8),
+                storeDescLength: afterUpdate?.description?.length,
+                storeDescPreview: afterUpdate?.description?.slice(0, 50)
             })
 
             console.timeEnd('⚡ [BUG-291] Task update')

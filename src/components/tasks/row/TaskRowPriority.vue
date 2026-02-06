@@ -156,7 +156,7 @@ onUnmounted(() => {
   border-color: var(--priority-low-border);
 }
 
-/* Priority Selector Dropdown - Glass morphism matching CustomSelect */
+/* Priority Selector Dropdown - Dark glass morphism */
 .priority-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -164,14 +164,15 @@ onUnmounted(() => {
   transform: translateX(-50%);
   z-index: 99999;
 
-  /* Glass morphism - purple-tinted matching CustomSelect */
-  background: rgba(35, 32, 50, 0.65);
+  /* Glass morphism - dark purple-tinted with solid fallback */
+  background-color: #1c192d !important;
+  background: rgba(28, 25, 45, 0.95) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   border-radius: var(--radius-md);
 
   min-width: 100px;
@@ -179,9 +180,7 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: var(--space-1);
 
-  /* Ensure backdrop-filter works */
   isolation: isolate;
-  transform: translateX(-50%) translateZ(0);
 }
 
 .priority-dropdown__item {
@@ -191,9 +190,10 @@ onUnmounted(() => {
   gap: var(--space-2);
   width: 100%;
   padding: var(--space-1_5) var(--space-2);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-primary);
+  border: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   font-size: var(--text-xs);
   font-weight: 500;
   text-transform: uppercase;
@@ -208,7 +208,8 @@ onUnmounted(() => {
 }
 
 .priority-dropdown__item:hover {
-  background: var(--surface-hover);
+  background: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .priority-dropdown__item.is-active {
@@ -216,27 +217,27 @@ onUnmounted(() => {
 }
 
 .priority-dropdown__item--high {
-  color: var(--priority-high-text);
+  color: #f87171 !important;
 }
 
 .priority-dropdown__item--high:hover {
-  background: var(--priority-high-bg);
+  background: rgba(239, 68, 68, 0.15) !important;
 }
 
 .priority-dropdown__item--medium {
-  color: var(--priority-medium-text);
+  color: #fb923c !important;
 }
 
 .priority-dropdown__item--medium:hover {
-  background: var(--priority-medium-bg);
+  background: rgba(249, 115, 22, 0.15) !important;
 }
 
 .priority-dropdown__item--low {
-  color: var(--priority-low-text);
+  color: #60a5fa !important;
 }
 
 .priority-dropdown__item--low:hover {
-  background: var(--priority-low-bg);
+  background: rgba(59, 130, 246, 0.15) !important;
 }
 
 .priority-dropdown__label {

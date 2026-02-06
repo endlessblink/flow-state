@@ -232,9 +232,10 @@ onUnmounted(() => {
   gap: var(--space-2);
   width: 100%;
   padding: var(--space-1_5) var(--space-2);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-primary);
+  border: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  color: var(--text-primary, rgba(255, 255, 255, 0.9)) !important;
   font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
@@ -246,7 +247,8 @@ onUnmounted(() => {
 }
 
 .project-dropdown__item:hover {
-  background: var(--surface-hover);
+  background: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .project-dropdown__item.is-active {

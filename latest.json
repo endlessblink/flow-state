@@ -1,11 +1,11 @@
 {
-  "version": "1.2.12",
-  "notes": "BUG-1206: Fix task details lost when re-opening edit modal in canvas",
-  "pub_date": "2026-02-06T13:37:43.274Z",
+  "version": "1.2.13",
+  "notes": "Auto-updater signing fix, progress tracking improvement",
+  "pub_date": "2026-02-06T14:35:18.018Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUYWtFdmZZZkR6dlRFdlpaL1preDdBT1FieUhaY1NmeGFxN0o1MmczdmVPN1gwL3NIZDV0RjZyb1BLVExNNWpYVjQ1SXFxaFdRNkx5WXJTRXNOVXhLd2xWTFVnM3kxK2drPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwMzg1MDYzCWZpbGU6Rmxvd1N0YXRlXzEuMi4xMl9hbWQ2NC5BcHBJbWFnZS50YXIuZ3oKbXJFcG1sWWMrZm1vSEdkbUdCRkd5TGN2SFdhZGtyMEpJYTV2aFBhUzNmck5lWXYwaElYa3prYWcyYnVQVGNiWHlUSmtSSzRJNlZremdxcWptanlTRFE9PQo=",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.12_amd64.AppImage.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSV2JXSllNVUduNXVUc1R6MjhyVlZkMG5MZ0JhQnpLSlUvT2xsVXMzZXNkK3FHSnNmUWVOakJ4TWRnTnNqK0djcFdmL3h2L0FrYS8yMEczQk5RT1pxSUZ3MUh1T0crVUFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwMzg4NDg3CWZpbGU6Rmxvd1N0YXRlXzEuMi4xM19hbWQ2NC5BcHBJbWFnZS50YXIuZ3oKcW9hNVBrc0J3MDV4WXBvMmpMdVdrY1VLYm9IVkgyTEZRWERmc0llazA2aWJjU1BXeElMRHlmaHVEenBwQ1hFS2g0Y0NwYUpXZ3lPM3dUTmpQYm1GQXc9PQo=",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.13_amd64.AppImage.tar.gz"
     }
   }
 }

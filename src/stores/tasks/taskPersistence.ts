@@ -269,6 +269,19 @@ export function useTaskPersistence(
                         mergedTasks.push(localTask)
                     } else {
                         // Remote is newer or equal -> Accept remote
+                        // BUG-1206 DEBUG: Log when remote description overwrites local
+                        if (localTask.description !== remoteTask.description) {
+                            console.warn('🐛 [BUG-1206] SMART-MERGE OVERWRITE - description changed!', {
+                                taskId: localTask.id?.slice(0, 8),
+                                localDescLength: localTask.description?.length,
+                                localDescPreview: localTask.description?.slice(0, 50),
+                                remoteDescLength: remoteTask.description?.length,
+                                remoteDescPreview: remoteTask.description?.slice(0, 50),
+                                localTime: new Date(localTime).toISOString(),
+                                remoteTime: new Date(remoteTime).toISOString(),
+                                isVeryRecent
+                            })
+                        }
                         mergedTasks.push(remoteTask)
                     }
 

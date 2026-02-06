@@ -69,12 +69,7 @@ echo ""
 echo -e "${YELLOW}[1/6] Pre-flight checks...${NC}"
 
 if ! command -v secret-tool &>/dev/null; then
-  echo -e "${RED}ERROR: secret-tool not found. Install it:${NC}"
-  echo "  sudo apt-get install -y libsecret-tools"
-  echo ""
-  echo "Then store your signing password:"
-  echo "  secret-tool store --label=\"FlowState Tauri Signing Key\" service flowstate type signing-key"
-  exit 1
+  echo -e "  ${YELLOW}secret-tool not found — assuming passwordless key${NC}"
 fi
 
 if [[ ! -f "$SIGNING_KEY" ]]; then
@@ -87,13 +82,14 @@ if [[ ! -f "$SSH_KEY" ]] && [[ "$SKIP_DEPLOY" == false ]]; then
   exit 1
 fi
 
-# Retrieve password from keyring
-SIGNING_PASSWORD=$(secret-tool lookup service flowstate type signing-key 2>/dev/null || true)
+# Retrieve password from keyring (optional — passwordless keys don't need one)
+if command -v secret-tool &>/dev/null; then
+  SIGNING_PASSWORD=$(secret-tool lookup service flowstate type signing-key 2>/dev/null || true)
+else
+  SIGNING_PASSWORD=""
+fi
 if [[ -z "$SIGNING_PASSWORD" ]]; then
-  echo -e "${RED}ERROR: Signing password not found in keyring.${NC}"
-  echo "Store it with:"
-  echo "  secret-tool store --label=\"FlowState Tauri Signing Key\" service flowstate type signing-key"
-  exit 1
+  echo -e "  ${YELLOW}No password in keyring — using passwordless key${NC}"
 fi
 
 # Read version

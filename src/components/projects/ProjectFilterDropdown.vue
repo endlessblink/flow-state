@@ -332,9 +332,10 @@ onUnmounted(() => {
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  border: none;
-  background: transparent;
-  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  border: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   font-size: var(--text-sm);
   text-align: left;
   cursor: pointer;
@@ -343,13 +344,15 @@ onUnmounted(() => {
 }
 
 .project-item:hover {
-  background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.08));
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
 }
 
 .project-item.active {
-  background: var(--brand-primary-bg-subtle, rgba(78, 205, 196, 0.1));
-  color: var(--brand-primary, #4ecdc4);
+  background: rgba(78, 205, 196, 0.1) !important;
+  background-color: rgba(78, 205, 196, 0.1) !important;
+  color: #4ecdc4 !important;
   font-weight: var(--font-semibold);
 }
 

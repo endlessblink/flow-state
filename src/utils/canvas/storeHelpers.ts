@@ -221,13 +221,31 @@ export function getParentChain(
     const visited = new Set<string>()
     let current = groups.find(g => g.id === groupId)
 
+    if (import.meta.env.DEV) {
+        console.log(`[CANVAS:PARENT-CHAIN] Starting for groupId=${groupId.slice(0, 8)}`, {
+            found: !!current,
+            currentName: current?.name,
+            currentParentGroupId: current?.parentGroupId ?? 'NONE/UNDEFINED'
+        })
+    }
+
     while (current && chain.length < maxDepth) {
         if (visited.has(current.id)) break // Cycle detected
         visited.add(current.id)
         chain.push(current)
 
-        if (!current.parentGroupId || current.parentGroupId === 'NONE') break
-        current = groups.find(g => g.id === current!.parentGroupId)
+        if (!current.parentGroupId || current.parentGroupId === 'NONE') {
+            if (import.meta.env.DEV) {
+                console.log(`[CANVAS:PARENT-CHAIN] Stopping at "${current.name}" - no parentGroupId`)
+            }
+            break
+        }
+
+        const nextParent = groups.find(g => g.id === current!.parentGroupId)
+        if (import.meta.env.DEV) {
+            console.log(`[CANVAS:PARENT-CHAIN] "${current.name}" has parent ${current.parentGroupId.slice(0, 8)} -> found: ${nextParent?.name ?? 'NOT FOUND'}`)
+        }
+        current = nextParent
     }
 
     return chain // [child, parent, grandparent, ...]

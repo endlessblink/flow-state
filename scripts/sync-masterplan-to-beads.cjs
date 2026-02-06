@@ -333,25 +333,23 @@ function sync() {
       // Create new bead
       console.log(`➕ Creating ${id}: ${title.substring(0, 40)}...`);
 
+      // Collect all labels
+      const labels = [];
+      if (label) labels.push(label);
+      if (type === 'IDEA') labels.push('idea');
+      if (type === 'ROAD') labels.push('roadmap');
+
       const args = [
         'create',
         `${id}: ${title}`,
         '--external-ref', id,
         '--type', beadType,
         '--priority', String(beadPriority),
-        '--status', status === 'closed' ? 'open' : status, // Create as open, then close
       ];
 
-      // Add label if needed
-      if (label) {
-        args.push('--labels', label);
-      }
-
-      // Add type-specific label for IDEA/ROAD items
-      if (type === 'IDEA') {
-        args.push('--labels', 'idea');
-      } else if (type === 'ROAD') {
-        args.push('--labels', 'roadmap');
+      // Add labels if any
+      if (labels.length > 0) {
+        args.push('--labels', labels.join(','));
       }
 
       const result = runBd(args);
@@ -359,9 +357,13 @@ function sync() {
       if (result.success) {
         stats.created++;
 
-        // If task is done, close it immediately
-        if (status === 'closed' && result.id && !DRY_RUN) {
-          runBd(['close', result.id, '--reason', 'Marked done in MASTER_PLAN.md']);
+        // Update status if not 'open' (bd create defaults to open)
+        if (result.id && !DRY_RUN) {
+          if (status === 'in_progress') {
+            runBd(['update', result.id, '--status', 'in_progress']);
+          } else if (status === 'closed') {
+            runBd(['close', result.id, '--reason', 'Marked done in MASTER_PLAN.md']);
+          }
         }
       } else {
         stats.errors++;

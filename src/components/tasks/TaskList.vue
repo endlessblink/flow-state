@@ -172,7 +172,10 @@ defineExpose({
   border: none; /* Remove container border - groups are self-contained */
   border-radius: 0;
   padding: var(--space-2); /* Inner breathing room */
-  contain: layout style; /* Performance optimization */
+  /* Allow scrolling - don't clip content */
+  overflow-y: auto;
+  min-height: 0; /* Critical for flex scroll */
+  flex: 1;
 }
 
 /* ADHD-friendly: Visual chunking with whitespace between project groups */

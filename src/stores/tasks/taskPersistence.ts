@@ -176,7 +176,26 @@ export function useTaskPersistence(
 
     // --- LOAD LOGIC ---
 
+    // BUG-1207 FIX (Fix 1.2b): Reentrancy guard for loadFromDatabase.
+    // If called while already loading (e.g., auth recovery + realtime both trigger reload),
+    // return the existing promise instead of starting a second concurrent fetch.
+    // This prevents race conditions where two loads merge/overwrite each other's results.
+    let _loadPromise: Promise<void> | null = null
+
     const loadFromDatabase = async () => {
+        if (_loadPromise) {
+            console.log('[TASK-LOAD] Reentrancy guard: returning existing load promise')
+            return _loadPromise
+        }
+        _loadPromise = _loadFromDatabaseImpl()
+        try {
+            await _loadPromise
+        } finally {
+            _loadPromise = null
+        }
+    }
+
+    const _loadFromDatabaseImpl = async () => {
         try {
             isLoadingFromDatabase.value = true
 
@@ -321,7 +340,33 @@ export function useTaskPersistence(
                 mergedTasks.push(remoteTask)
             }
 
-            _rawTasks.value = mergedTasks
+            // BUG-1207 FIX (Fix 2.2): Granular updates instead of full array replacement.
+            // `_rawTasks.value = mergedTasks` replaces the entire ref, causing ALL watchers
+            // and computeds to re-fire (even for unchanged tasks). Instead, surgically
+            // update/add/remove individual entries to minimize reactivity churn.
+            const mergedMap = new Map(mergedTasks.map(t => [t.id, t]))
+
+            // Update existing or remove stale entries (iterate backwards for safe splice)
+            for (let i = _rawTasks.value.length - 1; i >= 0; i--) {
+                const existing = _rawTasks.value[i]
+                const merged = mergedMap.get(existing.id)
+                if (merged) {
+                    // Task exists in merged result - update in place if different
+                    if (existing !== merged) {
+                        _rawTasks.value[i] = merged
+                    }
+                    mergedMap.delete(existing.id)
+                } else {
+                    // Task not in merged result - remove it
+                    _rawTasks.value.splice(i, 1)
+                }
+            }
+
+            // Add any new tasks from merged result that weren't already in the array
+            for (const [, newTask] of mergedMap) {
+                _rawTasks.value.push(newTask)
+            }
+
             console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)
 
         } catch (error) {

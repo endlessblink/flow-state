@@ -103,7 +103,7 @@
 3. Realtime subscriptions — DELETE events from other devices
 4. Store initialization — race conditions loading tasks before auth ready
 5. Cross-platform sync — Tauri vs PWA vs web state divergence
-6. BUG-1207 regression — task changes resetting in Tauri app
+6. ~~BUG-1207~~ ✅ regression — task changes resetting in Tauri app (FIXED 2026-02-06)
 
 ---
 
@@ -259,13 +259,25 @@
 
 ---
 
-### BUG-1207: Task Changes Reset in Tauri App (Board Position, Edits) (👀 REVIEW)
+### ~~BUG-1207~~: Task Changes Reset in Tauri App (Board Position, Edits) (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: Changes made to tasks in the Tauri desktop app (e.g., board position/order, edits) get reverted/reset. Broader than canvas-only position drift (BUG-1203) — affects task mutations across views.
 
-**Investigation**: Checking sync layer, Supabase persistence, and Tauri-specific code paths.
+**Root Causes Found (7)**: Recovery reload clobbering edits (no cooldown on WebSocket retry), double `loadFromDatabase()` on startup, smart merge full-array replacement, 30s pendingWrite timeout too short, board position dead code, group sync no protection, PiniaSharedState global conflicts.
+
+**Fixes Applied**:
+- Recovery cooldown on ALL 3 paths (WebSocket retry + visibility + online) + `input` event tracking + 60s cooldown
+- Dedup startup loads via `appInitLoadComplete` flag + reentrancy guard on `loadFromDatabase()`
+- Granular in-place array updates instead of full `_rawTasks.value` replacement
+- PendingWrites 120s safety fallback + explicit `removePendingWrite()` on sync completion
+- Direct Supabase save preserved as primary (VPS-first), sync queue as backup
+- Board position persistence: `event.moved` handler + `sortByOrder()` in grouping functions + `.order()` in fetchTasks
+- Group sync: version/timestamp checks in `updateGroupFromSync` + `pendingGroupWrites` + `fromSupabaseGroup` mapper in post-login handler
+- PiniaSharedState disabled globally (stores opt in individually)
+- Canvas sync stale parent write-back removed (read-only invariant restored)
+- Post-login handlers: added missing window flag checks (`__FlowStateIsDragging`, `__FlowStateIsResizing`, `__FlowStateIsSettling`)
 
 ---
 

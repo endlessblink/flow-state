@@ -444,32 +444,27 @@ export function useTaskOperations(
                 })
             } catch (queueError) {
                 const errorMsg = queueError instanceof Error ? queueError.message : String(queueError)
-                const errorStack = queueError instanceof Error ? queueError.stack : ''
-                console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', errorMsg, errorStack)
+                console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', errorMsg)
+                // BUG-1207 FIX (Fix 2.3): Only fall back to direct save when sync queue fails
+                // (e.g., guest mode with no auth, or IndexedDB unavailable).
+                // This replaces the old dual-write where BOTH paths always ran.
+                try {
+                    await saveSpecificTasks([updatedTask], `updateTask-fallback-${taskId}`)
+                } catch (saveError) {
+                    console.warn(`[SYNC-QUEUE] Fallback save also failed for ${taskId}:`, saveError)
+                }
             }
 
-            // BUG-060 FIX: Also attempt direct save for immediate sync when online
+            // BUG-1207: Direct save to Supabase (VPS is primary persistence).
+            // The sync queue above is a backup for offline/failure scenarios.
+            // Direct save ensures changes hit VPS immediately without waiting for queue interval.
+            // Echo protection: pendingWrites (120s, tied to sync completion) prevents
+            // the realtime echo from this save from reverting local state.
             try {
-                await saveSpecificTasks([updatedTask], `updateTask-${taskId}`)
-
-                // DRIFT FIX: REMOVED triggerCanvasSync() - this was causing sync loops!
-                // When Smart-Group applied properties → updateTask → triggerCanvasSync →
-                // syncNodes → Smart-Group applied again → infinite loop
-                // Canvas sync should ONLY happen on explicit user drag/drop actions,
-                // not on every task property update. Vue reactivity handles UI updates.
-            } catch (error) {
-                console.error(`❌ [BUG-060] Failed to save task update for ${taskId}:`, error)
-
-                // BUG-1206 FIX: Do NOT rollback the store when the sync queue has the operation.
-                // The old rollback caused data loss: saveTask() doesn't await updateTask(),
-                // so the modal closes with "saved successfully" but the async rollback
-                // silently reverts the store. The user re-opens and sees old data.
-                // The sync queue (IndexedDB) will retry and eventually persist the change.
-                // Keeping the optimistic update is the correct offline-first behavior.
-                console.warn(`⚠️ [BUG-1206] Direct save failed for task ${taskId}, but sync queue will retry. Store keeps optimistic update.`)
-
-                // Do NOT re-throw - the operation is queued and will retry.
-                // Callers (like saveTask) already closed the modal optimistically.
+                await saveSpecificTasks([updatedTask], `updateTask-direct-${taskId}`)
+            } catch (directSaveError) {
+                // Direct save failed - sync queue will retry. Don't throw, change is queued.
+                console.warn(`[TASK] Direct save failed for ${taskId}, sync queue will retry:`, directSaveError)
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false

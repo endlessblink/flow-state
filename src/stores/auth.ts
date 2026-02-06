@@ -25,6 +25,10 @@ export const useAuthStore = defineStore('auth', () => {
   // Prevents duplicate store reloads when onAuthStateChange fires multiple times
   let handledSignInForUserId: string | null = null
 
+  // BUG-1207: Flag set by useAppInitialization after it completes its own store load
+  // When true, the SIGNED_IN handler skips redundant loadFromDatabase() calls
+  let appInitLoadComplete = false
+
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -279,36 +283,45 @@ export const useAuthStore = defineStore('auth', () => {
           }
 
           // BUG-1086: Reset sign-in handler on sign-out so next sign-in reloads stores
+          // BUG-1207: Reset appInitLoadComplete so post-login sign-in reloads stores
           if (_event === 'SIGNED_OUT') {
             handledSignInForUserId = null
+            appInitLoadComplete = false
           }
 
           // BUG-1020: Reload stores when user signs in (projects were empty during guest mode)
           // BUG-1086: Only run ONCE per user to prevent duplicate reloads from repeated SIGNED_IN events
+          // BUG-1207: Skip if useAppInitialization already loaded stores (prevents double-load)
           if (_event === 'SIGNED_IN' && newSession?.user) {
             if (handledSignInForUserId === newSession.user.id) {
               console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN already handled for this user, skipping reload`)
               return
             }
             handledSignInForUserId = newSession.user.id
-            console.log(`👤 [AUTH:${currentTabId}] User signed in - reloading stores...`)
-            try {
-              const { useProjectStore } = await import('@/stores/projects')
-              const { useTaskStore } = await import('@/stores/tasks')
-              const { useCanvasStore } = await import('@/stores/canvas')
 
-              const projectStore = useProjectStore()
-              const taskStore = useTaskStore()
-              const canvasStore = useCanvasStore()
+            if (appInitLoadComplete) {
+              console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: skipping store reload (useAppInitialization already loaded)`)
+            } else {
+              // Post-init sign-in: user signed in via modal after app loaded in guest mode
+              console.log(`👤 [AUTH:${currentTabId}] User signed in (post-init) - reloading stores...`)
+              try {
+                const { useProjectStore } = await import('@/stores/projects')
+                const { useTaskStore } = await import('@/stores/tasks')
+                const { useCanvasStore } = await import('@/stores/canvas')
 
-              await Promise.all([
-                projectStore.loadProjectsFromDatabase(),
-                taskStore.loadFromDatabase(),
-                canvasStore.loadFromDatabase()
-              ])
-              console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after sign-in`)
-            } catch (e) {
-              console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
+                const projectStore = useProjectStore()
+                const taskStore = useTaskStore()
+                const canvasStore = useCanvasStore()
+
+                await Promise.all([
+                  projectStore.loadProjectsFromDatabase(),
+                  taskStore.loadFromDatabase(),
+                  canvasStore.loadFromDatabase()
+                ])
+                console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after post-init sign-in`)
+              } catch (e) {
+                console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
+              }
             }
           }
         })
@@ -329,6 +342,14 @@ export const useAuthStore = defineStore('auth', () => {
     })()
 
     return initPromise
+  }
+
+  /**
+   * BUG-1207: Mark that useAppInitialization has completed its store load
+   * This prevents the SIGNED_IN handler from doing a redundant reload
+   */
+  const markAppInitLoadComplete = () => {
+    appInitLoadComplete = true
   }
 
   /**
@@ -705,6 +726,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Actions
     initialize,
     retryInitialization,
+    markAppInitLoadComplete,
     signIn,
     signInWithPassword,
     signInWithGoogle,

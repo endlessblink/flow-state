@@ -193,10 +193,29 @@ export const useCanvasGroups = (
     // Flag to prevent auto-save after sync updates (breaks circular loop)
     let syncUpdateInProgress = false
 
+    // BUG-1207 Fix 4.1: Pending group writes tracking (mirrors task pattern)
+    const pendingGroupWrites = new Set<string>()
+
+    const addPendingGroupWrite = (groupId: string) => {
+        pendingGroupWrites.add(groupId)
+    }
+
+    const removePendingGroupWrite = (groupId: string) => {
+        pendingGroupWrites.delete(groupId)
+    }
+
     const updateGroupFromSync = (groupId: string, data: Partial<CanvasGroup>) => {
         // SAFETY: Validate incoming data to prevent corrupted groups
         if (!data || typeof data !== 'object') {
             console.warn(`[GROUP-SYNC] Ignoring invalid data for group ${groupId}:`, data)
+            return
+        }
+
+        // BUG-1207 Fix 4.1: Skip sync if local write is pending (prevents overwriting user's drag)
+        if (pendingGroupWrites.has(groupId)) {
+            if (import.meta.env.DEV) {
+                console.log(`[GROUP-SYNC] Skipping sync for group ${groupId.slice(0, 8)}... - pending local write`)
+            }
             return
         }
 
@@ -207,9 +226,34 @@ export const useCanvasGroups = (
             const index = _rawGroups.value.findIndex(g => g.id === groupId)
 
             if (index !== -1) {
+                const existing = _rawGroups.value[index]
+
+                // BUG-1207 Fix 4.1: Version/timestamp checks - prefer newer data
+                const incomingVersion = data.positionVersion ?? 0
+                const localVersion = existing.positionVersion ?? 0
+
+                if (incomingVersion > 0 && localVersion > incomingVersion) {
+                    if (import.meta.env.DEV) {
+                        console.log(`[GROUP-SYNC] Skipping older version for group ${groupId.slice(0, 8)}... (local v${localVersion} > incoming v${incomingVersion})`)
+                    }
+                    return
+                }
+
+                // If versions are equal, compare timestamps
+                if (incomingVersion === localVersion && existing.updatedAt && data.updatedAt) {
+                    const localTime = new Date(existing.updatedAt).getTime()
+                    const incomingTime = new Date(data.updatedAt).getTime()
+                    if (localTime > incomingTime) {
+                        if (import.meta.env.DEV) {
+                            console.log(`[GROUP-SYNC] Skipping older timestamp for group ${groupId.slice(0, 8)}... (local newer by ${localTime - incomingTime}ms)`)
+                        }
+                        return
+                    }
+                }
+
                 // Update existing group (don't trigger saveGroupToStorage)
                 _rawGroups.value[index] = {
-                    ..._rawGroups.value[index],
+                    ...existing,
                     ...data,
                     id: groupId, // Ensure ID is preserved
                     updatedAt: data.updatedAt || new Date().toISOString()
@@ -276,6 +320,8 @@ export const useCanvasGroups = (
         aggregatedTaskCountByGroupId,
         getTasksInSection,
         updateGroupFromSync,
-        removeGroupFromSync
+        removeGroupFromSync,
+        addPendingGroupWrite,
+        removePendingGroupWrite
     }
 }

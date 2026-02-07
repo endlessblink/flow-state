@@ -97,12 +97,56 @@
 
 **Problem**: Tasks may still be disappearing across platforms — PWA on mobile, Tauri desktop app, and web. A task created or edited on one platform can vanish when synced to another. This is the highest severity data loss bug possible.
 
-**Investigation Areas**:
-1. Sync orchestrator — LWW conflict resolution, offline queue replay
-2. Tombstones — incorrect soft-delete propagation across devices
-3. Realtime subscriptions — DELETE events from other devices
-4. Store initialization — race conditions loading tasks before auth ready
-5. Cross-platform sync — Tauri vs PWA vs web state divergence
+**5-Agent Investigation (2026-02-06)** — 5 Opus agents investigated independent hypotheses and debated findings:
+
+**ROOT CAUSE FOUND: `_soft_deleted` Column Mismatch Kill Chain**
+
+`useSyncOrchestrator.ts:329` writes `{ _soft_deleted: true }` but DB column is `is_deleted`. The sync orchestrator bypasses `supabaseMappers.ts`, so the update ALWAYS fails. Fallback at line 335 escalates to a HARD DELETE (`supabase.from(tableName).delete()`). This fires on 100% of task deletions:
+
+1. User deletes task → direct path soft-deletes correctly (`is_deleted: true`) ✅
+2. 0-5s later → sync queue tries `_soft_deleted: true` → **FAILS** (column doesn't exist)
+3. Fallback → `DELETE FROM tasks WHERE id = X` → **HARD DELETE** (permanent)
+4. DB trigger `trg_task_tombstone` → permanent tombstone created
+5. Realtime broadcasts DELETE event to ALL connected devices
+6. All devices blindly splice task from local state (`tasks.ts:205-208`)
+7. Any pending updates on other devices silently discarded as "not found" (`useSyncOrchestrator.ts:277-284`)
+
+**Secondary Bugs Found (6 total, ranked by severity):**
+
+| Rank | Bug | Severity | File:Line | Fix |
+|------|-----|----------|-----------|-----|
+| **1** | `_soft_deleted` → `is_deleted` column mismatch | **CRITICAL** | `useSyncOrchestrator.ts:329` | Change to `{ is_deleted: true, deleted_at: new Date().toISOString() }` |
+| **2** | Hard-delete fallback should not exist | **CRITICAL** | `useSyncOrchestrator.ts:335` | Remove fallback or add logging/alerting |
+| **3** | LWW "server wins" drops local changes silently | HIGH | `useSyncOrchestrator.ts:309-318` | Apply `serverData` to local state |
+| **4** | CREATE upsert overwrites newer server data | HIGH | `useSyncOrchestrator.ts:237-242` | Add timestamp comparison before upsert |
+| **5** | Entity "not found" discards queued updates silently | HIGH | `useSyncOrchestrator.ts:277-284` | Log warning, don't mark as `success: true` |
+| **6** | No `addPendingWrite` for delete operations | MEDIUM | `taskOperations.ts:474` | Add `addPendingWrite(taskId)` before delete |
+
+**Disproved Hypotheses:**
+- ~~Tombstones cause false-positive deletions~~ → Tombstones are passive/defensive only (checked during restore/import, never during sync)
+- ~~Store init race conditions~~ → Fixed by BUG-1207 (auth await, reentrancy guard, `appInitLoadComplete` flag)
+- ~~Smart merge drops local tasks~~ → TASK-1177 fix preserves ALL local-only tasks (never drops them)
+- ~~PiniaSharedState overwrites~~ → Globally disabled at `main.ts:106-111`
+
+**Zombie Resurrection Risk:** Smart merge preserves local-only tasks and re-queues CREATE via sync orchestrator. However, the DB tombstone (created by `trg_task_tombstone` trigger during the hard delete) may block re-creation depending on whether the upsert path checks tombstones (it does NOT — raw `upsert` bypasses `safeCreateTask`). Debate conclusion: 1-2 resurrection cycles possible before realtime DELETE propagates to all devices, then tombstone causes permanent ID poisoning. Not an infinite loop but makes deleted task IDs permanently unusable.
+
+**Debate Consensus (5/5 agents agree):**
+1. `_soft_deleted` kill chain is the **#1 confirmed cause** — deterministic, 100% blast radius, cross-platform
+2. Zombie resurrection is **real but self-dampening** (1-2 cycles, not infinite)
+3. Cross-tab create path (`useCrossTabSync.ts:84`) — H3 found `broadcastTaskOperation` is **dead code** (never called from outside the file), downgrading this from MEDIUM to NOT A VECTOR
+4. Two BUG-1211 sub-scenarios identified: (a) intentionally deleted tasks become unrecoverable (primary), (b) tasks disappearing without user action requires additional trigger (LWW silent discard or recovery reload)
+
+**Residual Risks (lower priority):**
+- `isVeryRecent` window (30s) misaligned with recovery cooldown (60s) (`taskPersistence.ts:284`)
+- Auth SIGNED_IN handler has no interaction cooldown (`auth.ts:316-320`)
+- `deleteTask()` missing `addPendingWrite` causes echo processing (`taskOperations.ts:474`)
+
+**Investigation Areas** (original, now resolved):
+1. ~~Sync orchestrator~~ → **ROOT CAUSE** (`_soft_deleted` mismatch + 5 secondary bugs)
+2. ~~Tombstones~~ → **DISPROVED** (passive/defensive only, but amplified by kill chain)
+3. ~~Realtime subscriptions~~ → **CONFIRMED** as propagation mechanism (DELETE handler has zero validation)
+4. ~~Store initialization~~ → **DISPROVED** (fixed by BUG-1207)
+5. ~~Cross-platform sync~~ → **DISPROVED** (smart merge safe, cross-tab sync is dead code)
 6. ~~BUG-1207~~ ✅ regression — task changes resetting in Tauri app (FIXED 2026-02-06)
 
 ---

@@ -272,7 +272,7 @@ Signature verification failed
   "plugins": {
     "updater": {
       "endpoints": ["https://in-theflow.com/updates/latest.json"],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk0ODVDNjBEQTVDQTVDRDMKUldUVFhNcWxEY2FGbFBaMmdvNnp1MXVCeG1NdUE1OE9tTmtpdjdrY3lZNnlCdWFsVERDSkkzRVMK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEzMjk2NTIzMjM2NkZDNjEKUldSaC9HWWpJMlVwRXdQL29LTHBJSjc4eGtrWUYwRkxpNmQwNDdaNTh3U3pLMHBtSlpkdVVncEUK"
     }
   }
 }
@@ -749,18 +749,56 @@ git push origin v1.2.6
 
 **Solution:** One-time manual install required.
 
+**CRITICAL - Linux Users Must Use AppImage:**
+
+The `.deb` package format **CANNOT auto-update** due to a fundamental Tauri limitation. Linux users MUST use the AppImage format to receive in-app updates.
+
 **Bootstrap process:**
-1. User installs FlowState via `.deb` package (initial install)
-2. App includes updater code (FEATURE-1194)
-3. From now on, all future updates are in-app
-4. User never needs to manually download `.deb` again
+1. Download the **AppImage** from `https://in-theflow.com/updates/FlowState_X.X.X_amd64.AppImage`
+2. Move it to `~/Applications/` (create directory if needed):
+   ```bash
+   mkdir -p ~/Applications
+   mv FlowState_*.AppImage ~/Applications/
+   chmod +x ~/Applications/FlowState_*.AppImage
+   ```
+3. Create a desktop entry for launcher integration:
+   ```bash
+   cat > ~/.local/share/applications/FlowState.desktop << 'EOF'
+[Desktop Entry]
+Name=FlowState
+Exec=/home/YOUR_USERNAME/Applications/FlowState_X.X.X_amd64.AppImage
+Icon=flow-state
+Type=Application
+Categories=Utility;Productivity;
+Comment=Productivity app with task management and pomodoro timer
+EOF
+   ```
+   Replace `YOUR_USERNAME` and `X.X.X` with actual values.
+
+4. Register the desktop entry:
+   ```bash
+   update-desktop-database ~/.local/share/applications/
+   ```
+
+5. Launch the app from your application launcher or run:
+   ```bash
+   ~/Applications/FlowState_*.AppImage
+   ```
+
+6. From now on, all future updates are in-app (no manual downloads needed)
+
+**Why not .deb?**
+- `.deb` installs are managed by the system package manager
+- System package manager locks files during runtime, preventing in-place updates
+- AppImage is a single portable executable that can self-replace
 
 **Migration path:**
-- Users on versions **before v1.2.5** (without updater) → must manually install v1.2.5+ once
-- Users on v1.2.5+ → automatic updates forever
+- Users on versions **before v1.2.5** (without updater) → manually install v1.2.5+ AppImage once
+- Users on v1.2.5+ AppImage → automatic updates forever
+- Users who installed via `.deb` → must switch to AppImage for auto-updates
 
 **Communication to users:**
-- Announce in release notes: "This is the last manual update you'll need!"
+- Announce in release notes: "This is the last manual update you'll need! (Use AppImage for auto-updates)"
 - After bootstrap, updates are seamless
 
 ## Troubleshooting
@@ -887,6 +925,46 @@ Error: Invalid signature for update
    # Compare with latest.json platforms.linux-x86_64.signature field
    ```
 
+### Issue: Old build artifacts pollute manifest
+
+**Symptom:**
+- `latest.json` points to wrong file (e.g., old `.deb` instead of current AppImage)
+- Manifest contains URLs for files from previous versions
+- Update downloads fail with 404 or signature mismatch
+
+**Cause:** `generate-update-manifest.cjs` scans the entire `src-tauri/target/release/bundle/` directory. If old `.sig` files from previous versions exist, they can be included in the manifest instead of the current version's files.
+
+**Fix:**
+
+**Option 1: Clean builds (manual cleanup before building):**
+```bash
+rm -rf src-tauri/target/release/bundle/
+npm run build && npx tauri build
+```
+
+**Option 2: Version filtering (automatic, already implemented):**
+
+The `generate-update-manifest.cjs` script now includes version filtering to prevent this issue:
+
+- Only matches files containing the current version string from `package.json`
+- Removed `.deb` from Linux platform patterns (AppImage-only for auto-updates)
+- Falls back to any `.sig` file only if version-specific match fails
+
+**Prevention:**
+- Clean old builds before new ones: `rm -rf src-tauri/target/release/bundle/`
+- Or rely on version filtering (handles it automatically)
+- When deploying, verify manifest URLs match current version
+
+**Verification:**
+```bash
+# Check manifest URLs contain correct version
+cat src-tauri/target/release/bundle/latest.json | jq '.platforms[].url'
+# All URLs should contain current version number (e.g., "1.2.6")
+
+# Verify actual files exist locally
+ls -lh src-tauri/target/release/bundle/appimage/FlowState_1.2.6_*.AppImage
+```
+
 ## Version Bump Checklist
 
 **Before releasing a new version, complete ALL steps:**
@@ -1008,6 +1086,201 @@ src-tauri/target/release/bundle/nsis/*.nsis.zip           # Windows NSIS install
 src-tauri/target/release/bundle/nsis/*.nsis.zip.sig       # Windows NSIS signature
 src-tauri/target/release/bundle/macos/*.app.tar.gz        # macOS app bundle
 src-tauri/target/release/bundle/macos/*.app.tar.gz.sig    # macOS signature
+```
+
+## Desktop Integration (AppImage)
+
+**Problem:** AppImages don't automatically appear in application launchers after download.
+
+**Solution:** Create a `.desktop` file for desktop environment integration.
+
+### Creating a Desktop Entry
+
+**Location:** `~/.local/share/applications/FlowState.desktop`
+
+**Template:**
+
+```ini
+[Desktop Entry]
+Name=FlowState
+Exec=/home/YOUR_USERNAME/Applications/FlowState_X.X.X_amd64.AppImage
+Icon=flow-state
+Type=Application
+Categories=Utility;Productivity;
+Comment=Productivity app with task management and pomodoro timer
+Terminal=false
+StartupWMClass=FlowState
+```
+
+**Create the file:**
+
+```bash
+# Replace YOUR_USERNAME with your actual username
+# Replace X.X.X with the actual version number
+
+cat > ~/.local/share/applications/FlowState.desktop << EOF
+[Desktop Entry]
+Name=FlowState
+Exec=/home/$(whoami)/Applications/FlowState_1.2.6_amd64.AppImage
+Icon=flow-state
+Type=Application
+Categories=Utility;Productivity;
+Comment=Productivity app with task management and pomodoro timer
+Terminal=false
+StartupWMClass=FlowState
+EOF
+```
+
+**Make it executable (some DEs require this):**
+
+```bash
+chmod +x ~/.local/share/applications/FlowState.desktop
+```
+
+**Register the desktop entry:**
+
+```bash
+update-desktop-database ~/.local/share/applications/
+```
+
+**Verify registration:**
+
+```bash
+# Should show FlowState in the output
+ls ~/.local/share/applications/ | grep FlowState
+```
+
+### After Auto-Update
+
+**Problem:** Desktop entry points to old AppImage path after an update.
+
+**Solution:** The AppImage filename changes with each version (e.g., `FlowState_1.2.5_amd64.AppImage` → `FlowState_1.2.6_amd64.AppImage`).
+
+**Options:**
+
+**Option 1: Use a symlink (recommended):**
+
+```bash
+# Create a stable symlink that always points to the latest version
+ln -sf ~/Applications/FlowState_1.2.6_amd64.AppImage ~/Applications/FlowState.AppImage
+
+# Update desktop entry to use symlink
+sed -i 's|Exec=.*|Exec=/home/'$(whoami)'/Applications/FlowState.AppImage|' \
+  ~/.local/share/applications/FlowState.desktop
+```
+
+After each update:
+```bash
+# Just update the symlink (desktop entry stays the same)
+ln -sf ~/Applications/FlowState_NEW_VERSION_amd64.AppImage ~/Applications/FlowState.AppImage
+```
+
+**Option 2: Update desktop entry after each update:**
+
+```bash
+# After update, modify the Exec line with new version
+sed -i 's|FlowState_[0-9.]*_amd64|FlowState_1.2.6_amd64|' \
+  ~/.local/share/applications/FlowState.desktop
+
+update-desktop-database ~/.local/share/applications/
+```
+
+**Option 3: Auto-update script (advanced):**
+
+Create `~/Applications/update-flowstate-launcher.sh`:
+
+```bash
+#!/bin/bash
+# Auto-update FlowState desktop entry after app updates
+
+LATEST_APPIMAGE=$(ls -t ~/Applications/FlowState_*.AppImage | head -1)
+
+if [ -z "$LATEST_APPIMAGE" ]; then
+  echo "No FlowState AppImage found"
+  exit 1
+fi
+
+sed -i "s|Exec=.*|Exec=$LATEST_APPIMAGE|" \
+  ~/.local/share/applications/FlowState.desktop
+
+update-desktop-database ~/.local/share/applications/
+echo "Desktop entry updated to: $LATEST_APPIMAGE"
+```
+
+Run after each update:
+```bash
+bash ~/Applications/update-flowstate-launcher.sh
+```
+
+### Icon Setup
+
+**Problem:** `Icon=flow-state` won't work unless icon is installed system-wide.
+
+**Solution:** Extract icon from AppImage or use absolute path.
+
+**Option 1: Extract icon from AppImage:**
+
+```bash
+# Extract AppImage contents
+cd /tmp
+~/Applications/FlowState_*.AppImage --appimage-extract
+
+# Copy icon to user icon directory
+mkdir -p ~/.local/share/icons/hicolor/256x256/apps/
+cp squashfs-root/usr/share/icons/hicolor/256x256/apps/flow-state.png \
+   ~/.local/share/icons/hicolor/256x256/apps/
+
+# Update icon cache
+gtk-update-icon-cache ~/.local/share/icons/hicolor/ -f
+```
+
+**Option 2: Use absolute path in desktop entry:**
+
+```ini
+Icon=/home/YOUR_USERNAME/Applications/flow-state.png
+```
+
+Download the icon to that location from the VPS or extract from AppImage.
+
+### Troubleshooting Desktop Entry
+
+**Desktop entry not showing in launcher:**
+
+```bash
+# Verify file exists
+ls -lh ~/.local/share/applications/FlowState.desktop
+
+# Check for syntax errors
+desktop-file-validate ~/.local/share/applications/FlowState.desktop
+
+# Force update desktop database
+update-desktop-database ~/.local/share/applications/
+
+# Restart desktop environment (or log out and back in)
+```
+
+**Icon not showing:**
+
+```bash
+# Verify icon path
+grep Icon ~/.local/share/applications/FlowState.desktop
+
+# Check if icon file exists
+ls -lh ~/.local/share/icons/hicolor/256x256/apps/flow-state.png
+```
+
+**AppImage won't launch from launcher:**
+
+```bash
+# Verify AppImage is executable
+ls -lh ~/Applications/FlowState_*.AppImage
+# Should show -rwxr-xr-x (x = executable)
+
+# Make executable if needed
+chmod +x ~/Applications/FlowState_*.AppImage
+
+# Test launch from terminal
+~/Applications/FlowState_*.AppImage
 ```
 
 ## Security Considerations

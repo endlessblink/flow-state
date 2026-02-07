@@ -159,6 +159,12 @@ export function classifyError(error: unknown): ErrorClassification {
     return 'transient'
   }
 
+  // BUG-1212: Duplicate key on CREATE means the task already exists server-side.
+  // Treat as conflict (auto-resolvable) rather than permanent failure.
+  if (lowerMessage.includes('duplicate key') && lowerMessage.includes('unique constraint')) {
+    return 'conflict'
+  }
+
   // Conflict errors - need special handling
   if (
     lowerMessage.includes('conflict') ||

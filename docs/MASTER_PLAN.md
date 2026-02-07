@@ -91,9 +91,9 @@
 
 ---
 
-### BUG-1211: Tasks Disappearing Across Platforms (PWA/Tauri/Web) (🔄 IN PROGRESS)
+### ~~BUG-1211~~: Tasks Disappearing Across Platforms (PWA/Tauri/Web) (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-07)
 
 **Problem**: Tasks may still be disappearing across platforms — PWA on mobile, Tauri desktop app, and web. A task created or edited on one platform can vanish when synced to another. This is the highest severity data loss bug possible.
 
@@ -174,6 +174,20 @@
 **Problem**: Task positions drift/shift on the canvas in the Tauri desktop app. Positions change unexpectedly, causing tasks to end up in wrong locations.
 
 **Investigation**: TBD - checking canvas sync, drag handlers, and geometry invariant violations.
+
+---
+
+### BUG-1216: Canvas Mouse Drift During Drag on Tauri (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
+
+**Problem**: When dragging a task node on the canvas in the Tauri desktop app, the node drifts away from the mouse cursor. The cursor and the dragged node end up at noticeably different positions (user screenshot shows significant offset). This makes precise canvas arrangement impossible.
+
+**Platform**: Tauri desktop app only (needs verification on PWA/web).
+
+**Likely areas**: Canvas drag handlers, coordinate system conversion (screen ↔ flow coordinates), Tauri webview viewport offset, or Vue Flow event coordinate handling.
+
+**Files to investigate**: `src/composables/canvas/useCanvasInteractions.ts`, `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasCore.ts`
 
 ---
 

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.16",
-  "notes": "v1.2.16: E2E updater test",
-  "pub_date": "2026-02-06T21:03:03.275Z",
+  "version": "1.2.17",
+  "notes": "BUG-1212: Fix sync queue duplicate key corruption - CREATE now uses upsert",
+  "pub_date": "2026-02-07T07:46:53.038Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXgxOGhDRkRQTHQyVURPS2pIaFFPeFo2cFJrRklsZnovOTlMOTlJUzFtSVdMNFFoNGtPZi9mN2xvVUsvU0ZzbTNuME1sclpLSU55VW93Q1BFa3d4VUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDExNzgzCWZpbGU6Rmxvd1N0YXRlXzEuMi4xNl9hbWQ2NC5BcHBJbWFnZQpwNTMyZHJ1YWx1SEtMeWMrZnduS2J6SXFPNHAwQTZQVUc2bUdCS1I2N3ZyY0VTSzBpQTNKcHRnbTJ5WHZtS0d0aW4zcitMbmRBeHVEN3dpYW1QMEdEZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.16_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTQrSTlpYkMwcE9XMVVFb1IxMG5yWUtncmdOV1J3Z2hGQm5qQ043K3NPQ1pkSUlQMElwRVJZM09kMHBwQnZ6SmswdEc0SjNjbU1uUnhIa3JXM0g1TGcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDUwNDEyCWZpbGU6Rmxvd1N0YXRlXzEuMi4xN19hbWQ2NC5BcHBJbWFnZQpueUpQRlNDWjJ6U2JQR2lHeElJOHo0VzJWaW1ZOS9YSkJvVXk1OGI5NURLRkFuZlRXWmxOeTZGcHJMSDFMb0J4YUxZR3pjb1Njc1lTV1BqcTR5UWxCQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.17_amd64.AppImage"
     }
   }
 }

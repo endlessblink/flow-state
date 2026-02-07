@@ -18,6 +18,7 @@
         :required="required"
         :class="inputClasses"
         :style="inputStyles"
+        :aria-describedby="helperTextId"
         @blur="$emit('blur', $event)"
         @focus="$emit('focus', $event)"
         @keydown.enter="$emit('enter', $event)"
@@ -26,7 +27,7 @@
       <slot name="suffix" />
     </div>
 
-    <span v-if="helperText" class="helper-text">
+    <span v-if="helperText" :id="helperTextId" class="helper-text">
       {{ helperText }}
     </span>
   </div>
@@ -67,6 +68,7 @@ const emit = defineEmits<{
 
 const inputRef = ref<HTMLInputElement>()
 const inputId = computed(() => props.id || `input-${Math.random().toString(36).substr(2, 9)}`)
+const helperTextId = computed(() => props.helperText ? `${inputId.value}-helper` : undefined)
 
 // Initialize slots for Vue 3 Composition API
 const slots = useSlots()

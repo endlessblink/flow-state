@@ -221,10 +221,8 @@ onUnmounted(() => {
   border: none !important;
   outline: none !important;
   border-radius: var(--radius-xl);
-  /* Glassmorphism: purple-tinted semi-transparent with blur */
-  background: rgba(32, 30, 48, 0.55) !important;
-  backdrop-filter: blur(20px) saturate(1.2);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  /* BUG-1216: backdrop-filter removed for performance - blur(20px) on every node kills pan/zoom */
+  background: rgba(32, 30, 48, 0.95) !important;
   /* Subtle border for definition */
   border: 1px solid var(--glass-border) !important;
   /* TASK-071: Fixed width to force vertical text wrapping instead of horizontal expansion */
@@ -234,7 +232,8 @@ onUnmounted(() => {
   /* FOUC FIX: Set min-height to prevent collapse before content rendering */
   min-height: 80px;
   position: relative;
-  transition: all var(--duration-normal) var(--spring-smooth);
+  /* BUG-1216: explicit properties only - 'all' causes drag sluggishness via transform */
+  transition: box-shadow var(--duration-normal) var(--spring-smooth), border-color var(--duration-normal) var(--spring-smooth), opacity var(--duration-normal) var(--spring-smooth);
   cursor: grab;
   user-select: none;
   /* Clean shadow for depth */
@@ -333,7 +332,7 @@ onUnmounted(() => {
   /* Prevent any transition effects during drag to avoid ghosting */
   transition: none !important;
   animation: none !important;
-  transform: scale(0.95) !important;
+  /* BUG-1216: scale() conflicts with Vue Flow translate() positioning - removed */
   opacity: 0.8 !important;
   /* Ensure clean visual state during drag */
   box-shadow: var(--shadow-dark-lg) !important;
@@ -346,6 +345,10 @@ onUnmounted(() => {
   will-change: auto !important;
   outline: none !important;
   border: none !important;
+}
+
+.task-node.is-dragging:hover {
+  transform: none !important; /* BUG-1216: prevent hover transform during drag */
 }
 
 /* Creation Pulse Animation - Gentle feedback when task is first added to canvas */

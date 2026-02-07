@@ -177,17 +177,31 @@
 
 ---
 
-### BUG-1216: Canvas Mouse Drift During Drag on Tauri (🔄 IN PROGRESS)
+### BUG-1218: RTL Missing in Calendar Task Create Dialog and Timer Task Name (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
 
-**Problem**: When dragging a task node on the canvas in the Tauri desktop app, the node drifts away from the mouse cursor. The cursor and the dragged node end up at noticeably different positions (user screenshot shows significant offset). This makes precise canvas arrangement impossible.
+**Problem**: The Calendar-specific QuickTaskCreate dialog and the header timer task name don't support RTL/Hebrew text, while the rest of the app does. Hebrew text in the calendar task title input shows LTR cursor position. Timer task name in the header bar doesn't auto-detect Hebrew direction.
 
-**Platform**: Tauri desktop app only (needs verification on PWA/web).
+**Fix**:
+1. Add `useHebrewAlignment` to `QuickTaskCreate.vue` (Calendar variant) — matches `QuickTaskCreateModal.vue`
+2. Fix `.timer-task` CSS in `AppHeader.vue` — use `unicode-bidi: plaintext` unconditionally instead of `:dir(rtl)` selector that never matches in LTR documents
 
-**Likely areas**: Canvas drag handlers, coordinate system conversion (screen ↔ flow coordinates), Tauri webview viewport offset, or Vue Flow event coordinate handling.
+---
 
-**Files to investigate**: `src/composables/canvas/useCanvasInteractions.ts`, `src/composables/canvas/useCanvasEvents.ts`, `src/composables/canvas/useCanvasCore.ts`
+### ~~BUG-1216~~: Canvas Mouse Drift + Performance on Tauri (👀 REVIEW)
+
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-07)
+
+**Problem**: Canvas drag drift, sluggish pan/zoom, and typing lag on Tauri desktop app.
+
+**Root Causes Found & Fixed**:
+1. **Cursor drift**: CSS `transform: scale()` on drag/hover overriding Vue Flow's `transform: translate()` — removed 3 conflicting scale transforms
+2. **Drag sluggishness**: `transition: all` and orphaned `transition: transform` on nodes — replaced with explicit property transitions
+3. **Pan/zoom lag**: `backdrop-filter: blur(20px)` on TaskNode/GroupNode, edge `transition: all`, production console.logs in hot paths — removed/fixed/dev-gated
+4. **Zoom "double take"**: `onMoveEnd` on every scroll-wheel tick writing to reactive Pinia store — debounced 150ms
+5. **Pan sluggishness**: `only-render-visible-elements` mount/unmount during pan — removed
+6. **Typing lag**: `will-change: transform` on viewport, `text-rendering: optimizeLegibility`, `contain: layout paint` — reverted/simplified
 
 ---
 
@@ -208,15 +222,31 @@
 
 ---
 
-### BUG-1204: Challenges Table 404 / Initialization Failure (📋 PLANNED)
+### BUG-1204: Challenges Table 404 / Initialization Failure (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-06)
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-07)
 
-**Problem**: Console errors show `user_challenges` table returning 404 and `[Challenges] Initialization failed`. The challenges migration (`20260206070234_challenges.sql`) exists but table may not be applied to the database.
+**Problem**: Console errors show `user_challenges` table returning 404 and `[Challenges] Initialization failed`. The challenges migration existed locally but was never applied to the VPS database.
+
+**Root Cause**: VPS has no Supabase CLI migration tracking (`supabase_migrations.schema_migrations` doesn't exist). Migrations were applied manually via direct SQL but the challenges migration was missed.
+
+**Additional Issue Found**: Two conflicting migration files existed (`20260206070234` and `20260206163002`) creating the same tables with different schemas. Code expected columns from both (e.g., `created_at`/`updated_at` from older, computed `completion_rate` from newer).
+
+**Fix Applied (2026-02-07)**:
+1. Merged both migrations into single canonical file (`20260206163002_challenges.sql`)
+2. Deleted duplicate migration (`20260206070234_challenges.sql`)
+3. Applied merged migration directly to VPS via SSH (`docker exec -i supabase-db psql`)
+4. Verified PostgREST serves both endpoints (HTTP 200)
+
+**Tables Created**: `user_challenges`, `challenge_history` (VPS now has 19 tables)
+**Columns Added to `user_gamification`**: 9 new RPG fields (corruption, multiplier, class, counters)
+**Also Created**: RLS policies, indexes, helper functions, auto-archive trigger, realtime subscription
+
+**Known Remaining Issue**: `updateChallengeCounters()` uses `supabase.rpc('increment')` which doesn't exist — but the function is scaffolded MVP code that just logs (line 680). Not blocking.
 
 **Errors**:
-- `Failed to load resource: 404 (Not Found) (user_challenges)`
-- `[Challenges] Initialization failed`
+- `Failed to load resource: 404 (Not Found) (user_challenges)` — **FIXED**
+- `[Challenges] Initialization failed` — **FIXED** (pending user verification)
 
 ---
 
@@ -268,6 +298,16 @@
 3. `src/stores/canvas/canvasUi.ts` — Persist display toggles + snap/guides
 4. `src/stores/tasks/taskPersistence.ts` — Add missing `activeDurationFilter` to persisted filters
 5. Key naming convention: `flowstate:` prefix with kebab-case
+
+---
+
+### TASK-1217: Add "Today" Filter to KDE Plasma Widget (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-07)
+
+Add a "Today" button/filter option to the KDE Plasma widget's task list that filters to only show tasks with today's due date. Queries `due_date` column via Supabase REST API.
+
+**Files**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 
 ---
 

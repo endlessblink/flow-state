@@ -515,14 +515,25 @@ export function useCanvasOrchestrator() {
             positionManagerUnsubscribe.value()
             positionManagerUnsubscribe.value = null
         }
+        // BUG-1216: Clean up viewport debounce timer
+        if (viewportSaveTimer) {
+            clearTimeout(viewportSaveTimer)
+            viewportSaveTimer = null
+        }
     })
 
     // Persist Viewport on Change
+    // BUG-1216: Debounce viewport persistence to prevent "double take" glitch during scroll-wheel zoom.
+    // Each scroll tick triggers a zoom animation → onMoveEnd fires → reactive store update → re-render.
+    // Without debounce, rapid scroll-wheel zoom causes cascading re-renders mid-animation.
+    let viewportSaveTimer: ReturnType<typeof setTimeout> | null = null
     onMoveEnd((flow) => {
         if (flow && flow.flowTransform) {
-            // Debounce viewport saves slightly to strictly avoid slamming store
-            // (VueFlow handles throttling internal events, but good to be safe)
-            canvasStore.setViewport(flow.flowTransform.x, flow.flowTransform.y, flow.flowTransform.zoom)
+            if (viewportSaveTimer) clearTimeout(viewportSaveTimer)
+            viewportSaveTimer = setTimeout(() => {
+                canvasStore.setViewport(flow.flowTransform.x, flow.flowTransform.y, flow.flowTransform.zoom)
+                viewportSaveTimer = null
+            }, 150)
         }
     })
 
@@ -541,6 +552,13 @@ export function useCanvasOrchestrator() {
     watch(() => taskStore.hideCanvasOverdueTasks, () => {
         if (!isInitialized.value) return
         batchedSyncNodes()
+    })
+    // BUG-1210 FIX: Watch smart view changes to re-sync canvas nodes
+    // Without this, switching to "This Week" doesn't refresh canvas when task count stays the same
+    watch(() => taskStore.activeSmartView, () => {
+        if (!isInitialized.value) return
+        batchedSyncNodes()
+        batchedSyncEdges()
     })
 
     // REACTIVITY FIX: Watch for manual sync requests from context menus
@@ -561,8 +579,9 @@ export function useCanvasOrchestrator() {
     let isSyncingFromWatcher = false
 
     // CRITICAL FIX: Watch for task data changes (e.g. after async load)
-    // Only watch task count changes, not deep property changes
-    watch(() => tasksWithCanvasPosition.value.length, () => {
+    // BUG-1210: Watch task IDs, not just length — smart view switches swap which tasks
+    // are visible without necessarily changing the count
+    watch(() => tasksWithCanvasPosition.value.map(t => t.id).join(','), () => {
         // Skip during initialization - onMounted handles initial sync
         if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
@@ -707,27 +726,30 @@ export function useCanvasOrchestrator() {
             // from clearing selection. Vue Flow's default behavior is correct - let it work.
 
             // DRIFT LOGGING: Log ALL changes from Vue Flow to catch position drift
-            const positionChanges = changes.filter((c: any) => c.type === 'position')
-            if (positionChanges.length > 0) {
-                console.log(`📍[VUEFLOW-CHANGE] ${positionChanges.length} position changes`,
-                    positionChanges.map((c: any) => ({
-                        id: c.id?.slice(0, 8),
-                        position: c.position ? { x: Math.round(c.position.x), y: Math.round(c.position.y) } : null,
-                        positionAbsolute: c.positionAbsolute ? { x: Math.round(c.positionAbsolute.x), y: Math.round(c.positionAbsolute.y) } : null,
-                        dragging: c.dragging
-                    }))
-                )
-            }
+            // BUG-1216: DEV-gated — these fire on every drag frame in production
+            if (import.meta.env.DEV) {
+                const positionChanges = changes.filter((c: any) => c.type === 'position')
+                if (positionChanges.length > 0) {
+                    console.log(`📍[VUEFLOW-CHANGE] ${positionChanges.length} position changes`,
+                        positionChanges.map((c: any) => ({
+                            id: c.id?.slice(0, 8),
+                            position: c.position ? { x: Math.round(c.position.x), y: Math.round(c.position.y) } : null,
+                            positionAbsolute: c.positionAbsolute ? { x: Math.round(c.positionAbsolute.x), y: Math.round(c.positionAbsolute.y) } : null,
+                            dragging: c.dragging
+                        }))
+                    )
+                }
 
-            // Also log dimension changes which might affect layout
-            const dimensionChanges = changes.filter((c: any) => c.type === 'dimensions')
-            if (dimensionChanges.length > 0) {
-                console.log(`📍[VUEFLOW-DIMENSIONS] ${dimensionChanges.length} dimension changes`,
-                    dimensionChanges.map((c: any) => ({
-                        id: c.id?.slice(0, 8),
-                        dimensions: c.dimensions
-                    }))
-                )
+                // Also log dimension changes which might affect layout
+                const dimensionChanges = changes.filter((c: any) => c.type === 'dimensions')
+                if (dimensionChanges.length > 0) {
+                    console.log(`📍[VUEFLOW-DIMENSIONS] ${dimensionChanges.length} dimension changes`,
+                        dimensionChanges.map((c: any) => ({
+                            id: c.id?.slice(0, 8),
+                            dimensions: c.dimensions
+                        }))
+                    )
+                }
             }
 
             applyNodeChanges(changes)

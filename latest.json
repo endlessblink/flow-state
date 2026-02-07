@@ -1,11 +1,11 @@
 {
-  "version": "1.2.19",
-  "notes": "v1.2.19: Add updater diagnostics for E2E update test",
-  "pub_date": "2026-02-07T08:27:37.390Z",
+  "version": "1.2.25",
+  "notes": "TASK-1186: AI overhaul - 20 tools, markdown chat, persistence, tauriFetch, provider health, API keys",
+  "pub_date": "2026-02-07T16:42:23.991Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTNwRmJUVWtQTUVvZWF6UEJJYzIxZ3NRZDRSWSsvbndOS2Q5ZDdIUFl6RVFmWFNIeWNXRnNJc2FMZlNVMUl3VFB6WmZDaVFORldWZXl2djdpL0xVWlFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDUyODU3CWZpbGU6Rmxvd1N0YXRlXzEuMi4xOV9hbWQ2NC5BcHBJbWFnZQpQKzZoOW1vTXJqMy9rOCs2UGRUZUpHSnNwemdvYlcrUjJJWUlLeFM5bEVzVkRrb1ZMbWY3M0FhSU00ZXl0S25uSGNMQThrc1oySjJKVm1IN0NrT0NDZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.19_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTFOd09iRmMrc3IzQThJeGFEQlc1RzZkUzN4enZFbkxCREowVEpTYWNzSjhBQWpmQjNVRmdPdGZUeEt5Uk9qaTZ5RjdKcnJQUUttTmJ5QUZFc1BGZXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDgyNTQzCWZpbGU6Rmxvd1N0YXRlXzEuMi4yNV9hbWQ2NC5BcHBJbWFnZQpxQkdzQ3Z6aDZmVjVQM0xJNWlNZFg1OTRQRU1za05CSkh5eGVpVEJHcndkSDM3dzRHRStIU0NpUjJrMW5DWld4azV4aDJPUnNVVkgxTlZjU253WlJBQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.25_amd64.AppImage"
     }
   }
 }

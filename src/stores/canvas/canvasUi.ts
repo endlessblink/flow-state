@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
@@ -41,9 +41,9 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
     // Group display state
     const activeGroupId = ref<string | null>(null)
-    // TASK-1215: Persist canvas preferences across restarts
-    const showGroupGuides = useStorage<boolean>('flowstate:canvas-group-guides', true)
-    const snapToGroups = useStorage<boolean>('flowstate:canvas-snap-groups', true)
+    // TASK-1215: Persist canvas preferences across restarts via Tauri store + localStorage
+    const showGroupGuides = usePersistentRef<boolean>('flowstate:canvas-group-guides', true)
+    const snapToGroups = usePersistentRef<boolean>('flowstate:canvas-snap-groups', true)
 
     // Sync trigger for external components
     const syncTrigger = ref(0)
@@ -100,11 +100,11 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         // syncTrigger.value++ // REMOVED - no longer allowed
     }
 
-    // Node display preferences (TASK-1215: Persist across restarts)
-    const showPriorityIndicator = useStorage<boolean>('flowstate:canvas-show-priority', true)
-    const showStatusBadge = useStorage<boolean>('flowstate:canvas-show-status', true)
-    const showDurationBadge = useStorage<boolean>('flowstate:canvas-show-duration', true)
-    const showScheduleBadge = useStorage<boolean>('flowstate:canvas-show-schedule', true)
+    // Node display preferences (TASK-1215: Persist across restarts via Tauri store + localStorage)
+    const showPriorityIndicator = usePersistentRef<boolean>('flowstate:canvas-show-priority', true)
+    const showStatusBadge = usePersistentRef<boolean>('flowstate:canvas-show-status', true)
+    const showDurationBadge = usePersistentRef<boolean>('flowstate:canvas-show-duration', true)
+    const showScheduleBadge = usePersistentRef<boolean>('flowstate:canvas-show-schedule', true)
 
     // Zoom configuration
     const zoomConfig = ref({

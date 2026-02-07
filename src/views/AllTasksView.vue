@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useStorage } from '@vueuse/core'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useMobileDetection } from '@/composables/useMobileDetection'
@@ -107,10 +108,10 @@ const timerStore = useTimerStore()
 // Computed properties stay on the store to maintain full reactivity chain
 const { hideDoneTasks } = storeToRefs(taskStore)
 
-// View State (local component state, no Pinia store needed)
-const viewType = ref<ViewType>('list')
-const density = ref<DensityType>('comfortable')
-const sortBy = ref('dueDate')
+// View State (TASK-1215: Persist across restarts via useStorage)
+const viewType = useStorage<ViewType>('flowstate:all-tasks-view-type', 'list')
+const density = useStorage<DensityType>('flowstate:all-tasks-density', 'comfortable')
+const sortBy = useStorage<string>('flowstate:all-tasks-sort-by', 'dueDate')
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
 

@@ -372,6 +372,9 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_notification::init())
+        // FEATURE-1194: tauri-plugin-updater 2.10 plugin Builder has no event hooks
+        // (on_before_exit is on UpdaterBuilder, not the plugin Builder).
+        // Updater diagnostics are logged at startup in setup() below instead.
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
@@ -404,6 +407,42 @@ pub fn run() {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
+            }
+
+            // FEATURE-1194: Log $APPIMAGE path for updater diagnostics
+            // The Tauri updater replaces the file at $APPIMAGE during updates.
+            // If $APPIMAGE is unset, the updater cannot locate the binary to replace.
+            // Note: eprintln! used alongside log! because the log plugin is only
+            // registered in debug builds, but we need this output in release too.
+            match std::env::var("APPIMAGE") {
+                Ok(path) => {
+                    eprintln!("[updater-diag] $APPIMAGE = {}", path);
+                    log::info!("[updater-diag] $APPIMAGE = {}", path);
+                    if std::path::Path::new(&path).exists() {
+                        eprintln!("[updater-diag] $APPIMAGE path exists on disk");
+                        log::info!("[updater-diag] $APPIMAGE path exists on disk");
+                    } else {
+                        eprintln!("[updater-diag] WARNING: $APPIMAGE path does NOT exist: {}", path);
+                        log::warn!("[updater-diag] $APPIMAGE path does NOT exist on disk: {}", path);
+                    }
+                }
+                Err(_) => {
+                    eprintln!("[updater-diag] WARNING: $APPIMAGE is NOT set - updater will fail to replace binary");
+                    eprintln!("[updater-diag] This may be a .deb install instead of AppImage");
+                    log::warn!("[updater-diag] $APPIMAGE is NOT set - updater will fail to replace binary");
+                }
+            }
+
+            // Also log the current executable path for reference
+            match std::env::current_exe() {
+                Ok(exe) => {
+                    eprintln!("[updater-diag] current_exe = {}", exe.display());
+                    log::info!("[updater-diag] current_exe = {}", exe.display());
+                }
+                Err(e) => {
+                    eprintln!("[updater-diag] Failed to get current_exe: {}", e);
+                    log::warn!("[updater-diag] Failed to get current_exe: {}", e);
+                }
             }
 
             // DevTools: Right-click → Inspect works in dev builds only

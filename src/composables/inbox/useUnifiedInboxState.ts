@@ -26,12 +26,12 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // BUG-1051: Persist filter to localStorage so it survives refresh
     const activeTimeFilter = useStorage<TimeFilterType>('canvas-inbox-time-filter', 'all')
 
-    // --- Advanced Filter State ---
-    const showAdvancedFilters = ref(false)
-    const unscheduledOnly = ref(false)
-    const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
-    const selectedProject = ref<string | null>(null)
-    const selectedDuration = ref<DurationCategory | null>(null)
+    // --- Advanced Filter State (TASK-1215: Persist across restarts) ---
+    const showAdvancedFilters = useStorage<boolean>('flowstate:inbox-advanced-filters', false)
+    const unscheduledOnly = useStorage<boolean>('flowstate:inbox-unscheduled-only', false)
+    const selectedPriority = useStorage<'high' | 'medium' | 'low' | null>('flowstate:inbox-priority-filter', null)
+    const selectedProject = useStorage<string | null>('flowstate:inbox-project-filter', null)
+    const selectedDuration = useStorage<DurationCategory | null>('flowstate:inbox-duration-filter', null)
 
     // TASK-1073: Sort state (persisted)
     const sortBy = useStorage<SortByType>('inbox-sort-by', 'newest')
@@ -45,7 +45,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Done Tasks Filter ---
     // showDoneOnly = false: Show active tasks (non-done)
     // showDoneOnly = true: Show ONLY done tasks
-    const showDoneOnly = ref(false)
+    const showDoneOnly = useStorage<boolean>('flowstate:inbox-show-done', false)
     // For backwards compatibility with prop name
     const currentHideDoneTasks = computed(() => !showDoneOnly.value)
     const toggleHideDoneTasks = () => {

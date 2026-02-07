@@ -16,6 +16,8 @@
         placeholder="Task name"
         aria-label="Task name"
         class="title-input"
+        :class="[titleAlignmentClasses]"
+        :style="titleAlignmentStyles"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
       >
@@ -27,6 +29,8 @@
         placeholder="Description"
         aria-label="Task description"
         class="description-input"
+        :class="[descAlignmentClasses]"
+        :style="descAlignmentStyles"
         @keydown.enter="handleCreate"
         @keydown.esc="$emit('close')"
       >
@@ -165,6 +169,7 @@ import { Calendar, Flag, Clock, Inbox } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
   isOpen: boolean
@@ -194,6 +199,13 @@ const localDate = ref('')
 const localStartTime = ref('')
 const localEndTime = ref('')
 const hasTime = ref(true) // Time is enabled by default when coming from calendar
+
+// Hebrew alignment
+const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
+const titleAlignmentClasses = computed(() => getAlignmentClasses(taskTitle.value))
+const titleAlignmentStyles = computed(() => applyInputAlignment(taskTitle.value))
+const descAlignmentClasses = computed(() => getAlignmentClasses(taskDescription.value))
+const descAlignmentStyles = computed(() => applyInputAlignment(taskDescription.value))
 
 const projects = computed(() => taskStore.projects)
 
@@ -619,7 +631,7 @@ watch(() => props.isOpen, (isOpen) => {
   color: var(--text-muted);
   flex-shrink: 0;
   position: absolute;
-  left: var(--space-3);
+  inset-inline-start: var(--space-3);
   z-index: 1;
   pointer-events: none;
 }
@@ -631,7 +643,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .compact-select :deep(.select-trigger) {
   padding: var(--space-2) var(--space-3);
-  padding-left: calc(var(--space-3) + 14px + var(--space-2));
+  padding-inline-start: calc(var(--space-3) + 14px + var(--space-2));
   min-height: auto;
   background: var(--glass-bg-tint);
   border-color: var(--glass-border);

@@ -52,12 +52,13 @@
           <div class="gamification-widgets">
             <button
               class="gamification-trigger"
+              :class="{ 'gamification-trigger--glow': isIntense }"
               title="Open Gamification Panel"
               @click="showGamificationPanel = !showGamificationPanel"
             >
               <LevelBadge />
-              <XpBar class="header-xp-bar" />
-              <StreakCounter />
+              <XpBar v-if="showAtIntensity('moderate')" class="header-xp-bar" />
+              <StreakCounter v-if="showAtIntensity('moderate')" />
             </button>
 
             <!-- Gamification Panel Dropdown -->
@@ -82,11 +83,11 @@
 
           <!-- Modals -->
           <AchievementsModal
-            v-if="showAchievementsModal"
+            :open="showAchievementsModal"
             @close="showAchievementsModal = false"
           />
           <ShopModal
-            v-if="showShopModal"
+            :open="showShopModal"
             @close="showShopModal = false"
           />
         </template>
@@ -132,7 +133,7 @@
               <div class="timer-time">
                 {{ timerStore.displayTime }}
               </div>
-              <div class="timer-task">
+              <div class="timer-task" dir="auto">
                 {{ timerStore.currentTaskName || '&nbsp;' }}
               </div>
             </div>
@@ -212,6 +213,15 @@
           Quick Sort
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
+        <router-link
+          v-if="showAtIntensity('moderate')"
+          to="/cyberflow"
+          class="view-tab"
+          :class="{ 'cyberflow-tab--glow': isIntense }"
+          active-class="active"
+        >
+          Cyberflow
+        </router-link>
       </div>
     </div>
   </header>
@@ -229,12 +239,14 @@ import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
 import { LevelBadge, XpBar, StreakCounter, GamificationPanel, AchievementsModal, ShopModal } from '@/components/gamification'
+import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
 
 const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
+const { showAtIntensity, isIntense } = useCyberflowTheme()
 
 // FEATURE-1118: Gamification panel/modal states
 const showGamificationPanel = ref(false)
@@ -254,7 +266,8 @@ const routeNameToTitle = {
   'calendar-test': 'Calendar Test',
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
-  'design-system': 'Design System'
+  'design-system': 'Design System',
+  'cyberflow': 'Cyberflow'
 }
 
 // Define proper types for page title info
@@ -572,15 +585,9 @@ const startLongBreak = async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* RTL support: inherit document direction */
-  direction: inherit;
-  text-align: start;
-}
-
-/* RTL-specific: Let browser detect text direction */
-:dir(rtl) .timer-task {
-  direction: rtl;
+  /* RTL support: auto-detect text direction for Hebrew/Arabic */
   unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .timer-controls {
@@ -832,5 +839,24 @@ const startLongBreak = async () => {
   position: fixed;
   inset: 0;
   z-index: 99;
+}
+
+/* Cyberflow intensity: intense glow on gamification trigger */
+.gamification-trigger--glow {
+  box-shadow: 0 0 8px var(--neon-cyan, rgba(0, 255, 255, 0.4)),
+              0 0 16px var(--neon-cyan, rgba(0, 255, 255, 0.2));
+  animation: cyberflowPulse 2s ease-in-out infinite;
+}
+
+/* Cyberflow intensity: intense glow on Cyberflow nav tab */
+.cyberflow-tab--glow {
+  box-shadow: 0 0 8px var(--neon-magenta, rgba(255, 0, 255, 0.4)),
+              0 0 16px var(--neon-magenta, rgba(255, 0, 255, 0.2));
+  animation: cyberflowPulse 2s ease-in-out infinite;
+}
+
+@keyframes cyberflowPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
 }
 </style>

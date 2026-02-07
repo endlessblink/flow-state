@@ -233,9 +233,13 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
     switch (operation.operation) {
       case 'create': {
-        // Insert with the entity ID
         const insertData = { id: entityId, ...payload }
-        result = await supabase.from(tableName).insert(insertData).select()
+        // BUG-1212: Use upsert instead of insert to handle duplicate key gracefully.
+        // When the direct save (createTask → saveSpecificTasks) succeeds before the
+        // sync queue processes, the row already exists. Using upsert makes this
+        // idempotent — matching the pattern in useSupabaseDatabase.ts saveTask/saveTasks.
+        console.debug(`🔄 [SYNC] CREATE via upsert for ${entityType}:${entityId} (idempotent)`)
+        result = await supabase.from(tableName).upsert(insertData, { onConflict: 'id' }).select()
         break
       }
 
@@ -270,11 +274,13 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
             .single()
 
           if (serverState.error) {
-            // Entity might be deleted - treat as permanent failure
+            // BUG-1211 FIX: Entity not found — likely deleted on another device.
+            // Mark as success to remove from queue (can't update a deleted entity),
+            // but log prominently so this is visible in debugging.
             if (serverState.error.code === 'PGRST116') {
-              console.log(`🗑️ [SYNC] Entity ${entityId} not found on server (deleted?), discarding update`)
+              console.warn(`⚠️ [SYNC] Entity ${entityType}:${entityId} not found on server (deleted on another device?). Queued update discarded — data in this update is lost.`)
               return {
-                success: true, // Mark as success to remove from queue
+                success: true,
                 operation
               }
             }
@@ -303,10 +309,13 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
             result = forceResult
           } else {
-            // Server change is newer - accept server version (our change is stale)
-            console.log(`📥 [SYNC] LWW: Server wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
+            // BUG-1211 FIX: Server change is newer — our local change is discarded.
+            // Log prominently so this is traceable. The local Pinia state will remain
+            // stale until the next loadFromDatabase() call picks up the server version
+            // via smart merge. This is not data loss (server has the newer version),
+            // but the local UI may show stale data temporarily.
+            console.warn(`⚠️ [SYNC] LWW: Server wins for ${entityType}:${entityId}. Local change DISCARDED (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()}). Local state will update on next sync.`)
 
-            // Mark as success - don't retry, server has newer data
             return {
               success: true,
               operation,
@@ -318,18 +327,18 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       }
 
       case 'delete': {
-        // Soft delete if the table supports it, otherwise hard delete
-        // FlowState uses soft delete (_soft_deleted flag)
+        // BUG-1211 FIX: Use correct DB column name `is_deleted` (not app-side `_soft_deleted`).
+        // The sync orchestrator bypasses supabaseMappers, so we must use DB column names directly.
+        // Previously used `_soft_deleted` which ALWAYS failed, causing fallback to hard DELETE
+        // which created permanent tombstones and broadcast realtime DELETE to all devices.
         result = await supabase
           .from(tableName)
-          .update({ _soft_deleted: true })
+          .update({ is_deleted: true, deleted_at: new Date().toISOString() })
           .eq('id', entityId)
           .select()
 
-        // If soft delete fails, try hard delete
-        if (result.error) {
-          result = await supabase.from(tableName).delete().eq('id', entityId)
-        }
+        // BUG-1211 FIX: Removed hard-delete fallback. If soft-delete fails, let the retry
+        // mechanism handle it. Hard deletes create permanent tombstones and are unrecoverable.
         break
       }
     }

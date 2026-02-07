@@ -478,6 +478,11 @@ export function useTaskOperations(
         const deletedTask = _rawTasks.value[index]
         manualOperationInProgress.value = true
 
+        // BUG-1211 FIX: Mark as pending write BEFORE the delete so the realtime
+        // echo (UPDATE with is_deleted=true) doesn't get processed as an external event.
+        // Without this, the realtime handler would redundantly splice the task again.
+        addPendingWrite(taskId)
+
         try {
             // TASK-1177: Queue deletion for offline-first sync FIRST
             // This ensures the delete persists in IndexedDB even if network fails

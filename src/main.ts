@@ -49,6 +49,9 @@ const preloadCriticalResources = async () => {
 
 preloadCriticalResources()
 
+// TASK-1215: Preload UI state from Tauri native store before Vue mounts
+import { preloadTauriUiState } from './composables/usePersistentRef'
+
 // Initialize global error handler
 import './utils/errorHandler'
 
@@ -91,6 +94,10 @@ async function initializeApp() {
   } catch (error) {
     console.warn('⚠️ [MAIN] Initialization monitor warning:', error)
   }
+
+  // TASK-1215: Load UI preferences from Tauri native store into localStorage
+  // BEFORE Vue mounts, so useStorage/usePersistentRef picks up correct values
+  await preloadTauriUiState()
 
   const app = createApp(App)
 

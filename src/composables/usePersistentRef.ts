@@ -28,9 +28,6 @@ let tauriStorePromise: Promise<any> | null = null
 
 const STORE_FILENAME = 'ui-preferences.json'
 
-// All registered keys (for preload)
-const registeredKeys = new Set<string>()
-
 /**
  * Check if we're running in Tauri
  */
@@ -52,6 +49,7 @@ async function getTauriStore(): Promise<any | null> {
       const { load } = await import('@tauri-apps/plugin-store')
       const store = await load(STORE_FILENAME, { defaults: {}, autoSave: false })
       tauriStoreInstance = store
+      console.log('[PERSISTENT-REF] Tauri store loaded:', STORE_FILENAME)
       return store
     } catch (e) {
       console.warn('[PERSISTENT-REF] Failed to load Tauri store:', e)
@@ -71,26 +69,35 @@ async function getTauriStore(): Promise<any | null> {
  * from the Tauri native store on app startup.
  */
 export async function preloadTauriUiState(): Promise<void> {
-  if (!isTauriEnv()) return
+  if (!isTauriEnv()) {
+    console.log('[PERSISTENT-REF] Not in Tauri, skipping preload')
+    return
+  }
 
   try {
+    console.log('[PERSISTENT-REF] Preloading UI state from Tauri store...')
     const store = await getTauriStore()
-    if (!store) return
+    if (!store) {
+      console.warn('[PERSISTENT-REF] Tauri store not available for preload')
+      return
+    }
 
     const entries: [string, any][] = await store.entries()
     let restored = 0
 
+    console.log(`[PERSISTENT-REF] Tauri store has ${entries.length} entries`)
+
     for (const [key, value] of entries) {
-      // Only restore flowstate: prefixed keys (our UI state)
-      if (key.startsWith('flowstate:')) {
-        // useStorage serializes to JSON, so we need to match that format
-        localStorage.setItem(key, JSON.stringify(value))
-        restored++
-      }
+      // useStorage serializes to JSON, so we need to match that format
+      localStorage.setItem(key, JSON.stringify(value))
+      restored++
+      console.log(`[PERSISTENT-REF] Restored: ${key} =`, value)
     }
 
     if (restored > 0) {
       console.log(`[PERSISTENT-REF] Restored ${restored} UI preferences from Tauri store`)
+    } else {
+      console.log('[PERSISTENT-REF] No saved preferences found in Tauri store (first run?)')
     }
   } catch (e) {
     console.warn('[PERSISTENT-REF] Failed to preload Tauri UI state:', e)
@@ -114,6 +121,7 @@ function scheduleTauriSave(key: string) {
 
     try {
       await store.save()
+      console.log(`[PERSISTENT-REF] Flushed ${pendingKeys.size} keys to disk:`, [...pendingKeys])
       pendingKeys.clear()
     } catch (e) {
       console.warn('[PERSISTENT-REF] Failed to save Tauri store:', e)
@@ -127,12 +135,21 @@ function scheduleTauriSave(key: string) {
  *
  * Usage: const myPref = usePersistentRef<boolean>('flowstate:my-pref', false)
  *
- * @param key - Storage key (should use flowstate: prefix)
+ * @param key - Storage key (use flowstate: prefix for new keys)
  * @param defaultValue - Default value if nothing persisted
+ * @param legacyKey - Optional old localStorage key to migrate from
  * @returns Reactive ref backed by localStorage + Tauri store
  */
-export function usePersistentRef<T>(key: string, defaultValue: T): RemovableRef<T> {
-  registeredKeys.add(key)
+export function usePersistentRef<T>(key: string, defaultValue: T, legacyKey?: string): RemovableRef<T> {
+  // Migrate from legacy localStorage key if it exists and new key doesn't
+  if (legacyKey) {
+    const legacyValue = localStorage.getItem(legacyKey)
+    if (legacyValue && !localStorage.getItem(key)) {
+      localStorage.setItem(key, legacyValue)
+      // Don't remove legacy key yet — other code might still read it
+      console.log(`[PERSISTENT-REF] Migrated ${legacyKey} → ${key}`)
+    }
+  }
 
   // useStorage provides reactive localStorage binding
   const storageRef = useStorage<T>(key, defaultValue)

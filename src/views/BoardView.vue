@@ -119,7 +119,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useStorage } from '@vueuse/core'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
@@ -204,10 +204,10 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 
 // BUG-1051: Persist UI state across refreshes
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
-const showFilters = useStorage<boolean>('board-show-filters', false)
+const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
 
-// View Type Switcher (priority, date, status)
-const currentViewType = useStorage<'priority' | 'date' | 'status'>('board-view-type', 'priority')
+// View Type Switcher (priority, date, status) (TASK-1215: Tauri-aware persistence)
+const currentViewType = usePersistentRef<'priority' | 'date' | 'status'>('flowstate:board-view-type', 'priority', 'board-view-type')
 const viewTypeOptions = [
   { value: 'priority' as const, label: 'Priority', icon: Flag },
   { value: 'date' as const, label: 'Due Date', icon: Calendar },

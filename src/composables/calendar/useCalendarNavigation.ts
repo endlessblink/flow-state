@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { useStorage } from '@vueuse/core'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 
 /**
@@ -18,7 +18,8 @@ export function useCalendarNavigation() {
     const currentDate = ref<Date>(new Date())
 
     // View mode IS persisted as a user preference (day/week/month)
-    const viewMode = useStorage<'day' | 'week' | 'month'>('calendar-view-mode', 'day')
+    // TASK-1215: Upgraded to Tauri-aware persistence
+    const viewMode = usePersistentRef<'day' | 'week' | 'month'>('flowstate:calendar-view-mode', 'day', 'calendar-view-mode')
 
     /**
      * Check if current date is today

@@ -1,6 +1,5 @@
 
 import { ref, computed, watch } from 'vue'
-import { useStorage } from '@vueuse/core'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
@@ -24,8 +23,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     // --- Core Filter State ---
     const isCollapsed = ref(false)
-    // BUG-1051: Persist filter to localStorage so it survives refresh
-    const activeTimeFilter = useStorage<TimeFilterType>('canvas-inbox-time-filter', 'all')
+    // BUG-1051: Persist filter (TASK-1215: upgraded to Tauri-aware persistence)
+    const activeTimeFilter = usePersistentRef<TimeFilterType>('flowstate:inbox-time-filter', 'all', 'canvas-inbox-time-filter')
 
     // --- Advanced Filter State (TASK-1215: Persist across restarts via Tauri store + localStorage) ---
     const showAdvancedFilters = usePersistentRef<boolean>('flowstate:inbox-advanced-filters', false)
@@ -34,8 +33,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     const selectedProject = usePersistentRef<string | null>('flowstate:inbox-project-filter', null)
     const selectedDuration = usePersistentRef<DurationCategory | null>('flowstate:inbox-duration-filter', null)
 
-    // TASK-1073: Sort state (persisted)
-    const sortBy = useStorage<SortByType>('inbox-sort-by', 'newest')
+    // TASK-1073: Sort state (TASK-1215: upgraded to Tauri-aware persistence)
+    const sortBy = usePersistentRef<SortByType>('flowstate:inbox-sort-by', 'newest', 'inbox-sort-by')
 
     // TASK-1075: Search query
     const searchQuery = ref('')

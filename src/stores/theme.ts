@@ -6,6 +6,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { themes, DEFAULT_THEME, THEME_STORAGE_KEY, type Theme } from '@/config/themes'
+// TASK-1215: Tauri dual-write for theme persistence
+import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 
 export const useThemeStore = defineStore('theme', () => {
   // ===== State =====
@@ -62,6 +64,13 @@ export const useThemeStore = defineStore('theme', () => {
 
     // Persist to localStorage
     localStorage.setItem(THEME_STORAGE_KEY, themeId)
+    // TASK-1215: Tauri dual-write
+    if (isTauriEnv()) {
+      getTauriStore().then(store => {
+        if (!store) return
+        store.set(THEME_STORAGE_KEY, themeId).then(() => scheduleTauriSave(THEME_STORAGE_KEY))
+      })
+    }
   }
 
   /**

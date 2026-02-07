@@ -4,6 +4,8 @@ import type { Task } from '@/types/tasks'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
+// TASK-1215: Tauri dual-write for filter persistence
+import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 
 export function useTaskPersistence(
     // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
@@ -433,6 +435,19 @@ export function useTaskPersistence(
                 hideCanvasOverdueTasks: hideCanvasOverdueTasks.value
             }
             localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
+
+            // TASK-1215: Also write to Tauri store for reliable persistence
+            if (isTauriEnv()) {
+                const store = await getTauriStore()
+                if (store) {
+                    try {
+                        await store.set(FILTER_STORAGE_KEY, state)
+                        scheduleTauriSave(FILTER_STORAGE_KEY)
+                    } catch (e) {
+                        console.warn('[TaskPersistence] Failed to write filters to Tauri store:', e)
+                    }
+                }
+            }
         }, 500)
     }
 

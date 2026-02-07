@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+// TASK-1215: Tauri dual-write for settings persistence
+import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 
 export interface AppSettings {
     // Timer
@@ -166,6 +168,13 @@ export const useSettingsStore = defineStore('settings', {
 
         saveToStorage() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.$state))
+            // TASK-1215: Tauri dual-write
+            if (isTauriEnv()) {
+                getTauriStore().then(store => {
+                    if (!store) return
+                    store.set(STORAGE_KEY, this.$state).then(() => scheduleTauriSave(STORAGE_KEY))
+                })
+            }
         },
 
         updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {

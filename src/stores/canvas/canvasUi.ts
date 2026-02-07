@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { usePersistentRef } from '@/composables/usePersistentRef'
+import { usePersistentRef, getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
@@ -151,10 +151,15 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
     const setHasInitialFit = (value: boolean) => {
         hasInitialFit.value = value
         viewportInitializedAt.value = value ? Date.now() : null
-        localStorage.setItem('flowstate-canvas-has-initial-fit', JSON.stringify({
-            value,
-            timestamp: Date.now()
-        }))
+        const fitData = { value, timestamp: Date.now() }
+        localStorage.setItem('flowstate-canvas-has-initial-fit', JSON.stringify(fitData))
+        // TASK-1215: Tauri dual-write
+        if (isTauriEnv()) {
+            getTauriStore().then(store => {
+                if (!store) return
+                store.set('flowstate-canvas-has-initial-fit', fitData).then(() => scheduleTauriSave('flowstate-canvas-has-initial-fit'))
+            })
+        }
     }
 
     // Reset hasInitialFit (for testing or when user requests re-center)
@@ -225,6 +230,14 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
             try {
                 // Save to local storage for immediate recovery
                 localStorage.setItem('canvas-viewport', JSON.stringify(newViewport))
+                // TASK-1215: Tauri dual-write
+                if (isTauriEnv()) {
+                    const store = await getTauriStore()
+                    if (store) {
+                        await store.set('canvas-viewport', newViewport)
+                        scheduleTauriSave('canvas-viewport')
+                    }
+                }
 
                 // Also save to Supabase User Settings for cloud persistence
                 const settings = await db.fetchUserSettings()

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 
 export const useCanvasUiStore = defineStore('canvasUi', () => {
@@ -40,8 +41,9 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
 
     // Group display state
     const activeGroupId = ref<string | null>(null)
-    const showGroupGuides = ref(true)
-    const snapToGroups = ref(true)
+    // TASK-1215: Persist canvas preferences across restarts
+    const showGroupGuides = useStorage<boolean>('flowstate:canvas-group-guides', true)
+    const snapToGroups = useStorage<boolean>('flowstate:canvas-snap-groups', true)
 
     // Sync trigger for external components
     const syncTrigger = ref(0)
@@ -98,11 +100,11 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         // syncTrigger.value++ // REMOVED - no longer allowed
     }
 
-    // Node display preferences
-    const showPriorityIndicator = ref(true)
-    const showStatusBadge = ref(true)
-    const showDurationBadge = ref(true)
-    const showScheduleBadge = ref(true)
+    // Node display preferences (TASK-1215: Persist across restarts)
+    const showPriorityIndicator = useStorage<boolean>('flowstate:canvas-show-priority', true)
+    const showStatusBadge = useStorage<boolean>('flowstate:canvas-show-status', true)
+    const showDurationBadge = useStorage<boolean>('flowstate:canvas-show-duration', true)
+    const showScheduleBadge = useStorage<boolean>('flowstate:canvas-show-schedule', true)
 
     // Zoom configuration
     const zoomConfig = ref({

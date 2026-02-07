@@ -15,6 +15,8 @@ export function useTaskPersistence(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     activeSmartView: Ref<any>,
     activeStatusFilter: Ref<string | null>,
+    // TASK-1215: Added duration filter persistence
+    activeDurationFilter: Ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>,
     isLoadingFromDatabase: Ref<boolean>,
     _manualOperationInProgress: Ref<boolean>,
     isLoadingFilters: Ref<boolean>,
@@ -33,6 +35,8 @@ export function useTaskPersistence(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         activeSmartView: any
         activeStatusFilter: string | null
+        // TASK-1215: Added missing duration filter persistence
+        activeDurationFilter?: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
         hideCanvasDoneTasks?: boolean
         hideCalendarDoneTasks?: boolean
         hideCanvasOverdueTasks?: boolean
@@ -392,6 +396,8 @@ export function useTaskPersistence(
                 projectStore.setActiveProject(state.activeProjectId)
                 activeSmartView.value = state.activeSmartView
                 activeStatusFilter.value = state.activeStatusFilter
+                // TASK-1215: Restore duration filter
+                activeDurationFilter.value = state.activeDurationFilter ?? null
                 hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
                 hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
                 hideCanvasOverdueTasks.value = state.hideCanvasOverdueTasks ?? false
@@ -420,6 +426,8 @@ export function useTaskPersistence(
                 activeProjectId: projectStore.activeProjectId,
                 activeSmartView: activeSmartView.value,
                 activeStatusFilter: activeStatusFilter.value,
+                // TASK-1215: Persist duration filter
+                activeDurationFilter: activeDurationFilter.value,
                 hideCanvasDoneTasks: hideCanvasDoneTasks.value,
                 hideCalendarDoneTasks: hideCalendarDoneTasks.value,
                 hideCanvasOverdueTasks: hideCanvasOverdueTasks.value

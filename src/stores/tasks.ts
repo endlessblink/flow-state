@@ -138,6 +138,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const persistence = useTaskPersistence(
     _rawTasks, hideDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
     activeSmartView, activeStatusFilter,
+    activeDurationFilter, // TASK-1215: Persist duration filter
     isLoadingFromDatabase, manualOperationInProgress, isLoadingFilters,
     syncInProgress,
     runAllTaskMigrations

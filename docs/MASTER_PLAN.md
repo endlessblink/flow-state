@@ -240,6 +240,23 @@
 
 ---
 
+### TASK-1215: Persist Full UI State Across Restarts (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
+
+**Problem**: Several UI preferences reset on app restart — inbox advanced filters, All Tasks view type/sort/density, canvas display toggles (priority/status/duration badges), canvas snap/guides, and the task duration filter are all volatile.
+
+**Approach**: Use VueUse `useStorage` (already a dependency, already used in 5 places) to persist the gaps. No new dependencies, no DB changes.
+
+**Changes**:
+1. `src/composables/inbox/useUnifiedInboxState.ts` — Persist advanced filters (priority, project, duration, unscheduled, showDone)
+2. `src/views/AllTasksView.vue` — Persist viewType, density, sortBy
+3. `src/stores/canvas/canvasUi.ts` — Persist display toggles + snap/guides
+4. `src/stores/tasks/taskPersistence.ts` — Add missing `activeDurationFilter` to persisted filters
+5. Key naming convention: `flowstate:` prefix with kebab-case
+
+---
+
 ### BUG-1209: Comprehensive Canvas Position Drift - All Causes (👀 REVIEW)
 
 **Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
@@ -2226,6 +2243,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
+| TASK-1215 | P0 | Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
 | FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |

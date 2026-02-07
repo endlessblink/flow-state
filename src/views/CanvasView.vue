@@ -79,6 +79,8 @@
         @mouseup="handleMouseUp"
         @click="handleCanvasContainerClick"
       >
+        <!-- BUG-1216: virtualization disabled — mount/unmount during pan causes sluggishness.
+             For typical canvas sizes (<100 nodes), keeping all nodes in DOM is faster. -->
         <VueFlow
           ref="vueFlowRef"
           :nodes="nodes"

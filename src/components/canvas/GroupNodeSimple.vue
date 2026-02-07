@@ -322,25 +322,19 @@ const handleResizeEnd = (event: unknown) => {
   /* TASK-073: Double-line border effect - inner solid + outer subtle */
   border: 2px solid rgba(255, 255, 255, 0.35) !important;
   border-radius: var(--radius-lg);
-  /* TASK-079: Brighter background for contrast against dark canvas */
-  background: rgba(45, 48, 58, 0.65) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* BUG-1216: backdrop-filter removed for performance */
+  background: rgba(45, 48, 58, 0.92) !important;
   position: relative;
   z-index: 1;
   /* TASK-073: Outer line via outline for double-border effect */
   outline: 1px solid rgba(255, 255, 255, 0.12);
   outline-offset: 2px;
-  /* TASK-079: Strong glow for zoom-out visibility */
   box-shadow:
-    /* Drop shadows */
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    /* ZOOM FIX: Large colored glow */
-    0 0 80px 20px currentColor,
-    /* TASK-073: Inner subtle highlight */
+    0 8px 24px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: all var(--duration-fast) ease;
+  /* BUG-1216: removed 80px glow spread - too expensive during pan/zoom */
+  /* BUG-1216: explicit properties only - 'all' causes drag sluggishness */
+  transition: box-shadow var(--duration-fast) ease, border-color var(--duration-fast) ease, outline var(--duration-fast) ease, opacity var(--duration-fast) ease;
 }
 
 .section-node.is-dragging {
@@ -357,12 +351,9 @@ const handleResizeEnd = (event: unknown) => {
   outline: 1px solid rgba(255, 255, 255, 0.20);
   outline-offset: 3px;
   box-shadow:
-    0 20px 56px rgba(0, 0, 0, 0.55),
-    0 10px 28px rgba(0, 0, 0, 0.35),
-    /* ZOOM FIX: Even stronger glow on hover */
-    0 0 100px 25px currentColor,
-    /* TASK-073: Brighter inner highlight on hover */
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  /* BUG-1216: removed 100px glow spread on hover */
 }
 
 /* TASK-073: Selected group state - highly visible */

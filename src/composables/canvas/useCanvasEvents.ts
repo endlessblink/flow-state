@@ -50,11 +50,14 @@ export function useCanvasEvents(syncNodes?: () => void) {
     // --- Event Handlers ---
 
     const handlePaneClick = (event: MouseEvent) => {
-        console.log('%c[DEBUG] handlePaneClick FIRED', 'background: red; color: white; font-size: 16px;', {
-            clientX: event.clientX,
-            clientY: event.clientY,
-            target: (event.target as HTMLElement)?.className
-        })
+        // BUG-1216: DEV-gated — styled console.log fires on every pane click
+        if (import.meta.env.DEV) {
+            console.log('%c[DEBUG] handlePaneClick FIRED', 'background: red; color: white; font-size: 16px;', {
+                clientX: event.clientX,
+                clientY: event.clientY,
+                target: (event.target as HTMLElement)?.className
+            })
+        }
 
         // Only Ctrl/Cmd+click toggles group selection
         // Shift is reserved for rubber-band drag selection (handled in useCanvasSelection)

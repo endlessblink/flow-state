@@ -3,11 +3,11 @@
 /* 1. The Container/Viewport */
 .vue-flow__transformation-pane,
 .vue-flow__viewport {
-    /* Force 3D rendering context to prevent flattening into a single bitmap */
-    transform-style: preserve-3d !important;
-    /* Disable bitmap caching optimization */
+    /* BUG-1216: will-change: auto keeps text crisp and typing responsive.
+     * will-change: transform was tried but causes sluggish typing (GPU re-rasterization on keystroke).
+     * Zoom smoothness is handled by debounced onMoveEnd in useCanvasOrchestrator. */
     will-change: auto !important;
-    backface-visibility: visible !important;
+    backface-visibility: hidden !important;
 }
 
 /* 2. The Nodes */
@@ -20,10 +20,12 @@
      * The translateZ(0) trick breaks node dragging. */
     backface-visibility: hidden !important;
 
-    /* Rendering quality hints */
-    text-rendering: optimizeLegibility !important;
-    -webkit-font-smoothing: subpixel-antialiased !important;
-    -moz-osx-font-smoothing: auto !important;
+    /* BUG-1216: Removed text-rendering: optimizeLegibility — forces expensive kerning
+     * calculations on every node. Browser defaults are sufficient for canvas task cards. */
+
+    /* BUG-1216: style containment prevents CSS counter/property leaks between nodes.
+     * layout+paint containment removed — interferes with text input inside nodes. */
+    contain: style;
 }
 
 /* 3. BUG-1116: Disable ALL transitions during drag to prevent lag
@@ -32,8 +34,12 @@
  * "animates" to cursor position instead of snapping instantly. */
 .vue-flow__node.dragging,
 .vue-flow__node.dragging *,
+.vue-flow__node.is-dragging,
+.vue-flow__node.is-dragging *,
 .vue-flow__node.selected.dragging,
-.vue-flow__node.selected.dragging * {
+.vue-flow__node.selected.dragging *,
+.vue-flow__node.selected.is-dragging,
+.vue-flow__node.selected.is-dragging * {
     transition: none !important;
     /* Also disable any animations */
     animation: none !important;

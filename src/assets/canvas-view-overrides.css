@@ -136,18 +136,18 @@
 /* Ensure task nodes stay on top during hover */
 .vue-flow__node:not([data-id^="section-"]):hover {
     z-index: 1001 !important;
-    transform: scale(1.02);
-    transition: transform var(--duration-normal) var(--ease-out);
+    /* BUG-1216: scale() and transition removed - conflicts with Vue Flow translate() positioning */
 }
 
 .vue-flow__edge-path {
     stroke: var(--color-navigation);
     stroke-width: 2px;
-    transition: all var(--duration-normal) var(--ease-out);
+    /* BUG-1216: explicit properties only - 'all' transitions filter during pan */
+    transition: stroke var(--duration-normal) var(--ease-out), stroke-width var(--duration-normal) var(--ease-out);
     /* Crisp rendering without anti-aliasing jaggedness */
     shape-rendering: geometricPrecision;
-    /* Subtle glow on permanent edges */
-    filter: drop-shadow(0 0 4px var(--color-navigation)) drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
+    /* BUG-1216: drop-shadow on all edges permanently is expensive - hover only */
+    filter: none;
 }
 
 .vue-flow__edge {
@@ -568,13 +568,14 @@
 }
 
 /* Drag cleanup CSS to prevent ghost lines and artifacts */
-.vue-flow__node.is-dragging {
+.vue-flow__node.is-dragging,
+.vue-flow__node.dragging {
     /* Prevent any visual artifacts during drag */
     transition: none !important;
     animation: none !important;
     /* Ensure clean visual state */
     opacity: 0.8 !important;
-    transform: scale(0.98) !important;
+    /* BUG-1216: scale() conflicts with Vue Flow translate() positioning - removed */
     z-index: 1000 !important;
 }
 

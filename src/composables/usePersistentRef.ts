@@ -130,6 +130,12 @@ function scheduleTauriSave(key: string) {
 }
 
 /**
+ * Exposed utilities for use by taskPersistence.ts and other manual
+ * localStorage users that need Tauri dual-write support.
+ */
+export { getTauriStore, isTauriEnv, scheduleTauriSave }
+
+/**
  * Create a persistent reactive ref that survives app restarts in both
  * browser and Tauri environments.
  *

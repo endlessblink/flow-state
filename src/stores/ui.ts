@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+// TASK-1215: Tauri dual-write for UI state persistence
+import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 
 const UI_STATE_STORAGE_KEY = 'flow-state-ui-state'
 
@@ -177,6 +179,13 @@ export const useUIStore = defineStore('ui', () => {
   const setLanguage = (languageCode: 'en' | 'he') => {
     locale.value = languageCode
     localStorage.setItem('app-locale', languageCode)
+    // TASK-1215: Tauri dual-write for locale
+    if (isTauriEnv()) {
+      getTauriStore().then(store => {
+        if (!store) return
+        store.set('app-locale', languageCode).then(() => scheduleTauriSave('app-locale'))
+      })
+    }
     persistState()
   }
 
@@ -205,6 +214,14 @@ export const useUIStore = defineStore('ui', () => {
       isDurationSectionExpanded: isDurationSectionExpanded.value
     }
     localStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(state))
+
+    // TASK-1215: Tauri dual-write
+    if (isTauriEnv()) {
+      getTauriStore().then(store => {
+        if (!store) return
+        store.set(UI_STATE_STORAGE_KEY, state).then(() => scheduleTauriSave(UI_STATE_STORAGE_KEY))
+      })
+    }
   }
 
   const loadState = () => {

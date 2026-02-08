@@ -1,11 +1,6 @@
 {
-  "version": "1.2.27",
-  "notes": "BUG-1219: Fix filter persistence in Tauri - add Tauri store fallback read + immediate flush on write",
-  "pub_date": "2026-02-08T06:56:44.675Z",
-  "platforms": {
-    "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTRvbUEzZ0FvU3lWam4raUsvRXo3bHFrenZLVjFoWlRrNkNDbWIxa0c5YkpuYllDRWNRb1ZYRjNTcWxSYmMyMHRhckUzL2M1ZlU1dUowNXd2RGxkOWdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTMzODA0CWZpbGU6Rmxvd1N0YXRlXzEuMi4yN19hbWQ2NC5BcHBJbWFnZQpJd1hiUjlLbkE4ZXFVVjVYRFR2QXhLVGNKb2cyMEhCZlZ2S2JwK3E4dVBpOFg0bG01eXBMZXUxRjF4VmlNK2FGMk5vb3g4SjF1TnVibXBCUlNCZk1EQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.27_amd64.AppImage"
-    }
-  }
+  "version": "1.2.29",
+  "notes": "TASK-1219: Time block notifications + BUG-1219: Filter persistence fix in Tauri",
+  "pub_date": "2026-02-08T08:42:38.690Z",
+  "platforms": {}
 }

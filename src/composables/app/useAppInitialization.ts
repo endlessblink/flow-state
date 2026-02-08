@@ -92,6 +92,11 @@ export function useAppInitialization() {
 
         await loadWithRetry()
 
+        // TASK-1215: Load persisted filters (smart view, project, duration, etc.)
+        // This was previously missing — loadFromDatabase() only loads tasks,
+        // not the filter state. Without this, activeSmartView resets to null on restart.
+        await taskStore.loadPersistedFilters()
+
         // BUG-1207: Tell auth store that app init has loaded stores
         // This prevents the SIGNED_IN handler from doing a redundant double-load
         authStore.markAppInitLoadComplete()

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.25",
-  "notes": "TASK-1186: AI overhaul - 20 tools, markdown chat, persistence, tauriFetch, provider health, API keys",
-  "pub_date": "2026-02-07T16:42:23.991Z",
+  "version": "1.2.27",
+  "notes": "BUG-1219: Fix filter persistence in Tauri - add Tauri store fallback read + immediate flush on write",
+  "pub_date": "2026-02-08T06:56:44.675Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTFOd09iRmMrc3IzQThJeGFEQlc1RzZkUzN4enZFbkxCREowVEpTYWNzSjhBQWpmQjNVRmdPdGZUeEt5Uk9qaTZ5RjdKcnJQUUttTmJ5QUZFc1BGZXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNDgyNTQzCWZpbGU6Rmxvd1N0YXRlXzEuMi4yNV9hbWQ2NC5BcHBJbWFnZQpxQkdzQ3Z6aDZmVjVQM0xJNWlNZFg1OTRQRU1za05CSkh5eGVpVEJHcndkSDM3dzRHRStIU0NpUjJrMW5DWld4azV4aDJPUnNVVkgxTlZjU253WlJBQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.25_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTRvbUEzZ0FvU3lWam4raUsvRXo3bHFrenZLVjFoWlRrNkNDbWIxa0c5YkpuYllDRWNRb1ZYRjNTcWxSYmMyMHRhckUzL2M1ZlU1dUowNXd2RGxkOWdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTMzODA0CWZpbGU6Rmxvd1N0YXRlXzEuMi4yN19hbWQ2NC5BcHBJbWFnZQpJd1hiUjlLbkE4ZXFVVjVYRFR2QXhLVGNKb2cyMEhCZlZ2S2JwK3E4dVBpOFg0bG01eXBMZXUxRjF4VmlNK2FGMk5vb3g4SjF1TnVibXBCUlNCZk1EQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.27_amd64.AppImage"
     }
   }
 }

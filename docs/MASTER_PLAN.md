@@ -3501,6 +3501,25 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
+### ~~TASK-1288~~: Tauri Crash Stability Fixes (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-08)
+
+**Problem**: Tauri desktop app crashed on close and during sync due to multiple issues: unhandled promise rejections, sync intervals firing after teardown, notification floods, and missing Rust panic recovery.
+
+**Fixes Applied (7 files)**:
+1. `src-tauri/Cargo.toml` — Set `panic=unwind` in release profile for graceful panic recovery
+2. `src-tauri/src/lib.rs` — Added release-mode logging for crash diagnostics
+3. `src-tauri/capabilities/default.json` — Added `http:default` permission for curl/fetch
+4. `src/utils/errorHandler.ts` — Added notification throttling (max 3 per 10s) to prevent toast floods
+5. `src/main.ts` — Removed duplicate `unhandledrejection` handler (was conflicting with errorHandler)
+6. `src/composables/useTauriStartup.ts` — Added 5s timeout to close handler to prevent hang-on-exit
+7. `src/composables/sync/useSyncOrchestrator.ts` — Added interval ID guard to prevent sync after teardown
+
+**Deployed**: v1.2.36 via `deploy-tauri-update.sh`
+
+---
+
 ### FEATURE-1118: Gamification System - Design & Implementation (🔄 IN PROGRESS)
 
 **Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-01-30)

@@ -488,8 +488,7 @@ export const useChallengesStore = defineStore('challenges', () => {
       : CORRUPTION_DELTAS.DAILY_COMPLETED
     await updateCorruption(corruptionDelta)
 
-    // Archive to history
-    await archiveToHistory(challenge, 'completed')
+    // DB trigger archive_challenge_to_history handles history insertion automatically
 
     // Update stats counters
     await updateChallengeCounters(challenge.challengeType, 'completed')
@@ -548,8 +547,13 @@ export const useChallengesStore = defineStore('challenges', () => {
 
     // Apply XP penalty if any
     if (challenge.penaltyXp > 0) {
-      // Deduct XP (this would need a new method in gamificationStore)
-      console.log('[Challenges] XP penalty:', -challenge.penaltyXp)
+      try {
+        await gamificationStore.awardXp(-challenge.penaltyXp, 'challenge_penalty', {
+          metadata: { challengeId: challenge.id, challengeTitle: challenge.title },
+        })
+      } catch (e) {
+        console.warn('[Challenges] Failed to apply XP penalty:', e)
+      }
     }
 
     // Update corruption (increase)
@@ -558,8 +562,7 @@ export const useChallengesStore = defineStore('challenges', () => {
       : CORRUPTION_DELTAS.DAILY_FAILED
     await updateCorruption(corruptionDelta)
 
-    // Archive to history
-    await archiveToHistory(challenge, reason)
+    // DB trigger archive_challenge_to_history handles history insertion automatically
 
     // Update stats counters
     await updateChallengeCounters(challenge.challengeType, 'failed')
@@ -662,22 +665,34 @@ export const useChallengesStore = defineStore('challenges', () => {
   ): Promise<void> {
     if (!authStore.user?.id || result === 'failed') return
 
-    const updates: Record<string, unknown> = {
-      total_challenges_completed: supabase.rpc('increment', { x: 1 }),
-    }
+    try {
+      const { data } = await supabase
+        .from('user_gamification')
+        .select('total_challenges_completed, daily_challenges_completed, weekly_challenges_completed, boss_fights_won')
+        .eq('user_id', authStore.user.id)
+        .single()
+      if (!data) return
 
-    if (type === 'daily') {
-      updates.daily_challenges_completed = supabase.rpc('increment', { x: 1 })
-    } else if (type === 'weekly' || type === 'boss') {
-      updates.weekly_challenges_completed = supabase.rpc('increment', { x: 1 })
-      if (type === 'boss') {
-        updates.boss_fights_won = supabase.rpc('increment', { x: 1 })
+      const updates: Record<string, number> = {
+        total_challenges_completed: (data.total_challenges_completed ?? 0) + 1,
       }
-    }
+      if (type === 'daily') {
+        updates.daily_challenges_completed = (data.daily_challenges_completed ?? 0) + 1
+      } else if (type === 'weekly' || type === 'boss') {
+        updates.weekly_challenges_completed = (data.weekly_challenges_completed ?? 0) + 1
+        if (type === 'boss') {
+          updates.boss_fights_won = (data.boss_fights_won ?? 0) + 1
+        }
+      }
 
-    // Simple increment for now (RPC would need to be created)
-    // For MVP, just log the action
-    console.log('[Challenges] Counter update:', type, result)
+      const { error } = await supabase
+        .from('user_gamification')
+        .update(updates)
+        .eq('user_id', authStore.user.id)
+      if (error) console.warn('[Challenges] Failed to update counters:', error)
+    } catch (e) {
+      console.warn('[Challenges] Counter update failed:', e)
+    }
   }
 
   // ===========================================================================

@@ -50,17 +50,17 @@ import {
 
 function mapDbToUserGamification(db: DbUserGamification): UserGamification {
   return {
-    userId: db.user_id,
-    totalXp: db.total_xp,
-    availableXp: db.available_xp,
-    level: db.level,
-    currentStreak: db.current_streak,
-    longestStreak: db.longest_streak,
-    streakFreezes: db.streak_freezes,
+    userId: db.user_id ?? '',
+    totalXp: db.total_xp ?? 0,
+    availableXp: db.available_xp ?? 0,
+    level: db.level ?? 1,
+    currentStreak: db.current_streak ?? 0,
+    longestStreak: db.longest_streak ?? 0,
+    streakFreezes: db.streak_freezes ?? 0,
     lastActivityDate: db.last_activity_date ? new Date(db.last_activity_date) : null,
     xpDecayDate: db.xp_decay_date ? new Date(db.xp_decay_date) : null,
     unlockedThemes: db.unlocked_themes || [],
-    equippedTheme: db.equipped_theme,
+    equippedTheme: db.equipped_theme ?? 'default',
     createdAt: new Date(db.created_at),
     updatedAt: new Date(db.updated_at),
   }
@@ -525,7 +525,7 @@ export const useGamificationStore = defineStore('gamification', () => {
 
     try {
       // Insert XP log
-      await supabase.from('xp_logs').insert({
+      const { error: logError } = await supabase.from('xp_logs').insert({
         user_id: authStore.user.id,
         xp_amount: xpAwarded,
         xp_type: 'earned',
@@ -536,6 +536,7 @@ export const useGamificationStore = defineStore('gamification', () => {
           ...options?.metadata,
         },
       })
+      if (logError) console.warn('[Gamification] Failed to log XP award:', logError)
 
       // ATOMIC UPDATE: Use SQL increment to prevent race conditions
       // Two simultaneous XP awards will both increment correctly
@@ -965,8 +966,6 @@ export const useGamificationStore = defineStore('gamification', () => {
       return { success: false, item, xpSpent: 0, newAvailableXp: profile.value.availableXp, error: 'Already owned' }
     }
 
-    purchaseInProgress = true
-
     if (profile.value.availableXp < item.priceXp) {
       return { success: false, item, xpSpent: 0, newAvailableXp: profile.value.availableXp, error: 'Not enough XP' }
     }
@@ -981,6 +980,7 @@ export const useGamificationStore = defineStore('gamification', () => {
       }
     }
 
+    purchaseInProgress = true
     const newAvailableXp = profile.value.availableXp - item.priceXp
 
     try {

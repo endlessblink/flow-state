@@ -4,6 +4,7 @@
  * FEATURE-1118: Main stats overview panel showing XP, level, streak, and recent achievements
  */
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useGamificationStore } from '@/stores/gamification'
 import XpBar from './XpBar.vue'
 import LevelBadge from './LevelBadge.vue'
@@ -13,11 +14,16 @@ import DailyChallengesPanel from './DailyChallengesPanel.vue'
 import { Trophy, ShoppingBag, ChevronRight, Sparkles, HelpCircle, ChevronDown } from 'lucide-vue-next'
 
 const showHelp = ref(false)
+const router = useRouter()
 
 const emit = defineEmits<{
   openAchievements: []
   openShop: []
 }>()
+
+function goToCyberflow() {
+  router.push('/cyberflow')
+}
 
 const gamificationStore = useGamificationStore()
 
@@ -42,6 +48,12 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
 <template>
   <div class="gamification-panel">
+    <!-- Cyberflow Command Center Link -->
+    <button class="cyberflow-link" @click="goToCyberflow">
+      <span class="cyberflow-link-label">CYBERFLOW COMMAND CENTER</span>
+      <ChevronRight :size="16" class="cyberflow-link-arrow" />
+    </button>
+
     <!-- Header with Level -->
     <div class="panel-header">
       <div class="header-main">
@@ -195,6 +207,42 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   border: 1px solid var(--gamification-panel-border);
   border-radius: var(--radius-lg);
   backdrop-filter: blur(12px);
+}
+
+/* Cyberflow Command Center Link */
+.cyberflow-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(var(--neon-cyan), 0.08);
+  border: 1px solid rgba(var(--neon-cyan), 0.25);
+  border-radius: var(--radius-md);
+  color: rgba(var(--neon-cyan), 0.9);
+  font-family: var(--font-cyber-data, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cyberflow-link:hover {
+  background: rgba(var(--neon-cyan), 0.15);
+  border-color: rgba(var(--neon-cyan), 0.5);
+  box-shadow: 0 0 12px rgba(var(--neon-cyan), 0.2);
+  color: rgba(var(--neon-cyan), 1);
+}
+
+.cyberflow-link-arrow {
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.cyberflow-link:hover .cyberflow-link-arrow {
+  opacity: 1;
+  transform: translateX(2px);
 }
 
 .panel-header {

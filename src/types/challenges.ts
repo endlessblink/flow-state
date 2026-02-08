@@ -302,9 +302,12 @@ export interface DbChallengeHistory {
   xp_earned: number
   xp_lost: number
   completion_rate: number | null
+  challenge_id: string | null
   generated_at: string | null
   resolved_at: string
   time_to_complete_minutes: number | null
+  objective_target: number
+  objective_achieved: number
   created_at: string
 }
 
@@ -341,7 +344,7 @@ export interface ChallengeHistoryEntry {
 /**
  * Map database history row to ChallengeHistoryEntry
  */
-export function mapDbChallengeHistory(row: DbChallengeHistory & { objective_target?: number; objective_achieved?: number }): ChallengeHistoryEntry {
+export function mapDbChallengeHistory(row: DbChallengeHistory): ChallengeHistoryEntry {
   return {
     id: row.id,
     userId: row.user_id,

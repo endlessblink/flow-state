@@ -411,7 +411,7 @@ export function generateDailyChallengesFromTemplates(
         target = calculateTarget(objectiveType, context.averagePomodorosPerDay, difficulty)
         break
       case 'clear_overdue':
-        target = Math.min(context.overdueCount, OBJECTIVE_CONSTRAINTS.clear_overdue.max)
+        target = Math.max(1, Math.min(context.overdueCount, OBJECTIVE_CONSTRAINTS.clear_overdue.max))
         break
       case 'focus_time_minutes':
         target = calculateTarget(objectiveType, context.averagePomodorosPerDay * 25, difficulty)
@@ -471,7 +471,7 @@ export function generateBossFightFromTemplate(
   const difficulty: ChallengeDifficulty = 'boss'
 
   // Boss targets are larger
-  const target = Math.round(context.averageTasksPerDay * 7 * DIFFICULTY_SCALING.boss)
+  const target = Math.max(1, Math.round(context.averageTasksPerDay * 7 * DIFFICULTY_SCALING.boss))
   const reward = XP_REWARDS.boss.max
   const penalty = calculatePenalty(reward, difficulty)
 

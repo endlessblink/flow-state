@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject } from 'vue'
+import { Play } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { WeekEvent } from '@/types/tasks'
 
@@ -19,6 +20,7 @@ defineEmits<{
   (e: 'eventContextMenu', event: MouseEvent, weekEvent: WeekEvent): void
   (e: 'cycleStatus', event: MouseEvent, weekEvent: WeekEvent): void
   (e: 'removeFromCalendar', weekEvent: WeekEvent): void
+  (e: 'startTimer', weekEvent: WeekEvent): void
   (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
 }>()
 // Inject helpers from parent CalendarView
@@ -151,6 +153,13 @@ const {
                   {{ event.title }}
                 </div>
                 <div class="event-actions">
+                  <button
+                    class="play-timer-btn"
+                    title="Start timer"
+                    @click.stop="$emit('startTimer', event)"
+                  >
+                    <Play :size="11" />
+                  </button>
                   <div
                     class="status-indicator"
                     :class="`status-${getTaskStatus(event)}`"
@@ -449,6 +458,23 @@ const {
   justify-content: center;
   border-radius: var(--radius-xs);
   cursor: pointer;
+}
+
+.play-timer-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  transition: color var(--duration-fast);
+}
+
+.play-timer-btn:hover {
+  color: var(--color-success);
 }
 
 .remove-from-calendar-btn {

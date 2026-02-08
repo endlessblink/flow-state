@@ -41,7 +41,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
   return { hour: snappedHour, minute: snappedMinute }
 }
 
-export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
+export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
 
@@ -139,8 +139,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       const dateStr = getDateString(currentDate.value)
       const events: CalendarEvent[] = []
 
-      // Use filteredTasks to respect sidebar smart view and project filters
-      const filteredTasks = taskStore.filteredTasks || []
+      // Use calendarFilteredTasks to bypass smart view filters (done tasks stay visible)
+      // Only filters by project + hideCalendarDoneTasks toggle
+      const filteredTasks = taskStore.calendarFilteredTasks || []
 
       filteredTasks.forEach(task => {
         if (!task) return // Skip invalid tasks
@@ -191,9 +192,18 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             // Validate startTime
             if (isNaN(startTime.getTime())) return
 
-            const endTime = new Date(startTime.getTime() + duration * 60000)
+            // TASK-1285: Apply timer growth if active
+            const growthMinutes = (instanceId && timerGrowthMap?.value?.get(instanceId)) || 0
+            const visualDuration = duration + growthMinutes
+
+            const endTime = new Date(startTime.getTime() + visualDuration * 60000)
             const startSlot = (startTime.getHours() * 2) + (startTime.getMinutes() >= 30 ? 1 : 0)
-            const slotSpan = Math.max(1, Math.ceil(duration / 30))
+            const slotSpan = Math.max(1, Math.ceil(visualDuration / 30))
+
+            // TASK-1285: Get instance status for completion tracking
+            const todayInstance = hasInstanceForToday
+              ? task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
+              : undefined
 
             const event = {
               id: instanceId || task.id,
@@ -202,13 +212,15 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
               title: task.title || 'Untitled Task',
               startTime,
               endTime,
-              duration,
+              duration: visualDuration,
               startSlot,
               slotSpan,
               color: getPriorityColor(task.priority),
               column: 0,
               totalColumns: 1,
-              isDueDate: false
+              isDueDate: false,
+              instanceStatus: todayInstance?.status,
+              taskStatus: task.status
             }
 
             events.push(event)

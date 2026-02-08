@@ -162,17 +162,15 @@ onUnmounted(() => {
   top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 99999;
+  z-index: var(--z-tooltip);
 
   /* Glass morphism - dark purple-tinted with solid fallback */
-  background-color: #1c192d !important;
-  background: rgba(28, 25, 45, 0.95) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  background-color: var(--overlay-component-bg) !important;
+  background: var(--overlay-component-bg) !important;
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border) !important;
+  box-shadow: var(--overlay-component-shadow);
   border-radius: var(--radius-md);
 
   min-width: 100px;
@@ -193,7 +191,7 @@ onUnmounted(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--text-primary) !important;
   font-size: var(--text-xs);
   font-weight: 500;
   text-transform: uppercase;
@@ -208,8 +206,8 @@ onUnmounted(() => {
 }
 
 .priority-dropdown__item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background: var(--glass-bg-heavy) !important;
+  background-color: var(--glass-bg-heavy) !important;
 }
 
 .priority-dropdown__item.is-active {
@@ -217,27 +215,27 @@ onUnmounted(() => {
 }
 
 .priority-dropdown__item--high {
-  color: #f87171 !important;
+  color: var(--color-priority-high) !important;
 }
 
 .priority-dropdown__item--high:hover {
-  background: rgba(239, 68, 68, 0.15) !important;
+  background: var(--priority-high-bg) !important;
 }
 
 .priority-dropdown__item--medium {
-  color: #fb923c !important;
+  color: var(--color-priority-medium) !important;
 }
 
 .priority-dropdown__item--medium:hover {
-  background: rgba(249, 115, 22, 0.15) !important;
+  background: var(--priority-medium-bg) !important;
 }
 
 .priority-dropdown__item--low {
-  color: #60a5fa !important;
+  color: var(--color-priority-low) !important;
 }
 
 .priority-dropdown__item--low:hover {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--priority-low-bg) !important;
 }
 
 .priority-dropdown__label {
@@ -252,7 +250,7 @@ onUnmounted(() => {
 .priority-dropdown__overlay {
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: var(--z-dropdown);
 }
 
 /* Dropdown transitions */

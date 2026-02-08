@@ -504,24 +504,25 @@ function startProcessing(): void {
 /**
  * Stop the sync processing loop
  */
-function _stopProcessing(): void {
+function stopProcessing(): void {
   if (processIntervalId.value) {
     clearInterval(processIntervalId.value)
     processIntervalId.value = null
   }
 }
 
+// Track whether the global sync loop has been started (prevents interval stacking on HMR/re-init)
+let globalSyncStarted = false
+
 /**
  * Main composable export
  */
 export function useSyncOrchestrator() {
-  // Start processing when composable is used
-  startProcessing()
-
-  // Clean up on unmount (optional - we want the sync to continue globally)
-  // onUnmounted(() => {
-  //   stopProcessing()
-  // })
+  // Guard against interval stacking: only start once globally
+  if (!globalSyncStarted) {
+    globalSyncStarted = true
+    startProcessing()
+  }
 
   /**
    * Enqueue a write operation for sync

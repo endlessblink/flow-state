@@ -289,10 +289,10 @@ export function cleanBackupStorage(): {
   const errors: string[] = []
 
   const backupKeys = [
-    'flow-state-user-backup',
-    'flow-state-imported-tasks',
-    'flow-state-simple-backups',
-    'flow-state-simple-latest-backup'
+    'flowstate-user-backup',
+    'flowstate-imported-tasks',
+    'flowstate-simple-backups',
+    'flowstate-simple-latest-backup'
   ]
 
   backupKeys.forEach(key => {

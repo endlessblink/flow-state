@@ -318,7 +318,7 @@ const saveProject = async () => {
 }
 
 .preview-emoji {
-  font-size: 32px;
+  font-size: var(--space-8);
   line-height: 1;
   text-align: center;
 }

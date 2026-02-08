@@ -139,7 +139,7 @@ onUnmounted(() => {
 .context-menu-overlay {
   position: fixed;
   inset: 0; /* RTL: full screen overlay */
-  z-index: 3000;
+  z-index: var(--z-popover);
   /* Transparent overlay to capture clicks */
 }
 
@@ -155,7 +155,7 @@ onUnmounted(() => {
   box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2);
   animation: menuSlideIn var(--duration-fast) var(--spring-bounce);
-  z-index: 3001;
+  z-index: var(--z-popover);
 }
 
 @keyframes menuSlideIn {

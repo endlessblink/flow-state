@@ -274,11 +274,11 @@ const timeFilters = computed((): TimeFilter[] => [
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   background: var(--glass-bg-light);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--space-px) solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
@@ -305,22 +305,22 @@ const timeFilters = computed((): TimeFilter[] => [
 
 .filter-count {
   position: absolute;
-  top: -1px;
-  right: -1px;
+  top: var(--space-neg-px);
+  right: var(--space-neg-px);
   background: var(--accent-primary);
-  border: 1px solid var(--surface-primary);
+  border: var(--space-px) solid var(--surface-primary);
   border-radius: var(--radius-full);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   font-weight: var(--font-semibold);
   padding: 0 var(--space-0_5);
-  min-width: 12px;
-  height: 12px;
+  min-width: var(--space-3);
+  height: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-btn.active .filter-count {
@@ -332,8 +332,8 @@ const timeFilters = computed((): TimeFilter[] => [
 /* Icon scaling for different screen sizes */
 @media (max-width: 320px) {
   .filter-btn {
-    width: 28px;
-    height: 28px;
+    width: var(--space-7);
+    height: var(--space-7);
   }
 
   .filter-btn:hover,

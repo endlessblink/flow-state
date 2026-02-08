@@ -294,7 +294,7 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
 }
 
 .intensity-default-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-muted);
   background: var(--glass-bg-soft);

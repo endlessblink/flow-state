@@ -390,18 +390,18 @@ function autoResize(event: Event) {
   position: fixed;
   inset: 0;
   background: var(--overlay-bg);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(var(--blur-xs));
+  -webkit-backdrop-filter: blur(var(--blur-xs));
   display: flex;
   align-items: flex-start; /* Start from TOP */
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 
 .task-create-sheet {
   width: 100%;
   height: 100dvh;
   max-height: none;
-  background: var(--surface-primary, rgb(35, 32, 52));
+  background: var(--surface-primary);
   /* No border-radius - full screen */
   border-radius: 0;
   display: flex;
@@ -422,14 +422,14 @@ function autoResize(event: Event) {
 .sheet-title {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   margin: 0;
   flex: 1;
   text-align: center;
 }
 
 .header-btn {
-  min-width: 70px;
+  min-width: var(--space-16);
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-md);
@@ -441,7 +441,7 @@ function autoResize(event: Event) {
 
 .cancel-btn {
   background: transparent;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary);
 }
 
 .cancel-btn:active {
@@ -450,7 +450,7 @@ function autoResize(event: Event) {
 
 .add-btn {
   background: transparent;
-  color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary);
 }
 
 .add-btn:disabled {
@@ -464,7 +464,7 @@ function autoResize(event: Event) {
 
 .stop-btn {
   background: var(--color-priority-high);
-  color: white;
+  color: var(--text-primary);
 }
 
 .stop-btn:active {
@@ -473,19 +473,19 @@ function autoResize(event: Event) {
 }
 
 .processing-btn {
-  background: var(--brand-primary, #4ECDC4);
-  color: hsl(230, 20%, 10%);
+  background: var(--brand-primary);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .btn-spinner {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-xl);
+  height: var(--icon-xl);
   border: 2px solid var(--overlay-component-bg-lighter);
-  border-top-color: hsl(230, 20%, 10%);
-  border-radius: 50%;
+  border-top-color: var(--surface-secondary);
+  border-radius: var(--radius-full);
   animation: spin 0.8s linear infinite;
 }
 
@@ -509,11 +509,11 @@ function autoResize(event: Event) {
 /* Single text block - main writing area */
 .task-text-block {
   flex: 1;
-  min-height: 200px;
+  min-height: 12.5rem;
   padding: var(--space-4);
   background: transparent;
   border: none;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   font-size: var(--text-lg);
   line-height: var(--leading-normal);
   font-family: inherit;
@@ -608,7 +608,7 @@ function autoResize(event: Event) {
   background: var(--glass-bg-weak);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   font-size: var(--text-sm);
   color-scheme: dark;
 }
@@ -628,15 +628,15 @@ function autoResize(event: Event) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary);
   font-weight: var(--font-semibold);
 }
 
 .voice-pulse {
   width: var(--space-3);
   height: var(--space-3);
-  background: var(--brand-primary, #4ECDC4);
-  border-radius: 50%;
+  background: var(--brand-primary);
+  border-radius: var(--radius-full);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -644,8 +644,8 @@ function autoResize(event: Event) {
   width: var(--icon-md);
   height: var(--icon-md);
   border: 2px solid var(--brand-border-subtle);
-  border-top-color: var(--brand-primary, #4ECDC4);
-  border-radius: 50%;
+  border-top-color: var(--brand-primary);
+  border-radius: var(--radius-full);
   animation: spin 0.8s linear infinite;
 }
 
@@ -714,11 +714,11 @@ function autoResize(event: Event) {
   background: var(--state-hover-bg);
   border: 1px solid var(--brand-border-subtle);
   border-radius: var(--radius-xl);
-  color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-normal) ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .rerecord-btn:hover {

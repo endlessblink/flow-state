@@ -107,13 +107,13 @@ const handleKeydown = (event: KeyboardEvent) => {
   position: fixed;
   inset: 0;
   background: var(--overlay-backdrop-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 
 .modal-container {
@@ -122,7 +122,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   backdrop-filter: var(--overlay-component-backdrop);
   -webkit-backdrop-filter: var(--overlay-component-backdrop);
   border: var(--overlay-component-border);
-  border-radius: var(--radius-xl, 16px);
+  border-radius: var(--radius-xl);
   width: 100%;
   max-width: 420px;
   box-shadow: var(--overlay-component-shadow);
@@ -135,7 +135,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .header-content--welcome {
@@ -145,39 +145,39 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .logo {
-  font-size: 2rem;
+  font-size: var(--text-2xl);
 }
 
 .modal-title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .modal-subtitle {
-  margin: 0.125rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  margin: var(--space-0_5) 0 0;
+  font-size: var(--text-meta);
+  color: var(--text-secondary);
 }
 
 .close-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   border: none;
   background: transparent;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-  border-radius: var(--radius-md, 8px);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
 }
 
 .close-btn:hover {
-  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.08));
-  color: var(--text-primary, #fff);
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
 }
 
 /* Body */
@@ -193,12 +193,12 @@ const handleKeydown = (event: KeyboardEvent) => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0.625rem var(--text-sm);
+  padding: var(--space-2_5) var(--space-3_5);
   background: transparent;
-  border: 1px solid var(--color-work, #3b82f6);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-work);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  color: var(--color-work, #3b82f6);
+  color: var(--color-work);
 }
 
 .status-icon {
@@ -217,18 +217,18 @@ const handleKeydown = (event: KeyboardEvent) => {
   align-items: center;
   gap: var(--space-3);
   font-size: var(--text-sm);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary);
 }
 
 .feature-icon {
-  color: var(--color-work, #3b82f6);
+  color: var(--color-work);
   flex-shrink: 0;
 }
 
 /* Footer */
 .modal-footer {
   padding: var(--space-5) var(--space-6);
-  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -238,18 +238,18 @@ const handleKeydown = (event: KeyboardEvent) => {
   width: 100%;
   padding: var(--space-3);
   background: transparent;
-  border: 1px solid var(--color-work, #3b82f6);
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-work, #3b82f6);
-  font-size: 0.9375rem;
+  border: 1px solid var(--color-work);
+  border-radius: var(--radius-md);
+  color: var(--color-work);
+  font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
 }
 
 .primary-btn:hover {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: var(--color-work-hover, #2563eb);
+  background: var(--work-bg-subtle);
+  border-color: var(--color-work-hover);
 }
 
 .secondary-actions {
@@ -261,21 +261,21 @@ const handleKeydown = (event: KeyboardEvent) => {
 .secondary-btn {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: var(--space-2) var(--text-sm);
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3_5);
   background: transparent;
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-md, 8px);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 0.8125rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
 }
 
 .secondary-btn:hover {
-  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.05));
-  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.15));
-  color: var(--text-primary, #fff);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
 }
 
 /* Transitions */

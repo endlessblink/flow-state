@@ -135,8 +135,8 @@
                 <div class="task-content">
                   <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
                   <div class="task-meta">
-                    <span v-if="task.dueDate && groupBy !== 'time'" class="task-due" :class="{ overdue: isOverdue(task.dueDate) }">
-                      {{ formatDueTime(task.dueDate) }}
+                    <span v-if="getDueBadge(task) && groupBy !== 'time'" class="task-due" :class="{ overdue: isOverdue(task.dueDate) }">
+                      {{ getDueBadge(task) }}
                     </span>
                     <span v-if="task.priority && groupBy !== 'priority'" class="priority-badge" :class="task.priority">
                       {{ priorityLabel(task.priority) }}
@@ -364,10 +364,12 @@ const filteredTodayTasks = computed(() => {
   return tasks
 })
 
-// Time-based categorization
+// Time-based categorization — only use explicit dueTime, never extract time from dueDate
+// BUG-1286: dueDate is date-only; parsing it as Date gives UTC midnight → 2am in UTC+2
 const getTaskHour = (task: Task): number | null => {
-  if (!task.dueDate) return null
-  return new Date(task.dueDate).getHours()
+  if (!task.dueTime) return null
+  const [hours] = task.dueTime.split(':').map(Number)
+  return isNaN(hours) ? null : hours
 }
 
 const isOverdue = (dueDate: string | Date | undefined): boolean => {
@@ -415,11 +417,10 @@ const groupedTasks = computed((): TaskGroup[] => {
       const hour = getTaskHour(t)
       return hour !== null && (hour >= 18 || hour < 6)
     })
+    // BUG-1286: Tasks without explicit dueTime are "untimed" → "Anytime Today"
     const untimedFiltered = tasks.filter(t => {
       if (isOverdue(t.dueDate)) return false
-      if (!t.dueDate) return true
-      const dueDate = new Date(t.dueDate)
-      return dueDate.getHours() === 0 && dueDate.getMinutes() === 0
+      return getTaskHour(t) === null
     })
 
     if (overdueFiltered.length > 0) groups.push({ key: 'overdue', title: 'Overdue', icon: AlertCircle, tasks: overdueFiltered })
@@ -479,10 +480,24 @@ const groupedTasks = computed((): TaskGroup[] => {
   return groups
 })
 
-const formatDueTime = (dueDate: string | Date | undefined): string => {
-  if (!dueDate) return ''
-  const date = new Date(dueDate)
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+// BUG-1286: Show meaningful badge — overdue date, explicit time, or nothing
+const getDueBadge = (task: Task): string => {
+  if (!task.dueDate) return ''
+  // Show relative date if overdue
+  if (isOverdue(task.dueDate)) {
+    // Parse as local date to avoid UTC shift
+    const [y, m, d] = task.dueDate.split('T')[0].split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+  // Show explicit time if user set one
+  if (task.dueTime) {
+    const [hours, minutes] = task.dueTime.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours, minutes, 0, 0)
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  return ''
 }
 
 const toggleTask = async (task: Task) => {
@@ -825,7 +840,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .checkbox-circle.checked {
   background: var(--primary-brand);
   border-color: var(--primary-brand);
-  color: white;
+  color: var(--text-primary);
 }
 
 .task-content {
@@ -837,7 +852,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .task-title {
-  font-size: 15px;
+  font-size: var(--text-base);
   color: var(--text-primary);
   /* Multi-line truncation for RTL/long text */
   display: -webkit-box;

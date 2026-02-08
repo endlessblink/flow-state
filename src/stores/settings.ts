@@ -48,7 +48,7 @@ export interface AppSettings {
     canvasViewport?: { x: number; y: number; zoom: number } | null
 }
 
-const STORAGE_KEY = 'flow-state-settings-v2'
+const STORAGE_KEY = 'flowstate-settings-v2'
 
 export const useSettingsStore = defineStore('settings', {
     state: (): AppSettings => ({
@@ -97,7 +97,17 @@ export const useSettingsStore = defineStore('settings', {
     actions: {
         loadFromStorage() {
             // Try new key first
-            const saved = localStorage.getItem(STORAGE_KEY)
+            let saved = localStorage.getItem(STORAGE_KEY)
+
+            // TASK-1267: Migrate from old hyphenated key prefix
+            if (!saved) {
+                const oldKey = localStorage.getItem('flow-state-settings-v2')
+                if (oldKey) {
+                    localStorage.setItem(STORAGE_KEY, oldKey)
+                    localStorage.removeItem('flow-state-settings-v2')
+                    saved = oldKey
+                }
+            }
 
             if (!saved) {
                 // Migration from old keys
@@ -174,8 +184,8 @@ export const useSettingsStore = defineStore('settings', {
                     // Object.assign overwrites defaults with saved state, so fields
                     // added after the user's settings were first saved will be undefined.
                     if (!this.$state.timeBlockNotifications) {
-                        this.$state.timeBlockNotifications = { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS }
-                        this.saveToStorage()
+                        this.$state.timeBlockNotifications = JSON.parse(JSON.stringify(DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS))
+                        try { this.saveToStorage() } catch (_) { /* non-fatal */ }
                     }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)

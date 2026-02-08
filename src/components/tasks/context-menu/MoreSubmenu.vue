@@ -19,6 +19,11 @@
         <span class="menu-text">Duplicate</span>
       </button>
 
+      <button class="menu-item menu-item--sm" @click.stop="$emit('pinQuickTask')">
+        <Pin :size="14" class="menu-icon" />
+        <span class="menu-text">Pin as Quick Task</span>
+      </button>
+
       <button
         v-if="!isBatchOperation && taskId"
         class="menu-item menu-item--sm"
@@ -37,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Layout, X, Clock } from 'lucide-vue-next'
+import { Copy, Layout, X, Clock, Pin } from 'lucide-vue-next'
 import type { CSSProperties } from 'vue'
 
 defineProps<{
@@ -51,6 +56,7 @@ defineProps<{
 defineEmits<{
   doneForNow: []
   duplicate: []
+  pinQuickTask: []
   moveToSection: [taskId: string]
   clearSelection: []
   mouseenter: []

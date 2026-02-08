@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: 'FlowState',
         short_name: 'FlowState',
-        description: 'Pomodoro timer with task management',
+        description: 'FlowState — visual task management across Board, Calendar, and Canvas views with Pomodoro timer, AI assistant, and gamification',
         theme_color: '#4F46E5',
         background_color: '#0f172a', // Dark mode background
         display: 'standalone',
@@ -95,8 +95,9 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   esbuild: {
     target: 'esnext',
-    // TASK-038: Strip console.* in production for cleaner builds
-    drop: mode === 'production' ? ['console', 'debugger'] : [],
+    // TASK-1281: Strip console.log and console.debug at build-time for production
+    // Using 'pure' instead of 'drop' to preserve console.warn and console.error
+    pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
     // Disable TypeScript checking for development
     // tsconfigRaw removed to fix type conflict
   },

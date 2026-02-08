@@ -117,7 +117,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
 }
 
 .modal-content {
@@ -129,13 +129,13 @@ const handleKeydown = (event: KeyboardEvent) => {
   border-radius: var(--radius-2xl);
   box-shadow: var(--overlay-component-shadow);
   width: 90%;
-  max-width: 400px;
+  max-width: var(--space-100);
   overflow: hidden;
   animation: modal-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modal-in {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  from { opacity: 0; transform: scale(0.95) translateY(var(--space-2_5)); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -202,8 +202,8 @@ const handleKeydown = (event: KeyboardEvent) => {
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
-  background: rgba(0, 0, 0, 0.1);
-  border-top: 1px solid var(--glass-border);
+  background: var(--overlay-light);
+  border-top: var(--space-px) solid var(--glass-border);
 }
 
 .btn {

@@ -183,7 +183,7 @@ onUnmounted(() => {
 .popover-overlay {
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: var(--z-popover);
   background: transparent;
 }
 
@@ -202,7 +202,7 @@ onUnmounted(() => {
   border-radius: var(--radius-xl);
   box-shadow: var(--overlay-component-shadow);
 
-  z-index: 3001;
+  z-index: var(--z-popover);
   animation: popoverSlideIn var(--duration-fast) var(--spring-bounce);
   pointer-events: all;
 

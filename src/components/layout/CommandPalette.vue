@@ -193,7 +193,7 @@ defineExpose({ open, close })
   align-items: flex-start;
   justify-content: center;
   padding-top: 20vh;
-  z-index: 2000;
+  z-index: var(--z-popover);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
 }
 

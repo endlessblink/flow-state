@@ -90,7 +90,7 @@ const dueDateClass = computed(() => {
 .meta-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--text-meta);
   font-weight: 400;
   color: var(--text-tertiary);
   white-space: nowrap;
@@ -99,7 +99,7 @@ const dueDateClass = computed(() => {
 /* Dot separator between badges */
 .badge-separator {
   color: var(--text-subtle);
-  font-size: 13px;
+  font-size: var(--text-meta);
   margin: 0 var(--space-1);
   user-select: none;
 }

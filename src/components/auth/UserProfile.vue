@@ -193,7 +193,7 @@ onUnmounted(() => {
 .user-profile-wrapper {
   position: relative;
   isolation: isolate;
-  z-index: 9999 !important; /* NUCLEAR OPTION: Extremely high z-index */
+  z-index: var(--z-tooltip) !important; /* NUCLEAR OPTION: Extremely high z-index */
   pointer-events: auto !important;
 }
 
@@ -205,7 +205,7 @@ onUnmounted(() => {
   justify-content: center;
   cursor: pointer !important;
   pointer-events: auto !important;
-  z-index: 10000 !important;
+  z-index: var(--z-tooltip) !important;
 
   /* Make it very obvious this is clickable */
   transition: all var(--duration-normal) var(--ease-out);
@@ -267,7 +267,7 @@ onUnmounted(() => {
   border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--overlay-component-shadow);
-  z-index: 99999;  /* Extremely high to ensure it's above all UI elements */
+  z-index: var(--z-tooltip);  /* Extremely high to ensure it's above all UI elements */
   overflow: hidden;
   pointer-events: auto !important;
 }

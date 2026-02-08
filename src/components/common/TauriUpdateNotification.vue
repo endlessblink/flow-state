@@ -232,79 +232,81 @@ onMounted(async () => {
 <style scoped>
 .tauri-update-notification {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: var(--z-toast);
   max-width: 420px;
-  width: calc(100% - 48px);
+  width: calc(100% - calc(var(--space-6) * 2));
 }
 
 .notification-card {
-  background: var(--bg-secondary) !important;
-  border: 1px solid var(--border-default) !important;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.2),
-    0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
-  backdrop-filter: blur(8px);
+  background: var(--surface-primary) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .notification-content {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: var(--space-9);
+  height: var(--space-9);
+  border-radius: var(--radius-full);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: var(--space-0_5);
 }
 
 .icon-wrapper.indigo {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  background: var(--purple-bg-subtle);
+  color: var(--color-info);
 }
 
 .icon-wrapper.green {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  background: var(--success-bg-subtle);
+  color: var(--color-work);
 }
 
 .icon-wrapper.red {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  background: var(--danger-bg-subtle);
+  color: var(--color-danger);
 }
 
 .text-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  line-height: 1.3;
+  line-height: var(--leading-tight);
   min-width: 0;
 }
 
 .title {
-  font-size: 14px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
 }
 
 .description {
-  font-size: 12px;
-  margin-top: 2px;
+  font-size: var(--text-xs);
+  margin-top: var(--space-0_5);
   word-break: break-word;
+  color: var(--text-secondary);
 }
 
 .download-progress {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -324,12 +326,12 @@ onMounted(async () => {
 /* Transitions */
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all var(--duration-slow) var(--spring-bounce);
 }
 
 .slide-up-enter-from,
 .slide-up-leave-to {
   opacity: 0;
-  transform: translateY(20px) scale(0.95);
+  transform: translateY(var(--space-5)) scale(0.95);
 }
 </style>

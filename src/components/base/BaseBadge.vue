@@ -48,22 +48,22 @@ withDefaults(defineProps<Props>(), {
 .base-badge.size-sm {
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-xs);
-  min-width: 20px;
-  height: 18px;
+  min-width: var(--space-5);
+  height: var(--space-4_5);
 }
 
 .base-badge.size-md {
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-xs);
-  min-width: 24px;
-  height: 20px;
+  min-width: var(--space-6);
+  height: var(--space-5);
 }
 
 .base-badge.size-lg {
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
-  min-width: 28px;
-  height: 24px;
+  min-width: var(--space-7);
+  height: var(--space-6);
 }
 
 /* Fully rounded (pill shape) */
@@ -88,29 +88,29 @@ withDefaults(defineProps<Props>(), {
 
 /* Variant: Success (green stroke) */
 .base-badge.variant-success {
-  background: rgba(16, 185, 129, 0.05);
+  background: var(--color-success-bg-tint);
   color: var(--color-success);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid var(--color-success-alpha-30);
 }
 
 /* Variant: Warning (orange stroke) */
 .base-badge.variant-warning {
-  background: rgba(245, 158, 11, 0.05);
+  background: var(--color-warning-bg-tint);
   color: var(--color-warning);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid var(--color-warning-alpha-30);
 }
 
 /* Variant: Danger (red stroke) */
 .base-badge.variant-danger {
-  background: rgba(239, 68, 68, 0.05);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--color-danger-bg-tint);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-alpha-30);
 }
 
 /* Variant: Info (blue stroke) */
 .base-badge.variant-info {
-  background: rgba(59, 130, 246, 0.05);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: var(--color-blue-bg-tint);
+  color: var(--color-blue);
+  border: 1px solid var(--color-blue-alpha-30);
 }
 </style>

@@ -478,10 +478,10 @@ onUnmounted(() => {
 }
 
 .section-color-indicator {
-  width: 12px;
-  height: 12px;
+  width: var(--space-3);
+  height: var(--space-3);
   border-radius: var(--radius-full);
-  box-shadow: 0 0 8px currentColor;
+  box-shadow: 0 0 var(--space-2) currentColor;
 }
 
 .section-name {
@@ -497,7 +497,7 @@ onUnmounted(() => {
   font-weight: var(--font-medium);
   padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-sm);
-  min-width: 20px;
+  min-width: var(--space-5);
   text-align: center;
 }
 
@@ -506,8 +506,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--space-4_5);
+  height: var(--space-4_5);
   background: linear-gradient(135deg, var(--color-work) 0%, var(--color-priority-high) 100%);
   border-radius: var(--radius-full);
   animation: power-pulse 2s ease-in-out infinite;
@@ -518,8 +518,8 @@ onUnmounted(() => {
 }
 
 @keyframes power-pulse {
-  0%, 100% { box-shadow: 0 0 4px var(--color-work); }
-  50% { box-shadow: 0 0 12px var(--color-work); }
+  0%, 100% { box-shadow: 0 0 var(--space-1) var(--color-work); }
+  50% { box-shadow: 0 0 var(--space-3) var(--color-work); }
 }
 
 .power-active {
@@ -549,8 +549,8 @@ onUnmounted(() => {
   color: var(--brand-primary);
   padding: 0 var(--space-1);
   border-radius: var(--radius-full);
-  min-width: 14px;
-  height: 14px;
+  min-width: var(--space-3_5);
+  height: var(--space-3_5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -740,7 +740,7 @@ onUnmounted(() => {
 
 .duration-quick {
   color: var(--green-text);
-  background: rgba(34, 197, 94, 0.1);
+  background: var(--green-bg-subtle);
 }
 
 .duration-short {

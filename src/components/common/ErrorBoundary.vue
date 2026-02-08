@@ -110,7 +110,7 @@ const copyErrorDetails = () => {
 .error-boundary {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,7 +148,7 @@ const copyErrorDetails = () => {
 }
 
 .error-icon {
-  font-size: 4rem;
+  font-size: var(--text-4xl);
   margin-bottom: var(--space-6);
   animation: errorPulse 2s ease-in-out infinite;
 }

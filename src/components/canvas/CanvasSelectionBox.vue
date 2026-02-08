@@ -34,8 +34,8 @@ defineProps<{
   position: absolute;
   z-index: 9999;
   pointer-events: none;
-  border: 2px solid rgba(99, 102, 241, 0.8);
-  background-color: rgba(99, 102, 241, 0.15);
-  border-radius: 4px;
+  border: var(--space-0_5) solid var(--brand-primary-border-medium);
+  background-color: var(--brand-primary-bg-subtle);
+  border-radius: var(--radius-sm);
 }
 </style>

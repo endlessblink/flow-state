@@ -118,7 +118,7 @@ const handleReload = async () => {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   max-width: 400px;
   width: calc(100% - 48px);
 }
@@ -170,11 +170,11 @@ const handleReload = async () => {
 }
 
 .title {
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .description {
-  font-size: 12px;
+  font-size: var(--text-xs);
   margin-top: 2px;
 }
 

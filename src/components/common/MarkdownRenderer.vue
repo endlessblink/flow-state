@@ -81,9 +81,9 @@ const handleClick = (event: MouseEvent) => {
   color: var(--text-primary);
 }
 
-:deep(h1) { font-size: 1.4rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.3rem; }
-:deep(h2) { font-size: 1.2rem; }
-:deep(h3) { font-size: 1.1rem; }
+:deep(h1) { font-size: var(--text-xl); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.3rem; }
+:deep(h2) { font-size: var(--text-lg); }
+:deep(h3) { font-size: var(--text-base); }
 
 :deep(p) {
   margin-bottom: var(--space-3);

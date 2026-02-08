@@ -1,11 +1,11 @@
 {
-  "version": "1.2.35",
-  "notes": "TASK-1219: Fix time block notifications - settings persistence gap (undefined timeBlockNotifications for existing users)",
-  "pub_date": "2026-02-08T14:49:30.437Z",
+  "version": "1.2.36",
+  "notes": "Crash stability fixes: panic=unwind, release logging, error notification throttling, close handler timeout, curl permissions, sync interval guard",
+  "pub_date": "2026-02-08T16:15:06.720Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRSs2bXVNQVR2bjFuTGFKeWovaXkvbU5nY2RtNjR1WitLR2M4bkVOWSsyUzBrT0c5eFRYeFllZCtHZlA0MTNKd3VrSzhyRGFsSTk2b0ZnQ01FNnJObGdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTYyMTcwCWZpbGU6Rmxvd1N0YXRlXzEuMi4zNV9hbWQ2NC5BcHBJbWFnZQoraUJaSGtycFNwbWZPeVRQUnhJUWdTTmNVeG9mdzhhQi9nTFd4c1FraUtteFg3dFptWi8ralpQcDVWSFc0RHA2UGU0QlpITThnUENCM0hVeHd3K09EZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.35_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXlJQk9xSUZxbG1sRTN4R09mOU05Ly9IeVRJbWs1TjNhcDg2QjBUMi9HRC9wN2tYQnRZT010ZFRvQnpRZGc4dVhXVjhqZWpPSzhrU2hEOE5ZMm9rc0FjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTY3MzA2CWZpbGU6Rmxvd1N0YXRlXzEuMi4zNl9hbWQ2NC5BcHBJbWFnZQpmMFpzSkVzaDhNRys0UTZQL0Q2ZGh0T0hGc3BTb1N6OWNReHViSjBiVVB6ZnhHTm5MNjZvSW5PRHhPT0pKSkFSNE5MTWNGSmYyK1VEZDQ2bElBTHJBdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.36_amd64.AppImage"
     }
   }
 }

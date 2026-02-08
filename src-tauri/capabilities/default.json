@@ -81,6 +81,11 @@
           "name": "systemctl-linux",
           "cmd": "systemctl",
           "args": true
+        },
+        {
+          "name": "curl",
+          "cmd": "curl",
+          "args": true
         }
       ]
     },
@@ -99,6 +104,7 @@
         }
       ]
     },
+    "shell:allow-open",
     "updater:default",
     "updater:allow-check",
     "updater:allow-download-and-install",
@@ -112,6 +118,18 @@
       "identifier": "fs:allow-write-text-file",
       "allow": [
         { "path": "$DOWNLOAD/**" },
+        { "path": "$HOME/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [
+        { "path": "$HOME/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
         { "path": "$HOME/**" }
       ]
     }

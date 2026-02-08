@@ -59,8 +59,8 @@ defineEmits<{
 
   /* Layered shadow for depth */
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.8),
-    0 4px 16px rgba(0, 0, 0, 0.4);
+    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.8),
+    0 var(--space-1) var(--space-4) rgba(var(--color-slate-900), 0.4);
 
   /* Animation */
   transition: all var(--duration-normal) var(--spring-smooth);
@@ -80,47 +80,47 @@ defineEmits<{
   border-color: var(--glass-border-hover);
   background: var(--glass-bg-medium);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.9),
-    0 6px 20px rgba(0, 0, 0, 0.5);
-  transform: translateY(-2px);
+    0 var(--space-3) var(--space-10) rgba(var(--color-slate-900), 0.9),
+    0 var(--space-1_5) var(--space-5) rgba(var(--color-slate-900), 0.5);
+  transform: translateY(calc(var(--space-0_5) * -1));
 }
 
 /* Glass variant - same base look, just adds inset highlight for colorful backgrounds */
 .base-card.is-glass {
   background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  backdrop-filter: blur(var(--space-5)) saturate(100%);
+  -webkit-backdrop-filter: blur(var(--space-5)) saturate(100%);
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4),
+    0 var(--space-1) var(--space-4) rgba(var(--color-slate-900), 0.2),
+    inset 0 1px 0 rgba(var(--color-slate-50), 0.05);
 }
 
 .base-card.is-glass:hover {
   border-color: var(--glass-border-hover);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    0 6px 20px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 var(--space-3) var(--space-10) rgba(var(--color-slate-900), 0.5),
+    0 var(--space-1_5) var(--space-5) rgba(var(--color-slate-900), 0.3),
+    inset 0 1px 0 rgba(var(--color-slate-50), 0.08);
 }
 
 /* Elevated variant - same base look, just deeper shadows for hierarchy */
 .base-card.is-elevated {
   background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  backdrop-filter: blur(var(--space-5)) saturate(100%);
+  -webkit-backdrop-filter: blur(var(--space-5)) saturate(100%);
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+    0 var(--space-4) var(--space-12) rgba(var(--color-slate-900), 0.5),
+    0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.3);
 }
 
 .base-card.is-elevated:hover {
   border-color: var(--glass-border-hover);
   box-shadow:
-    0 20px 56px rgba(0, 0, 0, 0.6),
-    0 10px 30px rgba(0, 0, 0, 0.4);
+    0 var(--space-5) 56px rgba(var(--color-slate-900), 0.6),
+    0 var(--space-2_5) var(--space-7_5) rgba(var(--color-slate-900), 0.4);
 }
 
 /* Variant: Outlined - pure stroke, transparent */
@@ -162,7 +162,7 @@ defineEmits<{
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.02) 100%
+    rgba(var(--color-slate-50), 0.02) 100%
   );
 }
 

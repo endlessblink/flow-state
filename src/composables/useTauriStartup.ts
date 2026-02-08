@@ -278,10 +278,17 @@ export function useTauriStartup() {
         // Prevent default close
         event.preventDefault()
 
-        // Run cleanup
-        await cleanup(stopSupabase)
+        // Run cleanup with timeout to prevent hanging on blocked IPC
+        try {
+          await Promise.race([
+            cleanup(stopSupabase),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Cleanup timeout')), 5000))
+          ])
+        } catch (error) {
+          console.warn('Cleanup timed out or failed, forcing window close:', error)
+        }
 
-        // Actually close the window
+        // Always close the window, even if cleanup failed/timed out
         await currentWindow.destroy()
       })
     } catch (error) {

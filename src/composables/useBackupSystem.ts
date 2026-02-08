@@ -1,5 +1,6 @@
 import IntegrityService from '@/utils/integrity'
 import { isTauri } from '@/composables/useTauriStartup'
+import { FILE_DIALOG_TIMEOUT_MS } from '@/config/timing'
 
 /**
  * Unified Backup System
@@ -69,16 +70,16 @@ export interface BackupSystemState {
 // ============================================================================
 
 const STORAGE_KEYS = {
-  HISTORY: 'flow-state-backup-history',
-  LATEST: 'flow-state-latest-backup',
-  STATS: 'flow-state-backup-stats',
+  HISTORY: 'flowstate-backup-history',
+  LATEST: 'flowstate-backup-latest',
+  STATS: 'flowstate-backup-stats',
   // BUG-059 FIX: Golden backup that can NEVER be overwritten by auto-backups
   // Only updated when manually triggered OR when task count reaches new maximum
-  GOLDEN: 'flow-state-golden-backup',
+  GOLDEN: 'flowstate-backup-golden',
   // TASK-332: Array of golden backups for rotation (keeps last 3 peaks)
-  GOLDEN_ROTATION: 'flow-state-golden-backup-rotation',
+  GOLDEN_ROTATION: 'flowstate-backup-golden-rotation',
   // Tracks the maximum task count ever seen - used to detect data loss
-  MAX_TASK_COUNT: 'flow-state-max-task-count'
+  MAX_TASK_COUNT: 'flowstate-max-task-count'
 } as const
 
 // TASK-332: Maximum number of golden backups to keep in rotation
@@ -1100,7 +1101,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
         // Race against a 30-second timeout (XDG Portal can sometimes hang)
         const timeoutPromise = new Promise<null>((_, reject) => {
-          setTimeout(() => reject(new Error('Dialog timeout after 30s - falling back to browser')), 30000)
+          setTimeout(() => reject(new Error('Dialog timeout after 30s - falling back to browser')), FILE_DIALOG_TIMEOUT_MS)
         })
 
         const filePath = await Promise.race([dialogPromise, timeoutPromise])

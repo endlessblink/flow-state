@@ -1,6 +1,7 @@
 <template>
   <div
     class="task-card"
+    :data-priority="task.priority || 'none'"
     draggable="true"
     tabindex="0"
     @dragstart="$emit('dragstart', $event)"
@@ -173,6 +174,7 @@ const formatDueDateLabel = (dueDate: string) => {
   padding: var(--space-3);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
+  border-left: 4px solid transparent;
   border-radius: var(--radius-lg);
   cursor: grab;
   transition: all var(--duration-fast) ease;
@@ -180,21 +182,27 @@ const formatDueDateLabel = (dueDate: string) => {
 
 .task-card:hover {
   background: var(--state-hover-bg);
+  border-left-color: inherit; /* Preserve priority color on hover */
   transform: translateY(-1px);
 }
 
+/* Priority shown via border-left on .task-card, not stripe */
 .priority-stripe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  height: 100%;
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  display: none;
 }
 
-.priority-high { background: var(--color-priority-high); }
-.priority-medium { background: var(--color-priority-medium); }
-.priority-low { background: var(--color-priority-low); }
+/* Priority colors via left border */
+.task-card[data-priority="high"] {
+  border-left-color: var(--color-priority-high);
+}
+
+.task-card[data-priority="medium"] {
+  border-left-color: var(--color-priority-medium);
+}
+
+.task-card[data-priority="low"] {
+  border-left-color: var(--color-priority-low);
+}
 
 .task-title {
   font-size: var(--text-sm);

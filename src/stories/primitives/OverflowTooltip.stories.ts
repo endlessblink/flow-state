@@ -1,7 +1,6 @@
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 const meta = {
-    title: 'PLACEHOLDER',
   component: OverflowTooltip,
     title: '🧩 Primitives/OverflowTooltip',
     tags: ['autodocs'],

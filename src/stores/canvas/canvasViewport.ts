@@ -13,12 +13,12 @@ export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => 
             return
         }
         viewport.value = { x, y, zoom }
-        localStorage.setItem('canvas-viewport', JSON.stringify({ x, y, zoom }))
+        localStorage.setItem('flowstate-canvas-viewport', JSON.stringify({ x, y, zoom }))
         // TASK-1215: Tauri dual-write
         if (isTauriEnv()) {
             getTauriStore().then(store => {
                 if (!store) return
-                store.set('canvas-viewport', { x, y, zoom }).then(() => scheduleTauriSave('canvas-viewport'))
+                store.set('flowstate-canvas-viewport', { x, y, zoom }).then(() => scheduleTauriSave('flowstate-canvas-viewport'))
             })
         }
     }
@@ -34,7 +34,7 @@ export const useCanvasViewport = (initialViewport = { x: 0, y: 0, zoom: 1 }) => 
                 return true
             }
 
-            const local = localStorage.getItem('canvas-viewport')
+            const local = localStorage.getItem('flowstate-canvas-viewport')
             if (local) {
                 try {
                     const parsed = JSON.parse(local)

@@ -8,6 +8,7 @@ import { useProjectStore } from './projects'
 // BUG-1099: Removed synchronous import of canvas store to break circular dependency
 // Canvas store access is now done via dynamic import in updateTaskFromSync
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
 // useCanvasOptimisticSync removed
@@ -118,7 +119,7 @@ export const useTaskStore = defineStore('tasks', () => {
     _pendingWriteTimeouts.set(taskId, setTimeout(() => {
       pendingWrites.value.delete(taskId)
       _pendingWriteTimeouts.delete(taskId)
-    }, 120000))
+    }, PENDING_WRITE_TIMEOUT_MS))
   }
 
   const removePendingWrite = (taskId: string) => {

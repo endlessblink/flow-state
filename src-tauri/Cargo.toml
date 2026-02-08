@@ -1,6 +1,6 @@
 [package]
 name = "flow-state"
-version = "1.2.35"
+version = "1.2.38"
 description = "FlowState - Productivity app with task management and pomodoro timer"
 authors = ["EndlessBlink"]
 license = "MIT"
@@ -37,6 +37,7 @@ tauri-plugin-process = "2"
 tauri-plugin-dialog = { version = "2.6", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-fs = "2.4"
 tauri-plugin-store = "2"
+tauri-plugin-oauth = "2"
 
 # BUG-1115: Release profile optimizations for better performance
 [profile.release]
@@ -44,7 +45,7 @@ lto = true           # Link-Time Optimization - smaller binary, better runtime
 codegen-units = 1    # Single codegen unit for better optimization (slower compile)
 strip = false        # Required - strip = true removes __TAURI_BUNDLE_TYPE symbol needed by updater
 opt-level = 3        # Maximum optimization
-panic = "abort"      # Abort on panic (smaller binary, no unwinding)
+panic = "unwind"     # Allow panic recovery instead of instant process death
 
 [profile.dev]
 opt-level = 0        # No optimization in dev for faster compilation

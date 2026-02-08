@@ -129,35 +129,33 @@ watch(isMenuOpen, (open) => {
   font-size: var(--text-xs);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: var(--red-bg-soft);
+  border: 1px solid var(--red-border);
   color: var(--color-danger);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .overdue-badge:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.6);
+  background: var(--red-bg-medium);
+  border-color: var(--red-border-hover);
   transform: scale(1.02);
 }
 
 /* Reschedule Menu - Glass morphism matching other dropdowns */
 .reschedule-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-1));
   left: 0;
-  z-index: 99999;
+  z-index: var(--z-tooltip);
 
   /* Glass morphism - purple-tinted matching standardized dropdowns */
-  background: rgba(35, 32, 50, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: var(--overlay-component-bg);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-xl);
   border-radius: var(--radius-md);
 
   min-width: 160px;
@@ -186,7 +184,7 @@ watch(isMenuOpen, (open) => {
   border-radius: var(--radius-md);
   user-select: none;
   white-space: nowrap;
-  min-height: 28px;
+  min-height: var(--space-7);
 }
 
 .reschedule-option:hover {

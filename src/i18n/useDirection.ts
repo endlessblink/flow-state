@@ -15,7 +15,7 @@ export function useDirection() {
 
   // Get saved direction preference or auto-detect from locale
   const getSavedDirection = (): 'ltr' | 'rtl' | 'auto' => {
-    const saved = localStorage.getItem('app-direction')
+    const saved = localStorage.getItem('flowstate-app-direction')
     if (saved && ['ltr', 'rtl', 'auto'].includes(saved)) {
       return saved as 'ltr' | 'rtl' | 'auto'
     }
@@ -42,7 +42,7 @@ export function useDirection() {
   // Set direction preference and save to localStorage
   const setDirection = (dir: 'ltr' | 'rtl' | 'auto') => {
     directionPreference.value = dir  // FIX: Update ref to trigger reactivity
-    localStorage.setItem('app-direction', dir)
+    localStorage.setItem('flowstate-app-direction', dir)
 
     // Update document direction
     updateDocumentDirection()

@@ -444,12 +444,13 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
   const measureConnectionSpeed = async (): Promise<number> => {
     try {
       const startTime = Date.now()
-      await fetch('https://httpbin.org/bytes/1024', {
+      await fetch('https://in-theflow.com', {
         method: 'GET',
         cache: 'no-cache'
       })
       const duration = Date.now() - startTime
-      const speedKbps = (1024 * 8) / (duration / 1000) // Convert to kbps
+      // Estimate based on typical response size (~5KB)
+      const speedKbps = (5 * 1024 * 8) / (duration / 1000) // Convert to kbps
       connectionSpeed.value = speedKbps
       return speedKbps
     } catch {

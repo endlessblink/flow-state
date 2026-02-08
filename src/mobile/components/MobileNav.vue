@@ -142,7 +142,7 @@ const handleClearCache = async () => {
   justify-content: space-around;
   align-items: center;
   padding-bottom: env(safe-area-inset-bottom);
-  z-index: 1000;
+  z-index: var(--z-dropdown);
   box-shadow: 0 -4px var(--space-5) rgba(0,0,0,0.1);
 }
 
@@ -176,7 +176,7 @@ const handleClearCache = async () => {
   position: fixed;
   inset: 0;
   background: var(--overlay-bg);
-  z-index: 2000;
+  z-index: var(--z-popover);
   display: flex;
   justify-content: flex-end;
   align-items: flex-end;

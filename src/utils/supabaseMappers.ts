@@ -2,9 +2,11 @@
 import type { Task, Project, Subtask, TaskInstance, TaskRecurrence, RecurringTaskInstance, NotificationPreferences } from '../types/tasks'
 import type { ScheduledNotification } from '../types/recurrence'
 import type { CanvasGroup } from '../types/canvas'
+import type { PinnedTask } from '../types/quickTasks'
 import type { AppSettings } from '../stores/settings'
 import type { PomodoroSession } from '../stores/timer'
 import type { SessionSummary } from '../stores/quickSort'
+import { UNCATEGORIZED_PROJECT_ID } from '../stores/tasks/taskOperations'
 
 // -- Validation Helpers --
 
@@ -29,7 +31,7 @@ const sanitizeUUID = (value: string | null | undefined): string | null => {
     // Handle string literals that should be null
     if (value === 'undefined' || value === 'null' || value === '') return null
     // Handle non-UUID placeholder values
-    if (value === 'uncategorized' || value === '1') return null
+    if (value === UNCATEGORIZED_PROJECT_ID || value === '1') return null
     // Validate UUID format
     if (!isValidUUID(value)) {
         console.warn(`[SUPABASE-MAPPER] Invalid UUID detected: "${value}", converting to null`)
@@ -49,6 +51,17 @@ const sanitizeTimestamp = (value: string | Date | null | undefined): string | nu
     // Handle Date objects
     if (value instanceof Date) {
         return isNaN(value.getTime()) ? null : value.toISOString()
+    }
+    // BUG-1286: Preserve date-only strings (YYYY-MM-DD) without adding T00:00:00.000Z
+    // This prevents timezone-induced time artifacts (e.g., 2am in UTC+2)
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        // Validate it's a real date
+        const [y, m, d] = value.split('-').map(Number)
+        const date = new Date(y, m - 1, d)
+        if (date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d) {
+            return value
+        }
+        return null
     }
     // Handle ISO string - validate it's a real date
     try {
@@ -224,6 +237,18 @@ export interface SupabaseQuickSortSession {
     efficiency: number
     streak_days: number
     completed_at: string
+}
+
+export interface SupabasePinnedTask {
+    id: string
+    user_id: string
+    title: string
+    description?: string
+    project_id?: string | null
+    priority?: string | null
+    sort_order?: number
+    created_at?: string
+    updated_at?: string
 }
 
 // -- Mappers --
@@ -450,7 +475,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
         status: record.status as Task['status'],
         priority: (record.priority as Task['priority']) || null,
 
-        projectId: record.project_id || 'uncategorized',
+        projectId: record.project_id || UNCATEGORIZED_PROJECT_ID,
         parentTaskId: record.parent_task_id || null,
 
         completedPomodoros: record.completed_pomodoros || 0,
@@ -652,5 +677,34 @@ export function fromSupabaseQuickSortSession(record: SupabaseQuickSortSession): 
         efficiency: record.efficiency,
         streakDays: record.streak_days,
         completedAt: new Date(record.completed_at)
+    }
+}
+
+// -- Pinned Task Mappers (FEATURE-1248) --
+
+export function toSupabasePinnedTask(pin: PinnedTask, userId: string): SupabasePinnedTask {
+    return {
+        id: pin.id,
+        user_id: userId,
+        title: pin.title,
+        description: pin.description || '',
+        project_id: sanitizeUUID(pin.projectId),
+        priority: pin.priority || null,
+        sort_order: pin.sortOrder || 0,
+        updated_at: new Date().toISOString()
+    }
+}
+
+export function fromSupabasePinnedTask(record: SupabasePinnedTask): PinnedTask {
+    return {
+        id: record.id,
+        userId: record.user_id,
+        title: record.title,
+        description: record.description || '',
+        projectId: record.project_id || null,
+        priority: record.priority || null,
+        sortOrder: record.sort_order || 0,
+        createdAt: new Date(record.created_at || Date.now()),
+        updatedAt: new Date(record.updated_at || Date.now())
     }
 }

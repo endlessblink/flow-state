@@ -282,15 +282,15 @@ watch(() => props.isVisible, (visible) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
 }
 
 .modal-content {
   background: var(--surface-primary);
-  border: 1px solid var(--glass-border);
+  border: var(--space-px) solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  max-width: 480px;
+  max-width: var(--space-120);
   width: 90%;
   max-height: 90vh;
   overflow: auto;
@@ -300,7 +300,7 @@ watch(() => props.isVisible, (visible) => {
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-8px);
+    transform: scale(0.96) translateY(var(--space-neg-2));
   }
   to {
     opacity: 1;

@@ -327,7 +327,7 @@ function close() {
   display: flex;
   align-items: flex-start;
   gap: var(--space-1, 4px);
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: rgba(234, 179, 8, 0.9);
   line-height: 1.4;
 }
@@ -338,7 +338,7 @@ function close() {
 
 .tip-icon {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .tip-text {
@@ -347,7 +347,7 @@ function close() {
 
 /* ── Task Title ── */
 .task-title-row {
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary, #fff);
   line-height: 1.4;
@@ -376,7 +376,7 @@ function close() {
 }
 
 .field-label {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
   text-transform: uppercase;
@@ -427,7 +427,7 @@ function close() {
 }
 
 .status-badge-btn {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 500;
   padding: 2px 8px;
   border-radius: var(--radius-sm, 4px);
@@ -486,7 +486,7 @@ function close() {
 /* ── Date Input ── */
 .date-input {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--text-xs);
   padding: 4px 8px;
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   border-radius: var(--radius-sm, 4px);
@@ -514,7 +514,7 @@ function close() {
   gap: 4px;
   padding: 5px 10px;
   border-radius: var(--radius-md, 8px);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -559,7 +559,7 @@ function close() {
   border: none;
   background: transparent;
   color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
-  font-size: 11px;
+  font-size: var(--text-xs);
   cursor: pointer;
   transition: color 0.12s ease;
 }

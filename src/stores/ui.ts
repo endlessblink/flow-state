@@ -4,7 +4,7 @@ import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler
 // TASK-1215: Tauri dual-write for UI state persistence
 import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
 
-const UI_STATE_STORAGE_KEY = 'flow-state-ui-state'
+const UI_STATE_STORAGE_KEY = 'flowstate-ui-state'
 
 /**
  * Helper to ensure a value is a Set<string>
@@ -23,7 +23,7 @@ function ensureSet(value: unknown): Set<string> {
 export type AuthModalView = 'login' | 'signup' | 'reset-password'
 
 export const useUIStore = defineStore('ui', () => {
-  // Temporary hardcoded values until i18n is fixed
+  // Default locale and direction (i18n integration pending)
   const locale = ref('en')
   const direction = ref('ltr')
   const isRTL = computed(() => direction.value === 'rtl')
@@ -178,12 +178,12 @@ export const useUIStore = defineStore('ui', () => {
   // Language and direction actions
   const setLanguage = (languageCode: 'en' | 'he') => {
     locale.value = languageCode
-    localStorage.setItem('app-locale', languageCode)
+    localStorage.setItem('flowstate-app-locale', languageCode)
     // TASK-1215: Tauri dual-write for locale
     if (isTauriEnv()) {
       getTauriStore().then(store => {
         if (!store) return
-        store.set('app-locale', languageCode).then(() => scheduleTauriSave('app-locale'))
+        store.set('flowstate-app-locale', languageCode).then(() => scheduleTauriSave('flowstate-app-locale'))
       })
     }
     persistState()
@@ -225,6 +225,14 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   const loadState = () => {
+    // TASK-1267: Migrate from old key prefix
+    if (!localStorage.getItem(UI_STATE_STORAGE_KEY)) {
+      const oldData = localStorage.getItem('flow-state-ui-state')
+      if (oldData) {
+        localStorage.setItem(UI_STATE_STORAGE_KEY, oldData)
+        localStorage.removeItem('flow-state-ui-state')
+      }
+    }
     const saved = localStorage.getItem(UI_STATE_STORAGE_KEY)
     if (saved) {
       try {

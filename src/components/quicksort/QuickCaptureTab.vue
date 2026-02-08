@@ -792,7 +792,7 @@ defineExpose({
   padding: var(--space-0_5) var(--space-1);
   background: var(--overlay-light);
   border-radius: var(--radius-sm);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-family: var(--font-mono);
 }
 

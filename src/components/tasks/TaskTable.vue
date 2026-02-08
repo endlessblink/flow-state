@@ -502,17 +502,17 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--glass-bg-light);
-  backdrop-filter: blur(var(--blur-regular));
-  -webkit-backdrop-filter: blur(var(--blur-regular));
+  backdrop-filter: var(--blur-regular);
+  -webkit-backdrop-filter: var(--blur-regular);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-shadow: var(--shadow-2xl);
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
+  grid-template-columns: var(--space-10) 1fr var(--space-20) var(--space-30) var(--space-30) var(--space-25) var(--space-25);
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background-color: var(--glass-bg-medium);
@@ -528,8 +528,8 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   position: relative;
-  min-height: 200px;
-  max-height: calc(100vh - 300px);
+  min-height: var(--space-50);
+  max-height: calc(100vh - var(--space-75));
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
 }
@@ -550,7 +550,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   grid-column: 2 / -1;
   margin: var(--space-2) 0;
-  backdrop-filter: blur(12px);
+  backdrop-filter: var(--blur-medium);
 }
 
 .selection-count {

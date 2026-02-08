@@ -1042,7 +1042,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   background: var(--border-hover);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   margin-left: var(--space-0_5);
 }
@@ -1246,7 +1246,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* Project badge in task meta */
 .project-badge {
-  font-size: 11px;
+  font-size: var(--text-xs);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-xs);
   background: var(--surface-tertiary);
@@ -1312,7 +1312,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .task-title {
-  font-size: 15px;
+  font-size: var(--text-base);
   color: var(--text-primary);
   /* Multi-line truncation for RTL/long text */
   display: -webkit-box;
@@ -1348,7 +1348,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 /* Inline priority badge (right side of title) */
 .priority-badge-inline {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-xs);
@@ -1369,7 +1369,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .priority-badge {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   padding: var(--space-0_5) var(--space-1_5);
   border-radius: var(--radius-xs);
@@ -1765,7 +1765,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-mode-badge {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   flex-shrink: 0;
 }
@@ -1813,7 +1813,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-bold);
   color: white;
   background: var(--primary-brand);
@@ -1837,7 +1837,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-offline-badge {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   background: var(--orange-bg-light);
   color: var(--warning-text);
@@ -1846,7 +1846,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-queue-status {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
   background: var(--primary-brand-bg-subtle);
   color: var(--primary-brand);
@@ -1857,7 +1857,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   background: var(--overlay-component-bg-lighter);
   color: #0f0;
   font-family: monospace;
-  font-size: 11px;
+  font-size: var(--text-xs);
   padding: var(--space-2) var(--space-3);
   margin: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
@@ -1879,7 +1879,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   border: none;
   color: var(--text-muted);
   font-size: var(--text-sm);
-  z-index: 1000;
+  z-index: var(--z-dropdown);
 }
 
 /* RTL Layout Support */

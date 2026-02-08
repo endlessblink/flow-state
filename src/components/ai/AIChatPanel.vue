@@ -831,7 +831,7 @@ onUnmounted(() => {
   border-inline-start: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  z-index: 10001;
+  z-index: var(--z-tooltip);
   box-shadow: var(--shadow-xl);
   transition: width var(--duration-normal) ease;
 }
@@ -843,7 +843,7 @@ onUnmounted(() => {
   height: 100vh;
   border-radius: 0;
   border-inline-start: none;
-  z-index: 10002;
+  z-index: var(--z-tooltip);
   box-shadow: none;
 }
 
@@ -862,7 +862,7 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: var(--overlay-component-bg-lighter);
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   display: none;
 }
 

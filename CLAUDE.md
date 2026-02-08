@@ -524,15 +524,13 @@ border-radius: 12px;              border-radius: var(--radius-lg);
    mkdir -p supabase/backups
    supabase db dump > supabase/backups/backup-$(date +%Y%m%d-%H%M%S).sql
    ```
-2. The `destructive-command-blocker.sh` hook will BLOCK migrations without recent backup
+2. NEVER run destructive commands — Claude Code must refuse and tell the user to run manually
 
 **Backup location:** `supabase/backups/` (not committed to git)
 
 **Dual-Engine Backup System:** See [`docs/claude-md-extension/backup-system.md`](docs/claude-md-extension/backup-system.md) for full details.
 - Auto-backup every 5 minutes via `npm run dev`
 - Recovery UI: Settings > Storage tab
-
-**Hook enforcement:** `.claude/hooks/destructive-command-blocker.sh`
 
 **If you need to reset the database:**
 - Tell the user to run the command MANUALLY in their terminal

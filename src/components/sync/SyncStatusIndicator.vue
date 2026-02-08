@@ -161,23 +161,23 @@ const handleClear = async () => {
 
 /* Status Colors */
 .status-synced {
-  color: var(--color-success, #22c55e);
+  color: var(--color-success);
 }
 
 .status-syncing {
-  color: var(--color-info, #3b82f6);
+  color: var(--color-info);
 }
 
 .status-pending {
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning);
 }
 
 .status-error {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-danger);
 }
 
 .status-offline {
-  color: var(--text-muted, #6b7280);
+  color: var(--text-muted);
 }
 
 /* Spinning animation for syncing */
@@ -197,12 +197,12 @@ const handleClear = async () => {
 /* Badge */
 .sync-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  font-size: 10px;
+  top: var(--space-0_5);
+  right: var(--space-0_5);
+  min-width: var(--space-4);
+  height: var(--space-4);
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
   font-weight: 700;
   color: white;
   border-radius: var(--radius-full);
@@ -213,47 +213,47 @@ const handleClear = async () => {
 }
 
 .status-pending .sync-badge {
-  background: var(--color-warning, #f59e0b);
+  background: var(--color-warning);
   animation: pulse-amber 2s ease-in-out infinite;
 }
 
 .status-error .sync-badge {
-  background: var(--color-danger, #ef4444);
+  background: var(--color-danger);
   animation: pulse-red 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse-amber {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 0 0 rgba(var(--color-warning-rgb), 0.4);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0);
+    box-shadow: 0 0 0 var(--space-1) rgba(var(--color-warning-rgb), 0);
   }
 }
 
 @keyframes pulse-red {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 0 0 rgba(var(--color-danger-rgb), 0.4);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 var(--space-1) rgba(var(--color-danger-rgb), 0);
   }
 }
 
 /* Hover effects */
 .sync-indicator:hover.status-synced {
-  color: var(--color-success-hover, #16a34a);
+  color: var(--color-success-hover);
 }
 
 .sync-indicator:hover.status-syncing {
-  color: var(--color-info-hover, #2563eb);
+  color: var(--color-info-hover);
 }
 
 .sync-indicator:hover.status-pending {
-  color: var(--color-warning-hover, #d97706);
+  color: var(--color-warning-hover);
 }
 
 .sync-indicator:hover.status-error {
-  color: var(--color-danger-hover, #dc2626);
+  color: var(--color-danger-hover);
 }
 </style>

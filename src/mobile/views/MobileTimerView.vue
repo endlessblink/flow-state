@@ -110,7 +110,7 @@ const toggleTimer = async () => {
 }
 
 .time-display {
-  font-size: 4rem;
+  font-size: var(--text-4xl);
   font-weight: var(--font-bold);
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);

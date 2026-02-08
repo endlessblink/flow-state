@@ -1,6 +1,7 @@
 // Centralized Smart View System
 // Single source of truth for all smart view filtering logic
 import type { Task } from '@/types/tasks'
+import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
 export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' |
   'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
@@ -351,7 +352,7 @@ export const useSmartViews = () => {
     }
 
     // Check for explicit "uncategorized" projectId value
-    if (task.projectId === 'uncategorized') {
+    if (task.projectId === UNCATEGORIZED_PROJECT_ID) {
       return true
     }
 

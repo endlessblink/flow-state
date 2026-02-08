@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowState",
-  "version": "1.2.35",
+  "version": "1.2.38",
   "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5546",
     "beforeDevCommand": "TAURI_DEV=true npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "echo 'Skipping - dist already built'",
     "features": [
       "devtools"
     ]
@@ -43,7 +43,8 @@
     "category": "Productivity",
     "shortDescription": "Productivity app with task management and pomodoro timer",
     "longDescription": "FlowState combines powerful task management across Board, Calendar, and Canvas views with an integrated Pomodoro timer.",
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "copyright": "Copyright (c) 2026 endlessblink"
   },
   "plugins": {
     "updater": {

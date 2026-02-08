@@ -775,7 +775,7 @@ function formatTime(milliseconds: number): string {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .primary-button {

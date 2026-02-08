@@ -167,21 +167,12 @@ const getDotStyle = (index: number) => ({
 
 /* Enhanced CSS Custom Properties with Comprehensive Design System */
 .drag-handle {
-  /* Animation Timing Functions */
-  --spring-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --spring-bouncy: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --spring-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Animation Timing Functions - uses global tokens from design-tokens.css:
+     --spring-smooth, --spring-bouncy, --spring-gentle, --ease-out-back already defined globally */
   --ease-in-out-expo: cubic-bezier(0.85, 0, 0.15, 1);
 
-  /* Glass Morphism Layers */
-  --glass-bg-soft: rgba(255, 255, 255, 0.06);
-  --glass-bg-light: rgba(255, 255, 255, 0.10);
-  --glass-bg-medium: rgba(255, 255, 255, 0.14);
-  --glass-bg-strong: rgba(255, 255, 255, 0.20);
-  --glass-border-subtle: rgba(255, 255, 255, 0.12);
-  --glass-border-medium: rgba(255, 255, 255, 0.20);
-  --glass-border-strong: rgba(255, 255, 255, 0.28);
+  /* Glass Morphism Layers - uses global tokens from design-tokens.css:
+     --glass-bg-*, --glass-border-* already defined globally */
 
   /* Color System */
   --primary-rgb: 59, 130, 246;
@@ -195,28 +186,25 @@ const getDotStyle = (index: number) => ({
   --state-focus: rgba(var(--primary-rgb), 0.12);
   --state-active: rgba(var(--accent-rgb), 0.2);
 
-  /* Blur Values */
+  /* Blur Values - component-specific (includes blur() wrapper) */
   --blur-light: blur(6px);
   --blur-medium: blur(10px);
   --blur-strong: blur(14px);
 
-  /* Shadows */
+  /* Shadows - component-specific (reference local --primary-rgb) */
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.10);
   --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.14);
   --shadow-glow: 0 0 20px rgba(var(--primary-rgb), 0.25);
   --shadow-glow-strong: 0 0 32px rgba(var(--primary-rgb), 0.35);
 
-  /* Transitions */
-  --transition-fast: 0.12s;
+  /* Transitions - uses global --duration-* tokens */
+  --transition-fast: var(--duration-fast);
   --transition-normal: var(--duration-normal);
   --transition-slow: var(--duration-slower);
 
-  /* Border Radius */
-  --radius-xs: 3px;
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Border Radius - uses global --radius-* tokens
+     (local aliases kept for backward compat within this component) */
 }
 
 /* Main Container */
@@ -225,8 +213,8 @@ const getDotStyle = (index: number) => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: var(--space-12);
+  height: var(--space-12);
 
   /* Multi-layer glass morphism background */
   background:
@@ -234,14 +222,14 @@ const getDotStyle = (index: number) => ({
     linear-gradient(225deg, var(--glass-bg-light) 0%, var(--glass-bg-soft) 100%);
 
   /* Enhanced border system */
-  border: 1px solid var(--glass-border-medium);
+  border: var(--space-0_5) solid var(--glass-border-medium);
   border-radius: var(--radius-md);
 
   /* Advanced shadow system */
   box-shadow:
     var(--shadow-soft),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.15),
+    inset 0 calc(-1 * var(--space-0_5)) 0 rgba(var(--color-slate-900), 0.08);
 
   /* Sophisticated backdrop effects */
   backdrop-filter: var(--blur-medium);
@@ -259,29 +247,29 @@ const getDotStyle = (index: number) => ({
 
 /* Size Variants */
 .drag-handle--sm {
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   border-radius: var(--radius-sm);
 }
 
 .drag-handle--lg {
-  width: 64px;
-  height: 64px;
+  width: var(--space-16);
+  height: var(--space-16);
   border-radius: var(--radius-lg);
 }
 
 /* State: Hover */
 .drag-handle:hover,
 .drag-handle--hovered {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(calc(-1 * var(--space-0_5))) scale(1.02);
   background:
     linear-gradient(135deg, var(--glass-bg-strong) 0%, var(--glass-bg-medium) 100%),
     linear-gradient(225deg, var(--state-hover) 0%, var(--glass-bg-soft) 100%);
   border-color: var(--glass-border-strong);
   box-shadow:
     var(--shadow-medium),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.25),
+    inset 0 calc(-1 * var(--space-0_5)) 0 rgba(var(--color-slate-900), 0.05);
   cursor: grab;
 }
 
@@ -295,7 +283,7 @@ const getDotStyle = (index: number) => ({
   box-shadow:
     var(--shadow-soft),
     var(--shadow-glow),
-    inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    inset 0 var(--space-0_5) var(--space-1) rgba(var(--color-slate-900), 0.1);
   cursor: grabbing;
   z-index: 100;
 }
@@ -307,8 +295,8 @@ const getDotStyle = (index: number) => ({
   border-color: rgba(var(--primary-rgb), 0.8);
   box-shadow:
     var(--shadow-medium),
-    0 0 0 3px rgba(var(--primary-rgb), 0.3);
-  transform: translateY(-1px);
+    0 0 0 var(--space-0_5) rgba(var(--primary-rgb), 0.3);
+  transform: translateY(calc(-1 * var(--space-0_5)));
 }
 
 /* State: Disabled */
@@ -343,8 +331,8 @@ const getDotStyle = (index: number) => ({
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   padding: var(--space-1);
   gap: var(--space-1);
   transition: transform var(--transition-normal) var(--spring-bouncy);
@@ -365,12 +353,12 @@ const getDotStyle = (index: number) => ({
 }
 
 .drag-handle__dots--sm {
-  gap: 3px;
+  gap: var(--space-0_5);
 }
 
 .drag-handle__dots--lg {
   grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
+  gap: var(--space-1_5);
 }
 
 .drag-handle__dots--hovered {
@@ -379,11 +367,11 @@ const getDotStyle = (index: number) => ({
 
 /* Individual Dot */
 .drag-handle__dot {
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  width: var(--space-1);
+  height: var(--space-1);
+  background: var(--glass-border-strong);
+  border-radius: var(--radius-full);
+  box-shadow: 0 var(--space-0_5) var(--space-0_5) rgba(var(--color-slate-900), 0.2);
   transition:
     background-color var(--transition-normal) ease,
     transform var(--transition-normal) var(--spring-bouncy),
@@ -392,14 +380,14 @@ const getDotStyle = (index: number) => ({
 
 .drag-handle__dot--dragging {
   background: rgb(var(--primary-light-rgb));
-  box-shadow: 0 0 4px rgba(var(--primary-rgb), 0.6);
+  box-shadow: 0 0 var(--space-1) rgba(var(--primary-rgb), 0.6);
   transform: scale(1.2);
   animation: dot-pulse 1.5s infinite var(--spring-gentle);
 }
 
 .drag-handle:hover .drag-handle__dot {
-  background: rgb(255, 255, 255);
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+  background: var(--text-primary);
+  box-shadow: 0 0 var(--space-1) rgba(var(--color-slate-50), 0.5);
 }
 
 /* Glow Layer */
@@ -418,7 +406,7 @@ const getDotStyle = (index: number) => ({
   opacity: 0;
   transition: opacity var(--transition-fast) ease;
   pointer-events: none;
-  filter: blur(8px);
+  filter: blur(var(--blur-xs));
 }
 
 .drag-handle--dragging .drag-handle__glow-layer {
@@ -431,7 +419,7 @@ const getDotStyle = (index: number) => ({
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: 2px solid rgba(var(--primary-rgb), 0.5);
+  border: var(--space-0_5) solid rgba(var(--primary-rgb), 0.5);
   opacity: 0;
   pointer-events: none;
 }
@@ -459,14 +447,14 @@ const getDotStyle = (index: number) => ({
 .drag-handle__indicator {
   position: absolute;
   background: rgba(var(--primary-rgb), 0.3);
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   display: none; /* Hidden by default, simpler visual preferred for now */
 }
 
 /* Animations */
 @keyframes dot-pulse {
   0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.8); }
+  50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 var(--space-2) rgba(var(--primary-rgb), 0.8); }
 }
 
 @keyframes glow-pulse {

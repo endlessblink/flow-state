@@ -209,20 +209,20 @@ function openSupabaseInstall() {
 .startup-screen {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--overlay-component-bg, rgba(28, 25, 45, 0.98));
-  backdrop-filter: var(--overlay-component-backdrop, blur(20px));
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
 }
 
 .startup-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-6, 24px);
-  padding: var(--space-8, 32px);
+  gap: var(--space-6);
+  padding: var(--space-8);
   max-width: 400px;
   text-align: center;
 }
@@ -231,34 +231,34 @@ function openSupabaseInstall() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3, 12px);
+  gap: var(--space-3);
 }
 
 .logo {
-  width: 80px;
-  height: 80px;
+  width: var(--space-20);
+  height: var(--space-20);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.06));
-  border: var(--overlay-component-border, 1px solid rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-xl, 20px);
+  background: var(--glass-bg-heavy);
+  border: var(--overlay-component-border);
+  border-radius: var(--radius-xl);
 }
 
 .logo-icon {
-  font-size: 40px;
+  font-size: var(--space-10);
 }
 
 .app-name {
-  font-size: var(--text-2xl, 24px);
+  font-size: var(--text-2xl);
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .status-message {
-  font-size: var(--text-base, 16px);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--text-base);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -267,42 +267,42 @@ function openSupabaseInstall() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2, 8px);
+  gap: var(--space-2);
 }
 
 .progress-bar {
   width: 100%;
-  height: 6px;
-  background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.06));
-  border-radius: var(--radius-full, 9999px);
+  height: var(--space-1_5);
+  background: var(--glass-bg-heavy);
+  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ef4444, #f97316);
-  border-radius: var(--radius-full, 9999px);
-  transition: width var(--duration-normal, 200ms) var(--ease-out, ease-out);
+  background: linear-gradient(90deg, var(--color-danger), var(--color-orange));
+  border-radius: var(--radius-full);
+  transition: width var(--duration-normal) var(--ease-out);
 }
 
 .progress-text {
-  font-size: var(--text-sm, 14px);
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 .status-indicators {
   display: flex;
-  gap: var(--space-6, 24px);
-  margin-top: var(--space-4, 16px);
+  gap: var(--space-6);
+  margin-top: var(--space-4);
 }
 
 .status-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-1, 4px);
+  gap: var(--space-1);
   opacity: 0.5;
-  transition: opacity var(--duration-fast, 150ms);
+  transition: opacity var(--duration-fast);
 }
 
 .status-item.active,
@@ -311,35 +311,35 @@ function openSupabaseInstall() {
 }
 
 .status-icon {
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-lg, 18px);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
 }
 
 .status-item.done .status-icon {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .status-label {
-  font-size: var(--text-sm, 14px);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .status-version {
-  font-size: var(--text-xs, 12px);
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  border-top-color: #f97316;
-  border-radius: 50%;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: var(--space-0_5) solid var(--glass-border);
+  border-top-color: var(--color-orange);
+  border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
 }
 
@@ -353,21 +353,21 @@ function openSupabaseInstall() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-4, 16px);
-  padding: var(--space-4, 16px);
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--radius-lg, 16px);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-lg);
   width: 100%;
 }
 
 .error-icon {
-  font-size: 32px;
+  font-size: var(--space-8);
 }
 
 .error-message {
-  font-size: var(--text-sm, 14px);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -375,76 +375,76 @@ function openSupabaseInstall() {
 .error-help {
   text-align: left;
   width: 100%;
-  padding: var(--space-3, 12px);
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: var(--radius-md, 8px);
+  padding: var(--space-3);
+  background: var(--surface-subtle);
+  border-radius: var(--radius-md);
 }
 
 .error-help p {
-  margin: 0 0 var(--space-2, 8px);
-  font-size: var(--text-sm, 14px);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .error-help ol {
   margin: 0;
-  padding-left: var(--space-5, 20px);
-  font-size: var(--text-sm, 14px);
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 .error-help li {
-  margin-bottom: var(--space-1, 4px);
+  margin-bottom: var(--space-1);
 }
 
 .error-help code {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm, 6px);
+  background: var(--code-bg);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-sm);
   font-family: monospace;
-  font-size: var(--text-xs, 12px);
+  font-size: var(--text-xs);
 }
 
 .error-actions {
   display: flex;
-  gap: var(--space-3, 12px);
+  gap: var(--space-3);
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .btn {
-  padding: var(--space-2, 8px) var(--space-4, 16px);
-  border-radius: var(--radius-md, 8px);
-  font-size: var(--text-sm, 14px);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--duration-fast, 150ms) var(--ease-out, ease-out);
+  transition: all var(--duration-fast) var(--ease-out);
   border: none;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ef4444, #f97316);
+  background: linear-gradient(135deg, var(--color-danger), var(--color-orange));
   color: white;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-secondary {
-  background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.06));
-  color: var(--text-primary, #fff);
-  border: var(--overlay-component-border, 1px solid rgba(255, 255, 255, 0.1));
+  background: var(--glass-bg-heavy);
+  color: var(--text-primary);
+  border: var(--overlay-component-border);
 }
 
 .btn-secondary:hover {
-  background: var(--glass-bg-medium, rgba(255, 255, 255, 0.08));
+  background: var(--glass-bg-medium);
 }
 
 .first-time-notice {
-  font-size: var(--text-xs, 12px);
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   margin: 0;
   font-style: italic;
 }
@@ -452,7 +452,7 @@ function openSupabaseInstall() {
 /* Fade transition */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity var(--duration-normal, 200ms) var(--ease-out, ease-out);
+  transition: opacity var(--duration-normal) var(--ease-out);
 }
 
 .fade-enter-from,

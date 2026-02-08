@@ -224,7 +224,7 @@ defineExpose({
 }
 
 .project-task-count {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 

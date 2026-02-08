@@ -304,7 +304,7 @@ const handleDrop = (event: DragEvent) => {
     box-shadow var(--duration-slow) var(--spring-smooth),
     transform var(--duration-normal) var(--spring-smooth);
   position: relative;
-  min-height: 40px;
+  min-height: var(--space-10);
   user-select: none;
   background: transparent;
   border: 1px solid transparent; /* Always have border to prevent layout shift */
@@ -319,8 +319,8 @@ const handleDrop = (event: DragEvent) => {
 .base-nav-item.is-active {
   background: var(--glass-bg-medium);
   border: 1px solid var(--state-active-border);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--space-2));
+  -webkit-backdrop-filter: blur(var(--space-2));
 }
 
 /* Selected State - Multi-select highlight */
@@ -337,12 +337,12 @@ const handleDrop = (event: DragEvent) => {
 /* Nested items - dynamic indentation based on CSS custom property */
 .base-nav-item.is-nested {
   padding-inline-start: var(--nesting-indent, var(--space-8)); /* RTL: nested item indentation */
-  min-height: 36px;
+  min-height: var(--space-9);
 }
 
 /* Optimized handling for deeper nesting levels - Todoist-style efficiency */
 .base-nav-item.is-nested[style*="--nesting-indent"] {
-  padding-inline-start: calc(var(--nesting-indent) + 8px); /* Reduced padding for better text space */
+  padding-inline-start: calc(var(--nesting-indent) + var(--space-2)); /* Reduced padding for better text space */
 }
 
 /* Expand chevron */
@@ -373,7 +373,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .chevron-spacer {
-  width: 14px;
+  width: var(--space-3_5);
   flex-shrink: 0;
 }
 
@@ -412,8 +412,8 @@ const handleDrop = (event: DragEvent) => {
 
 /* Color dot (for projects without emoji) */
 .color-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: var(--radius-full);
   flex-shrink: 0;
   opacity: 0.9;
@@ -428,7 +428,7 @@ const handleDrop = (event: DragEvent) => {
 /* Emoji icon for projects */
 .nav-emoji {
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1;
   transition: transform var(--duration-fast);
 }
@@ -484,7 +484,7 @@ const handleDrop = (event: DragEvent) => {
 .base-nav-item.is-drag-target.is-drag-valid {
   background: color-mix(in srgb, var(--brand-primary) 15%, transparent) !important;
   border-color: var(--brand-primary) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 20%, transparent) !important;
+  box-shadow: 0 0 0 var(--space-0_5) color-mix(in srgb, var(--brand-primary) 20%, transparent) !important;
   animation: pulseValid 1.5s ease-in-out infinite;
 }
 
@@ -505,10 +505,10 @@ const handleDrop = (event: DragEvent) => {
 /* Pulse animation for valid drop targets */
 @keyframes pulseValid {
   0%, 100% {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 20%, transparent) !important;
+    box-shadow: 0 0 0 var(--space-0_5) color-mix(in srgb, var(--brand-primary) 20%, transparent) !important;
   }
   50% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 30%, transparent) !important;
+    box-shadow: 0 0 0 var(--space-1) color-mix(in srgb, var(--brand-primary) 30%, transparent) !important;
   }
 }
 
@@ -525,25 +525,25 @@ const handleDrop = (event: DragEvent) => {
     color-mix(in srgb, var(--brand-primary) 95%, transparent) 0%,
     color-mix(in srgb, var(--brand-primary) 85%, transparent) 100%
   );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--space-3));
+  -webkit-backdrop-filter: blur(var(--space-3));
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
-  color: #0a0a0a;
+  color: hsl(var(--slate-900));
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   white-space: nowrap;
   pointer-events: none;
   box-shadow:
-    0 4px 12px color-mix(in srgb, var(--brand-primary) 30%, transparent),
-    0 0 0 2px color-mix(in srgb, var(--brand-primary) 20%, transparent);
+    0 var(--space-1) var(--space-3) color-mix(in srgb, var(--brand-primary) 30%, transparent),
+    0 0 0 var(--space-0_5) color-mix(in srgb, var(--brand-primary) 20%, transparent);
   z-index: 1000;
   animation: slideInLabel 0.2s var(--spring-smooth);
 }
 
 .drop-target-label strong {
   font-weight: var(--font-semibold);
-  color: #000;
+  color: hsl(var(--slate-900));
 }
 
 .drop-arrow {
@@ -555,7 +555,7 @@ const handleDrop = (event: DragEvent) => {
 @keyframes slideInLabel {
   from {
     opacity: 0;
-    transform: translateY(-50%) translateX(-8px);
+    transform: translateY(-50%) translateX(calc(var(--space-2) * -1));
   }
   to {
     opacity: 1;

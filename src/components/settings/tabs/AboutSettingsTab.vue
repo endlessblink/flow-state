@@ -5,6 +5,7 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { useTauriUpdater } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
 import { useSettingsStore } from '@/stores/settings'
+import { EXTERNAL_URLS } from '@/config/urls'
 
 declare const __APP_VERSION__: string
 
@@ -26,11 +27,11 @@ const handleRestart = async () => {
 }
 
 const openWebsite = () => {
-  window.open('https://in-theflow.com', '_blank')
+  window.open(EXTERNAL_URLS.PRODUCTION_SITE, '_blank')
 }
 
 const openGithub = () => {
-  window.open('https://github.com/endlessblink/flow-state', '_blank')
+  window.open(EXTERNAL_URLS.GITHUB_REPO, '_blank')
 }
 </script>
 

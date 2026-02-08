@@ -223,7 +223,7 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: center;
   padding-top: 15vh;
-  z-index: 3000;
+  z-index: var(--z-popover);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);

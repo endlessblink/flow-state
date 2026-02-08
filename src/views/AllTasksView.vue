@@ -367,7 +367,7 @@ onMounted(() => {
   transition: all var(--duration-normal) var(--spring-smooth);
   box-shadow: var(--shadow-md);
   position: relative;
-  z-index: 1000;
+  z-index: var(--z-dropdown);
   pointer-events: auto;
   user-select: none;
 }

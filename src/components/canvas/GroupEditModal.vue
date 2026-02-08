@@ -220,17 +220,17 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
 }
 
 .modal-content {
   background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--space-px) solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-dark-xl);
-  max-width: 500px;
+  max-width: var(--space-125);
   width: 90%;
   max-height: 90vh;
   overflow: auto;
@@ -240,7 +240,7 @@ onUnmounted(() => {
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-8px);
+    transform: scale(0.96) translateY(var(--space-neg-2));
   }
   to {
     opacity: 1;
@@ -265,7 +265,7 @@ onUnmounted(() => {
 
 .close-btn {
   background: transparent;
-  border: 1px solid transparent;
+  border: var(--space-px) solid transparent;
   color: var(--text-muted);
   cursor: pointer;
   padding: var(--space-2);

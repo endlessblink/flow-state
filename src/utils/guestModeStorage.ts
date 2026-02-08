@@ -10,9 +10,27 @@
 // Same-session sign-in can still migrate tasks before any restart.
 //
 // BUG-339: Historical keys that may still exist from older versions
+// TASK-1267: Old key names that may exist from previous versions
 const LEGACY_GUEST_KEYS = [
-  'pomoflow-guest-tasks',    // Old key name before rename
-  'pomoflow-guest-groups',   // Old key name before rename
+  'pomoflow-guest-tasks',
+  'pomoflow-guest-groups',
+  // Pre-TASK-1267 flow-state-* keys
+  'flow-state-local-user',
+  'flow-state-filters',
+  'flow-state-kanban-settings',
+  'flow-state-backup-history',
+  'flow-state-latest-backup',
+  'flow-state-golden-backup',
+  'flow-state-max-task-count',
+  'flow-state-simple-latest-backup',
+  'flow-state-local-banner-dismissed',
+  'flow-state-offline-queue',
+  'flow-state-ui-state',
+  'flow-state-theme',
+  'canvas-viewport',
+  'recent-emojis',
+  'quickSort_sessionHistory',
+  'quickSort_lastCompletedDate',
 ]
 
 const GUEST_EPHEMERAL_KEYS = [
@@ -21,36 +39,33 @@ const GUEST_EPHEMERAL_KEYS = [
 
   // Canvas
   'flowstate-guest-groups',
-  'canvas-viewport',
+  'flowstate-canvas-viewport',
   'flowstate-canvas-has-initial-fit',
   'flowstate-canvas-locks',
 
   // Local auth
-  'flow-state-local-user',
+  'flowstate-local-user',
 
   // Filters and view state
-  'flow-state-filters',
-  'flow-state-kanban-settings',
+  'flowstate-filters',
 
   // Backups (no data to backup in guest mode)
-  'flow-state-backup-history',
-  'flow-state-latest-backup',
-  'flow-state-golden-backup',
-  'flow-state-max-task-count',
-  'flow-state-simple-latest-backup',
+  'flowstate-backup-history',
+  'flowstate-backup-latest',
+  'flowstate-backup-golden',
+  'flowstate-max-task-count',
 
   // Quick Sort
-  'quickSort_sessionHistory',
-  'quickSort_lastCompletedDate',
+  'flowstate-quicksort-history',
+  'flowstate-quicksort-last-date',
 
   // Other user-specific data
-  'recent-emojis',
-  'flow-state-local-banner-dismissed',
-  'flow-state-offline-queue',
+  'flowstate-recent-emojis',
+  'flowstate-local-banner-dismissed',
+  'flowstate-offline-queue',
 
   // UI state
-  'flow-state-ui-state',
-  'flow-state-theme'
+  'flowstate-ui-state',
 ]
 
 /**

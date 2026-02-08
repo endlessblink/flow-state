@@ -212,8 +212,8 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   // Legacy localStorage functions (for fallback/migration)
   function saveToLocalStorage() {
     try {
-      localStorage.setItem('quickSort_sessionHistory', JSON.stringify(sessionHistory.value))
-      localStorage.setItem('quickSort_lastCompletedDate', lastCompletedDate.value || '')
+      localStorage.setItem('flowstate-quicksort-history', JSON.stringify(sessionHistory.value))
+      localStorage.setItem('flowstate-quicksort-last-date', lastCompletedDate.value || '')
     } catch (error) {
       console.error('Failed to save Quick Sort data to localStorage:', error)
     }
@@ -221,7 +221,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
 
   function loadFromLocalStorage() {
     try {
-      const historyData = localStorage.getItem('quickSort_sessionHistory')
+      const historyData = localStorage.getItem('flowstate-quicksort-history')
       if (historyData) {
         const parsed = JSON.parse(historyData)
         // Convert date strings back to Date objects
@@ -235,7 +235,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
         })) as SessionSummary[]
       }
 
-      const lastDate = localStorage.getItem('quickSort_lastCompletedDate')
+      const lastDate = localStorage.getItem('flowstate-quicksort-last-date')
       if (lastDate) {
         lastCompletedDate.value = lastDate
       }

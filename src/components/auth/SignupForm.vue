@@ -213,13 +213,13 @@ const passwordStrength = computed(() => {
   // Determine level and text
   if (score < 40) {
     level = 'weak'
-    text = 'Weak'
+    text = t('auth.passwordStrengthWeak')
   } else if (score < 70) {
     level = 'medium'
-    text = 'Medium'
+    text = t('auth.passwordStrengthMedium')
   } else {
     level = 'strong'
-    text = 'Strong'
+    text = t('auth.passwordStrengthStrong')
   }
 
   return { level, percent: Math.min(score, 100), text }
@@ -281,7 +281,7 @@ async function handleSubmit() {
 }
 
 .auth-brand-icon {
-  font-size: 40px;
+  font-size: var(--space-10);
   filter: drop-shadow(0 0 10px var(--brand-primary-alpha-30));
   margin-bottom: var(--space-2);
 }

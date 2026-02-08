@@ -229,13 +229,13 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
         viewportSaveTimer = setTimeout(async () => {
             try {
                 // Save to local storage for immediate recovery
-                localStorage.setItem('canvas-viewport', JSON.stringify(newViewport))
+                localStorage.setItem('flowstate-canvas-viewport', JSON.stringify(newViewport))
                 // TASK-1215: Tauri dual-write
                 if (isTauriEnv()) {
                     const store = await getTauriStore()
                     if (store) {
-                        await store.set('canvas-viewport', newViewport)
-                        scheduleTauriSave('canvas-viewport')
+                        await store.set('flowstate-canvas-viewport', newViewport)
+                        scheduleTauriSave('flowstate-canvas-viewport')
                     }
                 }
 
@@ -267,7 +267,7 @@ export const useCanvasUiStore = defineStore('canvasUi', () => {
             }
 
             // Fallback to local storage (handled by caller or component mount usually, but here for completeness if needed)
-            const local = localStorage.getItem('canvas-viewport')
+            const local = localStorage.getItem('flowstate-canvas-viewport')
             if (local) {
                 const parsed = JSON.parse(local)
                 if (parsed && typeof parsed.x === 'number') {

@@ -380,6 +380,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        // FEATURE-1202: OAuth localhost redirect server for Google sign-in in desktop app
+        .plugin(tauri_plugin_oauth::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the main window when a second instance is launched
             if let Some(window) = app.get_webview_window("main") {
@@ -400,14 +402,18 @@ pub fn run() {
             get_memory_usage,
         ])
         .setup(|app| {
-            // Enable logging in debug mode
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            // Enable logging in all builds (debug=Info, release=Error)
+            // Release logging is critical for diagnosing crashes in production
+            let log_level = if cfg!(debug_assertions) {
+                log::LevelFilter::Info
+            } else {
+                log::LevelFilter::Error
+            };
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log_level)
+                    .build(),
+            )?;
 
             // FEATURE-1194: Log $APPIMAGE path for updater diagnostics
             // The Tauri updater replaces the file at $APPIMAGE during updates.

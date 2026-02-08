@@ -623,7 +623,7 @@ watch(() => props.isOpen, async (isOpen) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
 }
 
 .modal-content {
@@ -644,7 +644,7 @@ watch(() => props.isOpen, async (isOpen) => {
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-8px);
+    transform: scale(0.96) translateY(var(--space-neg-2));
   }
   to {
     opacity: 1;
@@ -731,10 +731,10 @@ watch(() => props.isOpen, async (isOpen) => {
 }
 
 .color-preset {
-  width: 28px;
-  height: 28px;
+  width: var(--space-7);
+  height: var(--space-7);
   border-radius: var(--radius-sm);
-  border: 2px solid transparent;
+  border: var(--space-0_5) solid transparent;
   cursor: pointer;
   transition: all var(--duration-fast);
 }

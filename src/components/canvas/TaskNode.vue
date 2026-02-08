@@ -222,7 +222,7 @@ onUnmounted(() => {
   outline: none !important;
   border-radius: var(--radius-xl);
   /* BUG-1216: backdrop-filter removed for performance - blur(20px) on every node kills pan/zoom */
-  background: rgba(32, 30, 48, 0.95) !important;
+  background: var(--overlay-component-bg) !important;
   /* Subtle border for definition */
   border: 1px solid var(--glass-border) !important;
   /* TASK-071: Fixed width to force vertical text wrapping instead of horizontal expansion */
@@ -230,7 +230,7 @@ onUnmounted(() => {
   min-width: 200px;
   max-width: 320px;
   /* FOUC FIX: Set min-height to prevent collapse before content rendering */
-  min-height: 80px;
+  min-height: var(--space-20);
   position: relative;
   /* BUG-1216: explicit properties only - 'all' causes drag sluggishness via transform */
   transition: box-shadow var(--duration-normal) var(--spring-smooth), border-color var(--duration-normal) var(--spring-smooth), opacity var(--duration-normal) var(--spring-smooth);
@@ -238,8 +238,8 @@ onUnmounted(() => {
   user-select: none;
   /* Clean shadow for depth */
   box-shadow:
-    0 12px 24px var(--shadow-md),
-    0 6px 12px var(--shadow-md);
+    0 var(--space-3) var(--space-6) var(--shadow-md),
+    0 var(--space-1_5) var(--space-3) var(--shadow-md);
 
   box-sizing: border-box;
   display: block;
@@ -257,10 +257,10 @@ onUnmounted(() => {
 .task-node::before {
   content: '';
   position: absolute;
-  top: -1px;
-  left: -1px;
-  right: -1px;
-  bottom: -1px;
+  top: calc(-1 * var(--space-0_5) / 2);
+  left: calc(-1 * var(--space-0_5) / 2);
+  right: calc(-1 * var(--space-0_5) / 2);
+  bottom: calc(-1 * var(--space-0_5) / 2);
   border-radius: var(--radius-xl);
   pointer-events: none;
   z-index: 1;
@@ -270,15 +270,15 @@ onUnmounted(() => {
 .task-node.lod-2 {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(32, 30, 48, 0.95) !important; /* Solid fallback when blur is disabled */
+  background: var(--overlay-component-bg) !important; /* Solid fallback when blur is disabled */
 }
 
 .task-node.lod-3 {
   width: 120px;
   min-width: 120px;
-  height: 60px;
+  height: var(--space-15);
   box-shadow: none;
-  border: 4px solid rgba(255, 255, 255, 0.4);
+  border: var(--space-1) solid rgba(var(--color-slate-50), 0.4);
 }
 
 .task-node.lod-3 .task-node-content {
@@ -288,11 +288,11 @@ onUnmounted(() => {
 
 .task-node:hover {
   border: none;
-  transform: translate3d(0, -2px, 0);
+  transform: translate3d(0, calc(-1 * var(--space-0_5)), 0);
   /* Enhanced shadow on hover - v0.9.0 style */
   box-shadow:
-    0 16px 32px var(--shadow-strong),
-    0 8px 16px var(--shadow-md);
+    0 var(--space-4) var(--space-8) var(--shadow-strong),
+    0 var(--space-2) var(--space-4) var(--shadow-md);
   cursor: grab;
 }
 
@@ -302,28 +302,28 @@ onUnmounted(() => {
 
 /* Connection mode styles */
 .task-node.is-connecting {
-  border: 2px solid var(--color-navigation) !important;
+  border: var(--space-0_5) solid var(--color-navigation) !important;
   box-shadow:
-    0 0 20px var(--color-navigation),
-    0 8px 32px var(--shadow-strong) !important;
+    0 0 var(--space-5) var(--color-navigation),
+    0 var(--space-2) var(--space-8) var(--shadow-strong) !important;
   animation: pulse-connection 2s infinite;
   cursor: crosshair;
 }
 
 .task-node.is-connecting::before {
-  border: 2px solid var(--color-navigation);
+  border: var(--space-0_5) solid var(--color-navigation);
 }
 
 @keyframes pulse-connection {
   0%, 100% {
     box-shadow:
-      0 0 20px var(--color-navigation),
-      0 8px 32px var(--shadow-strong);
+      0 0 var(--space-5) var(--color-navigation),
+      0 var(--space-2) var(--space-8) var(--shadow-strong);
   }
   50% {
     box-shadow:
-      0 0 30px var(--color-navigation),
-      0 12px 48px var(--shadow-strong);
+      0 0 var(--space-7_5) var(--color-navigation),
+      0 var(--space-3) var(--space-12) var(--shadow-strong);
   }
 }
 
@@ -365,16 +365,16 @@ onUnmounted(() => {
   }
   20% {
     transform: scale(1.1) translateZ(0);
-    box-shadow: 0 0 40px 10px var(--brand-primary);
+    box-shadow: 0 0 var(--space-10) var(--space-2_5) var(--brand-primary);
     filter: brightness(1.2);
   }
   40% {
     transform: scale(0.95) translateZ(0);
-    box-shadow: 0 0 20px 5px var(--brand-primary);
+    box-shadow: 0 0 var(--space-5) var(--space-1_25) var(--brand-primary);
   }
   60% {
     transform: scale(1.02) translateZ(0);
-    box-shadow: 0 0 15px 2px var(--brand-primary);
+    box-shadow: 0 0 var(--space-3_75) var(--space-0_5) var(--brand-primary);
   }
   100% {
     transform: scale(1) translateZ(0);
@@ -416,38 +416,38 @@ onUnmounted(() => {
 
 /* Priority-based glow effects on card outline */
 .priority-high {
-  border-color: rgba(239, 68, 68, 0.5) !important;
+  border-color: var(--color-danger-soft) !important;
   box-shadow:
-    0 12px 24px var(--shadow-md),
-    0 6px 12px var(--shadow-md),
-    0 0 20px rgba(239, 68, 68, 0.25),
-    inset 0 0 0 1px rgba(239, 68, 68, 0.1);
+    0 var(--space-3) var(--space-6) var(--shadow-md),
+    0 var(--space-1_5) var(--space-3) var(--shadow-md),
+    0 0 var(--space-5) rgba(239, 68, 68, 0.25),
+    inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.1);
 }
 
 .priority-medium {
-  border-color: rgba(245, 158, 11, 0.5) !important;
+  border-color: var(--color-orange-soft) !important;
   box-shadow:
-    0 12px 24px var(--shadow-md),
-    0 6px 12px var(--shadow-md),
-    0 0 20px rgba(245, 158, 11, 0.25),
-    inset 0 0 0 1px rgba(245, 158, 11, 0.1);
+    0 var(--space-3) var(--space-6) var(--shadow-md),
+    0 var(--space-1_5) var(--space-3) var(--shadow-md),
+    0 0 var(--space-5) rgba(245, 158, 11, 0.25),
+    inset 0 0 0 var(--space-0_5) rgba(245, 158, 11, 0.1);
 }
 
 .priority-low {
-  border-color: rgba(59, 130, 246, 0.5) !important;
+  border-color: var(--color-blue-soft) !important;
   box-shadow:
-    0 12px 24px var(--shadow-md),
-    0 6px 12px var(--shadow-md),
-    0 0 20px rgba(59, 130, 246, 0.25),
-    inset 0 0 0 1px rgba(59, 130, 246, 0.1);
+    0 var(--space-3) var(--space-6) var(--shadow-md),
+    0 var(--space-1_5) var(--space-3) var(--shadow-md),
+    0 0 var(--space-5) rgba(59, 130, 246, 0.25),
+    inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.1);
 }
 
 .timer-active {
   border: none !important;
   box-shadow:
-    0 16px 32px var(--shadow-strong),
-    0 8px 16px var(--shadow-md),
-    0 0 24px var(--blue-shadow) !important;
+    0 var(--space-4) var(--space-8) var(--shadow-strong),
+    0 var(--space-2) var(--space-4) var(--shadow-md),
+    0 0 var(--space-6) var(--blue-shadow) !important;
 }
 
 .timer-active::before {
@@ -465,7 +465,7 @@ onUnmounted(() => {
 
 .status-done::before {
   /* Slightly darker/muted purple backdrop for completed tasks */
-  background: rgba(38, 35, 52, 0.70);
+  background: var(--overlay-backdrop);
 }
 
 .status-in-progress {
@@ -475,7 +475,7 @@ onUnmounted(() => {
 
 .selected {
   border: none !important;
-  box-shadow: 0 0 0 2px var(--brand-primary), var(--state-hover-shadow), var(--state-hover-glow) !important;
+  box-shadow: 0 0 0 var(--space-0_5) var(--brand-primary), var(--state-hover-shadow), var(--state-hover-glow) !important;
 }
 
 .multi-select-mode {
@@ -483,7 +483,7 @@ onUnmounted(() => {
 }
 
 .multi-select-mode:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(calc(-1 * var(--space-0_5))) scale(1.02);
 }
 
 /* TASK-1074: Brief flash animation when date is updated */
@@ -504,30 +504,30 @@ onUnmounted(() => {
 }
 
 @keyframes task-flash-green {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #10b981; }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #10b981; }
-  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #10b981; }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #10b981; }
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-success); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-success); }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-success); }
 }
 
 @keyframes task-flash-red {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #ef4444; }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #ef4444; }
-  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #ef4444; }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #ef4444; }
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-danger); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-danger); }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-danger); }
 }
 
 @keyframes task-flash-amber {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #f59e0b; }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #f59e0b; }
-  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #f59e0b; }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #f59e0b; }
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-orange); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-orange); }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-orange); }
 }
 
 @keyframes task-flash-blue {
-  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #3b82f6; }
-  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 25px 6px #3b82f6; }
-  50% { filter: brightness(1.15); box-shadow: 0 0 15px 4px #3b82f6; }
-  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 #3b82f6; }
+  0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
+  25% { transform: scale(1.02); filter: brightness(1.3); box-shadow: 0 0 var(--space-6_25) var(--space-1_5) var(--color-blue); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 var(--space-3_75) var(--space-1) var(--color-blue); }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 0 0 var(--color-blue); }
 }
 </style>

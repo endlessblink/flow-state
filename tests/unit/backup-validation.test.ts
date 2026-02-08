@@ -221,7 +221,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
     })
 
     it('should handle corrupted localStorage data gracefully', () => {
-      localStorageMock.setItem('flow-state-golden-backup', 'invalid-json{')
+      localStorageMock.setItem('flowstate-backup-golden', 'invalid-json{')
 
       const golden = backupSystem.getGoldenBackup()
       expect(golden).toBeNull()
@@ -240,7 +240,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         // No metadata
       }
 
-      localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(backupWithoutMetadata))
+      localStorageMock.setItem('flowstate-backup-golden', JSON.stringify(backupWithoutMetadata))
 
       const golden = backupSystem.getGoldenBackup()
       expect(golden).toBeDefined()
@@ -256,7 +256,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const oldTimestamp = Date.now() - (8 * 24 * 60 * 60 * 1000) // 8 days ago
       const backup = createMockBackup(10, oldTimestamp)
 
-      localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(backup))
+      localStorageMock.setItem('flowstate-backup-golden', JSON.stringify(backup))
 
       const validation = await backupSystem.validateGoldenBackup()
 
@@ -269,7 +269,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const recentTimestamp = Date.now() - (1 * 24 * 60 * 60 * 1000) // 1 day ago
       const backup = createMockBackup(10, recentTimestamp)
 
-      localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(backup))
+      localStorageMock.setItem('flowstate-backup-golden', JSON.stringify(backup))
 
       const validation = await backupSystem.validateGoldenBackup()
 
@@ -289,17 +289,17 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const backup4 = createMockBackup(40, Date.now() - 1000)
 
       // Manually add to rotation (simulating multiple saves)
-      localStorageMock.setItem('flow-state-golden-backup-rotation', JSON.stringify([backup1]))
+      localStorageMock.setItem('flowstate-backup-golden-rotation', JSON.stringify([backup1]))
       useBackupSystem() // Trigger potential migration
 
-      localStorageMock.setItem('flow-state-golden-backup-rotation', JSON.stringify([backup2, backup1]))
+      localStorageMock.setItem('flowstate-backup-golden-rotation', JSON.stringify([backup2, backup1]))
       useBackupSystem() // Trigger potential migration
 
-      localStorageMock.setItem('flow-state-golden-backup-rotation', JSON.stringify([backup3, backup2, backup1]))
+      localStorageMock.setItem('flowstate-backup-golden-rotation', JSON.stringify([backup3, backup2, backup1]))
       useBackupSystem() // Trigger potential migration
 
       // After 4th, rotation should have only 3
-      localStorageMock.setItem('flow-state-golden-backup-rotation', JSON.stringify([backup4, backup3, backup2]))
+      localStorageMock.setItem('flowstate-backup-golden-rotation', JSON.stringify([backup4, backup3, backup2]))
 
       const backupSystem = useBackupSystem()
       const rotation = backupSystem.getGoldenBackups()
@@ -312,7 +312,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const backup2 = createMockBackup(30, Date.now() - 2000)
       const backup3 = createMockBackup(20, Date.now() - 1000)
 
-      localStorageMock.setItem('flow-state-golden-backup-rotation', JSON.stringify([backup1, backup2, backup3]))
+      localStorageMock.setItem('flowstate-backup-golden-rotation', JSON.stringify([backup1, backup2, backup3]))
 
       const backupSystem = useBackupSystem()
       const rotation = backupSystem.getGoldenBackups()
@@ -326,7 +326,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const legacyBackup = createMockBackup(50, Date.now())
 
       // Set only legacy key
-      localStorageMock.setItem('flow-state-golden-backup', JSON.stringify(legacyBackup))
+      localStorageMock.setItem('flowstate-backup-golden', JSON.stringify(legacyBackup))
 
       const backupSystem = useBackupSystem()
       const rotation = backupSystem.getGoldenBackups()
@@ -335,7 +335,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(rotation[0].metadata?.taskCount).toBe(50)
 
       // Verify migration created the rotation array
-      const rotationStored = localStorageMock.getItem('flow-state-golden-backup-rotation')
+      const rotationStored = localStorageMock.getItem('flowstate-backup-golden-rotation')
       expect(rotationStored).not.toBeNull()
     })
 
@@ -344,7 +344,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const backup2 = createMockBackup(50, Date.now() - 1000) // Highest
       const backup3 = createMockBackup(30, Date.now())
 
-      localStorageMock.setItem('flow-state-golden-backup-rotation', JSON.stringify([backup1, backup2, backup3]))
+      localStorageMock.setItem('flowstate-backup-golden-rotation', JSON.stringify([backup1, backup2, backup3]))
 
       const backupSystem = useBackupSystem()
       const golden = backupSystem.getGoldenBackup()
@@ -359,7 +359,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   describe('Suspicious Data Loss Detection (BUG-059)', () => {
     it('should block auto-backup if task count drops by more than 50%', async () => {
       // Set a high max task count
-      localStorageMock.setItem('flow-state-max-task-count', '100')
+      localStorageMock.setItem('flowstate-max-task-count', '100')
 
       // Current tasks are far below threshold
       mockTaskStore.tasks = Array.from({ length: 30 }, (_, i) => ({
@@ -376,7 +376,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     it('should allow manual backup even with suspicious data loss', async () => {
       // Set a high max task count
-      localStorageMock.setItem('flow-state-max-task-count', '100')
+      localStorageMock.setItem('flowstate-max-task-count', '100')
 
       // Current tasks are far below threshold
       mockTaskStore.tasks = Array.from({ length: 30 }, (_, i) => ({
@@ -394,7 +394,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     it('should block auto-backup if all tasks disappear', async () => {
       // Set a previous max
-      localStorageMock.setItem('flow-state-max-task-count', '10')
+      localStorageMock.setItem('flowstate-max-task-count', '10')
 
       // Now we have 0 tasks
       mockTaskStore.tasks = []

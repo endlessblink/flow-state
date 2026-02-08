@@ -1125,8 +1125,8 @@ export const useGamificationStore = defineStore('gamification', () => {
       type: 'exposure',
       title: isShielded ? 'SHIELDED' : 'EXPOSED',
       description: isShielded
-        ? 'Timer active — +10% XP, corruption reduced'
-        : 'No timer running — -25% XP, corruption rising',
+        ? 'Timer active — +15% XP, corruption reduced'
+        : 'Working unshielded — normal XP rate',
       icon: isShielded ? 'shield' : 'shield-off',
       duration: 3000,
     }

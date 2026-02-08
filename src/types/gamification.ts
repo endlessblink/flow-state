@@ -341,22 +341,24 @@ export const XP_MULTIPLIERS = {
 } as const
 
 export const EXPOSURE_SYSTEM = {
-  // When completing tasks WITHOUT a timer running
-  EXPOSED_XP_PENALTY: 0.75,      // 25% XP reduction
-  EXPOSED_CORRUPTION_DELTA: 3,    // Corruption increases
+  // When completing tasks WITHOUT a timer running — NO PENALTY (Anti-Chore Manifesto)
+  EXPOSED_XP_PENALTY: 1.0,        // Normal XP — timer is invitation, not obligation
+  EXPOSED_CORRUPTION_DELTA: 0,     // No corruption increase without timer
 
-  // When completing tasks WITH a timer running
-  SHIELDED_XP_BONUS: 1.1,        // 10% XP boost
-  SHIELDED_CORRUPTION_DELTA: -2,  // Corruption decreases
+  // When completing tasks WITH a timer running — BONUS ONLY
+  SHIELDED_XP_BONUS: 1.15,        // +15% XP boost for using timer
+  SHIELDED_CORRUPTION_DELTA: -2,   // Corruption decreases when shielded
 } as const
 
 export const STREAK_CONFIG = {
   GRACE_PERIOD_HOURS: 24, // Hours after midnight to still count as same day
   MAX_FREEZES: 5,
   FREEZE_REFILL_DAYS: 30, // Days to earn a new freeze
-  DECAY_START_DAYS: 30, // Days of inactivity before XP decay
-  DECAY_RATE_PERCENT: 1, // % of total XP per day
-  DECAY_MAX_PER_DAY: 100, // Cap daily decay
+  // XP decay REMOVED per Anti-Chore Manifesto — earned XP is permanent forever
+  // These are kept at 0 for backward compatibility but never applied
+  DECAY_START_DAYS: 0,
+  DECAY_RATE_PERCENT: 0,
+  DECAY_MAX_PER_DAY: 0,
 } as const
 
 export const TIER_COLORS = {

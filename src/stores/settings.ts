@@ -169,6 +169,14 @@ export const useSettingsStore = defineStore('settings', {
                 try {
                     const parsed = JSON.parse(saved)
                     Object.assign(this.$state, parsed)
+
+                    // TASK-1219: Backfill new settings fields for existing users
+                    // Object.assign overwrites defaults with saved state, so fields
+                    // added after the user's settings were first saved will be undefined.
+                    if (!this.$state.timeBlockNotifications) {
+                        this.$state.timeBlockNotifications = { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS }
+                        this.saveToStorage()
+                    }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)
                 }

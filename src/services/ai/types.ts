@@ -108,6 +108,10 @@ export interface GenerateOptions {
   stream?: boolean
   /** Timeout in milliseconds */
   timeout?: number
+  /** OpenAI-compatible tools for native function calling (cloud providers only) */
+  tools?: OpenAITool[]
+  /** Tool choice: 'auto' lets model decide, 'none' disables tools */
+  toolChoice?: 'auto' | 'none'
 }
 
 /**
@@ -142,6 +146,35 @@ export interface StreamChunk {
   done: boolean
   /** Error message if streaming failed */
   error?: string
+  /** Native tool calls accumulated during streaming (populated in final chunk only) */
+  toolCalls?: NativeToolCall[]
+}
+
+// ============================================================================
+// Tool Calling Types (OpenAI-compatible)
+// ============================================================================
+
+/** OpenAI-compatible function definition for tools */
+export interface OpenAIToolFunction {
+  name: string
+  description: string
+  parameters: Record<string, unknown>
+}
+
+/** OpenAI-compatible tool definition */
+export interface OpenAITool {
+  type: 'function'
+  function: OpenAIToolFunction
+}
+
+/** A tool call returned by the API in native function calling mode */
+export interface NativeToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
+  }
 }
 
 // ============================================================================

@@ -2047,9 +2047,9 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
-### FEATURE-1223: AI Chat System Overhaul — RTL, Inline Editing, Full-Screen, Agent Chains (📋 PLANNED)
+### FEATURE-1223: AI Chat System Overhaul — RTL, Inline Editing, Full-Screen, Agent Chains (🔄 IN PROGRESS)
 
-**Priority**: P0-P3 (phased) | **Status**: 📋 PLANNED
+**Priority**: P0-P3 (phased) | **Status**: 🔄 IN PROGRESS (Phase 1-2 done, Phase 3-4 remaining)
 
 **Problem**: The AI Chat panel has critical UX issues (RTL broken for Hebrew, task names truncated, raw ISO dates, no inline editing) and lacks key features (full-screen mode, conversation history, voice input, gamification integration, multi-step agent workflows).
 
@@ -2063,14 +2063,14 @@ npm run tasks:bugs     # Filter by BUG type
 - [x] ~~**TASK-1226**~~: ✅ Inline task editing in chat results — clickable priority/status/date dropdowns on task list items
 - [x] ~~**TASK-1227**~~: ✅ Task list item 2-row layout — priority dot + title (row 1), date + status badges (row 2)
 
-#### Phase 2: Expand & Enrich (P1 — NEXT)
+#### Phase 2: Expand & Enrich (P1 — ✅ DONE)
 
-- [ ] **TASK-1228**: Expandable panel — toggle 380px → 600px → fullscreen with keyboard shortcut
-- [ ] **TASK-1229**: Gamification tools — `get_gamification_status`, `get_active_challenges`, `get_achievements_near_completion`
-- [ ] **TASK-1230**: Cyberflow AI personality mode — "Grid Handler" netrunner persona via system prompt toggle
-- [ ] **TASK-1231**: Voice input — microphone button with Web Speech API / Tauri native speech plugin
-- [ ] **TASK-1232**: Productivity tools — `get_productivity_stats`, `suggest_next_task`, `get_weekly_summary`
-- [ ] **TASK-1233**: Native function calling — Groq/OpenRouter `tools[]` API parameter instead of regex-parsing JSON blocks
+- [x] ~~**TASK-1228**~~: ✅ Expandable panel — toggle 380px → 600px → fullscreen with keyboard shortcut (Ctrl+Shift+F)
+- [x] ~~**TASK-1229**~~: ✅ Gamification tools — `get_gamification_status`, `get_active_challenges`, `get_achievements_near_completion`
+- [x] ~~**TASK-1230**~~: ✅ Cyberflow AI personality mode — "Grid Handler" netrunner persona via system prompt toggle
+- [x] ~~**TASK-1231**~~: ✅ Voice input — microphone button with Web Speech API, auto-fills input, pulse animation
+- [x] ~~**TASK-1232**~~: ✅ Productivity tools — `get_productivity_stats`, `suggest_next_task`, `get_weekly_summary`
+- [x] ~~**TASK-1233**~~: ✅ Native function calling — Groq/OpenRouter `tools[]` API parameter with text-based regex fallback for Ollama
 
 #### Phase 3: Deep Features (P2 — LATER)
 

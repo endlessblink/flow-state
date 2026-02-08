@@ -158,6 +158,8 @@ export class GroqProxyProvider implements AIProvider {
         max_tokens: options.maxTokens,
         temperature: options.temperature,
         stop_sequences: options.stopSequences,
+        tools: options.tools?.map(t => ({ type: t.type, function: t.function })),
+        tool_choice: options.toolChoice,
       })
 
       return {
@@ -188,12 +190,15 @@ export class GroqProxyProvider implements AIProvider {
         max_tokens: options.maxTokens,
         temperature: options.temperature,
         stop_sequences: options.stopSequences,
+        tools: options.tools?.map(t => ({ type: t.type, function: t.function })),
+        tool_choice: options.toolChoice,
       })
 
       for await (const chunk of stream) {
         yield {
           content: chunk.content,
           done: chunk.done,
+          toolCalls: chunk.toolCalls,
         }
 
         if (chunk.done) break

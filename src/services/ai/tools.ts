@@ -16,6 +16,7 @@ import { useProjectStore } from '@/stores/projects'
 import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
 import type { Task } from '@/types/tasks'
+import type { OpenAITool } from './types'
 
 // ============================================================================
 // Constants
@@ -1569,4 +1570,47 @@ export function buildToolsPrompt(): string {
   )
 
   return lines.join('\n')
+}
+
+/**
+ * Build OpenAI-compatible tools array for native function calling.
+ * Used with cloud providers (Groq, OpenRouter) that support the tools[] API parameter.
+ */
+export function buildOpenAITools(): OpenAITool[] {
+  return AI_TOOLS.map(tool => ({
+    type: 'function' as const,
+    function: {
+      name: tool.name,
+      description: tool.description + (tool.requiresConfirmation ? ' (requires confirmed=true parameter)' : ''),
+      parameters: {
+        type: 'object',
+        properties: tool.parameters.properties,
+        required: tool.parameters.required,
+      }
+    }
+  }))
+}
+
+/**
+ * Build a minimal tool behavior prompt for native function calling mode.
+ * When native tools[] are sent via API, the model already knows tool definitions,
+ * so we only need behavioral rules.
+ */
+export function buildNativeToolsBehaviorPrompt(): string {
+  return [
+    '## Tool Usage Rules',
+    '',
+    'You have access to tools via function calling. Use them as follows:',
+    '',
+    'IMPORTANT RULES:',
+    '- ALWAYS use read tools when user asks about their tasks, overdue items, schedule, timer, projects, or any data. Read tools show rich interactive results the user can click. Never guess — use the tool.',
+    '- Use write tools when user says "create", "add", "make", "change", "start timer", "stop timer".',
+    '- Use destructive tools only when explicitly asked. Pass confirmed=true for destructive operations.',
+    '- For normal chat, greetings, or general questions — respond naturally without tools.',
+    `- Maximum ${MAX_TOOLS_PER_RESPONSE} tool calls per response.`,
+    '- After using a read tool, keep your text response to 1 SHORT sentence — tool results render as interactive cards below.',
+    '',
+    'When you use a WRITE tool, say something natural like "Done!" or "Created!" in the user\'s language.',
+    'When you use a READ tool, write ONE short sentence — the tool data renders as clickable cards automatically.',
+  ].join('\n')
 }

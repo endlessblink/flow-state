@@ -3,20 +3,33 @@
  *
  * Provides a unified interface for AI chat functionality including:
  * - Sending messages with streaming responses
- * - Context-aware prompts
- * - Action handling
+ * - Context-aware prompts with timer & task statistics
+ * - Tool result feedback with undo support
+ * - Rate limiting (MAX_TOOLS_PER_RESPONSE)
+ * - Confirmation flow for destructive tools
+ * - Action button handlers wired to tools
+ * - Settings persistence (provider/model)
  *
- * @see TASK-1120 in MASTER_PLAN.md
+ * @see TASK-1120, TASK-1186 in MASTER_PLAN.md
  */
 
-import { computed, watch, ref } from 'vue'
+import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAIChatStore, type ChatAction, type ChatContext } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useTimerStore } from '@/stores/timer'
 import { createAIRouter, type TaskType, type RouterProviderType } from '@/services/ai'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
-import { parseToolCalls, executeTool, buildToolsPrompt, type ToolResult } from '@/services/ai/tools'
+import {
+  parseToolCalls,
+  executeTool,
+  buildToolsPrompt,
+  MAX_TOOLS_PER_RESPONSE,
+  AI_TOOLS,
+  type ToolCall,
+  type ToolResult,
+} from '@/services/ai/tools'
 
 // ============================================================================
 // Types
@@ -29,6 +42,17 @@ export interface SendMessageOptions {
   systemPrompt?: string
   /** Skip adding to message history */
   skipHistory?: boolean
+}
+
+/**
+ * A quick action button that can optionally call a tool directly
+ * (bypassing AI model call — works with Ollama and other local models).
+ */
+export interface QuickAction {
+  label: string
+  message: string
+  /** If set, the tool is called directly instead of sending to AI */
+  directTool?: ToolCall | null
 }
 
 // ============================================================================
@@ -54,10 +78,11 @@ async function getRouter() {
 const activeProviderRef = ref<string | null>(null)
 
 // Provider/model selection state
-const selectedProvider = ref<'ollama' | 'groq' | 'auto'>('auto')
+const selectedProvider = ref<'ollama' | 'groq' | 'openrouter' | 'auto'>('auto')
 const selectedModel = ref<string | null>(null)
 const availableOllamaModels = ref<string[]>([])
 const isLoadingModels = ref(false)
+const providerModelMemory = ref<Record<string, string | null>>({})
 
 /**
  * Fetch available models from local Ollama instance.
@@ -71,6 +96,25 @@ async function fetchOllamaModels(): Promise<string[]> {
   } catch {
     return []
   }
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Strip tool JSON blocks from displayed content so users don't see raw JSON.
+ */
+function stripToolBlocks(content: string): string {
+  return content.replace(/```(?:tool|json)?\s*\n?\{[\s\S]*?"tool"\s*:[\s\S]*?\}\n?```/g, '').trim()
+}
+
+/**
+ * Check whether a tool definition requires user confirmation before execution.
+ */
+function toolRequiresConfirmation(toolName: string): boolean {
+  const def = AI_TOOLS.find(t => t.name === toolName)
+  return def?.requiresConfirmation === true
 }
 
 // ============================================================================
@@ -95,6 +139,9 @@ export function useAIChat() {
     canSend
   } = storeToRefs(store)
 
+  // Pending confirmation flow: stores a tool call awaiting user approval
+  const pendingConfirmation = ref<ToolCall | null>(null)
+
   // ============================================================================
   // Context Management
   // ============================================================================
@@ -108,7 +155,6 @@ export function useAIChat() {
     // Get visible tasks if on canvas - use nodes from canvas store
     let visibleTaskIds: string[] | undefined
     if (currentContext.currentView === 'canvas') {
-      // Canvas nodes with type 'taskNode' contain task data
       visibleTaskIds = canvasStore.nodes
         .filter((n: { type?: string }) => n.type === 'taskNode' || n.type === 'task')
         .map((n: { id: string }) => n.id)
@@ -150,6 +196,7 @@ export function useAIChat() {
 
   /**
    * Build the system prompt with context awareness.
+   * Includes timer state, task statistics, and additional context.
    */
   function buildSystemPrompt(ctx: ChatContext): string {
     const parts: string[] = [
@@ -158,9 +205,11 @@ export function useAIChat() {
       '## CRITICAL RULES:',
       '1. ALWAYS respond in the SAME LANGUAGE the user writes to you. If they write in Hebrew, respond in Hebrew. If English, respond in English.',
       '2. Be conversational and natural. Have a normal chat.',
-      '3. ONLY use tools when the user EXPLICITLY asks you to create, add, or modify something.',
-      '4. If the user just says "hi" or asks a question, just respond normally - NO tool suggestions.',
-      '5. Never show JSON to the user or explain tool syntax. Just do the action silently.',
+      '3. Use WRITE tools (create, update, delete) ONLY when the user explicitly asks to create, add, modify, or delete something.',
+      '4. Use READ tools (get_overdue_tasks, list_tasks, search_tasks, get_task_details, get_daily_summary, get_timer_status, list_projects, list_groups) ALWAYS when the user asks about their tasks, schedule, what is overdue, timer status, or any data query. These tools return rich interactive results the user can click on. NEVER answer task data questions from memory — ALWAYS call the tool.',
+      '5. If the user just says "hi" or has a general question unrelated to their tasks, just respond normally - NO tools needed.',
+      '6. Never show JSON to the user or explain tool syntax. Just do the action silently.',
+      '7. When using read tools, keep your text response SHORT (1 sentence summary) — the tool results will show the detailed data with clickable links.',
       '',
       buildToolsPrompt(),
       ''
@@ -182,11 +231,59 @@ export function useAIChat() {
       parts.push(`There are ${ctx.visibleTaskIds.length} tasks visible on the canvas.`)
     }
 
+    // Enhanced context: Timer state
+    try {
+      const timerStore = useTimerStore()
+      if (timerStore.isTimerActive) {
+        const taskName = timerStore.currentTaskName || 'Unknown'
+        const remaining = timerStore.displayTime || '??:??'
+        parts.push(`Timer: Running for "${taskName}" (${remaining} left)`)
+      } else {
+        parts.push('Timer: Not running')
+      }
+    } catch {
+      // Timer store not available
+    }
+
+    // Enhanced context: Task statistics
+    try {
+      const allTasks = taskStore.tasks
+      const today = new Date().toISOString().split('T')[0]
+      const byStatus = {
+        planned: 0,
+        in_progress: 0,
+        done: 0,
+        backlog: 0,
+        on_hold: 0,
+      }
+      let overdueCount = 0
+      for (const t of allTasks) {
+        if (t.status && t.status in byStatus) {
+          byStatus[t.status as keyof typeof byStatus]++
+        }
+        if (t.dueDate && t.dueDate < today && t.status !== 'done') {
+          overdueCount++
+        }
+      }
+      parts.push(
+        `Tasks: ${allTasks.length} total, ${byStatus.planned} planned, ${byStatus.in_progress} in progress, ${byStatus.done} done, ${overdueCount} overdue`
+      )
+    } catch {
+      // Task store not available
+    }
+
+    // Additional context (from ChatContext)
+    if (ctx.additionalContext) {
+      parts.push('')
+      parts.push(ctx.additionalContext)
+    }
+
     // Add capabilities
     parts.push('')
     parts.push('You can help with:')
     parts.push('- Breaking down tasks into subtasks')
     parts.push('- Suggesting how to organize tasks into groups')
+    parts.push('- Managing timers and Pomodoro sessions')
     parts.push('- Answering questions about task management')
     parts.push('- Providing productivity tips')
 
@@ -199,6 +296,9 @@ export function useAIChat() {
 
   /**
    * Send a message and get a streaming response.
+   * Checks client-side intent detection first — if a tool match is found,
+   * executes it directly (no AI model call needed). This makes read-tools
+   * work reliably with Ollama and other small local models.
    */
   async function sendMessage(
     content: string,
@@ -206,6 +306,17 @@ export function useAIChat() {
   ): Promise<void> {
     if (!content.trim()) return
     if (store.isGenerating) return
+
+    // Client-side intent detection: only for Ollama / small local models
+    // that can't reliably emit JSON tool blocks. Cloud providers (Groq, OpenRouter)
+    // handle tool calling natively via the AI model.
+    const isLocalProvider = selectedProvider.value === 'ollama' ||
+      (selectedProvider.value === 'auto' && activeProviderRef.value === 'ollama')
+    const detectedTool = isLocalProvider ? detectToolIntent(content) : null
+    if (detectedTool && !options.systemPrompt) {
+      await executeDirectTool(content, detectedTool)
+      return
+    }
 
     // Clear input
     store.inputText = ''
@@ -238,37 +349,110 @@ export function useAIChat() {
         fullContent += chunk.content
       }
 
-      // Check for and execute tool calls
-      const toolCalls = parseToolCalls(fullContent)
-      const toolResults: ToolResult[] = []
+      // After successful stream, update active provider for badge display
+      try {
+        const currentRouter = await getRouter()
+        activeProviderRef.value = await currentRouter.getActiveProvider()
+      } catch { /* ignore */ }
 
-      if (toolCalls.length > 0) {
-        for (const call of toolCalls) {
-          console.log('[AIChat] Executing tool:', call.tool, call.parameters)
-          const result = await executeTool(call)
-          toolResults.push(result)
-          console.log('[AIChat] Tool result:', result)
-        }
+      // Parse tool calls from the response
+      const allToolCalls = parseToolCalls(fullContent)
 
-        // If tools were executed, append a summary to the content
-        if (toolResults.length > 0) {
-          const successfulTools = toolResults.filter(r => r.success)
-          const failedTools = toolResults.filter(r => !r.success)
+      // Rate limiting: parseToolCalls already truncates to MAX_TOOLS_PER_RESPONSE,
+      // but we detect if the original content had more calls for a user warning
+      const toolBlockCount = (fullContent.match(/```(?:tool|json)?\s*\n?[\s\S]*?\n?```/g) || []).length
+      const wasRateLimited = toolBlockCount > MAX_TOOLS_PER_RESPONSE
 
-          if (failedTools.length > 0) {
-            // Append error info to the streamed content for visibility
-            store.appendStreamingContent('\n\n---\n' + failedTools.map(r => `Error: ${r.message}`).join('\n'))
-          }
+      // Strip tool JSON blocks from the displayed message content
+      const cleanContent = stripToolBlocks(fullContent)
+      const lastMsg = store.messages[store.messages.length - 1]
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.content = cleanContent
+        store.streamingContent = cleanContent
+      }
 
-          // Log for debugging
-          if (successfulTools.length > 0) {
-            console.log('[AIChat] Tools executed successfully:', successfulTools.map(r => r.message))
-          }
+      // Separate tools needing confirmation vs immediate execution
+      const immediateTools: ToolCall[] = []
+      const confirmationTools: ToolCall[] = []
+      for (const call of allToolCalls) {
+        if (toolRequiresConfirmation(call.tool)) {
+          confirmationTools.push(call)
+        } else {
+          immediateTools.push(call)
         }
       }
 
-      // Complete the message
-      const actions = parseActionsFromResponse(fullContent)
+      // Execute immediate tools
+      const toolResults: ToolResult[] = []
+      for (const call of immediateTools) {
+        console.log('[AIChat] Executing tool:', call.tool, call.parameters)
+        const result = await executeTool(call)
+        toolResults.push(result)
+        console.log('[AIChat] Tool result:', result)
+
+        // Push undo entry if the tool returned an undoAction
+        if (result.success && result.undoAction) {
+          store.pushUndoEntry({
+            toolName: call.tool,
+            timestamp: Date.now(),
+            params: call.parameters,
+            undoAction: result.undoAction,
+            description: result.message,
+          })
+        }
+      }
+
+      // Handle tool result feedback
+      if (toolResults.length > 0) {
+        const failedTools = toolResults.filter(r => !r.success)
+
+        if (failedTools.length > 0) {
+          store.appendStreamingContent('\n\n---\n' + failedTools.map(r => `Error: ${r.message}`).join('\n'))
+        }
+
+        // Store tool results in message metadata (include data for rich rendering)
+        if (lastMsg) {
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            toolResults: toolResults.map((r, i) => ({
+              success: r.success,
+              message: r.message,
+              data: r.data,
+              tool: immediateTools[i]?.tool || 'unknown',
+              type: AI_TOOLS.find(t => t.name === immediateTools[i]?.tool)?.category || 'read',
+            })),
+          } as any
+        }
+      }
+
+      // Rate limit warning
+      if (wasRateLimited) {
+        store.appendStreamingContent(
+          `\n\n---\nTool limit reached (${MAX_TOOLS_PER_RESPONSE} per response). Some tool calls were skipped.`
+        )
+      }
+
+      // Handle confirmation tools: queue the first one for user approval
+      if (confirmationTools.length > 0) {
+        const confirmCall = confirmationTools[0]
+        pendingConfirmation.value = confirmCall
+
+        // Find a human-readable description for the confirmation prompt
+        const toolDef = AI_TOOLS.find(t => t.name === confirmCall.tool)
+        const toolDesc = toolDef?.description || confirmCall.tool
+        const paramSummary = confirmCall.tool === 'delete_task'
+          ? `task "${confirmCall.parameters.taskId}"`
+          : confirmCall.tool === 'bulk_update_status'
+            ? `${(confirmCall.parameters.taskIds as string[])?.length || 0} tasks to "${confirmCall.parameters.status}"`
+            : JSON.stringify(confirmCall.parameters)
+
+        store.appendStreamingContent(
+          `\n\n**Confirmation required:** ${toolDesc} (${paramSummary})`
+        )
+      }
+
+      // Build actions (including confirmation buttons if needed)
+      const actions = buildMessageActions(fullContent, confirmationTools)
       store.completeStreamingMessage({ actions })
 
     } catch (err) {
@@ -276,6 +460,88 @@ export function useAIChat() {
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat] Error:', err)
     }
+  }
+
+  /**
+   * Build action buttons for a message, including confirmation buttons and
+   * content-based actions wired to real tools.
+   */
+  function buildMessageActions(
+    content: string,
+    confirmationTools: ToolCall[]
+  ): ChatAction[] | undefined {
+    const actions: ChatAction[] = []
+
+    // Confirmation actions for destructive tools
+    if (confirmationTools.length > 0) {
+      actions.push({
+        id: 'confirm_action',
+        label: 'Confirm',
+        variant: 'danger',
+        handler: async () => {
+          await confirmPendingAction()
+        },
+      })
+      actions.push({
+        id: 'cancel_action',
+        label: 'Cancel',
+        variant: 'secondary',
+        handler: async () => {
+          cancelPendingAction()
+        },
+      })
+    }
+
+    // Content-based actions wired to real tools
+    const parsedActions = parseActionsFromResponse(content)
+    if (parsedActions) {
+      actions.push(...parsedActions)
+    }
+
+    return actions.length > 0 ? actions : undefined
+  }
+
+  /**
+   * Confirm and execute the pending destructive tool action.
+   */
+  async function confirmPendingAction(): Promise<void> {
+    const call = pendingConfirmation.value
+    if (!call) return
+
+    pendingConfirmation.value = null
+
+    // Force confirmed=true for destructive tools
+    const confirmedCall: ToolCall = {
+      tool: call.tool,
+      parameters: { ...call.parameters, confirmed: true },
+    }
+
+    console.log('[AIChat] Executing confirmed tool:', confirmedCall.tool, confirmedCall.parameters)
+    const result = await executeTool(confirmedCall)
+    console.log('[AIChat] Confirmed tool result:', result)
+
+    if (result.success && result.undoAction) {
+      store.pushUndoEntry({
+        toolName: call.tool,
+        timestamp: Date.now(),
+        params: call.parameters,
+        undoAction: result.undoAction,
+        description: result.message,
+      })
+    }
+
+    // Add result message to chat
+    store.addAssistantMessage(
+      result.success ? result.message : `Error: ${result.message}`
+    )
+  }
+
+  /**
+   * Cancel the pending destructive tool action.
+   */
+  function cancelPendingAction(): void {
+    pendingConfirmation.value = null
+    store.addAssistantMessage('Action cancelled.')
   }
 
   /**
@@ -300,42 +566,246 @@ export function useAIChat() {
     return 'chat'
   }
 
+  // ============================================================================
+  // Client-Side Intent Detection (for Ollama / small models)
+  // ============================================================================
+
+  /**
+   * Intent detection patterns — maps user messages to direct tool calls.
+   * Supports English and Hebrew. Returns null if no clear tool intent found.
+   */
+  function detectToolIntent(message: string): ToolCall | null {
+    const m = message.toLowerCase()
+
+    // Overdue tasks
+    if (/overdue|באיחור|past\s*due|מאחר/.test(m)) {
+      return { tool: 'get_overdue_tasks', parameters: {} }
+    }
+
+    // Timer status
+    if (/timer\s*status|time\s*left|how\s*(much\s*)?long|כמה\s*זמן|how much time/.test(m)) {
+      return { tool: 'get_timer_status', parameters: {} }
+    }
+
+    // Daily summary / plan day
+    if (/daily\s*summary|plan\s*(my\s*)?day|תכנן.*יום|סיכום\s*יומי|what('s| is) (on )?my day/.test(m)) {
+      return { tool: 'get_daily_summary', parameters: {} }
+    }
+
+    // List tasks
+    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(tasks?|משימות)/i.test(m)) {
+      return { tool: 'list_tasks', parameters: { status: 'all', limit: 50 } }
+    }
+
+    // List projects
+    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(projects?|פרויקטים)/i.test(m)) {
+      return { tool: 'list_projects', parameters: {} }
+    }
+
+    // List groups
+    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(groups?|קבוצות)/i.test(m)) {
+      return { tool: 'list_groups', parameters: {} }
+    }
+
+    // What am I working on? (timer context)
+    if (/what\s*(am\s*i|i'?m)\s*(working\s*on|doing)|על\s*מה\s*אני\s*עובד/.test(m)) {
+      return { tool: 'get_timer_status', parameters: {} }
+    }
+
+    return null
+  }
+
+  /**
+   * Execute a quick action by calling the tool directly (no AI model call).
+   * Used when quick actions have a directTool property or intent detection matches.
+   */
+  async function executeDirectTool(
+    displayMessage: string,
+    toolCall: ToolCall
+  ): Promise<void> {
+    if (store.isGenerating) return
+
+    store.inputText = ''
+    store.clearError()
+
+    // Add user message
+    store.addUserMessage(displayMessage)
+
+    // Start an assistant message
+    store.startStreamingMessage()
+
+    try {
+      console.log('[AIChat] Direct tool execution:', toolCall.tool, toolCall.parameters)
+      const result = await executeTool(toolCall)
+      console.log('[AIChat] Direct tool result:', result)
+
+      // Build a short summary
+      const summary = result.success
+        ? result.message
+        : `Error: ${result.message}`
+
+      // Set the message content
+      const lastMsg = store.messages[store.messages.length - 1]
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.content = summary
+        store.streamingContent = summary
+
+        // Attach tool results for rich rendering
+        if (result.success) {
+          const toolDef = AI_TOOLS.find(t => t.name === toolCall.tool)
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            toolResults: [{
+              success: result.success,
+              message: result.message,
+              data: result.data,
+              tool: toolCall.tool,
+              type: toolDef?.category || 'read',
+            }],
+          } as any
+        }
+      }
+
+      // Push undo entry if available
+      if (result.success && result.undoAction) {
+        store.pushUndoEntry({
+          toolName: toolCall.tool,
+          timestamp: Date.now(),
+          params: toolCall.parameters,
+          undoAction: result.undoAction,
+          description: result.message,
+        })
+      }
+
+      store.completeStreamingMessage()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Tool execution failed'
+      store.failStreamingMessage(errorMessage)
+      console.error('[AIChat] Direct tool error:', err)
+    }
+  }
+
   /**
    * Parse action buttons from AI response.
-   * Looks for patterns like [Action: Label] in the response.
+   * Actions are wired to real tool calls (create_subtasks, create_group).
    */
   function parseActionsFromResponse(content: string): ChatAction[] | undefined {
-    // For now, we'll add actions based on content patterns
-    // In the future, the AI could output structured action data
     const actions: ChatAction[] = []
 
-    // Check for task breakdown patterns
+    // Check for task breakdown patterns - wire to create_subtasks tool
     if (content.includes('subtask') || content.includes('breakdown')) {
       actions.push({
         id: 'create_subtasks',
         label: 'Create Subtasks',
         variant: 'primary',
         handler: async () => {
-          // TODO: Implement subtask creation
-          console.log('Creating subtasks...')
-        }
+          const selectedTask = store.context.selectedTask
+          if (!selectedTask) {
+            store.addAssistantMessage('Please select a task first to create subtasks for.')
+            return
+          }
+
+          // Parse subtask titles from the AI response
+          // Look for numbered lists (1. Title, 2. Title, etc.) or bullet points (- Title)
+          const subtaskTitles = parseSubtaskTitlesFromContent(content)
+          if (subtaskTitles.length === 0) {
+            store.addAssistantMessage('Could not find subtask suggestions in the response. Try asking again.')
+            return
+          }
+
+          const call: ToolCall = {
+            tool: 'create_subtasks',
+            parameters: {
+              parentTaskId: selectedTask.id,
+              subtasks: subtaskTitles.map(title => ({ title })),
+            },
+          }
+
+          const result = await executeTool(call)
+          store.addAssistantMessage(
+            result.success ? result.message : `Error: ${result.message}`
+          )
+        },
       })
     }
 
-    // Check for grouping patterns
+    // Check for grouping patterns - wire to create_group tool
     if (content.includes('group') && content.includes('suggest')) {
       actions.push({
         id: 'create_group',
         label: 'Create Group',
         variant: 'primary',
         handler: async () => {
-          // TODO: Implement group creation
-          console.log('Creating group...')
-        }
+          // Parse group name from the AI response
+          const groupName = parseGroupNameFromContent(content)
+          if (!groupName) {
+            store.addAssistantMessage('Could not determine a group name from the suggestion. Try asking again.')
+            return
+          }
+
+          const call: ToolCall = {
+            tool: 'create_group',
+            parameters: { name: groupName },
+          }
+
+          const result = await executeTool(call)
+          store.addAssistantMessage(
+            result.success ? result.message : `Error: ${result.message}`
+          )
+        },
       })
     }
 
     return actions.length > 0 ? actions : undefined
+  }
+
+  /**
+   * Extract subtask titles from AI response content.
+   * Looks for numbered lists (1. Title) or bullet points (- Title).
+   */
+  function parseSubtaskTitlesFromContent(content: string): string[] {
+    const titles: string[] = []
+    const lines = content.split('\n')
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      // Match "1. Title", "2. Title", etc.
+      const numberedMatch = trimmed.match(/^\d+[\.\)]\s+(.+)/)
+      // Match "- Title" or "* Title"
+      const bulletMatch = trimmed.match(/^[-*]\s+(.+)/)
+
+      const match = numberedMatch || bulletMatch
+      if (match) {
+        // Clean up: remove trailing punctuation, markdown bold, etc.
+        let title = match[1].replace(/\*\*/g, '').trim()
+        // Skip lines that look like descriptions rather than titles (too long)
+        if (title.length > 0 && title.length <= 120) {
+          titles.push(title)
+        }
+      }
+    }
+
+    return titles
+  }
+
+  /**
+   * Extract a group name from AI response content.
+   * Looks for quoted names or bold text near "group" keyword.
+   */
+  function parseGroupNameFromContent(content: string): string | null {
+    // Try: "group called "Name"" or "group: "Name""
+    const quotedMatch = content.match(/group\s*(?:called|named|:)\s*[""](.+?)[""]/i)
+    if (quotedMatch) return quotedMatch[1]
+
+    // Try: bold text near "group" keyword ("**Name**")
+    const boldMatch = content.match(/group.*?\*\*(.+?)\*\*/i)
+    if (boldMatch) return boldMatch[1]
+
+    // Try: first quoted string in the response
+    const anyQuoted = content.match(/[""](.+?)[""]/i)
+    if (anyQuoted) return anyQuoted[1]
+
+    return null
   }
 
   // ============================================================================
@@ -433,9 +903,36 @@ export function useAIChat() {
 
   /**
    * Set the active provider (auto, groq, or ollama).
+   * Persists the selection to localStorage via the store.
    */
-  function setProvider(provider: 'ollama' | 'groq' | 'auto') {
+  async function setProvider(provider: 'ollama' | 'groq' | 'openrouter' | 'auto') {
+    // Save current model for the outgoing provider
+    providerModelMemory.value[selectedProvider.value] = selectedModel.value
+
+    // Switch provider
     selectedProvider.value = provider
+
+    // Restore saved model for the incoming provider (or null if none saved)
+    selectedModel.value = providerModelMemory.value[provider] ?? null
+
+    store.updatePersistedSettings({
+      provider,
+      model: selectedModel.value || '',
+    })
+
+    // Update active provider badge
+    if (provider === 'auto') {
+      try {
+        const router = await getRouter()
+        const detectedProvider = await router.getActiveProvider()
+        activeProviderRef.value = detectedProvider
+      } catch {
+        activeProviderRef.value = null
+      }
+    } else {
+      activeProviderRef.value = provider
+    }
+
     if (provider === 'ollama' && availableOllamaModels.value.length === 0) {
       refreshOllamaModels()
     }
@@ -443,16 +940,49 @@ export function useAIChat() {
 
   /**
    * Set the model to use (null = default for provider).
+   * Persists the selection to localStorage via the store.
    */
   function setModel(model: string | null) {
     selectedModel.value = model
+    store.updatePersistedSettings({
+      provider: selectedProvider.value,
+      model: model || '',
+    })
   }
 
   /**
    * Initialize the AI chat system.
+   * Loads persisted provider/model settings from store.
    */
   async function initialize() {
     store.initialize()
+
+    // Load persisted settings
+    const savedSettings = store.getPersistedSettings()
+    if (savedSettings) {
+      if (['ollama', 'groq', 'openrouter', 'auto'].includes(savedSettings.provider)) {
+        selectedProvider.value = savedSettings.provider as typeof selectedProvider.value
+      }
+      if (savedSettings.model) {
+        // Validate persisted model matches persisted provider
+        // Groq models contain '-' and numbers (e.g. llama-3.3-70b-versatile)
+        // Ollama models contain ':' (e.g. llama3.2:latest)
+        const model = savedSettings.model
+        const provider = selectedProvider.value
+        const looksLikeOllama = model.includes(':')
+        const looksLikeGroq = /\d/.test(model) && model.includes('-') && !model.includes(':')
+
+        if (provider === 'groq' && looksLikeOllama) {
+          // Ollama model persisted but provider is Groq — reset
+          selectedModel.value = null
+        } else if (provider === 'ollama' && looksLikeGroq) {
+          // Groq model persisted but provider is Ollama — reset
+          selectedModel.value = null
+        } else {
+          selectedModel.value = model
+        }
+      }
+    }
 
     // Pre-initialize the router
     try {
@@ -491,6 +1021,11 @@ export function useAIChat() {
     setModel,
     refreshOllamaModels,
 
+    // Confirmation flow
+    pendingConfirmation,
+    confirmPendingAction,
+    cancelPendingAction,
+
     // Computed
     visibleMessages,
     canSend,
@@ -511,6 +1046,9 @@ export function useAIChat() {
     organizeCanvas,
     breakdownSelectedTask,
     planWeek,
+
+    // Direct tool execution (for Ollama / small models)
+    executeDirectTool,
 
     // Context
     setCurrentView: store.setCurrentView,

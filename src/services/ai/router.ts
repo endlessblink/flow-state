@@ -810,6 +810,34 @@ export class AIRouter {
   }
 
   /**
+   * Get cached health status for all providers.
+   * Returns the last known health status without triggering new checks.
+   */
+  getProviderHealthStatus(): Record<string, 'healthy' | 'degraded' | 'unavailable' | 'unknown'> {
+    const status: Record<string, 'healthy' | 'degraded' | 'unavailable' | 'unknown'> = {}
+
+    for (const providerType of this.config.providers) {
+      const cached = this.healthCache.get(providerType)
+      const provider = this.providers.get(providerType)
+
+      if (!provider) {
+        status[providerType] = 'unavailable'
+      } else if (!cached) {
+        // No health check performed yet - unknown until checked
+        status[providerType] = 'unknown'
+      } else if (cached.result.isHealthy) {
+        status[providerType] = 'healthy'
+      } else if (cached.result.status === 'error') {
+        status[providerType] = 'unavailable'
+      } else {
+        status[providerType] = 'degraded'
+      }
+    }
+
+    return status
+  }
+
+  /**
    * Get provider type from provider instance.
    */
   private getProviderType(provider: AIProvider): RouterProviderType {

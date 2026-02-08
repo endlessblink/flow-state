@@ -2190,9 +2190,9 @@ npm run tasks:bugs     # Filter by BUG type
 
 ## Planned Tasks (NEXT/BACKLOG)
 
-### FEATURE-1248: Quick Tasks - Pinned & Frequent Task Shortcuts (📋 PLANNED)
+### FEATURE-1248: Quick Tasks - Pinned & Frequent Task Shortcuts (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-08)
 
 **Problem**: Selecting a task to work on requires sifting through the full task list every time. For recurring work (e.g., "flow-state development" done daily), this friction adds up.
 

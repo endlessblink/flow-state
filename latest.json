@@ -1,11 +1,11 @@
 {
-  "version": "1.2.33",
-  "notes": "fix: time block notifications - add legacy task support + duration fallback",
-  "pub_date": "2026-02-08T11:34:26.497Z",
+  "version": "1.2.35",
+  "notes": "TASK-1219: Fix time block notifications - settings persistence gap (undefined timeBlockNotifications for existing users)",
+  "pub_date": "2026-02-08T14:49:30.437Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTRjYllZbzNBOFUrZHBOWE4vVWxVZHZ5dDdzZ2gxYUlyZXZkYnZ3Q0NsNlFyclVudDNIczAwZ3Jld01WRmt1WUJvZmt2Z0MrVTVKVndNTGVzdG9oUkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTUwNDY2CWZpbGU6Rmxvd1N0YXRlXzEuMi4zM19hbWQ2NC5BcHBJbWFnZQpNdUtHUmJDSjR5ZUY5OXd6b3dKSGFtbXRaNFlEOWp5S2xNSUpqM1ovMXdORit0c2YxMHBOZmlrZ3hPQVF5RU9tU0wweUpHcU9oQUNFSENxbWNSUnZEZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.33_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRSs2bXVNQVR2bjFuTGFKeWovaXkvbU5nY2RtNjR1WitLR2M4bkVOWSsyUzBrT0c5eFRYeFllZCtHZlA0MTNKd3VrSzhyRGFsSTk2b0ZnQ01FNnJObGdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTYyMTcwCWZpbGU6Rmxvd1N0YXRlXzEuMi4zNV9hbWQ2NC5BcHBJbWFnZQoraUJaSGtycFNwbWZPeVRQUnhJUWdTTmNVeG9mdzhhQi9nTFd4c1FraUtteFg3dFptWi8ralpQcDVWSFc0RHA2UGU0QlpITThnUENCM0hVeHd3K09EZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.35_amd64.AppImage"
     }
   }
 }

@@ -326,9 +326,8 @@ const handleTimeFilterSelect = (key: string) => {
   gap: var(--space-2);
   height: 44px;
   flex-shrink: 0;
-  /* BUG-1078: Ensure header content is never clipped */
-  width: fit-content;
-  min-width: 100%;
+  /* BUG-1078: Fill parent width; flex children use flex-shrink: 0 to prevent squishing */
+  width: 100%;
 }
 
 /* BUG-1078: Prevent NBadge from shrinking */

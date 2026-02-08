@@ -15,6 +15,7 @@ import { useNotificationStore } from '@/stores/notifications'
 import { useToast } from '@/composables/useToast'
 import { deliverNotification } from '@/utils/notificationDelivery'
 import type { TimeBlockMilestone } from '@/types/timeBlockNotifications'
+import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotifications'
 import type { Task, TaskInstance } from '@/types/tasks'
 
 interface ActiveTimeBlock {
@@ -43,6 +44,14 @@ export function useTimeBlockNotifications() {
   const shownMilestones = ref(new Set<string>())
   const currentDate = ref(getTodayStr())
   let intervalId: ReturnType<typeof setInterval> | null = null
+
+  /**
+   * Defensive settings getter — falls back to defaults if settings store
+   * was loaded from persisted state that predates the timeBlockNotifications field.
+   */
+  function getSettings() {
+    return settingsStore.timeBlockNotifications ?? DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS
+  }
 
   function getTodayStr(): string {
     const d = new Date()
@@ -160,7 +169,7 @@ export function useTimeBlockNotifications() {
    * Get effective milestones (global settings merged with per-instance overrides)
    */
   function getEffectiveMilestones(block: ActiveTimeBlock): TimeBlockMilestone[] {
-    const settings = settingsStore.timeBlockNotifications
+    const settings = getSettings()
     const override = block.instance.timeBlockNotifications
 
     // If override explicitly disables, return empty
@@ -186,7 +195,7 @@ export function useTimeBlockNotifications() {
    * Check if currently in Do Not Disturb hours
    */
   function isInDND(): boolean {
-    const settings = settingsStore.timeBlockNotifications
+    const settings = getSettings()
     if (!settings.respectDoNotDisturb) return false
 
     const dndPrefs = notificationStore.defaultPreferences?.doNotDisturb
@@ -221,7 +230,7 @@ export function useTimeBlockNotifications() {
    * Fire notifications for a milestone via configured channels
    */
   function fireMilestone(milestone: TimeBlockMilestone, block: ActiveTimeBlock): void {
-    const settings = settingsStore.timeBlockNotifications
+    const settings = getSettings()
     const override = block.instance.timeBlockNotifications
     const channels = { ...settings.deliveryChannels, ...override?.deliveryChannels }
 
@@ -247,7 +256,7 @@ export function useTimeBlockNotifications() {
    * Main tick: scan all active blocks, check milestones, fire notifications
    */
   function tick(): void {
-    const settings = settingsStore.timeBlockNotifications
+    const settings = getSettings()
     if (!settings.enabled) return
 
     // Midnight reset
@@ -301,7 +310,7 @@ export function useTimeBlockNotifications() {
 
     isInitialized = true
 
-    const settings = settingsStore.timeBlockNotifications
+    const settings = getSettings()
     console.log('[TIME-BLOCK] Starting with settings:', {
       enabled: settings.enabled,
       milestones: settings.milestones.map(m => `${m.id}(${m.enabled ? 'on' : 'off'})`),

@@ -74,14 +74,10 @@ export function useGamificationHooks() {
       // Show shielded toast
       gamificationStore.showExposureToast(true)
     } else {
-      // No timer = exposed
+      // No timer = normal XP (Anti-Chore Manifesto: timer is invitation, not obligation)
       exposureMultiplier = EXPOSURE_SYSTEM.EXPOSED_XP_PENALTY
-      // Increase corruption for working unshielded
-      if (challengesStore.isInitialized) {
-        await challengesStore.updateCorruption(EXPOSURE_SYSTEM.EXPOSED_CORRUPTION_DELTA)
-      }
-      // Show exposed toast
-      gamificationStore.showExposureToast(false)
+      // No corruption change when unshielded (EXPOSED_CORRUPTION_DELTA = 0)
+      // No toast for exposed — avoid nagging per Distraction Test
     }
 
     // Award XP

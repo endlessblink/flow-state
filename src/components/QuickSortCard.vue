@@ -25,6 +25,9 @@
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
             @click="updatePriority('low')"
+            aria-label="Set priority to Low"
+            title="Set priority to Low"
+            :aria-pressed="task.priority === 'low'"
           >
             Low
           </button>
@@ -32,6 +35,9 @@
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
             @click="updatePriority('medium')"
+            aria-label="Set priority to Medium"
+            title="Set priority to Medium"
+            :aria-pressed="task.priority === 'medium'"
           >
             Med
           </button>
@@ -39,6 +45,9 @@
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
             @click="updatePriority('high')"
+            aria-label="Set priority to High"
+            title="Set priority to High"
+            :aria-pressed="task.priority === 'high'"
           >
             High
           </button>
@@ -49,6 +58,9 @@
             class="quick-date-btn"
             :class="{ active: isToday }"
             @click.stop="setToday"
+            aria-label="Set due date to Today"
+            title="Set due date to Today"
+            :aria-pressed="isToday"
           >
             Today
           </button>
@@ -56,6 +68,9 @@
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
             @click.stop="setTomorrow"
+            aria-label="Set due date to Tomorrow"
+            title="Set due date to Tomorrow"
+            :aria-pressed="isTomorrow"
           >
             +1
           </button>
@@ -63,6 +78,9 @@
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
             @click.stop="setNextWeek"
+            aria-label="Set due date to Next Week"
+            title="Set due date to Next Week"
+            :aria-pressed="isNextWeek"
           >
             +7
           </button>
@@ -70,6 +88,9 @@
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
             @click.stop="clearDate"
+            aria-label="Clear due date"
+            title="Clear due date"
+            :aria-pressed="hasNoDate"
           >
             Clear
           </button>
@@ -324,6 +345,11 @@ function handleSwipeEnd() {
   border-color: var(--glass-border-hover);
 }
 
+.priority-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .priority-btn.active {
   background: transparent;
   border-color: var(--brand-primary);
@@ -355,6 +381,11 @@ function handleSwipeEnd() {
   color: var(--brand-primary);
 }
 
+.quick-date-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
 .quick-date-btn.active {
   background: transparent;
   border-color: var(--brand-primary);
@@ -371,6 +402,10 @@ function handleSwipeEnd() {
   background: var(--danger-bg);
   border-color: var(--danger);
   color: var(--danger);
+}
+
+.quick-date-btn.clear-btn:focus-visible {
+  outline-color: var(--danger);
 }
 
 .quick-date-btn.clear-btn.active {

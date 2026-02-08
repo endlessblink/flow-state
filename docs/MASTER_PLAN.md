@@ -369,6 +369,23 @@
 
 ---
 
+### ~~TASK-1246~~: Multi-Select Filters for Inbox (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-08)
+
+**Change**: Converted priority, project, and duration inbox filters from single-select dropdowns to multi-select with checkboxes. OR logic within each filter, AND between filters. Calendar inbox filters now persist across refreshes.
+
+**Files** (7):
+- `src/composables/inbox/useUnifiedInboxState.ts` — Array-backed Sets with computed wrappers, `.has()` filter logic
+- `src/composables/inbox/useCalendarInboxState.ts` — Same + added `usePersistentRef` for persistence
+- `src/components/canvas/InboxFilters.vue` — Checkbox UI, `@click.stop` keeps dropdown open, count badges
+- `src/components/inbox/unified/UnifiedInboxHeader.vue` — Plural Set props/emits
+- `src/components/inbox/calendar/CalendarInboxHeader.vue` — Plural Set props/emits
+- `src/components/inbox/UnifiedInboxPanel.vue` — Updated bindings + collapsed badge logic
+- `src/components/inbox/CalendarInboxPanel.vue` — Updated v-model bindings
+
+---
+
 ### TASK-1217: Add "Today" Filter to KDE Plasma Widget (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-07)
@@ -2422,6 +2439,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | TASK-1215 | P0 | Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
+| ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
 | FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |

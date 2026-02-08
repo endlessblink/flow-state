@@ -129,6 +129,63 @@ export const useSmartViews = () => {
   }
 
   /**
+   * Check if a task is due within the next 3 calendar days (today through day+2, inclusive)
+   * Includes: overdue tasks + tasks due from today until day+3 boundary (exclusive)
+   */
+  const isNext3DaysTask = (task: Task): boolean => {
+    if (task.status === 'done') return false
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const boundary = new Date(today)
+    boundary.setDate(boundary.getDate() + 3) // 3 calendar days from today (exclusive)
+    const boundaryStr = getLocalDateString(boundary)
+
+    // Check dueDate (include overdue - no lower bound check)
+    if (task.dueDate) {
+      const normalizedDueDate = normalizeDateString(task.dueDate)
+      if (normalizedDueDate && normalizedDueDate < boundaryStr) {
+        return true
+      }
+    }
+
+    // Check instances (authoritative if present)
+    // BUG-1188: If instances exist, ONLY check instance dates (instances are authoritative)
+    if (task.instances && task.instances.length > 0) {
+      return task.instances.some(inst => {
+        if (!inst || !inst.scheduledDate) return false
+        const normalizedInstDate = normalizeDateString(inst.scheduledDate)
+        return normalizedInstDate && normalizedInstDate < boundaryStr
+      })
+    }
+
+    // Legacy scheduledDate (only when NO instances exist)
+    if (task.scheduledDate) {
+      const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
+      if (normalizedScheduledDate && normalizedScheduledDate < boundaryStr) {
+        return true
+      }
+    }
+
+    // Only include tasks created today if they have NO date information at all
+    // BUG-1185: Must also check scheduledDate and instances, not just dueDate
+    const hasScheduledDate = task.scheduledDate && task.scheduledDate.trim() !== ''
+    const hasScheduledInstances = task.instances && task.instances.some(inst => inst?.scheduledDate)
+
+    if (!task.dueDate && !hasScheduledDate && !hasScheduledInstances && task.createdAt) {
+      const createdDate = new Date(task.createdAt)
+      if (!isNaN(createdDate.getTime())) {
+        createdDate.setHours(0, 0, 0, 0)
+        if (createdDate.getTime() === today.getTime()) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  /**
    * Check if a task is due this week (including overdue tasks)
    * TASK-1089: Uses calendar week ending at 00:00 Sunday (exclusive of Sunday)
    * - On Monday: shows Mon-Sat (5 days)
@@ -424,6 +481,7 @@ export const useSmartViews = () => {
   return {
     // Individual task checkers
     isTodayTask,
+    isNext3DaysTask,
     isWeekTask,
     isThisMonthTask,
     isUncategorizedTask,

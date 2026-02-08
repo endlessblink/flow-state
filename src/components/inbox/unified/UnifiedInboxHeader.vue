@@ -49,6 +49,38 @@
       </button>
     </NDropdown>
 
+    <!-- TASK-1246: Group Filter Dropdown -->
+    <NPopover
+      v-if="!isCollapsed && showGroupChips"
+      trigger="click"
+      placement="bottom-start"
+      :show-arrow="false"
+      raw
+    >
+      <template #trigger>
+        <button class="time-filter-dropdown" :class="{ active: selectedCanvasGroups.size > 0 }">
+          <Layers :size="14" />
+          <span>{{ groupFilterLabel }}</span>
+          <ChevronDown :size="12" />
+        </button>
+      </template>
+      <div class="group-filter-chips">
+        <button
+          v-for="group in groupOptions"
+          :key="group.value"
+          class="group-chip"
+          :class="{ active: isChipActive(group) }"
+          :style="getChipStyle(group)"
+          :title="group.value === '' ? 'Show all tasks' : `Filter by ${group.label} (Ctrl+click for multi-select)`"
+          @click="handleChipClick($event, group)"
+        >
+          <span v-if="group.color" class="chip-dot" :style="{ backgroundColor: group.color }" />
+          <span class="chip-label">{{ group.label }}</span>
+          <span v-if="group.count !== undefined" class="chip-count">{{ group.count }}</span>
+        </button>
+      </div>
+    </NPopover>
+
     <!-- TASK-1075: Search Toggle Button -->
     <button
       v-if="!isCollapsed"
@@ -87,23 +119,6 @@
     </div>
   </Transition>
 
-  <!-- Filter Chips (Canvas Groups) -->
-  <div v-if="!isCollapsed && showGroupChips" class="group-filter-chips">
-    <button
-      v-for="group in groupOptions"
-      :key="group.value"
-      class="group-chip"
-      :class="{ active: isChipActive(group) }"
-      :style="getChipStyle(group)"
-      :title="group.value === '' ? 'Show all tasks' : `Filter by ${group.label} (Ctrl+click for multi-select)`"
-      @click="handleChipClick($event, group)"
-    >
-      <span v-if="group.color" class="chip-dot" :style="{ backgroundColor: group.color }" />
-      <span class="chip-label">{{ group.label }}</span>
-      <span v-if="group.count !== undefined" class="chip-count">{{ group.count }}</span>
-    </button>
-  </div>
-
   <!-- Advanced Filters Toggle -->
   <div v-if="!isCollapsed" class="advanced-filters-section">
     <button
@@ -141,8 +156,8 @@
 
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
-import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2, Search, X } from 'lucide-vue-next'
-import { NBadge, NDropdown } from 'naive-ui'
+import { ChevronLeft, ChevronRight, CalendarDays, Filter, ChevronDown, CheckCircle2, Search, X, Layers } from 'lucide-vue-next'
+import { NBadge, NDropdown, NPopover } from 'naive-ui'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import type { Task } from '@/types/tasks'
 import type { DurationCategory } from '@/utils/durationCategories'
@@ -160,6 +175,7 @@ const props = defineProps<{
   taskCount: number
   activeTimeFilter: TimeFilterType
   todayCount: number
+  next3DaysCount: number
   weekCount: number
   monthCount: number
   showGroupChips: boolean
@@ -217,6 +233,17 @@ const clearSearch = () => {
   searchInputRef.value?.focus()
 }
 
+// TASK-1246: Group Filter Label
+const groupFilterLabel = computed(() => {
+  if (props.selectedCanvasGroups.size === 0) return 'Groups'
+  if (props.selectedCanvasGroups.size === 1) {
+    const activeId = Array.from(props.selectedCanvasGroups)[0]
+    const group = props.groupOptions.find(g => g.value === activeId)
+    return group?.label || 'Groups'
+  }
+  return `${props.selectedCanvasGroups.size} Groups`
+})
+
 // Chip Logic
 const isChipActive = (group: GroupOption) => {
   return group.value === ''
@@ -267,6 +294,7 @@ const handleChipClick = (event: MouseEvent, group: GroupOption) => {
 const timeFilterOptions = computed(() => [
   { label: 'All', key: 'all' },
   { label: `Today (${props.todayCount})`, key: 'today' },
+  { label: `Next 3 Days (${props.next3DaysCount})`, key: 'next3days' },
   { label: `This Week (${props.weekCount})`, key: 'week' },
   { label: `This Month (${props.monthCount})`, key: 'month' }
 ])
@@ -275,6 +303,7 @@ const timeFilterLabel = computed(() => {
   const labels: Record<TimeFilterType, string> = {
     all: 'All',
     today: 'Today',
+    next3days: '3 Days',
     week: 'Week',
     month: 'Month'
   }
@@ -378,14 +407,19 @@ const handleTimeFilterSelect = (key: string) => {
   font-weight: var(--font-medium);
 }
 
-/* Filter Chips */
+/* TASK-1246: Filter Chips (now inside popover) */
 .group-filter-chips {
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-2);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  border-bottom: 1px solid var(--border-light);
-  background: var(--surface-ground);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  max-width: 400px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
 }
 
 .group-chip {

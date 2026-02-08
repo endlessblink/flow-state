@@ -12,6 +12,7 @@
       :task-count="inboxTasks.length"
       :active-time-filter="activeTimeFilter"
       :today-count="todayCount"
+      :next3-days-count="next3DaysCount"
       :week-count="weekCount"
       :month-count="monthCount"
       :show-group-chips="context === 'calendar' && canvasGroupOptions.length > 1"
@@ -157,6 +158,7 @@ const {
   baseInboxTasks,
   inboxTasks,
   todayCount,
+  next3DaysCount,
   weekCount,
   monthCount,
   doneTaskCount,

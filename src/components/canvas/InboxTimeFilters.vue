@@ -23,13 +23,14 @@ import {
   Clock,
   Calendar,
   CalendarDays,
+  CalendarRange,
   CalendarPlus,
   CalendarX
 } from 'lucide-vue-next'
 import type { Task } from '@/stores/tasks'
 
 interface TimeFilter {
-  key: 'all' | 'now' | 'today' | 'tomorrow' | 'thisWeek' | 'noDate'
+  key: 'all' | 'now' | 'today' | 'tomorrow' | 'next3days' | 'thisWeek' | 'noDate'
   label: string
   description: string
   icon: Component
@@ -163,6 +164,22 @@ const filterTasks = (filterKey: string) => {
         return task.scheduledDate === tomorrowStr
       }
 
+      case 'next3days': {
+        const todayStr = getToday().toISOString().split('T')[0]
+        const boundary = new Date(getToday())
+        boundary.setDate(boundary.getDate() + 3)
+        const boundaryStr = boundary.toISOString().split('T')[0]
+        // Check instances first (authoritative)
+        if (task.instances && task.instances.length > 0) {
+          return task.instances.some(inst =>
+            inst.scheduledDate && inst.scheduledDate < boundaryStr
+          )
+        }
+        // Fallback to legacy scheduledDate
+        if (!task.scheduledDate) return false
+        return task.scheduledDate < boundaryStr
+      }
+
       case 'thisWeek': {
         // TASK-1089: Tasks scheduled within calendar week (until Sunday 00:00, exclusive)
         const weekEndStr = getWeekEnd().toISOString().split('T')[0]
@@ -217,6 +234,13 @@ const timeFilters = computed((): TimeFilter[] => [
     description: 'Tasks scheduled for tomorrow',
     icon: CalendarDays,
     count: filterTasks('tomorrow').length
+  },
+  {
+    key: 'next3days',
+    label: 'Next 3 Days',
+    description: 'Tasks due in the next 3 days',
+    icon: CalendarRange,
+    count: filterTasks('next3days').length
   },
   {
     key: 'thisWeek',

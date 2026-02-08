@@ -2072,6 +2072,35 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
+### TASK-1246: Collapse Sidebar Group Filters into Dropdown (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: The sidebar smart view area displays all groups (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, Today, Tomorrow, New Group, All) with counts in a flat grid that clutters the UI, especially when many groups exist.
+
+**Solution**: Collapse group filters into an existing dropdown or a new collapsible section so they don't show all the time. Keep the primary smart views (Today, This Week, All Active, Inbox) visible, but move the day-of-week groups and custom groups behind a dropdown/toggle.
+
+**Files**:
+- `src/layouts/AppSidebar.vue` — Main sidebar with smart view grid
+- `src/components/layout/SidebarSmartItem.vue` — Individual filter item component
+
+---
+
+### ~~TASK-1247~~: Add "Next 3 Days" Filter to Inbox (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-08)
+
+**Summary**: Added a "Next 3 Days" calendar-days filter showing tasks due today through day+2 (3 calendar days total), including overdue. Available in both the canvas icon bar (InboxTimeFilters.vue) and the unified inbox dropdown (UnifiedInboxHeader.vue).
+
+**Files Modified**:
+- `src/composables/useSmartViews.ts` — Added `isNext3DaysTask()` function
+- `src/composables/inbox/useUnifiedInboxState.ts` — Added `'next3days'` to TimeFilterType, filter branch, count
+- `src/components/inbox/unified/UnifiedInboxHeader.vue` — Dropdown option + label
+- `src/components/inbox/UnifiedInboxPanel.vue` — Passed count prop to header
+- `src/components/canvas/InboxTimeFilters.vue` — Icon button + filter case
+
+---
+
 ## Planned Tasks (NEXT/BACKLOG)
 
 ### TASK-1118: Test Suite Cleanup - Reduce 615 Tests to ~100 Essential (📋 PLANNED)
@@ -2440,6 +2469,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | TASK-1215 | P0 | Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
+| ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
 | FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |

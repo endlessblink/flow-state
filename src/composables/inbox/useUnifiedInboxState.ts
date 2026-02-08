@@ -13,12 +13,12 @@ export interface InboxContextProps {
     hideDoneTasks?: boolean
 }
 
-export type TimeFilterType = 'all' | 'today' | 'week' | 'month'
+export type TimeFilterType = 'all' | 'today' | 'next3days' | 'week' | 'month'
 export type SortByType = 'newest' | 'priority' | 'dueDate'
 
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
-    const { isTodayTask, isWeekTask, isThisMonthTask } = useSmartViews()
+    const { isTodayTask, isNext3DaysTask, isWeekTask, isThisMonthTask } = useSmartViews()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
 
     // --- Core Filter State ---
@@ -131,6 +131,10 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return baseInboxTasks.value.filter(task => isTodayTask(task)).length
     })
 
+    const next3DaysCount = computed(() => {
+        return baseInboxTasks.value.filter(task => isNext3DaysTask(task)).length
+    })
+
     const weekCount = computed(() => {
         return baseInboxTasks.value.filter(task => isWeekTask(task)).length
     })
@@ -179,6 +183,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         // 2. Time Filter
         if (activeTimeFilter.value === 'today') {
             tasks = tasks.filter(task => isTodayTask(task))
+        } else if (activeTimeFilter.value === 'next3days') {
+            tasks = tasks.filter(task => isNext3DaysTask(task))
         } else if (activeTimeFilter.value === 'week') {
             tasks = tasks.filter(task => isWeekTask(task))
         } else if (activeTimeFilter.value === 'month') {
@@ -300,6 +306,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         baseInboxTasks,
         inboxTasks,
         todayCount,
+        next3DaysCount,
         weekCount,
         monthCount,
         doneTaskCount,

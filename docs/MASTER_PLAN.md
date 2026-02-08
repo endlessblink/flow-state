@@ -352,9 +352,9 @@
 
 ---
 
-### TASK-1215: Persist Full UI State Across Restarts (🔄 IN PROGRESS)
+### ~~TASK-1215~~: Persist Full UI State Across Restarts (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-08)
 
 **Problem**: Several UI preferences reset on app restart — inbox advanced filters, All Tasks view type/sort/density, canvas display toggles (priority/status/duration badges), canvas snap/guides, and the task duration filter are all volatile.
 
@@ -2026,11 +2026,11 @@ npm run tasks:bugs     # Filter by BUG type
 
 #### Phase 1: Fix & Foundation (P0 — IMMEDIATE)
 
-- [ ] **TASK-1223**: RTL fix — CSS logical properties, `dir="auto"` on task titles, panel position mirroring
-- [ ] **TASK-1224**: Task name truncation — replace `nowrap` with 2-line clamp (`-webkit-line-clamp: 2`)
-- [ ] **TASK-1225**: Date formatting — new `formatRelativeDate()` utility using `Intl.RelativeTimeFormat` (auto Hebrew/English)
-- [ ] **TASK-1226**: Inline task editing in chat results — clickable priority/status/date dropdowns on task list items
-- [ ] **TASK-1227**: Task list item 2-row layout — priority dot + title (row 1), date + status badges (row 2)
+- [x] ~~**TASK-1223**~~: ✅ RTL fix — CSS logical properties, `dir="auto"` on task titles, panel position mirroring
+- [x] ~~**TASK-1224**~~: ✅ Task name truncation — replace `nowrap` with 2-line clamp (`-webkit-line-clamp: 2`)
+- [x] ~~**TASK-1225**~~: ✅ Date formatting — new `formatRelativeDate()` utility using `Intl.RelativeTimeFormat` (auto Hebrew/English)
+- [x] ~~**TASK-1226**~~: ✅ Inline task editing in chat results — clickable priority/status/date dropdowns on task list items
+- [x] ~~**TASK-1227**~~: ✅ Task list item 2-row layout — priority dot + title (row 1), date + status badges (row 2)
 
 #### Phase 2: Expand & Enrich (P1 — NEXT)
 
@@ -2101,7 +2101,137 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
+### TASK-1248: Design Token Audit & Cleanup (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-08)
+
+**Problem**: ~3,000 hardcoded CSS values across ~130 `.vue` and `.css` files bypass the design token system (`src/assets/design-tokens.css`). This undermines theme consistency, makes future theming/light-mode impossible, and creates maintenance debt.
+
+**Scan Results** (Feb 8, 2026):
+| Violation Type | Occurrences | Files |
+|---|---|---|
+| Hardcoded `rgba()`/`rgb()` | ~1,404 | 128 |
+| Hardcoded hex colors | ~488 | 75 |
+| Hardcoded `box-shadow` | ~411 | 127 |
+| Hardcoded `padding`/`margin`/`gap` px | ~181 | 25+ |
+| Hardcoded `font-size` px | ~121 | 20 |
+| Hardcoded `border-radius` px | ~92 | 31 |
+
+**Phased Plan** (by domain, priority order):
+
+| Phase | Domain | Files | Est. Violations | Priority |
+|---|---|---|---|---|
+| 1 | Mobile views (`mobile/`) | ~10 | ~500 | Highest — worst offender area |
+| 2 | AI Chat (`ai/`) | 2 | ~250 | High — AIChatPanel + ChatMessage |
+| 3 | Gamification (`gamification/`) | ~20 | ~400 | Medium — cyber components |
+| 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — TaskNode, GroupNode |
+| 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — TaskRow, drag handles |
+| 6 | CSS files (non-token) | 7 | ~300 | Lower — global overrides |
+| 7 | Remaining (base, calendar, layout, etc.) | ~60 | ~200 | Lowest — mostly clean |
+
+**Rules**:
+- Replace hardcoded values with existing tokens from `design-tokens.css`
+- If no suitable token exists, add a new semantic token first
+- Skip intentional hardcoded values (SVG attributes, keyframe animations, third-party overrides)
+- Each phase = one PR, tests must pass
+
+---
+
+### TASK-1249: Codebase Hygiene Audit — Placeholders, Hardcoded Values, Debug Leftovers (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-02-08)
+
+**Summary**: Comprehensive 7-agent audit found 10 CRITICAL, 34 MEDIUM, 29 LOW issues across placeholders, hardcoded values, demo content, debug leftovers, design token violations, AI config, and metadata.
+
+**Sub-Tasks (ordered by priority)**:
+
+#### P0 — Security & Broken Functionality
+- [x] **~~TASK-1250~~**: ✅ Fix API key storage — removed plaintext localStorage inputs since proxy handles keys server-side (`AIChatPanel.vue`)
+- [x] **~~TASK-1251~~**: ✅ Fix direct API calls bypassing proxy — route model-listing through `aiChatProxy.ts` instead of direct fetch to groq.com/openrouter.ai (`AIChatPanel.vue:275,290`)
+- [x] **~~TASK-1252~~**: ✅ Remove or gate `/keyboard-test` debug route — ships without auth, exposes task creation/deletion debug panel (`router/index.ts:105-108`)
+- [x] **~~TASK-1253~~**: ✅ Gate `window.__flowstate_tauri_debug` behind `import.meta.env.DEV` (`useTauriDebug.ts:270-276`)
+- [x] **~~TASK-1254~~**: ✅ Fix CORS wildcard on Supabase Edge Functions — restricted to `in-theflow.com` + Tauri + dev origins (`supabase/functions/*/index.ts`)
+- [x] **~~TASK-1255~~**: ✅ Fix WelcomeModal dead buttons — removed non-functional saveDisplayName, exportData, and stubbed userStats (`WelcomeModal.vue`)
+- [x] **~~TASK-1256~~**: ✅ Fix stale production origins — `flowstate.app` → `in-theflow.com` (`environments.ts`)
+- [x] **~~TASK-1257~~**: ✅ Fix `productionLogger.ts` — now uses Supabase session token via `supabase.auth.getSession()`
+
+#### P1 — Production Quality
+- [ ] **TASK-1258**: Replace httpbin.org with self-hosted endpoint — production code makes requests to third-party test service (`performanceBenchmark.ts`, `useNetworkOptimizer.ts:447`)
+- [x] **~~TASK-1259~~**: ✅ Remove unconditional `%c[DEBUG]` styled log from `useCanvasOrchestrator.ts`
+- [x] **~~TASK-1260~~**: ✅ Remove ~30 bug-specific debug tags across 10 files (`[BUG-339-DEBUG]`, `[TASK-288-DEBUG]`, `[DELETE-DEBUG]`, `[BUG-1116:DRAG-DEBUG]`, `[KEYBOARD]` etc.)
+- [x] **~~TASK-1261~~**: ✅ Fix silent no-op stubs — now throw Error or console.warn (`taskPersistence.ts`)
+- [x] **~~TASK-1262~~**: ✅ Re-enable CI lint & unit tests (`.github/workflows/ci.yml`)
+- [x] **~~TASK-1263~~**: ✅ Add Open Graph + Twitter Card meta tags + improved description (`index.html`)
+- [x] **~~TASK-1264~~**: ✅ Update stale AI model references — router.ts, types.ts, openrouterProxy.ts
+- [x] **~~TASK-1265~~**: ✅ Fix AI proxy health check consuming real API tokens every 60s — switched to OPTIONS request instead of chat completion (`aiChatProxy.ts:412-421`)
+
+#### P2 — Code Quality & Design System
+- [ ] **TASK-1266**: CSS design token migration — top 10 offending files (1,420 raw rgba + 434 hex violations across 129 files). Start with DoneToggleVisuals.vue (90), ChatMessage.vue (77), CyberSkillTree.vue (61)
+- [ ] **TASK-1267**: Standardize localStorage key prefixes — mix of `flowstate-*`, `flow-state-*`, and unprefixed keys across codebase
+- [ ] **TASK-1268**: Extract magic timeout numbers to named constants — ~25 hardcoded timeouts (120000ms, 5000ms, 3000ms, 30000ms) scattered across sync, drag, health check code
+- [ ] **TASK-1269**: Create centralized `src/config/urls.ts` — consolidate all external URLs (Groq, OpenRouter, DiceBear, GitHub, httpbin, etc.)
+- [ ] **TASK-1270**: Fix hardcoded i18n defaults — `ui.ts:26-28` has `locale='en'` with "temporary" comment; password strength not using i18n (`SignupForm.vue:214-222`)
+- [ ] **TASK-1271**: Improve Cyberflow empty states — `"SHOP OFFLINE"`, `"NO ITEMS"`, `"NO ACHIEVEMENTS"` need explanatory subtext
+- [ ] **TASK-1272**: Mobile design token compliance — MobileTimerView, MobileTodayView etc. use ~zero design tokens
+- [ ] **TASK-1273**: Update PWA manifest description — currently "Pomodoro timer with task management", should include FlowState branding
+- [ ] **TASK-1274**: Migrate `'uncategorized'` sentinel to `null` — used in 10+ files requiring sanitization at every DB boundary
+
+#### P3 — Backlog / Polish
+- [ ] **TASK-1275**: Remove 5 obsolete verification scripts in `scripts/` (verify-shadow-layer, verify-auth-user, verify-backup-system, verify-bug339-migration, verify-restore)
+- [ ] **TASK-1276**: Remove Storybook `title: 'PLACEHOLDER'` duplicate key (`OverflowTooltip.stories.ts:4`)
+- [ ] **TASK-1277**: Standardize z-index usage — 170 occurrences across 88 files should use `var(--z-*)` tokens
+- [ ] **TASK-1278**: Standardize font-size usage — 163 hardcoded `font-size: Xpx` across 33 files should use `var(--text-*)` tokens
+- [ ] **TASK-1279**: Add missing package.json metadata — `homepage`, `repository`, `bugs` fields
+- [ ] **TASK-1280**: Add copyright field to Tauri bundle config (`tauri.conf.json`)
+- [ ] **TASK-1281**: Adopt build-time console.log stripping — replace runtime `consoleFilter.ts` with Vite plugin for production builds (~700 console.logs ship today)
+- [ ] **TASK-1282**: Stop filtering `console.error` in consoleFilter.ts — errors with emoji prefixes get silently swallowed (line 280-301)
+
+---
+
 ## Planned Tasks (NEXT/BACKLOG)
+
+### FEATURE-1248: Quick Tasks - Pinned & Frequent Task Shortcuts (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED
+
+**Problem**: Selecting a task to work on requires sifting through the full task list every time. For recurring work (e.g., "flow-state development" done daily), this friction adds up.
+
+**Feature**: A "Quick Tasks" system that surfaces the most relevant tasks for one-click selection — powered by two sources:
+
+**1. Auto-detected frequent tasks** (smart):
+- SQL aggregation groups completed tasks by title, ranks by frequency
+- Supabase RPC function: `get_common_task_titles(user_id, limit)` queries task history
+- Tasks you create repeatedly float to the top automatically
+
+**2. Manually pinned tasks** (user-controlled):
+- New `pinned_tasks` table for permanent recurring shortcuts
+- User can pin/unpin from task context menu or Quick Tasks panel
+- Pinned tasks always appear at top, regardless of frequency
+
+**Surfaces in**:
+- **Main app**: Quick Task selector (timer area or floating panel) with pin/unpin UI
+- **KDE widget**: ComboBox dropdown, filtered by widget config, calls same Supabase RPC
+
+**Implementation Plan**:
+
+*Database (Supabase):*
+- [ ] `pinned_tasks` table (id, user_id, title, description, project_id, priority, sort_order, created_at)
+- [ ] RPC function `get_quick_tasks()` — returns pinned + top N frequent tasks, merged and deduplicated
+
+*Main App:*
+- [ ] `useQuickTasks.ts` composable — calls RPC, manages pin/unpin
+- [ ] Quick Task selector UI component (accessible from timer area)
+- [ ] Pin/unpin action in task context menu
+- [ ] Respect active filters (project, status, priority)
+
+*KDE Widget (pomoflow-kde repo):*
+- [ ] ComboBox dropdown calling Supabase RPC
+- [ ] Widget config filters affect results
+- [ ] Separate refresh timer (60s) from timer poll (2s)
+
+**Dependencies**: None — standalone feature
+
+---
 
 ### TASK-1118: Test Suite Cleanup - Reduce 615 Tests to ~100 Essential (📋 PLANNED)
 
@@ -2433,9 +2563,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### FEATURE-1202: Google Auth Sign-In (📋 PLANNED)
+### FEATURE-1202: Google Auth Sign-In (🔄 IN PROGRESS)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS
 
 **Feature**: Add Google OAuth sign-in as an authentication option alongside existing email/password auth.
 
@@ -2456,6 +2586,50 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - Configure OAuth credentials in Google Cloud Console
 - Set redirect URLs for both PWA and Tauri
 
+### TASK-1283: Google Calendar Plugin — Calendar View Integration (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Blocked By**: FEATURE-1202
+
+**Feature**: Add a plugin/settings option to connect Google Calendar. Once connected, display Google Calendar events alongside FlowState tasks in the Calendar view.
+
+**Requirements**:
+- [ ] Google OAuth must include `calendar.readonly` scope (extends FEATURE-1202)
+- [ ] Settings UI: "Connect Google Calendar" toggle in Settings > Integrations
+- [ ] Fetch events from Google Calendar API (read-only)
+- [ ] Display events in Calendar view with distinct styling (differentiate from tasks)
+- [ ] Handle token refresh for long-lived sessions
+- [ ] Graceful degradation when offline or token expired
+
+**Key Decisions Needed**:
+- Read-only vs read-write (create FlowState tasks from calendar events?)
+- Which calendars to sync (primary only vs user-selectable)
+- Event display style (overlay, side-by-side, merged timeline)
+
+---
+
+### TASK-1284: Add Quick Task Creation to KDE Plasma Widget (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Repo**: `pomoflow-kde` (separate)
+
+**Feature**: Add a quick-capture text field to the pomoflow-kde Plasma panel widget so users can create tasks directly from the desktop without opening FlowState. Tasks land in the Inbox.
+
+**Architecture**:
+- Single `PlasmaComponents3.TextField` + submit button in widget panel
+- POST to Supabase REST API (`/rest/v1/tasks`) with JWT auth (reuse existing timer auth)
+- Minimum payload: `{ user_id, title, status: "planned", is_in_inbox: true }`
+- Task appears in FlowState Inbox via Realtime subscription
+
+**Phases**:
+- [ ] **Phase 1 (MVP)**: Text field + Enter-to-submit, creates task with title only
+- [ ] **Phase 2**: Priority dropdown (Low/Med/High)
+- [ ] **Phase 3**: Project selector (fetch projects list)
+- [ ] **Phase 4**: Recent tasks list in expanded widget view
+
+**Key Decisions**:
+- Auth: Reuse existing timer sync token mechanism
+- No offline queue needed — just show error on failure
+- Let DB auto-generate UUIDs (don't send `id` in payload)
+
 ---
 
 ### Other Planned Tasks
@@ -2467,12 +2641,49 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
-| TASK-1215 | P0 | Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
+| ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
+| TASK-1248 | P1 | 📋 Design token audit & cleanup — replace ~3,000 hardcoded CSS values with design tokens (7 phases) |
+| **TASK-1249** | **P0** | **🔄 Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33 sub-tasks)** |
+| ~~TASK-1250~~ | P0 | ✅ Fix API key storage — removed plaintext localStorage (proxy handles keys server-side) |
+| ~~TASK-1251~~ | P0 | ✅ Fix direct API calls bypassing proxy (AIChatPanel.vue) |
+| ~~TASK-1252~~ | P0 | ✅ Remove/gate /keyboard-test debug route (ships without auth) |
+| ~~TASK-1253~~ | P0 | ✅ Gate window.__flowstate_tauri_debug behind DEV |
+| ~~TASK-1254~~ | P0 | ✅ Fix CORS wildcard on Edge Functions — restricted to allowed origins |
+| ~~TASK-1255~~ | P0 | ✅ Fix WelcomeModal — removed dead buttons and stubbed stats |
+| ~~TASK-1256~~ | P0 | ✅ Fix stale flowstate.app → in-theflow.com origins |
+| ~~TASK-1257~~ | P0 | ✅ Fix productionLogger — now uses Supabase session token |
+| TASK-1258 | P1 | Replace httpbin.org with self-hosted endpoint |
+| ~~TASK-1259~~ | P1 | ✅ Remove unconditional %c[DEBUG] styled canvas log |
+| ~~TASK-1260~~ | P1 | ✅ Remove ~30 bug-specific debug tags across 10 files |
+| ~~TASK-1261~~ | P1 | ✅ Fix silent no-op stubs — now throw or warn |
+| ~~TASK-1262~~ | P1 | ✅ Re-enable CI lint & unit tests |
+| ~~TASK-1263~~ | P1 | ✅ Add Open Graph + Twitter Card meta tags |
+| ~~TASK-1264~~ | P1 | ✅ Update stale AI model references |
+| ~~TASK-1265~~ | P1 | ✅ Fix AI proxy health check consuming real API tokens (OPTIONS request) |
+| TASK-1266 | P2 | CSS design token migration — top 10 offending files (1,420 rgba violations) |
+| TASK-1267 | P2 | Standardize localStorage key prefixes |
+| TASK-1268 | P2 | Extract magic timeout numbers to named constants |
+| TASK-1269 | P2 | Create centralized src/config/urls.ts |
+| TASK-1270 | P2 | Fix hardcoded i18n defaults (ui.ts, SignupForm.vue) |
+| TASK-1271 | P2 | Improve Cyberflow empty states (terse text) |
+| TASK-1272 | P2 | Mobile design token compliance |
+| TASK-1273 | P2 | Update PWA manifest description |
+| TASK-1274 | P2 | Migrate 'uncategorized' sentinel to null |
+| TASK-1275 | P3 | Remove 5 obsolete verification scripts |
+| TASK-1276 | P3 | Remove Storybook PLACEHOLDER duplicate key |
+| TASK-1277 | P3 | Standardize z-index usage (170 occurrences) |
+| TASK-1278 | P3 | Standardize font-size usage (163 occurrences) |
+| TASK-1279 | P3 | Add missing package.json metadata fields |
+| TASK-1280 | P3 | Add copyright to Tauri bundle config |
+| TASK-1281 | P3 | Adopt build-time console.log stripping (replace consoleFilter.ts) |
+| TASK-1282 | P3 | Stop filtering console.error in consoleFilter.ts |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
-| FEATURE-1202 | P2 | Google Auth sign-in (OAuth) |
+| FEATURE-1202 | P1 | 🔄 Google Auth sign-in (OAuth) |
+| TASK-1283 | P1 | 📋 Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
+| **TASK-1284** | **P0** | **🔄 Add quick task creation to KDE Plasma widget (pomoflow-kde repo)** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
 | TASK-310 | P2 | Automated SQL backup to cloud storage |
 | TASK-293 | P2 | Canvas viewport - center on Today + persist position |

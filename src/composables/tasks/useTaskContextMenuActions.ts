@@ -313,26 +313,11 @@ export function useTaskContextMenuActions(
     }
 
     const deleteTask = () => {
-        // BUG-1084 DEBUG: Diagnostic logging to identify delete failures
-        console.log('[DELETE-DEBUG] deleteTask called', {
-            isBatchOperation: isBatchOperation.value,
-            currentTaskId: currentTask.value?.id,
-            currentTaskTitle: currentTask.value?.title?.slice(0, 30)
-        })
-
         if (isBatchOperation.value) {
-            console.log('[DELETE-DEBUG] Emitting deleteSelected (batch operation)')
             emit('deleteSelected')
         } else if (currentTask.value) {
             const taskData = currentTask.value as unknown as { instanceId?: string; isCalendarEvent?: boolean }
-            console.log('[DELETE-DEBUG] Emitting confirmDelete', {
-                taskId: currentTask.value.id,
-                instanceId: taskData.instanceId,
-                isCalendarEvent: taskData.isCalendarEvent
-            })
             emit('confirmDelete', currentTask.value.id, taskData.instanceId, taskData.isCalendarEvent)
-        } else {
-            console.warn('[DELETE-DEBUG] No task to delete - currentTask is null')
         }
         emit('close')
     }

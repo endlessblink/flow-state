@@ -58,9 +58,6 @@
           <div class="cdh-missions-expiry">
             {{ missionsStatus }}
           </div>
-          <div class="cdh-missions-footer">
-            GO TO MISSIONS &gt;
-          </div>
         </div>
       </CyberSummaryCard>
 
@@ -101,9 +98,6 @@
               SYSTEMS NOMINAL
             </div>
           </template>
-          <div class="cdh-boss-footer">
-            GO TO BOSS &gt;
-          </div>
         </div>
       </CyberSummaryCard>
 
@@ -280,14 +274,14 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 .cyber-dashboard-hub {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 /* Grid Layout */
 .cdh-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 /* CHARACTER Card */

@@ -5,7 +5,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import type { GamificationToast, AchievementTier } from '@/types/gamification'
-import { X, Zap, ArrowUp, Award, Flame, ShoppingBag } from 'lucide-vue-next'
+import { X, Zap, ArrowUp, Award, Flame, ShoppingBag, Shield, ShieldOff } from 'lucide-vue-next'
 
 const props = defineProps<{
   toast: GamificationToast
@@ -23,10 +23,16 @@ const iconMap: Record<string, any> = {
   level_up: ArrowUp,
   achievement: Award,
   streak: Flame,
-  purchase: ShoppingBag
+  purchase: ShoppingBag,
+  exposure: Shield,
 }
 
-const IconComponent = computed(() => iconMap[props.toast.type] || Zap)
+const IconComponent = computed(() => {
+  if (props.toast.type === 'exposure') {
+    return props.toast.title === 'SHIELDED' ? Shield : ShieldOff
+  }
+  return iconMap[props.toast.type] || Zap
+})
 
 const tierClass = computed(() => {
   if (props.toast.tier) {
@@ -47,6 +53,11 @@ const borderColor = computed(() => {
   }
   if (props.toast.type === 'level_up') {
     return 'rgba(var(--neon-magenta), 0.5)'
+  }
+  if (props.toast.type === 'exposure') {
+    return props.toast.title === 'SHIELDED'
+      ? 'rgba(var(--neon-cyan), 0.5)'
+      : 'rgba(var(--neon-magenta), 0.5)'
   }
   return 'var(--toast-xp-border)'
 })
@@ -76,7 +87,9 @@ onMounted(() => {
     :class="[
       tierClass,
       `toast--${toast.type}`,
-      { 'toast--visible': isVisible, 'toast--exiting': isExiting }
+      { 'toast--visible': isVisible, 'toast--exiting': isExiting,
+        'toast--shielded': toast.type === 'exposure' && toast.title === 'SHIELDED',
+        'toast--exposed': toast.type === 'exposure' && toast.title === 'EXPOSED' }
     ]"
     :style="{ borderColor }"
     @click="dismiss"
@@ -187,6 +200,16 @@ onMounted(() => {
   background: rgba(255, 107, 53, 0.15);
   color: var(--streak-flame-color);
   animation: streakFlame 1s ease-in-out infinite;
+}
+
+.toast--exposed .toast-icon {
+  background: rgba(var(--neon-magenta), 0.15);
+  color: rgba(var(--neon-magenta), 1);
+}
+
+.toast--shielded .toast-icon {
+  background: rgba(var(--neon-cyan), 0.15);
+  color: rgba(var(--neon-cyan), 1);
 }
 
 .toast-content {

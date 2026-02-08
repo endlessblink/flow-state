@@ -135,7 +135,7 @@ const handleClearCache = async () => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: var(--space-16);
   background: var(--surface-primary);
   border-top: 1px solid var(--border-subtle);
   display: flex;
@@ -143,7 +143,7 @@ const handleClearCache = async () => {
   align-items: center;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1000;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 -4px var(--space-5) rgba(0,0,0,0.1);
 }
 
 .nav-item {
@@ -155,19 +155,19 @@ const handleClearCache = async () => {
   height: 100%;
   color: var(--text-tertiary);
   text-decoration: none;
-  font-size: 0.75rem;
-  gap: 4px;
-  transition: color 0.2s ease;
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+  transition: color var(--duration-normal) ease;
   cursor: pointer;
 }
 
 .nav-item.active {
-  color: var(--primary-brand);
+  color: var(--brand-primary);
 }
 
 .nav-item :deep(svg) {
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   stroke-width: 2px;
 }
 
@@ -175,7 +175,7 @@ const handleClearCache = async () => {
 .mobile-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-bg);
   z-index: 2000;
   display: flex;
   justify-content: flex-end;
@@ -185,24 +185,24 @@ const handleClearCache = async () => {
 .mobile-menu-content {
   background: var(--surface-primary);
   width: 100%;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  padding: var(--space-5);
+  box-shadow: 0 -4px var(--space-5) rgba(0,0,0,0.2);
+  animation: slideUp var(--duration-slow) cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
 }
 
 .menu-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .menu-header h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
   font-weight: 600;
 }
 
@@ -211,27 +211,27 @@ const handleClearCache = async () => {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .menu-items {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   background: var(--surface-secondary);
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--duration-normal);
 }
 
 .menu-item:active {
@@ -248,7 +248,7 @@ const handleClearCache = async () => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) ease;
 }
 
 .fade-enter-from,

@@ -50,21 +50,21 @@
             :class="{ active: isToday }"
             @click.stop="setToday"
           >
-            Today
+            ☀️ Today
           </button>
           <button
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
             @click.stop="setTomorrow"
           >
-            +1
+            🌅 +1
           </button>
           <button
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
             @click.stop="setNextWeek"
           >
-            +7
+            📆 +7
           </button>
           <button
             class="quick-date-btn clear-btn"
@@ -333,11 +333,12 @@ function handleSwipeEnd() {
 
 .date-shortcuts {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-2_5);
 }
 
 .quick-date-btn {
   padding: var(--space-2) var(--space-3);
+  min-height: 40px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);

@@ -112,15 +112,6 @@ export function useTaskEditState(
         // Guard: If we are saving, ignore external updates
         if (isSaving.value || !newTask) return
 
-        // BUG-1097 DEBUG: Log incoming task data
-        console.log('🔍 [BUG-1097] useTaskEditState watch triggered:', {
-            taskId: newTask.id?.slice(0, 8),
-            dueDate: newTask.dueDate,
-            scheduledDate: newTask.scheduledDate,
-            currentEditedId: editedTask.value.id?.slice(0, 8),
-            currentDueDate: editedTask.value.dueDate
-        })
-
         // Fingerprint for change detection
         const currentFingerprint = JSON.stringify({
             ...editedTask.value,
@@ -146,10 +137,6 @@ export function useTaskEditState(
         // BUG-1097 FIX: Always update if IDs match (same task being edited)
         // This ensures external changes to the task are reflected
         if (editedTask.value.id !== newTask.id || currentFingerprint !== newFingerprint) {
-            console.log('🔍 [BUG-1097] Updating editedTask with newTaskState:', {
-                dueDate: newTaskState.dueDate,
-                scheduledDate: newTaskState.scheduledDate
-            })
             editedTask.value = newTaskState
 
             // Store original snapshot for dirty tracking
@@ -176,20 +163,6 @@ export function useTaskEditState(
             // Get FRESH task from store (not the potentially stale props.task)
             const freshTask = taskStore.tasks.find(t => t.id === props.task!.id)
             if (freshTask) {
-                console.log('🔍 [BUG-1097] Modal opened - loading fresh task from store:', {
-                    taskId: freshTask.id?.slice(0, 8),
-                    dueDate: freshTask.dueDate,
-                    scheduledDate: freshTask.scheduledDate
-                })
-                // BUG-1206 DEBUG: Log description when modal opens
-                console.log('🐛 [BUG-1206] MODAL OPEN - fresh task description:', {
-                    taskId: freshTask.id?.slice(0, 8),
-                    descLength: freshTask.description?.length,
-                    descPreview: freshTask.description?.slice(0, 50),
-                    propsTaskDescLength: props.task?.description?.length,
-                    propsTaskDescPreview: props.task?.description?.slice(0, 50)
-                })
-
                 const newTaskState = {
                     ...freshTask,
                     subtasks: [...(freshTask.subtasks || [])],

@@ -491,12 +491,15 @@ export function useTaskPersistence(
         // BUG-1084 v5: Expose initialization flag for orchestrator
         _hasInitializedOnce,
         importTasksFromJSON: async () => {
-            // Disabled / TBD
+            throw new Error('importTasksFromJSON is not implemented')
         },
         importFromRecoveryTool: async () => {
-            // Disabled
+            throw new Error('importFromRecoveryTool is not implemented')
         },
-        recoverSoftDeletedTasks: async () => 0, // TBD: SQL Implementation needed later
+        recoverSoftDeletedTasks: async () => {
+            console.warn('[taskPersistence] recoverSoftDeletedTasks is not yet implemented')
+            return 0
+        }, // TBD: SQL Implementation needed later
 
         /**
          * TASK-344: Import tasks with immutable ID enforcement

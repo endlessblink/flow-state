@@ -409,20 +409,13 @@ export async function isProxyAvailable(provider: ProxyProvider): Promise<boolean
       }
     }
 
-    // Lightweight health check: send a minimal request with max_tokens=1
-    // instead of a full chat that wastes provider tokens
+    // TASK-1265: Health check using OPTIONS to avoid consuming API tokens.
+    // The Edge Function returns 200 'ok' for OPTIONS requests without
+    // forwarding to the actual AI provider.
     const response = await tauriFetch(proxyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeader,
-      },
-      body: JSON.stringify({
-        provider,
-        messages: [{ role: 'user', content: 'ping' }],
-        max_tokens: 1,
-      }),
-      signal: AbortSignal.timeout(10000),
+      method: 'OPTIONS',
+      headers: authHeader,
+      signal: AbortSignal.timeout(5000),
     })
 
     return response.ok

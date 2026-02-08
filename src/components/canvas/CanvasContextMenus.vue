@@ -30,6 +30,7 @@
     @open-group-settings="(section) => $emit('openGroupSettings', section)"
     @toggle-power-mode="(section) => $emit('togglePowerMode', section)"
     @collect-tasks="(section) => $emit('collectTasks', section)"
+    @collect-overdue-tasks="(section) => $emit('collectOverdueTasks', section)"
     @create-group-from-selection="$emit('createGroupFromSelection')"
   />
 
@@ -85,6 +86,8 @@ defineEmits<{
   (e: 'openGroupSettings', section: CanvasSection): void
   (e: 'togglePowerMode', section: CanvasSection): void
   (e: 'collectTasks', section: CanvasSection): void
+  // TASK-1222: Collect overdue tasks near group
+  (e: 'collectOverdueTasks', section: CanvasSection): void
   // TASK-1128: Create group from selected tasks
   (e: 'createGroupFromSelection'): void
 }>()

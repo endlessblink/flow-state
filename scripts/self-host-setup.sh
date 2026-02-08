@@ -194,8 +194,8 @@ info "Configuration options:"
 echo ""
 
 # Site URL
-read -rp "  Site URL [http://localhost:3000]: " SITE_URL
-SITE_URL="${SITE_URL:-http://localhost:3000}"
+read -rp "  Site URL [http://localhost:3050]: " SITE_URL
+SITE_URL="${SITE_URL:-http://localhost:3050}"
 
 # Cloudflare Tunnel (optional)
 echo ""

@@ -185,24 +185,6 @@ export function useTaskEditActions(
             const originalCanvasPosition = editedTask.value.canvasPosition ?? props.task?.canvasPosition
             const originalIsInInbox = editedTask.value.isInInbox ?? props.task?.isInInbox
 
-            // BUG-1047 DEBUG: Track position through save flow
-            const storeTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
-            console.log('🔍 [BUG-1047] Position tracking on save:', {
-                taskId: editedTask.value.id.slice(0, 8),
-                editedTaskPosition: editedTask.value.canvasPosition,
-                propsTaskPosition: props.task?.canvasPosition,
-                storeTaskPosition: storeTask?.canvasPosition,
-                resolvedOriginalPosition: originalCanvasPosition,
-                isInInbox: originalIsInInbox
-            })
-
-            // BUG-1206 DEBUG: Log description at save time
-            console.log('🐛 [BUG-1206] SAVE - description being saved:', {
-                taskId: editedTask.value.id?.slice(0, 8),
-                descriptionLength: editedTask.value.description?.length,
-                descriptionPreview: editedTask.value.description?.slice(0, 50)
-            })
-
             const updates: Record<string, unknown> = {
                 title: editedTask.value.title,
                 description: editedTask.value.description,
@@ -261,14 +243,6 @@ export function useTaskEditActions(
             // Now we: Update store → Close modal → Background ops
             console.time('⚡ [BUG-291] Task update')
 
-            // BUG-1097 DEBUG: Log what we're about to save including due date
-            console.log('🔍 [BUG-1097] About to updateTask with:', {
-                taskId: editedTask.value.id.slice(0, 8),
-                updatesHasPosition: 'canvasPosition' in updates,
-                updatesPosition: updates.canvasPosition,
-                dueDate: updates.dueDate
-            })
-
             // BUG-1097 FIX: Ensure dueDate is included in updates
             if (editedTask.value.dueDate !== undefined) {
                 updates.dueDate = editedTask.value.dueDate
@@ -278,20 +252,6 @@ export function useTaskEditActions(
             // before closing the modal. updateTask no longer rolls back on direct save failure
             // (sync queue retries), so this won't block the UI on network errors.
             await taskStore.updateTask(editedTask.value.id, updates as Partial<Task>)
-
-            // BUG-1097 DEBUG: Log what's in store after update
-            const afterUpdate = taskStore.tasks.find(t => t.id === editedTask.value.id)
-            console.log('🔍 [BUG-1097] Store after updateTask:', {
-                taskId: editedTask.value.id.slice(0, 8),
-                storePosition: afterUpdate?.canvasPosition,
-                storeDueDate: afterUpdate?.dueDate
-            })
-            // BUG-1206 DEBUG: Log description in store after save
-            console.log('🐛 [BUG-1206] AFTER SAVE - store description:', {
-                taskId: editedTask.value.id?.slice(0, 8),
-                storeDescLength: afterUpdate?.description?.length,
-                storeDescPreview: afterUpdate?.description?.slice(0, 50)
-            })
 
             console.timeEnd('⚡ [BUG-291] Task update')
 

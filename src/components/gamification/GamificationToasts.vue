@@ -14,7 +14,7 @@ const { showAtIntensity } = useCyberflowTheme()
 const filteredToasts = computed(() => {
   if (!showAtIntensity('minimal')) return []
   return gamificationStore.toastQueue.filter(toast => {
-    if (toast.type === 'xp' || toast.type === 'level_up') {
+    if (toast.type === 'xp' || toast.type === 'level_up' || toast.type === 'exposure') {
       return showAtIntensity('moderate')
     }
     return showAtIntensity('intense')

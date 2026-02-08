@@ -34,15 +34,15 @@ jobs:
         run: npm ci
 
       # Lint check - BLOCKING (0 errors achieved Dec 18, 2025)
-      # - name: Lint check
-      #   run: npm run lint
+      - name: Lint check
+        run: npm run lint
 
       - name: Build application
         run: npm run build
 
       # Unit tests - enabled after TASK-020 fix (Dec 19, 2025)
-      # - name: Run safety tests
-      #   run: npx vitest run tests/safety/ --config vitest.ci.config.ts
+      - name: Run safety tests
+        run: npx vitest run tests/safety/ --config vitest.ci.config.ts
 
       # Stress tests for backup system integrity (TASK-338)
       - name: Verify backup system

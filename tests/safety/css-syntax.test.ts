@@ -223,8 +223,8 @@ describe('CSS Syntax and Design Token Validation', () => {
     const validPropertyPatterns = [
       // Standard CSS properties
       /^[a-z-]+:\s*.+;?$/i,
-      // CSS custom properties
-      /^--[a-z-]+:\s*.+;?$/i,
+      // CSS custom properties (including augmented-ui vars like --aug-tl1)
+      /^--[a-z0-9-]+:\s*.+;?$/i,
       // Media queries, at-rules
       /^@.+/,
       // Selectors

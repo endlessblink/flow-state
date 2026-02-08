@@ -321,17 +321,17 @@ onUnmounted(() => {
 .swipeable-task-item {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-lg, 12px);
+  border-radius: var(--radius-lg);
 }
 
 .swipeable-content {
   position: relative;
   z-index: 2;
-  background: var(--surface-primary, rgb(35, 32, 52));
+  background: var(--surface-primary);
   will-change: transform;
   touch-action: pan-y;
   overflow: hidden;
-  border-radius: var(--radius-lg, 12px);
+  border-radius: var(--radius-lg);
 }
 
 /* Slot content wrapper - needed for proper z-index stacking and blur */
@@ -371,29 +371,29 @@ onUnmounted(() => {
 }
 
 .swipe-overlay.swipe-left {
-  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle at center, var(--danger-bg-medium) 0%, transparent 70%);
 }
 
 .swipe-overlay.swipe-right {
-  background: radial-gradient(circle at center, rgba(78, 205, 196, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle at center, var(--brand-bg-subtle) 0%, transparent 70%);
 }
 
 .overlay-icon {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
+  gap: var(--space-1_5);
+  font-size: var(--text-sm);
   font-weight: 700;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .overlay-icon.edit {
-  color: var(--primary-brand, #4ECDC4);
+  color: var(--brand-primary);
 }
 
 .overlay-icon.delete {
-  color: #ff6b6b;
+  color: var(--color-priority-high);
 }
 
 /* Action areas behind content */
@@ -410,25 +410,25 @@ onUnmounted(() => {
 
 .action-left {
   left: 0;
-  background: linear-gradient(90deg, var(--primary-brand, #4ECDC4) 0%, var(--primary-brand, #4ECDC4) 100%);
-  border-radius: var(--radius-lg, 12px) 0 0 var(--radius-lg, 12px);
+  background: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-primary) 100%);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
 }
 
 .action-right {
   right: 0;
-  background: linear-gradient(90deg, var(--danger-text, #ef4444) 0%, var(--danger-text, #ef4444) 100%);
-  border-radius: 0 var(--radius-lg, 12px) var(--radius-lg, 12px) 0;
+  background: linear-gradient(90deg, var(--color-priority-high) 0%, var(--color-priority-high) 100%);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
 }
 
 .action-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
   color: white;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
@@ -448,7 +448,7 @@ onUnmounted(() => {
 
 @keyframes pulse-delete {
   0%, 100% {
-    background: var(--danger-text, #ef4444);
+    background: var(--color-priority-high);
   }
   50% {
     background: hsl(0, 90%, 55%);

@@ -10,7 +10,8 @@
 
 import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
-import { XP_VALUES } from '@/types/gamification'
+import { useTimerStore } from '@/stores/timer'
+import { XP_VALUES, EXPOSURE_SYSTEM } from '@/types/gamification'
 import type { Task } from '@/types/tasks'
 
 export function useGamificationHooks() {
@@ -58,8 +59,36 @@ export function useGamificationHooks() {
       await gamificationStore.incrementStat('tasksCompletedHighPriority')
     }
 
+    // EXPOSURE DAMAGE SYSTEM: Check if timer is running
+    const timerStore = useTimerStore()
+    const isShielded = timerStore.isTimerActive
+
+    let exposureMultiplier = 1.0
+    if (isShielded) {
+      // Timer active = shielded
+      exposureMultiplier = EXPOSURE_SYSTEM.SHIELDED_XP_BONUS
+      // Reduce corruption slightly for good behavior
+      if (challengesStore.isInitialized) {
+        await challengesStore.updateCorruption(EXPOSURE_SYSTEM.SHIELDED_CORRUPTION_DELTA)
+      }
+      // Show shielded toast
+      gamificationStore.showExposureToast(true)
+    } else {
+      // No timer = exposed
+      exposureMultiplier = EXPOSURE_SYSTEM.EXPOSED_XP_PENALTY
+      // Increase corruption for working unshielded
+      if (challengesStore.isInitialized) {
+        await challengesStore.updateCorruption(EXPOSURE_SYSTEM.EXPOSED_CORRUPTION_DELTA)
+      }
+      // Show exposed toast
+      gamificationStore.showExposureToast(false)
+    }
+
     // Award XP
-    const result = await gamificationStore.awardXp(XP_VALUES.TASK_COMPLETE_BASE, 'task_complete', {
+    const result = await gamificationStore.awardXp(
+      Math.round(XP_VALUES.TASK_COMPLETE_BASE * exposureMultiplier),
+      isShielded ? 'task_complete_shielded' : 'task_complete_exposed',
+      {
       taskId: task.id,
       priority: task.priority,
       isOverdue: options?.wasOverdue,

@@ -198,6 +198,9 @@ export class AIRouter {
   private initialized = false
   private healthCheckInterval?: ReturnType<typeof setInterval>
 
+  /** The provider that actually handled the last request (not just "first healthy") */
+  private _lastUsedProvider: RouterProviderType | null = null
+
   // ============================================================================
   // Constructor
   // ============================================================================
@@ -416,7 +419,7 @@ export class AIRouter {
 
     // Merge options with defaults
     const generateOptions: GenerateOptions = {
-      model: options.model ?? (provider.type === 'ollama' ? 'llama3.2' : 'gpt-4'),
+      model: options.model ?? this.getDefaultModelForProvider(this.getProviderType(provider)),
       temperature: options.temperature,
       maxTokens: options.maxTokens,
       stopSequences: options.stopSequences,
@@ -427,8 +430,11 @@ export class AIRouter {
     try {
       const response = await provider.generate(messages, generateOptions)
 
-      // Track costs
+      // Record the actual provider used
       const providerType = this.getProviderType(provider)
+      this._lastUsedProvider = providerType
+
+      // Track costs
       this.trackCost(
         providerType,
         response.totalTokens ?? 0,
@@ -501,7 +507,8 @@ export class AIRouter {
           yield chunk
         }
 
-        // If we got here, streaming succeeded - exit the loop
+        // If we got here, streaming succeeded — record the actual provider used
+        this._lastUsedProvider = providerType
         return
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
@@ -795,6 +802,15 @@ export class AIRouter {
   // ============================================================================
   // Provider Management
   // ============================================================================
+
+  /**
+   * Get the provider that actually handled the last request.
+   * Unlike getActiveProvider() which returns the first healthy provider,
+   * this returns the provider that successfully completed the last chat/stream.
+   */
+  getLastUsedProvider(): RouterProviderType | null {
+    return this._lastUsedProvider
+  }
 
   /**
    * Get the currently active provider (first healthy one).

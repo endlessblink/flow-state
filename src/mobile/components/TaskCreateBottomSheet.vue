@@ -389,7 +389,7 @@ function autoResize(event: Event) {
 .sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
@@ -414,14 +414,14 @@ function autoResize(event: Event) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--glass-border-light);
   flex-shrink: 0;
 }
 
 .sheet-title {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
   color: var(--text-primary, #fff);
   margin: 0;
   flex: 1;
@@ -430,13 +430,13 @@ function autoResize(event: Event) {
 
 .header-btn {
   min-width: 70px;
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .cancel-btn {
@@ -445,7 +445,7 @@ function autoResize(event: Event) {
 }
 
 .cancel-btn:active {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-weak);
 }
 
 .add-btn {
@@ -463,13 +463,13 @@ function autoResize(event: Event) {
 }
 
 .stop-btn {
-  background: #ef4444;
+  background: var(--color-priority-high);
   color: white;
 }
 
 .stop-btn:active {
   transform: scale(0.96);
-  background: #dc2626;
+  background: var(--color-priority-high);
 }
 
 .processing-btn {
@@ -483,7 +483,7 @@ function autoResize(event: Event) {
 .btn-spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--overlay-component-bg-lighter);
   border-top-color: hsl(230, 20%, 10%);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -499,30 +499,30 @@ function autoResize(event: Event) {
 .create-form {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 /* Single text block - main writing area */
 .task-text-block {
   flex: 1;
   min-height: 200px;
-  padding: 16px;
+  padding: var(--space-4);
   background: transparent;
   border: none;
   color: var(--text-primary, #fff);
-  font-size: 18px;
-  line-height: 1.5;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
   font-family: inherit;
   resize: none;
   outline: none;
 }
 
 .task-text-block::placeholder {
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--text-muted);
 }
 
 /* RTL support for Hebrew/Arabic text */
@@ -538,34 +538,34 @@ function autoResize(event: Event) {
 .compact-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: var(--space-2_5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--glass-border-light);
 }
 
 .option-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   flex-wrap: wrap;
 }
 
 .option-icon {
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
 /* Compact chips */
 .chip {
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-  font-size: 13px;
-  font-weight: 500;
+  padding: var(--space-1_5) var(--space-2_5);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-meta);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) ease;
 }
 
 .chip:active {
@@ -573,94 +573,94 @@ function autoResize(event: Event) {
 }
 
 .chip.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.4);
+  background: var(--state-active-bg);
+  border-color: var(--state-hover-border);
   color: var(--brand-primary, #4ECDC4);
 }
 
 .chip.clear {
-  padding: 6px 8px;
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  padding: var(--space-1_5) var(--space-2);
+  color: var(--text-muted);
 }
 
 /* Priority colors */
 .chip.priority-high.active {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-strong);
+  color: var(--color-priority-high);
 }
 
 .chip.priority-medium.active {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
-  color: #f59e0b;
+  background: var(--orange-bg-light);
+  border-color: var(--color-priority-medium-border-medium);
+  color: var(--color-priority-medium);
 }
 
 .chip.priority-low.active {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
-  color: #3b82f6;
+  background: var(--blue-bg-subtle);
+  border-color: var(--blue-border-medium);
+  color: var(--color-priority-low);
 }
 
 .native-date-picker {
-  margin-top: 6px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  margin-top: var(--space-1_5);
+  padding: var(--space-2);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
   color: var(--text-primary, #fff);
-  font-size: 14px;
+  font-size: var(--text-sm);
   color-scheme: dark;
 }
 
 /* Voice Feedback */
 .voice-feedback {
-  padding: 16px;
-  background: rgba(78, 205, 196, 0.1);
-  border: 1px solid rgba(78, 205, 196, 0.3);
-  border-radius: 12px;
+  padding: var(--space-4);
+  background: var(--state-hover-bg);
+  border: 1px solid var(--brand-border-subtle);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .voice-indicator {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   color: var(--brand-primary, #4ECDC4);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 .voice-pulse {
-  width: 12px;
-  height: 12px;
+  width: var(--space-3);
+  height: var(--space-3);
   background: var(--brand-primary, #4ECDC4);
   border-radius: 50%;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 .processing-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(78, 205, 196, 0.3);
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border: 2px solid var(--brand-border-subtle);
   border-top-color: var(--brand-primary, #4ECDC4);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 .voice-feedback.processing {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: var(--orange-bg-light);
+  border-color: var(--color-priority-medium-border-medium);
 }
 
 .voice-feedback.processing .voice-indicator {
-  color: #f59e0b;
+  color: var(--color-priority-medium);
 }
 
 .voice-feedback.processing .processing-spinner {
-  border-color: rgba(245, 158, 11, 0.3);
-  border-top-color: #f59e0b;
+  border-color: var(--color-priority-medium-border-medium);
+  border-top-color: var(--color-priority-medium);
 }
 
 @keyframes pulse {
@@ -676,31 +676,31 @@ function autoResize(event: Event) {
 
 .voice-transcript {
   margin: 0;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 14px;
-  line-height: 1.5;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
 .stop-recording-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 12px 24px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  border-radius: 24px;
-  color: #ef4444;
-  font-size: 15px;
-  font-weight: 600;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-strong);
+  border-radius: var(--radius-2xl);
+  color: var(--color-priority-high);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .stop-recording-btn:active {
   transform: scale(0.96);
-  background: rgba(239, 68, 68, 0.25);
+  background: var(--danger-bg-medium);
 }
 
 /* Re-record button (TASK-1110) */
@@ -708,27 +708,27 @@ function autoResize(event: Event) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 10px 20px;
-  background: rgba(78, 205, 196, 0.1);
-  border: 1px solid rgba(78, 205, 196, 0.3);
-  border-radius: 20px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2_5) var(--space-5);
+  background: var(--state-hover-bg);
+  border: 1px solid var(--brand-border-subtle);
+  border-radius: var(--radius-xl);
   color: var(--brand-primary, #4ECDC4);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .rerecord-btn:hover {
-  background: rgba(78, 205, 196, 0.2);
-  border-color: rgba(78, 205, 196, 0.5);
+  background: var(--brand-bg-subtle);
+  border-color: var(--state-hover-border);
 }
 
 .rerecord-btn:active {
   transform: scale(0.96);
-  background: rgba(78, 205, 196, 0.25);
+  background: var(--state-active-bg);
 }
 
 /* ================================
@@ -737,7 +737,7 @@ function autoResize(event: Event) {
 
 .sheet-enter-active,
 .sheet-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--duration-slow) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sheet-enter-from,
@@ -758,7 +758,7 @@ function autoResize(event: Event) {
 @media (prefers-reduced-motion: reduce) {
   .sheet-enter-active,
   .sheet-leave-active {
-    transition: opacity 0.15s ease;
+    transition: opacity var(--duration-fast) ease;
   }
 
   .sheet-enter-from .task-create-sheet,

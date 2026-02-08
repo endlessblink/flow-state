@@ -82,7 +82,7 @@ function handleNavigate(section: 'missions' | 'boss' | 'upgrades' | 'achievement
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: var(--space-6);
+  padding: var(--space-3) var(--space-4);
   background: var(--app-background-gradient);
   color: rgb(var(--color-slate-100));
 }
@@ -95,7 +95,7 @@ function handleNavigate(section: 'missions' | 'boss' | 'upgrades' | 'achievement
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -137,10 +137,14 @@ function handleNavigate(section: 'missions' | 'boss' | 'upgrades' | 'achievement
 .cf-content {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  padding-top: var(--space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--cf-cyan-20) transparent;
 }
 
 /* Section wrapper for tabs with multiple sub-components */

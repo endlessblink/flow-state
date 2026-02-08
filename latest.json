@@ -1,6 +1,11 @@
 {
-  "version": "1.2.29",
-  "notes": "TASK-1219: Time block notifications + BUG-1219: Filter persistence fix in Tauri",
-  "pub_date": "2026-02-08T08:42:38.690Z",
-  "platforms": {}
+  "version": "1.2.33",
+  "notes": "fix: time block notifications - add legacy task support + duration fallback",
+  "pub_date": "2026-02-08T11:34:26.497Z",
+  "platforms": {
+    "linux-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTRjYllZbzNBOFUrZHBOWE4vVWxVZHZ5dDdzZ2gxYUlyZXZkYnZ3Q0NsNlFyclVudDNIczAwZ3Jld01WRmt1WUJvZmt2Z0MrVTVKVndNTGVzdG9oUkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTUwNDY2CWZpbGU6Rmxvd1N0YXRlXzEuMi4zM19hbWQ2NC5BcHBJbWFnZQpNdUtHUmJDSjR5ZUY5OXd6b3dKSGFtbXRaNFlEOWp5S2xNSUpqM1ovMXdORit0c2YxMHBOZmlrZ3hPQVF5RU9tU0wweUpHcU9oQUNFSENxbWNSUnZEZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.33_amd64.AppImage"
+    }
+  }
 }

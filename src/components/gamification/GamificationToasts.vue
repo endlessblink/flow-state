@@ -3,10 +3,23 @@
  * Gamification Toasts Container
  * FEATURE-1118: Renders all active gamification toast notifications
  */
+import { computed } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
+import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
 import AchievementToast from './AchievementToast.vue'
 
 const gamificationStore = useGamificationStore()
+const { showAtIntensity } = useCyberflowTheme()
+
+const filteredToasts = computed(() => {
+  if (!showAtIntensity('minimal')) return []
+  return gamificationStore.toastQueue.filter(toast => {
+    if (toast.type === 'xp' || toast.type === 'level_up') {
+      return showAtIntensity('moderate')
+    }
+    return showAtIntensity('intense')
+  })
+})
 
 function handleDismiss(id: string) {
   gamificationStore.dismissToast(id)
@@ -17,7 +30,7 @@ function handleDismiss(id: string) {
   <div class="toasts-container">
     <TransitionGroup name="toast-list">
       <AchievementToast
-        v-for="toast in gamificationStore.toastQueue"
+        v-for="toast in filteredToasts"
         :key="toast.id"
         :toast="toast"
         @dismiss="handleDismiss"

@@ -237,6 +237,15 @@ export interface DbUserGamification {
   xp_decay_date: string | null
   unlocked_themes: string[]
   equipped_theme: string
+  corruption_level: number
+  active_multiplier: number
+  character_class: string
+  daily_challenges_completed: number
+  weekly_challenges_completed: number
+  boss_fights_won: number
+  total_challenges_completed: number
+  last_daily_generation: string | null
+  last_weekly_generation: string | null
   created_at: string
   updated_at: string
 }

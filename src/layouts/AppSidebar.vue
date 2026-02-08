@@ -723,7 +723,9 @@ const uncategorizedCount = computed(() => taskStore.getUncategorizedTaskCount())
 // Methods
 const selectSmartView = (view: string) => {
   taskStore.setActiveProject(null)
-  taskStore.activeSmartView = view as any
+  // BUG-1219 fix: Use setSmartView() to trigger persistFilters()
+  // Previously set .activeSmartView directly, bypassing persistence
+  taskStore.setSmartView(view)
 }
 
 const handleStartQuickSort = () => {

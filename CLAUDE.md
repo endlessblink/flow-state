@@ -562,13 +562,17 @@ border-radius: 12px;              border-radius: var(--radius-lg);
 - `task_dedup_audit` - Task ID deduplication audit log
 
 *Gamification (FEATURE-1118 "Cyberflow"):*
-- `user_gamification` - XP, levels, streaks, equipped cosmetics
+- `user_gamification` - XP, levels, streaks, equipped cosmetics, RPG fields (corruption, multiplier, class)
 - `xp_logs` - XP transaction audit trail
 - `achievements` - Achievement definitions
 - `user_achievements` - User progress toward achievements
 - `shop_items` - Cosmetic items (themes, animations)
 - `user_purchases` - User's purchased items
 - `user_stats` - Aggregate counters for achievement tracking
+
+*Challenges (FEATURE-1132 "Cyberflow RPG"):*
+- `user_challenges` - Active daily/weekly/boss challenges with objectives and rewards
+- `challenge_history` - Completed/failed challenge archive for adaptive difficulty
 
 **Database Access Patterns:**
 - **Core app tables** → `useSupabaseDatabase.ts` (centralized composable)

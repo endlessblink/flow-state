@@ -78,7 +78,7 @@ const streakClass = computed(() => {
   padding: var(--space-1) var(--space-2);
   background: rgba(var(--color-slate-800), 0.6);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 107, 53, 0.2);
+  border: 1px solid var(--orange-bg-medium);
 }
 
 .streak-counter.compact {
@@ -94,7 +94,7 @@ const streakClass = computed(() => {
 
 .streak-icon {
   color: var(--streak-flame-color);
-  filter: drop-shadow(0 0 4px rgba(255, 107, 53, 0.5));
+  filter: drop-shadow(0 0 var(--space-1) rgba(255, 107, 53, 0.5));
 }
 
 .streak-icon--animated {
@@ -105,7 +105,7 @@ const streakClass = computed(() => {
   font-size: var(--text-lg);
   font-weight: var(--font-bold);
   color: var(--streak-text-color);
-  text-shadow: 0 0 8px rgba(255, 107, 53, 0.4);
+  text-shadow: 0 0 var(--space-2) rgba(255, 107, 53, 0.4);
 }
 
 .compact .streak-number {
@@ -120,8 +120,8 @@ const streakClass = computed(() => {
 .streak-freezes {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 6px;
+  gap: var(--space-0_5);
+  padding: var(--space-0_5) var(--space-1_5);
   background: rgba(var(--neon-cyan), 0.1);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
@@ -149,7 +149,7 @@ const streakClass = computed(() => {
 
 .streak--epic .streak-icon {
   color: #ff4500;
-  filter: drop-shadow(0 0 6px rgba(255, 69, 0, 0.6));
+  filter: drop-shadow(0 0 var(--space-1_5) rgba(255, 69, 0, 0.6));
 }
 
 .streak--epic .streak-number {
@@ -158,7 +158,7 @@ const streakClass = computed(() => {
 
 .streak--legendary .streak-icon {
   color: #ff00ff;
-  filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.7));
+  filter: drop-shadow(0 0 var(--space-2) rgba(255, 0, 255, 0.7));
 }
 
 .streak--legendary .streak-number {
@@ -170,7 +170,7 @@ const streakClass = computed(() => {
 
 .streak--legendary {
   border-color: rgba(255, 0, 255, 0.4);
-  box-shadow: 0 0 12px rgba(255, 0, 255, 0.2);
+  box-shadow: 0 0 var(--space-3) rgba(255, 0, 255, 0.2);
 }
 
 @keyframes pulse {

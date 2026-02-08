@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteLocationNormalized as _RouteLocationNormalized, NavigationGuardNext as _NavigationGuardNext } from 'vue-router' // SECURITY: App is now 100% Supabase standard
 import { useAuthStore } from '@/stores/auth'
+import { EXTERNAL_URLS } from '@/config/urls'
 
 // Mobile detection helper (mirrors useMobileDetection.ts logic)
 function isMobileDevice(): boolean {
@@ -53,7 +54,7 @@ const router = createRouter({
       path: '/design-system',
       name: 'design-system',
       beforeEnter() {
-        window.open('http://localhost:6006', '_blank')
+        window.open(EXTERNAL_URLS.STORYBOOK_DEV, '_blank')
         return false
       },
       redirect: '/'

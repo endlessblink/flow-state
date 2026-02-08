@@ -244,9 +244,9 @@ async function generateBoss() {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(30, 30, 30, 0.9));
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), var(--glass-bg-heavy));
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 60, 60, 0.3);
+  border: 1px solid var(--danger-border-medium);
 }
 
 .panel--compact {
@@ -272,8 +272,8 @@ async function generateBoss() {
 
 .header-title h3 {
   font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-gray-100);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -301,19 +301,19 @@ async function generateBoss() {
 
 .boss-name {
   font-size: var(--text-lg);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--color-error-400);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin: 0 0 var(--space-1);
-  text-shadow: 0 0 20px var(--color-error-500);
+  text-shadow: 0 0 var(--space-5) var(--color-error-500);
 }
 
 .boss-description {
   font-size: var(--text-sm);
-  color: var(--color-gray-400);
+  color: var(--text-tertiary);
   margin: 0;
-  line-height: 1.4;
+  line-height: var(--leading-snug);
 }
 
 .hp-section {
@@ -329,29 +329,29 @@ async function generateBoss() {
 }
 
 .hp-label {
-  font-weight: 600;
-  color: var(--color-gray-400);
+  font-weight: var(--font-semibold);
+  color: var(--text-tertiary);
   text-transform: uppercase;
 }
 
 .hp-value {
-  font-weight: 600;
-  color: var(--color-gray-200);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
 }
 
 .hp-bar-container {
-  height: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  height: var(--space-3);
+  background: var(--glass-bg-tint);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   position: relative;
 }
 
 .hp-bar {
   height: 100%;
-  border-radius: 6px;
-  transition: width 0.5s ease, background-color 0.3s ease;
-  box-shadow: 0 0 10px currentColor;
+  border-radius: var(--radius-sm);
+  transition: width var(--duration-slower) var(--ease-out), background-color var(--duration-slow) var(--ease-out);
+  box-shadow: 0 0 var(--space-2_5) currentColor;
 }
 
 .hp-bar--empty {
@@ -373,7 +373,7 @@ async function generateBoss() {
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--text-tertiary);
 }
 
 .stat svg {
@@ -388,17 +388,17 @@ async function generateBoss() {
   padding: var(--space-3);
   background: linear-gradient(135deg, var(--color-success-600), var(--color-success-500));
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--text-primary);
   font-size: var(--text-lg);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  animation: victory-glow 1s ease-in-out infinite alternate;
+  animation: victory-glow 1s var(--ease-in-out) infinite alternate;
 }
 
 @keyframes victory-glow {
-  from { box-shadow: 0 0 10px var(--color-success-500); }
-  to { box-shadow: 0 0 30px var(--color-success-400); }
+  from { box-shadow: 0 0 var(--space-2_5) var(--color-success-500); }
+  to { box-shadow: 0 0 var(--space-8) var(--color-success-400); }
 }
 
 .trophy-icon {
@@ -407,7 +407,7 @@ async function generateBoss() {
 
 @keyframes trophy-bounce {
   from { transform: translateY(0); }
-  to { transform: translateY(-4px); }
+  to { transform: translateY(calc(-1 * var(--space-1))); }
 }
 
 .no-boss {
@@ -424,18 +424,18 @@ async function generateBoss() {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background: linear-gradient(135deg, var(--color-error-600), var(--color-error-500));
-  color: white;
+  color: var(--text-primary);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .generate-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 60, 60, 0.3);
+  transform: translateY(calc(-1 * var(--space-px) * 2));
+  box-shadow: 0 var(--space-1) var(--space-3) var(--danger-shadow-strong);
 }
 
 .generate-button:disabled {

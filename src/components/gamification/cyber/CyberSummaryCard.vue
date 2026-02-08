@@ -44,8 +44,8 @@ const handleClick = () => {
   min-height: 160px;
   position: relative;
   transition: all 0.2s ease;
-  --aug-tl1: 16px;
-  --aug-br1: 16px;
+  --aug-tl1: var(--space-4);
+  --aug-br1: var(--space-4);
   --aug-border-all: 1px;
   --aug-border-bg: var(--accent-color);
 }

@@ -80,8 +80,8 @@ function handleBackdropClick(e: MouseEvent) {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: var(--overlay-backdrop);
+  backdrop-filter: blur(var(--space-1));
   z-index: var(--z-modal, 1300);
   display: flex;
   justify-content: flex-end;
@@ -101,9 +101,9 @@ function handleBackdropClick(e: MouseEvent) {
   /* augmented-ui frame on left edge */
   --aug-border-all: 2px;
   --aug-border-bg: linear-gradient(180deg, var(--cf-cyan), var(--cf-magenta));
-  --aug-tl1: 24px;
-  --aug-bl1: 24px;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+  --aug-tl1: var(--space-6);
+  --aug-bl1: var(--space-6);
+  box-shadow: calc(var(--space-1) * -1) 0 var(--space-6) rgba(var(--color-slate-900), 0.5);
 }
 
 /* Header */
@@ -132,11 +132,11 @@ function handleBackdropClick(e: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   background: transparent;
   border: 1px solid var(--cf-cyan-20);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -159,7 +159,7 @@ function handleBackdropClick(e: MouseEvent) {
 }
 
 .drawer-body::-webkit-scrollbar {
-  width: 8px;
+  width: var(--space-2);
 }
 
 .drawer-body::-webkit-scrollbar-track {
@@ -168,7 +168,7 @@ function handleBackdropClick(e: MouseEvent) {
 
 .drawer-body::-webkit-scrollbar-thumb {
   background: var(--cf-cyan-20);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .drawer-body::-webkit-scrollbar-thumb:hover {

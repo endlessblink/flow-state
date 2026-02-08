@@ -79,21 +79,21 @@ const IconComponent = computed(() => {
 
 .aria-avatar {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--color-primary-600), var(--color-accent-cyan));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  box-shadow: 0 0 12px var(--color-primary-500/50);
+  color: var(--text-primary);
+  box-shadow: 0 0 var(--space-3) var(--brand-bg-subtle);
 }
 
 .aria-bubble {
   flex: 1;
-  background: rgba(0, 200, 255, 0.05);
-  border: 1px solid rgba(0, 200, 255, 0.2);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
 }
@@ -116,14 +116,14 @@ const IconComponent = computed(() => {
 .aria-text {
   margin: 0;
   font-size: var(--text-sm);
-  color: var(--color-gray-300);
-  line-height: 1.5;
+  color: var(--text-tertiary);
+  line-height: var(--leading-normal);
 }
 
 /* Type variations */
 .aria-message--success .aria-bubble {
-  background: rgba(34, 197, 94, 0.05);
-  border-color: rgba(34, 197, 94, 0.2);
+  background: var(--success-bg-light);
+  border-color: var(--success-border);
 }
 
 .aria-message--success .aria-name {
@@ -135,8 +135,8 @@ const IconComponent = computed(() => {
 }
 
 .aria-message--warning .aria-bubble {
-  background: rgba(234, 179, 8, 0.05);
-  border-color: rgba(234, 179, 8, 0.2);
+  background: var(--orange-bg-light);
+  border-color: var(--color-priority-medium-border-medium);
 }
 
 .aria-message--warning .aria-name {
@@ -148,8 +148,8 @@ const IconComponent = computed(() => {
 }
 
 .aria-message--error .aria-bubble {
-  background: rgba(239, 68, 68, 0.05);
-  border-color: rgba(239, 68, 68, 0.2);
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-subtle);
 }
 
 .aria-message--error .aria-name {

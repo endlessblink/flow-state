@@ -5,6 +5,7 @@ import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
 import { useAuthStore } from '@/stores/auth'
 import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
+import { EXTERNAL_URLS } from '@/config/urls'
 import StatsRadar from './StatsRadar.vue'
 import CorruptionMeter from './CorruptionMeter.vue'
 
@@ -24,7 +25,7 @@ const avatarSeed = computed(() => {
 })
 
 const avatarUrl = computed(() =>
-  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(avatarSeed.value)}`
+  `${EXTERNAL_URLS.DICEBEAR_API}?seed=${encodeURIComponent(avatarSeed.value)}`
 )
 
 // Derive player stats from user_stats data
@@ -180,15 +181,15 @@ const flameIntensity = computed(() => {
 .cyber-profile {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
   --aug-border-all: 2px;
   --aug-border-bg: linear-gradient(135deg, var(--cf-cyan), var(--cf-magenta));
-  --aug-inlay-all: 4px;
+  --aug-inlay-all: var(--space-1);
   --aug-inlay-bg: rgba(0, 240, 255, 0.03);
-  --aug-tl1: 24px;
-  --aug-br1: 24px;
+  --aug-tl1: var(--space-6);
+  --aug-br1: var(--space-6);
   background: var(--cf-dark-1);
-  padding: 24px;
+  padding: var(--space-6);
 }
 
 /* Identity: Avatar + Class Badge */
@@ -196,13 +197,13 @@ const flameIntensity = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .cyber-profile__avatar-frame {
-  width: 96px;
-  height: 96px;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  width: calc(var(--space-6) * 4);
+  height: calc(var(--space-6) * 4);
+  clip-path: polygon(var(--space-2) 0, 100% 0, 100% calc(100% - var(--space-2)), calc(100% - var(--space-2)) 100%, 0 100%, 0 var(--space-2));
   border: 2px solid var(--cf-cyan-50);
   box-shadow: var(--cf-glow-cyan-subtle);
   overflow: hidden;
@@ -219,15 +220,15 @@ const flameIntensity = computed(() => {
 .cyber-profile__class-badge {
   --aug-border-all: 2px;
   --aug-border-bg: var(--cf-magenta);
-  --aug-tl1: 8px;
-  --aug-br1: 8px;
+  --aug-tl1: var(--space-2);
+  --aug-br1: var(--space-2);
   background: var(--cf-dark-3);
-  padding: 4px 16px;
+  padding: var(--space-1) var(--space-4);
 }
 
 .cyber-profile__class-name {
   font-family: var(--font-cyber-title);
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--cf-magenta);
   letter-spacing: 0.15em;
@@ -238,18 +239,18 @@ const flameIntensity = computed(() => {
 .cyber-profile__level-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1_5);
 }
 
 .cyber-profile__level-header {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .cyber-profile__level-label {
   font-family: var(--font-cyber-data);
-  font-size: 0.65rem;
+  font-size: var(--text-xs);
   color: var(--cf-cyan);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -258,26 +259,26 @@ const flameIntensity = computed(() => {
 
 .cyber-profile__level-number {
   font-family: var(--font-cyber-title);
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
   font-weight: 800;
   color: var(--cf-cyan);
-  text-shadow: 0 0 10px var(--cf-cyan-50);
+  text-shadow: 0 0 var(--space-2_5) var(--cf-cyan-50);
   line-height: 1;
 }
 
 .cyber-profile__xp-bar-wrapper {
   --aug-border-all: 1px;
   --aug-border-bg: var(--cf-cyan-50);
-  --aug-tl1: 4px;
-  --aug-br1: 4px;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 2px;
+  --aug-tl1: var(--space-1);
+  --aug-br1: var(--space-1);
+  background: rgba(var(--color-slate-900), 0.5);
+  padding: var(--space-0_5);
 }
 
 .cyber-profile__xp-track {
   position: relative;
-  height: 10px;
-  background: rgba(0, 0, 0, 0.4);
+  height: var(--space-2_5);
+  background: rgba(var(--color-slate-900), 0.4);
   overflow: hidden;
 }
 
@@ -295,7 +296,7 @@ const flameIntensity = computed(() => {
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, transparent 60%, rgba(255, 255, 255, 0.2));
+  background: linear-gradient(90deg, transparent 60%, rgba(var(--color-slate-50), 0.2));
   pointer-events: none;
 }
 
@@ -303,8 +304,8 @@ const flameIntensity = computed(() => {
   display: flex;
   justify-content: space-between;
   font-family: var(--font-cyber-data);
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: var(--text-2xs);
+  color: rgba(var(--color-slate-50), 0.5);
 }
 
 .cyber-profile__total-xp {
@@ -317,10 +318,10 @@ const flameIntensity = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.3);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(var(--color-slate-900), 0.3);
   border: 1px solid var(--cf-orange-20);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .cyber-profile__streak-content {
@@ -328,20 +329,20 @@ const flameIntensity = computed(() => {
   z-index: 1;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .cyber-profile__streak-number {
   font-family: var(--font-cyber-title);
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   font-weight: 800;
   color: var(--cf-orange);
-  text-shadow: 0 0 8px var(--cf-orange-50);
+  text-shadow: 0 0 var(--space-2) var(--cf-orange-50);
 }
 
 .cyber-profile__streak--epic .cyber-profile__streak-number {
-  color: #ff4500;
-  text-shadow: 0 0 10px rgba(255, 69, 0, 0.6);
+  color: hsl(var(--orange-600));
+  text-shadow: 0 0 var(--space-2_5) rgba(255, 69, 0, 0.6);
 }
 
 .cyber-profile__streak--legendary .cyber-profile__streak-number {
@@ -358,15 +359,15 @@ const flameIntensity = computed(() => {
 
 .cyber-profile__streak-label {
   font-family: var(--font-cyber-data);
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: var(--text-2xs);
+  color: rgba(var(--color-slate-50), 0.4);
 }
 
 /* Flame effect */
 .cyber-profile__flame {
   position: absolute;
   bottom: 50%;
-  left: 24px;
+  left: var(--space-6);
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 0;
@@ -382,34 +383,34 @@ const flameIntensity = computed(() => {
 }
 
 .flame--low::before {
-  width: 16px;
-  height: 22px;
+  width: var(--space-4);
+  height: calc(var(--space-5) + var(--space-0_5));
   background: radial-gradient(ellipse at bottom, rgba(255, 107, 53, 0.6), transparent);
-  filter: blur(3px);
+  filter: blur(calc(var(--space-0_5) * 1.5));
   animation: streak-flicker 1.5s ease-in-out infinite alternate;
 }
 
 .flame--moderate::before {
-  width: 20px;
-  height: 28px;
+  width: var(--space-5);
+  height: calc(var(--space-6) + var(--space-1));
   background: radial-gradient(ellipse at bottom, rgba(255, 107, 53, 0.7), rgba(255, 0, 100, 0.3), transparent);
-  filter: blur(3px);
+  filter: blur(calc(var(--space-0_5) * 1.5));
   animation: streak-flicker 1s ease-in-out infinite alternate;
 }
 
 .flame--intense::before {
-  width: 24px;
-  height: 34px;
-  background: radial-gradient(ellipse at bottom, #ff6b35, #ff0064, transparent);
-  filter: blur(4px);
+  width: var(--space-6);
+  height: calc(var(--space-8) + var(--space-0_5));
+  background: radial-gradient(ellipse at bottom, hsl(var(--orange-500)), hsl(var(--pink-600)), transparent);
+  filter: blur(var(--space-1));
   animation: streak-flicker 0.6s ease-in-out infinite alternate;
 }
 
 .flame--legendary::before {
-  width: 30px;
-  height: 42px;
-  background: radial-gradient(ellipse at bottom, #ff00ff, #ff0064, transparent);
-  filter: blur(5px);
+  width: calc(var(--space-6) + var(--space-1_5));
+  height: calc(var(--space-8) + var(--space-2_5));
+  background: radial-gradient(ellipse at bottom, hsl(var(--purple-500)), hsl(var(--pink-600)), transparent);
+  filter: blur(calc(var(--space-1) + var(--space-0_5)));
   animation: streak-flicker 0.4s ease-in-out infinite alternate;
 }
 
@@ -425,23 +426,23 @@ const flameIntensity = computed(() => {
 }
 
 .cyber-profile__streak-warning {
-  width: 18px;
-  height: 18px;
+  width: calc(var(--space-4) + var(--space-0_5));
+  height: calc(var(--space-4) + var(--space-0_5));
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: rgb(251, 191, 36);
-  color: black;
+  border-radius: var(--radius-full);
+  background: hsl(var(--orange-400));
+  color: hsl(var(--slate-900));
   font-family: var(--font-cyber-data);
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   font-weight: 700;
   animation: pulse-warning 1.5s ease-in-out infinite;
 }
 
 @keyframes streak-at-risk-pulse {
   0%, 100% { border-color: rgba(251, 191, 36, 0.3); }
-  50% { border-color: rgba(251, 191, 36, 0.7); box-shadow: 0 0 8px rgba(251, 191, 36, 0.2); }
+  50% { border-color: rgba(251, 191, 36, 0.7); box-shadow: 0 0 var(--space-2) rgba(251, 191, 36, 0.2); }
 }
 
 @keyframes pulse-warning {
@@ -451,7 +452,7 @@ const flameIntensity = computed(() => {
 
 /* Corruption section */
 .cyber-profile__corruption {
-  padding-top: 4px;
+  padding-top: var(--space-1);
 }
 
 /* Radar section */

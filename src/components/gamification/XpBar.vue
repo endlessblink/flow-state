@@ -109,7 +109,7 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
   height: 100%;
   background: var(--xp-bar-gradient);
   border-radius: var(--xp-bar-border-radius);
-  transition: width 0.5s ease-out;
+  transition: width var(--duration-slower) var(--ease-out);
 }
 
 .xp-bar-fill.animated {
@@ -118,9 +118,9 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
 
 .xp-bar-glow {
   position: absolute;
-  top: -2px;
+  top: calc(-1 * var(--space-px) * 2);
   left: 0;
-  height: calc(100% + 4px);
+  height: calc(100% + var(--space-1));
   background: transparent;
   box-shadow: var(--xp-bar-glow);
   border-radius: var(--xp-bar-border-radius);
@@ -132,11 +132,11 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
   font-size: var(--text-xs);
   color: rgba(var(--neon-cyan), 0.9);
   font-weight: var(--font-medium);
-  min-width: 32px;
+  min-width: var(--space-8);
   text-align: right;
 }
 
 .compact .xp-bar-track {
-  height: 6px;
+  height: var(--radius-sm);
 }
 </style>

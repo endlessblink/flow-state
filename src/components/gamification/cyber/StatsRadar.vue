@@ -116,11 +116,12 @@ const gridLevels = 5
       :key="`label-${i}`"
       :x="getLabelPoint(i).x"
       :y="getLabelPoint(i).y"
-      :font-size="size < 160 ? 9 : 11"
+      font-size="11"
       font-weight="600"
       text-anchor="middle"
       dominant-baseline="middle"
       class="stats-radar__label"
+      :style="{ fontSize: size < 160 ? 'var(--text-2xs)' : 'var(--text-xs)' }"
     >
       {{ label }}
     </text>
@@ -141,9 +142,9 @@ const gridLevels = 5
 
 .stats-radar__point {
   fill: var(--cf-magenta);
-  stroke: rgba(255, 255, 255, 0.8);
+  stroke: rgba(var(--color-slate-50), 0.8);
   stroke-width: 1.5;
-  filter: drop-shadow(0 0 3px var(--cf-magenta-50));
+  filter: drop-shadow(0 0 var(--space-0_5) var(--cf-magenta-50));
   transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

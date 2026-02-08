@@ -179,6 +179,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
     <div v-else class="cs-empty">
       <ShoppingBag :size="32" class="cs-empty-icon" />
       <span class="cs-empty-text">SHOP OFFLINE</span>
+      <span class="cs-empty-sub">Connect to sync to browse available items</span>
     </div>
 
     <!-- Browse Shop Button -->
@@ -231,11 +232,11 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-credits {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2_5);
   background: rgba(57, 255, 20, 0.05);
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(57, 255, 20, 0.2);
+  border: var(--space-0_5) solid rgba(57, 255, 20, 0.2);
 }
 
 .cs-credits-value {
@@ -243,7 +244,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--cf-lime);
-  text-shadow: 0 0 8px var(--cf-lime);
+  text-shadow: 0 0 var(--space-2) var(--cf-lime);
 }
 
 .cs-credits-label {
@@ -269,13 +270,13 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   align-items: center;
   gap: var(--space-3);
   border-radius: var(--radius-lg);
-  border: 2px solid var(--border-subtle);
+  border: var(--space-0_5) solid var(--border-subtle);
   transition: all 0.2s ease;
-  min-height: 60px;
+  min-height: var(--space-15);
 }
 
 .cs-item:hover {
-  transform: translateY(-1px);
+  transform: translateY(calc(-1 * var(--space-0_5)));
   border-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -286,22 +287,22 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 
 .cs-item--uncommon {
   border-color: var(--cf-lime);
-  box-shadow: 0 0 8px rgba(57, 255, 20, 0.2);
+  box-shadow: 0 0 var(--space-2) rgba(57, 255, 20, 0.2);
 }
 
 .cs-item--rare {
   border-color: rgba(0, 150, 255, 1);
-  box-shadow: 0 0 12px rgba(0, 150, 255, 0.3);
+  box-shadow: 0 0 var(--space-3) rgba(0, 150, 255, 0.3);
 }
 
 .cs-item--epic {
   border-color: rgba(147, 51, 234, 1);
-  box-shadow: 0 0 12px rgba(147, 51, 234, 0.4);
+  box-shadow: 0 0 var(--space-3) rgba(147, 51, 234, 0.4);
 }
 
 .cs-item--legendary {
   border-color: var(--cf-gold);
-  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 0 var(--space-4) rgba(255, 215, 0, 0.4);
 }
 
 /* Owned state */
@@ -318,8 +319,8 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 /* Icon Wrapper */
 .cs-icon-wrap {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: var(--space-12);
+  height: var(--space-12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,17 +342,17 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 /* Owned Badge Overlay */
 .cs-owned-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
+  top: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
+  width: var(--space-5);
+  height: var(--space-5);
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--cf-cyan);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   color: var(--cf-dark-1);
-  box-shadow: 0 0 8px var(--cf-cyan);
+  box-shadow: 0 0 var(--space-2) var(--cf-cyan);
 }
 
 /* Item Info */
@@ -360,7 +361,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .cs-name {
@@ -394,11 +395,11 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-price {
   display: flex;
   align-items: baseline;
-  gap: 3px;
-  padding: 4px 8px;
+  gap: var(--space-0_75);
+  padding: var(--space-1) var(--space-2);
   background: rgba(57, 255, 20, 0.1);
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(57, 255, 20, 0.3);
+  border: var(--space-0_5) solid rgba(57, 255, 20, 0.3);
 }
 
 .cs-price-value {
@@ -429,9 +430,9 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 
 /* Buy Button */
 .cs-buy {
-  padding: 6px 12px;
+  padding: var(--space-1_5) var(--space-3);
   background: rgba(0, 240, 255, 0.1);
-  border: 1px solid rgba(0, 240, 255, 0.4);
+  border: var(--space-0_5) solid rgba(0, 240, 255, 0.4);
   border-radius: var(--radius-sm);
   color: var(--cf-cyan);
   font-family: var(--font-cyber-title);
@@ -445,7 +446,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-buy:hover:not(:disabled) {
   background: rgba(0, 240, 255, 0.2);
   border-color: var(--cf-cyan);
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 var(--space-3) rgba(0, 240, 255, 0.3);
 }
 
 .cs-buy:disabled {
@@ -457,7 +458,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-status {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   font-family: var(--font-cyber-data);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -493,6 +494,14 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   letter-spacing: 0.05em;
 }
 
+.cs-empty-sub {
+  font-family: var(--font-cyber-ui);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-align: center;
+}
+
 /* Browse Shop Button */
 .cs-browse {
   display: flex;
@@ -501,7 +510,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: rgba(255, 0, 153, 0.05);
-  border: 1px solid rgba(255, 0, 153, 0.3);
+  border: var(--space-0_5) solid rgba(255, 0, 153, 0.3);
   border-radius: var(--radius-sm);
   color: var(--cf-magenta);
   font-family: var(--font-cyber-title);
@@ -515,7 +524,7 @@ async function handlePurchase(item: ShopItemWithOwnership) {
 .cs-browse:hover {
   background: rgba(255, 0, 153, 0.1);
   border-color: var(--cf-magenta);
-  box-shadow: 0 0 12px rgba(255, 0, 153, 0.3);
+  box-shadow: 0 0 var(--space-3) rgba(255, 0, 153, 0.3);
 }
 
 /* Responsive */

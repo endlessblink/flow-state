@@ -133,12 +133,12 @@ const sizeClass = computed(() => `badge--${props.size}`)
   padding: var(--space-2);
   background: var(--gamification-card-bg);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(var(--color-slate-600), 0.3);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--purple-border-medium);
+  transition: transform var(--duration-normal) ease, box-shadow var(--duration-normal) ease;
 }
 
 .achievement-badge:hover {
-  transform: translateY(-2px);
+  transform: translateY(calc(-1 * var(--space-0_5)));
 }
 
 .badge--earned:hover {
@@ -176,13 +176,13 @@ const sizeClass = computed(() => `badge--${props.size}`)
   align-items: center;
   justify-content: center;
   padding: var(--space-1);
-  background: rgba(var(--color-slate-700), 0.5);
+  background: var(--purple-bg-subtle);
   border-radius: var(--radius-sm);
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow var(--duration-slow) ease;
 }
 
 .badge--sm .badge-icon-wrapper {
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .badge--lg .badge-icon-wrapper {
@@ -191,11 +191,11 @@ const sizeClass = computed(() => `badge--${props.size}`)
 
 .badge-icon {
   color: var(--gamification-text-secondary);
-  transition: color 0.3s ease;
+  transition: color var(--duration-slow) ease;
 }
 
 .badge--earned .badge-icon {
-  filter: drop-shadow(0 0 4px currentColor);
+  filter: drop-shadow(0 0 var(--space-1) currentColor);
 }
 
 .badge-icon--locked {
@@ -205,7 +205,7 @@ const sizeClass = computed(() => `badge--${props.size}`)
 .badge-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   flex: 1;
   min-width: 0;
 }
@@ -220,17 +220,17 @@ const sizeClass = computed(() => `badge--${props.size}`)
 }
 
 .badge-progress {
-  height: 4px;
-  background: rgba(var(--color-slate-600), 0.5);
-  border-radius: 2px;
+  height: var(--space-1);
+  background: var(--purple-bg-subtle);
+  border-radius: var(--space-0_5);
   overflow: hidden;
 }
 
 .badge-progress-bar {
   height: 100%;
   background: rgba(var(--neon-cyan), 0.6);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  border-radius: var(--space-0_5);
+  transition: width var(--duration-slow) ease;
 }
 
 .badge-progress-text {

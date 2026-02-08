@@ -299,6 +299,28 @@
 
 ---
 
+### BUG-1286: PWA Today View Shows 2:00 AM on All Tasks Due to UTC Timezone Parsing (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-08)
+
+**Problem**: Tasks in the Mobile Today View all showed "2:00 AM" even though the user never set any due time. Additionally, the time-based grouping broke — all untimed tasks landed in "Evening" instead of "Anytime Today".
+
+**Root Cause**: `MobileTodayView.vue` extracted time from `dueDate` (a date-only field) instead of checking the explicit `dueTime` field. Date-only strings like "2026-02-08" are parsed by `new Date()` as UTC midnight, which becomes 2:00 AM in Israel (UTC+2). The untimed task filter used `getHours() === 0` which only works in UTC+0 and fails in other timezones.
+
+**Fix Applied (2026-02-08)**:
+1. **Changed `getTaskHour()`** — Now uses `task.dueTime` instead of parsing time from `dueDate`
+2. **Fixed untimed task filter** — Changed from `getHours() === 0` to `getTaskHour() === null`, making it timezone-agnostic
+3. **Replaced `formatDueTime()`** — Now uses `getDueBadge()` which only shows time when explicit `dueTime` is set
+4. **Fixed `sanitizeTimestamp()` in supabaseMappers.ts** — Preserves date-only strings (YYYY-MM-DD) instead of converting to UTC ISO
+
+**Files Changed**:
+- `src/mobile/views/MobileTodayView.vue` — Display and grouping fixes
+- `src/utils/supabaseMappers.ts` — Preserve date-only strings
+
+**Test Case**: Create a task with due date "2026-02-08" but no due time. In Israel (UTC+2), it should show "Anytime Today", not "2:00 AM".
+
+---
+
 ### BUG-1204: Challenges Table 404 / Initialization Failure (👀 REVIEW)
 
 **Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-07)
@@ -2165,7 +2187,7 @@ npm run tasks:bugs     # Filter by BUG type
 - [x] **~~TASK-1257~~**: ✅ Fix `productionLogger.ts` — now uses Supabase session token via `supabase.auth.getSession()`
 
 #### P1 — Production Quality
-- [ ] **TASK-1258**: Replace httpbin.org with self-hosted endpoint — production code makes requests to third-party test service (`performanceBenchmark.ts`, `useNetworkOptimizer.ts:447`)
+- [x] **~~TASK-1258~~**: ✅ Replace httpbin.org with self-hosted endpoint — production code now uses `in-theflow.com` (`performanceBenchmark.ts`, `useNetworkOptimizer.ts`)
 - [x] **~~TASK-1259~~**: ✅ Remove unconditional `%c[DEBUG]` styled log from `useCanvasOrchestrator.ts`
 - [x] **~~TASK-1260~~**: ✅ Remove ~30 bug-specific debug tags across 10 files (`[BUG-339-DEBUG]`, `[TASK-288-DEBUG]`, `[DELETE-DEBUG]`, `[BUG-1116:DRAG-DEBUG]`, `[KEYBOARD]` etc.)
 - [x] **~~TASK-1261~~**: ✅ Fix silent no-op stubs — now throw Error or console.warn (`taskPersistence.ts`)
@@ -2188,12 +2210,12 @@ npm run tasks:bugs     # Filter by BUG type
 #### P3 — Backlog / Polish
 - [x] **~~TASK-1275~~**: ✅ Remove 5 obsolete verification scripts in `scripts/` (verify-shadow-layer, verify-auth-user, verify-backup-system, verify-bug339-migration, verify-restore)
 - [x] **~~TASK-1276~~**: ✅ Remove Storybook `title: 'PLACEHOLDER'` duplicate key (`OverflowTooltip.stories.ts:4`)
-- [ ] **TASK-1277**: Standardize z-index usage — 170 occurrences across 88 files should use `var(--z-*)` tokens
-- [ ] **TASK-1278**: Standardize font-size usage — 163 hardcoded `font-size: Xpx` across 33 files should use `var(--text-*)` tokens
-- [ ] **TASK-1279**: Add missing package.json metadata — `homepage`, `repository`, `bugs` fields
-- [ ] **TASK-1280**: Add copyright field to Tauri bundle config (`tauri.conf.json`)
-- [ ] **TASK-1281**: Adopt build-time console.log stripping — replace runtime `consoleFilter.ts` with Vite plugin for production builds (~700 console.logs ship today)
-- [ ] **TASK-1282**: Stop filtering `console.error` in consoleFilter.ts — errors with emoji prefixes get silently swallowed (line 280-301)
+- [x] **~~TASK-1277~~**: ✅ Standardize z-index usage — replaced ~60 hardcoded values across 50 files with `var(--z-*)` tokens (dropdown, modal, popover, tooltip layers)
+- [x] **~~TASK-1278~~**: ✅ Standardize font-size usage — replaced ~100 hardcoded px/rem values across 32 files with `var(--text-*)` tokens
+- [x] **~~TASK-1279~~**: ✅ Add missing package.json metadata — homepage, repository, bugs fields
+- [x] **~~TASK-1280~~**: ✅ Add copyright field to Tauri bundle config (`tauri.conf.json`)
+- [x] **~~TASK-1281~~**: ✅ Adopt build-time console.log stripping — esbuild `pure` config strips console.log/debug in production
+- [x] **~~TASK-1282~~**: ✅ Stop filtering console.error/warn in consoleFilter.ts — now always pass through
 
 ---
 
@@ -2684,11 +2706,13 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| **TASK-1285** | **P0** | **🔄 Commit deploy safeguards & clean up 20 dead Claude hooks** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
+| BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
@@ -2702,7 +2726,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1255~~ | P0 | ✅ Fix WelcomeModal — removed dead buttons and stubbed stats |
 | ~~TASK-1256~~ | P0 | ✅ Fix stale flowstate.app → in-theflow.com origins |
 | ~~TASK-1257~~ | P0 | ✅ Fix productionLogger — now uses Supabase session token |
-| TASK-1258 | P1 | Replace httpbin.org with self-hosted endpoint |
+| ~~TASK-1258~~ | P1 | ✅ Replace httpbin.org with self-hosted endpoint |
 | ~~TASK-1259~~ | P1 | ✅ Remove unconditional %c[DEBUG] styled canvas log |
 | ~~TASK-1260~~ | P1 | ✅ Remove ~30 bug-specific debug tags across 10 files |
 | ~~TASK-1261~~ | P1 | ✅ Fix silent no-op stubs — now throw or warn |
@@ -2721,12 +2745,12 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1274~~ | P2 | ✅ Migrate 'uncategorized' sentinel to constant |
 | ~~TASK-1275~~ | P3 | ✅ Remove 5 obsolete verification scripts |
 | ~~TASK-1276~~ | P3 | ✅ Remove Storybook PLACEHOLDER duplicate key |
-| TASK-1277 | P3 | Standardize z-index usage (170 occurrences) |
-| TASK-1278 | P3 | Standardize font-size usage (163 occurrences) |
-| TASK-1279 | P3 | Add missing package.json metadata fields |
-| TASK-1280 | P3 | Add copyright to Tauri bundle config |
-| TASK-1281 | P3 | Adopt build-time console.log stripping (replace consoleFilter.ts) |
-| TASK-1282 | P3 | Stop filtering console.error in consoleFilter.ts |
+| ~~TASK-1277~~ | P3 | ✅ Standardize z-index usage (~60 values in 50 files) |
+| ~~TASK-1278~~ | P3 | ✅ Standardize font-size usage (~100 values in 32 files) |
+| ~~TASK-1279~~ | P3 | ✅ Add missing package.json metadata fields |
+| ~~TASK-1280~~ | P3 | ✅ Add copyright to Tauri bundle config |
+| ~~TASK-1281~~ | P3 | ✅ Adopt build-time console.log stripping (esbuild pure config) |
+| ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
 | FEATURE-1202 | P1 | 🔄 Google Auth sign-in (OAuth) |
@@ -3443,13 +3467,47 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
+### TASK-1287: Cyberflow RPG — Full Cyberpunk Game UI Overhaul (🔄 IN PROGRESS)
+
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-07)
+
+**Parent**: FEATURE-1118
+
+**Goal**: Complete cyberpunk visual overhaul of the gamification system with dedicated Cyberflow command center, Anti-Chore game design, and system interconnections.
+
+**Phase 1: Visual Foundation** ✅
+- Installed augmented-ui, added cyberpunk fonts (Rajdhani, Orbitron, Space Mono)
+- Created `src/assets/cyberflow-tokens.css` (neon palette, glow effects, clip-paths, animations)
+- Created `src/composables/useCyberflowTheme.ts` (intensity-aware theme composable)
+
+**Phase 2: Cyberflow Hub Page** ✅
+- New `/cyberflow` route with 5-tab navigation (Overview/Missions/Boss/Upgrades/Trophies)
+- Created 12 new cyber components (CyberDashboardHub, CyberMissionBriefing, CyberBossFight, CyberCharacterProfile, CyberSkillTree, CyberAchievements, CyberShop, etc.)
+- Hub-and-spoke layout: Overview cards → drill into tabs
+
+**Phase 3: Header Widget Redesign + Intensity Levels** ✅
+- Restyled LevelBadge, XpBar, StreakCounter with cyberpunk aesthetics
+- Intensity filtering wired up (minimal/moderate/intense)
+- Exposure toast system (shielded/exposed) with proper icon rendering
+
+**Phase P0: Anti-Chore Game Mechanics** ✅
+- Created `docs/game-mechanics.md` — authoritative game design reference
+- Removed exposed penalty (timer = invitation, not obligation)
+- Removed XP decay (earned XP permanent forever)
+- Updated SHIELDED_XP_BONUS from 1.10 to 1.15
+- Suppressed nagging "EXPOSED" toast per Distraction Test
+
+**Progress (2026-02-08):** Phases 1-3 complete + P0 anti-chore constants applied. 624 tests passing, zero TS errors. Next: P1 items (streak multiplier, corruption XP modifier, partial boss credit).
+
+---
+
 ### FEATURE-1118: Gamification System - Design & Implementation (🔄 IN PROGRESS)
 
 **Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-01-30)
 
 **Goal**: Add game-like elements to FlowState to increase engagement and make productivity feel rewarding.
 
-**Design Session**: In progress...
+**Design**: See `docs/game-mechanics.md` for full game design document (Anti-Chore Manifesto, system interconnections, ARIA personality, progression curve).
 
 ---
 

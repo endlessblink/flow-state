@@ -71,8 +71,8 @@ const handleTabClick = (tabId: typeof tabs[number]['id']) => {
 }
 
 .cyber-nav-tab__icon {
-  width: 14px;
-  height: 14px;
+  width: var(--space-3_5);
+  height: var(--space-3_5);
 }
 
 .cyber-nav-tab__label {

@@ -219,8 +219,8 @@ function handleChallengeClick(challenge: unknown) {
 
 .header-title h3 {
   font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-gray-100);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -231,15 +231,15 @@ function handleChallengeClick(challenge: unknown) {
 }
 
 .status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-gray-500);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--text-muted);
 }
 
 .status--complete {
   background: var(--color-success-500);
-  box-shadow: 0 0 8px var(--color-success-500);
+  box-shadow: 0 0 var(--space-2) var(--color-success-500);
 }
 
 .status--active {
@@ -258,8 +258,8 @@ function handleChallengeClick(challenge: unknown) {
 
 .status-text {
   font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-gray-300);
+  font-weight: var(--font-semibold);
+  color: var(--text-tertiary);
 }
 
 .challenges-list {
@@ -279,7 +279,7 @@ function handleChallengeClick(challenge: unknown) {
 }
 
 .all-complete p {
-  color: var(--color-gray-200);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -296,9 +296,9 @@ function handleChallengeClick(challenge: unknown) {
 
 .generate-prompt {
   font-size: var(--text-sm);
-  color: var(--color-gray-400);
+  color: var(--text-tertiary);
   margin-bottom: var(--space-3);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .generate-button {
@@ -307,18 +307,18 @@ function handleChallengeClick(challenge: unknown) {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background: linear-gradient(135deg, var(--color-primary-600), var(--color-accent-cyan));
-  color: white;
+  color: var(--text-primary);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .generate-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 200, 255, 0.3);
+  transform: translateY(calc(-1 * var(--space-px) * 2));
+  box-shadow: 0 var(--space-1) var(--space-3) rgba(0, 200, 255, 0.3);
 }
 
 .generate-button:disabled {
@@ -346,7 +346,7 @@ function handleChallengeClick(challenge: unknown) {
   gap: var(--space-2);
   margin-top: var(--space-3);
   padding: var(--space-2);
-  background: var(--color-error-500/20);
+  background: var(--danger-bg-medium);
   border-radius: var(--radius-sm);
   color: var(--color-error-400);
   font-size: var(--text-xs);
@@ -358,7 +358,7 @@ function handleChallengeClick(challenge: unknown) {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  color: var(--color-gray-400);
+  color: var(--text-tertiary);
 }
 
 .loading-state p {

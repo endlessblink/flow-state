@@ -47,7 +47,7 @@ function handleDismiss(id: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  z-index: 9999;
+  z-index: var(--z-tooltip);
   pointer-events: none;
 }
 

@@ -335,7 +335,7 @@ watch(damageDealt, (newVal, oldVal) => {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   line-height: 1.2;
-  text-shadow: 0 0 16px var(--cf-magenta);
+  text-shadow: 0 0 var(--space-4) var(--cf-magenta);
   margin: 0;
   text-align: center;
   display: flex;
@@ -347,25 +347,25 @@ watch(damageDealt, (newVal, oldVal) => {
 
 .cbf-boss-name--defeated {
   color: var(--cf-lime);
-  text-shadow: 0 0 16px var(--cf-lime);
+  text-shadow: 0 0 var(--space-4) var(--cf-lime);
 }
 
 .cbf-boss-name--failed {
   color: var(--cf-orange);
-  text-shadow: 0 0 16px var(--cf-orange);
+  text-shadow: 0 0 var(--space-4) var(--cf-orange);
 }
 
 .cbf-name-icon {
-  filter: drop-shadow(0 0 12px var(--cf-magenta));
+  filter: drop-shadow(0 0 var(--space-3) var(--cf-magenta));
 }
 
 .cbf-name-icon--victory {
-  filter: drop-shadow(0 0 12px var(--cf-lime));
+  filter: drop-shadow(0 0 var(--space-3) var(--cf-lime));
   animation: icon-victory 1.5s ease-in-out infinite;
 }
 
 .cbf-name-icon--failed {
-  filter: drop-shadow(0 0 12px var(--cf-orange));
+  filter: drop-shadow(0 0 var(--space-3) var(--cf-orange));
 }
 
 @keyframes icon-victory {
@@ -400,13 +400,13 @@ watch(damageDealt, (newVal, oldVal) => {
 /* HP Bar (THE hero element - huge and dramatic) */
 .cbf-hp-bar {
   position: relative;
-  height: 50px;
-  border: 2px solid var(--border-subtle);
+  height: var(--space-12_5);
+  border: var(--space-0_5) solid var(--border-subtle);
   overflow: hidden;
   background: var(--cf-dark-3);
   border-radius: var(--radius-md);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 var(--space-1) var(--space-3) rgba(0, 0, 0, 0.4);
 }
 
 /* HP Background Layer */
@@ -419,9 +419,9 @@ watch(damageDealt, (newVal, oldVal) => {
   background: repeating-linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.02) 0px,
-    rgba(255, 255, 255, 0.02) 2px,
-    transparent 2px,
-    transparent 4px
+    rgba(255, 255, 255, 0.02) var(--space-0_5),
+    transparent var(--space-0_5),
+    transparent var(--space-1)
   );
 }
 
@@ -443,7 +443,7 @@ watch(damageDealt, (newVal, oldVal) => {
   left: 0;
   height: 100%;
   transition: width 0.3s ease-out, background 0.3s ease;
-  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 var(--space-5) rgba(255, 255, 255, 0.2);
 }
 
 .cbf-hp-fill--pulse {
@@ -451,7 +451,7 @@ watch(damageDealt, (newVal, oldVal) => {
 }
 
 .cbf-hp-fill--flash {
-  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 0 var(--space-7_5) rgba(255, 255, 255, 0.8);
 }
 
 @keyframes hp-pulse {
@@ -463,7 +463,7 @@ watch(damageDealt, (newVal, oldVal) => {
 .cbf-phase-marker {
   position: absolute;
   top: 0;
-  width: 2px;
+  width: var(--space-0_5);
   height: 100%;
   background: rgba(255, 255, 255, 0.4);
   z-index: 2;
@@ -487,7 +487,7 @@ watch(damageDealt, (newVal, oldVal) => {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text-primary);
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 var(--space-1) rgba(0, 0, 0, 0.8), 0 0 var(--space-2) rgba(0, 0, 0, 0.8);
   z-index: 3;
   pointer-events: none;
 }
@@ -518,18 +518,18 @@ watch(damageDealt, (newVal, oldVal) => {
 }
 
 .cbf-phase-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-full);
   background: var(--cf-dark-3);
-  border: 2px solid var(--border-subtle);
+  border: var(--space-0_5) solid var(--border-subtle);
   transition: all 0.3s ease;
 }
 
 .cbf-phase-dot--active {
   background: var(--cf-magenta);
   border-color: var(--cf-magenta);
-  box-shadow: 0 0 10px var(--cf-magenta);
+  box-shadow: 0 0 var(--space-2_5) var(--cf-magenta);
 }
 
 /* Status Line (single message, centered) */
@@ -592,9 +592,9 @@ watch(damageDealt, (newVal, oldVal) => {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: rgba(255, 107, 53, 0.1);
-  border: 2px solid var(--cf-orange);
+  border: var(--space-0_5) solid var(--cf-orange);
   border-radius: var(--radius-md);
-  box-shadow: 0 0 12px rgba(255, 107, 53, 0.3);
+  box-shadow: 0 0 var(--space-3) rgba(255, 107, 53, 0.3);
 }
 
 .cbf-damage-label {
@@ -610,7 +610,7 @@ watch(damageDealt, (newVal, oldVal) => {
   font-size: var(--text-lg);
   font-weight: 900;
   color: var(--cf-orange);
-  text-shadow: 0 0 12px var(--cf-orange);
+  text-shadow: 0 0 var(--space-3) var(--cf-orange);
   line-height: 1;
 }
 
@@ -621,7 +621,7 @@ watch(damageDealt, (newVal, oldVal) => {
   gap: var(--space-2);
   padding: var(--space-3);
   background: rgba(57, 255, 20, 0.05);
-  border: 1px solid var(--cf-lime);
+  border: var(--space-0_5) solid var(--cf-lime);
   border-radius: var(--radius-md);
   flex-shrink: 0;
 }
@@ -647,7 +647,7 @@ watch(damageDealt, (newVal, oldVal) => {
 
 .cbf-objective-progress {
   position: relative;
-  height: 8px;
+  height: var(--space-2);
   background: var(--cf-dark-3);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -660,7 +660,7 @@ watch(damageDealt, (newVal, oldVal) => {
   height: 100%;
   background: linear-gradient(90deg, var(--cf-lime), var(--cf-cyan));
   transition: width 0.3s ease;
-  box-shadow: 0 0 8px var(--cf-lime);
+  box-shadow: 0 0 var(--space-2) var(--cf-lime);
 }
 
 .cbf-objective-count {
@@ -681,7 +681,7 @@ watch(damageDealt, (newVal, oldVal) => {
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle, rgba(57, 255, 20, 0.2) 0%, rgba(0, 0, 0, 0.9) 100%);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(var(--space-1_5));
   z-index: 10;
   pointer-events: none;
 }
@@ -694,9 +694,9 @@ watch(damageDealt, (newVal, oldVal) => {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   text-shadow:
-    0 0 10px var(--cf-lime),
-    0 0 20px var(--cf-lime),
-    0 0 30px var(--cf-lime);
+    0 0 var(--space-2_5) var(--cf-lime),
+    0 0 var(--space-5) var(--cf-lime),
+    0 0 var(--space-7_5) var(--cf-lime);
   animation: victory-pulse 1.5s ease-in-out infinite;
 }
 
@@ -716,7 +716,7 @@ watch(damageDealt, (newVal, oldVal) => {
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle, rgba(255, 107, 53, 0.2) 0%, rgba(0, 0, 0, 0.9) 100%);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(var(--space-1_5));
   z-index: 10;
   pointer-events: none;
 }
@@ -729,9 +729,9 @@ watch(damageDealt, (newVal, oldVal) => {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   text-shadow:
-    0 0 10px var(--cf-orange),
-    0 0 20px var(--cf-orange),
-    0 0 30px var(--cf-orange);
+    0 0 var(--space-2_5) var(--cf-orange),
+    0 0 var(--space-5) var(--cf-orange),
+    0 0 var(--space-7_5) var(--cf-orange);
 }
 
 /* No Boss State */

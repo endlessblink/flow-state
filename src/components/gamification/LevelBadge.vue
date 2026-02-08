@@ -41,7 +41,7 @@ const sizeClasses = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--level-badge-bg);
   border: var(--level-badge-border);
   box-shadow: var(--level-badge-glow);
@@ -52,8 +52,8 @@ const sizeClasses = computed(() => ({
 }
 
 .level-badge--sm {
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   font-size: var(--text-sm);
 }
 
@@ -64,8 +64,8 @@ const sizeClasses = computed(() => ({
 }
 
 .level-badge--lg {
-  width: 64px;
-  height: 64px;
+  width: var(--space-16);
+  height: var(--space-16);
   font-size: var(--text-2xl);
 }
 
@@ -76,13 +76,13 @@ const sizeClasses = computed(() => ({
 .level-number {
   position: relative;
   z-index: 1;
-  text-shadow: 0 0 8px rgba(var(--neon-cyan), 0.8);
+  text-shadow: 0 0 var(--space-2) rgba(var(--neon-cyan), 0.8);
 }
 
 .level-glow {
   position: absolute;
-  inset: -4px;
-  border-radius: 50%;
+  inset: calc(-1 * var(--space-1));
+  border-radius: var(--radius-full);
   background: radial-gradient(
     circle,
     rgba(var(--neon-cyan), 0.15) 0%,
@@ -94,7 +94,7 @@ const sizeClasses = computed(() => ({
 /* Hover effect */
 .level-badge:hover {
   transform: scale(1.05);
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-normal) var(--ease-out);
 }
 
 .level-badge:hover .level-glow {

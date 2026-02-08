@@ -177,6 +177,7 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
     <div v-else class="ca-empty">
       <Trophy :size="32" class="ca-empty-icon" />
       <span class="ca-empty-text">NO ACHIEVEMENTS</span>
+      <span class="ca-empty-sub">Complete tasks and challenges to earn achievements</span>
     </div>
 
     <!-- View All Button -->
@@ -230,8 +231,8 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
   font-family: var(--font-cyber-data);
   font-size: var(--text-xs);
   color: var(--text-muted);
-  padding: 2px 8px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-0_5) var(--space-2);
+  background: rgba(var(--color-slate-50), 0.05);
   border-radius: var(--radius-sm);
 }
 
@@ -265,8 +266,8 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
 }
 
 .ca-item:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
+  border-color: rgba(var(--color-slate-50), 0.15);
+  transform: translateY(calc(-1 * var(--space-0_5)));
 }
 
 /* Locked state: reduced opacity */
@@ -277,14 +278,14 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
 
 .ca-item--locked:hover {
   opacity: 0.5;
-  transform: translateY(-1px);
+  transform: translateY(calc(-0.5 * var(--space-0_5)));
 }
 
 /* Icon Wrapper */
 .ca-icon-wrap {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: calc(var(--space-8) * 2);
+  height: calc(var(--space-8) * 2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,7 +299,7 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
 }
 
 .ca-icon--locked {
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(var(--color-slate-50), 0.2);
 }
 
 /* Earned Badge Overlay */
@@ -306,15 +307,15 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
   position: absolute;
   top: 0;
   right: 0;
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--cf-cyan);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   color: var(--cf-dark-1);
-  box-shadow: 0 0 8px var(--cf-cyan);
+  box-shadow: 0 0 var(--space-2) var(--cf-cyan);
 }
 
 /* Achievement Name */
@@ -340,9 +341,9 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
 /* Progress Bar */
 .ca-progress {
   width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  height: calc(var(--space-0_5) * 1.5);
+  background: rgba(var(--color-slate-50), 0.1);
+  border-radius: var(--radius-xs);
   overflow: hidden;
   margin-top: auto;
 }
@@ -350,9 +351,9 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
 .ca-progress-fill {
   height: 100%;
   background: var(--cf-cyan);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: width 0.4s ease;
-  box-shadow: 0 0 4px var(--cf-cyan);
+  box-shadow: 0 0 var(--space-1) var(--cf-cyan);
 }
 
 /* Empty State */
@@ -377,6 +378,14 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
   letter-spacing: 0.05em;
 }
 
+.ca-empty-sub {
+  font-family: var(--font-cyber-ui);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-align: center;
+}
+
 /* View All Button */
 .ca-view-all {
   display: flex;
@@ -399,7 +408,7 @@ function getProgressPercent(achievement: AchievementWithProgress): number {
 .ca-view-all:hover {
   background: rgba(0, 240, 255, 0.1);
   border-color: var(--cf-cyan);
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 var(--space-3) rgba(0, 240, 255, 0.3);
 }
 
 /* Responsive */

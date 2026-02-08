@@ -91,7 +91,7 @@ const activeTierIndex = computed(() => {
 .corruption-meter {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
 }
 
@@ -103,7 +103,7 @@ const activeTierIndex = computed(() => {
 
 .corruption-meter__tier-name {
   font-family: var(--font-cyber-title);
-  font-size: 0.8rem;
+  font-size: var(--text-meta);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -111,31 +111,31 @@ const activeTierIndex = computed(() => {
 
 .corruption-meter__level-value {
   font-family: var(--font-cyber-data);
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: var(--text-sm);
+  color: rgba(var(--color-slate-50), 0.5);
   font-weight: 600;
 }
 
 .corruption-meter__bar {
   position: relative;
-  height: 12px;
-  border-radius: 6px;
+  height: var(--space-3);
+  border-radius: var(--radius-md);
   overflow: visible;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--color-slate-900), 0.6);
+  border: 1px solid rgba(var(--color-slate-50), 0.1);
 }
 
 .corruption-meter__gradient {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: linear-gradient(90deg,
-    #00f0ff 0%,
-    #39ff14 20%,
-    #ffff00 40%,
-    #ff8800 60%,
-    #ff3333 80%,
-    #cc0000 100%
+    hsl(var(--cyan-400)) 0%,
+    hsl(var(--lime-400)) 20%,
+    hsl(var(--yellow-400)) 40%,
+    hsl(var(--orange-500)) 60%,
+    hsl(var(--red-500)) 80%,
+    hsl(var(--red-700)) 100%
   );
   opacity: 0.8;
 }
@@ -150,22 +150,22 @@ const activeTierIndex = computed(() => {
 .corruption-meter__boundary {
   position: absolute;
   top: 0;
-  width: 2px;
+  width: var(--space-0_5);
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(var(--color-slate-900), 0.5);
 }
 
 .corruption-meter__indicator {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
-  background: white;
-  border: 2px solid rgba(0, 0, 0, 0.6);
+  width: var(--space-3);
+  height: var(--space-3);
+  background: hsl(var(--slate-50));
+  border: 2px solid rgba(var(--color-slate-900), 0.6);
   transform: translate(-50%, -50%) rotate(45deg);
   z-index: 3;
   transition: left 0.5s ease-out;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 var(--space-1_5) rgba(var(--color-slate-50), 0.5);
 }
 
 .corruption-meter__labels {
@@ -175,8 +175,8 @@ const activeTierIndex = computed(() => {
 
 .corruption-meter__label {
   font-family: var(--font-cyber-data);
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.35);
+  font-size: var(--text-2xs);
+  color: rgba(var(--color-slate-50), 0.35);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   width: 20%;
@@ -197,9 +197,9 @@ const activeTierIndex = computed(() => {
 
 @keyframes corruption-glitch {
   0% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  50% { transform: translateX(3px); }
-  75% { transform: translateX(-1px); }
+  25% { transform: translateX(calc(-1 * var(--space-0_5))); }
+  50% { transform: translateX(calc(var(--space-0_5) * 1.5)); }
+  75% { transform: translateX(calc(-0.5 * var(--space-0_5))); }
   100% { transform: translateX(0); }
 }
 

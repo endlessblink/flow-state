@@ -206,12 +206,12 @@ function handleClick() {
   border-radius: var(--radius-lg);
   border: 1px solid;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .challenge-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(calc(-1 * var(--space-px) * 2));
+  box-shadow: var(--shadow-dark-md);
 }
 
 .challenge-card--compact {
@@ -242,9 +242,9 @@ function handleClick() {
 }
 
 .challenge-title {
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   font-size: var(--text-sm);
-  line-height: 1.3;
+  line-height: var(--leading-tight);
 }
 
 .challenge-badges {
@@ -256,25 +256,25 @@ function handleClick() {
 .difficulty-badge,
 .time-badge {
   font-size: var(--text-xs);
-  padding: 2px 6px;
+  padding: var(--space-px) var(--radius-sm);
   border-radius: var(--radius-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   text-transform: uppercase;
 }
 
 .time-badge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-gray-300);
+  gap: var(--space-1);
+  background: var(--glass-bg-tint);
+  color: var(--text-tertiary);
 }
 
 .challenge-description {
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--text-tertiary);
   margin-bottom: var(--space-2);
-  line-height: 1.4;
+  line-height: var(--leading-snug);
 }
 
 .challenge-progress {
@@ -282,17 +282,17 @@ function handleClick() {
 }
 
 .progress-bar-container {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  height: var(--radius-sm);
+  background: var(--glass-bg-tint);
+  border-radius: var(--radius-xs);
   overflow: hidden;
   margin-bottom: var(--space-1);
 }
 
 .progress-bar {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
+  border-radius: var(--radius-xs);
+  transition: width var(--duration-slow) var(--ease-out);
   background: linear-gradient(90deg, var(--color-primary-500), var(--color-accent-cyan));
 }
 
@@ -315,8 +315,8 @@ function handleClick() {
 }
 
 .progress-values {
-  font-weight: 600;
-  color: var(--color-gray-200);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
 }
 
 .progress-label {
@@ -332,7 +332,7 @@ function handleClick() {
 .reward {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .reward--xp {

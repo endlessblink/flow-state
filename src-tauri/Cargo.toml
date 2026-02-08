@@ -1,6 +1,6 @@
 [package]
 name = "flow-state"
-version = "1.2.38"
+version = "1.2.40"
 description = "FlowState - Productivity app with task management and pomodoro timer"
 authors = ["EndlessBlink"]
 license = "MIT"
@@ -30,7 +30,8 @@ tauri = { version = "2.10", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-http = "2.5.7"
 tauri-plugin-shell = "2"
-tauri-plugin-notification = "2"
+# BUG-1289: tauri-plugin-notification disabled — block_on() panic on Linux
+# tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2.10"
 tauri-plugin-process = "2"

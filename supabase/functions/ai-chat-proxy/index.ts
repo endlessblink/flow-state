@@ -34,6 +34,8 @@ interface AIChatRequest {
   temperature?: number
   top_p?: number
   stop_sequences?: string[]
+  tools?: Array<{ type: 'function'; function: { name: string; description: string; parameters: object } }>
+  tool_choice?: 'auto' | 'none'
 }
 
 // ============================================================================
@@ -97,6 +99,8 @@ function buildRequestBody(request: AIChatRequest, defaultModel: string): object 
     temperature: request.temperature,
     top_p: request.top_p,
     stop: request.stop_sequences,
+    ...(request.tools && { tools: request.tools }),
+    ...(request.tool_choice && { tool_choice: request.tool_choice }),
   }
 }
 

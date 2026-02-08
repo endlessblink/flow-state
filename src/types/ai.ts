@@ -786,6 +786,9 @@ export interface AIStreamChunk {
 
   /** Finish reason (only on final chunk) */
   finishReason?: string
+
+  /** Native tool calls from streaming (populated in final chunk) */
+  toolCalls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>
 }
 
 /**

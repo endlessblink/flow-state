@@ -25,6 +25,7 @@ import { useAIChatStore } from '@/stores/aiChat'
 import { useTimerStore } from '@/stores/timer'
 import { createAIRouter } from '@/services/ai/router'
 import { useAIProactiveNudges } from '@/composables/useAIProactiveNudges'
+import { useVoiceInput } from '@/composables/useVoiceInput'
 import ChatMessage from './ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
@@ -67,6 +68,9 @@ const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
 const store = useAIChatStore()
 const timerStore = useTimerStore()
 const nudges = useAIProactiveNudges()
+
+// Voice input
+const { isSupported: voiceSupported, isListening, transcript, interimTranscript, error: voiceError, startListening, stopListening } = useVoiceInput()
 
 // ============================================================================
 // Refs
@@ -402,6 +406,33 @@ function handleSubmit() {
     sendMessage(message)
   }
 }
+
+/** Toggle voice input on/off */
+function toggleVoiceInput() {
+  if (isListening.value) {
+    stopListening()
+  } else {
+    startListening()
+  }
+}
+
+// Watch transcript to fill input field
+watch(transcript, (newVal) => {
+  if (newVal) {
+    store.inputText = newVal
+  }
+})
+
+// Watch interim to show live preview in input
+watch(interimTranscript, (newVal) => {
+  if (isListening.value && newVal) {
+    // Show interim transcript as placeholder-like preview
+    // but don't overwrite manual edits
+    if (!store.inputText || store.inputText === transcript.value) {
+      store.inputText = (transcript.value ? transcript.value + ' ' : '') + newVal
+    }
+  }
+})
 
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && !event.shiftKey) {
@@ -790,6 +821,25 @@ onUnmounted(() => {
           @keydown="handleKeydown"
           @input="autoResize"
         />
+        <!-- Voice input button -->
+        <button
+          v-if="voiceSupported"
+          type="button"
+          class="voice-input-btn"
+          :class="{ 'voice-input-btn--active': isListening }"
+          :title="isListening ? 'Stop listening' : 'Voice input'"
+          @click="toggleVoiceInput"
+        >
+          <svg v-if="!isListening" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="4" height="16"/>
+            <rect x="14" y="4" width="4" height="16"/>
+          </svg>
+        </button>
         <button
           class="send-btn"
           :disabled="!canSend"
@@ -798,6 +848,11 @@ onUnmounted(() => {
           <Loader2 v-if="isGenerating" class="spin" :size="18" />
           <Send v-else :size="18" />
         </button>
+      </div>
+
+      <!-- Voice error display -->
+      <div v-if="voiceError" class="voice-error-container">
+        <span class="voice-error">{{ voiceError }}</span>
       </div>
 
       <!-- Quick Actions -->
@@ -1507,6 +1562,58 @@ onUnmounted(() => {
 .send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ============================================================================
+   Voice Input
+   ============================================================================ */
+
+/* Voice input button */
+.voice-input-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-10);
+  height: var(--space-10);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  flex-shrink: 0;
+}
+
+.voice-input-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.voice-input-btn--active {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+  animation: voice-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.voice-error-container {
+  padding: var(--space-2) var(--space-4);
+  background: var(--danger-bg-subtle);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.voice-error {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  display: block;
 }
 
 /* ============================================================================

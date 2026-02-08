@@ -25,11 +25,14 @@ import {
   parseToolCalls,
   executeTool,
   buildToolsPrompt,
+  buildOpenAITools,
+  buildNativeToolsBehaviorPrompt,
   MAX_TOOLS_PER_RESPONSE,
   AI_TOOLS,
   type ToolCall,
   type ToolResult,
 } from '@/services/ai/tools'
+import type { NativeToolCall } from '@/services/ai/types'
 
 // ============================================================================
 // Types
@@ -189,13 +192,14 @@ export function useAIChat() {
 
   /**
    * Build messages for the AI including context.
+   * @param useNativeTools - When true, uses shorter behavior prompt (tool defs sent via API)
    */
-  function buildMessagesForAI(userMessage: string): RouterChatMessage[] {
+  function buildMessagesForAI(userMessage: string, useNativeTools = false): RouterChatMessage[] {
     const ctx = buildContext()
     const aiMessages: RouterChatMessage[] = []
 
     // System prompt with context
-    const systemPrompt = buildSystemPrompt(ctx)
+    const systemPrompt = buildSystemPrompt(ctx, useNativeTools)
     aiMessages.push({ role: 'system', content: systemPrompt })
 
     // Add recent message history (last 10 messages)
@@ -218,8 +222,9 @@ export function useAIChat() {
   /**
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
+   * @param useNativeTools - When true, uses shorter behavior prompt (tool defs sent via API)
    */
-  function buildSystemPrompt(ctx: ChatContext): string {
+  function buildSystemPrompt(ctx: ChatContext, useNativeTools = false): string {
     // Prepend personality prompt if active
     const personalityPrompt = getPersonalitySystemPrompt()
 
@@ -235,7 +240,7 @@ export function useAIChat() {
       '6. Never show JSON to the user or explain tool syntax. Just do the action silently.',
       '7. When using read tools, keep your text response SHORT (1 sentence summary) — the tool results will show the detailed data with clickable links.',
       '',
-      buildToolsPrompt(),
+      useNativeTools ? buildNativeToolsBehaviorPrompt() : buildToolsPrompt(),
       ''
     ]
 
@@ -336,6 +341,7 @@ export function useAIChat() {
     // handle tool calling natively via the AI model.
     const isLocalProvider = selectedProvider.value === 'ollama' ||
       (selectedProvider.value === 'auto' && activeProviderRef.value === 'ollama')
+    const useNativeTools = !isLocalProvider
     const detectedTool = isLocalProvider ? detectToolIntent(content) : null
     if (detectedTool && !options.systemPrompt) {
       await executeDirectTool(content, detectedTool)
@@ -356,21 +362,31 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const aiMessages = buildMessagesForAI(content)
+      const aiMessages = buildMessagesForAI(content, useNativeTools)
 
       // Determine task type from content
       const taskType = options.taskType ?? inferTaskType(content)
 
-      // Stream the response
+      // Stream the response, collecting native tool calls if available
       let fullContent = ''
+      let nativeToolCalls: NativeToolCall[] | undefined
+
       for await (const chunk of router.chatStream(aiMessages, {
         taskType,
         systemPrompt: options.systemPrompt,
         forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
-        model: selectedModel.value || undefined
+        model: selectedModel.value || undefined,
+        ...(useNativeTools && {
+          tools: buildOpenAITools(),
+          toolChoice: 'auto' as const,
+        }),
       })) {
         store.appendStreamingContent(chunk.content)
         fullContent += chunk.content
+        // Collect native tool calls from final chunk
+        if (chunk.toolCalls && chunk.toolCalls.length > 0) {
+          nativeToolCalls = chunk.toolCalls
+        }
       }
 
       // After successful stream, update badge to show the ACTUAL provider used
@@ -382,13 +398,38 @@ export function useAIChat() {
         }
       } catch { /* ignore */ }
 
-      // Parse tool calls from the response
-      const allToolCalls = parseToolCalls(fullContent)
+      // Parse tool calls: prefer native API tool_calls, fallback to regex for Ollama
+      let allToolCalls: ToolCall[]
+      let wasRateLimited = false
 
-      // Rate limiting: parseToolCalls already truncates to MAX_TOOLS_PER_RESPONSE,
-      // but we detect if the original content had more calls for a user warning
-      const toolBlockCount = (fullContent.match(/```(?:tool|json)?\s*\n?[\s\S]*?\n?```/g) || []).length
-      const wasRateLimited = toolBlockCount > MAX_TOOLS_PER_RESPONSE
+      if (nativeToolCalls && nativeToolCalls.length > 0) {
+        console.log('[AIChat] Using native tool calls:', nativeToolCalls.length)
+        allToolCalls = nativeToolCalls
+          .map(tc => {
+            try {
+              const params = JSON.parse(tc.function.arguments)
+              return { tool: tc.function.name, parameters: params } as ToolCall
+            } catch (e) {
+              console.warn('[AIChat] Failed to parse native tool call arguments:', tc.function.arguments, e)
+              return null
+            }
+          })
+          .filter((tc): tc is ToolCall => tc !== null)
+        // Enforce rate limit
+        if (allToolCalls.length > MAX_TOOLS_PER_RESPONSE) {
+          console.warn(`[AIChat] Truncating native tool calls from ${allToolCalls.length} to ${MAX_TOOLS_PER_RESPONSE}`)
+          wasRateLimited = true
+          allToolCalls = allToolCalls.slice(0, MAX_TOOLS_PER_RESPONSE)
+        }
+      } else {
+        // Fallback: regex-based parsing (for Ollama and models that don't support native tools)
+        allToolCalls = parseToolCalls(fullContent)
+
+        // Rate limiting: parseToolCalls already truncates to MAX_TOOLS_PER_RESPONSE,
+        // but we detect if the original content had more calls for a user warning
+        const toolBlockCount = (fullContent.match(/```(?:tool|json)?\s*\n?[\s\S]*?\n?```/g) || []).length
+        wasRateLimited = toolBlockCount > MAX_TOOLS_PER_RESPONSE
+      }
 
       // Strip tool JSON blocks from the displayed message content
       const cleanContent = stripToolBlocks(fullContent)

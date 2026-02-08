@@ -50,6 +50,8 @@ export interface ProxyAIChatRequest {
   temperature?: number
   top_p?: number
   stop_sequences?: string[]
+  tools?: Array<{ type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }>
+  tool_choice?: 'auto' | 'none'
 }
 
 /**
@@ -176,6 +178,8 @@ export async function proxyAIChat(
         temperature: request.temperature,
         top_p: request.top_p,
         stop_sequences: request.stop_sequences,
+        tools: request.tools,
+        tool_choice: request.tool_choice,
       }),
       signal,
     })
@@ -271,6 +275,8 @@ export async function* proxyAIChatStream(
         temperature: request.temperature,
         top_p: request.top_p,
         stop_sequences: request.stop_sequences,
+        tools: request.tools,
+        tool_choice: request.tool_choice,
       }),
       signal,
     })
@@ -329,6 +335,9 @@ async function* parseSSEStream(
   let buffer = ''
   let finalUsage: AITokenUsage | undefined
 
+  // Tool call accumulation for native function calling
+  const toolCallAccumulator: Map<number, { id: string; name: string; arguments: string }> = new Map()
+
   try {
     while (true) {
       const { done, value } = await reader.read()
@@ -348,7 +357,14 @@ async function* parseSSEStream(
         const dataStr = line.slice(5).trim()
 
         if (dataStr === '[DONE]') {
-          yield { content: '', done: true, usage: finalUsage }
+          const accToolCalls = toolCallAccumulator.size > 0
+            ? Array.from(toolCallAccumulator.values()).map(tc => ({
+                id: tc.id,
+                type: 'function' as const,
+                function: { name: tc.name, arguments: tc.arguments }
+              }))
+            : undefined
+          yield { content: '', done: true, usage: finalUsage, toolCalls: accToolCalls }
           return
         }
 
@@ -360,6 +376,25 @@ async function* parseSSEStream(
           const choice = chunk.choices[0]
           const content = choice.delta?.content || ''
 
+          // Accumulate native tool call deltas
+          if (choice.delta?.tool_calls) {
+            for (const tc of choice.delta.tool_calls) {
+              const idx = tc.index ?? 0
+              const existing = toolCallAccumulator.get(idx)
+              if (!existing) {
+                toolCallAccumulator.set(idx, {
+                  id: tc.id || '',
+                  name: tc.function?.name || '',
+                  arguments: tc.function?.arguments || '',
+                })
+              } else {
+                if (tc.id) existing.id = tc.id
+                if (tc.function?.name) existing.name = tc.function.name
+                if (tc.function?.arguments) existing.arguments += tc.function.arguments
+              }
+            }
+          }
+
           if (chunk.usage) {
             finalUsage = {
               promptTokens: chunk.usage.prompt_tokens,
@@ -368,15 +403,31 @@ async function* parseSSEStream(
             }
           }
 
-          yield {
-            content,
-            done: choice.finish_reason !== null,
-            usage: chunk.usage ? finalUsage : undefined,
-            finishReason: choice.finish_reason || undefined,
+          // Build accumulated tool calls for final chunk
+          if (choice.finish_reason) {
+            const accToolCalls = toolCallAccumulator.size > 0
+              ? Array.from(toolCallAccumulator.values()).map(tc => ({
+                  id: tc.id,
+                  type: 'function' as const,
+                  function: { name: tc.name, arguments: tc.arguments }
+                }))
+              : undefined
+
+            yield {
+              content,
+              done: true,
+              usage: chunk.usage ? finalUsage : undefined,
+              finishReason: choice.finish_reason || undefined,
+              toolCalls: accToolCalls,
+            }
+            return
           }
 
-          if (choice.finish_reason) {
-            return
+          yield {
+            content,
+            done: false,
+            usage: chunk.usage ? finalUsage : undefined,
+            finishReason: undefined,
           }
         } catch (parseError) {
           // Log but continue processing other chunks

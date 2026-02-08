@@ -425,6 +425,8 @@ export class AIRouter {
       stopSequences: options.stopSequences,
       systemPrompt: options.systemPrompt,
       timeout: options.timeout,
+      tools: options.tools,
+      toolChoice: options.toolChoice,
     }
 
     try {
@@ -492,6 +494,8 @@ export class AIRouter {
         systemPrompt: options.systemPrompt,
         stream: true,
         timeout: options.timeout,
+        tools: options.tools,
+        toolChoice: options.toolChoice,
       }
 
       try {

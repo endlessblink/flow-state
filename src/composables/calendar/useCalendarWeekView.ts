@@ -18,7 +18,7 @@ export type { WeekEvent } from '@/types/tasks'
  * Week view specific logic for calendar
  * Handles 7-day grid, events positioning, drag-and-drop, and resizing
  */
-export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
+export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
 
@@ -106,8 +106,9 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     weekDays.value.forEach((day, dayIndex) => {
       const dayEvents: WeekEvent[] = []
 
-      // Use filtered tasks to respect active status filter
-      taskStore.filteredTasks.forEach(task => {
+      // Use calendarFilteredTasks to bypass smart view filters (done tasks stay visible)
+      // Only filters by project + hideCalendarDoneTasks toggle
+      taskStore.calendarFilteredTasks.forEach(task => {
         if (!task) return
 
         try {
@@ -126,7 +127,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
             })
             .forEach((instance: any) => {
               const [hour, minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
-              const duration = instance.duration || task.estimatedDuration || 30
+              const baseDuration = instance.duration || task.estimatedDuration || 30
+
+              // TASK-1285: Apply timer growth if active
+              const growthMinutes = (instance.id && timerGrowthMap?.value?.get(instance.id)) || 0
+              const duration = baseDuration + growthMinutes
 
               // Only show if within working hours
               if (hour >= 6 && hour < 23) {
@@ -147,7 +152,9 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                   column: 0,
                   totalColumns: 1,
                   dayIndex,
-                  isDueDate: false
+                  isDueDate: false,
+                  instanceStatus: instance.status,
+                  taskStatus: task.status
                 })
               }
             })

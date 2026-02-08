@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject } from 'vue'
+import { Play } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
@@ -37,6 +38,7 @@ defineEmits<{
   (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'removeFromCalendar', calEvent: CalendarEvent): void
+  (e: 'startTimer', calEvent: CalendarEvent): void
   (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
 }>()
 // Inject helpers from parent CalendarView
@@ -177,6 +179,13 @@ const {
                   {{ calEvent.title }}
                 </div>
                 <div class="task-actions">
+                  <button
+                    class="play-timer-btn"
+                    title="Start timer for this task"
+                    @click.stop="$emit('startTimer', calEvent)"
+                  >
+                    <Play :size="12" />
+                  </button>
                   <div
                     class="status-indicator"
                     :class="`status-${getTaskStatus(calEvent)}`"
@@ -436,12 +445,12 @@ const {
 }
 
 .slot-task.is-compact .task-title {
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 
 .slot-task.is-compact .task-meta {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 /* Hide actions in compact mode to save space */
@@ -604,6 +613,25 @@ const {
 
 .status-indicator:hover {
   background: var(--glass-border);
+}
+
+.play-timer-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--space-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-timer-btn:hover {
+  color: var(--color-success);
+  background: var(--color-success-bg-light, rgba(34, 197, 94, 0.1));
 }
 
 .remove-from-calendar-btn {

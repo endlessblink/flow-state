@@ -131,6 +131,8 @@ export interface CalendarEvent {
   totalColumns: number
   isDueDate: boolean // Whether this represents a task due date
   projectId?: string // Project association for visual styling
+  instanceStatus?: 'scheduled' | 'completed' | 'skipped' // TASK-1285: Instance completion tracking
+  taskStatus?: Task['status'] // TASK-1285: Parent task status for UI display
 }
 
 export interface WeekEvent extends CalendarEvent {

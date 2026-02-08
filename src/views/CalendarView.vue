@@ -89,6 +89,7 @@
         @event-context-menu="handleEventContextMenu"
         @cycle-status="cycleTaskStatus"
         @remove-from-calendar="handleRemoveFromCalendar"
+        @start-timer="startTimerOnCalendarEvent"
         @start-resize="startResize"
       />
 
@@ -108,6 +109,7 @@
         @event-context-menu="handleEventContextMenu"
         @cycle-status="cycleTaskStatus"
         @remove-from-calendar="handleRemoveFromCalendar"
+        @start-timer="startTimerOnCalendarEvent"
         @start-resize="startWeekResize"
       />
 
@@ -139,6 +141,7 @@ import { useCalendarDragCreate } from '@/composables/useCalendarDragCreate'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
+import { useCalendarTimerIntegration } from '@/composables/calendar/useCalendarTimerIntegration'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
 import { useCalendarInteractionHandlers } from '@/composables/calendar/useCalendarInteractionHandlers'
 import { useCalendarModals } from '@/composables/calendar/useCalendarModals'
@@ -241,8 +244,13 @@ const handleTaskCreated = () => {
 }
 const eventHelpers = useCalendarCore()
 const calendarScroll = useCalendarScroll()
-const dayView = useCalendarDayView(currentDate, statusFilter)
-const weekView = useCalendarWeekView(currentDate, statusFilter)
+
+// TASK-1285: Timer-calendar integration (growth map for real-time time block growth)
+const timerIntegration = useCalendarTimerIntegration(currentDate)
+const { timerGrowthMap, startTimerOnCalendarEvent } = timerIntegration
+
+const dayView = useCalendarDayView(currentDate, statusFilter, timerGrowthMap)
+const weekView = useCalendarWeekView(currentDate, statusFilter, timerGrowthMap)
 const monthView = useCalendarMonthView(currentDate, statusFilter)
 
 // Reactive current time for time indicator

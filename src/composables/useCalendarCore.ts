@@ -108,6 +108,13 @@ export function useCalendarCore() {
     const nextStatus = statusCycle[nextIndex]
 
     await taskStore.moveTask(task.id, nextStatus) // BUG-1051: AWAIT to ensure persistence
+
+    // TASK-1285: Mark instance as completed when task cycles to done
+    if (nextStatus === 'done' && calendarEvent.instanceId) {
+      taskStore.updateTaskInstance(calendarEvent.taskId, calendarEvent.instanceId, {
+        status: 'completed'
+      })
+    }
   }
 
   // === PROJECT UTILITIES ===

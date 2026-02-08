@@ -7,9 +7,9 @@
       v-model:selected-canvas-groups="selectedCanvasGroups"
       v-model:show-advanced-filters="showAdvancedFilters"
       v-model:unscheduled-only="unscheduledOnly"
-      v-model:selected-priority="selectedPriority"
-      v-model:selected-project="selectedProject"
-      v-model:selected-duration="selectedDuration"
+      v-model:selected-priorities="selectedPriorities"
+      v-model:selected-projects="selectedProjects"
+      v-model:selected-durations="selectedDurations"
       :inbox-count="inboxTasks.length"
       :today-count="todayCount"
       :has-active-filters="hasActiveFilters"
@@ -72,9 +72,9 @@ const {
   showTodayOnly,
   showAdvancedFilters,
   unscheduledOnly,
-  selectedPriority,
-  selectedProject,
-  selectedDuration,
+  selectedPriorities,
+  selectedProjects,
+  selectedDurations,
   selectedCanvasGroups,
   searchQuery, // TASK-1075
   hideCalendarDoneTasks,

@@ -120,17 +120,17 @@
       <InboxFilters
         v-if="showAdvancedFilters"
         :unscheduled-only="unscheduledOnly"
-        :selected-priority="selectedPriority"
-        :selected-project="selectedProject"
-        :selected-duration="selectedDuration"
+        :selected-priorities="selectedPriorities"
+        :selected-projects="selectedProjects"
+        :selected-durations="selectedDurations"
         :hide-done-tasks="hideDoneTasks"
         :sort-by="sortBy"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduled-only', $event)"
-        @update:selected-priority="$emit('update:selected-priority', $event)"
-        @update:selected-project="$emit('update:selected-project', $event)"
-        @update:selected-duration="$emit('update:selected-duration', $event)"
+        @update:selected-priorities="$emit('update:selected-priorities', $event)"
+        @update:selected-projects="$emit('update:selected-projects', $event)"
+        @update:selected-durations="$emit('update:selected-durations', $event)"
         @update:hide-done-tasks="$emit('update:hide-done-tasks', $event)"
         @update:sort-by="$emit('update:sortBy', $event)"
         @clear-all="$emit('clearAll')"
@@ -167,9 +167,9 @@ const props = defineProps<{
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
-  selectedPriority: 'high' | 'medium' | 'low' | null
-  selectedProject: string | null
-  selectedDuration: DurationCategory | null
+  selectedPriorities: Set<string>
+  selectedProjects: Set<string>
+  selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
   doneTaskCount: number
   baseTasks: Task[]
@@ -185,9 +185,9 @@ const emit = defineEmits<{
   (e: 'toggleAdvancedFilters'): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void
-  (e: 'update:selected-priority', value: 'high' | 'medium' | 'low' | null): void
-  (e: 'update:selected-project', value: string | null): void
-  (e: 'update:selected-duration', value: DurationCategory | null): void
+  (e: 'update:selected-priorities', value: Set<string>): void
+  (e: 'update:selected-projects', value: Set<string>): void
+  (e: 'update:selected-durations', value: Set<DurationCategory>): void
   (e: 'update:hide-done-tasks', value: boolean): void
   (e: 'update:sortBy', value: SortByType): void // TASK-1073
   (e: 'update:searchQuery', value: string): void // TASK-1075

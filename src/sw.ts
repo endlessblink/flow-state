@@ -56,13 +56,12 @@ registerRoute(
 registerRoute(
   new Route(
     ({ url }) => {
-      // Match Supabase REST API and Realtime endpoints
-      const isSupabaseAPI = url.hostname.includes('supabase.co') ||
-        url.hostname.includes('api.in-theflow.com')
+      // Match Supabase API endpoints — never cache these
+      // Uses path-based detection so self-hosted instances work on any hostname
       const isRestAPI = url.pathname.includes('/rest/v1/')
       const isRealtime = url.pathname.includes('/realtime/')
-      const isAuth = url.pathname.includes('/auth/')
-      return isSupabaseAPI && (isRestAPI || isRealtime || isAuth)
+      const isAuth = url.pathname.includes('/auth/v1/')
+      return isRestAPI || isRealtime || isAuth
     },
     new NetworkOnly() // Never cache - always fetch from network
   )

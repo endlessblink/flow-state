@@ -13,20 +13,21 @@ const envUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 // Supabase JS client requires full URL (not relative path)
-// BUG-1064: Tauri ALWAYS connects to VPS for reliable cross-platform sync
-// Local Supabase is only used for backup, not for the main app connection
+// Self-hosting: All URLs come from env vars. No hardcoded fallbacks.
+// Production: Doppler injects VITE_SUPABASE_URL at build time.
 function resolveSupabaseUrl(): string {
-    // Production VPS URL - hardcoded for reliability
-    const VPS_URL = 'https://api.in-theflow.com'
-
-    // Tauri: Use env var if set (self-hosted builds), fall back to VPS (official builds)
-    if (isTauri) {
-        const url = envUrl || VPS_URL
-        console.log('[Supabase] Tauri →', url)
-        return url
+    if (!envUrl) {
+        console.warn('[Supabase] No VITE_SUPABASE_URL configured — running in Guest Mode')
+        return ''
     }
 
-    // Web/PWA: Use env var or resolve relative path
+    // Tauri: Use env var directly (must be a full URL)
+    if (isTauri) {
+        console.log('[Supabase] Tauri →', envUrl)
+        return envUrl
+    }
+
+    // Web/PWA: Resolve relative path (e.g. '/supabase' → 'https://host/supabase')
     if (envUrl.startsWith('/') && typeof window !== 'undefined') {
         const resolved = `${window.location.origin}${envUrl}`
         console.log('[Supabase] Web/PWA:', resolved)
@@ -34,8 +35,8 @@ function resolveSupabaseUrl(): string {
     }
 
     // Default: use env URL as-is
-    console.log('[Supabase] Using:', envUrl || VPS_URL)
-    return envUrl || VPS_URL
+    console.log('[Supabase] Using:', envUrl)
+    return envUrl
 }
 
 const supabaseUrl = resolveSupabaseUrl()

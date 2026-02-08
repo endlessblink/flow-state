@@ -387,32 +387,57 @@ export function useTaskPersistence(
     // --- FILTERS ---
     // (Kept as localStorage only, same as before)
 
+    const applyFilterState = (state: PersistedFilterState) => {
+        if (state.activeProjectId && !projectStore.projects.find(p => p.id === state.activeProjectId)) {
+            state.activeProjectId = null
+        }
+        projectStore.setActiveProject(state.activeProjectId)
+        activeSmartView.value = state.activeSmartView
+        activeStatusFilter.value = state.activeStatusFilter
+        // TASK-1215: Restore duration filter
+        activeDurationFilter.value = state.activeDurationFilter ?? null
+        hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
+        hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
+        hideCanvasOverdueTasks.value = state.hideCanvasOverdueTasks ?? false
+    }
+
     const loadFiltersFromLocalStorage = () => {
         try {
             const localSaved = localStorage.getItem(FILTER_STORAGE_KEY)
             if (localSaved) {
                 const state: PersistedFilterState = JSON.parse(localSaved)
-                if (state.activeProjectId && !projectStore.projects.find(p => p.id === state.activeProjectId)) {
-                    state.activeProjectId = null
-                }
-                projectStore.setActiveProject(state.activeProjectId)
-                activeSmartView.value = state.activeSmartView
-                activeStatusFilter.value = state.activeStatusFilter
-                // TASK-1215: Restore duration filter
-                activeDurationFilter.value = state.activeDurationFilter ?? null
-                hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
-                hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false
-                hideCanvasOverdueTasks.value = state.hideCanvasOverdueTasks ?? false
+                applyFilterState(state)
+                return true
             }
         } catch (_e) {
             console.warn('Failed to load filters from localStorage:', _e)
         }
+        return false
     }
 
     const loadPersistedFilters = async () => {
         isLoadingFilters.value = true
         try {
-            loadFiltersFromLocalStorage()
+            const loadedFromLocal = loadFiltersFromLocalStorage()
+
+            // BUG-1219: In Tauri, localStorage can be empty after restart.
+            // Fall back to reading directly from Tauri native store.
+            if (!loadedFromLocal && isTauriEnv()) {
+                try {
+                    const store = await getTauriStore()
+                    if (store) {
+                        const state = await store.get(FILTER_STORAGE_KEY) as PersistedFilterState | null
+                        if (state) {
+                            console.log('[TaskPersistence] Restored filters from Tauri store (localStorage was empty)')
+                            applyFilterState(state)
+                            // Re-populate localStorage so subsequent reads work
+                            localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[TaskPersistence] Failed to read filters from Tauri store:', e)
+                }
+            }
         } finally {
             isLoadingFilters.value = false
         }
@@ -437,12 +462,14 @@ export function useTaskPersistence(
             localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state))
 
             // TASK-1215: Also write to Tauri store for reliable persistence
+            // BUG-1219: Flush immediately (no scheduleTauriSave debounce) to prevent
+            // data loss if the app is closed shortly after a filter change
             if (isTauriEnv()) {
                 const store = await getTauriStore()
                 if (store) {
                     try {
                         await store.set(FILTER_STORAGE_KEY, state)
-                        scheduleTauriSave(FILTER_STORAGE_KEY)
+                        await store.save()
                     } catch (e) {
                         console.warn('[TaskPersistence] Failed to write filters to Tauri store:', e)
                     }

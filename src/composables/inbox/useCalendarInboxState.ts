@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
@@ -14,9 +15,23 @@ export function useCalendarInboxState() {
     // Advanced Filters
     const showAdvancedFilters = ref(false)
     const unscheduledOnly = ref(false)
-    const selectedPriority = ref<'high' | 'medium' | 'low' | null>(null)
-    const selectedProject = ref<string | null>(null)
-    const selectedDuration = ref<DurationCategory | null>(null)
+    // TASK-1246: Multi-select filters with persistence (array-backed for JSON-safe, Set API via computed)
+    const _selectedPriorities = usePersistentRef<string[]>('flowstate:cal-inbox-priority-filters', [])
+    const _selectedProjects = usePersistentRef<string[]>('flowstate:cal-inbox-project-filters', [])
+    const _selectedDurations = usePersistentRef<string[]>('flowstate:cal-inbox-duration-filters', [])
+
+    const selectedPriorities = computed({
+        get: () => new Set(_selectedPriorities.value),
+        set: (val: Set<string>) => { _selectedPriorities.value = Array.from(val) }
+    })
+    const selectedProjects = computed({
+        get: () => new Set(_selectedProjects.value),
+        set: (val: Set<string>) => { _selectedProjects.value = Array.from(val) }
+    })
+    const selectedDurations = computed({
+        get: () => new Set<DurationCategory>(_selectedDurations.value as DurationCategory[]),
+        set: (val: Set<DurationCategory>) => { _selectedDurations.value = Array.from(val) }
+    })
     const selectedCanvasGroups = ref<Set<string>>(new Set())
 
     // TASK-1075: Search query
@@ -70,9 +85,9 @@ export function useCalendarInboxState() {
     const hasActiveFilters = computed(() => {
         return showTodayOnly.value ||
             unscheduledOnly.value ||
-            selectedPriority.value !== null ||
-            selectedProject.value !== null ||
-            selectedDuration.value !== null ||
+            selectedPriorities.value.size > 0 ||
+            selectedProjects.value.size > 0 ||
+            selectedDurations.value.size > 0 ||
             (selectedCanvasGroups.value.size > 0)
     })
 
@@ -99,21 +114,22 @@ export function useCalendarInboxState() {
             tasks = tasks.filter(task => !isScheduledOnCalendar(task))
         }
 
-        if (selectedPriority.value !== null) {
-            tasks = tasks.filter(task => task.priority === selectedPriority.value)
+        // TASK-1246: Multi-select filters (OR within each)
+        if (selectedPriorities.value.size > 0) {
+            tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? ''))
         }
 
-        if (selectedProject.value !== null) {
-            if (selectedProject.value === 'none') {
-                tasks = tasks.filter(task => !task.projectId)
-            } else {
-                tasks = tasks.filter(task => task.projectId === selectedProject.value)
-            }
+        if (selectedProjects.value.size > 0) {
+            tasks = tasks.filter(task => {
+                if (selectedProjects.value.has('none') && !task.projectId) return true
+                return selectedProjects.value.has(task.projectId ?? '')
+            })
         }
 
-        if (selectedDuration.value !== null) {
+        if (selectedDurations.value.size > 0) {
+            const durCats = Array.from(selectedDurations.value)
             tasks = tasks.filter(task =>
-                matchesDurationCategory(task.estimatedDuration, selectedDuration.value!)
+                durCats.some(cat => matchesDurationCategory(task.estimatedDuration, cat))
             )
         }
 
@@ -138,9 +154,9 @@ export function useCalendarInboxState() {
 
     const clearAllFilters = () => {
         unscheduledOnly.value = false
-        selectedPriority.value = null
-        selectedProject.value = null
-        selectedDuration.value = null
+        selectedPriorities.value = new Set()
+        selectedProjects.value = new Set()
+        selectedDurations.value = new Set()
         selectedCanvasGroups.value = new Set()
         searchQuery.value = '' // TASK-1075
     }
@@ -151,9 +167,9 @@ export function useCalendarInboxState() {
         showTodayOnly,
         showAdvancedFilters,
         unscheduledOnly,
-        selectedPriority,
-        selectedProject,
-        selectedDuration,
+        selectedPriorities,
+        selectedProjects,
+        selectedDurations,
         selectedCanvasGroups,
         searchQuery, // TASK-1075
 

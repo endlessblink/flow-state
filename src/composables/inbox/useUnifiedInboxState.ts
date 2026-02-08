@@ -30,9 +30,23 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Advanced Filter State (TASK-1215: Persist across restarts via Tauri store + localStorage) ---
     const showAdvancedFilters = usePersistentRef<boolean>('flowstate:inbox-advanced-filters', false)
     const unscheduledOnly = usePersistentRef<boolean>('flowstate:inbox-unscheduled-only', false)
-    const selectedPriority = usePersistentRef<'high' | 'medium' | 'low' | null>('flowstate:inbox-priority-filter', null)
-    const selectedProject = usePersistentRef<string | null>('flowstate:inbox-project-filter', null)
-    const selectedDuration = usePersistentRef<DurationCategory | null>('flowstate:inbox-duration-filter', null)
+    // TASK-1246: Multi-select filters (array-backed for JSON-safe persistence, Set API via computed)
+    const _selectedPriorities = usePersistentRef<string[]>('flowstate:inbox-priority-filters', [])
+    const _selectedProjects = usePersistentRef<string[]>('flowstate:inbox-project-filters', [])
+    const _selectedDurations = usePersistentRef<string[]>('flowstate:inbox-duration-filters', [])
+
+    const selectedPriorities = computed({
+        get: () => new Set(_selectedPriorities.value),
+        set: (val: Set<string>) => { _selectedPriorities.value = Array.from(val) }
+    })
+    const selectedProjects = computed({
+        get: () => new Set(_selectedProjects.value),
+        set: (val: Set<string>) => { _selectedProjects.value = Array.from(val) }
+    })
+    const selectedDurations = computed({
+        get: () => new Set<DurationCategory>(_selectedDurations.value as DurationCategory[]),
+        set: (val: Set<DurationCategory>) => { _selectedDurations.value = Array.from(val) }
+    })
 
     // TASK-1073: Sort state (TASK-1215: upgraded to Tauri-aware persistence)
     const sortBy = usePersistentRef<SortByType>('flowstate:inbox-sort-by', 'newest', 'inbox-sort-by')
@@ -176,24 +190,24 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             tasks = tasks.filter(task => !isScheduledOnCalendar(task))
         }
 
-        // 4. Priority Filter
-        if (selectedPriority.value !== null) {
-            tasks = tasks.filter(task => task.priority === selectedPriority.value)
+        // 4. Priority Filter (TASK-1246: multi-select, OR within)
+        if (selectedPriorities.value.size > 0) {
+            tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? ''))
         }
 
-        // 5. Project Filter
-        if (selectedProject.value !== null) {
-            if (selectedProject.value === 'none') {
-                tasks = tasks.filter(task => !task.projectId)
-            } else {
-                tasks = tasks.filter(task => task.projectId === selectedProject.value)
-            }
+        // 5. Project Filter (TASK-1246: multi-select, OR within, handles 'none' sentinel)
+        if (selectedProjects.value.size > 0) {
+            tasks = tasks.filter(task => {
+                if (selectedProjects.value.has('none') && !task.projectId) return true
+                return selectedProjects.value.has(task.projectId ?? '')
+            })
         }
 
-        // 6. Duration Filter
-        if (selectedDuration.value !== null) {
+        // 6. Duration Filter (TASK-1246: multi-select, OR within)
+        if (selectedDurations.value.size > 0) {
+            const durCats = Array.from(selectedDurations.value)
             tasks = tasks.filter(task =>
-                matchesDurationCategory(task.estimatedDuration, selectedDuration.value!)
+                durCats.some(cat => matchesDurationCategory(task.estimatedDuration, cat))
             )
         }
 
@@ -240,9 +254,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     const clearAllFilters = () => {
         unscheduledOnly.value = false
-        selectedPriority.value = null
-        selectedProject.value = null
-        selectedDuration.value = null
+        selectedPriorities.value = new Set()
+        selectedProjects.value = new Set()
+        selectedDurations.value = new Set()
         activeTimeFilter.value = 'all'
         selectedCanvasGroups.value = new Set()
         searchQuery.value = '' // TASK-1075
@@ -273,9 +287,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         activeTimeFilter,
         showAdvancedFilters,
         unscheduledOnly,
-        selectedPriority,
-        selectedProject,
-        selectedDuration,
+        selectedPriorities,
+        selectedProjects,
+        selectedDurations,
         selectedCanvasGroups,
         currentHideDoneTasks,
         sortBy, // TASK-1073

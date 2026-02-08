@@ -272,39 +272,39 @@
                 :class="{ active: isToday }"
                 @click="setDueDate('today')"
               >
-                Today
+                ☀️ Today
               </button>
               <button
                 class="pill"
                 :class="{ active: isTomorrow }"
                 @click="setDueDate('tomorrow')"
               >
-                Tmrw
+                🌅 Tmrw
               </button>
               <button
                 class="pill"
                 @click="setDueDate('in3days')"
               >
-                +3d
+                📅 +3d
               </button>
               <button
                 class="pill"
                 :class="{ active: isWeekend }"
                 @click="setDueDate('weekend')"
               >
-                Wknd
+                🏖️ Wknd
               </button>
               <button
                 class="pill"
                 @click="setDueDate('nextweek')"
               >
-                +1wk
+                📆 +1wk
               </button>
               <button
                 class="pill"
                 @click="setDueDate('1month')"
               >
-                +1mo
+                🗓️ +1mo
               </button>
               <button
                 class="pill clear"
@@ -1676,13 +1676,15 @@ onMounted(() => {
 
 .date-pills-scroll {
   display: flex;
-  gap: var(--space-1_5);
+  gap: var(--space-2_5);
   flex: 1;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-bottom: 2px; /* Prevent cut-off on scroll */
+  padding-inline-end: var(--space-4);
+  scroll-snap-type: x proximity;
 }
 
 .date-pills-scroll::-webkit-scrollbar {
@@ -1696,6 +1698,7 @@ onMounted(() => {
 .pill {
   flex: 0 0 auto;
   padding: var(--space-2) var(--space-2_5);
+  min-height: 40px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);

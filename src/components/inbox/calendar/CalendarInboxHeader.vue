@@ -122,16 +122,16 @@
       <InboxFilters
         v-if="showAdvancedFilters"
         :unscheduled-only="unscheduledOnly"
-        :selected-priority="selectedPriority"
-        :selected-project="selectedProject"
-        :selected-duration="selectedDuration"
+        :selected-priorities="selectedPriorities"
+        :selected-projects="selectedProjects"
+        :selected-durations="selectedDurations"
         :hide-done-tasks="hideDoneTasks"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduledOnly', $event)"
-        @update:selected-priority="$emit('update:selectedPriority', $event)"
-        @update:selected-project="$emit('update:selectedProject', $event)"
-        @update:selected-duration="$emit('update:selectedDuration', $event)"
+        @update:selected-priorities="$emit('update:selectedPriorities', $event)"
+        @update:selected-projects="$emit('update:selectedProjects', $event)"
+        @update:selected-durations="$emit('update:selectedDurations', $event)"
         @update:hide-done-tasks="$emit('toggleHideDoneTasks')"
         @clear-all="$emit('clearAllFilters')"
       />
@@ -160,9 +160,9 @@ defineProps<{
   selectedCanvasGroups: Set<string>
   showAdvancedFilters: boolean
   unscheduledOnly: boolean
-  selectedPriority: 'high' | 'medium' | 'low' | null
-  selectedProject: string | null
-  selectedDuration: DurationCategory | null
+  selectedPriorities: Set<string>
+  selectedProjects: Set<string>
+  selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
   baseTasks: Task[]
   rootProjects: any[]
@@ -175,9 +175,9 @@ const emit = defineEmits<{
   (e: 'update:selectedCanvasGroups', value: Set<string>): void
   (e: 'update:showAdvancedFilters', value: boolean): void
   (e: 'update:unscheduledOnly', value: boolean): void
-  (e: 'update:selectedPriority', value: 'high' | 'medium' | 'low' | null): void
-  (e: 'update:selectedProject', value: string | null): void
-  (e: 'update:selectedDuration', value: DurationCategory | null): void
+  (e: 'update:selectedPriorities', value: Set<string>): void
+  (e: 'update:selectedProjects', value: Set<string>): void
+  (e: 'update:selectedDurations', value: Set<DurationCategory>): void
   (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'toggleHideDoneTasks'): void
   (e: 'clearAllFilters'): void

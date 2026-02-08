@@ -135,9 +135,9 @@ function handleClose() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(4px);
-  z-index: 10000;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(var(--space-1));
+  z-index: var(--z-tooltip);
 }
 
 .challenge-complete-card {
@@ -150,14 +150,14 @@ function handleClose() {
   background: linear-gradient(
     135deg,
     rgba(34, 197, 94, 0.2) 0%,
-    rgba(20, 20, 25, 0.95) 50%,
+    var(--glass-bg-solid) 50%,
     rgba(0, 200, 255, 0.1) 100%
   );
-  border: 2px solid var(--color-success-500);
+  border: var(--space-px) solid var(--color-success-500);
   border-radius: var(--radius-xl);
   box-shadow:
-    0 0 40px var(--color-success-500/30),
-    0 20px 60px rgba(0, 0, 0, 0.5);
+    0 0 var(--space-10) var(--success-shadow),
+    var(--shadow-dark-xl);
   text-align: center;
   max-width: 400px;
   width: 90%;
@@ -167,7 +167,7 @@ function handleClose() {
 /* Decorative sparkles */
 .sparkles {
   position: absolute;
-  top: -20px;
+  top: calc(-1 * var(--space-5));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -187,62 +187,62 @@ function handleClose() {
     opacity: 0.5;
   }
   50% {
-    transform: translateX(var(--offset-x, 0)) translateY(-10px) scale(1.2);
+    transform: translateX(var(--offset-x, 0)) translateY(calc(-1 * var(--space-2_5))) scale(1.2);
     opacity: 1;
   }
 }
 
 /* Trophy */
 .trophy-container {
-  width: 80px;
-  height: 80px;
+  width: var(--space-20);
+  height: var(--space-20);
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--color-warning-500), var(--color-warning-400));
-  border-radius: 50%;
-  box-shadow: 0 0 30px var(--color-warning-500/50);
-  animation: trophy-pulse 1s ease-in-out infinite alternate;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 var(--space-8) var(--color-warning-500/50);
+  animation: trophy-pulse 1s var(--ease-in-out) infinite alternate;
 }
 
 @keyframes trophy-pulse {
   from {
-    box-shadow: 0 0 20px var(--color-warning-500/30);
+    box-shadow: 0 0 var(--space-5) var(--color-warning-500/30);
     transform: scale(1);
   }
   to {
-    box-shadow: 0 0 40px var(--color-warning-500/60);
+    box-shadow: 0 0 var(--space-10) var(--color-warning-500/60);
     transform: scale(1.05);
   }
 }
 
 .trophy-icon {
-  color: white;
-  animation: trophy-bounce 0.6s ease-in-out infinite alternate;
+  color: var(--text-primary);
+  animation: trophy-bounce 0.6s var(--ease-in-out) infinite alternate;
 }
 
 @keyframes trophy-bounce {
   from { transform: translateY(0) rotate(-5deg); }
-  to { transform: translateY(-4px) rotate(5deg); }
+  to { transform: translateY(calc(-1 * var(--space-1))) rotate(5deg); }
 }
 
 /* Title */
 .complete-title {
   margin: 0;
   font-size: var(--text-2xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--color-success-400);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  text-shadow: 0 0 20px var(--color-success-500/50);
+  text-shadow: 0 0 var(--space-5) var(--success-shadow);
 }
 
 /* Challenge name */
 .challenge-name {
   margin: 0;
   font-size: var(--text-base);
-  color: var(--color-gray-300);
-  font-weight: 500;
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
 }
 
 /* Rewards */
@@ -250,7 +250,7 @@ function handleClose() {
   display: flex;
   gap: var(--space-6);
   padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-weak);
   border-radius: var(--radius-lg);
 }
 
@@ -275,8 +275,8 @@ function handleClose() {
 
 .reward-value {
   font-size: var(--text-xl);
-  font-weight: 700;
-  color: white;
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
 }
 
 .reward-label {
@@ -292,31 +292,31 @@ function handleClose() {
   font-style: italic;
   color: var(--color-primary-300);
   max-width: 300px;
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 /* Close button */
 .close-button {
   padding: var(--space-2) var(--space-6);
   background: linear-gradient(135deg, var(--color-success-600), var(--color-success-500));
-  color: white;
+  color: var(--text-primary);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .close-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--color-success-500/30);
+  transform: translateY(calc(-1 * var(--space-px) * 2));
+  box-shadow: 0 var(--space-1) var(--space-3) var(--success-shadow);
 }
 
 /* Transitions */
 .overlay-enter-active,
 .overlay-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-slow) var(--ease-out);
 }
 
 .overlay-enter-from,
@@ -326,16 +326,16 @@ function handleClose() {
 
 .content-enter-active,
 .content-leave-active {
-  transition: all 0.3s ease;
+  transition: all var(--duration-slow) var(--ease-out);
 }
 
 .content-enter-from {
   opacity: 0;
-  transform: scale(0.8) translateY(20px);
+  transform: scale(0.8) translateY(var(--space-5));
 }
 
 .content-leave-to {
   opacity: 0;
-  transform: scale(0.9) translateY(-10px);
+  transform: scale(0.9) translateY(calc(-1 * var(--space-2_5)));
 }
 </style>

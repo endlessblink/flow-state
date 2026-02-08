@@ -139,6 +139,7 @@ import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
 import { useAuthStore } from '@/stores/auth'
 import CyberSummaryCard from './CyberSummaryCard.vue'
+import { EXTERNAL_URLS } from '@/config/urls'
 
 const emit = defineEmits<{
   navigate: [section: 'missions' | 'boss' | 'upgrades' | 'achievements']
@@ -164,7 +165,7 @@ const { activeDailies, activeBoss, completedTodayCount: storeCompletedToday } = 
 // Avatar URL from email seed
 const avatarUrl = computed(() => {
   const email = authStore.user?.email || 'default'
-  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(email)}`
+  return `${EXTERNAL_URLS.DICEBEAR_API}?seed=${encodeURIComponent(email)}`
 })
 
 // Missions card data — use the store's computed directly
@@ -292,8 +293,8 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-character-avatar {
-  width: 48px;
-  height: 48px;
+  width: var(--space-12);
+  height: var(--space-12);
   border-radius: var(--radius-md);
   border: 2px solid var(--cf-cyan);
   flex-shrink: 0;
@@ -315,7 +316,7 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-character-xp-bar {
-  height: 6px;
+  height: var(--space-1_5);
   background: var(--cf-dark-2);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -329,7 +330,7 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-character-xp-text {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   font-family: var(--font-cyber-data);
 }
@@ -349,11 +350,11 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-character-class {
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--cf-magenta);
   font-family: var(--font-cyber-title);
   font-weight: 700;
-  padding: 2px var(--space-2);
+  padding: var(--space-0_5) var(--space-2);
   background: var(--cf-dark-2);
   border: 1px solid var(--cf-magenta);
   border-radius: var(--radius-sm);
@@ -375,7 +376,7 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-missions-progress-bar {
-  height: 8px;
+  height: var(--space-2);
   background: var(--cf-dark-2);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -410,7 +411,7 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-boss-hp-bar {
-  height: 8px;
+  height: var(--space-2);
   background: var(--cf-dark-2);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -423,7 +424,7 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-boss-hp-fill.hp-high {
-  background: #10b981;
+  background: var(--color-success);
 }
 
 .cdh-boss-hp-fill.hp-medium {
@@ -431,7 +432,7 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
 }
 
 .cdh-boss-hp-fill.hp-low {
-  background: #ef4444;
+  background: var(--color-danger);
 }
 
 .cdh-boss-hp-text {
@@ -526,8 +527,8 @@ const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
   }
 
   .cdh-character-avatar {
-    width: 40px;
-    height: 40px;
+    width: var(--space-10);
+    height: var(--space-10);
   }
 
   .cdh-aria-message {

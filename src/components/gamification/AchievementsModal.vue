@@ -148,9 +148,9 @@ const categoryStats = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(var(--space-1));
+  z-index: var(--z-modal);
 }
 
 .modal-container {
@@ -170,7 +170,7 @@ const categoryStats = computed(() => {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid rgba(var(--color-slate-600), 0.3);
+  border-bottom: 1px solid var(--purple-border-medium);
 }
 
 .header-title {
@@ -191,7 +191,7 @@ const categoryStats = computed(() => {
 }
 
 .header-count {
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2_5);
   background: rgba(var(--tier-gold), 0.15);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
@@ -209,11 +209,11 @@ const categoryStats = computed(() => {
   border-radius: var(--radius-md);
   color: var(--gamification-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .close-btn:hover {
-  background: rgba(var(--color-slate-600), 0.5);
+  background: var(--purple-bg-subtle);
   color: var(--gamification-text-primary);
 }
 
@@ -222,7 +222,7 @@ const categoryStats = computed(() => {
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
   overflow-x: auto;
-  border-bottom: 1px solid rgba(var(--color-slate-600), 0.2);
+  border-bottom: 1px solid var(--border-medium);
 }
 
 .category-tab {
@@ -231,18 +231,18 @@ const categoryStats = computed(() => {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: transparent;
-  border: 1px solid rgba(var(--color-slate-600), 0.3);
+  border: 1px solid var(--purple-border-medium);
   border-radius: var(--radius-md);
   color: var(--gamification-text-secondary);
   font-size: var(--text-sm);
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .category-tab:hover {
-  background: rgba(var(--color-slate-700), 0.5);
-  border-color: rgba(var(--color-slate-500), 0.5);
+  background: var(--purple-bg-subtle);
+  border-color: var(--purple-border-strong);
 }
 
 .category-tab.active {
@@ -278,12 +278,12 @@ const categoryStats = computed(() => {
 /* Modal transitions */
 .modal-enter-active,
 .modal-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-normal) ease;
 }
 
 .modal-enter-active .modal-container,
 .modal-leave-active .modal-container {
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-normal) ease;
 }
 
 .modal-enter-from,
@@ -293,6 +293,6 @@ const categoryStats = computed(() => {
 
 .modal-enter-from .modal-container,
 .modal-leave-to .modal-container {
-  transform: scale(0.95) translateY(10px);
+  transform: scale(0.95) translateY(var(--space-2_5));
 }
 </style>

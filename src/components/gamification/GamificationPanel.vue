@@ -206,7 +206,6 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   background: var(--gamification-panel-bg);
   border: 1px solid var(--gamification-panel-border);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(12px);
 }
 
 /* Cyberflow Command Center Link */
@@ -225,7 +224,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   font-weight: var(--font-semibold);
   letter-spacing: 0.1em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .cyberflow-link:hover {
@@ -237,7 +236,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
 .cyberflow-link-arrow {
   opacity: 0.6;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .cyberflow-link:hover .cyberflow-link-arrow {
@@ -261,7 +260,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 .header-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .header-title {
@@ -293,7 +292,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .action-btn:hover {
@@ -335,7 +334,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 }
 
 .achievement-count {
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   background: rgba(var(--color-slate-700), 0.5);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
@@ -344,15 +343,15 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 .see-all-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: rgba(var(--neon-cyan), 0.8);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .see-all-btn:hover {
@@ -401,7 +400,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .help-toggle:hover {
@@ -411,7 +410,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
 .help-chevron {
   margin-left: auto;
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-normal) var(--spring-smooth);
 }
 
 .help-chevron.rotated {
@@ -425,7 +424,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   padding: var(--space-3);
   background: rgba(var(--color-slate-800), 0.4);
   border-radius: var(--radius-md);
-  animation: slideDown 0.2s ease-out;
+  animation: slideDown var(--duration-normal) var(--ease-out);
 }
 
 @keyframes slideDown {
@@ -457,7 +456,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .help-list li {
@@ -471,14 +470,14 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 .xp-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 6px;
+  padding: var(--space-0_5) var(--space-1_5);
   background: rgba(var(--neon-cyan), 0.15);
   border: 1px solid rgba(var(--neon-cyan), 0.3);
   border-radius: var(--radius-sm);
   color: rgba(var(--neon-cyan), 0.9);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  min-width: 50px;
+  min-width: var(--space-12);
   justify-content: center;
 }
 

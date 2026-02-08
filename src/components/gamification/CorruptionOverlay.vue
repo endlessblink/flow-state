@@ -117,13 +117,13 @@ const overlayStyle = computed(() => ({
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9998; /* Below modals (9999) but above everything else */
+  z-index: var(--z-tooltip); /* Below modals but above everything else */
 
   /* Apply the filter from CSS custom properties */
   filter: var(--corruption-filter, none);
 
   /* Smooth transitions between corruption levels */
-  transition: filter 1s ease-out;
+  transition: filter 1s var(--ease-out);
 
   /* Glitch offset */
   transform: translate(var(--glitch-x, 0), var(--glitch-y, 0));
@@ -136,11 +136,11 @@ const overlayStyle = computed(() => ({
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   background-repeat: repeat;
-  background-size: 128px 128px;
+  background-size: var(--space-32) var(--space-32);
   opacity: var(--corruption-noise-opacity, 0);
   mix-blend-mode: overlay;
   pointer-events: none;
-  transition: opacity 1s ease-out;
+  transition: opacity 1s var(--ease-out);
 }
 
 /* Scan lines overlay */
@@ -150,9 +150,9 @@ const overlayStyle = computed(() => ({
   background: repeating-linear-gradient(
     to bottom,
     transparent,
-    transparent 2px,
-    rgba(0, 0, 0, var(--corruption-scanline-opacity, 0)) 2px,
-    rgba(0, 0, 0, var(--corruption-scanline-opacity, 0)) 4px
+    transparent var(--space-px),
+    rgba(0, 0, 0, var(--corruption-scanline-opacity, 0)) var(--space-px),
+    rgba(0, 0, 0, var(--corruption-scanline-opacity, 0)) var(--space-1)
   );
   pointer-events: none;
 }
@@ -162,11 +162,11 @@ const overlayStyle = computed(() => ({
   content: '';
   position: absolute;
   width: 100%;
-  height: 4px;
+  height: var(--space-1);
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(255, 60, 60, 0.3),
+    var(--danger-border-medium),
     transparent
   );
   animation: scanline-sweep 4s linear infinite;
@@ -174,7 +174,7 @@ const overlayStyle = computed(() => ({
 
 @keyframes scanline-sweep {
   0% {
-    top: -4px;
+    top: calc(-1 * var(--space-1));
   }
   100% {
     top: 100%;
@@ -188,11 +188,11 @@ const overlayStyle = computed(() => ({
   background: radial-gradient(
     ellipse at center,
     transparent 50%,
-    rgba(0, 0, 0, 0.3) 100%
+    var(--overlay-dark) 100%
   );
   pointer-events: none;
   opacity: calc((var(--corruption-level, 0) - 60) / 40);
-  transition: opacity 1s ease-out;
+  transition: opacity 1s var(--ease-out);
 }
 
 /* Heavy corruption adds a rust/sepia tint */
@@ -212,17 +212,17 @@ const overlayStyle = computed(() => ({
   content: '';
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 0 100px rgba(255, 60, 60, 0.2);
+  box-shadow: inset 0 0 var(--space-24) var(--danger-border-subtle);
   pointer-events: none;
-  animation: warning-pulse 2s ease-in-out infinite;
+  animation: warning-pulse 2s var(--ease-in-out) infinite;
 }
 
 @keyframes warning-pulse {
   0%, 100% {
-    box-shadow: inset 0 0 60px rgba(255, 60, 60, 0.15);
+    box-shadow: inset 0 0 var(--space-16) var(--danger-bg-subtle);
   }
   50% {
-    box-shadow: inset 0 0 100px rgba(255, 60, 60, 0.25);
+    box-shadow: inset 0 0 var(--space-24) var(--danger-bg-medium);
   }
 }
 

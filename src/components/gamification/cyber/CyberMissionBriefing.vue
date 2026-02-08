@@ -156,7 +156,7 @@ async function handleGenerate() {
   font-family: var(--font-cyber-data);
   font-size: var(--text-sm);
   color: var(--cf-magenta);
-  box-shadow: 0 0 12px var(--cf-magenta-20);
+  box-shadow: 0 0 var(--space-3) var(--cf-magenta-20);
 }
 
 /* Loading state */
@@ -241,14 +241,14 @@ async function handleGenerate() {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: var(--space-2);
-  box-shadow: 0 0 12px var(--cf-cyan-20);
+  box-shadow: 0 0 var(--space-3) var(--cf-cyan-20);
 }
 
 .mission-briefing__action-btn:hover:not(:disabled) {
   background: var(--cf-dark-2);
   border-color: var(--cf-cyan);
-  box-shadow: 0 0 24px var(--cf-cyan-20);
-  transform: translateY(-2px);
+  box-shadow: 0 0 var(--space-6) var(--cf-cyan-20);
+  transform: translateY(calc(var(--space-0_5) * -1));
 }
 
 .mission-briefing__action-btn:active:not(:disabled) {
@@ -277,17 +277,17 @@ async function handleGenerate() {
 
 /* Scrollbar styling */
 .mission-briefing::-webkit-scrollbar {
-  width: 6px;
+  width: var(--space-1_5);
 }
 
 .mission-briefing::-webkit-scrollbar-track {
   background: var(--cf-dark-2);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .mission-briefing::-webkit-scrollbar-thumb {
   background: var(--cf-cyan-20);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .mission-briefing::-webkit-scrollbar-thumb:hover {

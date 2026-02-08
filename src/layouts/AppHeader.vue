@@ -116,6 +116,9 @@
           <TimeDisplay />
         </div>
 
+        <!-- FEATURE-1248: Quick Task Shortcuts -->
+        <QuickTaskDropdown />
+
         <!-- POMODORO TIMER DISPLAY -->
         <div class="timer-container">
           <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
@@ -240,6 +243,7 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
 import { LevelBadge, XpBar, StreakCounter, GamificationPanel, AchievementsModal, ShopModal } from '@/components/gamification'
 import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
+import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 
 const router = useRouter()
 const taskStore = useTaskStore()
@@ -764,7 +768,7 @@ const startLongBreak = async () => {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: white;
   background: linear-gradient(135deg, #8b5cf6, #06b6d4);

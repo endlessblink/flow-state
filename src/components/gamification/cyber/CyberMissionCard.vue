@@ -245,7 +245,7 @@ function handleClick() {
 .mission-card--active {
   border-color: var(--mission-accent);
   transform: scale(1.02);
-  box-shadow: 0 0 24px var(--mission-accent-dim), 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 var(--space-6) var(--mission-accent-dim), 0 var(--space-1) var(--space-3) rgba(var(--color-slate-900), 0.3);
 }
 
 .mission-card--active::before {
@@ -259,7 +259,7 @@ function handleClick() {
 
 .mission-card--active:hover {
   transform: scale(1.03);
-  box-shadow: 0 0 32px var(--mission-accent-dim), 0 6px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 var(--space-8) var(--mission-accent-dim), 0 var(--space-1_5) var(--space-4) rgba(var(--color-slate-900), 0.4);
 }
 
 /* Completed state */
@@ -287,25 +287,25 @@ function handleClick() {
 /* Icon Box */
 .mission-card__icon-box {
   flex-shrink: 0;
-  width: 60px;
-  height: 60px;
+  width: calc(var(--space-6) + var(--space-3));
+  height: calc(var(--space-6) + var(--space-3));
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--mission-accent-dim);
   border: 2px solid var(--mission-accent);
   border-radius: var(--radius-md);
-  box-shadow: 0 0 16px var(--mission-accent-dim);
+  box-shadow: 0 0 var(--space-4) var(--mission-accent-dim);
   transition: all 0.3s ease;
 }
 
 .mission-card--active .mission-card__icon-box {
-  box-shadow: 0 0 24px var(--mission-accent);
+  box-shadow: 0 0 var(--space-6) var(--mission-accent);
 }
 
 .mission-card__icon {
   color: var(--mission-accent);
-  filter: drop-shadow(0 0 6px var(--mission-accent));
+  filter: drop-shadow(0 0 var(--space-1_5) var(--mission-accent));
 }
 
 /* Content */
@@ -336,9 +336,9 @@ function handleClick() {
 
 .mission-card__progress-track {
   flex: 1;
-  height: 6px;
+  height: var(--space-1_5);
   background: var(--cf-dark-2);
-  border-radius: 3px;
+  border-radius: calc(var(--space-0_5) * 1.5);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
 }
@@ -346,13 +346,13 @@ function handleClick() {
 .mission-card__progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--mission-accent), var(--cf-cyan));
-  border-radius: 3px;
+  border-radius: calc(var(--space-0_5) * 1.5);
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 8px var(--mission-accent);
+  box-shadow: 0 0 var(--space-2) var(--mission-accent);
 }
 
 .mission-card--active .mission-card__progress-fill {
-  box-shadow: 0 0 12px var(--mission-accent);
+  box-shadow: 0 0 var(--space-3) var(--mission-accent);
 }
 
 .mission-card__progress-text {
@@ -360,7 +360,7 @@ function handleClick() {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text-secondary);
-  min-width: 40px;
+  min-width: var(--space-10);
   text-align: right;
 }
 
@@ -407,7 +407,7 @@ function handleClick() {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--cf-gold);
-  box-shadow: 0 0 10px rgba(255, 193, 7, 0.2);
+  box-shadow: 0 0 var(--space-2_5) rgba(255, 193, 7, 0.2);
 }
 
 .mission-card__xp-badge svg {
@@ -432,8 +432,8 @@ function handleClick() {
 .mission-card__activate-btn:hover {
   background: var(--mission-accent-dim);
   border-color: var(--mission-accent);
-  box-shadow: 0 0 12px var(--mission-accent-dim);
-  transform: translateY(-1px);
+  box-shadow: 0 0 var(--space-3) var(--mission-accent-dim);
+  transform: translateY(calc(-0.5 * var(--space-0_5)));
 }
 
 /* Active indicator */
@@ -447,16 +447,16 @@ function handleClick() {
   font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
-  box-shadow: 0 0 16px var(--mission-accent);
+  box-shadow: 0 0 var(--space-4) var(--mission-accent);
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 16px var(--mission-accent);
+    box-shadow: 0 0 var(--space-4) var(--mission-accent);
   }
   50% {
-    box-shadow: 0 0 24px var(--mission-accent);
+    box-shadow: 0 0 var(--space-6) var(--mission-accent);
   }
 }
 
@@ -474,14 +474,14 @@ function handleClick() {
   background: var(--cf-lime);
   color: var(--cf-dark-1);
   border: 1px solid var(--cf-lime);
-  box-shadow: 0 0 12px var(--cf-lime-20);
+  box-shadow: 0 0 var(--space-3) var(--cf-lime-20);
 }
 
 .mission-card__status-badge--failed {
   background: var(--cf-magenta);
   color: var(--cf-dark-1);
   border: 1px solid var(--cf-magenta);
-  box-shadow: 0 0 12px var(--cf-magenta-20);
+  box-shadow: 0 0 var(--space-3) var(--cf-magenta-20);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1515,7 +1515,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
 }
 
 .delete-confirm-modal {

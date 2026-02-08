@@ -107,7 +107,7 @@ function handleNavigate(section: 'missions' | 'boss' | 'upgrades' | 'achievement
 
 .cf-title-text {
   font-family: 'Orbitron', 'Rajdhani', sans-serif;
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -124,7 +124,7 @@ function handleNavigate(section: 'missions' | 'boss' | 'upgrades' | 'achievement
 
 .cf-status {
   font-family: 'Share Tech Mono', 'Courier New', monospace;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(var(--neon-lime), 0.7);
@@ -164,7 +164,7 @@ function handleNavigate(section: 'missions' | 'boss' | 'upgrades' | 'achievement
   }
 
   .cf-title-text {
-    font-size: 1rem;
+    font-size: var(--text-base);
   }
 
   .cf-status {

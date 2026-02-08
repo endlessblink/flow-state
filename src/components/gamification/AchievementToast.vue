@@ -135,8 +135,8 @@ onMounted(() => {
   background: var(--toast-xp-bg);
   border: 1px solid var(--toast-xp-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 var(--space-1) var(--space-5) rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(var(--space-2));
   cursor: pointer;
   transform: translateX(100%) scale(0.9);
   opacity: 0;
@@ -197,7 +197,7 @@ onMounted(() => {
 }
 
 .toast--streak .toast-icon {
-  background: rgba(255, 107, 53, 0.15);
+  background: var(--orange-bg-light);
   color: var(--streak-flame-color);
   animation: streakFlame 1s ease-in-out infinite;
 }
@@ -215,7 +215,7 @@ onMounted(() => {
 .toast-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
   flex: 1;
   min-width: 0;
 }
@@ -237,8 +237,8 @@ onMounted(() => {
 .toast-xp {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   background: rgba(var(--neon-cyan), 0.15);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
@@ -251,29 +251,29 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: var(--space-1);
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: var(--gamification-text-secondary);
   cursor: pointer;
   opacity: 0.6;
-  transition: opacity 0.2s ease, background 0.2s ease;
+  transition: opacity var(--duration-normal) ease, background var(--duration-normal) ease;
 }
 
 .toast-close:hover {
   opacity: 1;
-  background: rgba(var(--color-slate-600), 0.5);
+  background: var(--purple-bg-subtle);
 }
 
 /* Hover glow effect */
 .achievement-toast:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4),
-              0 0 16px rgba(var(--neon-cyan), 0.1);
+  box-shadow: 0 var(--space-1) var(--space-6) rgba(0, 0, 0, 0.4),
+              0 0 var(--space-4) rgba(var(--neon-cyan), 0.1);
 }
 
 .toast--level_up:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4),
-              0 0 16px rgba(var(--neon-magenta), 0.2);
+  box-shadow: 0 var(--space-1) var(--space-6) rgba(0, 0, 0, 0.4),
+              0 0 var(--space-4) rgba(var(--neon-magenta), 0.2);
 }
 </style>

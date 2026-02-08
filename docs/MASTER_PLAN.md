@@ -189,6 +189,74 @@
 
 ---
 
+### TASK-1219: Quick Sort Mobile UX Fixes (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
+
+**Problem**: Multiple UX issues on the mobile Quick Sort view:
+
+1. **DUE buttons text-only** — Date buttons (Today, Tmrw, +3d, Wknd) should show emojis + text for faster recognition
+2. **Right side cutoff** — Date pills row gets clipped on narrow screens; rightmost buttons partially hidden
+3. **Touch target overlap** — Pressing "Tomorrow" also triggers "Wknd" due to cramped touch targets on mobile
+
+**Files**: `src/mobile/views/MobileQuickSortView.vue`
+
+---
+
+### TASK-1220: Quick Sort Pull-Down Capture Panel (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+
+**Goal**: When user drags the screen down in mobile Quick Sort, reveal a clean panel with:
+- Search existing tasks
+- Create a new task (spacious input)
+- Record a task with audio (voice-to-text)
+
+**Files**: `src/mobile/views/MobileQuickSortView.vue`, new composable for pull-down gesture
+
+---
+
+### TASK-1221: Quick Sort AI Commands Interface (📋 PLANNED)
+
+**Priority**: P3-LOW | **Status**: 📋 PLANNED
+
+**Goal**: Future concept — AI command interface in Quick Sort pull-down panel. Users can give natural language commands like "show all tasks that are overdue" or "create 3 tasks for project X". Builds on TASK-1220 pull-down panel.
+
+**Blocked By**: TASK-1220
+
+---
+
+### TASK-1223: AI Chat Model Selection UX Redesign (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: AI provider/model selection dropdown is confusing and shows incorrect state:
+1. Red health dots are misleading — red on OR/Local looks like "broken/offline" even when just unchecked
+2. "OR" label is cryptic — should say "OpenRouter"
+3. Header badge only shows provider name — never shows the actual model
+4. Model not reset when switching providers
+5. No per-provider model memory
+
+**Key Files**: `AIChatPanel.vue`, `useAIChat.ts`, `aiChat.ts` store, `router.ts`
+
+---
+
+### TASK-1222: Canvas Overdue Task Collector (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Goal**: Button on canvas groups (+ right-click context menu) to collect all overdue tasks from outside the group and arrange them in an orderly grid/row to the left of the group. If tasks are already positioned there, new ones integrate into the existing layout. Also expose this action via AI chat ("get all overdue tasks out of groups in an orderly way").
+
+**Requirements**:
+1. Group button / right-click "Collect Overdue Tasks" option
+2. Find all overdue tasks NOT in the target group
+3. Position them in a neat grid/row to the LEFT of the group
+4. Respect existing tasks already positioned in that area (append, don't overlap)
+5. AI chat tool to trigger this action via natural language
+6. Respect canvas geometry invariants (drag handlers only mutate positions)
+
+---
+
 ### ~~BUG-1216~~: Canvas Mouse Drift + Performance on Tauri (👀 REVIEW)
 
 **Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-07)
@@ -1928,6 +1996,62 @@ npm run tasks:bugs     # Filter by BUG type
 - `bd ready` shows prioritized unblocked tasks
 - `bd show <id> --json` confirms external_ref mapping
 - `npm run mp:sync:dry` previews changes
+
+---
+
+### FEATURE-1223: AI Chat System Overhaul — RTL, Inline Editing, Full-Screen, Agent Chains (📋 PLANNED)
+
+**Priority**: P0-P3 (phased) | **Status**: 📋 PLANNED
+
+**Problem**: The AI Chat panel has critical UX issues (RTL broken for Hebrew, task names truncated, raw ISO dates, no inline editing) and lacks key features (full-screen mode, conversation history, voice input, gamification integration, multi-step agent workflows).
+
+**5-Agent Expert Research (2026-02-08)**: UX Expert, AI Automation Expert, AI Agent Chains Expert, RTL/i18n Expert, Product Strategy Expert all completed deep analysis. Full findings in conversation history.
+
+#### Phase 1: Fix & Foundation (P0 — IMMEDIATE)
+
+- [ ] **TASK-1223**: RTL fix — CSS logical properties, `dir="auto"` on task titles, panel position mirroring
+- [ ] **TASK-1224**: Task name truncation — replace `nowrap` with 2-line clamp (`-webkit-line-clamp: 2`)
+- [ ] **TASK-1225**: Date formatting — new `formatRelativeDate()` utility using `Intl.RelativeTimeFormat` (auto Hebrew/English)
+- [ ] **TASK-1226**: Inline task editing in chat results — clickable priority/status/date dropdowns on task list items
+- [ ] **TASK-1227**: Task list item 2-row layout — priority dot + title (row 1), date + status badges (row 2)
+
+#### Phase 2: Expand & Enrich (P1 — NEXT)
+
+- [ ] **TASK-1228**: Expandable panel — toggle 380px → 600px → fullscreen with keyboard shortcut
+- [ ] **TASK-1229**: Gamification tools — `get_gamification_status`, `get_active_challenges`, `get_achievements_near_completion`
+- [ ] **TASK-1230**: Cyberflow AI personality mode — "Grid Handler" netrunner persona via system prompt toggle
+- [ ] **TASK-1231**: Voice input — microphone button with Web Speech API / Tauri native speech plugin
+- [ ] **TASK-1232**: Productivity tools — `get_productivity_stats`, `suggest_next_task`, `get_weekly_summary`
+- [ ] **TASK-1233**: Native function calling — Groq/OpenRouter `tools[]` API parameter instead of regex-parsing JSON blocks
+
+#### Phase 3: Deep Features (P2 — LATER)
+
+- [ ] **TASK-1234**: Conversation history — multiple conversations, auto-naming, localStorage model, conversation list UI
+- [ ] **TASK-1235**: Full-screen `/ai-chat` route — extract `AIChatCore.vue`, dedicated view with conversation sidebar
+- [ ] **TASK-1236**: Deterministic agent chains — "Plan my day", "End of day review", "Focus mode setup" (works with Ollama)
+- [ ] **TASK-1237**: ReAct agentic loop — multi-step reasoning for Groq/OpenRouter (circuit-breaker, abort, error recovery)
+- [ ] **TASK-1238**: AI challenge narrator — push narrative events to chat on challenge complete/fail
+- [ ] **TASK-1239**: Inline actions on results — "Mark done", "Start timer" hover buttons on task items
+
+#### Phase 4: Polish & Innovation (P3 — FUTURE)
+
+- [ ] **TASK-1240**: Supabase chat persistence — `ai_conversations` + `ai_messages` tables, cross-device sync
+- [ ] **TASK-1241**: Mobile bottom sheet — replace side panel with bottom sheet on mobile
+- [ ] **TASK-1242**: Corruption-influenced AI personality — glitchy tone at high corruption levels
+- [ ] **TASK-1243**: AI Game Master boss fights — real-time narrated boss encounters via chat
+- [ ] **TASK-1244**: Inline AI in views — AI suggestions embedded in canvas/board/calendar (Linear-inspired)
+- [ ] **TASK-1245**: Dynamic prompt assembly — only include relevant tool definitions per request type
+
+**Key Files**:
+- `src/components/ai/ChatMessage.vue` — message rendering, task list items, RTL CSS
+- `src/components/ai/AIChatPanel.vue` — panel layout, settings, quick actions
+- `src/composables/useAIChat.ts` — chat logic, tool execution, context building
+- `src/stores/aiChat.ts` — state management, persistence
+- `src/services/ai/tools.ts` — tool definitions (20 current, 6+ planned)
+- `src/services/ai/router.ts` — provider routing
+- `src/utils/dateUtils.ts` — date formatting utilities (needs `formatRelativeDate`)
+
+**Competitors Analyzed**: Linear AI, ClickUp Brain, Notion AI 3.0, Todoist Ramble, Motion, GitHub Copilot Chat, Cursor IDE
 
 ---
 

@@ -3,6 +3,7 @@ import { supabase } from '@/services/auth/supabase'
 import { useAuthStore } from '@/stores/auth'
 import type { Task, Project } from '@/types/tasks'
 import type { ScheduledNotification } from '@/types/recurrence'
+import type { PinnedTask } from '@/types/quickTasks'
 import type { CanvasGroup } from '@/types/canvas'
 import type { AppSettings } from '@/stores/settings'
 import type { PomodoroSession } from '@/stores/timer'
@@ -15,10 +16,13 @@ import {
     toSupabaseTimerSession, fromSupabaseTimerSession,
     toSupabaseUserSettings, fromSupabaseUserSettings,
     toSupabaseQuickSortSession, fromSupabaseQuickSortSession,
+    toSupabasePinnedTask, fromSupabasePinnedTask,
     type SupabaseTask, type SupabaseProject, type SupabaseGroup,
-    type SupabaseNotification, type SupabaseTimerSession, type SupabaseUserSettings, type SupabaseQuickSortSession
+    type SupabaseNotification, type SupabaseTimerSession, type SupabaseUserSettings, type SupabaseQuickSortSession,
+    type SupabasePinnedTask
 } from '@/utils/supabaseMappers'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
 // TASK-1060: SWR (Stale-While-Revalidate) Cache for database queries
 // Returns cached data immediately while fetching fresh data in background
@@ -160,6 +164,7 @@ export const invalidateCache = {
     tasks: () => swrCache.invalidatePrefix('tasks:'),
     projects: () => swrCache.invalidatePrefix('projects:'),
     groups: () => swrCache.invalidatePrefix('groups:'),
+    pinnedTasks: () => swrCache.invalidatePrefix('pinnedTasks:'),
     all: () => swrCache.clear(),
     // BUG-1056: Expose user change check for auth state changes
     onAuthChange: (userId: string | null) => swrCache.checkUserChange(userId)
@@ -463,7 +468,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             // Try to use the RPC function if available (more efficient)
             // TASK-1183: Sanitize project_id - 'uncategorized' is not a valid UUID
-            const sanitizedProjectId = task.projectId === 'uncategorized' || task.projectId === '1'
+            const sanitizedProjectId = task.projectId === UNCATEGORIZED_PROJECT_ID || task.projectId === '1'
                 ? null
                 : (task.projectId || null)
 
@@ -1706,6 +1711,77 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
     }
 
+    // -- Pinned Tasks (FEATURE-1248) --
+
+    const fetchPinnedTasks = async (): Promise<PinnedTask[]> => {
+        const userId = getUserIdSafe()
+        if (!userId) return []
+
+        try {
+            return await swrCache.getOrFetch(`pinnedTasks:${userId}`, async () => {
+                return await withRetry(async () => {
+                    const { data, error } = await supabase
+                        .from('pinned_tasks')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('sort_order', { ascending: true })
+
+                    if (error) throw error
+                    if (!data) return []
+
+                    return (data as SupabasePinnedTask[]).map(fromSupabasePinnedTask)
+                }, 'fetchPinnedTasks')
+            })
+        } catch (e: unknown) {
+            handleError(e, 'fetchPinnedTasks')
+            return []
+        }
+    }
+
+    const savePinnedTask = async (pin: PinnedTask): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('[GUEST] Skipping savePinnedTask - not authenticated')
+            return
+        }
+        try {
+            const payload = toSupabasePinnedTask(pin, userId)
+            const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
+            if (error) throw error
+            invalidateCache.pinnedTasks()
+        } catch (e: unknown) {
+            handleError(e, 'savePinnedTask')
+            throw e
+        }
+    }
+
+    const deletePinnedTask = async (pinId: string): Promise<void> => {
+        try {
+            const { error } = await supabase.from('pinned_tasks').delete().eq('id', pinId)
+            if (error) throw error
+            invalidateCache.pinnedTasks()
+        } catch (e: unknown) {
+            handleError(e, 'deletePinnedTask')
+            throw e
+        }
+    }
+
+    const reorderPinnedTasks = async (pins: PinnedTask[]): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) return
+        try {
+            const payload = pins.map((pin, index) => ({
+                ...toSupabasePinnedTask({ ...pin, sortOrder: index }, userId)
+            }))
+            const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
+            if (error) throw error
+            invalidateCache.pinnedTasks()
+        } catch (e: unknown) {
+            handleError(e, 'reorderPinnedTasks')
+            throw e
+        }
+    }
+
     return {
         isSyncing,
         lastSyncError,
@@ -1748,6 +1824,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         saveUserSettings,
         fetchQuickSortHistory,
         saveQuickSortSession,
+        // FEATURE-1248: Pinned Tasks
+        fetchPinnedTasks,
+        savePinnedTask,
+        deletePinnedTask,
+        reorderPinnedTasks,
         initRealtimeSubscription
     }
 }

@@ -1284,7 +1284,7 @@ onMounted(() => {
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-lg);
   color: var(--brand-primary);
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;

@@ -233,23 +233,23 @@ const formatTime = (timestamp: number): string => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(2px);
-  z-index: 9999;
+  background: rgba(var(--color-slate-900), 0.3);
+  backdrop-filter: blur(var(--blur-xs));
+  z-index: var(--z-tooltip);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 60px 20px 20px;
+  padding: var(--space-15) var(--space-5) var(--space-5);
 }
 
 .sync-error-popover {
   width: 360px;
-  max-height: calc(100vh - 100px);
-  background: var(--glass-bg-medium, rgba(30, 30, 32, 0.95));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: var(--shadow-xl, 0 25px 50px -12px rgba(0, 0, 0, 0.5));
-  backdrop-filter: blur(var(--blur-lg, 24px));
+  max-height: calc(100vh - var(--space-25));
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(var(--blur-lg));
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -259,20 +259,20 @@ const formatTime = (timestamp: number): string => {
 .popover-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3, 12px);
-  padding: var(--space-4, 16px);
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .header-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--danger-bg-subtle, rgba(239, 68, 68, 0.15));
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-danger, #ef4444);
+  width: var(--space-9);
+  height: var(--space-9);
+  background: var(--danger-bg-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
 }
 
 .header-content {
@@ -280,15 +280,15 @@ const formatTime = (timestamp: number): string => {
 }
 
 .header-title {
-  font-size: var(--text-base, 16px);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-primary, #fff);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .header-subtitle {
-  font-size: var(--text-sm, 14px);
-  color: var(--text-muted, #9ca3af);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -296,38 +296,38 @@ const formatTime = (timestamp: number): string => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--space-7);
+  height: var(--space-7);
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm, 6px);
-  color: var(--text-muted, #9ca3af);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--duration-fast, 100ms);
+  transition: all var(--duration-fast);
 }
 
 .close-btn:hover {
-  background: var(--state-hover-bg, rgba(255, 255, 255, 0.06));
-  color: var(--text-primary, #fff);
+  background: var(--state-hover-bg);
+  color: var(--text-primary);
 }
 
 /* Body */
 .popover-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4, 16px);
+  padding: var(--space-4);
 }
 
 .error-summary {
-  padding: var(--space-3, 12px);
-  background: var(--danger-bg-subtle, rgba(239, 68, 68, 0.1));
-  border-radius: var(--radius-md, 8px);
-  margin-bottom: var(--space-4, 16px);
+  padding: var(--space-3);
+  background: var(--danger-bg-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
 }
 
 .error-message {
-  font-size: var(--text-sm, 14px);
-  color: var(--color-danger, #ef4444);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
   line-height: 1.5;
 }
 
@@ -335,102 +335,102 @@ const formatTime = (timestamp: number): string => {
 .error-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3, 12px);
+  gap: var(--space-3);
 }
 
 .error-item {
-  padding: var(--space-3, 12px);
-  background: var(--surface-subtle, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
-  border-radius: var(--radius-md, 8px);
+  padding: var(--space-3);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .error-entity {
   display: flex;
   align-items: center;
-  gap: var(--space-2, 8px);
-  margin-bottom: var(--space-1, 4px);
-  color: var(--text-secondary, #d1d5db);
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  color: var(--text-secondary);
 }
 
 .entity-type {
-  font-weight: var(--font-medium, 500);
+  font-weight: var(--font-medium);
 }
 
 .entity-id {
   font-family: monospace;
-  font-size: var(--text-xs, 12px);
-  color: var(--text-muted, #9ca3af);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 /* TASK-1183: Permanent/corrupted error styling */
 .permanent-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 6px;
-  background: var(--danger-bg-subtle, rgba(239, 68, 68, 0.15));
-  color: var(--color-danger, #ef4444);
-  font-size: var(--text-xs, 12px);
-  font-weight: var(--font-medium, 500);
-  border-radius: var(--radius-sm, 4px);
+  gap: var(--space-0_5);
+  padding: var(--space-0_5) var(--space-1_5);
+  background: var(--danger-bg-subtle);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-sm);
   margin-left: auto;
 }
 
 .permanent-error {
-  border-color: var(--color-danger, #ef4444);
+  border-color: var(--color-danger);
   border-style: dashed;
 }
 
 .no-retry-hint {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-danger);
   font-style: italic;
 }
 
 .error-operation {
-  font-size: var(--text-sm, 14px);
-  color: var(--text-muted, #9ca3af);
-  margin-bottom: var(--space-1, 4px);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
 }
 
 .error-detail {
-  font-size: var(--text-xs, 12px);
-  color: var(--color-danger, #ef4444);
-  background: var(--danger-bg-subtle, rgba(239, 68, 68, 0.1));
-  padding: var(--space-1, 4px) var(--space-2, 8px);
-  border-radius: var(--radius-sm, 6px);
-  margin-bottom: var(--space-2, 8px);
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  background: var(--danger-bg-subtle);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
 }
 
 .error-meta {
   display: flex;
-  gap: var(--space-3, 12px);
-  font-size: var(--text-xs, 12px);
-  color: var(--text-muted, #9ca3af);
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 /* Show More */
 .show-more {
   display: flex;
   justify-content: center;
-  margin-top: var(--space-3, 12px);
+  margin-top: var(--space-3);
 }
 
 .show-more button {
   display: flex;
   align-items: center;
-  gap: var(--space-1, 4px);
+  gap: var(--space-1);
   background: transparent;
   border: none;
-  color: var(--color-info, #3b82f6);
-  font-size: var(--text-sm, 14px);
+  color: var(--color-info);
+  font-size: var(--text-sm);
   cursor: pointer;
-  padding: var(--space-1, 4px) var(--space-2, 8px);
-  border-radius: var(--radius-sm, 6px);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
 }
 
 .show-more button:hover {
-  background: var(--state-hover-bg, rgba(255, 255, 255, 0.06));
+  background: var(--state-hover-bg);
 }
 
 .show-more .rotated {
@@ -440,9 +440,9 @@ const formatTime = (timestamp: number): string => {
 /* Footer */
 .popover-footer {
   display: flex;
-  gap: var(--space-3, 12px);
-  padding: var(--space-4, 16px);
-  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .retry-btn {
@@ -450,53 +450,53 @@ const formatTime = (timestamp: number): string => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2, 8px);
-  padding: var(--space-2_5, 10px) var(--space-4, 16px);
-  background: var(--color-primary, #3b82f6);
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-4);
+  background: var(--color-primary);
   border: none;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
   color: white;
-  font-weight: var(--font-medium, 500);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-fast, 100ms);
+  transition: all var(--duration-fast);
 }
 
 .retry-btn:hover {
-  background: var(--color-primary-hover, #2563eb);
+  background: var(--color-primary-hover);
 }
 
 .clear-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2, 8px);
-  padding: var(--space-2_5, 10px) var(--space-4, 16px);
-  background: var(--color-danger, #ef4444);
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-4);
+  background: var(--color-danger);
   border: none;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
   color: white;
-  font-weight: var(--font-medium, 500);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-fast, 100ms);
+  transition: all var(--duration-fast);
 }
 
 .clear-btn:hover {
-  background: var(--color-danger-hover, #dc2626);
+  background: var(--color-danger-hover);
 }
 
 .dismiss-btn {
-  padding: var(--space-2_5, 10px) var(--space-4, 16px);
+  padding: var(--space-2_5) var(--space-4);
   background: transparent;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-md, 8px);
-  color: var(--text-secondary, #d1d5db);
-  font-weight: var(--font-medium, 500);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-fast, 100ms);
+  transition: all var(--duration-fast);
 }
 
 .dismiss-btn:hover {
-  background: var(--state-hover-bg, rgba(255, 255, 255, 0.06));
-  border-color: var(--border-hover, rgba(255, 255, 255, 0.15));
+  background: var(--state-hover-bg);
+  border-color: var(--border-hover);
 }
 </style>

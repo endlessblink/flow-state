@@ -96,9 +96,9 @@ const learnMore = () => {
 
 <style scoped>
 .auth-status-notice {
-  background: rgba(28, 25, 45, 0.36);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--glass-bg-light);
+  backdrop-filter: var(--blur-lg);
+  -webkit-backdrop-filter: var(--blur-lg);
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-lg);

@@ -198,17 +198,15 @@ onUnmounted(() => {
   bottom: calc(100% + 4px); /* ADHD: Position ABOVE the trigger, not buried below */
   left: 50%;
   transform: translateX(-50%);
-  z-index: 99999; /* High z-index to ensure visibility */
+  z-index: var(--z-tooltip); /* High z-index to ensure visibility */
 
   /* Glass morphism - using design tokens with solid fallback */
-  background-color: var(--surface-primary, #1c192d); /* Solid fallback */
-  background: var(--overlay-component-bg, rgba(28, 25, 45, 0.95));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  box-shadow:
-    0 -8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  background-color: var(--overlay-component-bg);
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
+  box-shadow: var(--overlay-component-shadow-up);
   border-radius: var(--radius-md);
 
   min-width: 160px;
@@ -235,7 +233,7 @@ onUnmounted(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: var(--text-primary, rgba(255, 255, 255, 0.9)) !important;
+  color: var(--text-primary) !important;
   font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
@@ -247,8 +245,8 @@ onUnmounted(() => {
 }
 
 .project-dropdown__item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background: var(--glass-bg-heavy) !important;
+  background-color: var(--glass-bg-heavy) !important;
 }
 
 .project-dropdown__item.is-active {
@@ -259,15 +257,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   flex-shrink: 0;
 }
 
 .project-dropdown__color {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+  width: var(--space-3_5);
+  height: var(--space-3_5);
+  border-radius: var(--radius-full);
 }
 
 .project-dropdown__name {
@@ -285,7 +283,7 @@ onUnmounted(() => {
 .project-dropdown__overlay {
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: var(--z-dropdown);
 }
 
 /* Dropdown transitions - slides down from above */
@@ -306,7 +304,7 @@ onUnmounted(() => {
 
 /* Custom scrollbar for dropdown list */
 .project-dropdown__list::-webkit-scrollbar {
-  width: 4px;
+  width: var(--space-1);
 }
 
 .project-dropdown__list::-webkit-scrollbar-track {

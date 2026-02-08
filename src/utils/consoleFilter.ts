@@ -256,10 +256,8 @@ export function applyConsoleFiltering(): void {
   }
 
   console.warn = (...args: unknown[]) => {
-    const firstArg = String(args[0])
-    if (!shouldFilter(firstArg)) {
-      originalConsole.warn(...args)
-    }
+    // NEVER filter console.warn - warnings must always be visible
+    originalConsole.warn(...args)
   }
 
   console.info = (...args: unknown[]) => {
@@ -278,8 +276,6 @@ export function applyConsoleFiltering(): void {
 
   // Intercept error logs to catch PouchDB "guardedConsole" errors
   console.error = (...args: unknown[]) => {
-    const firstArg = String(args[0])
-
     // Join all args to catch errors passed as second/third arguments (common in PouchDB)
     const allArgsStr = args.map(a => {
       if (a instanceof Error) return a.message + ' ' + a.stack
@@ -295,9 +291,8 @@ export function applyConsoleFiltering(): void {
       }))
     }
 
-    if (!shouldFilter(firstArg)) {
-      originalConsole.error(...args)
-    }
+    // NEVER filter console.error - errors must always be visible
+    originalConsole.error(...args)
   }
 }
 

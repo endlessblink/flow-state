@@ -53,7 +53,7 @@
         <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
       </div>
       <!-- DEBUG: Show group ID for deletion debugging -->
-      <span class="debug-id" style="position: absolute; top: -18px; right: 4px; font-size: 9px; color: #888; font-family: monospace;">
+      <span class="debug-id" style="position: absolute; top: calc(-1 * var(--space-4_5)); right: var(--space-1); font-size: var(--text-2xs); color: var(--text-muted); font-family: monospace;">
         {{ (props.data as any)?.id?.slice(0, 8) }} · d:{{ (props.data as any)?.directTaskCount }} a:{{ (props.data as any)?.aggregatedTaskCount }}
       </span>
     </div>
@@ -320,18 +320,18 @@ const handleResizeEnd = (event: unknown) => {
   display: flex;
   flex-direction: column;
   /* TASK-073: Double-line border effect - inner solid + outer subtle */
-  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+  border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.35) !important;
   border-radius: var(--radius-lg);
   /* BUG-1216: backdrop-filter removed for performance */
-  background: rgba(45, 48, 58, 0.92) !important;
+  background: var(--surface-elevated) !important;
   position: relative;
   z-index: 1;
   /* TASK-073: Outer line via outline for double-border effect */
-  outline: 1px solid rgba(255, 255, 255, 0.12);
-  outline-offset: 2px;
+  outline: var(--space-0_5) solid rgba(var(--color-slate-50), 0.12);
+  outline-offset: var(--space-0_5);
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.4),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.08);
   /* BUG-1216: removed 80px glow spread - too expensive during pan/zoom */
   /* BUG-1216: explicit properties only - 'all' causes drag sluggishness */
   transition: box-shadow var(--duration-fast) ease, border-color var(--duration-fast) ease, outline var(--duration-fast) ease, opacity var(--duration-fast) ease;
@@ -342,17 +342,17 @@ const handleResizeEnd = (event: unknown) => {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   filter: none !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4) !important;
 }
 
 .section-node:hover {
   /* TASK-073: Enhanced hover - brighter border and stronger outline */
-  border-color: rgba(255, 255, 255, 0.50) !important;
-  outline: 1px solid rgba(255, 255, 255, 0.20);
-  outline-offset: 3px;
+  border-color: rgba(var(--color-slate-50), 0.50) !important;
+  outline: var(--space-0_5) solid rgba(var(--color-slate-50), 0.20);
+  outline-offset: var(--space-0_75);
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 var(--space-3) var(--space-8) rgba(var(--color-slate-900), 0.5),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.1);
   /* BUG-1216: removed 100px glow spread on hover */
 }
 
@@ -360,15 +360,15 @@ const handleResizeEnd = (event: unknown) => {
 .section-node.selected,
 .section-node:focus-within {
   border-color: var(--accent-primary) !important;
-  outline: 2px solid rgba(99, 102, 241, 0.4);
-  outline-offset: 3px;
+  outline: var(--space-0_5) solid var(--color-purple-soft);
+  outline-offset: var(--space-0_75);
   box-shadow:
-    0 20px 56px rgba(0, 0, 0, 0.55),
-    0 10px 28px rgba(0, 0, 0, 0.35),
-    0 0 100px 25px currentColor,
+    0 var(--space-5) var(--space-14) rgba(var(--color-slate-900), 0.55),
+    0 var(--space-2_5) var(--space-7) rgba(var(--color-slate-900), 0.35),
+    0 0 var(--space-25) var(--space-6_25) currentColor,
     /* Accent glow for selection */
-    0 0 20px 4px rgba(99, 102, 241, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 0 var(--space-5) var(--space-1) var(--color-purple-soft),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.12);
 }
 
 .section-header {
@@ -377,17 +377,17 @@ const handleResizeEnd = (event: unknown) => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  padding-right: 50px; /* Make space for count badge */
-  border-bottom: 1px solid var(--glass-border-soft);
+  padding-right: var(--space-12_5); /* Make space for count badge */
+  border-bottom: var(--space-0_5) solid var(--glass-border-soft);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  min-height: 40px; /* Ensure consistent header height */
+  min-height: var(--space-10); /* Ensure consistent header height */
   overflow: hidden; /* Prevent header overflow */
   flex-shrink: 0; /* BUG-251: Don't shrink header when using flexbox layout */
 }
 
 .section-color-dot {
-  width: 10px;
-  height: 10px;
+  width: var(--space-2_5);
+  height: var(--space-2_5);
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
@@ -412,8 +412,8 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 .collapse-btn:focus {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 1px;
+  outline: var(--space-0_5) solid var(--accent-primary);
+  outline-offset: var(--space-0_5);
 }
 
 /* Header Actions Container - handles overflow gracefully */
@@ -434,7 +434,7 @@ const handleResizeEnd = (event: unknown) => {
   right: 0;
   top: 0;
   bottom: 0;
-  width: 16px;
+  width: var(--space-4);
   background: linear-gradient(to right, transparent, var(--glass-bg-light));
   pointer-events: none;
   opacity: 0;
@@ -449,8 +449,8 @@ const handleResizeEnd = (event: unknown) => {
 /* TASK-068: Removed .auto-collect-btn CSS - feature removed to reduce clutter */
 
 .section-name-input {
-  flex: 1 1 60px; /* Grow, shrink, min basis of 60px */
-  min-width: 60px; /* Minimum readable width */
+  flex: 1 1 var(--space-15); /* Grow, shrink, min basis of 60px */
+  min-width: var(--space-15); /* Minimum readable width */
   background: transparent;
   border: none;
   color: var(--text-primary);
@@ -507,9 +507,9 @@ const handleResizeEnd = (event: unknown) => {
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  padding: 2px var(--space-2);
+  padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-sm);
-  min-width: 20px;
+  min-width: var(--space-5);
   text-align: center;
   display: flex;
   align-items: center;
@@ -523,7 +523,7 @@ const handleResizeEnd = (event: unknown) => {
 .section-count.has-tasks {
   background: var(--blue-bg-medium);
   color: var(--blue-text);
-  border: 1px solid var(--blue-border-active);
+  border: var(--space-0_5) solid var(--blue-border-active);
 }
 
 .hidden-indicator {
@@ -546,7 +546,7 @@ const handleResizeEnd = (event: unknown) => {
 /* BUG-251 FIX: Ensure section body captures right-click events */
 .section-body {
   flex: 1;
-  min-height: 40px; /* Minimum clickable area even when empty */
+  min-height: var(--space-10); /* Minimum clickable area even when empty */
   position: relative;
   /* Ensure clicks on empty space are captured by the group, not the pane */
   pointer-events: auto;
@@ -559,13 +559,13 @@ const handleResizeEnd = (event: unknown) => {
   /* TASK-073: Subtle dashed outline for collapsed state distinction */
   border-style: dashed !important;
   border-color: var(--border-interactive) !important;
-  outline: 1px dashed rgba(255, 255, 255, 0.08);
-  outline-offset: 2px;
+  outline: var(--space-0_5) dashed rgba(var(--color-slate-50), 0.08);
+  outline-offset: var(--space-0_5);
 }
 
 .section-node.collapsed:hover {
-  border-color: rgba(255, 255, 255, 0.40) !important;
-  outline: 1px dashed rgba(255, 255, 255, 0.15);
+  border-color: rgba(var(--color-slate-50), 0.40) !important;
+  outline: var(--space-0_5) dashed rgba(var(--color-slate-50), 0.15);
 }
 
 .section-node.collapsed .section-header {
@@ -581,12 +581,12 @@ const handleResizeEnd = (event: unknown) => {
 /* TASK-073: Collapsed + selected state with accent outline */
 .section-node.collapsed.vue-flow__node--selected {
   border-color: var(--accent-primary) !important;
-  outline: 2px solid rgba(99, 102, 241, 0.3);
-  outline-offset: 3px;
+  outline: var(--space-0_5) solid var(--color-purple-soft);
+  outline-offset: var(--space-0_75);
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    0 0 20px 4px rgba(99, 102, 241, 0.25);
+    0 var(--space-4) var(--space-12) rgba(var(--color-slate-900), 0.5),
+    0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.3),
+    0 0 var(--space-5) var(--space-1) var(--color-purple-soft);
 }
 
 /* Visual hint for collapsed sections */
@@ -597,9 +597,9 @@ const handleResizeEnd = (event: unknown) => {
   right: var(--space-2);
   width: 0;
   height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--text-secondary);
+  border-left: var(--space-1) solid transparent;
+  border-right: var(--space-1) solid transparent;
+  border-top: var(--space-1) solid var(--text-secondary);
   opacity: 0.3;
 }
 
@@ -615,7 +615,7 @@ const handleResizeEnd = (event: unknown) => {
   align-items: center;
   gap: var(--space-0_5);
   background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
+  border: var(--space-0_5) solid var(--glass-border);
   color: var(--text-secondary);
   padding: var(--space-0_5) var(--space-1);
   border-radius: var(--radius-sm);
@@ -630,19 +630,19 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 .collect-btn.has-matches {
-  background: var(--blue-bg-medium, rgba(59, 130, 246, 0.2));
-  border-color: var(--blue-border-active, rgba(59, 130, 246, 0.4));
-  color: var(--blue-text, #3b82f6);
+  background: var(--blue-bg-medium);
+  border-color: var(--blue-border-active);
+  color: var(--blue-text);
 }
 
 .collect-badge {
-  background: var(--blue-bg-medium, rgba(59, 130, 246, 0.3));
-  color: var(--blue-text, #3b82f6);
-  font-size: 9px;
+  background: var(--blue-bg-medium);
+  color: var(--blue-text);
+  font-size: var(--text-2xs);
   font-weight: var(--font-bold);
   padding: 0 var(--space-1);
   border-radius: var(--radius-full);
-  min-width: 14px;
+  min-width: var(--space-3_5);
   text-align: center;
 }
 
@@ -652,9 +652,9 @@ const handleResizeEnd = (event: unknown) => {
   right: 0;
   margin-top: var(--space-1);
   background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--space-5));
+  -webkit-backdrop-filter: blur(var(--space-5));
+  border: var(--space-0_5) solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xl);
   z-index: 100;
@@ -685,7 +685,7 @@ const handleResizeEnd = (event: unknown) => {
   align-items: center;
   justify-content: center;
   background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
+  border: var(--space-0_5) solid var(--glass-border);
   color: var(--text-muted);
   padding: var(--space-0_5);
   border-radius: var(--radius-sm);
@@ -700,9 +700,9 @@ const handleResizeEnd = (event: unknown) => {
 }
 
 .power-toggle-btn.power-active {
-  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.2));
-  border-color: var(--amber-border-active, rgba(245, 158, 11, 0.4));
-  color: var(--amber-text, #f59e0b);
+  background: var(--amber-bg-medium);
+  border-color: var(--amber-border-active);
+  color: var(--amber-text);
 }
 
 /* Settings Button */
@@ -711,7 +711,7 @@ const handleResizeEnd = (event: unknown) => {
   align-items: center;
   justify-content: center;
   background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
+  border: var(--space-0_5) solid var(--glass-border);
   color: var(--text-muted);
   padding: var(--space-0_5);
   border-radius: var(--radius-sm);

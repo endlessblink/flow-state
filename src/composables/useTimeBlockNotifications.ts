@@ -8,7 +8,7 @@
  * DND: Checks notification store's existing DND config.
  */
 
-import { ref, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotificationStore } from '@/stores/notifications'
@@ -256,49 +256,53 @@ export function useTimeBlockNotifications() {
    * Main tick: scan all active blocks, check milestones, fire notifications
    */
   function tick(): void {
-    const settings = getSettings()
-    if (!settings.enabled) return
+    try {
+      const settings = getSettings()
+      if (!settings?.enabled) return
 
-    // Midnight reset
-    const today = getTodayStr()
-    if (today !== currentDate.value) {
-      shownMilestones.value.clear()
-      currentDate.value = today
-    }
+      // Midnight reset
+      const today = getTodayStr()
+      if (today !== currentDate.value) {
+        shownMilestones.value.clear()
+        currentDate.value = today
+      }
 
-    // DND check
-    if (isInDND()) return
+      // DND check
+      if (isInDND()) return
 
-    const now = Date.now()
-    const blocks = getActiveTimeBlocks()
+      const now = Date.now()
+      const blocks = getActiveTimeBlocks()
 
-    if (blocks.length > 0) {
-      console.log(`[TIME-BLOCK] Tick: ${blocks.length} active block(s) today`, blocks.map(b => ({
-        task: b.taskTitle,
-        start: b.startTime.toLocaleTimeString(),
-        end: b.endTime.toLocaleTimeString(),
-        duration: b.durationMinutes + 'min'
-      })))
-    }
+      if (blocks.length > 0) {
+        console.log(`[TIME-BLOCK] Tick: ${blocks.length} active block(s) today`, blocks.map(b => ({
+          task: b.taskTitle,
+          start: b.startTime.toLocaleTimeString(),
+          end: b.endTime.toLocaleTimeString(),
+          duration: b.durationMinutes + 'min'
+        })))
+      }
 
-    for (const block of blocks) {
-      const milestones = getEffectiveMilestones(block)
+      for (const block of blocks) {
+        const milestones = getEffectiveMilestones(block)
 
-      for (const milestone of milestones) {
-        const key = dedupKey(block, milestone)
-        if (shownMilestones.value.has(key)) continue
+        for (const milestone of milestones) {
+          const key = dedupKey(block, milestone)
+          if (shownMilestones.value.has(key)) continue
 
-        const triggerTime = getMilestoneTriggerTime(milestone, block)
-        if (!triggerTime) continue
+          const triggerTime = getMilestoneTriggerTime(milestone, block)
+          if (!triggerTime) continue
 
-        const triggerMs = triggerTime.getTime()
+          const triggerMs = triggerTime.getTime()
 
-        // Fire if trigger time has passed and we're within the tolerance window
-        if (now >= triggerMs && now - triggerMs <= LATE_TOLERANCE_MS) {
-          shownMilestones.value.add(key)
-          fireMilestone(milestone, block)
+          // Fire if trigger time has passed and we're within the tolerance window
+          if (now >= triggerMs && now - triggerMs <= LATE_TOLERANCE_MS) {
+            shownMilestones.value.add(key)
+            fireMilestone(milestone, block)
+          }
         }
       }
+    } catch (err) {
+      console.error('[TIME-BLOCK] Tick error (non-fatal):', err)
     }
   }
 
@@ -333,9 +337,9 @@ export function useTimeBlockNotifications() {
     console.log('[TIME-BLOCK] Notification polling stopped')
   }
 
-  onUnmounted(() => {
-    stop()
-  })
+  // NOTE: No onUnmounted — this composable is called inside onMounted (outside
+  // Vue setup context), so lifecycle hooks don't attach. The singleton guard
+  // + module-level intervalId ensure cleanup via stop() if ever needed.
 
   return {
     start,

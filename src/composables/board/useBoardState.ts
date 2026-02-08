@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Task, useTaskStore } from '@/stores/tasks'
 import { parseDateKey, getTaskInstances, formatDateKey } from '@/stores/tasks'
+import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
 interface BoardStateDependencies {
     taskStore: ReturnType<typeof useTaskStore>
@@ -30,7 +31,7 @@ export function useBoardState(deps: BoardStateDependencies) {
         taskStore.filteredTasks
             .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
             .forEach(task => {
-                const projectId = task.projectId || 'uncategorized'
+                const projectId = task.projectId || UNCATEGORIZED_PROJECT_ID
                 if (!grouped[projectId]) {
                     grouped[projectId] = []
                 }
@@ -56,10 +57,10 @@ export function useBoardState(deps: BoardStateDependencies) {
 
         // Add virtual "Uncategorized" project only if there are VISIBLE uncategorized tasks
         // TASK-243: Use tasksByProject which already applies hideDoneTasks filter
-        const uncategorizedTasks = tasksByProject.value['uncategorized'] || []
+        const uncategorizedTasks = tasksByProject.value[UNCATEGORIZED_PROJECT_ID] || []
         if (uncategorizedTasks.length > 0) {
             projects.push({
-                id: 'uncategorized',
+                id: UNCATEGORIZED_PROJECT_ID,
                 name: 'Uncategorized',
                 color: '#6B7280',
                 colorType: 'hex' as const,

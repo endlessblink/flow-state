@@ -303,7 +303,7 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + var(--space-2));
   left: 0;
-  z-index: 99999;
+  z-index: var(--z-tooltip);
   min-width: 200px;
   max-width: 300px;
   max-height: 400px;
@@ -398,7 +398,7 @@ onUnmounted(() => {
 .click-outside-overlay {
   position: fixed;
   inset: 0; /* RTL: full screen overlay */
-  z-index: 999;
+  z-index: var(--z-dropdown);
 }
 
 /* Transitions */

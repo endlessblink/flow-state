@@ -299,7 +299,7 @@ watch(isOpen, (newVal) => {
 
 .select-dropdown {
   /* Position is set via inline style from Teleport */
-  z-index: 99999;
+  z-index: var(--z-tooltip);
 
   /* Glass morphism - purple-tinted with blur */
   background: rgba(35, 32, 50, 0.65);

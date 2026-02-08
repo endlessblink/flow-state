@@ -96,6 +96,9 @@
       "signIn": "התחבר",
       "signingIn": "מתחבר..."
     },
+    "passwordStrengthWeak": "חלש",
+    "passwordStrengthMedium": "בינוני",
+    "passwordStrengthStrong": "חזק",
     "signup": {
       "title": "יצירת חשבון",
       "subtitle": "הירשם כדי להתחיל"

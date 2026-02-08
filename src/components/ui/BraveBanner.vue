@@ -74,11 +74,11 @@ const {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9999;
-  background: linear-gradient(135deg, #fb542b 0%, #ff7654 100%);
+  z-index: var(--z-tooltip);
+  background: linear-gradient(135deg, var(--color-orange-dark) 0%, var(--color-orange) 100%);
   color: white;
   padding: var(--space-3) var(--space-4);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .brave-banner__content {
@@ -100,20 +100,20 @@ const {
 
 .brave-banner__text strong {
   display: block;
-  font-size: 1rem;
+  font-size: var(--text-base);
   margin-bottom: var(--space-1);
 }
 
 .brave-banner__text p {
   margin: 0 0 var(--space-2);
   opacity: 0.95;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .brave-banner__instructions {
   margin: 0;
   padding-left: var(--space-4);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   opacity: 0.95;
 }
 
@@ -123,23 +123,23 @@ const {
 
 .brave-banner__close {
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--color-slate-50), 0.2);
   border: none;
   border-radius: var(--radius-sm);
   padding: var(--space-1);
   cursor: pointer;
   color: white;
-  transition: background 0.2s;
+  transition: background var(--duration-fast);
 }
 
 .brave-banner__close:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--color-slate-50), 0.3);
 }
 
 /* Slide down animation */
 .slide-down-enter-active,
 .slide-down-leave-active {
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition: transform var(--duration-slow) var(--ease-out), opacity var(--duration-slow) var(--ease-out);
 }
 
 .slide-down-enter-from,

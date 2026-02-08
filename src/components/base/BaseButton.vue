@@ -200,17 +200,17 @@ defineExpose({
 
 /* Focus state with visible indicator */
 .base-button:focus-visible {
-  outline: 2px solid var(--color-work);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+  outline: var(--space-0_5) solid var(--color-work);
+  outline-offset: var(--space-0_5);
+  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
 }
 
 /* Focus indicator for better visibility */
 .base-button .focus-indicator {
   position: absolute;
-  inset: -2px;
-  border: 2px solid transparent;
-  border-radius: calc(var(--radius-lg) + 2px);
+  inset: calc(var(--space-0_5) * -1);
+  border: var(--space-0_5) solid transparent;
+  border-radius: calc(var(--radius-lg) + var(--space-0_5));
   opacity: 0;
   transition: opacity var(--duration-normal) var(--ease-out);
   pointer-events: none;
@@ -219,7 +219,7 @@ defineExpose({
 .base-button:focus-visible .focus-indicator {
   opacity: 1;
   border-color: var(--color-work);
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
 }
 
 /* Disabled state with better accessibility */
@@ -254,11 +254,11 @@ defineExpose({
 }
 
 .spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: var(--space-0_5) solid currentColor;
   border-inline-end-color: transparent; /* RTL: spinner arc rotation */
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
   opacity: 0.7;
 }
@@ -325,7 +325,7 @@ defineExpose({
 }
 
 .base-button.variant-primary:hover:not(:disabled):not(.loading) {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-primary-bg-subtle);
   border-color: var(--brand-hover);
   color: var(--brand-hover);
   box-shadow: var(--state-hover-shadow), 0 4px 12px rgba(78, 205, 196, 0.15);
@@ -333,7 +333,7 @@ defineExpose({
 }
 
 .base-button.variant-primary:active:not(:disabled):not(.loading) {
-  background: rgba(78, 205, 196, 0.12);
+  background: var(--brand-primary-bg-light);
   transform: translateY(-1px) scale(0.98);
 }
 
@@ -382,7 +382,7 @@ defineExpose({
 }
 
 .base-button.variant-danger:hover:not(:disabled):not(.loading) {
-  background: rgba(239, 68, 68, 0.08);
+  background: var(--color-danger-bg-subtle);
   border-color: var(--color-danger);
   color: var(--color-danger);
   box-shadow: var(--shadow-md), 0 4px 12px rgba(239, 68, 68, 0.15);
@@ -390,7 +390,7 @@ defineExpose({
 }
 
 .base-button.variant-danger:active:not(:disabled):not(.loading) {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--color-danger-bg-light);
   transform: translateY(-1px) scale(0.98);
 }
 
@@ -409,14 +409,14 @@ defineExpose({
 }
 
 .base-button.variant-active:hover:not(:disabled):not(.loading) {
-  background: rgba(78, 205, 196, 0.05);
+  background: var(--brand-primary-bg-tint);
   border-color: var(--brand-hover);
   box-shadow: var(--state-hover-shadow), 0 0 0 1px var(--brand-hover) inset;
   transform: translateY(-1px);
 }
 
 .base-button.variant-active:active:not(:disabled):not(.loading) {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-primary-bg-subtle);
   transform: translateY(0) scale(0.98);
 }
 

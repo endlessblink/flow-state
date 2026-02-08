@@ -27,7 +27,7 @@ The Content Security Policy (CSP) `connect-src` directive now allows connections
 'connect-src': [
   "'self'",
   'http://84.46.253.137:5984', // CouchDB server - SPECIFIC
-  'https://httpbin.org', // SPECIFIC
+  // Note: httpbin.org removed in TASK-1258
 ]
 ```
 

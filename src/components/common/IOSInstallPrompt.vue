@@ -17,7 +17,7 @@ onMounted(() => {
   // Show tooltip only for iOS users not in standalone mode
   if (isIOS.value && !isStandalone.value) {
     // Check if dismissed before
-    const dismissed = localStorage.getItem('ios-install-prompt-dismissed')
+    const dismissed = localStorage.getItem('flowstate-ios-install-prompt-dismissed')
     if (!dismissed) {
       showTooltip.value = true
     }
@@ -26,7 +26,7 @@ onMounted(() => {
 
 const dismiss = () => {
   showTooltip.value = false
-  localStorage.setItem('ios-install-prompt-dismissed', 'true')
+  localStorage.setItem('flowstate-ios-install-prompt-dismissed', 'true')
 }
 </script>
 
@@ -77,7 +77,7 @@ const dismiss = () => {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   width: calc(100% - 32px);
   max-width: 300px;
 }
@@ -97,7 +97,7 @@ const dismiss = () => {
 }
 
 .tooltip-body {
-  font-size: 13px;
+  font-size: var(--text-meta);
   line-height: 1.4;
 }
 

@@ -40,30 +40,30 @@ const hintsClasses = computed(() => [
   position: absolute;
   top: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: rgba(0, 0, 0, 0.9);
+  transform: translateX(-50%) translateY(var(--space-2_5));
+  background: var(--tooltip-bg);
   border: 1px solid var(--glass-border);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  z-index: 1000;
+  z-index: var(--z-tooltip);
   pointer-events: none;
-  min-width: 140px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: var(--space-35);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Tooltip Arrow */
 .drag-handle__hints::before {
   content: '';
   position: absolute;
-  top: -var(--space-1_5);
+  top: calc(-1 * var(--space-1_5));
   left: 50%;
   transform: translateX(-50%);
-  border-width: 0 6px 6px 6px;
+  border-width: 0 var(--space-1_5) var(--space-1_5) var(--space-1_5);
   border-style: solid;
-  border-color: transparent transparent rgba(0, 0, 0, 0.9) transparent;
+  border-color: transparent transparent var(--tooltip-bg) transparent;
 }
 
 .drag-hints-fade-enter-active,
@@ -74,7 +74,7 @@ const hintsClasses = computed(() => [
 .drag-hints-fade-enter-from,
 .drag-hints-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(15px);
+  transform: translateX(-50%) translateY(var(--space-3_75));
 }
 
 .hint-item {
@@ -82,15 +82,15 @@ const hintsClasses = computed(() => [
   justify-content: space-between;
   align-items: center;
   font-size: var(--text-xs);
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-on-tooltip);
 }
 
 kbd {
   background: var(--glass-border-hover);
-  padding: 1px var(--space-1);
-  border-radius: 3px;
-  font-family: monospace;
+  padding: var(--space-0_25) var(--space-1);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: #fff;
+  color: var(--text-on-primary);
 }
 </style>

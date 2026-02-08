@@ -422,7 +422,7 @@ watch(() => props.isOpen, (isOpen) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: var(--z-popover);
   padding: var(--space-4);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
 }
@@ -531,7 +531,7 @@ watch(() => props.isOpen, (isOpen) => {
 .close-btn:focus-visible {
   outline: none;
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .modal-body {
@@ -589,21 +589,21 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-action-btn.status-done {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .quick-action-btn.status-done:hover {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: var(--status-done-bg);
+  border-color: var(--status-done-border);
 }
 
 .quick-action-btn.priority-high {
-  color: #eab308;
+  color: var(--color-warning);
 }
 
 .quick-action-btn.priority-high:hover {
-  background: rgba(234, 179, 8, 0.1);
-  border-color: rgba(234, 179, 8, 0.3);
+  background: var(--priority-high-bg);
+  border-color: var(--priority-high-border);
 }
 
 .quick-action-btn.danger {
@@ -612,7 +612,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .quick-action-btn.danger:hover {
   background: var(--color-danger-bg-light);
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: var(--color-danger-border);
 }
 
 /* Field Selectors */
@@ -649,8 +649,8 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .field-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: var(--space-4_5);
+  height: var(--space-4_5);
   cursor: pointer;
   accent-color: var(--brand-primary);
 }
@@ -663,7 +663,7 @@ watch(() => props.isOpen, (isOpen) => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding-inline-start: calc(18px + var(--space-3)); /* RTL: field input indentation */
+  padding-inline-start: calc(var(--space-4_5) + var(--space-3)); /* RTL: field input indentation */
   animation: slideDown var(--duration-fast) var(--spring-smooth);
 }
 
@@ -776,7 +776,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .field-name {
   font-weight: var(--font-medium);
-  min-width: 70px;
+  min-width: var(--space-18);
 }
 
 .old-value {

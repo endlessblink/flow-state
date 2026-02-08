@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="activeStatusFilter"
-    class="absolute top-4 left-4 z-20 px-4 py-2 bg-[rgba(99,102,241,0.2)] backdrop-blur-sm border border-indigo-500/30 rounded-lg text-indigo-300 text-sm font-medium flex items-center gap-2 shadow-lg"
+    class="absolute top-4 left-4 z-20 px-4 py-2 bg-[var(--brand-primary-bg-subtle)] backdrop-blur-sm border border-[var(--brand-primary-border-medium)] rounded-lg text-[var(--brand-primary-text)] text-sm font-medium flex items-center gap-2 shadow-lg"
   >
     <Filter :size="16" />
     <span>{{ filterLabel }} filter active</span>

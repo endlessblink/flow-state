@@ -545,7 +545,7 @@ const handleTimeFilterSelect = (key: string) => {
   border-radius: var(--radius-full);
   background: var(--surface-elevated);
   color: var(--text-secondary);
-  font-size: 0.625rem;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 

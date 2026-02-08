@@ -81,11 +81,11 @@ const taskStore = useTaskStore()
   border-radius: var(--radius-md);
 
   /* Glass morphism - purple-tinted */
-  background: rgba(35, 32, 50, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--overlay-component-bg-strong);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
   border: 1px solid var(--glass-border);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .toolbar-group {
@@ -96,7 +96,7 @@ const taskStore = useTaskStore()
 }
 
 .toolbar-separator {
-  width: 16px;
+  width: var(--space-4);
   height: 1px;
   background: var(--glass-border);
   margin: var(--space-0_5) 0;
@@ -107,10 +107,10 @@ const taskStore = useTaskStore()
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   border-radius: var(--radius-sm);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
@@ -119,44 +119,44 @@ const taskStore = useTaskStore()
 
 .toolbar-btn:hover {
   background: var(--glass-border);
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .toolbar-btn:focus-visible {
-  outline: 2px solid var(--brand-primary, #6366f1);
-  outline-offset: 2px;
+  outline: 2px solid var(--brand-primary);
+  outline-offset: var(--space-0_5);
 }
 
 /* Primary action button (Add Task) */
 .toolbar-btn.primary {
   background: var(--color-indigo-bg-heavy);
-  color: #818cf8;
-  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--color-indigo-light);
+  border-color: var(--color-indigo-border);
 }
 
 .toolbar-btn.primary:hover {
-  background: rgba(99, 102, 241, 0.35);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+  background: var(--color-indigo-bg-medium);
+  box-shadow: var(--glow-indigo-md);
 }
 
 /* Toggle buttons */
 .toolbar-btn.toggle {
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  color: var(--text-muted);
 }
 
 .toolbar-btn.toggle:hover {
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   background: var(--glass-bg-heavy);
 }
 
 .toolbar-btn.toggle.active {
   background: var(--glass-border);
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .toolbar-btn.toggle.active.overdue {
-  color: #fb923c; /* Orange-400 */
-  background: rgba(251, 146, 60, 0.15);
-  border-color: rgba(251, 146, 60, 0.25);
+  color: var(--color-orange);
+  background: var(--orange-bg-soft);
+  border-color: var(--orange-border);
 }
 </style>

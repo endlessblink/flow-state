@@ -77,14 +77,14 @@ const percentage = computed(() => {
 
 .progress-count {
   font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--color-text-primary, #ffffff);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .progress-label {
   font-size: var(--text-sm);
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary);
 }
 
 .streak-info {
@@ -92,8 +92,8 @@ const percentage = computed(() => {
   align-items: center;
   gap: var(--space-1_5);
   padding: var(--space-1_5) var(--space-3);
-  background: rgba(251, 146, 60, 0.15);
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  background: var(--amber-bg-light);
+  border: 1px solid var(--amber-border);
   border-radius: var(--radius-xl);
 }
 
@@ -104,8 +104,8 @@ const percentage = computed(() => {
 
 .streak-count {
   font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-warning, #fb923c);
+  font-weight: var(--font-semibold);
+  color: var(--color-warning);
 }
 
 .progress-bar-container {
@@ -114,21 +114,21 @@ const percentage = computed(() => {
 
 .progress-bar-track {
   position: relative;
-  height: 8px;
+  height: var(--space-2);
   background: var(--glass-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--blur-light);
 }
 
 .progress-bar-fill {
   position: relative;
   height: 100%;
-  background: linear-gradient(90deg, var(--color-blue) 0%, #8b5cf6 50%, #ec4899 100%);
+  background: linear-gradient(90deg, var(--color-blue) 0%, var(--color-purple) 50%, var(--color-pink) 100%);
   border-radius: var(--radius-sm);
-  transition: width var(--duration-slower) cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width var(--duration-slower) var(--ease-out);
   min-width: 0;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  box-shadow: var(--glow-blue-subtle);
 }
 
 .progress-percentage {
@@ -136,10 +136,10 @@ const percentage = computed(() => {
   right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
-  font-size: 9px;
-  font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-bold);
+  color: var(--text-on-primary);
+  text-shadow: var(--text-shadow-sm);
 }
 
 /* Animations */

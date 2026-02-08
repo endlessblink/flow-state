@@ -7,6 +7,7 @@
  */
 
 import type { Task } from '@/types/tasks'
+import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
 /**
  * Validation result with detailed error information
@@ -206,7 +207,7 @@ export function sanitizeTask(task: unknown, options: {
     completedPomodoros: typeof taskObj.completedPomodoros === 'number' ? taskObj.completedPomodoros : 0,
     subtasks: Array.isArray(taskObj.subtasks) ? taskObj.subtasks : [],
     dueDate: typeof taskObj.dueDate === 'string' ? taskObj.dueDate : new Date().toISOString().split('T')[0],
-    projectId: typeof taskObj.projectId === 'string' ? taskObj.projectId : 'uncategorized',
+    projectId: typeof taskObj.projectId === 'string' ? taskObj.projectId : UNCATEGORIZED_PROJECT_ID,
     createdAt: parseDate(taskObj.createdAt) || new Date(),
     updatedAt: parseDate(taskObj.updatedAt) || new Date(),
     instances: Array.isArray(taskObj.instances) ? taskObj.instances : [],

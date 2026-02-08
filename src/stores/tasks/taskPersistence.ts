@@ -30,7 +30,7 @@ export function useTaskPersistence(
     // BUG-1084 v5: Flag to indicate that loadFromDatabase has completed at least once
     // Used by useCanvasOrchestrator to wait for store initialization before syncing
     const _hasInitializedOnce = ref(false)
-    const FILTER_STORAGE_KEY = 'flow-state-filters'
+    const FILTER_STORAGE_KEY = 'flowstate-filters'
 
     interface PersistedFilterState {
         activeProjectId: string | null
@@ -403,6 +403,14 @@ export function useTaskPersistence(
 
     const loadFiltersFromLocalStorage = () => {
         try {
+            // TASK-1267: Migrate from old key prefix
+            if (!localStorage.getItem(FILTER_STORAGE_KEY)) {
+                const oldData = localStorage.getItem('flow-state-filters')
+                if (oldData) {
+                    localStorage.setItem(FILTER_STORAGE_KEY, oldData)
+                    localStorage.removeItem('flow-state-filters')
+                }
+            }
             const localSaved = localStorage.getItem(FILTER_STORAGE_KEY)
             if (localSaved) {
                 const state: PersistedFilterState = JSON.parse(localSaved)

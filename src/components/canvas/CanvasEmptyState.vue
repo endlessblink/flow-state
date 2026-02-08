@@ -48,21 +48,21 @@ defineEmits<{
 }
 
 .empty-icon {
-  color: var(--color-text-tertiary);
+  color: var(--text-tertiary);
   opacity: 0.5;
 }
 
 .empty-title {
-  font-size: var(--space-6);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   margin: 0;
   text-align: center;
 }
 
 .empty-description {
   font-size: var(--text-base);
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin: 0;
   text-align: center;
   max-width: 400px;
@@ -79,13 +79,13 @@ defineEmits<{
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-6);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-out);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 .empty-btn.primary {
@@ -96,26 +96,26 @@ defineEmits<{
 
 .empty-btn.primary:hover {
   background: var(--color-indigo-bg-heavy);
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: var(--color-indigo-border);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  box-shadow: var(--glow-indigo-sm);
 }
 
 .empty-btn.secondary {
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background: var(--purple-bg-soft);
+  border: 1px solid var(--purple-border);
+  color: var(--color-purple-light);
 }
 
 .empty-btn.secondary:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.3);
+  background: var(--purple-bg-medium);
+  border-color: var(--purple-border-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  box-shadow: var(--glow-purple-sm);
 }
 
 .empty-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 </style>

@@ -107,7 +107,7 @@ defineEmits<{
   top: 0;
   left: 0;
   right: 0;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   background: linear-gradient(135deg, #ff6b6b, #ffa726);
   color: white;
   padding: var(--space-3) var(--space-4);
@@ -168,7 +168,7 @@ defineEmits<{
   top: 60px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10001;
+  z-index: var(--z-tooltip);
   background: linear-gradient(135deg, #ff4757, #ff6b7a);
   color: white;
   padding: var(--space-4) var(--space-5);
@@ -246,7 +246,7 @@ defineEmits<{
   bottom: 0;
   background: var(--overlay-darker);
   backdrop-filter: blur(4px);
-  z-index: 10002;
+  z-index: var(--z-tooltip);
   display: flex;
   align-items: center;
   justify-content: center;

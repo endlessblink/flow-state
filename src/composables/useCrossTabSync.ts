@@ -5,6 +5,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useAuthStore } from '@/stores/auth'
 import { useBroadcastChannelSync } from './sync/useBroadcastChannelSync'
 import { useTimerLeaderElection } from './sync/useTimerLeaderElection'
+import { CROSS_TAB_DEDUP_TIMEOUT_MS } from '@/config/timing'
 
 // Types for cross-tab messages
 export interface CrossTabMessage {
@@ -155,7 +156,7 @@ export function useCrossTabSync() {
   const trackLocalOperation = (operation: TaskOperation) => {
     if (operation.taskId) {
       pendingLocalOperations.value.set(operation.taskId, operation)
-      setTimeout(() => pendingLocalOperations.value.delete(operation.taskId!), 5000)
+      setTimeout(() => pendingLocalOperations.value.delete(operation.taskId!), CROSS_TAB_DEDUP_TIMEOUT_MS)
     }
   }
 

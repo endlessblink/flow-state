@@ -108,7 +108,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   backdrop-filter: blur(4px);
 }
 
@@ -129,7 +129,7 @@ onUnmounted(() => {
 
 h2 {
   margin: 0 0 var(--space-3, 12px) 0;
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
   font-weight: 600;
 }
 
@@ -141,7 +141,7 @@ h2 {
 
 .error-details {
   font-family: monospace;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--text-tertiary, rgba(255, 255, 255, 0.5));
   background: rgba(0, 0, 0, 0.3);
   padding: var(--space-2, 8px);
@@ -192,7 +192,7 @@ h2 {
 
 .max-retries-message {
   color: var(--status-error, #ef4444);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   margin-top: var(--space-4, 16px);
   margin-bottom: 0;
 }

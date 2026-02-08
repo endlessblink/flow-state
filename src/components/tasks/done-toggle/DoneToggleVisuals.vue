@@ -281,29 +281,28 @@ const getCelebrationStyle = (index: number) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: var(--space-0_5) solid var(--glass-handle);
   border-radius: var(--radius-md);
   /* Multi-layer glass morphism with depth */
   background:
     linear-gradient(135deg,
-      rgba(255, 255, 255, 0.3) 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      rgba(255, 255, 255, 0.2) 100%
+      rgba(var(--color-slate-50), 0.3) 0%,
+      rgba(var(--color-slate-50), 0.4) 50%,
+      rgba(var(--color-slate-50), 0.2) 100%
     ),
     radial-gradient(circle at 30% 30%,
-      rgba(255, 255, 255, 0.2) 0%,
+      rgba(var(--color-slate-50), 0.2) 0%,
       transparent 70%
     );
-  backdrop-filter: blur(16px) saturate(1.8);
+  backdrop-filter: blur(var(--space-4)) saturate(1.8);
   cursor: pointer;
-  transition: all var(--duration-slower) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: all var(--duration-slower) var(--spring-swift);
   position: relative;
   overflow: visible;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    var(--shadow-md),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.4),
+    inset 0 calc(-1 * var(--space-0_5)) 0 rgba(var(--color-slate-900), 0.1);
   user-select: none;
   /* Advanced GPU acceleration */
   transform: translateZ(0);
@@ -312,22 +311,21 @@ const getCelebrationStyle = (index: number) => {
 
 /* Sophisticated hover state with enhanced glass effect */
 .done-toggle__button:hover {
-  transform: translateY(-2px) translateZ(0);
+  transform: translateY(calc(-1 * var(--space-0_5))) translateZ(0);
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.18),
-    0 4px 16px rgba(0, 0, 0, 0.12),
-    0 0 0 1px rgba(59, 130, 246, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  border-color: rgba(59, 130, 246, 0.9);
+    var(--shadow-xl),
+    0 0 0 var(--space-0_5) var(--blue-border-medium),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.5);
+  border-color: rgba(var(--color-blue), 0.9);
   /* Enhanced hover glass with color infusion */
   background:
     linear-gradient(135deg,
-      rgba(255, 255, 255, 0.4) 0%,
-      rgba(59, 130, 246, 0.2) 50%,
-      rgba(255, 255, 255, 0.3) 100%
+      rgba(var(--color-slate-50), 0.4) 0%,
+      var(--blue-bg-medium) 50%,
+      rgba(var(--color-slate-50), 0.3) 100%
     ),
     radial-gradient(circle at 70% 70%,
-      rgba(59, 130, 246, 0.15) 0%,
+      var(--blue-bg-subtle) 0%,
       transparent 70%
     );
 }
@@ -336,9 +334,8 @@ const getCelebrationStyle = (index: number) => {
 .done-toggle__button:active {
   transform: translateY(0) scale(0.96) translateZ(0);
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.16),
-    0 2px 8px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    var(--shadow-lg),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.3);
 }
 
 /* Premium completed state with enhanced visual hierarchy */
@@ -346,23 +343,22 @@ const getCelebrationStyle = (index: number) => {
   /* Rich gradient glass morphism for completed state */
   background:
     linear-gradient(135deg,
-      rgba(34, 197, 94, 0.9) 0%,
+      rgba(var(--color-success), 0.9) 0%,
       rgba(22, 163, 74, 0.95) 50%,
       rgba(16, 185, 129, 0.9) 100%
     ),
     radial-gradient(circle at 30% 30%,
-      rgba(255, 255, 255, 0.3) 0%,
+      rgba(var(--color-slate-50), 0.3) 0%,
       transparent 70%
     );
-  border-color: rgba(34, 197, 94, 1);
+  border-color: var(--color-success);
   color: white;
-  backdrop-filter: blur(20px) saturate(2.0);
+  backdrop-filter: blur(var(--space-5)) saturate(2.0);
   box-shadow:
-    0 12px 40px rgba(34, 197, 94, 0.5),
-    0 4px 16px rgba(34, 197, 94, 0.3),
-    0 0 0 1px rgba(34, 197, 94, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    0 var(--space-3) var(--space-10) var(--success-shadow),
+    0 0 0 var(--space-0_5) var(--success-border-active),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.4),
+    inset 0 calc(-1 * var(--space-0_5)) 0 rgba(var(--color-slate-900), 0.1);
 }
 
 .done-toggle__button--completed:hover {
@@ -373,16 +369,15 @@ const getCelebrationStyle = (index: number) => {
       rgba(5, 150, 105, 0.95) 100%
     ),
     radial-gradient(circle at 70% 70%,
-      rgba(255, 255, 255, 0.4) 0%,
+      rgba(var(--color-slate-50), 0.4) 0%,
       transparent 70%
     );
   border-color: rgba(22, 163, 74, 1);
   box-shadow:
-    0 20px 64px rgba(34, 197, 94, 0.6),
-    0 8px 24px rgba(34, 197, 94, 0.4),
-    0 0 0 2px rgba(34, 197, 94, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px) translateZ(0);
+    0 var(--space-5) var(--space-16) var(--success-shadow),
+    0 0 0 var(--space-0_5) rgba(var(--color-success), 0.9),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.5);
+  transform: translateY(calc(-1 * var(--space-0_5))) translateZ(0);
 }
 
 /* Disabled state with reduced visual weight */
@@ -391,21 +386,18 @@ const getCelebrationStyle = (index: number) => {
   cursor: not-allowed;
   pointer-events: none;
   transform: none !important;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Enhanced focus visibility with WCAG AA compliance */
 .done-toggle__button:focus-visible {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 3px;
+  outline: var(--space-0_5) solid var(--color-primary);
+  outline-offset: var(--space-0_5);
   /* Enhanced background for better focus visibility */
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: var(--blue-bg-medium);
   box-shadow:
-    0 0 0 4px rgba(59, 130, 246, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.16),
-    0 2px 8px rgba(0, 0, 0, 0.12);
+    0 0 0 var(--space-1) var(--blue-bg-medium),
+    var(--shadow-md);
 }
 
 /* Content container with z-index management */
@@ -436,7 +428,7 @@ const getCelebrationStyle = (index: number) => {
 
 /* Sophisticated circle system with multiple layers */
 .done-toggle__circle {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--color-slate-50), 0.9);
   position: relative;
   transition: all var(--duration-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
   transform: translateZ(0);
@@ -444,16 +436,16 @@ const getCelebrationStyle = (index: number) => {
 
 .done-toggle__circle--hover,
 .done-toggle__circle--focus {
-  color: rgba(59, 130, 246, 0.95);
+  color: rgba(var(--color-blue), 0.95);
   transform: scale(1.1) translateZ(0);
 }
 
 /* Circle inner decoration */
 .done-toggle__circle-inner {
   position: absolute;
-  inset: -4px;
-  border: 1px solid var(--border-hover);
-  border-radius: 50%;
+  inset: calc(-1 * var(--space-1));
+  border: var(--space-0_5) solid var(--border-hover);
+  border-radius: var(--radius-full);
   opacity: 0;
   transition: opacity var(--duration-slow) var(--ease-out);
 }
@@ -465,9 +457,9 @@ const getCelebrationStyle = (index: number) => {
 /* Circle glow effect */
 .done-toggle__circle-glow {
   position: absolute;
-  inset: -8px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%);
-  border-radius: 50%;
+  inset: calc(-1 * var(--space-2));
+  background: radial-gradient(circle, var(--blue-bg-medium) 0%, transparent 70%);
+  border-radius: var(--radius-full);
   opacity: 0;
   transition: opacity var(--duration-slow) var(--ease-out);
   z-index: -1;
@@ -480,9 +472,9 @@ const getCelebrationStyle = (index: number) => {
 /* Circle pulse animation */
 .done-toggle__circle-pulse {
   position: absolute;
-  inset: -12px;
-  border: 2px solid rgba(59, 130, 246, 0.4);
-  border-radius: 50%;
+  inset: calc(-1 * var(--space-3));
+  border: var(--space-0_5) solid var(--blue-border-medium);
+  border-radius: var(--radius-full);
   opacity: 0;
   animation: circlePulse 2s ease-in-out infinite;
 }
@@ -490,9 +482,9 @@ const getCelebrationStyle = (index: number) => {
 /* Check enhancement effects */
 .done-toggle__check-glow {
   position: absolute;
-  inset: -6px;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%);
-  border-radius: 50%;
+  inset: calc(-1 * var(--space-1_5));
+  background: radial-gradient(circle, var(--success-shadow) 0%, transparent 70%);
+  border-radius: var(--radius-full);
   opacity: 0;
   transition: opacity var(--duration-slow) var(--ease-out);
   z-index: -1;
@@ -504,12 +496,12 @@ const getCelebrationStyle = (index: number) => {
 
 .done-toggle__check-sparkle {
   position: absolute;
-  top: -var(--space-1);
-  inset-inline-end: -4px; /* RTL: check sparkle position */
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
+  top: calc(-1 * var(--space-1));
+  inset-inline-end: calc(-1 * var(--space-1)); /* RTL: check sparkle position */
+  width: var(--space-1);
+  height: var(--space-1);
+  background: rgba(var(--color-slate-50), 0.8);
+  border-radius: var(--radius-full);
   opacity: 0;
   animation: sparkle 3s ease-in-out infinite;
 }
@@ -517,10 +509,10 @@ const getCelebrationStyle = (index: number) => {
 /* Advanced ripple system with enhanced effects */
 .done-toggle__ripple {
   position: absolute;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: radial-gradient(circle,
-    rgba(34, 197, 94, 0.7) 0%,
-    rgba(34, 197, 94, 0.4) 40%,
+    rgba(var(--color-success), 0.7) 0%,
+    rgba(var(--color-success), 0.4) 40%,
     transparent 70%
   );
   opacity: 0.6;
@@ -538,9 +530,9 @@ const getCelebrationStyle = (index: number) => {
 /* Visual feedback layers */
 .done-toggle__glow-layer {
   position: absolute;
-  inset: -2px;
+  inset: calc(-1 * var(--space-0_5));
   background: radial-gradient(circle,
-    rgba(59, 130, 246, 0.1) 0%,
+    var(--blue-bg-light) 0%,
     transparent 60%
   );
   border-radius: var(--radius-md);
@@ -557,9 +549,9 @@ const getCelebrationStyle = (index: number) => {
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.3) 0%,
+    rgba(var(--color-slate-50), 0.3) 0%,
     transparent 50%,
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(var(--color-slate-50), 0.1) 100%
   );
   border-radius: var(--radius-md);
   opacity: 0.6;
@@ -578,71 +570,67 @@ const getCelebrationStyle = (index: number) => {
 
 /* Size variants with responsive scaling */
 .done-toggle__button--sm {
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   border-radius: var(--radius-sm);
-  border-width: 1.5px;
+  border-width: var(--space-0_5);
 }
 
 .done-toggle__button--lg {
-  width: 40px;
-  height: 40px;
+  width: var(--space-10);
+  height: var(--space-10);
   border-radius: var(--radius-lg);
-  border-width: 2.5px;
+  border-width: var(--space-0_5);
 }
 
 .done-toggle__button--md {
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
 }
 
 /* Enhanced variant styles with sophisticated glass morphism */
 .done-toggle__button--subtle {
   background:
     linear-gradient(135deg,
-      rgba(255, 255, 255, 0.2) 0%,
-      rgba(255, 255, 255, 0.25) 50%,
-      rgba(255, 255, 255, 0.15) 100%
+      rgba(var(--color-slate-50), 0.2) 0%,
+      rgba(var(--color-slate-50), 0.25) 50%,
+      rgba(var(--color-slate-50), 0.15) 100%
     );
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--glass-border-strong);
   box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(10px) saturate(1.5);
+    var(--shadow-sm),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.3);
+  backdrop-filter: blur(var(--space-2_5)) saturate(1.5);
 }
 
 .done-toggle__button--subtle:hover {
   background:
     linear-gradient(135deg,
-      rgba(255, 255, 255, 0.3) 0%,
-      rgba(255, 255, 255, 0.35) 50%,
-      rgba(255, 255, 255, 0.25) 100%
+      rgba(var(--color-slate-50), 0.3) 0%,
+      rgba(var(--color-slate-50), 0.35) 50%,
+      rgba(var(--color-slate-50), 0.25) 100%
     );
-  box-shadow:
-    0 10px 32px rgba(0, 0, 0, 0.12),
-    0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 .done-toggle__button--prominent {
   background:
     linear-gradient(135deg,
-      rgba(59, 130, 246, 0.95) 0%,
+      rgba(var(--color-blue), 0.95) 0%,
       rgba(37, 99, 235, 1) 50%,
       rgba(29, 78, 216, 0.95) 100%
     ),
     radial-gradient(circle at 30% 30%,
-      rgba(255, 255, 255, 0.2) 0%,
+      rgba(var(--color-slate-50), 0.2) 0%,
       transparent 70%
     );
-  border-color: rgba(59, 130, 246, 1);
+  border-color: var(--color-blue);
   color: white;
   box-shadow:
-    0 12px 40px rgba(59, 130, 246, 0.5),
-    0 4px 16px rgba(59, 130, 246, 0.3),
-    0 0 0 1px rgba(59, 130, 246, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(18px) saturate(2.0);
+    var(--purple-shadow-deep),
+    0 0 0 var(--space-0_5) var(--blue-border-active),
+    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.3);
+  backdrop-filter: blur(var(--space-4_5)) saturate(2.0);
 }
 
 .done-toggle__button--prominent:hover {
@@ -653,24 +641,23 @@ const getCelebrationStyle = (index: number) => {
       rgba(30, 64, 175, 1) 100%
     ),
     radial-gradient(circle at 70% 70%,
-      rgba(255, 255, 255, 0.3) 0%,
+      rgba(var(--color-slate-50), 0.3) 0%,
       transparent 70%
     );
   box-shadow:
-    0 20px 64px rgba(59, 130, 246, 0.6),
-    0 8px 24px rgba(59, 130, 246, 0.4),
-    0 0 0 2px rgba(59, 130, 246, 0.9);
+    0 var(--space-5) var(--space-16) var(--blue-shadow),
+    0 0 0 var(--space-0_5) rgba(var(--color-blue), 0.9);
 }
 
 .done-toggle__button--prominent .done-toggle__circle {
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(var(--color-slate-50), 0.95);
 }
 
 /* Touch feedback overlay */
 .done-toggle__touch-feedback {
   position: absolute;
-  inset: -8px;
-  background: rgba(59, 130, 246, 0.1);
+  inset: calc(-1 * var(--space-2));
+  background: var(--blue-bg-light);
   border-radius: inherit;
   pointer-events: none;
   opacity: 0.6;
@@ -681,8 +668,8 @@ const getCelebrationStyle = (index: number) => {
   position: absolute;
   top: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: rgba(0, 0, 0, 0.9);
+  transform: translateX(-50%) translateY(var(--space-2_5));
+  background: var(--overlay-component-bg);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   display: flex;
@@ -692,12 +679,12 @@ const getCelebrationStyle = (index: number) => {
   opacity: 0;
   transition: all var(--duration-normal) var(--ease-out);
   z-index: 100;
-  min-width: 120px;
+  min-width: var(--space-30);
 }
 
 .done-toggle__hints--visible {
   opacity: 1;
-  transform: translateX(-50%) translateY(14px);
+  transform: translateX(-50%) translateY(var(--space-3_5));
 }
 
 .hint-item {
@@ -706,17 +693,17 @@ const getCelebrationStyle = (index: number) => {
   justify-content: space-between;
   gap: var(--space-2);
   font-size: var(--text-xs);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--color-slate-50), 0.9);
 }
 
 .hint-icon {
-  width: 14px;
+  width: var(--space-3_5);
   text-align: center;
 }
 
 kbd {
   background: var(--border-hover);
-  padding: 1px var(--space-1);
+  padding: var(--space-0_5) var(--space-1);
   border-radius: var(--radius-sm);
   font-family: monospace;
   font-size: var(--text-xs);
@@ -725,7 +712,7 @@ kbd {
 /* Progress Border Styles */
 .done-toggle__progress-wrapper {
   position: absolute;
-  inset: -4px;
+  inset: calc(-1 * var(--space-1));
   border-radius: inherit;
   pointer-events: none;
   z-index: -1;
@@ -734,14 +721,14 @@ kbd {
 .done-toggle__progress-bg {
   position: absolute;
   inset: 0;
-  border: 1px solid var(--glass-border);
+  border: var(--space-0_5) solid var(--glass-border);
   border-radius: inherit;
 }
 
 .done-toggle__progress-fill {
   position: absolute;
   inset: 0;
-  border: 2px solid rgba(34, 197, 94, 0.6);
+  border: var(--space-0_5) solid var(--status-done-border);
   border-radius: inherit;
   clip-path: inset(0 calc(100% - var(--progress)) 0 0);
   transition: clip-path var(--duration-slow) var(--ease-out);
@@ -801,10 +788,10 @@ kbd {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 4px;
-  height: 4px;
+  width: var(--space-1);
+  height: var(--space-1);
   background: var(--color-primary); /* Fallback */
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   pointer-events: none;
   animation: particleBurst 1s ease-out forwards;
   animation-delay: var(--delay);
@@ -815,7 +802,7 @@ kbd {
   0% {
     transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0) scale(0);
     opacity: 1;
-    background: #34d399;
+    background: var(--color-success);
   }
   50% {
     opacity: 0.8;
@@ -830,10 +817,10 @@ kbd {
 /* Utilities */
 .sr-only {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: var(--space-0_5);
+  height: var(--space-0_5);
   padding: 0;
-  margin: -1px;
+  margin: calc(-1 * var(--space-0_5));
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
@@ -844,10 +831,10 @@ kbd {
    SIMPLE VARIANT - Minimal rounded square
    ========================================== */
 .done-toggle--simple {
-  width: 18px;
-  height: 18px;
+  width: var(--space-4_5);
+  height: var(--space-4_5);
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--glass-border);
+  border: var(--space-0_5) solid var(--glass-border);
   background: transparent;
   cursor: pointer;
   display: flex;
@@ -863,8 +850,8 @@ kbd {
 }
 
 .done-toggle--simple:focus-visible {
-  outline: 2px solid var(--brand-primary);
-  outline-offset: 2px;
+  outline: var(--space-0_5) solid var(--brand-primary);
+  outline-offset: var(--space-0_5);
 }
 
 .done-toggle--simple:disabled {
@@ -878,8 +865,8 @@ kbd {
 }
 
 .done-toggle--simple-checked:hover {
-  background: var(--brand-primary-dark, #3ab8a8);
-  border-color: var(--brand-primary-dark, #3ab8a8);
+  background: var(--brand-primary-dark, hsl(var(--brand-600)));
+  border-color: var(--brand-primary-dark, hsl(var(--brand-600)));
 }
 
 .done-toggle--simple-icon {

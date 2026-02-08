@@ -486,12 +486,12 @@ onBeforeUnmount(() => {
 .chip-count {
   background: var(--accent-primary);
   color: white;
-  font-size: 0.625rem;
-  font-weight: 600;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-semibold);
   padding: 0 var(--space-1);
   border-radius: var(--radius-full);
-  min-width: 14px;
-  height: 14px;
+  min-width: var(--space-3_5);
+  height: var(--space-3_5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -540,7 +540,7 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
@@ -558,9 +558,9 @@ onBeforeUnmount(() => {
 
 /* TASK-1246: Checkbox indicator for multi-select */
 .checkbox-indicator {
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid var(--glass-border);
+  width: var(--space-3_5);
+  height: var(--space-3_5);
+  border: var(--space-px) solid var(--glass-border);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -576,8 +576,8 @@ onBeforeUnmount(() => {
 }
 
 .priority-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -619,14 +619,14 @@ onBeforeUnmount(() => {
 }
 
 .clear-filters-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: rgb(239, 68, 68);
+  background: var(--danger-bg-light);
+  border-color: var(--danger-border-medium);
+  color: var(--color-danger);
 }
 
 /* Scrollbar for dropdown */
 .dropdown-menu::-webkit-scrollbar {
-  width: 4px;
+  width: var(--space-1);
 }
 
 .dropdown-menu::-webkit-scrollbar-track {

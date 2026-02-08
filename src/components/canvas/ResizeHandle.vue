@@ -61,11 +61,11 @@ const onLeave = () => {
 <style scoped>
 .custom-resize-handle-component {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: var(--space-4);
+  height: var(--space-4);
   border-radius: 50%;
   background-color: var(--brand-primary);
-  border: 2px solid var(--surface-primary);
+  border: var(--space-0_5) solid var(--surface-primary);
   box-shadow: var(--shadow-dark-md);
   transition: all var(--duration-normal) var(--ease-out);
   z-index: 100;
@@ -77,8 +77,8 @@ const onLeave = () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
+  width: var(--space-1_5);
+  height: var(--space-1_5);
   border-radius: 50%;
   background-color: var(--surface-primary);
   transition: all var(--duration-fast) var(--ease-out);
@@ -89,8 +89,8 @@ const onLeave = () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   border-radius: 50%;
   cursor: inherit;
 }
@@ -155,8 +155,8 @@ const onLeave = () => {
 
 .custom-resize-handle-component:hover .handle-inner,
 .custom-resize-handle-component.is-resizing .handle-inner {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   background-color: var(--glass-bg-heavy);
 }
 

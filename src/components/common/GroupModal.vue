@@ -344,7 +344,7 @@ watch(() => props.isOpen, async (isOpen) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: var(--z-popover);
   backdrop-filter: blur(12px) saturate(100%);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
 }

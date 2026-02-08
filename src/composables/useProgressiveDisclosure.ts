@@ -1,7 +1,7 @@
 import { ref, provide, inject, type Ref } from 'vue'
 
 export const PROGRESSIVE_DISCLOSURE_KEY = Symbol('progressiveDisclosure')
-const STORAGE_KEY = 'flow-state-progressive-disclosure'
+const STORAGE_KEY = 'flowstate-progressive-disclosure'
 
 export interface ProgressiveDisclosureState {
   enabled: Ref<boolean>

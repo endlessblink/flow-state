@@ -20,8 +20,8 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(4px);
+  background: var(--overlay-light);
+  backdrop-filter: var(--overlay-backdrop-blur);
   z-index: 50;
 }
 
@@ -37,9 +37,9 @@ defineProps<{
 }
 
 .loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--color-border);
+  width: var(--space-12);
+  height: var(--space-12);
+  border: var(--space-1) solid var(--color-border);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;

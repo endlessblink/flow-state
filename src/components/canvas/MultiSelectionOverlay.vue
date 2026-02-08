@@ -329,14 +329,14 @@ onUnmounted(() => {
   top: var(--space-4);
   left: var(--space-4);
   background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--space-px) solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
   box-shadow: var(--shadow-xl);
   pointer-events: auto;
-  min-width: 300px;
+  min-width: var(--space-75);
 }
 
 .control-group {
@@ -354,7 +354,7 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
-  min-width: 80px;
+  min-width: var(--space-20);
 }
 
 .mode-btn,
@@ -363,7 +363,7 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--space-1);
   background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
+  border: var(--space-px) solid var(--glass-border);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -427,12 +427,12 @@ onUnmounted(() => {
   right: 0;
   margin-top: var(--space-1);
   background: var(--glass-bg-solid);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--space-px) solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xl);
-  min-width: 150px;
+  min-width: var(--space-37_5);
   z-index: 1001;
 }
 

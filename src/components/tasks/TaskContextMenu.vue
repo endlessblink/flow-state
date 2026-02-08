@@ -215,6 +215,7 @@
       @mouseleave="closeSubmenu('more')"
       @done-for-now="() => { closeAllSubmenusNow(); handleDoneForNow() }"
       @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
+      @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
       @move-to-section="taskId => { closeAllSubmenusNow(); $emit('moveToSection', taskId); $emit('close') }"
       @clear-selection="() => { closeAllSubmenusNow(); clearSelection() }"
     />
@@ -255,6 +256,7 @@ import type { Task } from '@/stores/tasks'
 
 // New Architecture Imports
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
+import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
 import { statusOptions } from './context-menu/constants'
 import StatusSubmenu from './context-menu/StatusSubmenu.vue'
@@ -422,6 +424,21 @@ const handleDoneForNow = async () => {
     console.error('Error updating task due date:', error)
     showToast('Failed to reschedule task', 'error')
   }
+}
+
+// FEATURE-1248: Pin task as quick task shortcut
+const { pinFromTask } = useQuickTasks()
+const pinAsQuickTask = async () => {
+    emit('close')
+    if (!currentTask.value) return
+    const { showToast } = useToast()
+    try {
+        await pinFromTask(currentTask.value)
+        showToast('Pinned as Quick Task', 'success', { duration: 2000 })
+    } catch (error) {
+        console.error('Error pinning quick task:', error)
+        showToast('Failed to pin task', 'error')
+    }
 }
 
 // Menu positioning
@@ -634,17 +651,17 @@ onUnmounted(() => {
 
 /* Highlighted menu item - stands out */
 .menu-item--highlight {
-  background: var(--amber-bg-light, rgba(245, 158, 11, 0.08));
-  border-left: 3px solid var(--amber-text, #f59e0b);
+  background: var(--amber-bg-light);
+  border-left: var(--space-0_75) solid var(--amber-text);
   margin: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   width: calc(100% - var(--space-4));
 }
 .menu-item--highlight:hover {
-  background: var(--amber-bg-medium, rgba(245, 158, 11, 0.15));
+  background: var(--amber-bg-medium);
 }
 .menu-item--highlight .menu-icon {
-  color: var(--amber-text, #f59e0b);
+  color: var(--amber-text);
 }
 
 .menu-hint {
@@ -753,8 +770,8 @@ onUnmounted(() => {
 }
 
 .priority-dot {
-  width: 7px;
-  height: 7px;
+  width: var(--space-1_75);
+  height: var(--space-1_75);
   border-radius: var(--radius-full);
 }
 
@@ -779,13 +796,13 @@ onUnmounted(() => {
 
 .footer-btn {
   padding: 0 var(--space-2);
-  height: 28px;
+  height: var(--space-7);
   background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-fast);
 }

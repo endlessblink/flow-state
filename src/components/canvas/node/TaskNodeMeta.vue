@@ -118,20 +118,20 @@ defineEmits<{
 }
 
 .done-badge {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--color-success);
+  background: var(--green-bg-soft);
+  border: 1px solid var(--green-border);
 }
 
 /* "Done for now" badge - amber text to indicate rescheduled */
 .done-for-now-badge {
-  color: var(--amber-text, #f59e0b);
+  color: var(--color-amber);
 }
 
 /* Clickable badges */
 .clickable {
   cursor: pointer;
-  transition: opacity var(--duration-fast) ease;
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .clickable:hover {
@@ -150,8 +150,8 @@ defineEmits<{
 }
 
 .subtask-complete {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--color-success);
+  background: var(--green-bg-soft);
+  border: 1px solid var(--green-border);
 }
 </style>

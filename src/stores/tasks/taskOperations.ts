@@ -11,6 +11,9 @@ import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
+/** Frontend sentinel for tasks with no project. Sanitized to null before DB writes. */
+export const UNCATEGORIZED_PROJECT_ID = 'uncategorized' as const
+
 // BUG-1184: Helper to check if a string is a valid UUID (for parent_id column)
 // Group IDs like "group-xxx" should NOT be saved to parent_id (UUID column)
 const isValidUUID = (str: string | null | undefined): boolean => {
@@ -100,7 +103,7 @@ export function useTaskOperations(
             }
 
             // Keep 'uncategorized' as frontend placeholder, sanitize to null when sending to DB
-            let projectId = taskData.projectId || 'uncategorized'
+            let projectId = taskData.projectId || UNCATEGORIZED_PROJECT_ID
             if (taskData.parentTaskId) {
                 const parentTask = _rawTasks.value.find(t => t.id === taskData.parentTaskId)
                 if (parentTask) projectId = parentTask.projectId
@@ -308,7 +311,7 @@ export function useTaskOperations(
 
             // Project logic
             if ('projectId' in updates) {
-                const isUncategorized = !updates.projectId || updates.projectId === '1' || updates.projectId === 'uncategorized'
+                const isUncategorized = !updates.projectId || updates.projectId === '1' || updates.projectId === UNCATEGORIZED_PROJECT_ID
                 updates.isUncategorized = isUncategorized
             }
 

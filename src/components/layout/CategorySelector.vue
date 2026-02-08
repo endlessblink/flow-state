@@ -333,7 +333,7 @@ kbd {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-family: monospace;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
 }

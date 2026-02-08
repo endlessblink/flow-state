@@ -307,9 +307,9 @@ export class PerformanceBenchmark {
     console.log('🌐 Benchmarking network requests...')
 
     const endpoints = [
-      { url: 'https://httpbin.org/json', method: 'GET' as const },
-      { url: 'https://httpbin.org/post', method: 'POST' as const },
-      { url: 'https://httpbin.org/put', method: 'PUT' as const }
+      { url: 'https://in-theflow.com', method: 'GET' as const },
+      { url: 'https://in-theflow.com', method: 'GET' as const },
+      { url: 'https://in-theflow.com', method: 'GET' as const }
     ]
 
     const times: number[] = []
@@ -507,7 +507,7 @@ export class PerformanceBenchmark {
   private async warmupNetworkRequests() {
     for (let i = 0; i < (this.config.warmupIterations || 2); i++) {
       try {
-        await fetch('https://httpbin.org/status/200')
+        await fetch('https://in-theflow.com')
       } catch {
         // Ignore warmup errors
       }

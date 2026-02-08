@@ -123,13 +123,13 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => {
     // BUG-012 FIX: localStorage override ONLY works in DEV builds (AND, not OR)
     // This prevents production users from gaining admin access via localStorage
-    if (import.meta.env.DEV && localStorage.getItem('flow-state-dev-mode') === 'true') return true
+    if (import.meta.env.DEV && localStorage.getItem('flowstate-dev-mode') === 'true') return true
     return user.value?.app_metadata?.role === 'admin' ||
       user.value?.user_metadata?.role === 'admin'
   })
   const isDev = computed(() => {
     // BUG-012 FIX: localStorage override ONLY works in DEV builds (AND, not OR)
-    if (import.meta.env.DEV && localStorage.getItem('flow-state-dev-mode') === 'true') return true
+    if (import.meta.env.DEV && localStorage.getItem('flowstate-dev-mode') === 'true') return true
     return isAdmin.value ||
       user.value?.app_metadata?.role === 'developer' ||
       user.value?.user_metadata?.role === 'developer'
@@ -270,6 +270,14 @@ export const useAuthStore = defineStore('auth', () => {
           // Update local state
           session.value = newSession
           user.value = newSession?.user || null
+
+          // FEATURE-1202: Write session to shared file for KDE widget (Tauri only)
+          // ~/.config/flowstate/session.json — KDE widget reads this for authenticated API calls
+          if (typeof window !== 'undefined' && '__TAURI__' in window) {
+            writeSessionFile(newSession).catch(e => {
+              console.warn('[AUTH] Failed to write session file for KDE widget:', e)
+            })
+          }
 
           // BUG-1056: Handle token refresh across tabs - update realtime connection
           if (_event === 'TOKEN_REFRESHED' && newSession?.access_token) {
@@ -511,6 +519,49 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * FEATURE-1202: Write session to shared file for KDE widget
+   * Tauri app writes to ~/.config/flowstate/session.json on every auth state change.
+   * KDE widget reads this file for authenticated API calls.
+   * On sign-out (null session), the file is cleared.
+   */
+  const writeSessionFile = async (sessionData: Session | null) => {
+    try {
+      const { writeTextFile, mkdir, exists } = await import('@tauri-apps/plugin-fs')
+      const { homeDir } = await import('@tauri-apps/api/path')
+
+      const home = await homeDir()
+      const configDir = `${home}.config/flowstate`
+      const sessionPath = `${configDir}/session.json`
+
+      // Ensure directory exists
+      const dirExists = await exists(configDir)
+      if (!dirExists) {
+        await mkdir(configDir, { recursive: true })
+      }
+
+      if (sessionData) {
+        // Write minimal session data (only what KDE widget needs)
+        const payload = JSON.stringify({
+          access_token: sessionData.access_token,
+          refresh_token: sessionData.refresh_token,
+          expires_at: sessionData.expires_at,
+          user_id: sessionData.user?.id,
+          updated_at: new Date().toISOString(),
+        })
+        await writeTextFile(sessionPath, payload)
+        console.log('[AUTH] Session file written for KDE widget')
+      } else {
+        // Clear session file on sign-out
+        await writeTextFile(sessionPath, '{}')
+        console.log('[AUTH] Session file cleared (signed out)')
+      }
+    } catch (e) {
+      // Non-critical — KDE widget is optional
+      console.warn('[AUTH] Could not write session file:', e)
+    }
+  }
+
   const signInWithPassword = async (email: string, password: string) => {
     try {
       // 1. Capture guest data BEFORE sign-in clears/changes state
@@ -625,6 +676,20 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = true
       error.value = null
 
+      // FEATURE-1202: Branch on Tauri vs PWA
+      // Tauri uses localhost redirect + system browser (can't do in-WebView redirect)
+      // PWA uses standard OAuth redirect in same window
+      const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
+
+      if (isTauri) {
+        const { signInWithGoogleTauri } = await import('@/composables/useTauriOAuth')
+        await signInWithGoogleTauri()
+        // Tauri flow handles session internally via exchangeCodeForSession
+        // onAuthStateChange will fire and update store state
+        return
+      }
+
+      // PWA: standard OAuth redirect flow
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

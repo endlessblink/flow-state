@@ -150,12 +150,12 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: 22px;
+  height: var(--space-5_5);
   padding: 0 var(--space-1_5);
   font-size: var(--text-xs);
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--color-slate-50), 0.6);
   background: transparent;
-  border: 1px solid var(--border-subtle);
+  border: var(--space-0_5) solid var(--border-subtle);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -165,7 +165,7 @@ onUnmounted(() => {
 
 .task-row__due-date-trigger:hover {
   border-color: var(--border-hover);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(var(--color-slate-50), 0.8);
   background: var(--glass-bg-soft);
 }
 
@@ -185,56 +185,56 @@ onUnmounted(() => {
 
 /* Overdue - red */
 .task-row__due-date--overdue {
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.3);
+  color: var(--color-danger);
+  border-color: rgba(var(--color-danger), 0.3);
 }
 
 .task-row__due-date--overdue:hover {
-  border-color: rgba(255, 107, 107, 0.5);
+  border-color: rgba(var(--color-danger), 0.5);
 }
 
 /* Today - yellow */
 .task-row__due-date--today {
-  color: #feca57;
-  border-color: rgba(254, 202, 87, 0.3);
+  color: var(--color-amber);
+  border-color: rgba(var(--color-amber), 0.3);
   font-weight: 500;
 }
 
 .task-row__due-date--today:hover {
-  border-color: rgba(254, 202, 87, 0.5);
+  border-color: rgba(var(--color-amber), 0.5);
 }
 
 /* Soon (within 3 days) - blue */
 .task-row__due-date--soon {
-  color: #54a0ff;
-  border-color: rgba(84, 160, 255, 0.3);
+  color: var(--color-blue);
+  border-color: rgba(var(--color-blue), 0.3);
 }
 
 .task-row__due-date--soon:hover {
-  border-color: rgba(84, 160, 255, 0.5);
+  border-color: rgba(var(--color-blue), 0.5);
 }
 
 /* Due Date Dropdown - Dark glass morphism */
 .due-date-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-1));
   left: 50%;
   transform: translateX(-50%);
-  z-index: 99999;
+  z-index: var(--z-tooltip);
 
   /* Glass morphism - dark purple-tinted with solid fallback */
-  background-color: #1c192d !important;
+  background-color: hsl(var(--slate-900)) !important;
   background: rgba(28, 25, 45, 0.95) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(var(--space-4));
+  -webkit-backdrop-filter: blur(var(--space-4));
+  border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.1) !important;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4),
+    0 0 0 var(--space-0_5) rgba(var(--color-slate-50), 0.05) inset;
   border-radius: var(--radius-md);
 
-  min-width: 120px;
-  max-height: 200px;
+  min-width: var(--space-30);
+  max-height: var(--space-50);
   overflow-y: auto;
   padding: var(--space-1);
 
@@ -251,7 +251,7 @@ onUnmounted(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: rgba(var(--color-slate-50), 0.9) !important;
   font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
@@ -259,12 +259,12 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   user-select: none;
   white-space: nowrap;
-  min-height: 28px;
+  min-height: var(--space-7);
 }
 
 .due-date-dropdown__item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(var(--color-slate-50), 0.08) !important;
+  background-color: rgba(var(--color-slate-50), 0.08) !important;
 }
 
 .due-date-dropdown__item.is-active {
@@ -283,7 +283,7 @@ onUnmounted(() => {
 .due-date-dropdown__overlay {
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: var(--z-dropdown);
 }
 
 /* Dropdown transitions */
@@ -294,11 +294,11 @@ onUnmounted(() => {
 
 .dropdown-slide-enter-from {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(calc(-1 * var(--space-1)));
 }
 
 .dropdown-slide-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(calc(-1 * var(--space-1)));
 }
 </style>

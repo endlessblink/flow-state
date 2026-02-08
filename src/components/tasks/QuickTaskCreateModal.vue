@@ -424,9 +424,9 @@ watch(() => _props.isOpen, (isOpen) => {
 
 /* Mic Button - Progressive Disclosure */
 .mic-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: var(--space-9);
+  height: var(--space-9);
+  border-radius: var(--radius-full);
   border: none;
   background: var(--glass-bg-soft);
   color: var(--text-secondary);
@@ -484,10 +484,10 @@ watch(() => _props.isOpen, (isOpen) => {
 
 @keyframes pulse-recording {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 0 0 var(--danger-glow-medium);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 var(--space-2) transparent;
   }
 }
 
@@ -505,16 +505,16 @@ watch(() => _props.isOpen, (isOpen) => {
 .voice-waveform {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 20px;
+  gap: var(--space-0_5);
+  height: var(--space-5);
 }
 
 .wave-bar {
-  width: 3px;
-  height: 6px;
+  width: var(--space-0_75);
+  height: var(--space-1_5);
   background: var(--danger-text);
-  border-radius: 2px;
-  animation: wave 0.8s ease-in-out infinite;
+  border-radius: var(--radius-xs);
+  animation: wave var(--duration-normal) ease-in-out infinite;
 }
 
 .wave-bar:nth-child(1) { animation-delay: 0s; }
@@ -524,8 +524,8 @@ watch(() => _props.isOpen, (isOpen) => {
 .wave-bar:nth-child(5) { animation-delay: 0.4s; }
 
 @keyframes wave {
-  0%, 100% { height: 6px; }
-  50% { height: 16px; }
+  0%, 100% { height: var(--space-1_5); }
+  50% { height: var(--space-4); }
 }
 
 .voice-status {
@@ -538,9 +538,9 @@ watch(() => _props.isOpen, (isOpen) => {
 }
 
 .voice-cancel {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-full);
   border: none;
   background: transparent;
   color: var(--text-tertiary);

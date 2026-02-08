@@ -79,23 +79,21 @@ onBeforeUnmount(() => {
 <style scoped>
 .context-menu {
   /* Glass morphism - purple-tinted with blur */
-  background: rgba(35, 32, 50, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  box-shadow: var(--overlay-component-shadow);
   padding: var(--space-2);
-  min-width: 180px;
+  min-width: var(--space-45);
   animation: menuSlideIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes menuSlideIn {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-4px);
+    transform: scale(0.96) translateY(var(--space-neg-1));
   }
   to {
     opacity: 1;
@@ -110,7 +108,7 @@ onBeforeUnmount(() => {
   width: 100%;
   padding: var(--space-3) var(--space-4);
   background: transparent;
-  border: 1px solid transparent;
+  border: var(--space-px) solid transparent;
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -118,12 +116,12 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   text-align: left;
-  min-height: 40px;
+  min-height: var(--space-10);
 }
 
 .menu-item:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--danger-bg-light);
+  border-color: var(--danger-border-medium);
   color: var(--color-danger);
 }
 
@@ -147,6 +145,6 @@ onBeforeUnmount(() => {
   padding: var(--space-1) var(--space-2);
   background: var(--glass-bg-light);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
+  border: var(--space-px) solid var(--glass-border);
 }
 </style>

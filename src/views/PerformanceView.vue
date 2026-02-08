@@ -325,7 +325,7 @@ const saveAsBaseline = () => {
 
 .header-content--performance h1 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: var(--text-3xl);
   background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -370,7 +370,7 @@ const saveAsBaseline = () => {
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
   margin: var(--space-2) 0;
   color: var(--color-indigo);
@@ -438,7 +438,7 @@ td {
 
 .sidebar li {
   margin-bottom: var(--space-3);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
 }
 
@@ -457,7 +457,7 @@ td {
 .status-badge {
   padding: var(--space-1) 0.6rem;
   border-radius: var(--radius-sm);
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   font-weight: 700;
 }
 

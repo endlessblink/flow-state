@@ -356,18 +356,15 @@ watch(() => props.isOpen, (isOpen) => {
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: var(--overlay-heavy);
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: var(--blur-medium) saturate(120%);
+  -webkit-backdrop-filter: var(--blur-medium) saturate(120%);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.15s ease;
+  z-index: var(--z-modal);
+  animation: fadeIn var(--duration-faster) var(--ease-in);
 }
 
 @keyframes fadeIn {
@@ -376,24 +373,22 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .quick-create-modal {
-  background: rgba(28, 25, 48, 0.85);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid var(--glass-border-hover);
+  background: var(--overlay-component-bg);
+  backdrop-filter: var(--overlay-component-backdrop) saturate(150%);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) saturate(150%);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.5),
-    0 16px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-2xl);
   padding: var(--space-6);
-  width: 520px;
+  width: var(--modal-width-md);
   max-width: 90vw;
-  animation: slideUp 0.2s var(--spring-smooth);
+  animation: slideUp var(--duration-fast) var(--spring-smooth);
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(var(--space-5));
   }
   to {
     opacity: 1;
@@ -670,7 +665,7 @@ watch(() => props.isOpen, (isOpen) => {
 }
 
 .duration-input {
-  width: 40px;
+  width: var(--space-10);
   background: transparent;
   border: none;
   color: var(--text-primary);
@@ -724,7 +719,7 @@ watch(() => props.isOpen, (isOpen) => {
 
 .create-btn:hover:not(:disabled) {
   background: var(--glass-border-hover);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--glass-border-strong);
 }
 
 .create-btn:disabled {

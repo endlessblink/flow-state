@@ -572,12 +572,12 @@ const addToRecent = (emoji: string) => {
   recentEmojis.value = recent.slice(0, 20) // Keep only 20 recent
 
   // Save to localStorage
-  localStorage.setItem('recent-emojis', JSON.stringify(recentEmojis.value))
+  localStorage.setItem('flowstate-recent-emojis', JSON.stringify(recentEmojis.value))
 }
 
 // Load recent emojis from localStorage
 onMounted(() => {
-  const saved = localStorage.getItem('recent-emojis')
+  const saved = localStorage.getItem('flowstate-recent-emojis')
   if (saved) {
     try {
       recentEmojis.value = JSON.parse(saved)
@@ -610,7 +610,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: var(--z-popover);
   animation: fadeIn var(--duration-normal) var(--spring-smooth);
 }
 

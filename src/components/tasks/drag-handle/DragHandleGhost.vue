@@ -40,14 +40,14 @@ const ghostStyle = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: rgba(59, 130, 246, 0.2);
-  border: 1px solid rgba(59, 130, 246, 0.5);
+  width: var(--space-12);
+  height: var(--space-12);
+  background: var(--blue-bg-light);
+  border: 1px solid var(--blue-border-medium);
   border-radius: var(--radius-md);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform var(--duration-instant) cubic-bezier(0.2, 0, 0.2, 1);
+  backdrop-filter: var(--blur-light);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--duration-instant) var(--ease-out);
 }
 
 .drag-handle__ghost-content {
@@ -63,10 +63,10 @@ const ghostStyle = computed(() => ({
 }
 
 .drag-handle__ghost-dot {
-  width: 4px;
-  height: 4px;
-  background: rgba(59, 130, 246, 0.8);
-  border-radius: 50%;
-  box-shadow: 0 0 2px rgba(59, 130, 246, 0.4);
+  width: var(--space-1);
+  height: var(--space-1);
+  background: var(--color-blue);
+  border-radius: var(--radius-full);
+  box-shadow: var(--glow-blue-subtle);
 }
 </style>

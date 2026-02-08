@@ -18,6 +18,7 @@ import { storeToRefs } from 'pinia'
 import { getGroupAbsolutePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
 import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import { positionManager } from '@/services/canvas/PositionManager'
+import { DRAG_SETTLE_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS } from '@/config/timing'
 import { lockManager } from '@/services/canvas/LockManager'
 import { getPlatformDiagnostics, isLinuxTauri } from '@/utils/contextMenuCoordinates'
 
@@ -680,7 +681,7 @@ export function useCanvasInteractions(deps?: {
                                         positionManager.updatePosition(task.id, absolutePos, 'user-drag', oldParentId)
                                     } finally {
                                         // BUG-1209: Delay clearing pendingWrite to catch realtime echo
-                                        setTimeout(() => taskStore.removePendingWrite(task.id), 3000)
+                                        setTimeout(() => taskStore.removePendingWrite(task.id), DRAG_SETTLE_TIMEOUT_MS)
                                     }
                                 }
                                 setNodeState(task.id, NodeState.IDLE)
@@ -823,7 +824,7 @@ export function useCanvasInteractions(deps?: {
                         // BUG-1209: Delay clearing pendingWrite by 3s so the Supabase realtime echo
                         // (arriving 100ms-2s later) is still blocked by isPendingWrite().
                         // Previously cleared immediately, allowing echo to overwrite position.
-                        setTimeout(() => taskStore.removePendingWrite(task.id), 3000)
+                        setTimeout(() => taskStore.removePendingWrite(task.id), DRAG_SETTLE_TIMEOUT_MS)
                     }
 
                     if (oldParentId !== newParentId) {
@@ -1080,7 +1081,7 @@ export function useCanvasInteractions(deps?: {
             lockManager.release(childId, 'user-resize')
         })
 
-        setTimeout(() => isResizeSettling.value = false, 1000)
+        setTimeout(() => isResizeSettling.value = false, RESIZE_SETTLE_TIMEOUT_MS)
     }
 
     return {

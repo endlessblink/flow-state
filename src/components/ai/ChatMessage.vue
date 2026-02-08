@@ -1065,7 +1065,7 @@ function toolIcon(type?: string) {
   gap: var(--space-1);
   padding: var(--space-0_5) var(--space-2);
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
 }
 
@@ -1197,7 +1197,7 @@ function toolIcon(type?: string) {
 }
 
 .task-overdue-badge {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--color-priority-high);
   background: var(--danger-bg-light);
@@ -1208,7 +1208,7 @@ function toolIcon(type?: string) {
 }
 
 .task-due-date {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
@@ -1272,7 +1272,7 @@ function toolIcon(type?: string) {
 }
 
 .summary-section-label {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--text-secondary);
   padding: var(--space-2) var(--space-3) var(--space-1);
@@ -1371,7 +1371,7 @@ function toolIcon(type?: string) {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-2);
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
 
@@ -1446,7 +1446,7 @@ function toolIcon(type?: string) {
 }
 
 .gam-xp-text {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   margin-top: var(--space-1);
 }
@@ -1482,7 +1482,7 @@ function toolIcon(type?: string) {
 }
 
 .gam-achievement-icon {
-  color: #ffd700;
+  color: rgb(var(--tier-gold));
 }
 
 .gam-stat-value {
@@ -1566,7 +1566,7 @@ function toolIcon(type?: string) {
 .diff-boss { background: var(--danger-bg-light); color: var(--color-priority-high); }
 
 .challenge-flavor {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   font-style: italic;
   margin-top: var(--space-0_5);
@@ -1607,7 +1607,7 @@ function toolIcon(type?: string) {
 }
 
 .challenge-progress-text {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--text-secondary);
   white-space: nowrap;
@@ -1621,7 +1621,7 @@ function toolIcon(type?: string) {
 }
 
 .challenge-reward {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--color-focus);
 }
@@ -1671,7 +1671,7 @@ function toolIcon(type?: string) {
 }
 
 .achievement-desc {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   margin-top: var(--space-0_5);
 }
@@ -1725,7 +1725,7 @@ function toolIcon(type?: string) {
   border-radius: 50%;
   background: var(--color-focus);
   color: white;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-bold);
   display: flex;
   align-items: center;

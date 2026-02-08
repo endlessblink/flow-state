@@ -433,7 +433,7 @@ function triggerHaptic(duration: number = 10) {
 
 .save-btn {
   background: var(--brand-primary);
-  color: hsl(230, 20%, 10%);
+  color: var(--text-primary);
 }
 
 .save-btn:disabled {

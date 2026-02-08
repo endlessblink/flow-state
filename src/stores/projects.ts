@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { Project } from '@/types/tasks'
+import { UNCATEGORIZED_PROJECT_ID } from './tasks/taskOperations'
 
 export const useProjectStore = defineStore('projects', () => {
 
@@ -262,7 +263,7 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const getProjectDisplayName = (projectId: string | null | undefined): string => {
-        if (!projectId || projectId === '1' || projectId === 'uncategorized') return 'Uncategorized'
+        if (!projectId || projectId === '1' || projectId === UNCATEGORIZED_PROJECT_ID) return 'Uncategorized'
         const project = getProjectById(projectId)
         return project?.name || 'Uncategorized'
     }

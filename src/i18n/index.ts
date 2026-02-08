@@ -9,7 +9,7 @@ const rtlLanguages = ['ar', 'he', 'fa', 'ur']
 
 // Get saved locale or default to browser language
 const getSavedLocale = (): string => {
-  const saved = localStorage.getItem('app-locale')
+  const saved = localStorage.getItem('flowstate-app-locale')
   if (saved && ['en', 'he'].includes(saved)) {
     return saved
   }

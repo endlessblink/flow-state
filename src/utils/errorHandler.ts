@@ -49,6 +49,10 @@ export class GlobalErrorHandler {
   private reports: ErrorReport[] = []
   private maxErrors = 100
   private maxReports = 200
+  private activeNotifications = 0
+  private maxActiveNotifications = 3
+  private lastNotificationTime = 0
+  private notificationCooldownMs = 1000
 
   private constructor() {
     this.setupGlobalHandlers()
@@ -143,6 +147,15 @@ export class GlobalErrorHandler {
   }
 
   private showReportNotification(report: ErrorReport) {
+    // Throttle: max 3 active notifications, 1s cooldown between new ones
+    const now = Date.now()
+    if (this.activeNotifications >= this.maxActiveNotifications ||
+        now - this.lastNotificationTime < this.notificationCooldownMs) {
+      return
+    }
+    this.lastNotificationTime = now
+    this.activeNotifications++
+
     const colors = {
       [ErrorSeverity.INFO]: '#3b82f6',     // Blue
       [ErrorSeverity.WARNING]: '#f59e0b',  // Amber
@@ -203,6 +216,7 @@ export class GlobalErrorHandler {
     setTimeout(() => {
       if (notification.parentElement) {
         notification.remove()
+        this.activeNotifications = Math.max(0, this.activeNotifications - 1)
       }
     }, timeout)
   }
@@ -266,6 +280,15 @@ export class GlobalErrorHandler {
   }
 
   private showErrorNotification(error: ErrorInfo) {
+    // Throttle: max 3 active notifications, 1s cooldown between new ones
+    const now = Date.now()
+    if (this.activeNotifications >= this.maxActiveNotifications ||
+        now - this.lastNotificationTime < this.notificationCooldownMs) {
+      return
+    }
+    this.lastNotificationTime = now
+    this.activeNotifications++
+
     // Create a more user-friendly error notification
     const notification = document.createElement('div')
     notification.style.cssText = `
@@ -365,11 +388,13 @@ export class GlobalErrorHandler {
     document.body.appendChild(notification)
 
     // Auto-remove after 10 seconds
-    setTimeout(() => {
+    const removeNotification = () => {
       if (notification.parentElement) {
         notification.remove()
+        this.activeNotifications = Math.max(0, this.activeNotifications - 1)
       }
-    }, 10000)
+    }
+    setTimeout(removeNotification, 10000)
   }
 
   getErrors(): ErrorInfo[] {

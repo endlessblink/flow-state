@@ -61,6 +61,9 @@ try {
             // BUG-339: Explicit auth configuration for reliability
             autoRefreshToken: true,
             persistSession: true,
+            // FEATURE-1202: PKCE flow required for Tauri OAuth code exchange
+            // Backward-compatible with existing PWA implicit flow
+            flowType: 'pkce',
             // Use custom storage key to avoid conflicts with other apps
             storageKey: 'flowstate-supabase-auth',
             // For desktop apps (Tauri), don't try to detect session from URL

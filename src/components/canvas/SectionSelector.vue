@@ -207,22 +207,22 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(35, 32, 55, 0.35);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border-hover);
+  background: var(--glass-bg-medium);
+  backdrop-filter: var(--overlay-component-backdrop);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  border: var(--space-px) solid var(--glass-border-hover);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-sm);
   cursor: pointer;
   outline: none;
   transition: all var(--duration-normal) var(--ease-out);
-  min-height: 40px;
+  min-height: var(--space-10);
 }
 
 .select-trigger:hover {
   border-color: var(--border-interactive);
-  background: rgba(40, 40, 60, 0.45);
+  background: var(--glass-bg-heavy);
 }
 
 .selected-info {
@@ -233,8 +233,8 @@ onBeforeUnmount(() => {
 }
 
 .section-color-dot {
-  width: 10px;
-  height: 10px;
+  width: var(--space-2_5);
+  height: var(--space-2_5);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -260,7 +260,7 @@ onBeforeUnmount(() => {
 
 .select-dropdown {
   /* Position is set via inline style from Teleport */
-  z-index: 99999;
+  z-index: var(--z-tooltip);
 
   /* Use design tokens for consistent overlay styling */
   background: var(--overlay-component-bg);
@@ -365,8 +365,8 @@ onBeforeUnmount(() => {
 }
 
 .section-selector.is-compact .section-color-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
 }
 
 .section-selector.is-compact .select-icon {

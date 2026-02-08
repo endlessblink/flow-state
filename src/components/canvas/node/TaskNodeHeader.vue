@@ -46,8 +46,8 @@ defineProps<{
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   background: var(--brand-primary);
   color: white;
   border-radius: var(--radius-full);
@@ -55,19 +55,19 @@ defineProps<{
   align-items: center;
   justify-content: center;
   z-index: 5;
-  box-shadow: 0 2px 8px var(--brand-primary);
+  box-shadow: 0 var(--space-0_5) var(--space-2) var(--brand-primary);
   animation: timerPulse 2s ease-in-out infinite;
-  border: 2px solid white;
+  border: var(--space-0_5) solid white;
 }
 
 @keyframes timerPulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 2px 8px var(--brand-primary);
+    box-shadow: 0 var(--space-0_5) var(--space-2) var(--brand-primary);
   }
   50% {
     transform: scale(1.1);
-    box-shadow: 0 2px 12px var(--brand-primary), 0 0 16px var(--blue-border-medium);
+    box-shadow: 0 var(--space-0_5) var(--space-3) var(--brand-primary), 0 0 var(--space-4) var(--blue-border-medium);
   }
 }
 </style>

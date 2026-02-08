@@ -189,9 +189,9 @@
 
 ---
 
-### TASK-1219: Quick Sort Mobile UX Fixes (🔄 IN PROGRESS)
+### TASK-1219: Quick Sort Mobile UX Fixes (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-08)
 
 **Problem**: Multiple UX issues on the mobile Quick Sort view:
 
@@ -199,20 +199,29 @@
 2. **Right side cutoff** — Date pills row gets clipped on narrow screens; rightmost buttons partially hidden
 3. **Touch target overlap** — Pressing "Tomorrow" also triggers "Wknd" due to cramped touch targets on mobile
 
-**Files**: `src/mobile/views/MobileQuickSortView.vue`
+**Changes**:
+- Added emoji prefixes to all 6 date buttons in both `MobileQuickSortView.vue` and `QuickSortCard.vue`
+- Increased pill gap, added scroll padding + scroll-snap for date pills
+- Added min-height 40px for proper mobile touch targets
+- Fixed `isWeekend` mutual exclusivity (no longer highlights when Tomorrow is active)
+
+**Files**: `src/mobile/views/MobileQuickSortView.vue`, `src/components/QuickSortCard.vue`
 
 ---
 
-### TASK-1220: Quick Sort Pull-Down Capture Panel (📋 PLANNED)
+### TASK-1220: Quick Sort Pull-Down Capture Panel (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-08)
 
-**Goal**: When user drags the screen down in mobile Quick Sort, reveal a clean panel with:
+**Goal**: When user drags the screen down in any mobile view, reveal a command center panel with:
 - Search existing tasks
-- Create a new task (spacious input)
-- Record a task with audio (voice-to-text)
+- Create a new task (spacious input with keyboard)
+- Record a task with audio (voice-to-text via Whisper)
+- Quick action tiles: Quick Sort, Timer, Today, Settings
 
-**Files**: `src/mobile/views/MobileQuickSortView.vue`, new composable for pull-down gesture
+**Changes**: Implemented as pull-down gesture in `MobileLayout.vue` (available from ALL mobile views, not just Quick Sort). Panel includes task input, voice recording, search with results, and 4 action tiles.
+
+**Files**: `src/mobile/layouts/MobileLayout.vue`
 
 ---
 
@@ -2166,19 +2175,19 @@ npm run tasks:bugs     # Filter by BUG type
 - [x] **~~TASK-1265~~**: ✅ Fix AI proxy health check consuming real API tokens every 60s — switched to OPTIONS request instead of chat completion (`aiChatProxy.ts:412-421`)
 
 #### P2 — Code Quality & Design System
-- [ ] **TASK-1266**: CSS design token migration — top 10 offending files (1,420 raw rgba + 434 hex violations across 129 files). Start with DoneToggleVisuals.vue (90), ChatMessage.vue (77), CyberSkillTree.vue (61)
-- [ ] **TASK-1267**: Standardize localStorage key prefixes — mix of `flowstate-*`, `flow-state-*`, and unprefixed keys across codebase
-- [ ] **TASK-1268**: Extract magic timeout numbers to named constants — ~25 hardcoded timeouts (120000ms, 5000ms, 3000ms, 30000ms) scattered across sync, drag, health check code
-- [ ] **TASK-1269**: Create centralized `src/config/urls.ts` — consolidate all external URLs (Groq, OpenRouter, DiceBear, GitHub, httpbin, etc.)
-- [ ] **TASK-1270**: Fix hardcoded i18n defaults — `ui.ts:26-28` has `locale='en'` with "temporary" comment; password strength not using i18n (`SignupForm.vue:214-222`)
-- [ ] **TASK-1271**: Improve Cyberflow empty states — `"SHOP OFFLINE"`, `"NO ITEMS"`, `"NO ACHIEVEMENTS"` need explanatory subtext
-- [ ] **TASK-1272**: Mobile design token compliance — MobileTimerView, MobileTodayView etc. use ~zero design tokens
-- [ ] **TASK-1273**: Update PWA manifest description — currently "Pomodoro timer with task management", should include FlowState branding
-- [ ] **TASK-1274**: Migrate `'uncategorized'` sentinel to `null` — used in 10+ files requiring sanitization at every DB boundary
+- [ ] **TASK-1266**: CSS design token migration — top 10 offending files (1,420 raw rgba + 434 hex violations across 129 files). ~305 hardcoded values migrated in 20+ files (DoneToggleVisuals, GamificationPanel, ShopModal, BossFightPanel, ChallengeCard, ChallengeComplete, AchievementBadge, AchievementToast, AchievementsModal, CorruptionOverlay, DailyChallengesPanel, LevelBadge, StreakCounter, XpBar, TaskCreateBottomSheet, TaskEditBottomSheet, CalendarTaskCard, TauriUpdateNotification, ARIAMessage, etc.). Remaining violations still exist.
+- [x] **~~TASK-1267~~**: ✅ Standardize localStorage key prefixes — settings.ts migrated with migration logic for old keys
+- [x] **~~TASK-1268~~**: ✅ Extract magic timeout numbers to named constants — created `src/config/timing.ts` with PENDING_WRITE_TIMEOUT_MS, DRAG_SETTLE_TIMEOUT_MS, FILE_DIALOG_TIMEOUT_MS, CROSS_TAB_DEDUP_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS
+- [x] **~~TASK-1269~~**: ✅ Create centralized `src/config/urls.ts` — EXTERNAL_URLS with DiceBear, GitHub, production site, Storybook dev
+- [x] **~~TASK-1270~~**: ✅ Fix hardcoded i18n defaults — updated ui.ts comment, wrapped password strength labels in `t()` calls, added en/he translations
+- [x] **~~TASK-1271~~**: ✅ Improve Cyberflow empty states — added explanatory subtext to CyberSkillTree, CyberAchievements, CyberShop
+- [x] **~~TASK-1272~~**: ✅ Mobile design token compliance — MobileTodayView migrated to tokens
+- [x] **~~TASK-1273~~**: ✅ Update PWA manifest description — updated to FlowState branding with full feature description
+- [x] **~~TASK-1274~~**: ✅ Migrate `'uncategorized'` sentinel to constant — created UNCATEGORIZED_PROJECT_ID in taskOperations.ts, used in supabaseMappers + useSupabaseDatabase
 
 #### P3 — Backlog / Polish
-- [ ] **TASK-1275**: Remove 5 obsolete verification scripts in `scripts/` (verify-shadow-layer, verify-auth-user, verify-backup-system, verify-bug339-migration, verify-restore)
-- [ ] **TASK-1276**: Remove Storybook `title: 'PLACEHOLDER'` duplicate key (`OverflowTooltip.stories.ts:4`)
+- [x] **~~TASK-1275~~**: ✅ Remove 5 obsolete verification scripts in `scripts/` (verify-shadow-layer, verify-auth-user, verify-backup-system, verify-bug339-migration, verify-restore)
+- [x] **~~TASK-1276~~**: ✅ Remove Storybook `title: 'PLACEHOLDER'` duplicate key (`OverflowTooltip.stories.ts:4`)
 - [ ] **TASK-1277**: Standardize z-index usage — 170 occurrences across 88 files should use `var(--z-*)` tokens
 - [ ] **TASK-1278**: Standardize font-size usage — 163 hardcoded `font-size: Xpx` across 33 files should use `var(--text-*)` tokens
 - [ ] **TASK-1279**: Add missing package.json metadata — `homepage`, `repository`, `bugs` fields
@@ -2189,6 +2198,45 @@ npm run tasks:bugs     # Filter by BUG type
 ---
 
 ## Planned Tasks (NEXT/BACKLOG)
+
+### INQUIRY-1249: WhatsApp Bot Integration for Task Creation via WAHA + Groq (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (2026-02-08)
+
+**Concept**: WhatsApp bot that receives forwarded messages, parses them with AI, and creates tasks in FlowState automatically.
+
+**Research Findings**:
+- **WAHA** (WhatsApp HTTP API): Self-hosted Docker container, REST API, free core tier, 6.1k GitHub stars
+- **Groq** (Llama 3.3 70B): Free AI parsing — extracts title, priority, due date from natural language
+- **Supabase REST API**: Direct task insertion into existing FlowState database
+- **Oracle Cloud free tier**: Hosting (ARM 4 OCPU / 24GB RAM — more than enough)
+- **Dedicated WhatsApp number**: Eliminates ban risk on personal account
+
+**Proposed Architecture**:
+```
+WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot (Node.js)
+                                                                          ↓
+                                                                   Groq API (free)
+                                                                          ↓
+                                                                   Supabase REST → FlowState
+```
+
+**Estimated Cost**: $0/month (all free tiers)
+
+**Alternatives Evaluated**:
+- NanoClaw: Powerful but requires Claude API ($), overkill for task parsing
+- Baileys direct: Works but WAHA provides better REST abstraction + anti-ban tools
+- Twilio: Official but $0.005/msg, unnecessary for personal use
+
+**Next Steps**:
+- [ ] Set up Oracle Cloud free tier VM
+- [ ] Deploy WAHA Docker container with NOWEB engine
+- [ ] Build webhook handler (Node.js/TypeScript, ~200 LOC)
+- [ ] Integrate Groq for message parsing
+- [ ] Connect to FlowState Supabase via REST API
+- [ ] Test end-to-end flow
+
+---
 
 ### FEATURE-1248: Quick Tasks - Pinned & Frequent Task Shortcuts (🔄 IN PROGRESS)
 
@@ -2662,17 +2710,17 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1263~~ | P1 | ✅ Add Open Graph + Twitter Card meta tags |
 | ~~TASK-1264~~ | P1 | ✅ Update stale AI model references |
 | ~~TASK-1265~~ | P1 | ✅ Fix AI proxy health check consuming real API tokens (OPTIONS request) |
-| TASK-1266 | P2 | CSS design token migration — top 10 offending files (1,420 rgba violations) |
-| TASK-1267 | P2 | Standardize localStorage key prefixes |
-| TASK-1268 | P2 | Extract magic timeout numbers to named constants |
-| TASK-1269 | P2 | Create centralized src/config/urls.ts |
-| TASK-1270 | P2 | Fix hardcoded i18n defaults (ui.ts, SignupForm.vue) |
-| TASK-1271 | P2 | Improve Cyberflow empty states (terse text) |
-| TASK-1272 | P2 | Mobile design token compliance |
-| TASK-1273 | P2 | Update PWA manifest description |
-| TASK-1274 | P2 | Migrate 'uncategorized' sentinel to null |
-| TASK-1275 | P3 | Remove 5 obsolete verification scripts |
-| TASK-1276 | P3 | Remove Storybook PLACEHOLDER duplicate key |
+| TASK-1266 | P2 | 🔄 CSS design token migration — ~305 values migrated in 20+ files, remaining violations still exist |
+| ~~TASK-1267~~ | P2 | ✅ Standardize localStorage key prefixes |
+| ~~TASK-1268~~ | P2 | ✅ Extract magic timeout numbers to named constants (src/config/timing.ts) |
+| ~~TASK-1269~~ | P2 | ✅ Create centralized src/config/urls.ts |
+| ~~TASK-1270~~ | P2 | ✅ Fix hardcoded i18n defaults (ui.ts, SignupForm.vue) |
+| ~~TASK-1271~~ | P2 | ✅ Improve Cyberflow empty states (terse text) |
+| ~~TASK-1272~~ | P2 | ✅ Mobile design token compliance |
+| ~~TASK-1273~~ | P2 | ✅ Update PWA manifest description |
+| ~~TASK-1274~~ | P2 | ✅ Migrate 'uncategorized' sentinel to constant |
+| ~~TASK-1275~~ | P3 | ✅ Remove 5 obsolete verification scripts |
+| ~~TASK-1276~~ | P3 | ✅ Remove Storybook PLACEHOLDER duplicate key |
 | TASK-1277 | P3 | Standardize z-index usage (170 occurrences) |
 | TASK-1278 | P3 | Standardize font-size usage (163 occurrences) |
 | TASK-1279 | P3 | Add missing package.json metadata fields |

@@ -20,6 +20,8 @@ import { useChallengesStore } from '@/stores/challenges'
 // TASK-1177: Offline-first sync system
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
+// TASK-1219: Time block progress notifications
+import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
 export function useAppInitialization() {
     const timerStore = useTimerStore()
@@ -136,6 +138,15 @@ export function useAppInitialization() {
             itpProtection.recordInteraction()
         } catch (error) {
             console.warn('⚠️ Safari ITP check failed:', error)
+        }
+
+        // TASK-1219: Time block progress notifications
+        try {
+            const timeBlockNotifications = useTimeBlockNotifications()
+            timeBlockNotifications.start()
+            console.log('[TIME-BLOCK] Initialized successfully')
+        } catch (error) {
+            console.warn('[TIME-BLOCK] Initialization failed:', error)
         }
 
         // Initialize global keyboard shortcuts

@@ -73,11 +73,11 @@
         <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
       </button>
 
-      <!-- Priority Filter -->
+      <!-- TASK-1246: Priority Multi-Select Filter -->
       <div ref="priorityDropdownRef" class="filter-dropdown">
         <button
           class="filter-chip"
-          :class="{ active: selectedPriority !== null }"
+          :class="{ active: selectedPriorities.size > 0 }"
           @click="showPriorityDropdown = !showPriorityDropdown"
         >
           <Flag :size="14" />
@@ -87,8 +87,7 @@
         <div v-if="showPriorityDropdown" class="dropdown-menu">
           <button
             class="dropdown-item"
-            :class="{ selected: selectedPriority === null }"
-            @click="selectPriority(null)"
+            @click="clearPriorities"
           >
             All Priorities
           </button>
@@ -96,9 +95,12 @@
             v-for="priority in priorities"
             :key="priority.value"
             class="dropdown-item"
-            :class="{ selected: selectedPriority === priority.value }"
-            @click="selectPriority(priority.value)"
+            :class="{ selected: selectedPriorities.has(priority.value) }"
+            @click.stop="togglePriority(priority.value)"
           >
+            <span class="checkbox-indicator" :class="{ checked: selectedPriorities.has(priority.value) }">
+              <Check v-if="selectedPriorities.has(priority.value)" :size="10" />
+            </span>
             <span class="priority-dot" :class="`priority-${priority.value}`" />
             {{ priority.label }}
             <span class="item-count">{{ getPriorityCount(priority.value) }}</span>
@@ -106,11 +108,11 @@
         </div>
       </div>
 
-      <!-- Duration Filter -->
+      <!-- TASK-1246: Duration Multi-Select Filter -->
       <div ref="durationDropdownRef" class="filter-dropdown">
         <button
           class="filter-chip"
-          :class="{ active: selectedDuration !== null }"
+          :class="{ active: selectedDurations.size > 0 }"
           @click="showDurationDropdown = !showDurationDropdown"
         >
           <Clock :size="14" />
@@ -120,8 +122,7 @@
         <div v-if="showDurationDropdown" class="dropdown-menu">
           <button
             class="dropdown-item"
-            :class="{ selected: selectedDuration === null }"
-            @click="selectDuration(null)"
+            @click="clearDurations"
           >
             All Durations
           </button>
@@ -129,9 +130,12 @@
             v-for="duration in durations"
             :key="duration.value"
             class="dropdown-item"
-            :class="{ selected: selectedDuration === duration.value }"
-            @click="selectDuration(duration.value)"
+            :class="{ selected: selectedDurations.has(duration.value) }"
+            @click.stop="toggleDuration(duration.value)"
           >
+            <span class="checkbox-indicator" :class="{ checked: selectedDurations.has(duration.value) }">
+              <Check v-if="selectedDurations.has(duration.value)" :size="10" />
+            </span>
             <span class="duration-icon">{{ duration.icon }}</span>
             {{ duration.label }}
             <span class="item-count">{{ getDurationCount(duration.value) }}</span>
@@ -139,11 +143,11 @@
         </div>
       </div>
 
-      <!-- Project Filter -->
+      <!-- TASK-1246: Project Multi-Select Filter -->
       <div ref="projectDropdownRef" class="filter-dropdown">
         <button
           class="filter-chip"
-          :class="{ active: selectedProject !== null }"
+          :class="{ active: selectedProjects.size > 0 }"
           @click="showProjectDropdown = !showProjectDropdown"
         >
           <FolderOpen :size="14" />
@@ -153,17 +157,19 @@
         <div v-if="showProjectDropdown" class="dropdown-menu">
           <button
             class="dropdown-item"
-            :class="{ selected: selectedProject === null }"
-            @click="selectProject(null)"
+            @click="clearProjects"
           >
             All Projects
           </button>
           <button
             class="dropdown-item"
-            :class="{ selected: selectedProject === 'none' }"
-            @click="selectProject('none')"
+            :class="{ selected: selectedProjects.has('none') }"
+            @click.stop="toggleProject('none')"
           >
-            <span class="project-icon">📥</span>
+            <span class="checkbox-indicator" :class="{ checked: selectedProjects.has('none') }">
+              <Check v-if="selectedProjects.has('none')" :size="10" />
+            </span>
+            <span class="project-icon">&#128229;</span>
             No Project
             <span class="item-count">{{ getProjectCount(null) }}</span>
           </button>
@@ -171,10 +177,13 @@
             v-for="project in projects"
             :key="project.id"
             class="dropdown-item"
-            :class="{ selected: selectedProject === project.id }"
-            @click="selectProject(project.id)"
+            :class="{ selected: selectedProjects.has(project.id) }"
+            @click.stop="toggleProject(project.id)"
           >
-            <span class="project-icon">{{ project.emoji || '📁' }}</span>
+            <span class="checkbox-indicator" :class="{ checked: selectedProjects.has(project.id) }">
+              <Check v-if="selectedProjects.has(project.id)" :size="10" />
+            </span>
+            <span class="project-icon">{{ project.emoji || '&#128193;' }}</span>
             {{ project.name }}
             <span class="item-count">{{ getProjectCount(project.id) }}</span>
           </button>
@@ -196,20 +205,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
 import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
 // TASK-144: Use centralized duration categories
 import { type DurationCategory, DURATION_FILTER_OPTIONS, matchesDurationCategory } from '@/utils/durationCategories'
 
 
+// TASK-1246: Multi-select props (Set types)
 interface Props {
   tasks: Task[]
   projects: Project[]
   unscheduledOnly: boolean
-  selectedPriority: 'high' | 'medium' | 'low' | null
-  selectedProject: string | null
-  selectedDuration: DurationCategory | null
+  selectedPriorities: Set<string>
+  selectedProjects: Set<string>
+  selectedDurations: Set<DurationCategory>
   hideDoneTasks?: boolean // TASK-076: Separate done filter for each view
   sortBy?: SortByType // TASK-1073: Sort option
 }
@@ -218,9 +228,9 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:unscheduledOnly': [value: boolean]
-  'update:selectedPriority': [value: 'high' | 'medium' | 'low' | null]
-  'update:selectedProject': [value: string | null]
-  'update:selectedDuration': [value: DurationCategory | null]
+  'update:selectedPriorities': [value: Set<string>]
+  'update:selectedProjects': [value: Set<string>]
+  'update:selectedDurations': [value: Set<DurationCategory>]
   'update:hideDoneTasks': [value: boolean] // TASK-076
   'update:sortBy': [value: SortByType] // TASK-1073
   clearAll: []
@@ -255,29 +265,36 @@ const unscheduledCount = computed(() => {
   return props.tasks.filter(task => !isScheduledOnCalendar(task)).length
 })
 
-// Computed: Priority label
+// TASK-1246: Computed labels with count badges
 const priorityLabel = computed(() => {
-  if (props.selectedPriority === null) return 'Priority'
-  return priorities.find(p => p.value === props.selectedPriority)?.label || 'Priority'
+  const count = props.selectedPriorities.size
+  if (count === 0) return 'Priority'
+  if (count === 1) return priorities.find(p => p.value === [...props.selectedPriorities][0])?.label || 'Priority'
+  return `Priority (${count})`
 })
 
-// Computed: Duration label
 const durationLabel = computed(() => {
-  if (props.selectedDuration === null) return 'Duration'
-  return durations.find(d => d.value === props.selectedDuration)?.label.split(' ')[0] || 'Duration'
+  const count = props.selectedDurations.size
+  if (count === 0) return 'Duration'
+  if (count === 1) return durations.find(d => d.value === [...props.selectedDurations][0])?.label.split(' ')[0] || 'Duration'
+  return `Duration (${count})`
 })
 
-// Computed: Project label
 const projectLabel = computed(() => {
-  if (props.selectedProject === null) return 'Project'
-  if (props.selectedProject === 'none') return 'No Project'
-  const project = props.projects.find(p => p.id === props.selectedProject)
-  return project?.name || 'Project'
+  const count = props.selectedProjects.size
+  if (count === 0) return 'Project'
+  if (count === 1) {
+    const first = [...props.selectedProjects][0]
+    if (first === 'none') return 'No Project'
+    const project = props.projects.find(p => p.id === first)
+    return project?.name || 'Project'
+  }
+  return `Project (${count})`
 })
 
 // Computed: Check if any filters are active
 const hasActiveFilters = computed(() => {
-  return props.unscheduledOnly || props.selectedPriority !== null || props.selectedProject !== null || props.selectedDuration !== null || props.hideDoneTasks
+  return props.unscheduledOnly || props.selectedPriorities.size > 0 || props.selectedProjects.size > 0 || props.selectedDurations.size > 0 || props.hideDoneTasks
 })
 
 // Get count of tasks with specific priority
@@ -300,30 +317,46 @@ const getDurationCount = (duration: DurationCategory): number => {
   ).length
 }
 
-// Select priority and close dropdown
-const selectPriority = (priority: 'high' | 'medium' | 'low' | null) => {
-  emit('update:selectedPriority', priority)
+// TASK-1246: Toggle handlers (multi-select, don't close dropdown)
+const togglePriority = (priority: 'high' | 'medium' | 'low') => {
+  const next = new Set(props.selectedPriorities)
+  next.has(priority) ? next.delete(priority) : next.add(priority)
+  emit('update:selectedPriorities', next)
+}
+
+const clearPriorities = () => {
+  emit('update:selectedPriorities', new Set())
   showPriorityDropdown.value = false
 }
 
-// Select project and close dropdown
-const selectProject = (projectId: string | null) => {
-  emit('update:selectedProject', projectId)
+const toggleProject = (projectId: string) => {
+  const next = new Set(props.selectedProjects)
+  next.has(projectId) ? next.delete(projectId) : next.add(projectId)
+  emit('update:selectedProjects', next)
+}
+
+const clearProjects = () => {
+  emit('update:selectedProjects', new Set())
   showProjectDropdown.value = false
 }
 
-// Select duration and close dropdown
-const selectDuration = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null) => {
-  emit('update:selectedDuration', duration)
+const toggleDuration = (duration: DurationCategory) => {
+  const next = new Set(props.selectedDurations)
+  next.has(duration) ? next.delete(duration) : next.add(duration)
+  emit('update:selectedDurations', next)
+}
+
+const clearDurations = () => {
+  emit('update:selectedDurations', new Set())
   showDurationDropdown.value = false
 }
 
 // Clear all filters
 const clearAllFilters = () => {
   emit('update:unscheduledOnly', false)
-  emit('update:selectedPriority', null)
-  emit('update:selectedProject', null)
-  emit('update:selectedDuration', null)
+  emit('update:selectedPriorities', new Set())
+  emit('update:selectedProjects', new Set())
+  emit('update:selectedDurations', new Set())
   emit('update:hideDoneTasks', false) // TASK-076
   emit('clearAll')
 }
@@ -520,6 +553,25 @@ onBeforeUnmount(() => {
 
 .dropdown-item.selected {
   background: var(--state-active-bg);
+  color: var(--state-active-text);
+}
+
+/* TASK-1246: Checkbox indicator for multi-select */
+.checkbox-indicator {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--spring-smooth);
+}
+
+.checkbox-indicator.checked {
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
   color: var(--state-active-text);
 }
 

@@ -19,9 +19,9 @@
       :selected-canvas-groups="selectedCanvasGroups"
       :show-advanced-filters="showAdvancedFilters"
       :unscheduled-only="unscheduledOnly"
-      :selected-priority="selectedPriority"
-      :selected-project="selectedProject"
-      :selected-duration="selectedDuration"
+      :selected-priorities="selectedPriorities"
+      :selected-projects="selectedProjects"
+      :selected-durations="selectedDurations"
       :hide-done-tasks="currentHideDoneTasks"
       :done-task-count="doneTaskCount"
       :base-tasks="baseInboxTasks"
@@ -35,9 +35,9 @@
       @toggle-advanced-filters="showAdvancedFilters = !showAdvancedFilters"
       @update:selected-canvas-groups="selectedCanvasGroups = $event"
       @update:unscheduled-only="unscheduledOnly = $event"
-      @update:selected-priority="selectedPriority = $event"
-      @update:selected-project="selectedProject = $event"
-      @update:selected-duration="selectedDuration = $event"
+      @update:selected-priorities="selectedPriorities = $event"
+      @update:selected-projects="selectedProjects = $event"
+      @update:selected-durations="selectedDurations = $event"
       @update:hide-done-tasks="toggleHideDoneTasks"
       @update:sort-by="sortBy = $event"
       @update:search-query="searchQuery = $event"
@@ -47,7 +47,7 @@
     <!-- Collapsed State Badges -->
     <div v-if="isCollapsed" class="collapsed-badges-container">
       <BaseBadge
-        v-if="!unscheduledOnly && !selectedPriority && !selectedProject"
+        v-if="!unscheduledOnly && selectedPriorities.size === 0 && selectedProjects.size === 0"
         variant="count"
         size="sm"
         rounded
@@ -146,9 +146,9 @@ const {
   activeTimeFilter,
   showAdvancedFilters,
   unscheduledOnly,
-  selectedPriority,
-  selectedProject,
-  selectedDuration,
+  selectedPriorities,
+  selectedProjects,
+  selectedDurations,
   selectedCanvasGroups,
   currentHideDoneTasks,
   sortBy, // TASK-1073

@@ -32,6 +32,8 @@ export interface TaskInstance {
   isModified?: boolean
   isSkipped?: boolean
   parentTaskId?: string
+  // TASK-1219: Per-instance notification override
+  timeBlockNotifications?: import('./timeBlockNotifications').TimeBlockNotificationOverride
 }
 
 export interface NotificationPreferences {

@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 // TASK-1215: Tauri dual-write for settings persistence
 import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
+// TASK-1219: Time block notification types
+import type { TimeBlockNotificationSettings } from '@/types/timeBlockNotifications'
+import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotifications'
 
 export interface AppSettings {
     // Timer
@@ -35,6 +38,9 @@ export interface AppSettings {
 
     // FEATURE-1194: Auto-updater
     autoUpdateEnabled: boolean
+
+    // TASK-1219: Time block progress notifications
+    timeBlockNotifications: TimeBlockNotificationSettings
 
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
@@ -78,6 +84,9 @@ export const useSettingsStore = defineStore('settings', {
 
         // FEATURE-1194: Auto-updater defaults
         autoUpdateEnabled: false,
+
+        // TASK-1219: Time block notification defaults
+        timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },
 
         // Miscellaneous defaults
         sidebarCollapsed: false,

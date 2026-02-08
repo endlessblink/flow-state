@@ -1,0 +1,788 @@
+/**
+ * CYBERFLOW DESIGN TOKENS - Cyberpunk Visual Foundation
+ * FEATURE-1118 "Cyberflow" RPG Gamification Layer
+ *
+ * This file provides all visual patterns for cyberpunk-styled UI components:
+ * - augmented-ui panel frames
+ * - Neon glow effects (box-shadow & text-shadow)
+ * - Scanline overlays
+ * - Glitch text effects
+ * - Terminal text reveal animations
+ * - Corner-cut clip-paths
+ * - Cyberpunk typography (Rajdhani, Orbitron, Space Mono)
+ * - Color palette with semantic aliases
+ * - Intensity-level architecture (minimal/moderate/intense)
+ * - prefers-reduced-motion accessibility
+ *
+ * ALL STYLES SCOPED UNDER .cyberflow TO PREVENT BLEED INTO OTHER VIEWS
+ * Import order: design-tokens.css → corruption-tokens.css → cyberflow-tokens.css
+ */
+
+/* ===================================================================
+   GOOGLE FONTS - Cyberpunk Typography
+   =================================================================== */
+
+/* Rajdhani - Primary UI font (condensed, geometric) */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+
+/* Orbitron - Display font (futuristic, bold) */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+/* Space Mono - Monospace for data/stats */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+/* ===================================================================
+   AUGMENTED-UI CSS LIBRARY
+   =================================================================== */
+
+/* Futuristic panel frame library */
+@import 'augmented-ui/augmented-ui.min.css';
+
+/* ===================================================================
+   CYBERFLOW ROOT SCOPE - Base Tokens
+   =================================================================== */
+
+.cyberflow {
+  /* ========================
+     FONT STACK TOKENS
+     ======================== */
+  --font-cyber-ui: 'Rajdhani', system-ui, sans-serif;
+  --font-cyber-title: 'Orbitron', 'Rajdhani', sans-serif;
+  --font-cyber-data: 'Space Mono', 'Courier New', monospace;
+
+  /* ========================
+     COLOR PALETTE
+     ======================== */
+  /* Primary Colors */
+  --cf-cyan: #00f0ff;           /* Primary UI, borders, info */
+  --cf-magenta: #ff0099;        /* Danger, bosses, high corruption */
+  --cf-lime: #39ff14;           /* Success, XP, completion */
+  --cf-orange: #ff6b35;         /* Warning, mid corruption */
+  --cf-gold: #ffd700;           /* Achievements, rare items */
+  --cf-purple: #9333ea;         /* XP bar, mystical */
+
+  /* Dark Backgrounds */
+  --cf-dark-1: #050508;         /* Deepest background */
+  --cf-dark-2: #0a0a12;         /* Panel backgrounds */
+  --cf-dark-3: #12121a;         /* Card backgrounds */
+  --cf-dark-4: #1a1a25;         /* Elevated surfaces */
+
+  /* Opacity Variants (50%, 20%) */
+  --cf-cyan-50: rgba(0, 240, 255, 0.5);
+  --cf-cyan-20: rgba(0, 240, 255, 0.2);
+
+  --cf-magenta-50: rgba(255, 0, 153, 0.5);
+  --cf-magenta-20: rgba(255, 0, 153, 0.2);
+
+  --cf-lime-50: rgba(57, 255, 20, 0.5);
+  --cf-lime-20: rgba(57, 255, 20, 0.2);
+
+  --cf-orange-50: rgba(255, 107, 53, 0.5);
+  --cf-orange-20: rgba(255, 107, 53, 0.2);
+
+  --cf-gold-50: rgba(255, 215, 0, 0.5);
+  --cf-gold-20: rgba(255, 215, 0, 0.2);
+
+  --cf-purple-50: rgba(147, 51, 234, 0.5);
+  --cf-purple-20: rgba(147, 51, 234, 0.2);
+
+  /* ========================
+     SEMANTIC ALIASES
+     ======================== */
+  --cf-success: var(--cf-lime);
+  --cf-danger: var(--cf-magenta);
+  --cf-warning: var(--cf-orange);
+  --cf-info: var(--cf-cyan);
+  --cf-accent: var(--cf-purple);
+  --cf-achievement: var(--cf-gold);
+
+  /* ========================
+     NEON GLOW TOKENS
+     ======================== */
+  /* Cyan Glow - 4 layers (full intensity) */
+  --cf-glow-cyan-full:
+    0 0 5px #00f0ff,
+    0 0 10px #00f0ff,
+    0 0 20px #00f0ff,
+    0 0 40px #00f0ff;
+
+  --cf-glow-cyan-subtle:
+    0 0 5px rgba(0, 240, 255, 0.5),
+    0 0 10px rgba(0, 240, 255, 0.2);
+
+  /* Magenta Glow */
+  --cf-glow-magenta-full:
+    0 0 5px #ff0099,
+    0 0 10px #ff0099,
+    0 0 20px #ff0099,
+    0 0 40px #ff0099;
+
+  --cf-glow-magenta-subtle:
+    0 0 5px rgba(255, 0, 153, 0.5),
+    0 0 10px rgba(255, 0, 153, 0.2);
+
+  /* Lime Glow */
+  --cf-glow-lime-full:
+    0 0 5px #39ff14,
+    0 0 10px #39ff14,
+    0 0 20px #39ff14,
+    0 0 40px #39ff14;
+
+  --cf-glow-lime-subtle:
+    0 0 5px rgba(57, 255, 20, 0.5),
+    0 0 10px rgba(57, 255, 20, 0.2);
+
+  /* Orange Glow */
+  --cf-glow-orange-full:
+    0 0 5px #ff6b35,
+    0 0 10px #ff6b35,
+    0 0 20px #ff6b35,
+    0 0 40px #ff6b35;
+
+  --cf-glow-orange-subtle:
+    0 0 5px rgba(255, 107, 53, 0.5),
+    0 0 10px rgba(255, 107, 53, 0.2);
+
+  /* Gold Glow */
+  --cf-glow-gold-full:
+    0 0 5px #ffd700,
+    0 0 10px #ffd700,
+    0 0 20px #ffd700,
+    0 0 40px #ffd700;
+
+  --cf-glow-gold-subtle:
+    0 0 5px rgba(255, 215, 0, 0.5),
+    0 0 10px rgba(255, 215, 0, 0.2);
+
+  /* Text Glow (uses currentColor) */
+  --cf-text-glow-full:
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    0 0 40px currentColor;
+
+  /* ========================
+     TIER COLORS
+     ======================== */
+  --cf-tier-bronze: #cd7f32;
+  --cf-tier-silver: #c0c0c0;
+  --cf-tier-gold: #ffd700;
+  --cf-tier-platinum: #e5e4e2;
+}
+
+/* ===================================================================
+   CORNER-CUT CLIP-PATHS
+   Lightweight alternative to augmented-ui for simple elements
+   =================================================================== */
+
+.cf-corner-cut-sm {
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
+}
+
+.cf-corner-cut {
+  clip-path: polygon(
+    12px 0,
+    100% 0,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    0 100%,
+    0 12px
+  );
+}
+
+.cf-corner-cut-lg {
+  clip-path: polygon(
+    20px 0,
+    100% 0,
+    100% calc(100% - 20px),
+    calc(100% - 20px) 100%,
+    0 100%,
+    0 20px
+  );
+}
+
+/* ===================================================================
+   AUGMENTED-UI PANEL RECIPES
+   =================================================================== */
+
+/* Standard Panel - Top-left and bottom-right clips with border */
+.cf-panel {
+  --aug-border-all: 2px;
+  --aug-border-bg: var(--cf-cyan);
+  --aug-tl1: 20px;
+  --aug-br1: 20px;
+  background: var(--cf-dark-2);
+  padding: 1rem 1.25rem;
+  position: relative;
+}
+
+/* Panel with Dual Layer (border + inlay) */
+.cf-panel-inlay {
+  --aug-border-all: 2px;
+  --aug-border-bg: linear-gradient(135deg, var(--cf-cyan), var(--cf-magenta));
+  --aug-inlay-all: 4px;
+  --aug-inlay-bg: rgba(0, 240, 255, 0.03);
+  --aug-tl1: 24px;
+  --aug-br1: 24px;
+  background: var(--cf-dark-1);
+  padding: 1.5rem;
+}
+
+/* Card Variant (smaller clips) */
+.cf-card {
+  --aug-border-all: 1px;
+  --aug-border-bg: var(--cf-cyan-50);
+  --aug-tl1: 14px;
+  --aug-br1: 14px;
+  background: var(--cf-dark-2);
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.cf-card:hover {
+  --aug-border-all: 2px;
+  --aug-border-bg: var(--cf-cyan);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Badge Variant (hex border) */
+.cf-badge {
+  --aug-border-all: 2px;
+  --aug-border-bg: var(--cf-gold);
+  --aug-tl1: 12px;
+  --aug-tr1: 12px;
+  --aug-br1: 12px;
+  --aug-bl1: 12px;
+  background: var(--cf-dark-3);
+  padding: 0.75rem;
+  text-align: center;
+  min-width: 100px;
+}
+
+/* ===================================================================
+   SCANLINE OVERLAY
+   CRT monitor / retro terminal effect
+   =================================================================== */
+
+.cf-scanlines {
+  position: relative;
+  overflow: hidden;
+}
+
+.cf-scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.3) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+  animation: cf-scanline-drift 8s linear infinite;
+}
+
+@keyframes cf-scanline-drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 100%;
+  }
+}
+
+/* ===================================================================
+   GLITCH TEXT EFFECT
+   RGB channel-split animation for boss names and corruption warnings
+   =================================================================== */
+
+.cf-glitch {
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-cyber-title);
+  font-weight: 700;
+  color: #fff;
+}
+
+.cf-glitch::before,
+.cf-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.cf-glitch::before {
+  left: 2px;
+  text-shadow: -2px 0 #ff0099;
+  animation: cf-glitch-channel-1 3s infinite linear alternate-reverse;
+  will-change: clip-path;
+}
+
+.cf-glitch::after {
+  left: -2px;
+  text-shadow: 2px 0 #00f0ff;
+  animation: cf-glitch-channel-2 2s infinite linear alternate-reverse;
+  will-change: clip-path;
+}
+
+@keyframes cf-glitch-channel-1 {
+  0% { clip-path: inset(40% 0 61% 0); }
+  10% { clip-path: inset(92% 0 1% 0); }
+  20% { clip-path: inset(43% 0 1% 0); }
+  30% { clip-path: inset(25% 0 58% 0); }
+  40% { clip-path: inset(54% 0 7% 0); }
+  50% { clip-path: inset(58% 0 43% 0); }
+  60% { clip-path: inset(70% 0 7% 0); }
+  70% { clip-path: inset(9% 0 55% 0); }
+  80% { clip-path: inset(18% 0 37% 0); }
+  90% { clip-path: inset(80% 0 4% 0); }
+  100% { clip-path: inset(30% 0 28% 0); }
+}
+
+@keyframes cf-glitch-channel-2 {
+  0% { clip-path: inset(25% 0 58% 0); }
+  10% { clip-path: inset(17% 0 76% 0); }
+  20% { clip-path: inset(71% 0 12% 0); }
+  30% { clip-path: inset(84% 0 2% 0); }
+  40% { clip-path: inset(3% 0 46% 0); }
+  50% { clip-path: inset(31% 0 60% 0); }
+  60% { clip-path: inset(48% 0 23% 0); }
+  70% { clip-path: inset(63% 0 18% 0); }
+  80% { clip-path: inset(6% 0 83% 0); }
+  90% { clip-path: inset(42% 0 41% 0); }
+  100% { clip-path: inset(55% 0 29% 0); }
+}
+
+/* ===================================================================
+   TERMINAL TEXT REVEAL
+   Typewriter effect for ARIA messages and mission briefings
+   =================================================================== */
+
+.cf-terminal-reveal {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--cf-cyan);
+  width: 0;
+  animation:
+    cf-terminal-typing var(--terminal-speed, 2s) steps(var(--terminal-steps, 40)) forwards,
+    cf-terminal-cursor-blink 0.8s step-end infinite;
+  will-change: width;
+}
+
+@keyframes cf-terminal-typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes cf-terminal-cursor-blink {
+  0%, 100% { border-right-color: var(--cf-cyan); }
+  50% { border-right-color: transparent; }
+}
+
+/* Terminal speed variants */
+.cf-terminal-reveal--fast {
+  --terminal-speed: 0.8s;
+  --terminal-steps: 20;
+}
+
+.cf-terminal-reveal--slow {
+  --terminal-speed: 4s;
+  --terminal-steps: 80;
+}
+
+/* ===================================================================
+   PULSE GLOW ANIMATIONS
+   For active/highlighted elements
+   =================================================================== */
+
+@keyframes cf-pulse-glow {
+  0%, 100% {
+    box-shadow: var(--cf-glow-cyan-full);
+  }
+  50% {
+    box-shadow:
+      0 0 10px #00f0ff,
+      0 0 20px #00f0ff,
+      0 0 40px #00f0ff,
+      0 0 60px #00f0ff;
+  }
+}
+
+@keyframes cf-pulse-cyan {
+  0%, 100% { box-shadow: var(--cf-glow-cyan-full); }
+  50% { box-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff, 0 0 40px #00f0ff, 0 0 60px #00f0ff; }
+}
+
+@keyframes cf-pulse-magenta {
+  0%, 100% { box-shadow: var(--cf-glow-magenta-full); }
+  50% { box-shadow: 0 0 10px #ff0099, 0 0 20px #ff0099, 0 0 40px #ff0099, 0 0 60px #ff0099; }
+}
+
+@keyframes cf-pulse-lime {
+  0%, 100% { box-shadow: var(--cf-glow-lime-full); }
+  50% { box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14, 0 0 40px #39ff14, 0 0 60px #39ff14; }
+}
+
+@keyframes cf-pulse-gold {
+  0%, 100% { box-shadow: var(--cf-glow-gold-full); }
+  50% { box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700, 0 0 40px #ffd700, 0 0 60px #ffd700; }
+}
+
+/* ===================================================================
+   TIER GLOW CLASSES
+   For level badges based on tier
+   =================================================================== */
+
+.cf-tier-bronze {
+  color: var(--cf-tier-bronze);
+  box-shadow: 0 0 8px rgba(205, 127, 50, 0.6);
+}
+
+.cf-tier-silver {
+  color: var(--cf-tier-silver);
+  box-shadow: 0 0 8px rgba(192, 192, 192, 0.6);
+}
+
+.cf-tier-gold {
+  color: var(--cf-tier-gold);
+  box-shadow:
+    0 0 12px rgba(255, 215, 0, 0.7),
+    0 0 24px rgba(255, 215, 0, 0.3);
+}
+
+.cf-tier-platinum {
+  color: var(--cf-tier-platinum);
+  box-shadow:
+    0 0 12px rgba(229, 228, 226, 0.8),
+    0 0 24px rgba(229, 228, 226, 0.4);
+}
+
+/* ===================================================================
+   INTENSITY LEVEL ARCHITECTURE
+   .cf-minimal = colors + fonts only
+   .cf-moderate = augmented-ui + subtle glow
+   .cf-intense = everything at full power
+   =================================================================== */
+
+/* ===================================
+   MINIMAL - Colors + Fonts Only
+   =================================== */
+
+.cyberflow.cf-minimal .cf-scanlines::before {
+  display: none;
+}
+
+.cyberflow.cf-minimal .cf-glitch::before,
+.cyberflow.cf-minimal .cf-glitch::after {
+  display: none;
+}
+
+.cyberflow.cf-minimal .cf-terminal-reveal {
+  animation: none;
+  width: auto;
+  overflow: visible;
+  white-space: normal;
+  border-right: none;
+}
+
+.cyberflow.cf-minimal .neon-pulse-cyan,
+.cyberflow.cf-minimal .neon-pulse-magenta,
+.cyberflow.cf-minimal .neon-pulse-lime,
+.cyberflow.cf-minimal .neon-pulse-gold {
+  animation: none;
+  box-shadow: none;
+}
+
+/* ===================================
+   MODERATE - Frames + Subtle Glow
+   =================================== */
+
+/* augmented-ui frames are active */
+.cyberflow.cf-moderate [data-augmented-ui] {
+  /* Enabled by library */
+}
+
+/* Subtle glow (2 layers, reduced opacity) */
+.cyberflow.cf-moderate .neon-cyan {
+  box-shadow: var(--cf-glow-cyan-subtle);
+}
+
+.cyberflow.cf-moderate .neon-magenta {
+  box-shadow: var(--cf-glow-magenta-subtle);
+}
+
+.cyberflow.cf-moderate .neon-lime {
+  box-shadow: var(--cf-glow-lime-subtle);
+}
+
+.cyberflow.cf-moderate .neon-orange {
+  box-shadow: var(--cf-glow-orange-subtle);
+}
+
+.cyberflow.cf-moderate .neon-gold {
+  box-shadow: var(--cf-glow-gold-subtle);
+}
+
+/* Subtle pulse (slower, opacity-based) */
+@keyframes cf-pulse-subtle {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.cyberflow.cf-moderate .neon-pulse-cyan,
+.cyberflow.cf-moderate .neon-pulse-magenta,
+.cyberflow.cf-moderate .neon-pulse-lime,
+.cyberflow.cf-moderate .neon-pulse-gold {
+  animation: cf-pulse-subtle 3s ease-in-out infinite;
+}
+
+/* No scanlines at moderate */
+.cyberflow.cf-moderate .cf-scanlines::before {
+  display: none;
+}
+
+/* No glitch at moderate */
+.cyberflow.cf-moderate .cf-glitch::before,
+.cyberflow.cf-moderate .cf-glitch::after {
+  display: none;
+}
+
+/* No terminal reveal at moderate */
+.cyberflow.cf-moderate .cf-terminal-reveal {
+  animation: none;
+  width: auto;
+  overflow: visible;
+  white-space: normal;
+  border-right: none;
+}
+
+/* ===================================
+   INTENSE - Everything Full Power
+   =================================== */
+
+/* augmented-ui frames are active */
+.cyberflow.cf-intense [data-augmented-ui] {
+  /* Enabled by library */
+}
+
+/* Full neon glow (4 layers, full opacity) */
+.cyberflow.cf-intense .neon-cyan {
+  box-shadow: var(--cf-glow-cyan-full);
+}
+
+.cyberflow.cf-intense .neon-magenta {
+  box-shadow: var(--cf-glow-magenta-full);
+}
+
+.cyberflow.cf-intense .neon-lime {
+  box-shadow: var(--cf-glow-lime-full);
+}
+
+.cyberflow.cf-intense .neon-orange {
+  box-shadow: var(--cf-glow-orange-full);
+}
+
+.cyberflow.cf-intense .neon-gold {
+  box-shadow: var(--cf-glow-gold-full);
+}
+
+/* Full text glow */
+.cyberflow.cf-intense .neon-text {
+  text-shadow: var(--cf-text-glow-full);
+}
+
+/* Specific color text glows */
+.cyberflow.cf-intense .neon-text-cyan {
+  color: var(--cf-cyan);
+  text-shadow: var(--cf-glow-cyan-full);
+}
+
+.cyberflow.cf-intense .neon-text-magenta {
+  color: var(--cf-magenta);
+  text-shadow: var(--cf-glow-magenta-full);
+}
+
+.cyberflow.cf-intense .neon-text-lime {
+  color: var(--cf-lime);
+  text-shadow: var(--cf-glow-lime-full);
+}
+
+.cyberflow.cf-intense .neon-text-gold {
+  color: var(--cf-gold);
+  text-shadow: var(--cf-glow-gold-full);
+}
+
+/* Full pulse */
+.cyberflow.cf-intense .neon-pulse-cyan {
+  animation: cf-pulse-cyan 2s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.cyberflow.cf-intense .neon-pulse-magenta {
+  animation: cf-pulse-magenta 2s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.cyberflow.cf-intense .neon-pulse-lime {
+  animation: cf-pulse-lime 1.5s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.cyberflow.cf-intense .neon-pulse-gold {
+  animation: cf-pulse-gold 2.5s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+/* Scanlines active */
+.cyberflow.cf-intense .cf-scanlines::before {
+  display: block;
+}
+
+/* Glitch active */
+.cyberflow.cf-intense .cf-glitch::before,
+.cyberflow.cf-intense .cf-glitch::after {
+  display: block;
+}
+
+/* Terminal reveal active */
+.cyberflow.cf-intense .cf-terminal-reveal {
+  animation:
+    cf-terminal-typing var(--terminal-speed, 2s) steps(var(--terminal-steps, 40)) forwards,
+    cf-terminal-cursor-blink 0.8s step-end infinite;
+}
+
+/* ===================================================================
+   PREFERS-REDUCED-MOTION ACCESSIBILITY
+   Keep color and layout, remove ALL motion
+   =================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Glitch - remove channel split animation */
+  .cyberflow .cf-glitch::before,
+  .cyberflow .cf-glitch::after {
+    animation: none;
+    clip-path: none;
+    text-shadow: none;
+  }
+
+  /* Scanlines - remove drift, keep static pattern */
+  .cyberflow .cf-scanlines::before {
+    animation: none;
+    /* Static scanline pattern remains visible */
+  }
+
+  /* Neon pulse - remove pulse, keep static glow */
+  .cyberflow .neon-pulse-cyan,
+  .cyberflow .neon-pulse-magenta,
+  .cyberflow .neon-pulse-lime,
+  .cyberflow .neon-pulse-gold {
+    animation: none;
+  }
+
+  /* Terminal reveal - show text immediately */
+  .cyberflow .cf-terminal-reveal,
+  .cyberflow .cf-terminal-reveal-line {
+    animation: none;
+    width: auto;
+    overflow: visible;
+    white-space: normal;
+    border-right: none;
+  }
+
+  /* General transitions - reduce to instant */
+  .cyberflow * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ===================================================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   Reduce box-shadow layers on smaller devices
+   =================================================================== */
+
+@media (max-width: 768px) {
+  .cyberflow.cf-intense .neon-cyan,
+  .cyberflow.cf-intense .neon-magenta,
+  .cyberflow.cf-intense .neon-lime,
+  .cyberflow.cf-intense .neon-orange,
+  .cyberflow.cf-intense .neon-gold {
+    /* Reduce from 4 layers to 2 on mobile */
+    box-shadow:
+      0 0 5px currentColor,
+      0 0 15px currentColor;
+  }
+}
+
+/* ===================================================================
+   UTILITY CLASSES
+   Copy-pasteable neon effect classes
+   =================================================================== */
+
+/* Box-shadow neon glow */
+.neon-cyan { box-shadow: var(--cf-glow-cyan-full); }
+.neon-magenta { box-shadow: var(--cf-glow-magenta-full); }
+.neon-lime { box-shadow: var(--cf-glow-lime-full); }
+.neon-orange { box-shadow: var(--cf-glow-orange-full); }
+.neon-gold { box-shadow: var(--cf-glow-gold-full); }
+
+/* Subtle variants */
+.neon-cyan--subtle { box-shadow: var(--cf-glow-cyan-subtle); }
+.neon-magenta--subtle { box-shadow: var(--cf-glow-magenta-subtle); }
+.neon-lime--subtle { box-shadow: var(--cf-glow-lime-subtle); }
+.neon-orange--subtle { box-shadow: var(--cf-glow-orange-subtle); }
+.neon-gold--subtle { box-shadow: var(--cf-glow-gold-subtle); }
+
+/* Text glow */
+.neon-text { text-shadow: var(--cf-text-glow-full); }
+.neon-text-cyan {
+  color: var(--cf-cyan);
+  text-shadow:
+    0 0 5px #00f0ff,
+    0 0 10px #00f0ff,
+    0 0 20px #00f0ff,
+    0 0 40px #00f0ff;
+}
+.neon-text-magenta {
+  color: var(--cf-magenta);
+  text-shadow:
+    0 0 5px #ff0099,
+    0 0 10px #ff0099,
+    0 0 20px #ff0099,
+    0 0 40px #ff0099;
+}
+.neon-text-lime {
+  color: var(--cf-lime);
+  text-shadow:
+    0 0 5px #39ff14,
+    0 0 10px #39ff14,
+    0 0 20px #39ff14,
+    0 0 40px #39ff14;
+}
+.neon-text-gold {
+  color: var(--cf-gold);
+  text-shadow:
+    0 0 5px #ffd700,
+    0 0 10px #ffd700,
+    0 0 20px #ffd700,
+    0 0 40px #ffd700;
+}
+
+/* ===================================================================
+   END OF CYBERFLOW DESIGN TOKENS
+   =================================================================== */

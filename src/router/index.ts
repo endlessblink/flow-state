@@ -107,6 +107,12 @@ const router = createRouter({
       component: () => import('@/components/debug/KeyboardDeletionTest.vue')
     },
     {
+      path: '/cyberflow',
+      name: 'cyberflow',
+      component: () => import('@/views/CyberflowView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/performance',
       name: 'performance',
       component: () => import('@/views/PerformanceView.vue'),

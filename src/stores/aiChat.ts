@@ -11,8 +11,10 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, watch } from 'vue'
 import type { Task } from '@/types/tasks'
+import { executeTool } from '@/services/ai/tools'
+import type { ToolCall } from '@/services/ai/tools'
 
 // ============================================================================
 // Types
@@ -81,6 +83,27 @@ export interface ChatContext {
   additionalContext?: string
 }
 
+/**
+ * An entry in the undo buffer for reversible tool actions.
+ */
+export interface UndoEntry {
+  toolName: string
+  timestamp: number
+  params: Record<string, unknown>
+  undoAction: { toolName: string; params: Record<string, unknown> }
+  description: string
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const CHAT_HISTORY_KEY = 'flowstate-ai-chat-history'
+const AI_SETTINGS_KEY = 'flowstate-ai-settings'
+const MAX_PERSISTED_MESSAGES = 50
+const MAX_UNDO_ENTRIES = 10
+const SAVE_DEBOUNCE_MS = 300
+
 // ============================================================================
 // Store
 // ============================================================================
@@ -118,6 +141,103 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   /** Whether the chat has been initialized */
   const isInitialized = ref(false)
+
+  /** Undo buffer for reversible tool actions (session only, not persisted) */
+  const undoBuffer = ref<UndoEntry[]>([])
+
+  /** Persisted AI settings (provider/model) */
+  const persistedSettings = ref<{ provider: string; model: string } | null>(null)
+
+  // ============================================================================
+  // Persistence Helpers
+  // ============================================================================
+
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Serialize messages for localStorage (strips non-serializable fields like action handlers).
+   */
+  function serializeMessages(msgs: ChatMessage[]): string {
+    const serializable = msgs.slice(-MAX_PERSISTED_MESSAGES).map(m => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+      isStreaming: false, // never persist streaming state
+      error: m.error,
+      taskId: m.taskId,
+      metadata: m.metadata,
+      // actions are NOT persisted (handlers are functions)
+    }))
+    return JSON.stringify(serializable)
+  }
+
+  /**
+   * Deserialize messages from localStorage, restoring Date objects.
+   */
+  function deserializeMessages(json: string): ChatMessage[] {
+    try {
+      const parsed = JSON.parse(json) as Array<Record<string, unknown>>
+      return parsed.map(m => ({
+        ...m,
+        timestamp: new Date(m.timestamp as string),
+      })) as ChatMessage[]
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Save messages to localStorage (debounced).
+   */
+  function debouncedSaveMessages() {
+    if (saveTimeout) clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem(CHAT_HISTORY_KEY, serializeMessages(messages.value))
+      } catch {
+        // localStorage full or unavailable - silently ignore
+      }
+    }, SAVE_DEBOUNCE_MS)
+  }
+
+  /**
+   * Load messages from localStorage.
+   */
+  function loadPersistedMessages(): ChatMessage[] {
+    try {
+      const raw = localStorage.getItem(CHAT_HISTORY_KEY)
+      if (!raw) return []
+      return deserializeMessages(raw)
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Save AI settings to localStorage.
+   */
+  function saveSettings(settings: { provider: string; model: string }) {
+    try {
+      persistedSettings.value = settings
+      localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings))
+    } catch {
+      // silently ignore
+    }
+  }
+
+  /**
+   * Load AI settings from localStorage.
+   */
+  function loadPersistedSettings(): { provider: string; model: string } | null {
+    try {
+      const raw = localStorage.getItem(AI_SETTINGS_KEY)
+      if (!raw) return null
+      return JSON.parse(raw) as { provider: string; model: string }
+    } catch {
+      return null
+    }
+  }
 
   // ============================================================================
   // Getters
@@ -306,12 +426,22 @@ export const useAIChatStore = defineStore('aiChat', () => {
   }
 
   /**
-   * Clear all messages.
+   * Clear all messages, localStorage history, and re-add welcome message.
    */
   function clearMessages() {
     messages.value = []
     streamingContent.value = ''
     error.value = null
+    undoBuffer.value = []
+    try {
+      localStorage.removeItem(CHAT_HISTORY_KEY)
+    } catch {
+      // silently ignore
+    }
+    // Re-add welcome message
+    addAssistantMessage(
+      "Hi! I'm your FlowState AI assistant. I can help you organize your tasks, break down complex work, and suggest canvas groupings. Just ask me anything!"
+    )
   }
 
   /**
@@ -323,13 +453,35 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   /**
    * Initialize the chat (called on app startup).
+   * Loads persisted messages and settings from localStorage.
    */
   function initialize() {
     if (isInitialized.value) return
 
-    // Add welcome message
-    addAssistantMessage(
-      "Hi! I'm your FlowState AI assistant. I can help you organize your tasks, break down complex work, and suggest canvas groupings. Just ask me anything!"
+    // Load persisted settings
+    persistedSettings.value = loadPersistedSettings()
+
+    // Load persisted messages
+    const persisted = loadPersistedMessages()
+    if (persisted.length > 0) {
+      messages.value = persisted
+    } else {
+      // Only show welcome message if no persisted messages
+      addAssistantMessage(
+        "Hi! I'm your FlowState AI assistant. I can help you organize your tasks, break down complex work, and suggest canvas groupings. Just ask me anything!"
+      )
+    }
+
+    // Watch messages for persistence (debounced)
+    watch(
+      () => messages.value.length,
+      () => debouncedSaveMessages(),
+    )
+    // Also watch for content changes (streaming appends don't change length)
+    watch(
+      messages,
+      () => debouncedSaveMessages(),
+      { deep: true }
     )
 
     isInitialized.value = true
@@ -348,6 +500,78 @@ export const useAIChatStore = defineStore('aiChat', () => {
     error.value = null
     isInitialized.value = false
     isPanelOpen.value = false
+    undoBuffer.value = []
+    persistedSettings.value = null
+    try {
+      localStorage.removeItem(CHAT_HISTORY_KEY)
+      localStorage.removeItem(AI_SETTINGS_KEY)
+    } catch {
+      // silently ignore
+    }
+  }
+
+  // ============================================================================
+  // Undo Buffer
+  // ============================================================================
+
+  /**
+   * Push an entry to the undo buffer.
+   * Most recent entries are at the front. Capped at MAX_UNDO_ENTRIES.
+   */
+  function pushUndoEntry(entry: UndoEntry) {
+    undoBuffer.value.unshift(entry)
+    if (undoBuffer.value.length > MAX_UNDO_ENTRIES) {
+      undoBuffer.value = undoBuffer.value.slice(0, MAX_UNDO_ENTRIES)
+    }
+  }
+
+  /**
+   * Pop the most recent undo entry and execute its reverse action.
+   * Returns the entry that was undone, or null if buffer is empty.
+   */
+  async function undoLastAction(): Promise<UndoEntry | null> {
+    if (undoBuffer.value.length === 0) return null
+
+    const entry = undoBuffer.value.shift()!
+
+    // Execute the reverse tool call
+    const toolCall: ToolCall = {
+      tool: entry.undoAction.toolName,
+      parameters: entry.undoAction.params,
+    }
+
+    try {
+      await executeTool(toolCall)
+    } catch {
+      // If undo fails, we still remove the entry (it's been consumed)
+    }
+
+    return entry
+  }
+
+  /**
+   * Get the current undo buffer contents.
+   */
+  function getUndoHistory(): UndoEntry[] {
+    return undoBuffer.value
+  }
+
+  // ============================================================================
+  // Settings Persistence
+  // ============================================================================
+
+  /**
+   * Update and persist AI provider/model settings.
+   */
+  function updatePersistedSettings(settings: { provider: string; model: string }) {
+    saveSettings(settings)
+  }
+
+  /**
+   * Get the persisted AI settings.
+   */
+  function getPersistedSettings(): { provider: string; model: string } | null {
+    return persistedSettings.value
   }
 
   // ============================================================================
@@ -373,6 +597,8 @@ export const useAIChatStore = defineStore('aiChat', () => {
     pendingSuggestionCount,
     error,
     isInitialized,
+    undoBuffer,
+    persistedSettings,
 
     // Getters
     visibleMessages,
@@ -397,6 +623,15 @@ export const useAIChatStore = defineStore('aiChat', () => {
     clearMessages,
     clearError,
     initialize,
-    reset
+    reset,
+
+    // Undo
+    pushUndoEntry,
+    undoLastAction,
+    getUndoHistory,
+
+    // Settings Persistence
+    updatePersistedSettings,
+    getPersistedSettings,
   }
 })

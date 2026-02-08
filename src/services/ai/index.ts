@@ -3,8 +3,8 @@
  *
  * Unified AI provider system supporting multiple backends:
  * - Ollama (local inference)
- * - OpenAI (cloud, future)
- * - Groq (cloud, future)
+ * - Groq (direct + proxy via Supabase Edge Function)
+ * - OpenRouter (proxy via Supabase Edge Function)
  *
  * @see ROAD-011 in MASTER_PLAN.md
  */
@@ -42,11 +42,13 @@ export {
   OllamaProvider,
   createOllamaProvider,
   autoDetectOllama,
-  ClaudeProvider,
-  createClaudeProvider,
-  DeepSeekProvider,
-  createDeepSeekProvider,
-  autoDetectDeepSeek,
+  GroqProvider,
+  createGroqProvider,
+  autoDetectGroq,
+  GroqProxyProvider,
+  createGroqProxyProvider,
+  OpenRouterProxyProvider,
+  createOpenRouterProxyProvider,
 } from './providers'
 
 // Router
@@ -79,6 +81,7 @@ export type {
 // AI Tools for tool execution
 export {
   AI_TOOLS,
+  MAX_TOOLS_PER_RESPONSE,
   executeTool,
   parseToolCalls,
   buildToolsPrompt,
@@ -86,6 +89,7 @@ export {
 
 export type {
   ToolDefinition,
+  ToolParam,
   ToolCall,
   ToolResult,
 } from './tools'

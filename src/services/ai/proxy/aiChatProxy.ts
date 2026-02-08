@@ -18,6 +18,8 @@ import type {
   AITokenUsage,
 } from '@/types/ai'
 import { AIProvider as AIProviderEnum, AIErrorCode, createAIProviderError } from '@/types/ai'
+// TASK-1186: Use Tauri HTTP for CORS-free requests in desktop app
+import { tauriFetch } from '../utils/tauriHttp'
 
 // ============================================================================
 // Types
@@ -159,7 +161,7 @@ export async function proxyAIChat(
   }
 
   try {
-    const response = await fetch(proxyUrl, {
+    const response = await tauriFetch(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -254,7 +256,7 @@ export async function* proxyAIChatStream(
   }
 
   try {
-    const response = await fetch(proxyUrl, {
+    const response = await tauriFetch(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -388,21 +390,42 @@ async function* parseSSEStream(
 }
 
 /**
- * Check if the AI proxy is available and configured for a provider
+ * Check if the AI proxy is available and configured for a provider.
+ * Uses a lightweight OPTIONS/POST request instead of a full chat completion.
  *
  * @param provider - Provider to check
  * @returns Promise resolving to availability status
  */
 export async function isProxyAvailable(provider: ProxyProvider): Promise<boolean> {
   try {
-    // Make a minimal request to check if the proxy is working
-    const response = await proxyAIChat({
-      provider,
-      messages: [{ role: 'user', content: 'Hi' }],
-      max_tokens: 1,
+    const proxyUrl = getProxyUrl()
+
+    // Get auth token if available
+    let authHeader: Record<string, string> = {}
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        authHeader = { 'Authorization': `Bearer ${session.access_token}` }
+      }
+    }
+
+    // Lightweight health check: send a minimal request with max_tokens=1
+    // instead of a full chat that wastes provider tokens
+    const response = await tauriFetch(proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader,
+      },
+      body: JSON.stringify({
+        provider,
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 1,
+      }),
+      signal: AbortSignal.timeout(10000),
     })
 
-    return !!response.content
+    return response.ok
   } catch {
     return false
   }

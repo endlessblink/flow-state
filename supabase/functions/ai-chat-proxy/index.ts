@@ -150,7 +150,7 @@ async function handleOpenRouterRequest(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://in-theflow.com', // Required by OpenRouter
+      'HTTP-Referer': Deno.env.get('SITE_URL') || 'https://in-theflow.com', // Required by OpenRouter
       'X-Title': 'FlowState', // Optional but recommended
     },
     body: JSON.stringify(body),

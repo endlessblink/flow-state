@@ -29,6 +29,8 @@ import type {
   ProviderHealthStatus,
   GroqConfig,
 } from '../types'
+// TASK-1186: Use Tauri HTTP for CORS-free requests in desktop app
+import { tauriFetch } from '../utils/tauriHttp'
 
 // ============================================================================
 // Groq API Types (OpenAI-compatible)
@@ -184,7 +186,7 @@ export class GroqProvider implements AIProvider {
     const startTime = Date.now()
 
     try {
-      const response = await fetch(`${GROQ_API_ENDPOINT}/models`, {
+      const response = await tauriFetch(`${GROQ_API_ENDPOINT}/models`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -227,7 +229,7 @@ export class GroqProvider implements AIProvider {
 
   async listModels(): Promise<AIModel[]> {
     try {
-      const response = await fetch(`${GROQ_API_ENDPOINT}/models`, {
+      const response = await tauriFetch(`${GROQ_API_ENDPOINT}/models`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -276,7 +278,7 @@ export class GroqProvider implements AIProvider {
     }
 
     try {
-      const response = await fetch(`${GROQ_API_ENDPOINT}/chat/completions`, {
+      const response = await tauriFetch(`${GROQ_API_ENDPOINT}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -327,7 +329,7 @@ export class GroqProvider implements AIProvider {
     }
 
     try {
-      const response = await fetch(`${GROQ_API_ENDPOINT}/chat/completions`, {
+      const response = await tauriFetch(`${GROQ_API_ENDPOINT}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

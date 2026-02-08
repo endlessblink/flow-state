@@ -166,7 +166,6 @@ export class SimpleGlobalKeyboardHandler {
    * Execute new task - dispatch custom event for App.vue to handle
    */
   private executeNewTask(): void {
-
     window.dispatchEvent(new CustomEvent('global-new-task'))
   }
 
@@ -174,8 +173,6 @@ export class SimpleGlobalKeyboardHandler {
    * Execute undo operation
    */
   private async executeUndo(): Promise<void> {
-    console.log('🔴 [KEYBOARD] executeUndo called')
-
     if (!this.undoRedo) {
       console.warn('⚠️ [UNDO] Undo system not initialized')
       return
@@ -183,15 +180,11 @@ export class SimpleGlobalKeyboardHandler {
 
     try {
       // Check if undo is possible
-      console.log('🔴 [KEYBOARD] canUndo:', this.undoRedo.canUndo?.value)
       if (!this.undoRedo.canUndo?.value) {
-        console.log('🔴 [KEYBOARD] Nothing to undo')
         return // Nothing to undo - silent return
       }
 
-      console.log('🔴 [KEYBOARD] Calling undo()...')
       await this.undoRedo.undo()
-      console.log('🔴 [KEYBOARD] undo() completed')
     } catch (error) {
       console.error('❌ [UNDO] Undo failed:', error)
     }

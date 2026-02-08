@@ -1119,6 +1119,20 @@ export const useGamificationStore = defineStore('gamification', () => {
     toastQueue.value.push(toast)
   }
 
+  function showExposureToast(isShielded: boolean) {
+    const toast: GamificationToast = {
+      id: `exposure-${Date.now()}`,
+      type: 'exposure',
+      title: isShielded ? 'SHIELDED' : 'EXPOSED',
+      description: isShielded
+        ? 'Timer active — +10% XP, corruption reduced'
+        : 'No timer running — -25% XP, corruption rising',
+      icon: isShielded ? 'shield' : 'shield-off',
+      duration: 3000,
+    }
+    toastQueue.value.push(toast)
+  }
+
   function dismissToast(id: string) {
     const index = toastQueue.value.findIndex((t) => t.id === id)
     if (index !== -1) {
@@ -1257,6 +1271,7 @@ export const useGamificationStore = defineStore('gamification', () => {
     equipTheme,
     applyTheme,
     dismissToast,
+    showExposureToast,
     updateSettings,
 
     // Utilities

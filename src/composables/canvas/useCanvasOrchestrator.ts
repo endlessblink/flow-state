@@ -239,12 +239,6 @@ export function useCanvasOrchestrator() {
             x: events.canvasContextMenuX.value,
             y: events.canvasContextMenuY.value
         }
-        console.log('[TASK-288-DEBUG] orchestrator wrapper called', {
-            groupOrId: typeof groupOrId === 'string' ? groupOrId : groupOrId?.id,
-            storedContextMenuX: events.canvasContextMenuX.value,
-            storedContextMenuY: events.canvasContextMenuY.value,
-            screenPos
-        })
         actions.createTaskInGroup(groupOrId, screenPos)
     }
 
@@ -323,12 +317,6 @@ export function useCanvasOrchestrator() {
             target.classList.contains('vue-flow__background')
         )
 
-        console.log('%c[DEBUG] handleCanvasContainerClick FIRED', 'background: purple; color: white; font-size: 16px;', {
-            target: target.className,
-            isEmptyCanvasClick,
-            isVueFlowSelectionBox
-        })
-
         if (isEmptyCanvasClick) {
             selection.clearSelection()
         }
@@ -339,8 +327,13 @@ export function useCanvasOrchestrator() {
         events.closeNodeContextMenu()
     }
 
-    const collectTasksForSection = (_sectionId: string) => {
-        smartGroups.autoCollectOverdueTasks()
+    const collectTasksForSection = (sectionId: string) => {
+        actions.collectOverdueTasksNearGroup(sectionId)
+    }
+
+    // TASK-1222: Collect overdue tasks and arrange near a group
+    const collectOverdueTasksNearGroup = (sectionId: string) => {
+        actions.collectOverdueTasksNearGroup(sectionId)
     }
 
     // Connections - use context menu store refs for edge menu to sync with EdgeContextMenu component
@@ -690,6 +683,7 @@ export function useCanvasOrchestrator() {
         ...alignment,
         ...smartGroups,
         collectTasksForSection,
+        collectOverdueTasksNearGroup,
         ...connections,
 
         // Interaction Handlers

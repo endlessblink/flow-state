@@ -968,7 +968,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: var(--space-4);
   position: sticky;
   top: 0;
   background: var(--app-background-gradient);
@@ -976,31 +976,31 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .mobile-inbox-header h2 {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   margin: 0;
 }
 
 .task-count {
   background: var(--surface-secondary);
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
 }
 
 /* Filter Section */
 .filter-section {
-  padding: 0 16px 12px;
+  padding: 0 var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .filter-chips {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -1013,17 +1013,17 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .filter-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 20px;
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3_5);
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
   background: var(--surface-secondary);
   color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .filter-chip.active {
@@ -1039,12 +1039,12 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* TASK-1104: Filter count badge */
 .filter-count {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 6px;
-  border-radius: 10px;
+  background: var(--border-hover);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-sm);
   font-size: 11px;
-  font-weight: 600;
-  margin-left: 2px;
+  font-weight: var(--font-semibold);
+  margin-left: var(--space-0_5);
 }
 
 .filter-chip.active .filter-count {
@@ -1056,21 +1056,21 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .controls-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .control-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
   background: var(--surface-secondary);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-meta);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .control-btn:active {
@@ -1090,12 +1090,12 @@ const isOverdue = (dueDate: string | Date): boolean => {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   min-width: 150px;
   background: var(--surface-primary);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   z-index: 100;
   overflow: hidden;
 }
@@ -1103,16 +1103,16 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2_5);
   width: 100%;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--text-sm);
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-fast);
 }
 
 .dropdown-item:hover {
@@ -1126,7 +1126,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* Hide Done Toggle */
 .hide-done-btn {
-  padding: 8px;
+  padding: var(--space-2);
   min-width: 36px;
   justify-content: center;
 }
@@ -1140,15 +1140,15 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .sort-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
   background: var(--surface-secondary);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-meta);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .sort-btn:active {
@@ -1160,18 +1160,18 @@ const isOverdue = (dueDate: string | Date): boolean => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 10px 16px;
-  margin: 0 16px 12px;
+  gap: var(--space-3);
+  padding: var(--space-2_5) var(--space-4);
+  margin: 0 var(--space-4) var(--space-3);
   background: var(--surface-secondary);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
 }
 
 .hint-text {
-  font-size: 13px;
+  font-size: var(--text-meta);
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .hint-divider {
@@ -1179,14 +1179,14 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .hint-dismiss {
-  margin-left: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
+  margin-left: var(--space-2);
+  padding: var(--space-1_5) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
   color: var(--primary-brand);
   background: var(--primary-brand-bg-subtle);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -1197,58 +1197,58 @@ const isOverdue = (dueDate: string | Date): boolean => {
 /* Task List */
 .mobile-task-list {
   flex: 1;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2_5);
 }
 
 /* TASK-1104: Task Groups */
 .task-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .task-group:not(:first-child) {
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .group-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 4px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-1);
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .group-color-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
 .group-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-meta);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
   flex: 1;
 }
 
 .group-count {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   background: var(--surface-secondary);
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: var(--radius-sm);
 }
 
 /* Project badge in task meta */
 .project-badge {
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-xs);
   background: var(--surface-tertiary);
   color: var(--text-tertiary);
   max-width: 80px;
@@ -1261,10 +1261,10 @@ const isOverdue = (dueDate: string | Date): boolean => {
   display: flex;
   align-items: center;
   background: var(--surface-primary);
-  padding: 14px;
-  border-radius: 12px;
-  gap: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  padding: var(--space-3_5);
+  border-radius: var(--radius-lg);
+  gap: var(--space-3);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
   /* Prevent text selection during swipe */
   -webkit-user-select: none;
@@ -1277,24 +1277,24 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .mobile-task-item.timer-active {
-  border: 2px solid var(--timer-active-border, var(--primary-brand));
-  box-shadow: 0 0 12px var(--timer-active-glow, rgba(var(--primary-brand-rgb), 0.2));
+  border: var(--space-0_5) solid var(--timer-active-border, var(--primary-brand));
+  box-shadow: var(--timer-active-glow-strong);
 }
 
 .task-checkbox {
-  padding: 4px;
+  padding: var(--space-1);
   flex-shrink: 0;
 }
 
 .checkbox-circle {
   width: 22px;
   height: 22px;
-  border: 2px solid var(--border-subtle);
-  border-radius: 50%;
+  border: var(--space-0_5) solid var(--border-subtle);
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .checkbox-circle.checked {
@@ -1308,7 +1308,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .task-title {
@@ -1337,7 +1337,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .task-title-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .task-title-row .task-title {
@@ -1349,10 +1349,10 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .priority-badge-inline {
   flex-shrink: 0;
   font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-top: 2px; /* Align with first line of title */
+  font-weight: var(--font-semibold);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-xs);
+  margin-top: var(--space-0_5);
   background: var(--surface-tertiary);
   color: var(--text-secondary);
 }
@@ -1365,14 +1365,14 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .task-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .priority-badge {
   font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-weight: var(--font-semibold);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-xs);
   background: var(--surface-tertiary);
   color: var(--text-secondary);
 }
@@ -1385,8 +1385,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .due-date {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
 
@@ -1397,7 +1397,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .timer-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--primary-brand-bg-subtle);
   color: var(--primary-brand);
@@ -1415,11 +1415,11 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .empty-state {
   text-align: center;
   color: var(--text-muted);
-  padding: 60px 20px;
+  padding: 60px var(--space-5);
 }
 
 .empty-state p {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 /* Expanded Quick Add Bar */
@@ -1428,47 +1428,47 @@ const isOverdue = (dueDate: string | Date): boolean => {
   bottom: 64px; /* Above nav */
   left: 0;
   right: 0;
-  padding: 12px 16px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   background: var(--surface-primary);
   border-top: 1px solid var(--border-subtle);
   z-index: 50;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-md);
+  transition: all var(--duration-slow) var(--spring-smooth);
 }
 
 .quick-add-bar.expanded {
-  padding-top: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -8px 24px rgba(0,0,0,0.15);
-  border-radius: 24px 24px 0 0;
+  padding-top: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
 }
 
 .quick-add-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .quick-add-input {
   flex: 1;
-  padding: 12px 16px;
-  border-radius: 24px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-2xl);
   border: 1px solid var(--border-subtle);
   background: var(--surface-secondary);
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: var(--text-base);
   outline: none;
 }
 
 .quick-add-input:focus {
   border-color: var(--primary-brand);
-  box-shadow: 0 0 0 2px rgba(var(--primary-brand-rgb), 0.1);
+  box-shadow: var(--brand-primary-glow);
 }
 
 .add-btn {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--primary-brand);
   color: white;
@@ -1477,7 +1477,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(var(--primary-brand-rgb), 0.3);
+  box-shadow: var(--brand-primary-glow);
 }
 
 .add-btn:disabled {
@@ -1491,11 +1491,11 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* Quick Add Options (expanded state) */
 .quick-add-options {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  animation: slideUp 0.2s ease-out;
+  gap: var(--space-3_5);
+  animation: slideUp var(--duration-normal) ease-out;
 }
 
 @keyframes slideUp {
@@ -1512,15 +1512,15 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .option-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .option-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: var(--space-1_5);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1528,20 +1528,20 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .option-chips {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .option-chip {
-  padding: 8px 14px;
-  border-radius: 18px;
+  padding: var(--space-2) var(--space-3_5);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   background: var(--surface-secondary);
   color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-meta);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) ease;
 }
 
 .option-chip:active {
@@ -1577,13 +1577,13 @@ const isOverdue = (dueDate: string | Date): boolean => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px;
-  margin-top: 4px;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  margin-top: var(--space-1);
   border: none;
   background: transparent;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: var(--text-meta);
   cursor: pointer;
 }
 
@@ -1595,7 +1595,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .mic-btn {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--surface-tertiary);
   color: var(--text-secondary);
@@ -1604,7 +1604,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .mic-btn:active {
@@ -1636,26 +1636,26 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-feedback {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  margin-top: 12px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
   background: var(--surface-secondary);
-  border-radius: 12px;
-  animation: slideUp 0.2s ease-out;
+  border-radius: var(--radius-lg);
+  animation: slideUp var(--duration-normal) ease-out;
 }
 
 .voice-waveform {
   display: flex;
   align-items: center;
   gap: 3px;
-  height: 24px;
+  height: var(--space-6);
 }
 
 .wave-bar {
   width: 3px;
-  height: 8px;
+  height: var(--space-2);
   background: var(--danger-text);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   animation: wave 0.8s ease-in-out infinite;
 }
 
@@ -1666,13 +1666,13 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .wave-bar:nth-child(5) { animation-delay: 0.4s; }
 
 @keyframes wave {
-  0%, 100% { height: 8px; }
-  50% { height: 20px; }
+  0%, 100% { height: var(--space-2); }
+  50% { height: var(--space-5); }
 }
 
 .voice-status {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -1682,7 +1682,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-cancel {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   border: none;
   background: var(--surface-tertiary);
   color: var(--text-tertiary);
@@ -1703,40 +1703,40 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-lang-toggle {
   min-width: 36px;
   height: 28px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hover);
+  background: var(--glass-bg-light);
   color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) ease;
 }
 
 .voice-lang-toggle:active {
   transform: scale(0.95);
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-hover);
 }
 
 /* Voice language hint (when not recording) */
 .voice-lang-hint {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .voice-lang-btn {
-  padding: 6px 12px;
-  border-radius: 16px;
+  padding: var(--space-1_5) var(--space-3);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   background: var(--surface-tertiary);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) ease;
 }
 
 .voice-lang-btn:active {
@@ -1746,42 +1746,42 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* Voice mode toggle button */
 .voice-mode-btn {
-  padding: 6px 12px;
-  border-radius: 16px;
+  padding: var(--space-1_5) var(--space-3);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--brand-primary);
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-bg-subtle);
   color: var(--brand-primary);
-  font-size: 12px;
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-fast) ease;
 }
 
 .voice-mode-btn:active {
   transform: scale(0.97);
-  background: rgba(78, 205, 196, 0.2);
+  background: var(--brand-border-subtle);
 }
 
 /* Voice mode badge (inside recording feedback) */
 .voice-mode-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   flex-shrink: 0;
 }
 
 .voice-mode-badge.whisper {
-  background: rgba(78, 205, 196, 0.15);
+  background: var(--state-active-bg);
   color: var(--brand-primary);
 }
 
 /* Voice error message */
 .voice-error {
-  margin-top: 8px;
-  padding: 8px 12px;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   background: var(--danger-bg-subtle);
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-meta);
   color: var(--danger-text);
 }
 
@@ -1797,13 +1797,13 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .mic-btn.offline::after {
   content: '';
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 8px;
-  height: 8px;
+  bottom: var(--space-0_5);
+  right: var(--space-0_5);
+  width: var(--space-2);
+  height: var(--space-2);
   background: var(--warning-text);
-  border-radius: 50%;
-  border: 2px solid var(--surface-primary);
+  border-radius: var(--radius-full);
+  border: var(--space-0_5) solid var(--surface-primary);
 }
 
 .voice-pending-badge {
@@ -1814,7 +1814,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   height: 18px;
   padding: 0 5px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: white;
   background: var(--primary-brand);
   border-radius: 9px;
@@ -1835,32 +1835,32 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .voice-offline-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   font-size: 11px;
-  font-weight: 600;
-  background: var(--warning-bg-subtle);
+  font-weight: var(--font-semibold);
+  background: var(--orange-bg-light);
   color: var(--warning-text);
 }
 
 .voice-queue-status {
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: var(--font-medium);
   background: var(--primary-brand-bg-subtle);
   color: var(--primary-brand);
 }
 
 /* Debug Banner */
 .debug-banner {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--overlay-component-bg-lighter);
   color: #0f0;
   font-family: monospace;
   font-size: 11px;
-  padding: 8px 12px;
-  margin: 8px 16px;
-  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
   line-height: 1.6;
 }
 
@@ -1871,14 +1871,14 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .debug-toggle {
   position: fixed;
   top: 60px;
-  right: 8px;
+  right: var(--space-2);
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-full);
+  background: var(--overlay-component-bg-lighter);
   border: none;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
   z-index: 1000;
 }
 

@@ -56,31 +56,70 @@ export function useTimeBlockNotifications() {
     const today = getTodayStr()
     const blocks: ActiveTimeBlock[] = []
 
-    const tasks = Array.isArray(taskStore.tasks) ? taskStore.tasks : []
+    // IMPORTANT: Use _rawTasks (unfiltered) — taskStore.tasks is filtered by
+    // active smart view/project/status filters and would miss tasks not in the current view
+    const tasks = Array.isArray(taskStore._rawTasks) ? taskStore._rawTasks : []
 
     for (const task of tasks) {
-      if (!task.instances || !Array.isArray(task.instances)) continue
+      // Path 1: Instance-based scheduling (primary path)
+      if (task.instances && Array.isArray(task.instances)) {
+        for (let i = 0; i < task.instances.length; i++) {
+          const inst = task.instances[i]
+          if (!inst || inst.scheduledDate !== today) continue
+          if (!inst.scheduledTime) continue
+          if (inst.status === 'skipped') continue
 
-      for (let i = 0; i < task.instances.length; i++) {
-        const inst = task.instances[i]
-        if (inst.scheduledDate !== today) continue
-        if (!inst.scheduledTime || !inst.duration) continue
-        if (inst.status === 'skipped') continue
+          // Duration fallback: instance.duration → task.estimatedDuration → 30 (matches calendar)
+          const duration = inst.duration || task.estimatedDuration || 30
 
-        const [hours, minutes] = inst.scheduledTime.split(':').map(Number)
+          const [hours, minutes] = inst.scheduledTime.split(':').map(Number)
+          if (isNaN(hours) || isNaN(minutes)) continue
+
+          const start = new Date()
+          start.setHours(hours, minutes, 0, 0)
+          const end = new Date(start.getTime() + duration * 60_000)
+
+          blocks.push({
+            taskId: task.id,
+            taskTitle: task.title,
+            instanceIndex: i,
+            startTime: start,
+            endTime: end,
+            durationMinutes: duration,
+            instance: inst
+          })
+        }
+      }
+
+      // Path 2: Legacy task-level scheduling (task.scheduledDate + task.scheduledTime)
+      if (task.scheduledDate === today && task.scheduledTime) {
+        // Skip if we already found an instance for today (avoid duplicates)
+        const alreadyHasInstance = blocks.some(b => b.taskId === task.id)
+        if (alreadyHasInstance) continue
+
+        const [hours, minutes] = task.scheduledTime.split(':').map(Number)
+        if (isNaN(hours) || isNaN(minutes)) continue
+
+        const duration = task.estimatedDuration || 30
         const start = new Date()
         start.setHours(hours, minutes, 0, 0)
+        const end = new Date(start.getTime() + duration * 60_000)
 
-        const end = new Date(start.getTime() + inst.duration * 60_000)
+        // Create a synthetic instance for the legacy task
+        const syntheticInstance: TaskInstance = {
+          scheduledDate: today,
+          scheduledTime: task.scheduledTime,
+          duration
+        }
 
         blocks.push({
           taskId: task.id,
           taskTitle: task.title,
-          instanceIndex: i,
+          instanceIndex: -1, // -1 signals legacy/synthetic
           startTime: start,
           endTime: end,
-          durationMinutes: inst.duration,
-          instance: inst
+          durationMinutes: duration,
+          instance: syntheticInstance
         })
       }
     }
@@ -224,6 +263,15 @@ export function useTimeBlockNotifications() {
     const now = Date.now()
     const blocks = getActiveTimeBlocks()
 
+    if (blocks.length > 0) {
+      console.log(`[TIME-BLOCK] Tick: ${blocks.length} active block(s) today`, blocks.map(b => ({
+        task: b.taskTitle,
+        start: b.startTime.toLocaleTimeString(),
+        end: b.endTime.toLocaleTimeString(),
+        duration: b.durationMinutes + 'min'
+      })))
+    }
+
     for (const block of blocks) {
       const milestones = getEffectiveMilestones(block)
 
@@ -252,6 +300,15 @@ export function useTimeBlockNotifications() {
     }
 
     isInitialized = true
+
+    const settings = settingsStore.timeBlockNotifications
+    console.log('[TIME-BLOCK] Starting with settings:', {
+      enabled: settings.enabled,
+      milestones: settings.milestones.map(m => `${m.id}(${m.enabled ? 'on' : 'off'})`),
+      channels: settings.deliveryChannels,
+      totalTasks: taskStore._rawTasks?.length ?? 0
+    })
+
     // Run immediately once, then every 15 seconds
     tick()
     intervalId = setInterval(tick, POLL_INTERVAL_MS)

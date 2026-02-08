@@ -200,7 +200,7 @@ export interface LevelInfo {
 
 export interface GamificationToast {
   id: string
-  type: 'xp' | 'level_up' | 'achievement' | 'streak' | 'purchase'
+  type: 'xp' | 'level_up' | 'achievement' | 'streak' | 'purchase' | 'exposure'
   title: string
   description?: string
   xpAmount?: number
@@ -338,6 +338,16 @@ export const XP_MULTIPLIERS = {
   OVERDUE_PENALTY: 0.9,
   CONSECUTIVE_POMODORO_BONUS: 0.1, // +10% per consecutive session
   MAX_CONSECUTIVE_BONUS: 0.5, // Cap at +50%
+} as const
+
+export const EXPOSURE_SYSTEM = {
+  // When completing tasks WITHOUT a timer running
+  EXPOSED_XP_PENALTY: 0.75,      // 25% XP reduction
+  EXPOSED_CORRUPTION_DELTA: 3,    // Corruption increases
+
+  // When completing tasks WITH a timer running
+  SHIELDED_XP_BONUS: 1.1,        // 10% XP boost
+  SHIELDED_CORRUPTION_DELTA: -2,  // Corruption decreases
 } as const
 
 export const STREAK_CONFIG = {

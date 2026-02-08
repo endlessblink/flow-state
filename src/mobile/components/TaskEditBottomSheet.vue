@@ -365,33 +365,33 @@ function triggerHaptic(duration: number = 10) {
 .sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(var(--blur-xs));
+  -webkit-backdrop-filter: blur(var(--blur-xs));
   display: flex;
   align-items: flex-end;
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 
 .task-edit-sheet {
   width: 100%;
   max-height: 85vh;
-  background: var(--surface-primary, rgb(35, 32, 52));
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  background: var(--surface-primary);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dark-xl);
 }
 
 /* Sheet Handle */
 .sheet-handle {
-  width: 40px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-  margin: 12px auto 0;
+  width: var(--space-10);
+  height: var(--space-1);
+  background: var(--border-hover);
+  border-radius: var(--radius-xs);
+  margin: var(--space-3) auto 0;
   flex-shrink: 0;
 }
 
@@ -400,39 +400,39 @@ function triggerHaptic(duration: number = 10) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--glass-border-light);
   flex-shrink: 0;
 }
 
 .sheet-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .header-btn {
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .cancel-btn {
   background: transparent;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary);
 }
 
 .cancel-btn:active {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg-weak);
 }
 
 .save-btn {
-  background: var(--brand-primary, #4ECDC4);
+  background: var(--brand-primary);
   color: hsl(230, 20%, 10%);
 }
 
@@ -449,89 +449,89 @@ function triggerHaptic(duration: number = 10) {
 .edit-form {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 16px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-5) var(--space-4);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .field-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 .field-input {
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: var(--text-primary, #fff);
-  font-size: 16px;
+  padding: var(--space-3_5) var(--space-4);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-base);
   outline: none;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .field-input:focus {
-  border-color: var(--brand-primary, #4ECDC4);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--state-active-bg);
 }
 
 .field-input::placeholder {
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--text-muted);
 }
 
 .field-textarea {
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: var(--text-primary, #fff);
-  font-size: 16px;
+  padding: var(--space-3_5) var(--space-4);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-base);
   outline: none;
   resize: none;
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .field-textarea:focus {
-  border-color: var(--brand-primary, #4ECDC4);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--state-active-bg);
 }
 
 .field-textarea::placeholder {
-  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--text-muted);
 }
 
 /* Priority Options */
 .priority-options {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .priority-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 14px;
-  font-weight: 500;
+  gap: var(--space-1_5);
+  padding: var(--space-2_5) var(--space-3_5);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .priority-pill:active {
@@ -539,49 +539,49 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .priority-pill.priority-high.active {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  background: var(--priority-high-bg);
+  border-color: var(--priority-high-border);
+  color: var(--color-priority-high);
 }
 
 .priority-pill.priority-medium.active {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
-  color: #f59e0b;
+  background: var(--priority-medium-bg);
+  border-color: var(--priority-medium-border);
+  color: var(--color-priority-medium);
 }
 
 .priority-pill.priority-low.active {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
-  color: #3b82f6;
+  background: var(--priority-low-bg);
+  border-color: var(--priority-low-border);
+  color: var(--color-priority-low);
 }
 
 .priority-pill.priority-none.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary, #fff);
+  background: var(--glass-bg-tint);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 /* Date Options */
 .date-options {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .date-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 14px;
-  font-weight: 500;
+  gap: var(--space-1_5);
+  padding: var(--space-2_5) var(--space-3_5);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .date-pill:active {
@@ -589,47 +589,47 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .date-pill.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.4);
-  color: var(--brand-primary, #4ECDC4);
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  color: var(--brand-primary);
 }
 
 .date-pill.clear-date {
-  padding: 10px;
-  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  padding: var(--space-2_5);
+  color: var(--text-muted);
 }
 
 .native-date-picker {
-  margin-top: 8px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text-primary, #fff);
-  font-size: 16px;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-base);
   color-scheme: dark;
 }
 
 /* Status Options */
 .status-options {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .status-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 14px;
-  font-weight: 500;
+  gap: var(--space-1_5);
+  padding: var(--space-2_5) var(--space-3_5);
+  background: var(--glass-bg-weak);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-normal) ease;
 }
 
 .status-pill:active {
@@ -637,9 +637,9 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .status-pill.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.4);
-  color: var(--brand-primary, #4ECDC4);
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  color: var(--brand-primary);
 }
 
 /* ================================
@@ -648,7 +648,7 @@ function triggerHaptic(duration: number = 10) {
 
 .sheet-enter-active,
 .sheet-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--duration-slow) var(--spring-gentle);
 }
 
 .sheet-enter-from,
@@ -668,7 +668,7 @@ function triggerHaptic(duration: number = 10) {
 @media (prefers-reduced-motion: reduce) {
   .sheet-enter-active,
   .sheet-leave-active {
-    transition: opacity 0.15s ease;
+    transition: opacity var(--duration-fast) ease;
   }
 
   .sheet-enter-from .task-edit-sheet,

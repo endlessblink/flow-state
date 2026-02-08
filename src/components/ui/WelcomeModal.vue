@@ -31,28 +31,7 @@
             <!-- Status Banner -->
             <div class="status-banner">
               <CheckCircle :size="20" class="status-icon" />
-              <span>{{ false ? 'Profile created' : `Day ${userStats?.daysSinceCreation || 1}` }}</span>
-            </div>
-
-            <!-- Optional Name Input -->
-            <div class="name-section">
-              <label class="input-label">Display Name (optional)</label>
-              <div class="input-row">
-                <input
-                  v-model="displayName"
-                  type="text"
-                  placeholder="Enter your name"
-                  class="name-input"
-                  maxlength="30"
-                >
-                <button
-                  :disabled="!displayName || displayName === currentDisplayName"
-                  class="save-btn"
-                  @click="saveDisplayName"
-                >
-                  Save
-                </button>
-              </div>
+              <span>Welcome!</span>
             </div>
 
             <!-- Features (Simplified) -->
@@ -78,10 +57,6 @@
               Get Started
             </button>
             <div class="secondary-actions">
-              <button class="secondary-btn" @click="exportData">
-                <Download :size="16" />
-                Export
-              </button>
               <button class="secondary-btn" @click="emit('showSettings')">
                 <Settings :size="16" />
                 Settings
@@ -95,15 +70,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import {
   X,
   CheckCircle,
   LayoutGrid,
   Timer,
   Shield,
-  Download,
   Settings
 } from 'lucide-vue-next'
 
@@ -117,16 +89,6 @@ const emit = defineEmits<{
   showSettings: []
 }>()
 
-const authStore = useAuthStore()
-const displayName = ref('')
-
-const userStats = computed(() => ({ daysSinceCreation: 1 })) // Stubbed
-const currentDisplayName = computed(() => authStore.displayName || '')
-
-onMounted(() => {
-  displayName.value = currentDisplayName.value
-})
-
 const closeModal = () => {
   emit('close')
 }
@@ -134,22 +96,9 @@ const closeModal = () => {
 // Keyboard handler - Enter closes modal, Escape also closes
 const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Enter' || event.key === 'Escape') {
-    // Don't close if typing in the name input
-    const target = event.target as HTMLElement
-    if (target.tagName === 'INPUT' && event.key === 'Enter') return
-
     event.preventDefault()
     closeModal()
   }
-}
-
-const saveDisplayName = () => {
-  // Update display name logic for authStore (if supported by Supabase)
-  console.log('Update display name not implemented for Supabase in this modal yet')
-}
-
-const exportData = () => {
-  console.log('Export data not implemented in this modal yet')
 }
 </script>
 
@@ -254,65 +203,6 @@ const exportData = () => {
 
 .status-icon {
   flex-shrink: 0;
-}
-
-/* Name Section */
-.name-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.input-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-}
-
-.input-row {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.name-input {
-  flex: 1;
-  padding: 0.625rem var(--text-sm);
-  background: transparent;
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-md, 8px);
-  color: var(--text-primary, #fff);
-  font-size: var(--text-sm);
-}
-
-.name-input::placeholder {
-  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
-}
-
-.name-input:focus {
-  outline: none;
-  border-color: var(--color-work, #3b82f6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-.save-btn {
-  padding: 0.625rem var(--space-4);
-  background: transparent;
-  border: 1px solid var(--color-work, #3b82f6);
-  border-radius: var(--radius-md, 8px);
-  color: var(--color-work, #3b82f6);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.save-btn:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.save-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* Features */

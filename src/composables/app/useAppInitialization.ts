@@ -66,9 +66,6 @@ export function useAppInitialization() {
 
         uiStore.loadState()
 
-        console.log('🔍 [BUG-339-DEBUG] Starting database load...')
-        console.log('🔍 [BUG-339-DEBUG] Auth status:', authStore.isAuthenticated)
-
         // TASK-1060: Add retry wrapper for initial load to handle transient auth failures
         const loadWithRetry = async (maxRetries = 3, delayMs = 1000) => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -100,9 +97,6 @@ export function useAppInitialization() {
         // BUG-1207: Tell auth store that app init has loaded stores
         // This prevents the SIGNED_IN handler from doing a redundant double-load
         authStore.markAppInitLoadComplete()
-
-        console.log('🔍 [BUG-339-DEBUG] Task count after load:', taskStore.tasks.length)
-        console.log('🔍 [BUG-339-DEBUG] Raw tasks:', taskStore._rawTasks?.length || 'N/A')
 
         // FEATURE-1118: Initialize gamification system
         try {
@@ -295,15 +289,6 @@ export function useAppInitialization() {
 
             // High Severity Issue #7: Skip if task is pending local write (drag in progress)
             if (tasks.isPendingWrite(taskId)) {
-                // BUG-1206 DEBUG: Log what would have been overwritten
-                const currentTask = tasks.tasks.find((t: any) => t.id === taskId)
-                const mappedIncoming = newDoc ? fromSupabaseTask(newDoc as SupabaseTask) : null
-                if (currentTask && mappedIncoming && currentTask.description !== mappedIncoming.description) {
-                    console.warn(`🐛 [BUG-1206] BLOCKED sync overwrite for ${taskId.slice(0,8)} (pendingWrite)`, {
-                        localDesc: currentTask.description?.slice(0, 50),
-                        incomingDesc: mappedIncoming.description?.slice(0, 50)
-                    })
-                }
                 console.log(`🔒 [HANDLER] TASK ${taskId.slice(0,8)} skipped - pending local write`)
                 return
             }

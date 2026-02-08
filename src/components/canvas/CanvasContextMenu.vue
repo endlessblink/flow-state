@@ -63,6 +63,15 @@
         <span class="menu-text">Collect Matching Tasks</span>
       </button>
 
+      <!-- TASK-1222: Collect Overdue Tasks (always visible for groups) -->
+      <button
+        class="menu-item"
+        @click="handleCollectOverdueTasks"
+      >
+        <AlertCircle :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Collect Overdue Tasks</span>
+      </button>
+
       <div class="menu-divider" />
 
       <button
@@ -248,7 +257,8 @@ import {
   Columns as _Columns, ArrowLeftRight, ArrowUpDown, Edit2, Trash2, Inbox,
   LayoutGrid, ChevronRight, Rows, LayoutList, Grid3x3,
   Settings, Zap, Magnet, // TASK-068: Icons for group actions moved from header
-  Clock // Done for now
+  Clock, // Done for now
+  AlertCircle // TASK-1222: Collect Overdue Tasks
 } from 'lucide-vue-next'
 import { useContextMenu } from '@/composables/useContextMenu'
 import type { CanvasSection } from '@/stores/canvas'
@@ -293,6 +303,8 @@ const emit = defineEmits<{
   openGroupSettings: [section: CanvasSection]
   togglePowerMode: [section: CanvasSection]
   collectTasks: [section: CanvasSection]
+  // TASK-1222: Collect overdue tasks near a group
+  collectOverdueTasks: [section: CanvasSection]
   // TASK-1128: Create group from selected tasks
   createGroupFromSelection: []
 }>()
@@ -420,6 +432,15 @@ const handleCollectTasks = () => {
   if (props.contextSection) {
     console.log('🧲 CanvasContextMenu: Collect Tasks for:', props.contextSection.name)
     emit('collectTasks', props.contextSection)
+    emit('close')
+  }
+}
+
+// TASK-1222: Handler for collecting overdue tasks near group
+const handleCollectOverdueTasks = () => {
+  if (props.contextSection) {
+    console.log('⚠️ CanvasContextMenu: Collect Overdue Tasks for:', props.contextSection.name)
+    emit('collectOverdueTasks', props.contextSection)
     emit('close')
   }
 }

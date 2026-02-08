@@ -350,7 +350,7 @@ function triggerHaptic(duration: number = 10) {
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--glass-border);
-  background: rgba(78, 205, 196, 0.05);
+  background: var(--brand-bg-subtle);
 }
 
 .header-info {
@@ -360,7 +360,7 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .header-icon {
-  color: var(--brand-primary, #4ECDC4);
+  color: var(--brand-primary);
 }
 
 .header-title {
@@ -370,8 +370,8 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .close-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   border: none;
   border-radius: var(--radius-full);
   background: var(--glass-bg-soft);
@@ -442,8 +442,8 @@ function triggerHaptic(duration: number = 10) {
 
 .rerecord-btn:hover:not(:disabled) {
   background: var(--glass-bg);
-  border-color: var(--brand-primary, #4ECDC4);
-  color: var(--brand-primary, #4ECDC4);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .rerecord-btn:active:not(:disabled) {
@@ -456,16 +456,16 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .rerecord-btn.recording {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #ef4444;
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-strong);
+  color: var(--color-priority-high);
   animation: pulse-rerecord 1.5s ease-in-out infinite;
 }
 
 .rerecord-btn.processing {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.5);
-  color: var(--brand-primary, #4ECDC4);
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  color: var(--brand-primary);
 }
 
 .rerecord-label {
@@ -483,17 +483,17 @@ function triggerHaptic(duration: number = 10) {
 
 @keyframes pulse-rerecord {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 0 0 var(--danger-bg-medium);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 var(--space-1) transparent;
   }
 }
 
 /* Title Textarea - RTL-aware */
 .title-textarea {
   width: 100%;
-  min-height: 80px;
+  min-height: var(--space-20);
   padding: var(--space-3) var(--space-4);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
@@ -508,8 +508,8 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .title-textarea:focus {
-  border-color: var(--brand-primary, #4ECDC4);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 var(--space-0_5) var(--state-active-bg);
 }
 
 .title-textarea::placeholder {
@@ -527,8 +527,8 @@ function triggerHaptic(duration: number = 10) {
 
 /* Recording active state (TASK-1110) */
 .title-textarea.recording-active {
-  border-color: rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--danger-border-hover);
+  background: var(--danger-bg-subtle);
   animation: pulse-textarea 1.5s ease-in-out infinite;
 }
 
@@ -539,10 +539,10 @@ function triggerHaptic(duration: number = 10) {
 
 @keyframes pulse-textarea {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 0 0 var(--danger-bg-medium);
   }
   50% {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 var(--space-0_5) transparent;
   }
 }
 
@@ -576,21 +576,21 @@ function triggerHaptic(duration: number = 10) {
 
 /* Priority pills */
 .pill.priority-high.active {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #ef4444;
+  background: var(--priority-high-bg);
+  border-color: var(--priority-high-border);
+  color: var(--color-priority-high);
 }
 
 .pill.priority-medium.active {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #f59e0b;
+  background: var(--priority-medium-bg);
+  border-color: var(--priority-medium-border);
+  color: var(--color-priority-medium);
 }
 
 .pill.priority-low.active {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.5);
-  color: #3b82f6;
+  background: var(--priority-low-bg);
+  border-color: var(--priority-low-border);
+  color: var(--color-priority-low);
 }
 
 .pill.priority-none.active {
@@ -601,20 +601,20 @@ function triggerHaptic(duration: number = 10) {
 
 /* Date pills */
 .pill.date-pill.active {
-  background: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.5);
-  color: var(--brand-primary, #4ECDC4);
+  background: var(--state-active-bg);
+  border-color: var(--state-active-border);
+  color: var(--brand-primary);
 }
 
 .pill.clear-pill {
   padding: var(--space-2);
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-medium);
+  color: var(--color-priority-high);
 }
 
 .pill.clear-pill:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--danger-bg-medium);
 }
 
 .detected-label {
@@ -663,8 +663,8 @@ function triggerHaptic(duration: number = 10) {
 }
 
 .confirm-btn {
-  background: var(--brand-primary, #4ECDC4);
-  color: var(--surface-primary, hsl(230, 20%, 10%));
+  background: var(--brand-primary);
+  color: var(--surface-primary);
 }
 
 .confirm-btn:hover:not(:disabled) {

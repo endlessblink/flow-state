@@ -530,7 +530,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 
 <style scoped>
 .mobile-today {
-  padding: 16px;
+  padding: var(--space-4);
   padding-bottom: 100px;
   min-height: 100vh;
   background: var(--app-background-gradient);
@@ -541,18 +541,18 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 10px 16px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  padding: var(--space-2_5) var(--space-4);
+  margin-bottom: var(--space-4);
   background: var(--surface-secondary);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
 }
 
 .hint-text {
-  font-size: 13px;
+  font-size: var(--text-meta);
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .hint-divider {
@@ -560,14 +560,14 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .hint-dismiss {
-  margin-left: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
+  margin-left: var(--space-2);
+  padding: var(--space-1_5) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
   color: var(--primary-brand);
   background: var(--primary-brand-bg-subtle);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -579,20 +579,20 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 /* TASK-1104: Filter Section */
 .filter-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
 }
 
 .filter-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -603,15 +603,15 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .filter-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 20px;
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);
   background: var(--surface-secondary);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-meta);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
   white-space: nowrap;
 }
 
@@ -627,30 +627,30 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   min-width: 160px;
   max-height: 240px;
   overflow-y: auto;
   background: var(--surface-primary);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 100;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2_5);
   width: 100%;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--text-sm);
   text-align: left;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-fast);
 }
 
 .dropdown-item:hover {
@@ -663,31 +663,31 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .project-emoji {
-  font-size: 16px;
+  font-size: var(--text-base);
 }
 
 .priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
 }
 
-.priority-dot.critical { background: #dc2626; }
-.priority-dot.high { background: #f97316; }
-.priority-dot.medium { background: #eab308; }
-.priority-dot.low { background: #22c55e; }
+.priority-dot.critical { background: var(--color-priority-high); }
+.priority-dot.high { background: var(--color-priority-medium); }
+.priority-dot.medium { background: var(--color-warning); }
+.priority-dot.low { background: var(--color-success); }
 
 .clear-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 16px;
-  border: 1px solid var(--danger-border);
+  gap: var(--space-1);
+  padding: var(--space-1_5) var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--danger-border-subtle);
   background: var(--danger-bg-subtle);
   color: var(--danger-text);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   cursor: pointer;
   align-self: flex-start;
 }
@@ -700,26 +700,26 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .task-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 2px;
+  gap: var(--space-2);
+  margin-top: var(--space-0_5);
 }
 
 .priority-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-xs);
 }
 
 .priority-badge.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
-.priority-badge.high { background: var(--warning-bg-subtle); color: var(--warning-text); }
+.priority-badge.high { background: var(--orange-bg-subtle); color: var(--color-priority-medium); }
 .priority-badge.medium { background: var(--primary-brand-bg-subtle); color: var(--primary-brand); }
 .priority-badge.low { background: var(--surface-tertiary); color: var(--text-muted); }
 
 .project-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: var(--text-xs);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-xs);
   background: var(--surface-tertiary);
   color: var(--text-tertiary);
   max-width: 80px;
@@ -729,37 +729,37 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .date-display h2 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
   margin: 0;
   color: var(--text-primary);
 }
 
 .full-date {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
 .task-count {
   background: var(--surface-secondary);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: var(--space-1_5) var(--space-3);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
 }
 
 .time-sections {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .time-section {
   background: var(--surface-primary);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
 }
 
 .time-section.overdue {
@@ -769,32 +769,32 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-weight: 600;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-weight: var(--font-semibold);
   color: var(--text-secondary);
 }
 
 .section-header .count {
   margin-left: auto;
   background: var(--surface-secondary);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: var(--space-0_5) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
 }
 
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .task-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   background: var(--surface-secondary);
   cursor: pointer;
   /* Prevent text selection */
@@ -808,18 +808,18 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .task-checkbox {
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .checkbox-circle {
   width: 22px;
   height: 22px;
   border: 2px solid var(--border-subtle);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--duration-normal);
 }
 
 .checkbox-circle.checked {
@@ -832,7 +832,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
   min-width: 0;
 }
 
@@ -859,7 +859,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .task-due {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
 
@@ -868,9 +868,9 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .timer-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: var(--space-9);
+  height: var(--space-9);
+  border-radius: var(--radius-full);
   border: none;
   background: var(--primary-brand-bg-subtle);
   color: var(--primary-brand);
@@ -887,19 +887,19 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: var(--space-16) var(--space-5);
   color: var(--text-tertiary);
 }
 
 .empty-state h3 {
-  margin: 16px 0 8px;
-  font-size: 20px;
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-xl);
   color: var(--text-primary);
 }
 
 .empty-state p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 /* RTL Layout Support */

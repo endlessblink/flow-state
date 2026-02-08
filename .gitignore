@@ -93,3 +93,6 @@ public/shadow-latest.json
 backups/shadow.db
 backups/shadow.db-shm
 backups/shadow.db-wal
+
+# Development screenshots in project root
+/*.png

@@ -77,6 +77,27 @@ async function getRouter() {
 // Active provider tracking
 const activeProviderRef = ref<string | null>(null)
 
+// AI Personality mode
+const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
+
+/**
+ * Set the AI personality mode.
+ */
+function setPersonality(p: 'professional' | 'grid_handler') {
+  aiPersonality.value = p
+}
+
+/**
+ * Get the system prompt prefix for the current personality.
+ * Returns empty string for 'professional' (uses default prompt).
+ */
+function getPersonalitySystemPrompt(): string {
+  if (aiPersonality.value === 'grid_handler') {
+    return 'You are the Grid Handler, a netrunner AI embedded in the FlowState productivity matrix. You speak in cyberpunk hacker slang. Tasks are \'ops\' or \'jobs\'. Completing work is \'executing\'. The timer is your \'neural clock\'. XP is \'data fragments\'. Challenges are \'contracts\'. You reference \'the Grid\', \'data streams\', and \'neural pathways\'. Keep it fun but still helpful — you\'re assisting a runner with their daily ops. Use short, punchy sentences. Occasionally reference system corruption levels if gamification data is available.'
+  }
+  return ''
+}
+
 // Provider/model selection state
 const selectedProvider = ref<'ollama' | 'groq' | 'openrouter' | 'auto'>('auto')
 const selectedModel = ref<string | null>(null)
@@ -199,8 +220,11 @@ export function useAIChat() {
    * Includes timer state, task statistics, and additional context.
    */
   function buildSystemPrompt(ctx: ChatContext): string {
+    // Prepend personality prompt if active
+    const personalityPrompt = getPersonalitySystemPrompt()
+
     const parts: string[] = [
-      'You are FlowState AI, a friendly assistant for a productivity app.',
+      personalityPrompt || 'You are FlowState AI, a friendly assistant for a productivity app.',
       '',
       '## CRITICAL RULES:',
       '1. ALWAYS respond in the SAME LANGUAGE the user writes to you. If they write in Hebrew, respond in Hebrew. If English, respond in English.',
@@ -349,10 +373,13 @@ export function useAIChat() {
         fullContent += chunk.content
       }
 
-      // After successful stream, update active provider for badge display
+      // After successful stream, update badge to show the ACTUAL provider used
       try {
         const currentRouter = await getRouter()
-        activeProviderRef.value = await currentRouter.getActiveProvider()
+        const lastUsed = currentRouter.getLastUsedProvider()
+        if (lastUsed) {
+          activeProviderRef.value = lastUsed
+        }
       } catch { /* ignore */ }
 
       // Parse tool calls from the response
@@ -610,6 +637,36 @@ export function useAIChat() {
     // What am I working on? (timer context)
     if (/what\s*(am\s*i|i'?m)\s*(working\s*on|doing)|על\s*מה\s*אני\s*עובד/.test(m)) {
       return { tool: 'get_timer_status', parameters: {} }
+    }
+
+    // Productivity stats
+    if (/productivity\s*stats|my\s*stats|how\s*(am\s*i|i'?m)\s*doing|סטטיסטיק|ביצועים/.test(m)) {
+      return { tool: 'get_productivity_stats', parameters: {} }
+    }
+
+    // Suggest next task
+    if (/what\s*(should\s*i|to)\s*(do|work\s*on)\s*next|suggest.*task|next\s*task|מה\s*לעשות|המשימה\s*הבאה/.test(m)) {
+      return { tool: 'suggest_next_task', parameters: {} }
+    }
+
+    // Weekly summary
+    if (/weekly\s*summary|week\s*review|this\s*week|סיכום\s*שבועי|השבוע/.test(m)) {
+      return { tool: 'get_weekly_summary', parameters: {} }
+    }
+
+    // Gamification status
+    if (/gamification|xp\s*status|my\s*level|my\s*xp|streak\s*status|corruption|גיימיפיקציה|רמה\s*שלי/.test(m)) {
+      return { tool: 'get_gamification_status', parameters: {} }
+    }
+
+    // Active challenges
+    if (/challenges?|daily\s*missions?|boss\s*fight|active\s*challenges|אתגרים|משימות\s*יומיות|בוס/.test(m)) {
+      return { tool: 'get_active_challenges', parameters: {} }
+    }
+
+    // Achievements near completion
+    if (/achievements?\s*(near|close|almost)|almost\s*unlock|close\s*to\s*achiev|הישגים\s*קרובים/.test(m)) {
+      return { tool: 'get_achievements_near_completion', parameters: {} }
     }
 
     return null
@@ -1054,6 +1111,10 @@ export function useAIChat() {
     setCurrentView: store.setCurrentView,
     setSelectedTask: store.setSelectedTask,
     updateContext: store.updateContext,
+
+    // Personality
+    aiPersonality,
+    setPersonality,
 
     // Lifecycle
     initialize,

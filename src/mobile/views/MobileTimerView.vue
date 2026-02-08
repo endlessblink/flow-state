@@ -73,66 +73,66 @@ const toggleTimer = async () => {
   align-items: center;
   justify-content: center;
   height: 100vh;
-  padding: 20px;
+  padding: var(--space-5);
   padding-bottom: 100px; /* Space for nav */
   background: var(--app-background-gradient);
 }
 
 .timer-display-container {
-  margin-bottom: 40px;
+  margin-bottom: var(--space-10);
   position: relative;
 }
 
 .timer-circle {
   width: 280px;
   height: 280px;
-  border-radius: 50%;
-  border: 4px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  border: var(--space-1) solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--surface-secondary);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-xl);
+  transition: all var(--duration-slow) var(--spring-smooth);
   position: relative;
   overflow: hidden;
 }
 
 .timer-circle.is-active {
-  border-color: var(--primary-brand);
-  box-shadow: 0 0 40px rgba(var(--primary-brand-rgb), 0.3);
+  border-color: var(--brand-primary);
+  box-shadow: var(--timer-active-shadow-hover);
 }
 
 .timer-circle.is-break {
   border-color: var(--success-border);
-  box-shadow: 0 0 40px rgba(var(--success-rgb), 0.3);
+  box-shadow: var(--success-glow);
 }
 
 .time-display {
   font-size: 4rem;
-  font-weight: 700;
+  font-weight: var(--font-bold);
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   z-index: 2;
 }
 
 .status-label {
-  font-size: 1rem;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
-  margin-top: 8px;
+  margin-top: var(--space-2);
   z-index: 2;
 }
 
 .timer-controls-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--duration-normal);
   z-index: 3;
 }
 
@@ -142,20 +142,20 @@ const toggleTimer = async () => {
 
 .timer-actions {
   display: flex;
-  gap: 20px;
+  gap: var(--space-5);
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: var(--space-8);
 }
 
 .action-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -166,35 +166,35 @@ const toggleTimer = async () => {
 .focus-mode-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: var(--primary-brand);
-  background: var(--primary-brand-bg-subtle);
-  padding: 8px 12px;
-  border-radius: 20px;
+  gap: var(--space-1_5);
+  font-size: var(--text-xs);
+  color: var(--brand-primary);
+  background: var(--brand-bg-subtle);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xl);
 }
 
 .current-task {
   text-align: center;
   background: var(--surface-primary);
-  padding: 16px 24px;
-  border-radius: 16px;
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 320px;
 }
 
 .current-task h3 {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   color: var(--text-tertiary);
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--space-2) 0;
   letter-spacing: 0.05em;
 }
 
 .current-task p {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 500;
+  font-size: var(--text-lg);
+  font-weight: var(--font-medium);
   color: var(--text-primary);
 }
 </style>

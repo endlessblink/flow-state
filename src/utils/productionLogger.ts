@@ -453,11 +453,13 @@ export class ProductionLogger {
         timestamp: new Date().toISOString()
       }
 
+      const authToken = await this.getAuthToken()
+
       const response = await fetch(this.remoteEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(payload)
       })
@@ -528,10 +530,18 @@ export class ProductionLogger {
 
   /**
    * Get authentication token for remote logging
+   * Uses Supabase session token if available
    */
-  private getAuthToken(): string {
-    // This should be implemented based on your auth system
-    return localStorage.getItem('auth_token') || ''
+  private async getAuthToken(): Promise<string> {
+    try {
+      // Dynamically import to avoid circular dependencies
+      const { supabase } = await import('@/services/auth/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      return session?.access_token || ''
+    } catch (error) {
+      console.warn('⚠️ Failed to get auth token:', error)
+      return ''
+    }
   }
 
   /**

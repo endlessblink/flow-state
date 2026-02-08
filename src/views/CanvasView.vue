@@ -253,6 +253,7 @@
       @open-group-settings="handleOpenSectionSettingsFromContext"
       @toggle-power-mode="handleToggleFocusMode"
       @collect-tasks="handleCollectTasksFromMenu"
+      @collect-overdue-tasks="handleCollectOverdueFromMenu"
       @disconnect-edge="disconnectEdge"
       @delete-node="deleteNode"
       @create-group-from-selection="createGroupFromSelection"
@@ -332,7 +333,7 @@ const {
   selectionBox, handleMouseDown, handleMouseMove, handleMouseUp, handleCanvasContainerClick, handleTaskSelect,
   alignLeft, alignRight, alignTop, alignBottom, alignCenterHorizontal, alignCenterVertical,
   distributeHorizontal, distributeVertical, arrangeInRow, arrangeInColumn, arrangeInGrid,
-  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, disconnectEdge
+  collectTasksForSection, autoCollectOverdueTasks: handleCollectTasksFromMenu, collectOverdueTasksNearGroup, disconnectEdge
 } = orchestrator
 
 // Register global hotkeys
@@ -356,6 +357,19 @@ const handleOpenSectionSettingsFromContext = () => {
     if (contextMenuStore.canvasContextSection) handleOpenSectionSettings(contextMenuStore.canvasContextSection.id)
 }
 const handleToggleFocusMode = () => uiStore.toggleFocusMode()
+
+// TASK-1222: Collect overdue tasks near a group
+const handleCollectOverdueFromMenu = (section: CanvasGroup) => {
+  collectOverdueTasksNearGroup(section.id)
+}
+
+// TASK-1222: Listen for AI tool collect-overdue-tasks events
+useEventListener(window, 'collect-overdue-tasks', (e: Event) => {
+  const detail = (e as CustomEvent).detail
+  if (detail?.groupId) {
+    collectOverdueTasksNearGroup(detail.groupId)
+  }
+})
 
 // TASK-288 DEBUG: Wrapper to trace createTaskInGroup call
 const handleCreateTaskInGroupDebug = (section: CanvasGroup) => {

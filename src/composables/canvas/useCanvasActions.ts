@@ -43,7 +43,7 @@ export function useCanvasActions(
     const canvasStore = useCanvasStore()
     const contextMenuStore = useCanvasContextMenuStore()
     const taskStore = useTaskStore()
-    const { getSelectedNodes, screenToFlowCoordinate, removeNodes } = useVueFlow()
+    const { getSelectedNodes, screenToFlowCoordinate, removeNodes, fitView } = useVueFlow()
 
     // --- Instantiate Sub-Composables ---
 
@@ -65,7 +65,8 @@ export function useCanvasActions(
         closeCanvasContextMenu: deps.closeCanvasContextMenu,
         screenToFlowCoordinate: (pos) => screenToFlowCoordinate(pos),
         recentlyDeletedGroups: deps.recentlyDeletedGroups,
-        undoHistory
+        undoHistory,
+        fitView: (options) => fitView(options)
     })
 
     // --- Orchestrator Logic (things that don't fit cleanly or bridge both) ---
@@ -282,6 +283,7 @@ export function useCanvasActions(
         confirmBulkDelete: taskActions.confirmBulkDelete,
         cancelBulkDelete: taskActions.cancelBulkDelete,
         arrangeDoneTasksInGrid: taskActions.arrangeDoneTasksInGrid,
+        collectOverdueTasksNearGroup: taskActions.collectOverdueTasksNearGroup,
 
         isQuickTaskCreateOpen: taskActions.isQuickTaskCreateOpen,
         quickTaskPosition: taskActions.quickTaskPosition,

@@ -38,7 +38,7 @@ The setup wizard will:
 5. Wait for everything to become healthy
 6. Print the access URL
 
-Open http://localhost:3000 in your browser and create an account.
+Open http://localhost:3050 in your browser and create an account.
 
 ---
 

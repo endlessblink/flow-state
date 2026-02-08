@@ -101,11 +101,14 @@ const router = createRouter({
       props: true,
       meta: { requiresAuth: true }
     },
-    {
-      path: '/keyboard-test',
-      name: 'keyboard-test',
-      component: () => import('@/components/debug/KeyboardDeletionTest.vue')
-    },
+    // Only include debug routes in development
+    ...(import.meta.env.DEV ? [
+      {
+        path: '/keyboard-test',
+        name: 'keyboard-test',
+        component: () => import('@/components/debug/KeyboardDeletionTest.vue')
+      }
+    ] : []),
     {
       path: '/cyberflow',
       name: 'cyberflow',

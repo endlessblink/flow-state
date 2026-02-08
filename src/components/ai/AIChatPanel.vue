@@ -19,11 +19,12 @@
 
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { onClickOutside } from '@vueuse/core'
-import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTimerStore } from '@/stores/timer'
 import { createAIRouter } from '@/services/ai/router'
+import { useAIProactiveNudges } from '@/composables/useAIProactiveNudges'
 import ChatMessage from './ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
@@ -56,10 +57,16 @@ const {
   confirmPendingAction,
   cancelPendingAction,
   executeDirectTool,
+  aiPersonality,
+  setPersonality,
 } = useAIChat()
+
+// Personality helpers
+const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
 
 const store = useAIChatStore()
 const timerStore = useTimerStore()
+const nudges = useAIProactiveNudges()
 
 // ============================================================================
 // Refs
@@ -72,14 +79,27 @@ const showSettings = ref(false)
 const showApiKeys = ref(false)
 const lastUserMessage = ref<string>('')
 
+// Panel sizing mode: compact (380px) | expanded (600px) | fullscreen
+const panelMode = ref<'compact' | 'expanded' | 'fullscreen'>('compact')
+
+function cyclePanelMode() {
+  if (panelMode.value === 'compact') panelMode.value = 'expanded'
+  else if (panelMode.value === 'expanded') panelMode.value = 'fullscreen'
+  else panelMode.value = 'compact'
+}
+
+const panelStyle = computed(() => {
+  if (panelMode.value === 'fullscreen') return {}
+  if (panelMode.value === 'expanded') return { width: '600px' }
+  return { width: '380px' }
+})
+
 // Close settings dropdown on click outside
 onClickOutside(settingsContainerRef, () => {
   showSettings.value = false
 })
 
-// API key refs
-const groqApiKey = ref('')
-const openrouterApiKey = ref('')
+// Provider status refs (for health checks only)
 const testingGroqKey = ref(false)
 const testingOpenrouterKey = ref(false)
 const groqKeyStatus = ref<'idle' | 'success' | 'error'>('idle')
@@ -217,35 +237,24 @@ function healthDotClass(provider: string): string {
 }
 
 // ============================================================================
-// API Key Management
+// Provider Health Checks (TASK-1250: API keys are server-side only)
 // ============================================================================
-
-function loadApiKeys() {
-  try {
-    groqApiKey.value = localStorage.getItem('flowstate-groq-api-key') || ''
-    openrouterApiKey.value = localStorage.getItem('flowstate-openrouter-api-key') || ''
-  } catch {
-    // localStorage not available
-  }
-}
-
-function saveApiKeys() {
-  try {
-    localStorage.setItem('flowstate-groq-api-key', groqApiKey.value)
-    localStorage.setItem('flowstate-openrouter-api-key', openrouterApiKey.value)
-  } catch {
-    // localStorage not available
-  }
-}
+// Note: Groq and OpenRouter API keys are managed server-side via Doppler.
+// The test functions below verify proxy availability, NOT localStorage keys.
 
 async function testGroqKey() {
   testingGroqKey.value = true
   groqKeyStatus.value = 'idle'
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/models', {
-      headers: { 'Authorization': `Bearer ${groqApiKey.value}` },
-    })
-    groqKeyStatus.value = response.ok ? 'success' : 'error'
+    // TASK-1251: Use proxy to test server-side key configuration
+    // Note: This tests the server-side API key (from Doppler/env vars),
+    // not the key entered in the UI. The UI inputs are legacy - the proxy
+    // handles keys server-side. TASK-1250 will remove these UI inputs.
+    const router = createAIRouter({ debug: false })
+    await router.initialize()
+    const available = await router.isProviderAvailable('groq')
+    groqKeyStatus.value = available ? 'success' : 'error'
+    router.dispose()
   } catch {
     groqKeyStatus.value = 'error'
   } finally {
@@ -257,10 +266,15 @@ async function testOpenrouterKey() {
   testingOpenrouterKey.value = true
   openrouterKeyStatus.value = 'idle'
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/models', {
-      headers: { 'Authorization': `Bearer ${openrouterApiKey.value}` },
-    })
-    openrouterKeyStatus.value = response.ok ? 'success' : 'error'
+    // TASK-1251: Use proxy to test server-side key configuration
+    // Note: This tests the server-side API key (from Doppler/env vars),
+    // not the key entered in the UI. The UI inputs are legacy - the proxy
+    // handles keys server-side. TASK-1250 will remove these UI inputs.
+    const router = createAIRouter({ debug: false })
+    await router.initialize()
+    const available = await router.isProviderAvailable('openrouter')
+    openrouterKeyStatus.value = available ? 'success' : 'error'
+    router.dispose()
   } catch {
     openrouterKeyStatus.value = 'error'
   } finally {
@@ -414,7 +428,21 @@ function handleSelectTask(taskId: string) {
 
 function handleEscapeKey(event: KeyboardEvent) {
   if (event.key === 'Escape' && isPanelOpen.value) {
+    // In fullscreen, Escape returns to compact instead of closing
+    if (panelMode.value !== 'compact') {
+      panelMode.value = 'compact'
+      return
+    }
     closePanel()
+  }
+}
+
+function handlePanelModeShortcut(event: KeyboardEvent) {
+  if (event.ctrlKey && event.shiftKey && event.key === 'F') {
+    event.preventDefault()
+    if (isPanelOpen.value) {
+      cyclePanelMode()
+    }
   }
 }
 
@@ -447,16 +475,29 @@ function selectProviderOption(provider: 'auto' | 'groq' | 'openrouter' | 'ollama
 // Lifecycle
 // ============================================================================
 
+// Handle nudge send events
+function handleNudgeSend(event: Event) {
+  const detail = (event as CustomEvent).detail
+  if (detail?.content) {
+    sendMessage(detail.content)
+  }
+}
+
 onMounted(() => {
   initialize()
-  loadApiKeys()
+  nudges.start()
   document.addEventListener('keydown', handleKeyboardShortcut)
   document.addEventListener('keydown', handleEscapeKey)
+  document.addEventListener('keydown', handlePanelModeShortcut)
+  window.addEventListener('ai-nudge-send', handleNudgeSend)
 })
 
 onUnmounted(() => {
+  nudges.stop()
   document.removeEventListener('keydown', handleKeyboardShortcut)
   document.removeEventListener('keydown', handleEscapeKey)
+  document.removeEventListener('keydown', handlePanelModeShortcut)
+  window.removeEventListener('ai-nudge-send', handleNudgeSend)
 })
 </script>
 
@@ -475,12 +516,15 @@ onUnmounted(() => {
     <aside
       v-if="isPanelOpen"
       class="ai-chat-panel"
+      :class="{ 'panel-fullscreen': panelMode === 'fullscreen' }"
+      :style="panelStyle"
     >
       <!-- Header -->
       <header class="ai-chat-header">
         <div class="header-title">
-          <Sparkles class="header-icon" :size="18" />
-          <span>AI Assistant</span>
+          <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
+          <Sparkles v-else class="header-icon" :size="18" />
+          <span>{{ isGridHandler ? 'Grid Handler' : 'AI Assistant' }}</span>
           <span v-if="headerBadgeText" class="provider-badge" :class="'provider-' + activeProvider">
             {{ headerBadgeText }}
           </span>
@@ -570,61 +614,79 @@ onUnmounted(() => {
                   />
                 </div>
 
-                <!-- API Keys Collapsible Section -->
+                <!-- AI Personality Toggle -->
+                <div class="settings-section">
+                  <label class="settings-label">Personality</label>
+                  <div class="personality-toggle">
+                    <button
+                      class="personality-option"
+                      :class="{ active: !isGridHandler }"
+                      @click="setPersonality('professional')"
+                    >
+                      <Sparkles :size="12" />
+                      Professional
+                    </button>
+                    <button
+                      class="personality-option grid-handler-option"
+                      :class="{ active: isGridHandler }"
+                      @click="setPersonality('grid_handler')"
+                    >
+                      <Zap :size="12" />
+                      Grid Handler
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Provider Status Section (TASK-1250: Keys are server-side) -->
                 <div class="settings-section api-keys-section">
                   <button class="api-keys-toggle" @click="showApiKeys = !showApiKeys">
-                    <label class="settings-label">API Keys</label>
+                    <label class="settings-label">Provider Status</label>
                     <ChevronDown v-if="!showApiKeys" :size="14" class="api-keys-chevron" />
                     <ChevronUp v-else :size="14" class="api-keys-chevron" />
                   </button>
 
                   <Transition name="dropdown">
                     <div v-if="showApiKeys" class="api-keys-content">
-                      <!-- Groq API Key -->
-                      <div class="api-key-row">
-                        <label class="api-key-label">Groq</label>
-                        <div class="api-key-input-row">
-                          <input
-                            v-model="groqApiKey"
-                            type="password"
-                            class="api-key-input"
-                            placeholder="sk-..."
-                          />
-                          <button
-                            class="api-key-test-btn"
-                            :class="{ success: groqKeyStatus === 'success', error: groqKeyStatus === 'error' }"
-                            :disabled="!groqApiKey || testingGroqKey"
-                            @click="testGroqKey"
-                          >
-                            <Loader2 v-if="testingGroqKey" class="spin" :size="10" />
-                            <span v-else>Test</span>
-                          </button>
-                        </div>
+                      <div class="provider-info-box">
+                        <p class="provider-info-text">
+                          API keys are managed securely via server-side configuration.
+                          Test buttons verify proxy availability.
+                        </p>
                       </div>
 
-                      <!-- OpenRouter API Key -->
-                      <div class="api-key-row">
-                        <label class="api-key-label">OpenRouter</label>
-                        <div class="api-key-input-row">
-                          <input
-                            v-model="openrouterApiKey"
-                            type="password"
-                            class="api-key-input"
-                            placeholder="sk-or-..."
-                          />
-                          <button
-                            class="api-key-test-btn"
-                            :class="{ success: openrouterKeyStatus === 'success', error: openrouterKeyStatus === 'error' }"
-                            :disabled="!openrouterApiKey || testingOpenrouterKey"
-                            @click="testOpenrouterKey"
-                          >
-                            <Loader2 v-if="testingOpenrouterKey" class="spin" :size="10" />
-                            <span v-else>Test</span>
-                          </button>
+                      <!-- Groq Status -->
+                      <div class="provider-status-row">
+                        <div class="provider-status-label">
+                          <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')"></span>
+                          <span>Groq</span>
                         </div>
+                        <button
+                          class="api-key-test-btn"
+                          :class="{ success: groqKeyStatus === 'success', error: groqKeyStatus === 'error' }"
+                          :disabled="testingGroqKey"
+                          @click="testGroqKey"
+                        >
+                          <Loader2 v-if="testingGroqKey" class="spin" :size="10" />
+                          <span v-else>Test</span>
+                        </button>
                       </div>
 
-                      <button class="api-key-save-btn" @click="saveApiKeys">Save Keys</button>
+                      <!-- OpenRouter Status -->
+                      <div class="provider-status-row">
+                        <div class="provider-status-label">
+                          <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')"></span>
+                          <span>OpenRouter</span>
+                        </div>
+                        <button
+                          class="api-key-test-btn"
+                          :class="{ success: openrouterKeyStatus === 'success', error: openrouterKeyStatus === 'error' }"
+                          :disabled="testingOpenrouterKey"
+                          @click="testOpenrouterKey"
+                        >
+                          <Loader2 v-if="testingOpenrouterKey" class="spin" :size="10" />
+                          <span v-else>Test</span>
+                        </button>
+                      </div>
                     </div>
                   </Transition>
                 </div>
@@ -649,6 +711,14 @@ onUnmounted(() => {
             @click="clearMessages"
           >
             <Trash2 :size="16" />
+          </button>
+          <button
+            class="header-btn expand-btn"
+            :title="panelMode === 'fullscreen' ? 'Minimize (Ctrl+Shift+F)' : 'Expand (Ctrl+Shift+F)'"
+            @click="cyclePanelMode"
+          >
+            <Minimize2 v-if="panelMode === 'fullscreen'" :size="16" />
+            <Maximize2 v-else :size="16" />
           </button>
           <button
             class="header-btn close-btn"
@@ -763,6 +833,18 @@ onUnmounted(() => {
   flex-direction: column;
   z-index: 10001;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  transition: width 0.2s ease;
+}
+
+.panel-fullscreen {
+  inset: 0;
+  width: 100vw !important;
+  max-width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border-inline-start: none;
+  z-index: 10002;
+  box-shadow: none;
 }
 
 /* Mobile full-width */
@@ -814,6 +896,11 @@ onUnmounted(() => {
 
 .header-icon {
   color: var(--accent-primary, #8b5cf6);
+}
+
+.grid-handler-icon {
+  color: #00ff88;
+  filter: drop-shadow(0 0 4px rgba(0, 255, 136, 0.5));
 }
 
 .provider-badge {
@@ -869,6 +956,11 @@ onUnmounted(() => {
 .header-btn:hover {
   background: var(--bg-hover, rgba(255, 255, 255, 0.08));
   color: var(--text-primary, #fff);
+}
+
+.expand-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-primary, #8b5cf6);
 }
 
 .close-btn:hover {
@@ -1028,6 +1120,51 @@ onUnmounted(() => {
 }
 
 /* ============================================================================
+   Personality Toggle
+   ============================================================================ */
+
+.personality-toggle {
+  display: flex;
+  gap: var(--space-1, 4px);
+  background: var(--bg-input, rgba(0, 0, 0, 0.2));
+  border-radius: var(--radius-md, 8px);
+  padding: 2px;
+}
+
+.personality-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.personality-option:hover {
+  color: var(--text-primary, #fff);
+}
+
+.personality-option.active {
+  background: var(--accent-primary, #8b5cf6);
+  color: white;
+}
+
+.grid-handler-option.active {
+  background: linear-gradient(135deg, #00ff88, #06b6d4);
+  color: #0a0a0f;
+  text-shadow: none;
+}
+
+/* ============================================================================
    API Keys Section
    ============================================================================ */
 
@@ -1060,40 +1197,39 @@ onUnmounted(() => {
   margin-top: var(--space-2, 8px);
 }
 
-.api-key-row {
+.provider-info-box {
+  padding: var(--space-2, 8px);
+  background: var(--bg-input, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm, 4px);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.provider-info-text {
+  font-size: 11px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  line-height: 1.4;
+  margin: 0;
+}
+
+.provider-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--space-2, 8px);
 }
 
-.api-key-label {
-  display: block;
-  font-size: 11px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-  margin-bottom: var(--space-1, 4px);
+.provider-status-row:last-child {
+  margin-bottom: 0;
 }
 
-.api-key-input-row {
+.provider-status-label {
   display: flex;
-  gap: var(--space-1, 4px);
-}
-
-.api-key-input {
-  flex: 1;
-  padding: var(--space-1, 4px) var(--space-2, 8px);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  background: var(--bg-input, rgba(0, 0, 0, 0.2));
-  color: var(--text-primary, #fff);
-  border-radius: var(--radius-sm, 4px);
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
-  font-family: inherit;
-}
-
-.api-key-input:focus {
-  outline: none;
-  border-color: var(--accent-primary, #8b5cf6);
-}
-
-.api-key-input::placeholder {
-  color: var(--text-tertiary, rgba(255, 255, 255, 0.3));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-weight: 500;
 }
 
 .api-key-test-btn {
@@ -1129,24 +1265,6 @@ onUnmounted(() => {
 .api-key-test-btn.error {
   border-color: var(--error, #ef4444);
   color: var(--error, #ef4444);
-}
-
-.api-key-save-btn {
-  width: 100%;
-  padding: var(--space-1, 4px) var(--space-2, 8px);
-  border: none;
-  background: var(--accent-primary, #8b5cf6);
-  color: white;
-  border-radius: var(--radius-sm, 4px);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin-top: var(--space-2, 8px);
-}
-
-.api-key-save-btn:hover {
-  background: var(--accent-hover, #7c3aed);
 }
 
 /* ============================================================================
@@ -1349,6 +1467,8 @@ onUnmounted(() => {
   min-height: 40px;
   max-height: 120px;
   font-family: inherit;
+  text-align: start;
+  unicode-bidi: plaintext;
 }
 
 .ai-chat-input:focus {

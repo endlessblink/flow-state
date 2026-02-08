@@ -13,6 +13,8 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useProjectStore } from '@/stores/projects'
+import { useGamificationStore } from '@/stores/gamification'
+import { useChallengesStore } from '@/stores/challenges'
 import type { Task } from '@/types/tasks'
 
 // ============================================================================
@@ -291,6 +293,18 @@ export const AI_TOOLS: ToolDefinition[] = [
     parameters: { type: 'object', properties: {}, required: [] },
   },
   {
+    name: 'collect_overdue_to_group',
+    description: 'Collect all overdue tasks and arrange them in an orderly grid next to a specific group on the canvas. Use when user says "get overdue tasks", "collect overdue", "organize overdue near group".',
+    category: 'write',
+    parameters: {
+      type: 'object',
+      properties: {
+        groupId: { type: 'string', description: 'The group ID to place overdue tasks next to. If not provided, uses the first available group.' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'bulk_update_status',
     description: 'Update the status of multiple tasks at once. Requires confirmed=true to execute.',
     category: 'destructive',
@@ -304,6 +318,44 @@ export const AI_TOOLS: ToolDefinition[] = [
       },
       required: ['taskIds', 'status', 'confirmed'],
     },
+  },
+
+  // ── GAMIFICATION & PRODUCTIVITY TOOLS ────────────────────────────────────
+  {
+    name: 'get_productivity_stats',
+    description: 'Get productivity statistics: tasks completed, focus time, pomodoros, streaks, and task breakdown by status',
+    category: 'read',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'suggest_next_task',
+    description: 'Suggest the best task to work on next based on priority, due dates, and overdue status',
+    category: 'read',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_weekly_summary',
+    description: 'Get a weekly productivity summary including tasks done, focus time, streak status, and XP earned',
+    category: 'read',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_gamification_status',
+    description: 'Get gamification profile: XP, level, streak, corruption, equipped theme, and level progress',
+    category: 'read',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_active_challenges',
+    description: 'Get active daily challenges and weekly boss with progress, time remaining, and rewards',
+    category: 'read',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'get_achievements_near_completion',
+    description: 'Get achievements that are close to being unlocked (>50% progress) with progress details',
+    category: 'read',
+    parameters: { type: 'object', properties: {}, required: [] },
   },
 ]
 
@@ -843,7 +895,9 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const allTasks = taskStore.tasks
         const today = dateStr
 
-        const dueToday = allTasks.filter((t: Task) => t.dueDate === today && t.status !== 'done')
+        // Normalize dueDate: extract YYYY-MM-DD from either "2026-02-07" or "2026-02-07T22:00:00+00:00"
+        const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+        const dueToday = allTasks.filter((t: Task) => t.dueDate && normDate(t.dueDate) === today && t.status !== 'done')
         const completedToday = allTasks.filter((t: Task) => {
           if (t.status !== 'done') return false
           // Check if completedAt matches today
@@ -857,7 +911,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         })
         const overdue = allTasks.filter((t: Task) => {
           if (!t.dueDate || t.status === 'done') return false
-          return t.dueDate < today
+          return normDate(t.dueDate) < today
         })
 
         // Timer sessions info
@@ -946,23 +1000,32 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
       }
 
       case 'get_overdue_tasks': {
-        const today = new Date().toISOString().split('T')[0]
+        const now = new Date()
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
         const overdue = taskStore.tasks.filter((t: Task) => {
           if (!t.dueDate || t.status === 'done') return false
-          return t.dueDate < today
+          // Normalize: extract YYYY-MM-DD from either "2026-02-07" or "2026-02-07T22:00:00+00:00"
+          const dueDateKey = t.dueDate.includes('T') ? t.dueDate.split('T')[0] : t.dueDate
+          return dueDateKey < todayKey
         })
 
         return {
           success: true,
           message: `Found ${overdue.length} overdue tasks`,
-          data: overdue.map((t: Task) => ({
-            id: t.id,
-            title: t.title,
-            dueDate: t.dueDate,
-            priority: t.priority,
-            status: t.status,
-            daysOverdue: Math.floor((new Date(today).getTime() - new Date(t.dueDate).getTime()) / (1000 * 60 * 60 * 24)),
-          })),
+          data: overdue.map((t: Task) => {
+            const dueDateKey = t.dueDate.includes('T') ? t.dueDate.split('T')[0] : t.dueDate
+            const [y, m, d] = dueDateKey.split('-').map(Number)
+            const dueMs = new Date(y, m - 1, d).getTime()
+            return {
+              id: t.id,
+              title: t.title,
+              dueDate: t.dueDate,
+              priority: t.priority,
+              status: t.status,
+              daysOverdue: Math.max(1, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24))),
+            }
+          }),
         }
       }
 
@@ -1006,6 +1069,381 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           success: successCount > 0,
           message: `Updated ${successCount}/${taskIds.length} tasks to "${status}"`,
           data: { status, results },
+        }
+      }
+
+      case 'collect_overdue_to_group': {
+        let groupId = call.parameters.groupId as string | undefined
+
+        // If no groupId provided, find the first group
+        if (!groupId) {
+          const groups = canvasStore.groups
+          if (groups.length === 0) {
+            return {
+              success: false,
+              message: 'No groups found on the canvas. Create a group first.',
+            }
+          }
+          groupId = groups[0].id
+        }
+
+        // Find overdue tasks for reporting (normalize dates with T timestamps)
+        const now = new Date()
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+        const overdueTasks = taskStore.tasks.filter((t: Task) => {
+          if (!t.dueDate || t.status === 'done') return false
+          if (normDate(t.dueDate) >= todayKey) return false
+          if (t.parentId === groupId) return false
+          return true
+        })
+
+        if (overdueTasks.length === 0) {
+          return {
+            success: true,
+            message: 'No overdue tasks found outside this group.',
+            data: { overdueCount: 0 },
+          }
+        }
+
+        // Import and call the collect function dynamically
+        // The actual positioning logic lives in useCanvasTaskActions
+        // We trigger it via a custom event that CanvasView listens to
+        window.dispatchEvent(new CustomEvent('collect-overdue-tasks', {
+          detail: { groupId }
+        }))
+
+        return {
+          success: true,
+          message: `Collecting ${overdueTasks.length} overdue tasks and arranging them near the group`,
+          data: {
+            groupId,
+            overdueCount: overdueTasks.length,
+            tasks: overdueTasks.slice(0, 10).map((t: Task) => ({
+              id: t.id,
+              title: t.title,
+              dueDate: t.dueDate,
+              daysOverdue: Math.max(1, Math.floor((new Date(todayKey).getTime() - new Date(normDate(t.dueDate)).getTime()) / (1000 * 60 * 60 * 24))),
+            })),
+          },
+        }
+      }
+
+      // ── GAMIFICATION & PRODUCTIVITY TOOLS ────────────────────────────────
+      case 'get_productivity_stats': {
+        const allTasks = taskStore.tasks
+        const todayStr = new Date().toISOString().split('T')[0]
+        const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+
+        const byStatus = { planned: 0, in_progress: 0, done: 0, backlog: 0, on_hold: 0 }
+        let overdueCount = 0
+        let completedToday = 0
+
+        for (const t of allTasks) {
+          if (t.status && t.status in byStatus) {
+            byStatus[t.status as keyof typeof byStatus]++
+          }
+          if (t.dueDate && normDate(t.dueDate) < todayStr && t.status !== 'done') {
+            overdueCount++
+          }
+          if (t.status === 'done') {
+            const completedDate = t.completedAt
+              ? new Date(t.completedAt).toISOString().split('T')[0]
+              : new Date(t.updatedAt).toISOString().split('T')[0]
+            if (completedDate === todayStr) completedToday++
+          }
+        }
+
+        // Gamification stats
+        let gamStats: any = null
+        try {
+          const gamStore = useGamificationStore()
+          if (gamStore.isInitialized && gamStore.stats) {
+            gamStats = {
+              tasksCompleted: gamStore.stats.tasksCompleted,
+              pomodorosCompleted: gamStore.stats.pomodorosCompleted,
+              totalFocusMinutes: gamStore.stats.totalFocusMinutes,
+              currentStreak: gamStore.streakInfo.currentStreak,
+              longestStreak: gamStore.streakInfo.longestStreak,
+              isActiveToday: gamStore.streakInfo.isActiveToday,
+            }
+          }
+        } catch { /* gamification not available */ }
+
+        // Timer sessions
+        let sessionsToday = 0
+        try {
+          timerStore = useTimerStore()
+          sessionsToday = timerStore.completedSessions.length
+        } catch { /* timer not available */ }
+
+        return {
+          success: true,
+          message: 'Productivity statistics',
+          data: {
+            totalTasks: allTasks.length,
+            completedToday,
+            overdueCount,
+            byStatus,
+            pomodorosToday: sessionsToday,
+            ...(gamStats || {}),
+          },
+        }
+      }
+
+      case 'suggest_next_task': {
+        const allTasks = taskStore.tasks
+        const todayStr = new Date().toISOString().split('T')[0]
+        const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+
+        // Filter actionable tasks (not done, not on_hold)
+        const actionable = allTasks.filter((t: Task) =>
+          t.status !== 'done' && t.status !== 'on_hold'
+        )
+
+        if (actionable.length === 0) {
+          return { success: true, message: 'No actionable tasks found. Everything is done!', data: { suggestion: null } }
+        }
+
+        // Score tasks: overdue high-priority first, then due today, then by priority
+        const scored = actionable.map((t: Task) => {
+          let score = 0
+          const dueDateKey = t.dueDate ? normDate(t.dueDate) : null
+
+          // Overdue tasks get highest priority
+          if (dueDateKey && dueDateKey < todayStr) score += 100
+          // Due today
+          if (dueDateKey && dueDateKey === todayStr) score += 50
+          // Priority scoring
+          if (t.priority === 'high') score += 30
+          else if (t.priority === 'medium') score += 15
+          else if (t.priority === 'low') score += 5
+          // In-progress tasks get a small boost
+          if (t.status === 'in_progress') score += 10
+
+          return { task: t, score }
+        })
+
+        scored.sort((a, b) => b.score - a.score)
+
+        const top = scored.slice(0, 3)
+        return {
+          success: true,
+          message: `Suggested ${top.length} tasks to work on next`,
+          data: top.map(({ task, score }) => ({
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            status: task.status,
+            dueDate: task.dueDate || null,
+            score,
+            reason: score >= 100 ? 'overdue' : score >= 50 ? 'due today' : score >= 30 ? 'high priority' : 'next up',
+          })),
+        }
+      }
+
+      case 'get_weekly_summary': {
+        const allTasks = taskStore.tasks
+        const now = new Date()
+        const weekAgo = new Date(now)
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        const weekAgoStr = weekAgo.toISOString().split('T')[0]
+
+        // Count tasks completed this week
+        let completedThisWeek = 0
+        for (const t of allTasks) {
+          if (t.status !== 'done') continue
+          const completedDate = t.completedAt
+            ? new Date(t.completedAt).toISOString().split('T')[0]
+            : new Date(t.updatedAt).toISOString().split('T')[0]
+          if (completedDate >= weekAgoStr) completedThisWeek++
+        }
+
+        // Gamification weekly data
+        let weeklyGam: any = null
+        try {
+          const gamStore = useGamificationStore()
+          if (gamStore.isInitialized) {
+            weeklyGam = {
+              totalXp: gamStore.totalXp,
+              level: gamStore.currentLevel,
+              currentStreak: gamStore.streakInfo.currentStreak,
+              focusMinutes: gamStore.stats?.totalFocusMinutes ?? 0,
+              pomodorosCompleted: gamStore.stats?.pomodorosCompleted ?? 0,
+            }
+          }
+        } catch { /* not available */ }
+
+        // Challenge stats
+        let challengeStats: any = null
+        try {
+          const challengeStore = useChallengesStore()
+          if (challengeStore.isInitialized) {
+            challengeStats = {
+              completedToday: challengeStore.completedTodayCount,
+              activeDailies: challengeStore.activeDailies.length,
+              hasBoss: !!challengeStore.activeBoss,
+              corruptionLevel: challengeStore.corruptionLevel,
+            }
+          }
+        } catch { /* not available */ }
+
+        return {
+          success: true,
+          message: 'Weekly summary',
+          data: {
+            completedThisWeek,
+            totalTasks: allTasks.length,
+            remainingTasks: allTasks.filter((t: Task) => t.status !== 'done').length,
+            ...(weeklyGam || {}),
+            challenges: challengeStats,
+          },
+        }
+      }
+
+      case 'get_gamification_status': {
+        let gamStore: ReturnType<typeof useGamificationStore>
+        try {
+          gamStore = useGamificationStore()
+        } catch {
+          return { success: false, message: 'Gamification system not available.' }
+        }
+
+        if (!gamStore.isInitialized || !gamStore.profile) {
+          return { success: false, message: 'Gamification not initialized. Please wait for the app to fully load.' }
+        }
+
+        const levelInfo = gamStore.levelInfo
+        const streakInfo = gamStore.streakInfo
+
+        // Corruption from challenges store
+        let corruptionLevel = 0
+        let corruptionTier = 'clean'
+        try {
+          const challengeStore = useChallengesStore()
+          corruptionLevel = challengeStore.corruptionLevel
+          corruptionTier = challengeStore.corruptionTier.tier
+        } catch { /* not available */ }
+
+        return {
+          success: true,
+          message: 'Gamification status',
+          data: {
+            totalXp: gamStore.totalXp,
+            availableXp: gamStore.availableXp,
+            level: gamStore.currentLevel,
+            levelProgress: levelInfo.progressPercent,
+            xpToNextLevel: levelInfo.xpForNextLevel - levelInfo.currentXp,
+            currentStreak: streakInfo.currentStreak,
+            longestStreak: streakInfo.longestStreak,
+            isActiveToday: streakInfo.isActiveToday,
+            streakAtRisk: streakInfo.streakAtRisk,
+            streakFreezes: streakInfo.streakFreezes,
+            corruptionLevel,
+            corruptionTier,
+            equippedTheme: gamStore.equippedTheme,
+            achievementsEarned: gamStore.earnedAchievements.length,
+            achievementsTotal: gamStore.achievements.length,
+          },
+        }
+      }
+
+      case 'get_active_challenges': {
+        let challengeStore: ReturnType<typeof useChallengesStore>
+        try {
+          challengeStore = useChallengesStore()
+        } catch {
+          return { success: false, message: 'Challenge system not available.' }
+        }
+
+        if (!challengeStore.isInitialized) {
+          return { success: false, message: 'Challenge system not initialized. Please wait for the app to fully load.' }
+        }
+
+        const now = new Date()
+
+        const dailies = challengeStore.activeDailies.map(c => ({
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          objectiveType: c.objectiveType,
+          objectiveCurrent: c.objectiveCurrent,
+          objectiveTarget: c.objectiveTarget,
+          progressPercent: Math.round((c.objectiveCurrent / c.objectiveTarget) * 100),
+          rewardXp: c.rewardXp,
+          penaltyXp: c.penaltyXp,
+          difficulty: c.difficulty,
+          narrativeFlavor: c.narrativeFlavor,
+          timeRemaining: Math.max(0, Math.round((c.expiresAt.getTime() - now.getTime()) / 60000)),
+          status: c.status,
+        }))
+
+        const boss = challengeStore.activeBoss
+        const bossData = boss ? {
+          id: boss.id,
+          title: boss.title,
+          description: boss.description,
+          objectiveType: boss.objectiveType,
+          objectiveCurrent: boss.objectiveCurrent,
+          objectiveTarget: boss.objectiveTarget,
+          progressPercent: Math.round((boss.objectiveCurrent / boss.objectiveTarget) * 100),
+          rewardXp: boss.rewardXp,
+          penaltyXp: boss.penaltyXp,
+          difficulty: boss.difficulty,
+          narrativeFlavor: boss.narrativeFlavor,
+          timeRemaining: Math.max(0, Math.round((boss.expiresAt.getTime() - now.getTime()) / 60000)),
+          status: boss.status,
+        } : null
+
+        return {
+          success: true,
+          message: `${dailies.length} active challenges${bossData ? ' + 1 boss' : ''}`,
+          data: {
+            dailies,
+            boss: bossData,
+            completedToday: challengeStore.completedTodayCount,
+            allDailiesComplete: challengeStore.allDailiesComplete,
+            corruptionLevel: challengeStore.corruptionLevel,
+          },
+        }
+      }
+
+      case 'get_achievements_near_completion': {
+        let gamStore: ReturnType<typeof useGamificationStore>
+        try {
+          gamStore = useGamificationStore()
+        } catch {
+          return { success: false, message: 'Gamification system not available.' }
+        }
+
+        if (!gamStore.isInitialized) {
+          return { success: false, message: 'Gamification not initialized.' }
+        }
+
+        // Get unearned achievements with >50% progress
+        const nearComplete = gamStore.achievementsWithProgress
+          .filter(a => !a.isEarned && a.conditionValue > 0)
+          .map(a => ({
+            id: a.id,
+            name: a.name,
+            description: a.description,
+            icon: a.icon,
+            category: a.category,
+            tier: a.tier,
+            progress: a.progress,
+            target: a.conditionValue,
+            progressPercent: Math.round((a.progress / a.conditionValue) * 100),
+            xpReward: a.xpReward,
+            remaining: a.conditionValue - a.progress,
+          }))
+          .filter(a => a.progressPercent >= 50)
+          .sort((a, b) => b.progressPercent - a.progressPercent)
+          .slice(0, 10)
+
+        return {
+          success: true,
+          message: `${nearComplete.length} achievements near completion`,
+          data: nearComplete,
         }
       }
 

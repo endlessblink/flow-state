@@ -152,7 +152,7 @@ export const stagingConfig: EnvironmentConfig = {
   },
   security: {
     requireHTTPS: true,
-    allowedOrigins: ['https://staging.flowstate.app'],
+    allowedOrigins: ['https://staging.in-theflow.com'],
     corsEnabled: true,
     validateSSL: true
   },
@@ -206,7 +206,7 @@ export const productionConfig: EnvironmentConfig = {
   },
   security: {
     requireHTTPS: true,
-    allowedOrigins: ['https://app.flowstate.app'],
+    allowedOrigins: ['https://in-theflow.com', 'https://www.in-theflow.com'],
     corsEnabled: true,
     validateSSL: true
   },

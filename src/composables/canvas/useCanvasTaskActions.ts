@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { CANVAS } from '@/constants/canvas'
 import { useToast } from '@/composables/useToast'
+import { positionManager } from '@/services/canvas/PositionManager'
 
 
 
@@ -17,6 +18,7 @@ export interface TaskActionsDeps {
     screenToFlowCoordinate: (position: { x: number; y: number }) => { x: number; y: number }
     recentlyDeletedGroups?: Ref<Set<string>>
     undoHistory: any
+    fitView?: (options?: { padding?: number; duration?: number; nodes?: string[] }) => void
 }
 
 export function useCanvasTaskActions(deps: TaskActionsDeps) {
@@ -82,12 +84,6 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const groupId = typeof groupOrId === 'string' ? groupOrId : groupOrId.id
         const group = canvasStore._rawGroups.find(g => g.id === groupId)
 
-        console.log('[TASK-288-DEBUG] createTaskInGroup action called', {
-            groupId,
-            screenPos,
-            groupFound: !!group
-        })
-
         if (!group) return
 
         // Group's canvas position (for clamping only)
@@ -95,14 +91,6 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const groupY = group.position?.y || 0
         const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
         const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
-
-        console.log('[TASK-288-DEBUG] Group position:', {
-            groupX,
-            groupY,
-            groupWidth,
-            groupHeight,
-            rawPosition: group.position
-        })
 
         let absolutePos: { x: number; y: number }
 
@@ -112,21 +100,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             // The node builder handles conversion to relative for Vue Flow
             const flowCoords = deps.screenToFlowCoordinate(screenPos)
 
-            console.log('[TASK-288-DEBUG] Coordinate conversion:', {
-                screenPos,
-                flowCoords,
-                CANVAS_DEFAULT_TASK_WIDTH: CANVAS.DEFAULT_TASK_WIDTH,
-                CANVAS_DEFAULT_TASK_HEIGHT: CANVAS.DEFAULT_TASK_HEIGHT
-            })
-
             // Store ABSOLUTE position (centered on click point)
             // Node builder will convert to relative when building Vue Flow nodes
             absolutePos = {
                 x: flowCoords.x - (CANVAS.DEFAULT_TASK_WIDTH / 2),
                 y: flowCoords.y - (CANVAS.DEFAULT_TASK_HEIGHT / 2)
             }
-
-            console.log('[TASK-288-DEBUG] Absolute position (before clamp):', absolutePos)
 
             // Clamp to group bounds (absolute coordinates)
             const padding = 10
@@ -137,23 +116,18 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             absolutePos.x = Math.max(minX, Math.min(absolutePos.x, maxX))
             absolutePos.y = Math.max(minY, Math.min(absolutePos.y, maxY))
-
-            console.log('[TASK-288-DEBUG] Absolute position (after clamp):', absolutePos)
         } else {
             // Fallback: center of group (absolute coordinates)
             absolutePos = {
                 x: groupX + (groupWidth / 2) - (CANVAS.DEFAULT_TASK_WIDTH / 2),
                 y: groupY + (groupHeight / 2) - (CANVAS.DEFAULT_TASK_HEIGHT / 2)
             }
-            console.log('[TASK-288-DEBUG] Using fallback center position (absolute):', absolutePos)
         }
 
         const finalPosition = {
             ...absolutePos,
             parentId: group.id
         }
-
-        console.log('[TASK-288-DEBUG] Final quickTaskPosition:', finalPosition)
 
         quickTaskPosition.value = finalPosition
         deps.closeCanvasContextMenu()
@@ -181,16 +155,6 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             const shouldCreateInInbox = isDefaultPosition
 
             const { x, y, parentId, parentTaskId } = quickTaskPosition.value
-
-            console.log('[TASK-288-DEBUG] handleQuickTaskCreate - Creating task with position:', {
-                quickTaskPosition: { ...quickTaskPosition.value },
-                isDefaultPosition,
-                shouldCreateInInbox,
-                finalPosition: shouldCreateInInbox ? 'INBOX' : { x, y },
-                finalParentId: shouldCreateInInbox ? 'NONE' : parentId,
-                parentTaskId: parentTaskId || 'NONE',
-                taskData: data
-            })
 
             await taskStore.createTaskWithUndo({
                 title: data.title,
@@ -541,6 +505,182 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         }
     }
 
+    /**
+     * GEOMETRY WRITER: Collects overdue tasks and arranges them in a grid to the LEFT of a target group (TASK-1222)
+     * This is an ALLOWED geometry write as it's an explicit user action (context menu click or AI command).
+     *
+     * - Finds all overdue tasks NOT inside the target group
+     * - Places them in a neat grid to the left of the group
+     * - Detects existing content in the target area to avoid overlaps
+     * - Clears parentId so tasks become free-floating on canvas
+     */
+    const collectOverdueTasksNearGroup = async (targetGroupId: string) => {
+        const toast = useToast()
+        console.log(`[COLLECT-OVERDUE] Starting collection for group: ${targetGroupId}`)
+
+        // Step 1: Find the target group
+        const groups = canvasStore._rawGroups || []
+        console.log(`[COLLECT-OVERDUE] Available groups: ${groups.length}`, groups.map(g => ({ id: g.id, name: g.name, hasPosition: !!g.position })))
+        const targetGroup = groups.find(g => g.id === targetGroupId)
+
+        if (!targetGroup) {
+            console.error('[COLLECT-OVERDUE] Target group not found')
+            toast.showToast('Target group not found', 'error')
+            return { success: false, count: 0 }
+        }
+
+        if (!targetGroup.position) {
+            console.error('[COLLECT-OVERDUE] Target group has no position:', targetGroup)
+            toast.showToast('Target group has no position data', 'error')
+            return { success: false, count: 0 }
+        }
+
+        // Step 2: Find overdue tasks not in this group
+        // Normalize dates: extract YYYY-MM-DD from "2026-02-07" or "2026-02-07T22:00:00+00:00"
+        const now = new Date()
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
+
+        console.log(`[COLLECT-OVERDUE] Today: ${today}, Total tasks: ${taskStore.tasks.length}`)
+
+        const overdueTasks = taskStore.tasks.filter(t => {
+            if (!t.dueDate || t.status === 'done') return false
+            const dueDateKey = normDate(t.dueDate)
+            if (dueDateKey >= today) return false
+            if (t.parentId === targetGroupId) return false
+            return true
+        })
+
+        console.log(`[COLLECT-OVERDUE] Overdue tasks (all): ${overdueTasks.length}`)
+
+        // Separate into tasks with/without canvas positions
+        const overdueOnCanvas = overdueTasks.filter(t => t.canvasPosition)
+        const overdueInInbox = overdueTasks.filter(t => !t.canvasPosition)
+        console.log(`[COLLECT-OVERDUE] On canvas: ${overdueOnCanvas.length}, Inbox only: ${overdueInInbox.length}`)
+
+        // Use ALL overdue tasks — assign canvas positions even to inbox tasks
+        const tasksToCollect = overdueTasks
+
+        console.log(`[COLLECT-OVERDUE] Found ${tasksToCollect.length} overdue tasks outside group "${targetGroup.name}"`)
+
+        if (tasksToCollect.length === 0) {
+            toast.showToast('No overdue tasks found outside this group', 'info')
+            return { success: true, count: 0 }
+        }
+
+        // Step 3: Grid configuration (matches arrangeDoneTasksInGrid proven values)
+        const cardWidth = 300
+        const cardHeight = 180
+        const gapX = 80
+        const gapY = 50
+        const columns = Math.min(4, tasksToCollect.length)
+        const gap = 200 // Gap between target group and the grid
+
+        // Step 4: Calculate grid dimensions
+        const rows = Math.ceil(tasksToCollect.length / columns)
+        const gridActualWidth = columns * (cardWidth + gapX) - gapX
+        const gridActualHeight = rows * (cardHeight + gapY) - gapY
+
+        // Step 5: Calculate initial placement to the LEFT of the target group
+        const groupLeftEdge = targetGroup.position.x
+        const groupTopEdge = targetGroup.position.y
+        let startX = groupLeftEdge - gap - gridActualWidth
+        const startY = groupTopEdge // Align top with target group
+
+        // Step 6: Detect overlaps with existing content in the target area
+        const scanBuffer = 50
+        const scanLeft = startX - scanBuffer
+        const scanRight = startX + gridActualWidth + scanBuffer
+        const scanTop = startY - scanBuffer
+        const scanBottom = startY + gridActualHeight + scanBuffer
+
+        // Check all canvas tasks for overlaps
+        const conflictingTasks = taskStore.tasks.filter(t => {
+            if (!t.canvasPosition) return false
+            if (tasksToCollect.some(ot => ot.id === t.id)) return false // Skip tasks we're moving
+            return t.canvasPosition.x >= scanLeft && t.canvasPosition.x <= scanRight &&
+                   t.canvasPosition.y >= scanTop && t.canvasPosition.y <= scanBottom
+        })
+
+        // Check all groups for overlaps (except target group)
+        const conflictingGroups = groups.filter(g => {
+            if (g.id === targetGroupId || !g.position) return false
+            return (g.position.x + (g.position.width || 300)) >= scanLeft &&
+                   g.position.x <= scanRight &&
+                   (g.position.y + (g.position.height || 200)) >= scanTop &&
+                   g.position.y <= scanBottom
+        })
+
+        // If conflicts, shift further left
+        if (conflictingTasks.length > 0 || conflictingGroups.length > 0) {
+            const allConflictXs = [
+                ...conflictingTasks.map(t => t.canvasPosition!.x),
+                ...conflictingGroups.map(g => g.position.x)
+            ]
+            const minConflictX = Math.min(...allConflictXs)
+            startX = minConflictX - gridActualWidth - gap
+            console.log(`[COLLECT-OVERDUE] Shifted left to avoid ${conflictingTasks.length + conflictingGroups.length} overlapping items, new startX: ${startX}`)
+        }
+
+        console.log(`[COLLECT-OVERDUE] Placing ${tasksToCollect.length} tasks in grid at x=${startX}, y=${startY}`)
+
+        try {
+            // Step 7: Position each task in the grid
+            let updatedCount = 0
+            const pmUpdates: Array<{ id: string; x: number; y: number; parentId: string | null }> = []
+
+            for (let i = 0; i < tasksToCollect.length; i++) {
+                const task = tasksToCollect[i]
+                const col = i % columns
+                const row = Math.floor(i / columns)
+
+                const newX = startX + col * (cardWidth + gapX)
+                const newY = startY + row * (cardHeight + gapY)
+
+                try {
+                    await undoHistory.updateTaskWithUndo(task.id, {
+                        parentId: null, // Explicitly clear parent — undefined skips DB update, null clears it
+                        canvasPosition: { x: newX, y: newY }
+                    })
+                    // Track for PositionManager force-update
+                    pmUpdates.push({ id: task.id, x: newX, y: newY, parentId: null })
+                    updatedCount++
+                } catch (taskError) {
+                    console.error(`[COLLECT-OVERDUE] Failed to update task ${task.id}:`, taskError)
+                }
+            }
+
+            console.log(`[COLLECT-OVERDUE] Updated ${updatedCount}/${tasksToCollect.length} tasks`)
+
+            // Step 8: Force-update PositionManager so syncNodes sees new positions
+            // Without this, PM's cached positions cause the idempotence check in syncNodes
+            // to skip the setNodes() call, making tasks appear not to move.
+            // Use 'remote-sync' source which auto-releases locks after update.
+            const pmResult = positionManager.batchUpdate(pmUpdates, 'remote-sync')
+            console.log(`[COLLECT-OVERDUE] PositionManager updated: ${pmResult.successCount} succeeded, ${pmResult.rejectedIds.length} rejected`)
+
+            // Step 9: Sync canvas (single sync, then second for parent-child hierarchy)
+            deps.syncNodes()
+            await new Promise(resolve => setTimeout(resolve, 150))
+            deps.syncNodes()
+
+            // Step 10: Pan viewport to show the placed tasks + target group
+            await nextTick()
+            const placedNodeIds = tasksToCollect.map(t => t.id)
+            placedNodeIds.push(CanvasIds.groupNodeId(targetGroupId))
+            deps.fitView?.({ nodes: placedNodeIds, padding: 0.3, duration: 500 })
+
+            toast.showToast(`Collected ${updatedCount} overdue task${updatedCount === 1 ? '' : 's'}`, 'success')
+            console.log(`[COLLECT-OVERDUE] Successfully arranged ${updatedCount} overdue tasks near group "${targetGroup.name}"`)
+
+            return { success: true, count: updatedCount }
+        } catch (error) {
+            console.error('[ASYNC-ERROR] collectOverdueTasksNearGroup failed', error)
+            toast.showToast('Failed to collect overdue tasks', 'error')
+            return { success: false, count: 0 }
+        }
+    }
+
     return {
         isQuickTaskCreateOpen,
         quickTaskPosition,
@@ -557,6 +697,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         deleteSelectedTasks,
         confirmBulkDelete,
         cancelBulkDelete,
-        arrangeDoneTasksInGrid
+        arrangeDoneTasksInGrid,
+        collectOverdueTasksNearGroup
     }
 }

@@ -24,9 +24,6 @@
 // Core interface and types
 export * from './types'
 
-// Base abstract class
-export { BaseAIProvider } from './BaseAIProvider'
-
 // Ollama (Local)
 export {
   OllamaProvider,
@@ -51,23 +48,10 @@ export {
 } from './openrouterProxy'
 
 // ============================================================================
-// Legacy Direct Providers (for reference/testing only - expose API keys)
+// Direct Providers (for local/testing use)
 // ============================================================================
 
-// Claude/Anthropic (DEPRECATED - use OpenRouter proxy instead)
-export {
-  ClaudeProvider,
-  createClaudeProvider,
-} from './claude'
-
-// DeepSeek (DEPRECATED - use Groq proxy instead)
-export {
-  DeepSeekProvider,
-  createDeepSeekProvider,
-  autoDetectDeepSeek,
-} from './deepseek'
-
-// Groq Direct (DEPRECATED - use GroqProxyProvider instead)
+// Groq Direct
 export {
   GroqProvider,
   createGroqProvider,

@@ -1,0 +1,43 @@
+node_modules
+dist
+.git
+.github
+.vscode
+.claude
+.omc
+
+# Tauri build artifacts
+src-tauri/target
+src-tauri/gen
+
+# Local environment files
+.env
+.env.local
+.env.production
+.env.self-host
+
+# Development files
+*.log
+*.tsbuildinfo
+coverage
+stats.html
+
+# Supabase local data
+supabase/.temp
+supabase/.branches
+
+# Backups
+supabase/backups
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Screenshots and temp images
+*.png
+*.jpg
+!src/**/*.png
+!src/**/*.jpg
+!public/**/*.png
+!public/**/*.ico
+!public/**/*.svg

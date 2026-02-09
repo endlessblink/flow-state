@@ -371,7 +371,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_notification::init())
+        // BUG-1289: tauri-plugin-notification DISABLED — Notification::show()
+        // calls block_on() inside tokio runtime on Linux, causing fatal panic.
+        // Using Browser Notification API from JS instead (works in Tauri webview).
+        // .plugin(tauri_plugin_notification::init())
         // FEATURE-1194: tauri-plugin-updater 2.10 plugin Builder has no event hooks
         // (on_before_exit is on UpdaterBuilder, not the plugin Builder).
         // Updater diagnostics are logged at startup in setup() below instead.

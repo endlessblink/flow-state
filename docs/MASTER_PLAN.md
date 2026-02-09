@@ -3620,6 +3620,8 @@ TASK-1223 tokenization commit introduced broken CSS in TaskNode.vue and GroupNod
 - Timer bugs (1, 2, 4): `timerStore.startTimer()` fails silently — likely `clearExistingSession()` async failure or error in `startTaskNowWithUndo()` preventing timer from being called
 - Context menu bug (3): Global `task-context-menu` event dispatch exists and ModalManager listens, but event may not reach handler or task lookup may fail silently
 
+**Progress (2026-02-10):** Fixed timer.ts silently aborting when leadership claim fails, split context menu startTaskNow into independent try blocks, added diagnostic logging across the pipeline. Needs user testing in calendar.
+
 **Files**:
 - `src/composables/calendar/useCalendarTimerIntegration.ts` — Calendar play button handler
 - `src/composables/tasks/useTaskContextMenuActions.ts` — "Start" and "Timer" context menu actions

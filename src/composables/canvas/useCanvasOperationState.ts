@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { DRAG_SETTLE_TIMEOUT_MS } from '@/config/timing'
 
 export type CanvasOperationType =
     | 'idle'

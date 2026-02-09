@@ -541,30 +541,25 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
         const normDate = (d: string) => d.includes('T') ? d.split('T')[0] : d
 
-        console.log(`[COLLECT-OVERDUE] Today: ${today}, Total tasks: ${taskStore.tasks.length}`)
+        // Use _rawTasks (unfiltered) — taskStore.tasks applies smart view/status filters
+        const allTasks = taskStore._rawTasks
 
-        const overdueTasks = taskStore.tasks.filter(t => {
+        // Collect ALL overdue tasks regardless of which group they're in.
+        // Tasks already inside the target group will be pulled OUT and arranged in the grid.
+        const overdueTasks = allTasks.filter(t => {
             if (!t.dueDate || t.status === 'done') return false
             const dueDateKey = normDate(t.dueDate)
             if (dueDateKey >= today) return false
-            if (t.parentId === targetGroupId) return false
             return true
         })
 
-        console.log(`[COLLECT-OVERDUE] Overdue tasks (all): ${overdueTasks.length}`)
-
-        // Separate into tasks with/without canvas positions
-        const overdueOnCanvas = overdueTasks.filter(t => t.canvasPosition)
-        const overdueInInbox = overdueTasks.filter(t => !t.canvasPosition)
-        console.log(`[COLLECT-OVERDUE] On canvas: ${overdueOnCanvas.length}, Inbox only: ${overdueInInbox.length}`)
-
-        // Use ALL overdue tasks — assign canvas positions even to inbox tasks
+        // Include inbox tasks too — they'll get canvas positions assigned
         const tasksToCollect = overdueTasks
 
-        console.log(`[COLLECT-OVERDUE] Found ${tasksToCollect.length} overdue tasks outside group "${targetGroup.name}"`)
+        console.log(`[COLLECT-OVERDUE] Found ${tasksToCollect.length} overdue tasks to arrange near group "${targetGroup.name}"`, { today, totalRaw: allTasks.length })
 
         if (tasksToCollect.length === 0) {
-            toast.showToast('No overdue tasks found outside this group', 'info')
+            toast.showToast('No overdue tasks found', 'info')
             return { success: true, count: 0 }
         }
 
@@ -594,8 +589,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const scanTop = startY - scanBuffer
         const scanBottom = startY + gridActualHeight + scanBuffer
 
-        // Check all canvas tasks for overlaps
-        const conflictingTasks = taskStore.tasks.filter(t => {
+        // Check all canvas tasks for overlaps (use raw to include filtered-out tasks)
+        const conflictingTasks = allTasks.filter(t => {
             if (!t.canvasPosition) return false
             if (tasksToCollect.some(ot => ot.id === t.id)) return false // Skip tasks we're moving
             return t.canvasPosition.x >= scanLeft && t.canvasPosition.x <= scanRight &&
@@ -652,20 +647,25 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             console.log(`[COLLECT-OVERDUE] Updated ${updatedCount}/${tasksToCollect.length} tasks`)
 
-            // Step 8: Force-update PositionManager so syncNodes sees new positions
-            // Without this, PM's cached positions cause the idempotence check in syncNodes
-            // to skip the setNodes() call, making tasks appear not to move.
-            // Use 'remote-sync' source which auto-releases locks after update.
+            // Step 8: Wait for watcher-triggered syncs from the sequential loop to settle.
+            // Each updateTaskWithUndo yields the event loop ~4 times, triggering canvas watchers
+            // that fire intermediate syncs with partially-updated data. Let them drain first.
+            await new Promise(resolve => setTimeout(resolve, 300))
+
+            // Step 9: Force-update PositionManager with the DEFINITIVE positions.
+            // This overwrites any stale PM entries left by intermediate watcher syncs.
             const pmResult = positionManager.batchUpdate(pmUpdates, 'remote-sync')
             console.log(`[COLLECT-OVERDUE] PositionManager updated: ${pmResult.successCount} succeeded, ${pmResult.rejectedIds.length} rejected`)
 
-            // Step 9: Sync canvas (single sync, then second for parent-child hierarchy)
+            // Step 10: Final authoritative sync — this reads our fresh PM values
             deps.syncNodes()
-            await new Promise(resolve => setTimeout(resolve, 150))
+            await new Promise(resolve => setTimeout(resolve, 200))
+            // Second sync for parent-child hierarchy changes (parentId: null detach)
             deps.syncNodes()
 
-            // Step 10: Pan viewport to show the placed tasks + target group
+            // Step 11: Pan viewport to show the placed tasks + target group
             await nextTick()
+            await new Promise(resolve => setTimeout(resolve, 100))
             const placedNodeIds = tasksToCollect.map(t => t.id)
             placedNodeIds.push(CanvasIds.groupNodeId(targetGroupId))
             deps.fitView?.({ nodes: placedNodeIds, padding: 0.3, duration: 500 })

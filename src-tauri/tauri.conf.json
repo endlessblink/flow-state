@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowState",
-  "version": "1.2.40",
+  "version": "1.2.42",
   "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5546",
     "beforeDevCommand": "TAURI_DEV=true npm run dev",
-    "beforeBuildCommand": "echo 'Skipping - dist already built'",
+    "beforeBuildCommand": "npm run build",
     "features": [
       "devtools"
     ]

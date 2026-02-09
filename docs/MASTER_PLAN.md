@@ -151,6 +151,20 @@
 
 ---
 
+### BUG-1290: Week View Not Loading (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-09)
+
+**Problem**: Calendar week view doesn't render at all. Switching to week mode shows blank content.
+
+**Root Cause**: `CalendarWeekView.vue` injects `getWeekEventStyle` and `isCurrentWeekTimeCell` from `calendar-helpers`, but `CalendarView.vue` never provides them. Both functions are `undefined`, crashing the week view template when `:style="getWeekEventStyle(event)"` is called.
+
+**Fix**: Added `getWeekEventStyle` and `isCurrentWeekTimeCell` to the `provide('calendar-helpers')` object in `CalendarView.vue` and destructured them from `weekView` composable.
+
+**Files**: `src/views/CalendarView.vue`
+
+---
+
 ### BUG-1197: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
@@ -164,6 +178,16 @@
 2. **Drag stale detection** (`useCanvasInteractions.ts`): In `onNodeDragStop`, detect when `node.parentNode` doesn't match `task.parentId`. Restore correct position and skip processing.
 
 **Files**: `src/composables/canvas/useCanvasSync.ts`, `src/composables/canvas/useCanvasInteractions.ts`
+
+---
+
+### TASK-1289: Investigate severe task position drift episode (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-09)
+
+**Problem**: User experienced a moment of severe task position drift. Root cause unknown — may be a regression of BUG-1209 fixes or a new drift vector. Needs investigation of recent changes to canvas sync, drag handlers, and position persistence.
+
+**Related**: BUG-1203, BUG-1209, BUG-1061
 
 ---
 
@@ -2072,14 +2096,14 @@ npm run tasks:bugs     # Filter by BUG type
 - [x] ~~**TASK-1232**~~: ✅ Productivity tools — `get_productivity_stats`, `suggest_next_task`, `get_weekly_summary`
 - [x] ~~**TASK-1233**~~: ✅ Native function calling — Groq/OpenRouter `tools[]` API parameter with text-based regex fallback for Ollama
 
-#### Phase 3: Deep Features (P2 — LATER)
+#### Phase 3: Deep Features (P2 — ✅ DONE)
 
-- [ ] **TASK-1234**: Conversation history — multiple conversations, auto-naming, localStorage model, conversation list UI
-- [ ] **TASK-1235**: Full-screen `/ai-chat` route — extract `AIChatCore.vue`, dedicated view with conversation sidebar
-- [ ] **TASK-1236**: Deterministic agent chains — "Plan my day", "End of day review", "Focus mode setup" (works with Ollama)
-- [ ] **TASK-1237**: ReAct agentic loop — multi-step reasoning for Groq/OpenRouter (circuit-breaker, abort, error recovery)
-- [ ] **TASK-1238**: AI challenge narrator — push narrative events to chat on challenge complete/fail
-- [ ] **TASK-1239**: Inline actions on results — "Mark done", "Start timer" hover buttons on task items
+- [x] ~~**TASK-1234**~~: ✅ Conversation history — multiple conversations, auto-naming, localStorage model, conversation list UI
+- [x] ~~**TASK-1235**~~: ✅ Full-screen `/ai-chat` route — dedicated view with conversation sidebar, two-column layout
+- [x] ~~**TASK-1236**~~: ✅ Deterministic agent chains — "Plan my day", "End of day review", "Focus mode setup" (works with Ollama)
+- [x] ~~**TASK-1237**~~: ✅ ReAct agentic loop — multi-step reasoning for Groq/OpenRouter (circuit-breaker, abort, error recovery)
+- [x] ~~**TASK-1238**~~: ✅ AI challenge narrator — push narrative events to chat on challenge complete/fail
+- [x] ~~**TASK-1239**~~: ✅ Inline actions on results — "Mark done", "Start timer" hover buttons on task items
 
 #### Phase 4: Polish & Innovation (P3 — FUTURE)
 
@@ -2091,13 +2115,16 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1245**: Dynamic prompt assembly — only include relevant tool definitions per request type
 
 **Key Files**:
-- `src/components/ai/ChatMessage.vue` — message rendering, task list items, RTL CSS
-- `src/components/ai/AIChatPanel.vue` — panel layout, settings, quick actions
-- `src/composables/useAIChat.ts` — chat logic, tool execution, context building
-- `src/stores/aiChat.ts` — state management, persistence
+- `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
+- `src/components/ai/AIChatPanel.vue` — panel layout, settings, quick actions, full-screen nav
+- `src/views/AIChatView.vue` — full-screen AI chat with conversation sidebar (Phase 3)
+- `src/composables/useAIChat.ts` — chat logic, tool execution, agent chains, ReAct loop
+- `src/composables/useAgentChains.ts` — deterministic multi-step tool chains (Phase 3)
+- `src/composables/useAIChallengeNarrator.ts` — gamification event narrator (Phase 3)
+- `src/stores/aiChat.ts` — conversation model, multi-chat persistence
 - `src/services/ai/tools.ts` — tool definitions (20 current, 6+ planned)
 - `src/services/ai/router.ts` — provider routing
-- `src/utils/dateUtils.ts` — date formatting utilities (needs `formatRelativeDate`)
+- `src/utils/dateUtils.ts` — date formatting utilities
 
 **Competitors Analyzed**: Linear AI, ClickUp Brain, Notion AI 3.0, Todoist Ramble, Motion, GitHub Copilot Chat, Cursor IDE
 
@@ -2706,6 +2733,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| **TASK-1289** | **P0** | **🔄 Investigate severe task position drift episode** |
 | **TASK-1285** | **P0** | **🔄 Commit deploy safeguards & clean up 20 dead Claude hooks** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |

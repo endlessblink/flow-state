@@ -18,8 +18,9 @@
  */
 
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { onClickOutside } from '@vueuse/core'
-import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap } from 'lucide-vue-next'
+import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap, ExternalLink } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTimerStore } from '@/stores/timer'
@@ -61,6 +62,14 @@ const {
   aiPersonality,
   setPersonality,
 } = useAIChat()
+
+// Router for full-screen navigation
+const vueRouter = useRouter()
+
+function openFullScreenChat() {
+  closePanel()
+  vueRouter.push({ name: 'ai-chat' })
+}
 
 // Personality helpers
 const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
@@ -752,6 +761,13 @@ onUnmounted(() => {
             <Maximize2 v-else :size="16" />
           </button>
           <button
+            class="header-btn fullscreen-btn"
+            title="Open full-screen chat"
+            @click="openFullScreenChat"
+          >
+            <ExternalLink :size="16" />
+          </button>
+          <button
             class="header-btn close-btn"
             title="Close (Ctrl+/ or Esc)"
             @click="closePanel"
@@ -1013,7 +1029,8 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
-.expand-btn:hover {
+.expand-btn:hover,
+.fullscreen-btn:hover {
   background: var(--purple-bg-subtle);
   color: var(--accent-primary, #8b5cf6);
 }

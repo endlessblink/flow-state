@@ -2768,12 +2768,33 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
+### FEATURE-1293: Catalog View UX/UI Redesign (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: The Catalog view (AllTasksView) has poor UX/UI — broken table header layout, no visual hierarchy in list mode, generic feel compared to Canvas and Cyberflow views. Neither Table nor List mode is usable for the owner's workflow.
+
+**Goal**: Redesign to support 4 use cases: bulk operations, quick scanning, inline data management, and review/triage. Keep glass morphism aesthetic, execute it better.
+
+**Files**: `src/views/AllTasksView.vue`, `src/components/tasks/TaskTable.vue`, `src/components/tasks/TaskList.vue`, `src/components/layout/ViewControls.vue`
+
+**Research Completed (2026-02-10)**:
+- 4-agent investigation: keep-advocate, archive-advocate, codebase-analyst, industry-trends
+- Decision: Redesign, not archive. Canvas is the core differentiator; Catalog view should complement it for data-heavy tasks
+- User requirements: bulk ops, quick scanning, inline editing, review/triage
+- Design direction: Glass morphism (current theme) executed well
+
+**Progress (2026-02-10):** Research phase complete — 4 agents investigated archive-vs-redesign from different perspectives. Decision made to redesign with glass morphism aesthetic. Planning phase next.
+
+---
+
 ### Other Planned Tasks
 
 | Task | Priority | Description |
 |------|----------|-------------|
 | **TASK-1289** | **P0** | **🔄 Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
+| **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
@@ -2782,6 +2803,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | **BUG-1291** | **P0** | **🔄 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | **BUG-1292** | **P0** | **📋 KDE widget doesn't reliably start break timer (pomoflow-kde repo)** |
+| ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
@@ -3567,6 +3589,20 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 - Suppressed nagging "EXPOSED" toast per Distraction Test
 
 **Progress (2026-02-08):** Phases 1-3 complete + P0 anti-chore constants applied. 624 tests passing, zero TS errors. Next: P1 items (streak multiplier, corruption XP modifier, partial boss credit).
+
+---
+
+### ~~BUG-1293~~: Canvas CSS Tokenization Damage (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-02-09)
+
+TASK-1223 tokenization commit introduced broken CSS in TaskNode.vue and GroupNodeSimple.vue:
+- `var(--shadow-md)` (full shorthand) used as color in compound box-shadows → all shadows invalid
+- Phantom tokens (`--color-danger-soft`, `--color-orange-soft`, `--color-blue-soft`, `--overlay-backdrop`, `--color-purple-soft`) never added to design-tokens.css
+- GroupNodeSimple background swapped to opaque `--surface-elevated` instead of semi-transparent
+- Debug span and watcher left in GroupNodeSimple template/script
+
+**Fix**: Replaced all broken token references with inline rgba values. Removed debug elements.
 
 ---
 

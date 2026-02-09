@@ -1,5 +1,0 @@
-
-Running 1 test using 1 worker
-
-[1A[2K[1/1] [chromium] › tests/debug-startup.spec.ts:4:1 › capture startup errors
-[1A[2K  1 passed (1.6s)

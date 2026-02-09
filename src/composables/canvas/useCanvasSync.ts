@@ -449,10 +449,14 @@ export function useCanvasSync() {
 
                 // Calculate Relative Position for Vue Flow
                 let vueFlowPos = absolutePos
-                // Only convert to relative if we have a valid, visible parent
+                // TASK-1289: Only convert to relative if parent is both visible AND in PositionManager
+                // (prevents double-offset when PM hasn't ingested parent group yet)
                 if (parentId && visibleGroupIds.has(parentId)) {
-                    const relative = positionManager.getRelativePosition(task.id)
-                    if (relative) vueFlowPos = relative
+                    const parentInPM = positionManager.getPosition(parentId)
+                    if (parentInPM) {
+                        const relative = positionManager.getRelativePosition(task.id)
+                        if (relative) vueFlowPos = relative
+                    }
                 }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })

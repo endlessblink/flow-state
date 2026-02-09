@@ -497,9 +497,9 @@ export function useCanvasInteractions(deps?: {
                     if (!group) continue
 
                     // Compute absolute position for the group
-                    // BUG-1209: Round to prevent cumulative micro-drift from snap-to-grid
+                    // BUG-1209/TASK-1289: Snap to 16px grid to prevent cumulative micro-drift
                     const rawAbsolutePos = computeNodeAbsolutePosition(node, allGroups)
-                    const absolutePos = { x: Math.round(rawAbsolutePos.x), y: Math.round(rawAbsolutePos.y) }
+                    const absolutePos = { x: Math.round(rawAbsolutePos.x / 16) * 16, y: Math.round(rawAbsolutePos.y / 16) * 16 }
                     const groupWidth = group.position.width
                     const groupHeight = group.position.height
 

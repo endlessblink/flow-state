@@ -111,6 +111,12 @@ const router = createRouter({
       }
     ] : []),
     {
+      path: '/ai-chat',
+      name: 'ai-chat',
+      component: () => import('@/views/AIChatView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/cyberflow',
       name: 'cyberflow',
       component: () => import('@/views/CyberflowView.vue'),

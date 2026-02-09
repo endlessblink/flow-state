@@ -18,11 +18,12 @@
  */
 
 import { computed, ref } from 'vue'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target, Play, CheckCircle2 } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type { ChatMessage, ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
+import { executeTool } from '@/services/ai/tools'
 
 // ============================================================================
 // Props
@@ -62,6 +63,11 @@ md.renderer.rules.link_open = function (tokens: any[], idx: number, options: any
 
 const loadingActions = ref<Set<string>>(new Set())
 const copied = ref(false)
+
+// Track which tasks have been actioned (for visual feedback)
+const completedTaskIds = ref<Set<string>>(new Set())
+const timerStartedTaskIds = ref<Set<string>>(new Set())
+const actionLoading = ref<Record<string, string>>({}) // taskId -> 'done' | 'timer'
 
 // ============================================================================
 // Computed
@@ -282,6 +288,36 @@ function toolIcon(type?: string) {
     default: return Zap
   }
 }
+
+async function markTaskDone(taskId: string, event: MouseEvent) {
+  event.stopPropagation() // Don't open popover
+  if (actionLoading.value[taskId]) return
+
+  actionLoading.value[taskId] = 'done'
+  try {
+    await executeTool({ tool: 'update_task', parameters: { taskId, updates: { status: 'done' } } })
+    completedTaskIds.value.add(taskId)
+  } catch (err) {
+    console.error('[ChatMessage] Mark done failed:', err)
+  } finally {
+    delete actionLoading.value[taskId]
+  }
+}
+
+async function startTaskTimer(taskId: string, event: MouseEvent) {
+  event.stopPropagation() // Don't open popover
+  if (actionLoading.value[taskId]) return
+
+  actionLoading.value[taskId] = 'timer'
+  try {
+    await executeTool({ tool: 'start_timer', parameters: { taskId } })
+    timerStartedTaskIds.value.add(taskId)
+  } catch (err) {
+    console.error('[ChatMessage] Start timer failed:', err)
+  } finally {
+    delete actionLoading.value[taskId]
+  }
+}
 </script>
 
 <template>
@@ -362,6 +398,7 @@ function toolIcon(type?: string) {
                 v-for="task in result.data.overdueTasks"
                 :key="task.id"
                 class="task-list-item"
+                :class="{ 'task-completed': completedTaskIds.has(task.id) }"
                 @click="openQuickEdit(task, $event)"
               >
                 <span
@@ -372,6 +409,34 @@ function toolIcon(type?: string) {
                 <div class="task-meta-row">
                   <span v-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
                 </div>
+                <div class="task-inline-actions" @click.stop>
+                  <button
+                    v-if="!completedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-done-btn"
+                    :class="{ loading: actionLoading[task.id] === 'done' }"
+                    title="Mark done"
+                    @click="markTaskDone(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                    <CheckCircle2 v-else :size="12" />
+                  </button>
+                  <button
+                    v-if="!timerStartedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-timer-btn"
+                    :class="{ loading: actionLoading[task.id] === 'timer' }"
+                    title="Start timer"
+                    @click="startTaskTimer(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                    <Play v-else :size="12" />
+                  </button>
+                  <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge">
+                    <CheckCircle2 :size="12" /> Done
+                  </span>
+                  <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge">
+                    <Play :size="12" /> Timer started
+                  </span>
+                </div>
               </button>
             </div>
             <!-- Due today task list if any -->
@@ -381,6 +446,7 @@ function toolIcon(type?: string) {
                 v-for="task in result.data.dueTodayTasks"
                 :key="task.id"
                 class="task-list-item"
+                :class="{ 'task-completed': completedTaskIds.has(task.id) }"
                 @click="openQuickEdit(task, $event)"
               >
                 <span
@@ -394,6 +460,34 @@ function toolIcon(type?: string) {
                     class="task-status-badge"
                     :class="'status-' + task.status"
                   >{{ task.status }}</span>
+                </div>
+                <div class="task-inline-actions" @click.stop>
+                  <button
+                    v-if="!completedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-done-btn"
+                    :class="{ loading: actionLoading[task.id] === 'done' }"
+                    title="Mark done"
+                    @click="markTaskDone(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                    <CheckCircle2 v-else :size="12" />
+                  </button>
+                  <button
+                    v-if="!timerStartedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-timer-btn"
+                    :class="{ loading: actionLoading[task.id] === 'timer' }"
+                    title="Start timer"
+                    @click="startTaskTimer(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                    <Play v-else :size="12" />
+                  </button>
+                  <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge">
+                    <CheckCircle2 :size="12" /> Done
+                  </span>
+                  <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge">
+                    <Play :size="12" /> Timer started
+                  </span>
                 </div>
               </button>
             </div>
@@ -583,6 +677,7 @@ function toolIcon(type?: string) {
                 v-for="(task, idx) in result.data"
                 :key="task.id"
                 class="task-list-item suggest-item"
+                :class="{ 'task-completed': completedTaskIds.has(task.id) }"
                 @click="openQuickEdit(task, $event)"
               >
                 <span class="suggest-rank">{{ Number(idx) + 1 }}</span>
@@ -594,6 +689,34 @@ function toolIcon(type?: string) {
                   />
                   <span class="suggest-reason" :class="'reason-' + task.reason.replace(/\s+/g, '-')">{{ task.reason }}</span>
                   <span v-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
+                </div>
+                <div class="task-inline-actions" @click.stop>
+                  <button
+                    v-if="!completedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-done-btn"
+                    :class="{ loading: actionLoading[task.id] === 'done' }"
+                    title="Mark done"
+                    @click="markTaskDone(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                    <CheckCircle2 v-else :size="12" />
+                  </button>
+                  <button
+                    v-if="!timerStartedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-timer-btn"
+                    :class="{ loading: actionLoading[task.id] === 'timer' }"
+                    title="Start timer"
+                    @click="startTaskTimer(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                    <Play v-else :size="12" />
+                  </button>
+                  <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge">
+                    <CheckCircle2 :size="12" /> Done
+                  </span>
+                  <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge">
+                    <Play :size="12" /> Timer started
+                  </span>
                 </div>
               </button>
             </div>
@@ -653,6 +776,7 @@ function toolIcon(type?: string) {
                 v-for="task in getTasksFromResult(result)"
                 :key="task.id"
                 class="task-list-item"
+                :class="{ 'task-completed': completedTaskIds.has(task.id) }"
                 @click="openQuickEdit(task, $event)"
               >
                 <span
@@ -671,6 +795,34 @@ function toolIcon(type?: string) {
                     class="task-status-badge"
                     :class="'status-' + task.status"
                   >{{ task.status }}</span>
+                </div>
+                <div class="task-inline-actions" @click.stop>
+                  <button
+                    v-if="!completedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-done-btn"
+                    :class="{ loading: actionLoading[task.id] === 'done' }"
+                    title="Mark done"
+                    @click="markTaskDone(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                    <CheckCircle2 v-else :size="12" />
+                  </button>
+                  <button
+                    v-if="!timerStartedTaskIds.has(task.id)"
+                    class="inline-action-btn inline-timer-btn"
+                    :class="{ loading: actionLoading[task.id] === 'timer' }"
+                    title="Start timer"
+                    @click="startTaskTimer(task.id, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                    <Play v-else :size="12" />
+                  </button>
+                  <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge">
+                    <CheckCircle2 :size="12" /> Done
+                  </span>
+                  <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge">
+                    <Play :size="12" /> Timer started
+                  </span>
                 </div>
               </button>
             </div>
@@ -1782,5 +1934,89 @@ function toolIcon(type?: string) {
 .gam-badge-corruption {
   background: var(--danger-bg-light);
   color: var(--color-priority-high);
+}
+
+/* ============================================================================
+   Inline Task Actions (hover)
+   ============================================================================ */
+
+.task-inline-actions {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.task-list-item:hover .task-inline-actions {
+  opacity: 1;
+}
+
+.inline-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.inline-done-btn {
+  background: var(--success-bg-light);
+  color: var(--color-success);
+}
+
+.inline-done-btn:hover {
+  background: var(--color-success);
+  color: white;
+}
+
+.inline-timer-btn {
+  background: var(--blue-bg-light);
+  color: var(--status-in-progress-text);
+}
+
+.inline-timer-btn:hover {
+  background: var(--status-in-progress-text);
+  color: white;
+}
+
+.inline-action-btn.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.inline-action-done-badge,
+.inline-action-timer-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0_5);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  padding: 2px var(--space-1_5);
+  border-radius: var(--radius-sm);
+}
+
+.inline-action-done-badge {
+  background: var(--success-bg-light);
+  color: var(--color-success);
+}
+
+.inline-action-timer-badge {
+  background: var(--blue-bg-light);
+  color: var(--status-in-progress-text);
+}
+
+.task-list-item.task-completed .task-title {
+  text-decoration: line-through;
+  opacity: 0.6;
 }
 </style>

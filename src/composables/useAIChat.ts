@@ -33,6 +33,7 @@ import {
   type ToolResult,
 } from '@/services/ai/tools'
 import type { NativeToolCall } from '@/services/ai/types'
+import { useAgentChains } from './useAgentChains'
 
 // ============================================================================
 // Types
@@ -45,6 +46,8 @@ export interface SendMessageOptions {
   systemPrompt?: string
   /** Skip adding to message history */
   skipHistory?: boolean
+  /** Enable multi-step ReAct (Reasoning + Acting) loop for cloud providers */
+  useReAct?: boolean
 }
 
 /**
@@ -99,6 +102,25 @@ function getPersonalitySystemPrompt(): string {
     return 'You are the Grid Handler, a netrunner AI embedded in the FlowState productivity matrix. You speak in cyberpunk hacker slang. Tasks are \'ops\' or \'jobs\'. Completing work is \'executing\'. The timer is your \'neural clock\'. XP is \'data fragments\'. Challenges are \'contracts\'. You reference \'the Grid\', \'data streams\', and \'neural pathways\'. Keep it fun but still helpful — you\'re assisting a runner with their daily ops. Use short, punchy sentences. Occasionally reference system corruption levels if gamification data is available.'
   }
   return ''
+}
+
+// ============================================================================
+// ReAct Loop Configuration
+// ============================================================================
+
+/** Maximum reasoning steps before the circuit breaker stops the ReAct loop */
+const MAX_REACT_STEPS = 5
+
+/** AbortController for cancelling an in-progress ReAct loop */
+const reactAbortController = ref<AbortController | null>(null)
+
+/**
+ * Abort an in-progress ReAct loop.
+ * Safe to call even if no loop is running.
+ */
+function abortReAct() {
+  reactAbortController.value?.abort()
+  reactAbortController.value = null
 }
 
 // Provider/model selection state
@@ -165,6 +187,9 @@ export function useAIChat() {
 
   // Pending confirmation flow: stores a tool call awaiting user approval
   const pendingConfirmation = ref<ToolCall | null>(null)
+
+  // Agent chains integration
+  const agentChains = useAgentChains()
 
   // ============================================================================
   // Context Management
@@ -336,11 +361,18 @@ export function useAIChat() {
     if (!content.trim()) return
     if (store.isGenerating) return
 
+    // Check provider type for routing decisions
+    const isLocalProvider = selectedProvider.value === 'ollama' ||
+      (selectedProvider.value === 'auto' && activeProviderRef.value === 'ollama')
+
+    // Delegate to ReAct loop if requested and using a cloud provider
+    if (options.useReAct && !isLocalProvider) {
+      return sendMessageWithReAct(content, options)
+    }
+
     // Client-side intent detection: only for Ollama / small local models
     // that can't reliably emit JSON tool blocks. Cloud providers (Groq, OpenRouter)
     // handle tool calling natively via the AI model.
-    const isLocalProvider = selectedProvider.value === 'ollama' ||
-      (selectedProvider.value === 'auto' && activeProviderRef.value === 'ollama')
     const useNativeTools = !isLocalProvider
     const detectedTool = isLocalProvider ? detectToolIntent(content) : null
     if (detectedTool && !options.systemPrompt) {
@@ -527,6 +559,220 @@ export function useAIChat() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get response'
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat] Error:', err)
+    }
+  }
+
+  // ============================================================================
+  // ReAct (Reasoning + Acting) Loop
+  // ============================================================================
+
+  /**
+   * Send a message using the ReAct (Reasoning + Acting) multi-step loop.
+   *
+   * The AI reasons about what to do, calls tools, receives results,
+   * then reasons again — repeating until it provides a final answer
+   * (no more tool calls) or the circuit breaker fires (MAX_REACT_STEPS).
+   *
+   * Only supported for cloud providers (Groq/OpenRouter) with native
+   * function calling. Falls back to regular sendMessage for local providers.
+   *
+   * @see TASK-1237 in MASTER_PLAN.md
+   */
+  async function sendMessageWithReAct(
+    content: string,
+    options: SendMessageOptions = {}
+  ): Promise<void> {
+    if (!content.trim()) return
+    if (store.isGenerating) return
+
+    // Set up abort controller for this ReAct session
+    const abortController = new AbortController()
+    reactAbortController.value = abortController
+
+    // Clear input
+    store.inputText = ''
+    store.clearError()
+
+    // Add user message
+    if (!options.skipHistory) {
+      store.addUserMessage(content)
+    }
+
+    // Start streaming response
+    store.startStreamingMessage()
+
+    try {
+      const router = await getRouter()
+      const conversationMessages: RouterChatMessage[] = buildMessagesForAI(content, true) // useNativeTools=true
+      const taskType = options.taskType ?? inferTaskType(content)
+
+      let stepCount = 0
+      let continueLoop = true
+
+      while (continueLoop && stepCount < MAX_REACT_STEPS) {
+        // Check if aborted
+        if (abortController.signal.aborted) {
+          store.appendStreamingContent('\n\n---\n*ReAct loop aborted by user.*')
+          break
+        }
+
+        stepCount++
+
+        let fullContent = ''
+        let nativeToolCalls: NativeToolCall[] | undefined
+
+        // Stream the response
+        for await (const chunk of router.chatStream(conversationMessages, {
+          taskType,
+          systemPrompt: options.systemPrompt,
+          forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+          model: selectedModel.value || undefined,
+          tools: buildOpenAITools(),
+          toolChoice: 'auto' as const,
+        })) {
+          // Check abort between chunks
+          if (abortController.signal.aborted) {
+            break
+          }
+          store.appendStreamingContent(chunk.content)
+          fullContent += chunk.content
+          if (chunk.toolCalls && chunk.toolCalls.length > 0) {
+            nativeToolCalls = chunk.toolCalls
+          }
+        }
+
+        // If aborted during streaming, exit
+        if (abortController.signal.aborted) {
+          store.appendStreamingContent('\n\n---\n*ReAct loop aborted by user.*')
+          break
+        }
+
+        // Check for tool calls
+        if (nativeToolCalls && nativeToolCalls.length > 0) {
+          // Parse native tool calls into ToolCall format
+          const toolCalls = nativeToolCalls
+            .map(tc => {
+              try {
+                return { tool: tc.function.name, parameters: JSON.parse(tc.function.arguments) } as ToolCall
+              } catch {
+                return null
+              }
+            })
+            .filter((tc): tc is ToolCall => tc !== null)
+            .slice(0, MAX_TOOLS_PER_RESPONSE)
+
+          // Separate confirmation vs immediate tools
+          const immediateTools = toolCalls.filter(c => !toolRequiresConfirmation(c.tool))
+          const confirmationTools = toolCalls.filter(c => toolRequiresConfirmation(c.tool))
+
+          // Execute immediate tools
+          const toolResults: ToolResult[] = []
+          for (const call of immediateTools) {
+            console.log(`[AIChat] ReAct step ${stepCount} - executing tool:`, call.tool, call.parameters)
+            const result = await executeTool(call)
+            toolResults.push(result)
+
+            // Push undo if available
+            if (result.success && result.undoAction) {
+              store.pushUndoEntry({
+                toolName: call.tool,
+                timestamp: Date.now(),
+                params: call.parameters,
+                undoAction: result.undoAction,
+                description: result.message,
+              })
+            }
+          }
+
+          // Accumulate tool results in message metadata
+          const lastMsg = store.messages[store.messages.length - 1]
+          if (lastMsg) {
+            const existingResults = ((lastMsg.metadata as Record<string, unknown>)?.toolResults as unknown[]) || []
+            lastMsg.metadata = {
+              ...lastMsg.metadata,
+              toolResults: [
+                ...existingResults,
+                ...toolResults.map((r, i) => ({
+                  success: r.success,
+                  message: r.message,
+                  data: r.data,
+                  tool: immediateTools[i]?.tool || 'unknown',
+                  type: AI_TOOLS.find(t => t.name === immediateTools[i]?.tool)?.category || 'read',
+                })),
+              ],
+            } as Record<string, unknown>
+          }
+
+          // If there are confirmation tools, stop the loop (need user input)
+          if (confirmationTools.length > 0) {
+            pendingConfirmation.value = confirmationTools[0]
+            const toolDef = AI_TOOLS.find(t => t.name === confirmationTools[0].tool)
+            const toolDesc = toolDef?.description || confirmationTools[0].tool
+            store.appendStreamingContent(
+              `\n\n**Confirmation required:** ${toolDesc}`
+            )
+            continueLoop = false
+            break
+          }
+
+          // Feed tool results back to AI for next reasoning step
+          conversationMessages.push({
+            role: 'assistant',
+            content: fullContent || '',
+          })
+
+          // Add tool results as a user message so the AI can reason about them
+          const toolResultsSummary = toolResults
+            .map(r => `[${r.success ? 'OK' : 'ERROR'}] ${r.message}${r.data ? '\nData: ' + JSON.stringify(r.data).slice(0, 500) : ''}`)
+            .join('\n\n')
+
+          conversationMessages.push({
+            role: 'user',
+            content: `Tool results:\n${toolResultsSummary}\n\nContinue reasoning or provide your final answer.`,
+          })
+
+          // Add step indicator to streaming content
+          store.appendStreamingContent(
+            `\n\n---\n*Step ${stepCount}: executed ${toolResults.length} tool(s)*\n\n`
+          )
+
+        } else {
+          // No tool calls = final answer, exit loop
+          continueLoop = false
+        }
+      }
+
+      // If we hit the circuit breaker
+      if (stepCount >= MAX_REACT_STEPS && continueLoop) {
+        store.appendStreamingContent(
+          `\n\n---\n*Reached maximum reasoning steps (${MAX_REACT_STEPS}). Stopping.*`
+        )
+      }
+
+      // Clean up: strip any lingering tool blocks from the final message
+      const lastMsg = store.messages[store.messages.length - 1]
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.content = stripToolBlocks(lastMsg.content || '')
+      }
+
+      store.completeStreamingMessage()
+
+      // Update provider badge
+      try {
+        const currentRouter = await getRouter()
+        const lastUsed = currentRouter.getLastUsedProvider()
+        if (lastUsed) activeProviderRef.value = lastUsed
+      } catch { /* ignore */ }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get response'
+      store.failStreamingMessage(errorMessage)
+      console.error('[AIChat] ReAct error:', err)
+    } finally {
+      // Clean up abort controller
+      if (reactAbortController.value === abortController) {
+        reactAbortController.value = null
+      }
     }
   }
 
@@ -949,6 +1195,99 @@ export function useAIChat() {
   }
 
   // ============================================================================
+  // Agent Chains
+  // ============================================================================
+
+  /**
+   * Execute a predefined agent chain.
+   * Runs tool steps sequentially, shows progress, and sends final prompt to AI.
+   */
+  async function executeAgentChain(chainId: string): Promise<void> {
+    if (store.isGenerating) return
+
+    const chain = agentChains.chains.find((c) => c.id === chainId)
+    if (!chain) {
+      store.addAssistantMessage(`Chain not found: ${chainId}`)
+      return
+    }
+
+    // Clear input and add user message
+    store.inputText = ''
+    store.clearError()
+    store.addUserMessage(chain.name)
+
+    // Start streaming message to show progress
+    store.startStreamingMessage()
+
+    try {
+      // Execute the chain
+      console.log(`[AIChat] Starting agent chain: ${chain.name}`)
+      const { results, finalPrompt } = await agentChains.executeChain(chainId)
+
+      // Show tool results as they come in (add to message metadata)
+      const lastMsg = store.messages[store.messages.length - 1]
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.metadata = {
+          ...lastMsg.metadata,
+          toolResults: results.map((r, i) => {
+            const step = chain.steps[i]
+            const toolName = step.type === 'tool' ? step.tool : 'prompt'
+            return {
+              success: r.success,
+              message: r.message,
+              data: r.data,
+              tool: toolName || 'unknown',
+              type: 'read' as const,
+            }
+          }),
+        } as any
+      }
+
+      // If there's a final prompt, send it to the AI
+      if (finalPrompt) {
+        // Update streaming content with a loading message
+        store.appendStreamingContent('Analyzing results...')
+
+        // Send the prompt through the AI
+        const router = await getRouter()
+        const aiMessages: RouterChatMessage[] = [
+          { role: 'system', content: 'You are FlowState AI, a friendly productivity assistant. Respond concisely.' },
+          { role: 'user', content: finalPrompt },
+        ]
+
+        let fullResponse = ''
+        for await (const chunk of router.chatStream(aiMessages, {
+          taskType: 'chat',
+          forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+          model: selectedModel.value || undefined,
+        })) {
+          fullResponse += chunk.content
+        }
+
+        // Replace loading message with AI response
+        const cleanResponse = stripToolBlocks(fullResponse)
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = cleanResponse
+          store.streamingContent = cleanResponse
+        }
+      } else {
+        // No final prompt — just show tool results
+        const summary = `Completed chain "${chain.name}" with ${results.length} steps.`
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = summary
+          store.streamingContent = summary
+        }
+      }
+
+      store.completeStreamingMessage()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Chain execution failed'
+      store.failStreamingMessage(errorMessage)
+      console.error('[AIChat] Agent chain error:', err)
+    }
+  }
+
+  // ============================================================================
   // Panel Management
   // ============================================================================
 
@@ -1137,6 +1476,8 @@ export function useAIChat() {
 
     // Message actions
     sendMessage,
+    sendMessageWithReAct,
+    abortReAct,
     clearMessages: store.clearMessages,
     clearError: store.clearError,
 
@@ -1156,6 +1497,12 @@ export function useAIChat() {
     // Personality
     aiPersonality,
     setPersonality,
+
+    // Agent chains
+    executeAgentChain,
+    agentChains: agentChains.chains,
+    chainExecution: agentChains.currentExecution,
+    abortChain: agentChains.abortChain,
 
     // Lifecycle
     initialize,

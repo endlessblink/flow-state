@@ -293,9 +293,9 @@
 
 ---
 
-### TASK-1223: AI Chat Model Selection UX Redesign (🔄 IN PROGRESS)
+### ~~TASK-1223~~: AI Chat Model Selection UX Redesign (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-09)
 
 **Problem**: AI provider/model selection dropdown is confusing and shows incorrect state:
 1. Red health dots are misleading — red on OR/Local looks like "broken/offline" even when just unchecked

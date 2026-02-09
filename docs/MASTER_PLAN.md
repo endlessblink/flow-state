@@ -207,7 +207,9 @@
 
 **Root Cause**: `startTimer()` in `timer.ts` unconditionally calls `clearExistingSession()` and creates a brand new session with full duration.
 
-**Fix**: Add `switchTask()` method that changes the task association on the running session without resetting the countdown. Update all play button call sites to use `switchTask()` when a timer is already active.
+**Fix**: Add `switchTimerTask()` method that changes the task association on the running session without resetting the countdown. `startTimer()` now detects an active work session and calls `switchTimerTask()` instead of resetting.
+
+**Progress (2026-02-10):** Implemented `switchTimerTask()` in `timer.ts`. Added early return in `startTimer()` — when a work timer is active and a different task is requested, it switches the taskId, broadcasts to other devices, and persists to DB without resetting the countdown. Exposed `switchTimerTask` in store return. Needs user testing.
 
 ---
 
@@ -2775,6 +2777,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | **BUG-1291** | **P0** | **🔄 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
+| **BUG-1292** | **P0** | **📋 KDE widget doesn't reliably start break timer (pomoflow-kde repo)** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |

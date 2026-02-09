@@ -2284,7 +2284,9 @@ npm run tasks:bugs     # Filter by BUG type
 
 ### INQUIRY-1249: WhatsApp Bot Integration for Task Creation via WAHA + Groq (📋 PLANNED)
 
-**Priority**: P2 | **Status**: 📋 PLANNED (2026-02-08)
+**Priority**: P2 | **Status**: 📋 PLANNED (2026-02-10)
+
+**Progress (2026-02-10):** Researched WhatsApp bot options (NanoClaw, WAHA, Baileys, Twilio). Decided on WAHA + Groq + Oracle Cloud free tier stack. $0/month total cost. Dedicated WhatsApp number for zero ban risk.
 
 **Concept**: WhatsApp bot that receives forwarded messages, parses them with AI, and creates tasks in FlowState automatically.
 

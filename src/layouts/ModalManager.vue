@@ -391,6 +391,7 @@ const handleOpenTaskEdit = (event: Event) => {
 }
 
 const handleTaskContextMenu = (event: Event) => {
+  console.log('📋 [MODAL-MGR] handleTaskContextMenu received event')
   const customEvent = event as CustomEvent
   const { event: mouseEvent, task, instanceId, isCalendarEvent } = customEvent.detail
 

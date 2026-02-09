@@ -2,18 +2,22 @@
 /**
  * XP Progress Bar Component
  * FEATURE-1118: Displays XP progress toward next level with neon glow effect
+ * Live XP counter animations replace toast notifications
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
+import type { XpAnimationEvent } from '@/composables/useXpAnimations'
 
 const props = withDefaults(defineProps<{
   showLabel?: boolean
   compact?: boolean
   animated?: boolean
+  xpEvent?: XpAnimationEvent | undefined
 }>(), {
   showLabel: true,
   compact: false,
-  animated: true
+  animated: true,
+  xpEvent: undefined
 })
 
 const gamificationStore = useGamificationStore()
@@ -22,6 +26,29 @@ const levelInfo = computed(() => gamificationStore.levelInfo)
 const progressPercent = computed(() => levelInfo.value.progressPercent)
 const currentXp = computed(() => levelInfo.value.currentXp)
 const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
+
+// Floater state
+const floaters = ref<Array<{ id: string; amount: number; key: number }>>([])
+const isGlowing = ref(false)
+
+watch(() => props.xpEvent, (event) => {
+  if (event && event.type === 'xp_gain' && event.amount) {
+    // Add floater
+    const floater = { id: event.id, amount: event.amount, key: Date.now() }
+    floaters.value.push(floater)
+
+    // Trigger glow
+    isGlowing.value = true
+
+    // Clean up
+    setTimeout(() => {
+      floaters.value = floaters.value.filter(f => f.id !== floater.id)
+    }, 1500)
+    setTimeout(() => {
+      isGlowing.value = false
+    }, 800)
+  }
+})
 </script>
 
 <template>
@@ -32,16 +59,28 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
     <div
       v-if="showLabel && !compact"
       class="xp-label"
+      :class="{ 'xp-label--glow': isGlowing }"
     >
       <span class="xp-current">{{ currentXp.toLocaleString() }}</span>
       <span class="xp-separator">/</span>
       <span class="xp-target">{{ xpForNext.toLocaleString() }} XP</span>
+
+      <!-- XP Floaters -->
+      <TransitionGroup name="xp-floater">
+        <span
+          v-for="floater in floaters"
+          :key="floater.key"
+          class="xp-floater"
+        >
+          +{{ floater.amount }}
+        </span>
+      </TransitionGroup>
     </div>
 
     <div class="xp-bar-track">
       <div
         class="xp-bar-fill"
-        :class="{ animated }"
+        :class="{ animated, 'xp-bar-fill--pulse': isGlowing }"
         :style="{ width: `${progressPercent}%` }"
       />
       <div
@@ -74,6 +113,7 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
 }
 
 .xp-label {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: var(--space-1);
@@ -83,6 +123,13 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
 .xp-current {
   color: rgba(var(--neon-cyan), 1);
   font-weight: var(--font-semibold);
+  transition: transform 0.2s ease-out, text-shadow 0.2s ease-out;
+}
+
+/* XP Label glow on gain */
+.xp-label--glow .xp-current {
+  text-shadow: 0 0 8px rgba(var(--neon-cyan), 0.8);
+  transform: scale(1.1);
 }
 
 .xp-separator {
@@ -91,6 +138,44 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
 
 .xp-target {
   color: var(--gamification-text-secondary);
+}
+
+/* Floating +XP numbers */
+.xp-floater {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  color: rgba(var(--neon-cyan), 1);
+  text-shadow: 0 0 6px rgba(var(--neon-cyan), 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .xp-floater-enter-active {
+    animation: floatUp 1.5s ease-out forwards;
+  }
+
+  .xp-floater-leave-active {
+    display: none;
+  }
+
+  @keyframes floatUp {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: translateY(-16px) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-28px) scale(0.9);
+    }
+  }
 }
 
 .xp-bar-track {
@@ -114,6 +199,19 @@ const xpForNext = computed(() => levelInfo.value.xpForNextLevel)
 
 .xp-bar-fill.animated {
   animation: xpGlow 2s ease-in-out infinite;
+}
+
+/* Bar pulse on XP gain */
+@media (prefers-reduced-motion: no-preference) {
+  .xp-bar-fill--pulse {
+    animation: barPulse 0.6s ease-out;
+  }
+
+  @keyframes barPulse {
+    0% { filter: brightness(1); }
+    30% { filter: brightness(1.6); }
+    100% { filter: brightness(1); }
+  }
 }
 
 .xp-bar-glow {

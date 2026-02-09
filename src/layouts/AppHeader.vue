@@ -50,16 +50,35 @@
         <!-- FEATURE-1118: Gamification Widgets -->
         <template v-if="settingsStore.gamificationEnabled">
           <div class="gamification-widgets">
-            <button
+            <!-- TASK-1287: Per-widget tooltip wrappers (div replaces button for per-widget hover) -->
+            <div
               class="gamification-trigger"
               :class="{ 'gamification-trigger--glow': isIntense }"
-              title="Open Gamification Panel"
+              role="group"
+              tabindex="0"
               @click="showGamificationPanel = !showGamificationPanel"
+              @keydown.enter="showGamificationPanel = !showGamificationPanel"
             >
-              <LevelBadge />
-              <XpBar v-if="showAtIntensity('moderate')" class="header-xp-bar" />
-              <StreakCounter v-if="showAtIntensity('moderate')" />
-            </button>
+              <GamificationTooltipWrapper :disabled="!showAtIntensity('moderate')" :panel-open="showGamificationPanel">
+                <LevelBadge :level-event="latestLevelEvent" />
+                <template #tooltip><LevelTooltipContent /></template>
+              </GamificationTooltipWrapper>
+
+              <GamificationTooltipWrapper v-if="showAtIntensity('moderate')" :panel-open="showGamificationPanel">
+                <XpBar class="header-xp-bar" :xp-event="latestXpEvent" />
+                <template #tooltip><XpTooltipContent /></template>
+              </GamificationTooltipWrapper>
+
+              <GamificationTooltipWrapper v-if="showAtIntensity('moderate')" :panel-open="showGamificationPanel">
+                <StreakCounter :shield-event="latestShieldEvent" />
+                <template #tooltip><StreakTooltipContent /></template>
+              </GamificationTooltipWrapper>
+
+              <GamificationTooltipWrapper v-if="showAtIntensity('moderate') && hasChallenges" :panel-open="showGamificationPanel">
+                <ChallengePips />
+                <template #tooltip><ChallengeTooltipContent /></template>
+              </GamificationTooltipWrapper>
+            </div>
 
             <!-- Gamification Panel Dropdown -->
             <div
@@ -241,8 +260,14 @@ import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-n
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
-import { LevelBadge, XpBar, StreakCounter, GamificationPanel, AchievementsModal, ShopModal } from '@/components/gamification'
+import { LevelBadge, XpBar, StreakCounter, GamificationPanel, AchievementsModal, ShopModal, GamificationTooltipWrapper, ChallengePips } from '@/components/gamification'
+import LevelTooltipContent from '@/components/gamification/tooltips/LevelTooltipContent.vue'
+import XpTooltipContent from '@/components/gamification/tooltips/XpTooltipContent.vue'
+import StreakTooltipContent from '@/components/gamification/tooltips/StreakTooltipContent.vue'
+import ChallengeTooltipContent from '@/components/gamification/tooltips/ChallengeTooltipContent.vue'
 import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
+import { useXpAnimations } from '@/composables/useXpAnimations'
+import { useChallengesStore } from '@/stores/challenges'
 import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 
 const router = useRouter()
@@ -250,7 +275,12 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
+const challengesStore = useChallengesStore()
 const { showAtIntensity, isIntense } = useCyberflowTheme()
+const { latestXpEvent, latestLevelEvent, latestShieldEvent } = useXpAnimations()
+
+// TASK-1287: Whether challenge pips should show
+const hasChallenges = computed(() => challengesStore.hasActiveChallenges)
 
 // FEATURE-1118: Gamification panel/modal states
 const showGamificationPanel = ref(false)

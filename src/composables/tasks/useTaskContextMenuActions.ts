@@ -223,30 +223,38 @@ export function useTaskContextMenuActions(
         })
 
         if (taskId && !isBatch) {
+            // Step 1: Create calendar instance (may fail independently)
             try {
-                // BUG-1090: AWAIT to ensure instance is persisted before navigation
                 console.log('🎯 [CONTEXT-MENU] Starting task now, creating calendar instance...')
                 await taskStore.startTaskNowWithUndo(taskId)
-                console.log('🎯 [CONTEXT-MENU] Task instance created, starting timer...')
+                console.log('🎯 [CONTEXT-MENU] Task instance created successfully')
+            } catch (error) {
+                console.error('🎯 [CONTEXT-MENU] Failed to create calendar instance:', error)
+                // Continue to start timer anyway - the task exists even if instance creation failed
+            }
 
-                // BUG-1051: AWAIT for timer sync
+            // Step 2: Start timer (independent of instance creation)
+            try {
+                console.log('🎯 [CONTEXT-MENU] Starting timer...')
                 await timerStore.startTimer(taskId, timerStore.settings.workDuration, false)
-                console.log('🎯 [CONTEXT-MENU] Timer started, navigating...')
+                console.log('🎯 [CONTEXT-MENU] Timer started successfully')
+            } catch (error) {
+                console.error('🎯 [CONTEXT-MENU] Failed to start timer:', error)
+            }
 
-                // BUG-1090: Use query param instead of event to avoid race condition
-                // The event was dispatched before CalendarView mounted, causing it to miss
+            // Step 3: Navigate to calendar
+            try {
                 if (router.currentRoute.value.name !== 'calendar') {
                     console.log('🎯 [CONTEXT-MENU] Navigating to calendar with startNow param')
                     await router.push({ path: '/calendar', query: { startNow: 'true' } })
                 } else {
-                    // Already on calendar - dispatch event directly
                     console.log('🎯 [CONTEXT-MENU] Already on calendar, dispatching event')
                     window.dispatchEvent(new CustomEvent('start-task-now', {
                         detail: { taskId }
                     }))
                 }
             } catch (error) {
-                console.error('🎯 [CONTEXT-MENU] startTaskNow ERROR:', error)
+                console.error('🎯 [CONTEXT-MENU] Navigation failed:', error)
             }
         } else {
             console.warn('🎯 [CONTEXT-MENU] startTaskNow skipped:', {

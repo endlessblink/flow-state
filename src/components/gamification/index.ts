@@ -15,6 +15,10 @@ export { default as AchievementsModal } from './AchievementsModal.vue'
 export { default as ShopModal } from './ShopModal.vue'
 export { default as GamificationToasts } from './GamificationToasts.vue'
 
+// Tooltip system (TASK-1287)
+export { default as GamificationTooltipWrapper } from './GamificationTooltipWrapper.vue'
+export { default as ChallengePips } from './ChallengePips.vue'
+
 // Challenge system (FEATURE-1132)
 export { default as ChallengeCard } from './ChallengeCard.vue'
 export { default as DailyChallengesPanel } from './DailyChallengesPanel.vue'

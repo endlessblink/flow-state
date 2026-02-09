@@ -181,6 +181,8 @@
 
 **Files**: `src/views/CalendarView.vue`
 
+**Progress (2026-02-10):** Root cause identified and fixed — added missing `getWeekEventStyle` and `isCurrentWeekTimeCell` to `provide('calendar-helpers')`. Type-check passes. Awaiting user verification.
+
 ---
 
 ### BUG-1197: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)

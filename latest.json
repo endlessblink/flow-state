@@ -1,11 +1,11 @@
 {
-  "version": "1.2.36",
-  "notes": "Crash stability fixes: panic=unwind, release logging, error notification throttling, close handler timeout, curl permissions, sync interval guard",
-  "pub_date": "2026-02-08T16:15:06.720Z",
+  "version": "1.2.42",
+  "notes": "FEATURE-1223 Phase 3: conversation history, full-screen AI chat, agent chains, ReAct loop, challenge narrator, inline actions",
+  "pub_date": "2026-02-09T09:17:28.081Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXlJQk9xSUZxbG1sRTN4R09mOU05Ly9IeVRJbWs1TjNhcDg2QjBUMi9HRC9wN2tYQnRZT010ZFRvQnpRZGc4dVhXVjhqZWpPSzhrU2hEOE5ZMm9rc0FjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNTY3MzA2CWZpbGU6Rmxvd1N0YXRlXzEuMi4zNl9hbWQ2NC5BcHBJbWFnZQpmMFpzSkVzaDhNRys0UTZQL0Q2ZGh0T0hGc3BTb1N6OWNReHViSjBiVVB6ZnhHTm5MNjZvSW5PRHhPT0pKSkFSNE5MTWNGSmYyK1VEZDQ2bElBTHJBdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.36_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS94Ukt2Rnk0eXNmclpWNzJseGdRM2NmYkFlZ0tmNEM3R0NDcFVVQ2hRS1RNOTJTNHY0c05QVnVYQnZQQWUrOWR3UVdlSk1YUnhtTElzR3JHRGdCblFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNjI4NjQ3CWZpbGU6Rmxvd1N0YXRlXzEuMi40Ml9hbWQ2NC5BcHBJbWFnZQp3MFpHeVlEdDlVVlBOdkdDRHZWaUluNmxObTN2ZDRzQWR2dGprd2FPb2o1b0drTzVuN255STNuL0EyU3o3NzM5dlFYd3B6blBlemhEOW1OV01VQWhDdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.42_amd64.AppImage"
     }
   }
 }

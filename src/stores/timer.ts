@@ -438,17 +438,43 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   // Timer Control Actions
+
+  /**
+   * TASK-1287: Switch the timer's associated task without resetting the countdown.
+   * Only changes the taskId on the running session and persists to DB.
+   */
+  const switchTimerTask = async (taskId: string) => {
+    if (!currentSession.value) return
+    console.log('🍅 [TIMER] switchTimerTask:', { from: currentSession.value.taskId, to: taskId })
+    currentSession.value.taskId = taskId
+    broadcastSession()
+    await saveTimerSessionWithLeadership()
+  }
+
   const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
     console.log('🍅 [TIMER] startTimer called:', { taskId, duration, isBreak })
 
+    // TASK-1287: If a work timer is already running, just switch the task — don't reset
+    if (currentSession.value?.isActive && !currentSession.value.isBreak && !isBreak
+        && currentSession.value.taskId !== taskId) {
+      await switchTimerTask(taskId)
+      return
+    }
+
     // User's explicit action takes precedence - clear any existing session
-    await clearExistingSession()
+    try {
+      await clearExistingSession()
+    } catch (error) {
+      console.warn('🍅 [TIMER] clearExistingSession failed, continuing anyway:', error)
+      // Don't block timer start because of DB cleanup failure
+    }
 
     const claimedLeadership = crossTabSync.claimTimerLeadership()
     console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
     if (!claimedLeadership) {
-      console.warn('🍅 [TIMER] Blocked: Could not claim cross-tab leadership')
-      return
+      // BUG-1291: Don't silently abort for user-initiated timer starts
+      // In single-window Tauri mode, stale leadership state shouldn't block the user
+      console.warn('🍅 [TIMER] Leadership claim failed but proceeding - user action takes precedence')
     }
     isLeader.value = true
 
@@ -608,35 +634,22 @@ export const useTimerStore = defineStore('timer', () => {
       ? (taskName ? `Break finished! Ready to work on "${taskName}"?` : 'Break finished! Ready to work?')
       : (taskName ? `Great work on "${taskName}"! Time for a break.` : 'Great work! Time for a break.')
 
-    // Try Tauri native notification first (best UX on desktop with native OS sound)
-    // BUG-1112: Only show Tauri notification when KDE widget is NOT active
-    // When the KDE widget is connected, it handles its own notifications
-    if (isTauri() && !isKdeWidgetActive.value) {
-      try {
-        const { sendNotification, isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification')
-
-        let hasPermission = await isPermissionGranted()
-        if (!hasPermission) {
-          const permission = await requestPermission()
-          hasPermission = permission === 'granted'
-        }
-
-        if (hasPermission) {
-          sendNotification({
-            title: 'Session Complete! 🍅',
-            body: notificationBody,
-            sound: 'default'  // Plays native OS notification sound
-          })
-          console.log('🍅 [TIMER] Showed Tauri native notification with sound')
-          return  // Don't fall through to browser notifications
-        }
-      } catch (err) {
-        console.warn('🍅 [TIMER] Tauri notification failed, falling back:', err)
-        // Fall through to Service Worker / browser notification
-      }
-    } else if (isTauri() && isKdeWidgetActive.value) {
-      console.log('🍅 [TIMER] KDE widget is active, skipping Tauri notification (widget handles it)')
+    // BUG-1289: Use Browser Notification API instead of tauri-plugin-notification
+    // The Tauri notification plugin panics on Linux (block_on inside tokio runtime).
+    // Browser Notification API works in Tauri webview on all platforms.
+    // BUG-1112: Only show notification when KDE widget is NOT active
+    if (isTauri() && isKdeWidgetActive.value) {
+      console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
       return  // KDE widget shows its own notification
+    }
+
+    if (isTauri() && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('Session Complete! 🍅', {
+        body: notificationBody,
+        icon: '/favicon.ico'
+      })
+      console.log('🍅 [TIMER] Showed browser notification (Tauri webview)')
+      return
     }
 
     // Try Service Worker notification (supports action buttons)
@@ -1052,7 +1065,7 @@ export const useTimerStore = defineStore('timer', () => {
     isTimerActive, isPaused, currentTaskId, displayTime, currentTaskName,
     sessionTypeIcon, tabDisplayTime, sessionStatusText,
     timerPercentage, faviconStatus, tabTitleWithTimer,
-    startTimer, pauseTimer, resumeTimer, stopTimer, completeSession,
+    startTimer, switchTimerTask, pauseTimer, resumeTimer, stopTimer, completeSession,
     requestNotificationPermission, playStartSound, playEndSound,
     // TASK-1009: Expose handler for app initialization to use in consolidated Realtime subscription
     handleRemoteTimerUpdate

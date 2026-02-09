@@ -1,10 +1,11 @@
 /**
  * TASK-1219: Shared notification delivery utility
- * 2-tier delivery: Tauri native → Browser Notification API
- * Extracted from timer.ts:611-690 pattern
+ * Uses Browser Notification API (works in both Tauri webview and browsers).
+ *
+ * BUG-1289: tauri-plugin-notification v2.3.3 on Linux calls block_on() inside
+ * the tokio runtime, causing a fatal panic: "Cannot start a runtime from within
+ * a runtime". The Browser Notification API avoids this by not going through Rust.
  */
-
-import { isTauri } from '@/composables/useTauriStartup'
 
 interface DeliveryOptions {
   title: string
@@ -14,38 +15,12 @@ interface DeliveryOptions {
 }
 
 /**
- * Deliver a notification via the best available channel.
- * Tier 1: Tauri native notification (desktop app)
- * Tier 2: Browser Notification API (fallback)
+ * Deliver a notification via the Browser Notification API.
+ * Works in Tauri webview (all platforms) and browsers.
  */
 export async function deliverNotification(options: DeliveryOptions): Promise<void> {
   const { title, body, tag, sound = true } = options
 
-  // Tier 1: Tauri native notification
-  if (isTauri()) {
-    try {
-      const { sendNotification, isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification')
-
-      let hasPermission = await isPermissionGranted()
-      if (!hasPermission) {
-        const permission = await requestPermission()
-        hasPermission = permission === 'granted'
-      }
-
-      if (hasPermission) {
-        sendNotification({
-          title,
-          body,
-          sound: sound ? 'default' : undefined
-        })
-        return
-      }
-    } catch (err) {
-      console.warn('[TIME-BLOCK] Tauri notification failed, falling back:', err)
-    }
-  }
-
-  // Tier 2: Browser Notification API
   if (!('Notification' in window)) return
 
   if (Notification.permission === 'granted') {

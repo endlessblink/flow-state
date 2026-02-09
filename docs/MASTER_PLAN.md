@@ -151,6 +151,24 @@
 
 ---
 
+### ~~BUG-1289~~: Tauri App Crashes on Startup — Notification Plugin Panic (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-10)
+
+**Problem**: Tauri desktop app crashes seconds after opening with: `Cannot start a runtime from within a runtime` in `tauri_plugin_notification::Notification::show`.
+
+**Root Cause**: `tauri-plugin-notification` v2.3.3 on Linux calls `block_on()` inside the tokio runtime when showing a notification. `useTimeBlockNotifications.ts` calls `tick()` immediately on startup, which triggers `deliverNotification()` → Tauri `sendNotification()` → Rust panic.
+
+**Fix**: Disabled `tauri-plugin-notification` entirely. All notification calls now use the Browser `Notification` API which works in Tauri webviews without going through Rust.
+- `src/utils/notificationDelivery.ts` — removed Tauri plugin tier, use Browser API only
+- `src/stores/timer.ts` — replaced Tauri `sendNotification` with Browser `Notification`
+- `src-tauri/src/lib.rs` — commented out `tauri_plugin_notification::init()`
+- `src-tauri/Cargo.toml` — commented out `tauri-plugin-notification` dependency
+
+**Deployed**: v1.2.39 via `deploy-tauri-update.sh`
+
+---
+
 ### BUG-1290: Week View Not Loading (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-09)
@@ -178,6 +196,18 @@
 2. **Drag stale detection** (`useCanvasInteractions.ts`): In `onNodeDragStop`, detect when `node.parentNode` doesn't match `task.parentId`. Restore correct position and skip processing.
 
 **Files**: `src/composables/canvas/useCanvasSync.ts`, `src/composables/canvas/useCanvasInteractions.ts`
+
+---
+
+### TASK-1287: Play Button Should Switch Timer Task Without Resetting (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-10)
+
+**Problem**: Clicking the play button on a different task resets the Pomodoro timer to full duration instead of just switching the associated task. Expected: if 15 min remain on Task A and user clicks play on Task B, the timer should continue at 15 min but now be associated with Task B.
+
+**Root Cause**: `startTimer()` in `timer.ts` unconditionally calls `clearExistingSession()` and creates a brand new session with full duration.
+
+**Fix**: Add `switchTask()` method that changes the task association on the running session without resetting the countdown. Update all play button call sites to use `switchTask()` when a timer is already active.
 
 ---
 
@@ -2741,6 +2771,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
+| **BUG-1291** | **P0** | **🔄 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
@@ -3526,6 +3557,29 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 - Suppressed nagging "EXPOSED" toast per Distraction Test
 
 **Progress (2026-02-08):** Phases 1-3 complete + P0 anti-chore constants applied. 624 tests passing, zero TS errors. Next: P1 items (streak multiplier, corruption XP modifier, partial boss credit).
+
+---
+
+### BUG-1291: Timer & Context Menu Broken Across Views (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Symptoms** (4 bugs, likely shared root causes):
+1. **Calendar play button**: Pressing play icon on a calendar task doesn't start the timer
+2. **Context menu "Start" button**: Creates calendar instance (moves task) but timer doesn't start
+3. **Calendar right-click**: No context menu appears when right-clicking a calendar task
+4. **Canvas play button**: Pressing play on canvas doesn't reliably start timer in calendar
+
+**Root Cause Analysis**:
+- Timer bugs (1, 2, 4): `timerStore.startTimer()` fails silently — likely `clearExistingSession()` async failure or error in `startTaskNowWithUndo()` preventing timer from being called
+- Context menu bug (3): Global `task-context-menu` event dispatch exists and ModalManager listens, but event may not reach handler or task lookup may fail silently
+
+**Files**:
+- `src/composables/calendar/useCalendarTimerIntegration.ts` — Calendar play button handler
+- `src/composables/tasks/useTaskContextMenuActions.ts` — "Start" and "Timer" context menu actions
+- `src/composables/calendar/useCalendarInteractionHandlers.ts` — Right-click event dispatch
+- `src/stores/timer.ts` — `startTimer()` with `clearExistingSession` + `claimTimerLeadership`
+- `src/layouts/ModalManager.vue` — Global task context menu handler
 
 ---
 

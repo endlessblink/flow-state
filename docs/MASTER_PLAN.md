@@ -2342,17 +2342,20 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 **Implementation Plan**:
 
 *Database (Supabase):*
-- [ ] `pinned_tasks` table (id, user_id, title, description, project_id, priority, sort_order, created_at)
-- [ ] RPC function `get_quick_tasks()` — returns pinned + top N frequent tasks, merged and deduplicated
+- [x] `pinned_tasks` table (id, user_id, title, description, project_id, priority, sort_order, created_at) ✅
+- [ ] RPC function `get_quick_tasks()` — returns pinned + top N frequent tasks, merged and deduplicated (skipped — client-side merge used instead)
 
 *Main App:*
-- [ ] `useQuickTasks.ts` composable — calls RPC, manages pin/unpin
-- [ ] Quick Task selector UI component (accessible from timer area)
-- [ ] Pin/unpin action in task context menu
+- [x] `useQuickTasks.ts` composable — fetches pins from Supabase, merges with frequent tasks client-side ✅
+- [x] Quick Task selector UI component (`QuickTaskDropdown.vue` in timer area) ✅
+- [x] Pin/unpin action in task context menu (`MoreSubmenu.vue` + `TaskContextMenu.vue`) ✅
+- [x] Quick-add input for pinning new tasks directly from dropdown ✅
 - [ ] Respect active filters (project, status, priority)
 
+**Progress (2026-02-08):** Main app implementation complete — `pinned_tasks` table with RLS applied to local + VPS, composable, dropdown component with quick-add, context menu pin action. Content cutoff fix applied. Needs version bump + deploy. KDE widget integration still pending (separate repo).
+
 *KDE Widget (pomoflow-kde repo):*
-- [ ] ComboBox dropdown calling Supabase RPC
+- [ ] ComboBox dropdown querying `pinned_tasks` via PostgREST REST API
 - [ ] Widget config filters affect results
 - [ ] Separate refresh timer (60s) from timer poll (2s)
 

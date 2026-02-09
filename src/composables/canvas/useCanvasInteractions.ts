@@ -628,9 +628,9 @@ export function useCanvasInteractions(deps?: {
                     // When node has parentNode, node.position is RELATIVE, not absolute
                     // computedPosition is preferred; fallback calculates from parent's absolute
                     const rawAbsolutePos = computeNodeAbsolutePosition(node, taskAllGroups)
-                    // BUG-1209: Round to grid to prevent cumulative micro-drift from snap-to-grid
+                    // BUG-1209/TASK-1289: Snap to 16px grid to prevent cumulative micro-drift
                     // (CanvasView uses 16px grid — store should always save grid-aligned values)
-                    const absolutePos = { x: Math.round(rawAbsolutePos.x), y: Math.round(rawAbsolutePos.y) }
+                    const absolutePos = { x: Math.round(rawAbsolutePos.x / 16) * 16, y: Math.round(rawAbsolutePos.y / 16) * 16 }
 
                     // 2. Build spatial task with explicit dimensions for center-based containment
                     const spatialTask = {

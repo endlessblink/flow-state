@@ -57,6 +57,9 @@ export function useCanvasOperationState() {
             ;(window as any).__FlowStateIsSettling = true
         }
 
+        // TASK-1289: Use DRAG_SETTLE_TIMEOUT_MS (3000ms) instead of 800ms to match
+        // the pendingWrite guard. The previous 800ms left a 2.2s gap where realtime
+        // echo could trigger syncStoreToCanvas with stale positions.
         const settleTimeout = window.setTimeout(() => {
             if (state.value.type === 'drag-settling') {
                 state.value = { type: 'idle' }
@@ -69,7 +72,7 @@ export function useCanvasOperationState() {
                 pendingUpdates.value = []
                 updates.forEach(update => update())
             }
-        }, 800)
+        }, DRAG_SETTLE_TIMEOUT_MS)
 
         state.value = { type: 'drag-settling', nodeIds, settleTimeout }
     }

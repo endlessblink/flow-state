@@ -238,8 +238,8 @@ onUnmounted(() => {
   user-select: none;
   /* Clean shadow for depth */
   box-shadow:
-    0 var(--space-3) var(--space-6) var(--shadow-md),
-    0 var(--space-1_5) var(--space-3) var(--shadow-md);
+    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
+    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12);
 
   box-sizing: border-box;
   display: block;
@@ -291,8 +291,8 @@ onUnmounted(() => {
   transform: translate3d(0, calc(-1 * var(--space-0_5)), 0);
   /* Enhanced shadow on hover - v0.9.0 style */
   box-shadow:
-    0 var(--space-4) var(--space-8) var(--shadow-strong),
-    0 var(--space-2) var(--space-4) var(--shadow-md);
+    0 var(--space-4) var(--space-8) rgba(0, 0, 0, 0.4),
+    0 var(--space-2) var(--space-4) rgba(0, 0, 0, 0.12);
   cursor: grab;
 }
 
@@ -305,7 +305,7 @@ onUnmounted(() => {
   border: var(--space-0_5) solid var(--color-navigation) !important;
   box-shadow:
     0 0 var(--space-5) var(--color-navigation),
-    0 var(--space-2) var(--space-8) var(--shadow-strong) !important;
+    0 var(--space-2) var(--space-8) rgba(0, 0, 0, 0.4) !important;
   animation: pulse-connection 2s infinite;
   cursor: crosshair;
 }
@@ -318,12 +318,12 @@ onUnmounted(() => {
   0%, 100% {
     box-shadow:
       0 0 var(--space-5) var(--color-navigation),
-      0 var(--space-2) var(--space-8) var(--shadow-strong);
+      0 var(--space-2) var(--space-8) rgba(0, 0, 0, 0.4);
   }
   50% {
     box-shadow:
       0 0 var(--space-7_5) var(--color-navigation),
-      0 var(--space-3) var(--space-12) var(--shadow-strong);
+      0 var(--space-3) var(--space-12) rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -416,28 +416,28 @@ onUnmounted(() => {
 
 /* Priority-based glow effects on card outline */
 .priority-high {
-  border-color: var(--color-danger-soft) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
   box-shadow:
-    0 var(--space-3) var(--space-6) var(--shadow-md),
-    0 var(--space-1_5) var(--space-3) var(--shadow-md),
+    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
+    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
     0 0 var(--space-5) rgba(239, 68, 68, 0.25),
     inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.1);
 }
 
 .priority-medium {
-  border-color: var(--color-orange-soft) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
   box-shadow:
-    0 var(--space-3) var(--space-6) var(--shadow-md),
-    0 var(--space-1_5) var(--space-3) var(--shadow-md),
+    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
+    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
     0 0 var(--space-5) rgba(245, 158, 11, 0.25),
     inset 0 0 0 var(--space-0_5) rgba(245, 158, 11, 0.1);
 }
 
 .priority-low {
-  border-color: var(--color-blue-soft) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
   box-shadow:
-    0 var(--space-3) var(--space-6) var(--shadow-md),
-    0 var(--space-1_5) var(--space-3) var(--shadow-md),
+    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
+    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
     0 0 var(--space-5) rgba(59, 130, 246, 0.25),
     inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.1);
 }
@@ -445,8 +445,8 @@ onUnmounted(() => {
 .timer-active {
   border: none !important;
   box-shadow:
-    0 var(--space-4) var(--space-8) var(--shadow-strong),
-    0 var(--space-2) var(--space-4) var(--shadow-md),
+    0 var(--space-4) var(--space-8) rgba(0, 0, 0, 0.4),
+    0 var(--space-2) var(--space-4) rgba(0, 0, 0, 0.12),
     0 0 var(--space-6) var(--blue-shadow) !important;
 }
 
@@ -465,7 +465,7 @@ onUnmounted(() => {
 
 .status-done::before {
   /* Slightly darker/muted purple backdrop for completed tasks */
-  background: var(--overlay-backdrop);
+  background: rgba(38, 35, 52, 0.70);
 }
 
 .status-in-progress {

@@ -52,10 +52,6 @@
         {{ taskCount }}
         <span v-if="isCollapsed && taskCount > 0" class="hidden-indicator" :title="`${taskCount} hidden tasks`">📦</span>
       </div>
-      <!-- DEBUG: Show group ID for deletion debugging -->
-      <span class="debug-id" style="position: absolute; top: calc(-1 * var(--space-4_5)); right: var(--space-1); font-size: var(--text-2xs); color: var(--text-muted); font-family: monospace;">
-        {{ (props.data as any)?.id?.slice(0, 8) }} · d:{{ (props.data as any)?.directTaskCount }} a:{{ (props.data as any)?.aggregatedTaskCount }}
-      </span>
     </div>
 
     <!-- TASK-141: ADD SLOT FOR CHILD NODES (CRITICAL FOR VUE FLOW NESTING) -->
@@ -185,21 +181,6 @@ const handleDateSelect = (timestamp: number | null) => {
   showDatePicker.value = false
 }
 
-// DEBUG: Watch for count changes to verify reactivity pipeline
-watch(
-  () => [props.data?.directTaskCount, props.data?.aggregatedTaskCount],
-  (newVal, oldVal) => {
-    if (newVal[0] !== oldVal?.[0] || newVal[1] !== oldVal?.[1]) {
-      console.log('[DEBUG HEADER REACT]', props.data?.id, {
-        direct: newVal[0],
-        aggregated: newVal[1],
-        oldDirect: oldVal?.[0],
-        oldAggregated: oldVal?.[1],
-      })
-    }
-  }
-)
-
 // TASK-130: Compute upcoming date for day-of-week groups
 const dayOfWeekDateSuffix = computed(() => {
   // Use local name ref for immediate reactivity
@@ -323,7 +304,7 @@ const handleResizeEnd = (event: unknown) => {
   border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.35) !important;
   border-radius: var(--radius-lg);
   /* BUG-1216: backdrop-filter removed for performance */
-  background: var(--surface-elevated) !important;
+  background: rgba(45, 48, 58, 0.92) !important;
   position: relative;
   z-index: 1;
   /* TASK-073: Outer line via outline for double-border effect */
@@ -360,14 +341,14 @@ const handleResizeEnd = (event: unknown) => {
 .section-node.selected,
 .section-node:focus-within {
   border-color: var(--accent-primary) !important;
-  outline: var(--space-0_5) solid var(--color-purple-soft);
+  outline: var(--space-0_5) solid rgba(99, 102, 241, 0.4);
   outline-offset: var(--space-0_75);
   box-shadow:
     0 var(--space-5) var(--space-14) rgba(var(--color-slate-900), 0.55),
     0 var(--space-2_5) var(--space-7) rgba(var(--color-slate-900), 0.35),
     0 0 var(--space-25) var(--space-6_25) currentColor,
     /* Accent glow for selection */
-    0 0 var(--space-5) var(--space-1) var(--color-purple-soft),
+    0 0 var(--space-5) var(--space-1) rgba(99, 102, 241, 0.4),
     inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.12);
 }
 
@@ -581,12 +562,12 @@ const handleResizeEnd = (event: unknown) => {
 /* TASK-073: Collapsed + selected state with accent outline */
 .section-node.collapsed.vue-flow__node--selected {
   border-color: var(--accent-primary) !important;
-  outline: var(--space-0_5) solid var(--color-purple-soft);
+  outline: var(--space-0_5) solid rgba(99, 102, 241, 0.4);
   outline-offset: var(--space-0_75);
   box-shadow:
     0 var(--space-4) var(--space-12) rgba(var(--color-slate-900), 0.5),
     0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.3),
-    0 0 var(--space-5) var(--space-1) var(--color-purple-soft);
+    0 0 var(--space-5) var(--space-1) rgba(99, 102, 241, 0.4);
 }
 
 /* Visual hint for collapsed sections */

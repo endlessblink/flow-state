@@ -2,16 +2,20 @@
 /**
  * Level Badge Component
  * FEATURE-1118: Displays current level with glowing neon effect
+ * Live level-up ring animation replaces toast notifications
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
+import type { XpAnimationEvent } from '@/composables/useXpAnimations'
 
 const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
   showPulse?: boolean
+  levelEvent?: XpAnimationEvent | undefined
 }>(), {
   size: 'md',
-  showPulse: false
+  showPulse: false,
+  levelEvent: undefined
 })
 
 const gamificationStore = useGamificationStore()
@@ -22,16 +26,25 @@ const sizeClasses = computed(() => ({
   md: 'level-badge--md',
   lg: 'level-badge--lg'
 }[props.size]))
+
+const isLevelingUp = ref(false)
+
+watch(() => props.levelEvent, (event) => {
+  if (event && event.type === 'level_up') {
+    isLevelingUp.value = true
+    setTimeout(() => { isLevelingUp.value = false }, 2000)
+  }
+})
 </script>
 
 <template>
   <div
     class="level-badge"
     :class="[sizeClasses, { 'level-badge--pulse': showPulse }]"
-    :title="`Level ${level}`"
   >
     <span class="level-number">{{ level }}</span>
     <div class="level-glow" />
+    <div v-if="isLevelingUp" class="level-up-ring" />
   </div>
 </template>
 
@@ -89,6 +102,62 @@ const sizeClasses = computed(() => ({
     transparent 70%
   );
   pointer-events: none;
+}
+
+/* Level-up ring animation */
+.level-up-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-full);
+  border: 2px solid rgba(var(--neon-magenta), 0.8);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .level-up-ring {
+    animation: levelUpRing 1.5s ease-out forwards;
+  }
+
+  @keyframes levelUpRing {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+      border-width: 2px;
+    }
+    50% {
+      transform: scale(1.6);
+      opacity: 0.6;
+      border-width: 1px;
+    }
+    100% {
+      transform: scale(2.2);
+      opacity: 0;
+      border-width: 0.5px;
+    }
+  }
+}
+
+/* Override the badge glow during level-up */
+.level-badge:has(.level-up-ring) {
+  box-shadow: 0 0 12px rgba(var(--neon-magenta), 0.6),
+              0 0 24px rgba(var(--neon-magenta), 0.3);
+}
+
+.level-badge:has(.level-up-ring) .level-number {
+  color: rgba(var(--neon-magenta), 1);
+  text-shadow: 0 0 8px rgba(var(--neon-magenta), 0.8);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .level-badge:has(.level-up-ring) .level-number {
+    animation: levelNumberPop 0.4s ease-out;
+  }
+
+  @keyframes levelNumberPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
 }
 
 /* Hover effect */

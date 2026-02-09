@@ -30,6 +30,7 @@ interface ActiveTimeBlock {
 
 // Module-level singleton guard
 let isInitialized = false
+let tickCount = 0
 
 const POLL_INTERVAL_MS = 15_000  // 15 seconds
 // Tolerance: don't fire milestones that are more than 2 minutes old
@@ -257,8 +258,12 @@ export function useTimeBlockNotifications() {
    */
   function tick(): void {
     try {
+      tickCount++
       const settings = getSettings()
-      if (!settings?.enabled) return
+      if (!settings?.enabled) {
+        if (tickCount <= 3) console.log('[TIME-BLOCK] Disabled in settings, skipping tick')
+        return
+      }
 
       // Midnight reset
       const today = getTodayStr()
@@ -268,13 +273,40 @@ export function useTimeBlockNotifications() {
       }
 
       // DND check
-      if (isInDND()) return
+      if (isInDND()) {
+        if (tickCount <= 3) console.log('[TIME-BLOCK] DND active, skipping tick')
+        return
+      }
 
       const now = Date.now()
       const blocks = getActiveTimeBlocks()
 
+      // Diagnostic: log every tick for the first 4 ticks, then every 20th tick
+      if (tickCount <= 4 || tickCount % 20 === 0) {
+        const tasks = Array.isArray(taskStore._rawTasks) ? taskStore._rawTasks : []
+        const tasksWithInstances = tasks.filter(t => t.instances?.length)
+        const tasksWithSchedule = tasks.filter(t => t.scheduledDate === today)
+        console.log(`[TIME-BLOCK] Tick #${tickCount}: ${blocks.length} blocks found | ${tasks.length} total tasks | ${tasksWithInstances.length} with instances | ${tasksWithSchedule.length} with scheduledDate=today(${today})`)
+
+        if (blocks.length === 0 && (tasksWithInstances.length > 0 || tasksWithSchedule.length > 0)) {
+          // We have tasks but no blocks detected — log WHY
+          for (const task of tasksWithInstances.slice(0, 3)) {
+            const todayInst = task.instances?.filter(i => i?.scheduledDate === today)
+            console.log(`[TIME-BLOCK] Task "${task.title}": ${task.instances?.length} instances, ${todayInst?.length} for today`, todayInst?.map(i => ({
+              date: i.scheduledDate,
+              time: i.scheduledTime,
+              duration: i.duration,
+              status: i.status
+            })))
+          }
+          for (const task of tasksWithSchedule.slice(0, 3)) {
+            console.log(`[TIME-BLOCK] Legacy task "${task.title}": scheduledDate=${task.scheduledDate} scheduledTime=${task.scheduledTime} duration=${task.estimatedDuration}`)
+          }
+        }
+      }
+
       if (blocks.length > 0) {
-        console.log(`[TIME-BLOCK] Tick: ${blocks.length} active block(s) today`, blocks.map(b => ({
+        console.log(`[TIME-BLOCK] Active blocks:`, blocks.map(b => ({
           task: b.taskTitle,
           start: b.startTime.toLocaleTimeString(),
           end: b.endTime.toLocaleTimeString(),
@@ -296,6 +328,7 @@ export function useTimeBlockNotifications() {
 
           // Fire if trigger time has passed and we're within the tolerance window
           if (now >= triggerMs && now - triggerMs <= LATE_TOLERANCE_MS) {
+            console.log(`[TIME-BLOCK] 🔔 FIRING milestone "${milestone.id}" for "${block.taskTitle}"`)
             shownMilestones.value.add(key)
             fireMilestone(milestone, block)
           }

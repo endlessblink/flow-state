@@ -39,8 +39,19 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
    * 3. Start the timer via timerStore
    */
   const startTimerOnCalendarEvent = async (calEvent: CalendarEvent) => {
+    console.log('🎯 [CALENDAR-TIMER] startTimerOnCalendarEvent called:', {
+      taskId: calEvent.taskId,
+      instanceId: calEvent.instanceId,
+      instanceStatus: calEvent.instanceStatus,
+      taskStatus: calEvent.taskStatus
+    })
+
     const task = taskStore.tasks.find(t => t.id === calEvent.taskId)
-    if (!task) return
+    if (!task) {
+      console.error('🎯 [CALENDAR-TIMER] Task not found in store:', calEvent.taskId,
+        'Available tasks:', taskStore.tasks.length)
+      return
+    }
 
     const isInstanceCompleted = calEvent.instanceStatus === 'completed' || calEvent.taskStatus === 'done'
     let targetInstanceId = calEvent.instanceId
@@ -76,8 +87,13 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
       timerGrowthMap.value.set(targetInstanceId, 0)
     }
 
-    // Start the timer
-    await timerStore.startTimer(calEvent.taskId)
+    // Start the timer (wrap in try/catch)
+    try {
+      await timerStore.startTimer(calEvent.taskId)
+      console.log('🎯 [CALENDAR-TIMER] Timer started successfully for task:', calEvent.taskId)
+    } catch (error) {
+      console.error('🎯 [CALENDAR-TIMER] Failed to start timer:', error)
+    }
   }
 
   // Watch timer's remaining time to update growth map every minute

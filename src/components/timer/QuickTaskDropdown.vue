@@ -392,9 +392,7 @@ watch(isOpen, (open) => {
     flex: 1;
     font-size: var(--text-sm);
     color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
     unicode-bidi: plaintext;
     text-align: start;
 }

@@ -45,8 +45,24 @@ export function useCalendarInteractionHandlers(
         mouseEvent.preventDefault()
         mouseEvent.stopPropagation()
 
+        console.log('📋 [CALENDAR-CTX] handleEventContextMenu called:', {
+            taskId: calendarEvent.taskId,
+            instanceId: calendarEvent.instanceId,
+            mouseX: mouseEvent.clientX,
+            mouseY: mouseEvent.clientY
+        })
+
         const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
-        if (!task) return
+        if (!task) {
+            console.error('📋 [CALENDAR-CTX] Task NOT FOUND in store for calendarEvent:', {
+                taskId: calendarEvent.taskId,
+                totalTasks: taskStore.tasks.length,
+                taskIds: taskStore.tasks.slice(0, 5).map(t => t.id)
+            })
+            return
+        }
+
+        console.log('📋 [CALENDAR-CTX] Dispatching task-context-menu event for task:', task.title)
 
         // Dispatch global event for ModalManager to handle
         window.dispatchEvent(new CustomEvent('task-context-menu', {

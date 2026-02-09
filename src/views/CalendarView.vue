@@ -260,7 +260,7 @@ const currentTime = ref(new Date())
 // Destructure commonly used items from composables
 const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
-const { workingHours, weekDays, weekEvents, handleWeekDragOver, handleWeekDrop, startWeekResize } = weekView
+const { workingHours, weekDays, weekEvents, handleWeekDragOver, handleWeekDrop, startWeekResize, getWeekEventStyle, isCurrentWeekTimeCell } = weekView
 
 const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
 
@@ -322,7 +322,9 @@ provide('calendar-helpers', {
   getTasksForSlot,
   isTaskPrimarySlot,
   getSlotTaskStyle,
-  handleRemoveFromCalendar
+  handleRemoveFromCalendar,
+  getWeekEventStyle,
+  isCurrentWeekTimeCell
 })
 
 // Positioning and sizing for slot tasks are handled by getSlotTaskStyle from useCalendarDayView

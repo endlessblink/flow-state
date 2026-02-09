@@ -2,17 +2,21 @@
 /**
  * Streak Counter Component
  * FEATURE-1118: Displays current streak with flame animation
+ * Live shield flash animation for timer bonus application
  */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
-import { Flame, ShieldCheck, AlertTriangle } from 'lucide-vue-next'
+import { Flame, ShieldCheck, AlertTriangle, Shield } from 'lucide-vue-next'
+import type { XpAnimationEvent } from '@/composables/useXpAnimations'
 
 const props = withDefaults(defineProps<{
   showFreezes?: boolean
   compact?: boolean
+  shieldEvent?: XpAnimationEvent | undefined
 }>(), {
   showFreezes: true,
-  compact: false
+  compact: false,
+  shieldEvent: undefined
 })
 
 const gamificationStore = useGamificationStore()
@@ -24,6 +28,15 @@ const streakClass = computed(() => {
   if (streak >= 30) return 'streak--epic'
   if (streak >= 7) return 'streak--hot'
   return 'streak--normal'
+})
+
+const showShieldFlash = ref(false)
+
+watch(() => props.shieldEvent, (event) => {
+  if (event && event.type === 'shielded') {
+    showShieldFlash.value = true
+    setTimeout(() => { showShieldFlash.value = false }, 1500)
+  }
 })
 </script>
 
@@ -38,6 +51,10 @@ const streakClass = computed(() => {
         :class="{ 'streak-icon--animated': streakInfo.isActiveToday }"
         :size="compact ? 16 : 20"
       />
+      <!-- Shield flash when timer bonus applies -->
+      <Transition name="shield-flash">
+        <Shield v-if="showShieldFlash" :size="compact ? 14 : 16" class="shield-flash-icon" />
+      </Transition>
       <span class="streak-number">{{ streakInfo.currentStreak }}</span>
       <span
         v-if="!compact"
@@ -87,6 +104,7 @@ const streakClass = computed(() => {
 }
 
 .streak-main {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -99,6 +117,37 @@ const streakClass = computed(() => {
 
 .streak-icon--animated {
   animation: streakFlame 1s ease-in-out infinite;
+}
+
+/* Shield flash animation */
+.shield-flash-icon {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  color: rgba(var(--neon-cyan), 1);
+  filter: drop-shadow(0 0 6px rgba(var(--neon-cyan), 0.8));
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shield-flash-icon {
+    animation: shieldFlash 1.5s ease-out forwards;
+  }
+
+  @keyframes shieldFlash {
+    0% { opacity: 0; transform: scale(0.5); }
+    20% { opacity: 1; transform: scale(1.2); }
+    60% { opacity: 0.8; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.8); }
+  }
+
+  .shield-flash-enter-active {
+    animation: shieldFlash 1.5s ease-out forwards;
+  }
+
+  .shield-flash-leave-active {
+    display: none;
+  }
 }
 
 .streak-number {

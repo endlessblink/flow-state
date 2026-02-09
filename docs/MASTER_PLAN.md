@@ -250,19 +250,19 @@
 
 ---
 
-### TASK-1222: Canvas Overdue Task Collector (🔄 IN PROGRESS)
+### ~~TASK-1222~~: Canvas Overdue Task Collector (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-09)
 
-**Goal**: Button on canvas groups (+ right-click context menu) to collect all overdue tasks from outside the group and arrange them in an orderly grid/row to the left of the group. If tasks are already positioned there, new ones integrate into the existing layout. Also expose this action via AI chat ("get all overdue tasks out of groups in an orderly way").
+**Goal**: Right-click context menu option on canvas groups to collect ALL overdue tasks and arrange them in an orderly grid to the left of the group. Tasks inside the group are pulled out. Also exposed via AI chat tool.
 
-**Requirements**:
-1. Group button / right-click "Collect Overdue Tasks" option
-2. Find all overdue tasks NOT in the target group
-3. Position them in a neat grid/row to the LEFT of the group
-4. Respect existing tasks already positioned in that area (append, don't overlap)
-5. AI chat tool to trigger this action via natural language
-6. Respect canvas geometry invariants (drag handlers only mutate positions)
+**Implementation**:
+- `collectOverdueTasksNearGroup` in `useCanvasTaskActions.ts`
+- Collects ALL overdue tasks (including those inside target group), detaches them (parentId: null), arranges in grid left of group
+- Collision detection shifts grid left if existing tasks occupy the target area
+- fitView pans viewport to show results
+- AI chat tool `collect_overdue_to_group` triggers via CustomEvent
+- Context menu wired through CanvasContextMenu → CanvasContextMenus → CanvasView
 
 ---
 

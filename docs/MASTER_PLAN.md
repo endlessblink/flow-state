@@ -2771,7 +2771,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | Task | Priority | Description |
 |------|----------|-------------|
 | **TASK-1289** | **P0** | **🔄 Investigate severe task position drift episode** |
-| **TASK-1285** | **P0** | **🔄 Commit deploy safeguards & clean up 20 dead Claude hooks** |
+| ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |

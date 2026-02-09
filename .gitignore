@@ -96,3 +96,20 @@ backups/shadow.db-wal
 
 # Development screenshots in project root
 /*.png
+
+# Debug artifacts (prevent root clutter)
+/debug_*.txt
+/eslint_*.txt
+/node_debug.txt
+/independence_test_log.txt
+/repro_log.txt
+/structure_debug.txt
+/sync_debug.txt
+/unused-files.txt
+
+# Audit/report artifacts
+audit-reports/
+/eslint-*.json
+/full-dead-code.json
+/health-results.json
+/pwa-report.json

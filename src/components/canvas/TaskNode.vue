@@ -20,6 +20,7 @@
       'lod-3': isLOD3
     }"
     @click="handleClick"
+    @pointerdown="handlePointerDown"
     @mousedown="handleMouseDown"
     @contextmenu.prevent="handleContextMenu"
   >
@@ -183,6 +184,7 @@ const {
   toggleDescriptionExpanded,
   handleCheckboxClick,
   handleClick,
+  handlePointerDown,
   handleMouseDown,
   handleContextMenu,
   handleReschedule,

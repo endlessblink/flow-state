@@ -249,86 +249,48 @@ export function useCanvasSelection(deps: {
         return match ? { x: parseFloat(match[1]), y: parseFloat(match[2]), zoom: parseFloat(match[3]) } : { x: 0, y: 0, zoom: 1 }
     }
 
-    // --- BUG-1295: GLOBAL INTERCEPTOR FOR MODIFIER+CLICK ---
-    // Runs in CAPTURE phase to intercept events BEFORE Vue Flow's
-    // nodesselection-rect overlay can block them. This is the only way
-    // to handle Ctrl/Cmd/Shift+Click when multiple nodes are selected,
-    // because Vue Flow renders an overlay with pointer-events:all that
-    // covers all selected nodes and prevents clicks from reaching them.
-    const handleGlobalModifierClick = (e: MouseEvent) => {
-        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) return
+    // --- BUG-1295: POINTER-EVENTS BYPASS FOR MODIFIER+CLICK ---
+    // Vue Flow renders a `.vue-flow__nodesselection-rect` overlay with
+    // `pointer-events: all` that covers all selected nodes when 2+ are selected.
+    // This blocks ALL clicks from reaching individual nodes underneath.
+    //
+    // When Ctrl/Meta/Shift is held, we disable pointer-events on this overlay
+    // so clicks pass through to task nodes. The node-level handlers in
+    // useTaskNodeActions.ts (handlePointerDown, handleMouseDown, handleClick)
+    // then handle selection toggle with stopPropagation to prevent Vue Flow
+    // from also processing the event.
+    const setSelectionRectPointerEvents = (value: string) => {
+        const rects = document.querySelectorAll('.vue-flow__nodesselection-rect') as NodeListOf<HTMLElement>
+        rects.forEach(rect => { rect.style.pointerEvents = value })
+    }
 
-        const elements = document.elementsFromPoint(e.clientX, e.clientY)
-        const taskElement = elements.find(el =>
-            el.classList.contains('task-node') ||
-            el.classList.contains('vue-flow__node-taskNode')
-        )
-
-        if (taskElement) {
-            e.stopPropagation()
-            e.preventDefault()
-            let taskId = taskElement.getAttribute('data-task-id')
-
-            if (!taskId && taskElement.classList.contains('vue-flow__node-taskNode')) {
-                const inner = taskElement.querySelector('.task-node')
-                if (inner) taskId = inner.getAttribute('data-task-id')
-                if (!taskId) taskId = taskElement.getAttribute('data-id')
-            } else if (!taskId && taskElement.classList.contains('task-node')) {
-                taskId = taskElement.getAttribute('data-task-id')
-            }
-
-            if (taskId) {
-                const currentSelection = [...canvasStore.selectedNodeIds]
-                let newSelection: string[]
-
-                if (currentSelection.includes(taskId)) {
-                    newSelection = currentSelection.filter(id => id !== taskId)
-                } else {
-                    newSelection = [...currentSelection, taskId]
-                }
-
-                canvasStore.setSelectedNodes(newSelection)
-
-                if (nodes.value) {
-                    const selectionChanges = nodes.value.map((n: any) => ({
-                        id: n.id,
-                        type: 'select' as const,
-                        selected: newSelection.includes(n.id)
-                    }))
-                    applyNodeChanges(selectionChanges)
-                }
-            }
+    const handleModifierKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Control' || e.key === 'Meta' || e.key === 'Shift') {
+            setSelectionRectPointerEvents('none')
         }
     }
 
-    // BUG-1295: Also intercept click events with modifiers in capture phase.
-    // The mousedown interceptor handles the actual toggle, but Vue Flow also
-    // processes the subsequent click event on the nodesselection-rect overlay,
-    // which can clear all selection (especially for Ctrl+Click).
-    // This listener prevents that by eating the click event when modifiers are held.
-    const handleGlobalModifierClickBlock = (e: MouseEvent) => {
-        if (!e.ctrlKey && !e.metaKey && !e.shiftKey) return
-
-        const elements = document.elementsFromPoint(e.clientX, e.clientY)
-        const isOnTaskNode = elements.some(el =>
-            el.classList.contains('task-node') ||
-            el.classList.contains('vue-flow__node-taskNode')
-        )
-
-        if (isOnTaskNode) {
-            e.stopPropagation()
-            e.preventDefault()
+    const handleModifierKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'Control' || e.key === 'Meta' || e.key === 'Shift') {
+            setSelectionRectPointerEvents('')
         }
+    }
+
+    // Safety: restore pointer-events when window loses focus (e.g., Alt+Tab while holding Ctrl)
+    const handleWindowBlur = () => {
+        setSelectionRectPointerEvents('')
     }
 
     onMounted(() => {
-        window.addEventListener('mousedown', handleGlobalModifierClick, true)
-        window.addEventListener('click', handleGlobalModifierClickBlock, true)
+        window.addEventListener('keydown', handleModifierKeyDown)
+        window.addEventListener('keyup', handleModifierKeyUp)
+        window.addEventListener('blur', handleWindowBlur)
     })
 
     onUnmounted(() => {
-        window.removeEventListener('mousedown', handleGlobalModifierClick, true)
-        window.removeEventListener('click', handleGlobalModifierClickBlock, true)
+        window.removeEventListener('keydown', handleModifierKeyDown)
+        window.removeEventListener('keyup', handleModifierKeyUp)
+        window.removeEventListener('blur', handleWindowBlur)
     })
 
     return {

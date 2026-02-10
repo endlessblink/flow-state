@@ -1840,6 +1840,20 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
+### BUG-1294: Canvas Ctrl+Click Toggle Selection Broken (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-10)
+
+**Problem**: Ctrl+Click on canvas tasks doesn't toggle individual selection (select/deselect). When multiple tasks are selected, Ctrl+Click should add/remove individual tasks from the selection.
+
+**Root Cause**: Double-toggle — Vue Flow handles multi-selection on mousedown (via `:multi-selection-key-code`), then TaskNode's `handleClick` toggles again on the click event. The `stopPropagation()` on click is too late — Vue Flow already processed selection during mousedown.
+
+**Fix**: Intercept mousedown for Ctrl/Meta (like Shift already is) and remove duplicate toggle from click handler.
+
+**Files**: `src/composables/canvas/node/useTaskNodeActions.ts`
+
+---
+
 ## Active Tasks (IN PROGRESS)
 
 ### TASK-1060: Infrastructure & E2E Sync Stability (🔄 IN PROGRESS)
@@ -2768,6 +2782,36 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
+### TASK-1292: Quick Task Creation in KDE Widget (👀 REVIEW)
+
+**Priority**: P0 | **Status**: 👀 REVIEW (2026-02-10) | **Repo**: `pomoflow-kde` (separate)
+
+**Feature**: Enhanced quick-capture functionality for the KDE Plasma widget with task creation and pinned task shortcuts.
+
+**Implementation**:
+1. **Quick-add input row** with two buttons:
+   - "+" button: Create task only (lands in Inbox)
+   - Play button: Create task + start timer immediately
+2. **Pinned tasks** as teal-bordered chip shortcuts below input:
+   - Tap chip: Find existing task by title OR create if doesn't exist + start timer
+   - Data persists via `pinned_tasks` table on VPS
+3. **Pin button** (📌) in task list delegate for quick pinning
+4. **Data sync**:
+   - `fetchPinnedTasks()` called on auth success, token refresh, and Refresh button
+   - Uses existing Supabase REST API (`/rest/v1/pinned_tasks`)
+
+**Architecture**:
+- Leverages existing Supabase auth (JWT token from timer sync)
+- POST to `/rest/v1/tasks` with `{ user_id, title, status: "planned", is_in_inbox: true }`
+- Task creation reuses pattern from TASK-1284 Phase 1
+- Pinned tasks query: `GET /rest/v1/pinned_tasks?user_id=eq.{uuid}&select=*&order=created_at.desc`
+
+**Files**: `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+
+**Progress (2026-02-10):** All features implemented. Quick-add input with create/play buttons functional. Pinned tasks chips display and trigger task find/create + timer start. Pin button in task list delegate works. Awaiting user testing.
+
+---
+
 ### FEATURE-1293: Catalog View UX/UI Redesign (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS
@@ -2802,7 +2846,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | **BUG-1291** | **P0** | **🔄 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
-| **BUG-1292** | **P0** | **📋 KDE widget doesn't reliably start break timer (pomoflow-kde repo)** |
+| ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
+| **TASK-1292** | **P0** | **👀 Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (pomoflow-kde repo)** |
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
@@ -3628,6 +3673,26 @@ TASK-1223 tokenization commit introduced broken CSS in TaskNode.vue and GroupNod
 - `src/composables/calendar/useCalendarInteractionHandlers.ts` — Right-click event dispatch
 - `src/stores/timer.ts` — `startTimer()` with `clearExistingSession` + `claimTimerLeadership`
 - `src/layouts/ModalManager.vue` — Global task context menu handler
+
+---
+
+### ~~BUG-1292~~: KDE Widget Intermittently Fails to Start Break Timer (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-10)
+
+**Root Cause**: When a work session completes, `onSessionComplete()` sets `hasActiveSession = false`, causing `syncTimer.interval` to switch from 2s to 30s polling. User clicks "Break" in notification → `notify.sh` POSTs new session to Supabase → widget won't discover it for up to 30 seconds.
+
+**Fix**: 6 targeted edits:
+1. Added `transitionUntil` property (timestamp-based 15s grace period)
+2. **Main fix**: `syncTimer.interval` now checks `sessionJustCompleted || Date.now() < transitionUntil`
+3. Grace period set in `onSessionComplete()` — 15s fast-poll window
+4. Empty-result guard during transition prevents UI flicker
+5. Error handling for non-200/non-401 responses in `fetchCurrentSession()`
+6. `notify.sh` now retries (2x with 1s delay) and logs to `/tmp/pomoflow-notify.log`
+
+**Files**:
+- `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
+- `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/scripts/notify.sh`
 
 ---
 

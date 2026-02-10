@@ -249,9 +249,14 @@ export function useCanvasSelection(deps: {
         return match ? { x: parseFloat(match[1]), y: parseFloat(match[2]), zoom: parseFloat(match[3]) } : { x: 0, y: 0, zoom: 1 }
     }
 
-    // --- GLOBAL INTERCEPTOR FOR SHIFT+CLICK ---
-    const handleGlobalShiftClick = (e: MouseEvent) => {
-        if (!e.shiftKey) return
+    // --- BUG-1295: GLOBAL INTERCEPTOR FOR MODIFIER+CLICK ---
+    // Runs in CAPTURE phase to intercept events BEFORE Vue Flow's
+    // nodesselection-rect overlay can block them. This is the only way
+    // to handle Ctrl/Cmd/Shift+Click when multiple nodes are selected,
+    // because Vue Flow renders an overlay with pointer-events:all that
+    // covers all selected nodes and prevents clicks from reaching them.
+    const handleGlobalModifierClick = (e: MouseEvent) => {
+        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) return
 
         const elements = document.elementsFromPoint(e.clientX, e.clientY)
         const taskElement = elements.find(el =>
@@ -261,6 +266,7 @@ export function useCanvasSelection(deps: {
 
         if (taskElement) {
             e.stopPropagation()
+            e.preventDefault()
             let taskId = taskElement.getAttribute('data-task-id')
 
             if (!taskId && taskElement.classList.contains('vue-flow__node-taskNode')) {
@@ -295,12 +301,34 @@ export function useCanvasSelection(deps: {
         }
     }
 
+    // BUG-1295: Also intercept click events with modifiers in capture phase.
+    // The mousedown interceptor handles the actual toggle, but Vue Flow also
+    // processes the subsequent click event on the nodesselection-rect overlay,
+    // which can clear all selection (especially for Ctrl+Click).
+    // This listener prevents that by eating the click event when modifiers are held.
+    const handleGlobalModifierClickBlock = (e: MouseEvent) => {
+        if (!e.ctrlKey && !e.metaKey && !e.shiftKey) return
+
+        const elements = document.elementsFromPoint(e.clientX, e.clientY)
+        const isOnTaskNode = elements.some(el =>
+            el.classList.contains('task-node') ||
+            el.classList.contains('vue-flow__node-taskNode')
+        )
+
+        if (isOnTaskNode) {
+            e.stopPropagation()
+            e.preventDefault()
+        }
+    }
+
     onMounted(() => {
-        window.addEventListener('mousedown', handleGlobalShiftClick, true)
+        window.addEventListener('mousedown', handleGlobalModifierClick, true)
+        window.addEventListener('click', handleGlobalModifierClickBlock, true)
     })
 
     onUnmounted(() => {
-        window.removeEventListener('mousedown', handleGlobalShiftClick, true)
+        window.removeEventListener('mousedown', handleGlobalModifierClick, true)
+        window.removeEventListener('click', handleGlobalModifierClickBlock, true)
     })
 
     return {

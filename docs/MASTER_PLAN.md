@@ -2849,6 +2849,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
 | **TASK-1292** | **P0** | **👀 Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (pomoflow-kde repo)** |
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
+| ~~**BUG-1294**~~ | **P1** | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
@@ -3693,6 +3694,24 @@ TASK-1223 tokenization commit introduced broken CSS in TaskNode.vue and GroupNod
 **Files**:
 - `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/ui/main.qml`
 - `~/.local/share/plasma/plasmoids/com.pomoflow.widget/contents/scripts/notify.sh`
+
+---
+
+### ~~BUG-1294~~: Calendar Play Button Shouldn't Reset Timer for Already-Running Task (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-10)
+
+**Problem**: Calendar play button would reset the timer or create duplicate timer instances when clicked on a task that already has a timer running.
+
+**Root Cause**: Calendar play button handler (`useCalendarTimerIntegration.ts`) didn't check if timer was already running for the clicked task. Combined with TASK-1287's same-task no-op guard being incomplete, this allowed timer resets.
+
+**Fix**: 2-file change:
+1. **src/stores/timer.ts** — Expanded TASK-1287 guard to be a true no-op when timer is already running for the same task (early return before any state changes)
+2. **src/composables/calendar/useCalendarTimerIntegration.ts** — Added early return in calendar play handler when timer is already running for the clicked task
+
+**Files**:
+- `src/stores/timer.ts`
+- `src/composables/calendar/useCalendarTimerIntegration.ts`
 
 ---
 

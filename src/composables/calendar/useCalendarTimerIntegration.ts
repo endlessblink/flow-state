@@ -53,6 +53,12 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
       return
     }
 
+    // BUG-1294: If timer is already running for this task, no-op — calendar block keeps growing
+    if (timerStore.isTimerActive && timerStore.currentTaskId === calEvent.taskId) {
+      console.log('🎯 [CALENDAR-TIMER] Timer already running for this task, no-op')
+      return
+    }
+
     const isInstanceCompleted = calEvent.instanceStatus === 'completed' || calEvent.taskStatus === 'done'
     let targetInstanceId = calEvent.instanceId
     let targetDuration = calEvent.duration

@@ -10,13 +10,14 @@
       </div>
       <div class="header-controls header-controls--minimal">
         <!-- View Type Switcher -->
-        <div class="view-type-switcher">
+        <div class="view-type-switcher" role="group" aria-label="View mode">
           <button
             v-for="option in viewTypeOptions"
             :key="option.value"
             class="view-type-btn"
             :class="{ active: currentViewType === option.value }"
             :title="option.label"
+            :aria-pressed="currentViewType === option.value"
             @click="currentViewType = option.value"
           >
             <component :is="option.icon" :size="16" :stroke-width="1.5" />
@@ -29,6 +30,8 @@
           class="filter-toggle icon-only"
           :class="{ active: showFilters }"
           title="Toggle filters"
+          aria-label="Toggle filters"
+          :aria-pressed="showFilters"
           @click="showFilters = !showFilters"
         >
           <SlidersHorizontal :size="20" :stroke-width="1.5" />
@@ -39,6 +42,8 @@
           class="done-column-toggle icon-only"
           :class="{ active: hideDoneTasks }"
           :title="hideDoneTasks ? 'Show done tasks' : 'Hide done tasks'"
+          aria-label="Hide done tasks"
+          :aria-pressed="hideDoneTasks"
           @click="handleToggleDoneColumn"
         >
           <CheckCircle v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.42",
-  "notes": "FEATURE-1223 Phase 3: conversation history, full-screen AI chat, agent chains, ReAct loop, challenge narrator, inline actions",
-  "pub_date": "2026-02-09T09:17:28.081Z",
+  "version": "1.2.48",
+  "notes": "v1.2.48: BUG-1295 canvas Ctrl+Click fix, BUG-1294 calendar timer fix",
+  "pub_date": "2026-02-10T12:03:25.569Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS94Ukt2Rnk0eXNmclpWNzJseGdRM2NmYkFlZ0tmNEM3R0NDcFVVQ2hRS1RNOTJTNHY0c05QVnVYQnZQQWUrOWR3UVdlSk1YUnhtTElzR3JHRGdCblFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNjI4NjQ3CWZpbGU6Rmxvd1N0YXRlXzEuMi40Ml9hbWQ2NC5BcHBJbWFnZQp3MFpHeVlEdDlVVlBOdkdDRHZWaUluNmxObTN2ZDRzQWR2dGprd2FPb2o1b0drTzVuN255STNuL0EyU3o3NzM5dlFYd3B6blBlemhEOW1OV01VQWhDdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.42_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXpWdHBINWlMOHRQT1gycWkrbldTeS9POEtpM1hzdmZBc1pRdXlPc1dXWW1HYmJVUGluVC84WGZnTFZ4bCszTUFDamZTYVVMUi94dVhPTnkrbXVUREFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNzI1MDA1CWZpbGU6Rmxvd1N0YXRlXzEuMi40OF9hbWQ2NC5BcHBJbWFnZQp0N2toU2RYbHBrdmJzL0x4KzNmWlhyY3RIbk1PN0huWkpxV21zTjRLQnlFRWs4ZVFyN21mdjFpUW42V3MxdXYrWWRSbFJPUE1qcTFnM0E3OHN6VS9Cdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.48_amd64.AppImage"
     }
   }
 }

@@ -47,7 +47,8 @@ describe('useCanvasOperationState', () => {
             operationState.startDrag(['1'])
             operationState.endDrag(['1'])
 
-            vi.advanceTimersByTime(800)
+            // TASK-1289: settling timeout increased from 800ms to DRAG_SETTLE_TIMEOUT_MS (3000ms)
+            vi.advanceTimersByTime(3000)
             expect(operationState.isIdle.value).toBe(true)
         })
     })

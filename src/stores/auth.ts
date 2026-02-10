@@ -642,10 +642,17 @@ export const useAuthStore = defineStore('auth', () => {
         refreshTimer = null
       }
 
-      const { error: signOutError } = await supabase.auth.signOut()
-      if (signOutError) throw signOutError
+      // FEATURE-1202: Use scope: 'local' for reliable logout.
+      // Server-side signOut can hang/fail when session was established via setSession()
+      // (e.g., after Google OAuth with manual token extraction).
+      // Local scope clears localStorage session — sufficient for logout.
+      try {
+        await supabase.auth.signOut({ scope: 'local' })
+      } catch (signOutErr) {
+        console.warn('[AUTH] supabase.auth.signOut() failed, clearing locally:', signOutErr)
+      }
 
-      // Clear auth state
+      // Always clear auth state regardless of signOut result
       user.value = null
       session.value = null
 

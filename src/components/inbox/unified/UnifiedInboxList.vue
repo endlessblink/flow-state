@@ -112,7 +112,10 @@ const props = defineProps<{
   (e: 'clearSelection'): void
 }>() ;// Virtual scrolling constants
 const ITEM_HEIGHT = 72 // Height of each task card in pixels
-const VIRTUAL_THRESHOLD = 50 // Only virtualize if more than this many items
+// BUG: Virtual scroll is broken — VueUse's containerProps are not bound to the DOM,
+// so useVirtualList always returns an empty list. Disabled by raising threshold.
+// TODO: Fix virtual scroll properly (bind containerProps to container element)
+const VIRTUAL_THRESHOLD = 10000 // Effectively disabled — virtual scroll implementation is broken
 const OVERSCAN = 5
 const selectedCount = computed(() => props.selectedTaskIds.size)
 

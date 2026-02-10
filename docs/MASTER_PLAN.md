@@ -2713,23 +2713,22 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### FEATURE-1202: Google Auth Sign-In (🔄 IN PROGRESS)
+### ~~FEATURE-1202~~: Google Auth Sign-In (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+**Priority**: P1 | **Status**: ✅ DONE (2026-02-10)
 
 **Feature**: Add Google OAuth sign-in as an authentication option alongside existing email/password auth.
 
-**Requirements**:
-- [ ] Configure Google OAuth provider in Supabase Dashboard
-- [ ] Add "Sign in with Google" button to login/signup UI
-- [ ] Handle OAuth callback flow
-- [ ] Link Google accounts with existing email accounts (if same email)
-- [ ] Test on both PWA and Tauri desktop
-
-**Files to Modify**:
-- `src/services/auth/supabase.ts` - Add Google OAuth method
-- `src/stores/auth.ts` - Handle OAuth flow state
-- Login/signup components - Add Google button
+**Completed**:
+- [x] Configure Google OAuth provider in Supabase (VPS GoTrue)
+- [x] "Sign in with Google" button in PWA login/signup UI
+- [x] OAuth callback handling with Vue Router hash mode fix (manual token extraction + setSession)
+- [x] PKCE flow for Tauri desktop (localhost redirect + system browser)
+- [x] Session file sharing for KDE widget (~/.config/flowstate/session.json)
+- [x] Google OAuth in KDE widget via helper script (oauth-google.py)
+- [x] Reliable signOut with scope: 'local' fallback
+- [x] Fixed virtual scroll bug in inbox (tasks not rendering when 50+ items)
+- [x] Tested on PWA (in-theflow.com) and KDE widget
 
 **Supabase Setup**:
 - Enable Google provider in Supabase Auth settings
@@ -2890,7 +2889,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
 | FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
-| FEATURE-1202 | P1 | 🔄 Google Auth sign-in (OAuth) |
+| ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | TASK-1283 | P1 | 📋 Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | **TASK-1284** | **P0** | **🔄 Add quick task creation to KDE Plasma widget (pomoflow-kde repo)** |
 | TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |

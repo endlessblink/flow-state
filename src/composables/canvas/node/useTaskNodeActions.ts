@@ -172,12 +172,23 @@ export function useTaskNodeActions(
         emit('contextMenu', event, props.task)
     }
 
+    // BUG-1295: Stop pointer event propagation to prevent Vue Flow's internal
+    // selection handlers from firing when multi-select modifiers are held.
+    // pointerdown fires BEFORE mousedown in the event sequence; if Vue Flow's
+    // node wrapper sees the pointerdown, it may reset or change selection
+    // before our mousedown handler runs.
+    const handlePointerDown = (event: PointerEvent) => {
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
+            event.stopPropagation()
+        }
+    }
+
     const handleMouseDown = (event: MouseEvent) => {
         // BUG-1295: Stop propagation on ALL multi-select modifier keys to prevent
         // Vue Flow from handling selection on mousedown (which causes double-toggle
         // when our handleClick also toggles on the click event).
-        // Note: The global capture interceptor in useCanvasSelection.ts handles
-        // the case where Vue Flow's selection-rect overlay blocks this handler.
+        // The pointer-events bypass in useCanvasSelection.ts disables the selection
+        // overlay when modifiers are held, allowing clicks to reach this handler.
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
             event.stopPropagation()
             triggerSelect(props.task, true)
@@ -296,6 +307,7 @@ export function useTaskNodeActions(
         toggleDescriptionExpanded,
         handleCheckboxClick,
         handleClick,
+        handlePointerDown, // BUG-1295
         handleMouseDown,
         handleContextMenu,
         handleReschedule, // TASK-282

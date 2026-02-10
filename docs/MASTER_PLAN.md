@@ -1840,17 +1840,17 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### BUG-1294: Canvas Ctrl+Click Toggle Selection Broken (🔄 IN PROGRESS)
+### BUG-1295: Canvas Ctrl+Click Toggle Selection Broken (🔄 IN PROGRESS)
 
 **Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-10)
 
 **Problem**: Ctrl+Click on canvas tasks doesn't toggle individual selection (select/deselect). When multiple tasks are selected, Ctrl+Click should add/remove individual tasks from the selection.
 
-**Root Cause**: Double-toggle — Vue Flow handles multi-selection on mousedown (via `:multi-selection-key-code`), then TaskNode's `handleClick` toggles again on the click event. The `stopPropagation()` on click is too late — Vue Flow already processed selection during mousedown.
+**Root Cause**: Vue Flow renders a `nodesselection-rect` overlay with `pointer-events: all` that covers ALL selected nodes, blocking clicks from reaching individual TaskNode components. The existing Shift+Click global capture interceptor handles this for Shift but not Ctrl/Meta. Additionally, Vue Flow's click handler on the selection rect clears all selection for Ctrl+Click.
 
-**Fix**: Intercept mousedown for Ctrl/Meta (like Shift already is) and remove duplicate toggle from click handler.
+**WIP Fix**: Extended global capture interceptor to handle Ctrl/Meta+Click (not just Shift). Added click capture blocker to prevent Vue Flow from clearing selection. Still has issues with Ctrl+Click deselecting all instead of individual toggle.
 
-**Files**: `src/composables/canvas/node/useTaskNodeActions.ts`
+**Files**: `src/composables/canvas/useCanvasSelection.ts`, `src/composables/canvas/node/useTaskNodeActions.ts`
 
 ---
 

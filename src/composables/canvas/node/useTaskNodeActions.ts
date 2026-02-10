@@ -146,12 +146,11 @@ export function useTaskNodeActions(
             return
         }
 
-        // Ctrl/Cmd+click toggles selection (for multi-select)
-        // CRITICAL: stopPropagation prevents Vue Flow from processing this click
-        // and overriding our custom multi-select behavior
+        // BUG-1295: Multi-select toggle was already handled in handleMouseDown
+        // (or the global capture interceptor in useCanvasSelection.ts).
+        // Just stop propagation to prevent Vue Flow from also processing the click.
         if (isMultiSelectClick) {
             event.stopPropagation()
-            triggerSelect(props.task, true)
             return
         }
 
@@ -174,11 +173,14 @@ export function useTaskNodeActions(
     }
 
     const handleMouseDown = (event: MouseEvent) => {
-        // BUG-MIX: Stop propagation on Shift+Mousedown to prevent Vue Flow Box Selection
-        if (event.shiftKey) {
+        // BUG-1295: Stop propagation on ALL multi-select modifier keys to prevent
+        // Vue Flow from handling selection on mousedown (which causes double-toggle
+        // when our handleClick also toggles on the click event).
+        // Note: The global capture interceptor in useCanvasSelection.ts handles
+        // the case where Vue Flow's selection-rect overlay blocks this handler.
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
             event.stopPropagation()
-            // Toggle selection logic immediately
-            triggerSelect(props.task, true) // Force multi-select toggle
+            triggerSelect(props.task, true)
         }
     }
 

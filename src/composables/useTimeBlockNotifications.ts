@@ -68,7 +68,7 @@ export function useTimeBlockNotifications() {
 
     // IMPORTANT: Use _rawTasks (unfiltered) — taskStore.tasks is filtered by
     // active smart view/project/status filters and would miss tasks not in the current view
-    const tasks = Array.isArray(taskStore._rawTasks) ? taskStore._rawTasks : []
+    const tasks = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : []
 
     for (const task of tasks) {
       // Path 1: Instance-based scheduling (primary path)
@@ -283,7 +283,7 @@ export function useTimeBlockNotifications() {
 
       // Diagnostic: log every tick for the first 4 ticks, then every 20th tick
       if (tickCount <= 4 || tickCount % 20 === 0) {
-        const tasks = Array.isArray(taskStore._rawTasks) ? taskStore._rawTasks : []
+        const tasks = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : []
         const tasksWithInstances = tasks.filter(t => t.instances?.length)
         const tasksWithSchedule = tasks.filter(t => t.scheduledDate === today)
         console.log(`[TIME-BLOCK] Tick #${tickCount}: ${blocks.length} blocks found | ${tasks.length} total tasks | ${tasksWithInstances.length} with instances | ${tasksWithSchedule.length} with scheduledDate=today(${today})`)
@@ -352,7 +352,7 @@ export function useTimeBlockNotifications() {
       enabled: settings.enabled,
       milestones: settings.milestones.map(m => `${m.id}(${m.enabled ? 'on' : 'off'})`),
       channels: settings.deliveryChannels,
-      totalTasks: taskStore._rawTasks?.length ?? 0
+      totalTasks: taskStore.rawTasks?.length ?? 0
     })
 
     // Run immediately once, then every 15 seconds

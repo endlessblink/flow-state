@@ -25,6 +25,8 @@
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
             @click="updatePriority('low')"
+            aria-label="Set priority to Low"
+            title="Set priority to Low"
           >
             Low
           </button>
@@ -32,6 +34,8 @@
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
             @click="updatePriority('medium')"
+            aria-label="Set priority to Medium"
+            title="Set priority to Medium"
           >
             Med
           </button>
@@ -39,6 +43,8 @@
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
             @click="updatePriority('high')"
+            aria-label="Set priority to High"
+            title="Set priority to High"
           >
             High
           </button>
@@ -49,6 +55,8 @@
             class="quick-date-btn"
             :class="{ active: isToday }"
             @click.stop="setToday"
+            aria-label="Set due date to Today"
+            title="Set due date to Today"
           >
             ☀️ Today
           </button>
@@ -56,6 +64,8 @@
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
             @click.stop="setTomorrow"
+            aria-label="Set due date to Tomorrow"
+            title="Set due date to Tomorrow"
           >
             🌅 +1
           </button>
@@ -63,6 +73,8 @@
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
             @click.stop="setNextWeek"
+            aria-label="Set due date to Next Week"
+            title="Set due date to Next Week"
           >
             📆 +7
           </button>
@@ -70,6 +82,8 @@
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
             @click.stop="clearDate"
+            aria-label="Clear due date"
+            title="Clear due date"
           >
             Clear
           </button>
@@ -331,6 +345,12 @@ function handleSwipeEnd() {
   font-weight: var(--font-semibold);
 }
 
+.priority-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus);
+}
+
 .date-shortcuts {
   display: flex;
   gap: var(--space-2_5);
@@ -361,6 +381,12 @@ function handleSwipeEnd() {
   border-color: var(--brand-primary);
   color: var(--brand-primary);
   font-weight: var(--font-semibold);
+}
+
+.quick-date-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus);
 }
 
 .quick-date-btn.clear-btn {

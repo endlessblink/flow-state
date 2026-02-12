@@ -84,7 +84,7 @@
               class="btn btn-ai btn-action"
               @click="openAIAssist"
             >
-              <Sparkles :size="14" />
+              <Sparkles :size="16" />
               AI Assist
             </button>
             <div class="spacer" />
@@ -467,12 +467,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
   justify-content: flex-end;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--overlay-component-bg) 20%,
-    var(--overlay-component-bg) 100%
-  );
+  background: var(--overlay-component-bg);
   border-top: 1px solid var(--border-subtle);
   z-index: 10;
   /* Ensure buttons don't overflow - account for scrollbar */

@@ -296,6 +296,42 @@ export async function getFailedOperations(): Promise<WriteOperation[]> {
 }
 
 /**
+ * BUG-1301: Recover operations stuck in 'syncing' status.
+ *
+ * If the app crashes or reloads while an operation is being synced,
+ * it gets stuck as 'syncing' forever because getPendingOperations()
+ * only returns 'pending' and 'failed' — never 'syncing'.
+ * This resets stale syncing operations back to 'pending' so they can retry.
+ *
+ * @param maxAgeMs Maximum age in ms before a syncing operation is considered stale (default: 60s)
+ * @returns Number of operations recovered
+ */
+export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
+  const db = getWriteQueueDB()
+  const cutoff = Date.now() - maxAgeMs
+
+  const staleOps = await db.operations
+    .where('status')
+    .equals('syncing')
+    .filter(op => !op.lastAttemptAt || op.lastAttemptAt < cutoff)
+    .toArray()
+
+  if (staleOps.length > 0) {
+    for (const op of staleOps) {
+      if (op.id) {
+        await updateOperation(op.id, {
+          status: 'pending',
+          retryCount: op.retryCount + 1
+        })
+      }
+    }
+    console.warn(`⚠️ [SYNC] BUG-1301: Recovered ${staleOps.length} stale syncing operation(s) back to pending`)
+  }
+
+  return staleOps.length
+}
+
+/**
  * Clear all failed operations (for corrupted entries that can't be fixed)
  * Also clears conflict and permanently stuck operations
  */
@@ -311,10 +347,13 @@ export async function clearFailedOperations(): Promise<number> {
     retryCount: op.retryCount
   })))
 
-  // Clear failed, conflict, AND any stuck operations with high retry counts
+  // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
+  // session crash and will never complete. Previously only cleared 'failed' and
+  // 'conflict', leaving orphaned 'syncing' ops stuck forever.
   const toDelete = allOps.filter(op =>
     op.status === 'failed' ||
     op.status === 'conflict' ||
+    op.status === 'syncing' ||
     op.retryCount >= 10 // Also clear anything stuck after 10+ retries
   )
 

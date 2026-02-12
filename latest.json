@@ -1,11 +1,11 @@
 {
-  "version": "1.2.49",
-  "notes": "BUG-1296: Fix time block notifications never firing — _rawTasks → rawTasks property name mismatch",
-  "pub_date": "2026-02-10T17:06:11.722Z",
+  "version": "1.2.52",
+  "notes": "Canvas drift fixes: stale parentId write-back, reconciliation race fix, legacy sync removal. Closes BUG-1061, BUG-1197, BUG-1203, BUG-1209, TASK-1289.",
+  "pub_date": "2026-02-12T18:50:58.922Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS9BYyt0UGdYMlRzVXRwdm5GUnpFcFJFMEFrYXpJcmFKTElieXR2QmxLWFN2aldGR0FaTE9lU2pEYjZkRHdUODh3ZjI5VmRCRlAzazJlUHVMM2ltbndzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNzQzMTcxCWZpbGU6Rmxvd1N0YXRlXzEuMi40OV9hbWQ2NC5BcHBJbWFnZQpOTXh4bjR3T0lhbFg3WVlCbXhmenE4K2J5NjBwQWZjc2oyWWFocUFtYTF2UWQ4YnIrbGpmTDhsYzlqb2plSDNsa0R1anJjYjJJZTZlUU5DZ0liRWJEQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.49_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTVIVTViR3ozaTA5WEh0OGJiUk9KeWNuR0RmUEdEWEVqaXNYTUpMcHRZUXBHZy9aYUpWWWs2bnc3blo3c2ZSQTcwbWswQ2swRWVEK3VHaDd0SUprbXc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwOTIyMjU4CWZpbGU6Rmxvd1N0YXRlXzEuMi41Ml9hbWQ2NC5BcHBJbWFnZQo2SHk2bGIrdXM2ZGE1M3d6YytYVU1ldW5CbnhjZTFuRk5BVmlBM3FEZFNkVDRxOGFMSGVBRUwzTndXYXZjcS9LNVM1OUM1dFYvbmtmUVVkNjJ6ZDFEQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.52_amd64.AppImage"
     }
   }
 }

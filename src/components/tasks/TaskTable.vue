@@ -107,6 +107,7 @@
 
             <div class="table-cell project-cell">
               <span
+                v-if="task.projectId"
                 class="project-emoji-badge"
                 :class="`project-visual--${getProjectVisual(task).type}`"
                 :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
@@ -123,13 +124,6 @@
                   class="project-emoji project-css-circle"
                   :style="{ '--project-color': getProjectVisual(task).color }"
                   :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-                />
-                <ProjectEmojiIcon
-                  v-else
-                  emoji="📁"
-                  size="xs"
-                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-                  class="project-emoji"
                 />
               </span>
             </div>
@@ -223,6 +217,7 @@
 
         <div class="table-cell project-cell">
           <span
+            v-if="task.projectId"
             class="project-emoji-badge"
             :class="`project-visual--${getProjectVisual(task).type}`"
             :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
@@ -239,13 +234,6 @@
               class="project-emoji project-css-circle"
               :style="{ '--project-color': getProjectVisual(task).color }"
               :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-            />
-            <ProjectEmojiIcon
-              v-else
-              emoji="📁"
-              size="xs"
-              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-              class="project-emoji"
             />
           </span>
         </div>
@@ -343,7 +331,7 @@ interface Props {
 const statusOptions = [
   { label: 'To Do', value: 'planned' },
   { label: 'In Progress', value: 'in_progress' },
-  { label: '✓', value: 'done' },
+  { label: 'Done', value: 'done' },
   { label: 'Backlog', value: 'backlog' },
   { label: 'On Hold', value: 'on_hold' }
 ]
@@ -512,7 +500,7 @@ onUnmounted(() => {
 
 .table-header {
   display: grid;
-  grid-template-columns: var(--space-10) 1fr var(--space-20) var(--space-30) var(--space-30) var(--space-25) var(--space-25);
+  grid-template-columns: 40px 1fr 80px 120px 120px 100px 100px;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background-color: var(--glass-bg-medium);
@@ -923,30 +911,6 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* ADHD-friendly: Status-colored left border for instant visual recognition */
-.table-row {
-  border-left: 4px solid transparent;
-}
-
-.table-row[data-status="planned"] {
-  border-left-color: var(--status-planned-border);
-}
-
-.table-row[data-status="in_progress"] {
-  border-left-color: var(--status-in-progress-border);
-}
-
-.table-row[data-status="done"] {
-  border-left-color: var(--status-done-border);
-}
-
-.table-row[data-status="backlog"] {
-  border-left-color: var(--status-backlog-border);
-}
-
-.table-row[data-status="on_hold"] {
-  border-left-color: var(--status-on-hold-border);
-}
 
 /* ADHD-friendly: Compact density for 40px rows */
 .task-table--compact .table-row {

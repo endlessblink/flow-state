@@ -169,6 +169,10 @@ export function useCanvasSync() {
      */
     const syncStoreToCanvas = (tasks?: Task[]) => {
         if (isSyncing.value) return
+        // BUG-1203: Skip re-sync triggered by stale parentId write-back.
+        // The write-back updates the task store, which fires watchers that call syncStoreToCanvas.
+        // Without this guard, we'd get an infinite loop: sync → detect stale → write-back → sync → ...
+        if (isWritingBackStaleParents.value) return
         isSyncing.value = true
 
         // BUG-1203: Collect stale parentId detections for deferred cleanup.
@@ -238,7 +242,6 @@ export function useCanvasSync() {
 
             // Commit updates (locks will prevent overwrites of dragged items)
             const batchResult = positionManager.batchUpdate(updates, 'remote-sync')
-            const successCount = batchResult?.successCount ?? 0
             const rejectedIds = batchResult?.rejectedIds ?? []
             if (rejectedIds.length > 0) {
                 console.log(`[CANVAS:SYNC] Deferred ${rejectedIds.length} locked nodes (will retry next sync)`)
@@ -464,10 +467,6 @@ export function useCanvasSync() {
                 }
 
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })
-
-                // Determine parent node for Vue Flow
-                // DRIFT LOGGING: Track original parentId before any modifications
-                const originalParentId = task.parentId
 
                 // SAFETY: Cycle Detection
                 if (parentId && hasParentCycle(task.id, parentId, groups)) {

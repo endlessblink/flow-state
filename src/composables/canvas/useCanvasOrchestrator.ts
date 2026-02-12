@@ -87,8 +87,7 @@ export function useCanvasOrchestrator() {
         onMoveEnd,
         applyNodeChanges,
         applyEdgeChanges,
-        screenToFlowCoordinate,
-        getIntersectingNodes
+        screenToFlowCoordinate
     } = useCanvasCore()
 
     const { hasInitialFit, operationLoading, operationError } = storeToRefs(canvasUiStore)

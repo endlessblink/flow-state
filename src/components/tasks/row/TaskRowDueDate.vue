@@ -150,12 +150,11 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: var(--space-5_5);
-  padding: 0 var(--space-1_5);
+  padding: var(--space-0_5) var(--space-1_5);
   font-size: var(--text-xs);
   color: rgba(var(--color-slate-50), 0.6);
   background: transparent;
-  border: var(--space-0_5) solid var(--border-subtle);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--duration-fast);
@@ -186,11 +185,11 @@ onUnmounted(() => {
 /* Overdue - red */
 .task-row__due-date--overdue {
   color: var(--color-danger);
-  border-color: rgba(var(--color-danger), 0.3);
+  border-color: var(--color-danger);
 }
 
 .task-row__due-date--overdue:hover {
-  border-color: rgba(var(--color-danger), 0.5);
+  border-color: var(--color-danger);
 }
 
 /* Today - yellow */

@@ -1,0 +1,41 @@
+{
+  "default": {
+    "name": "Neon District",
+    "ambientColor": "#0a0a1a",
+    "fogColor": "#0d0d2b",
+    "fogDensity": 0.02,
+    "floorColor": "#111122",
+    "neonPrimary": "#00ffff",
+    "neonSecondary": "#ff0066",
+    "neonAccent": "#7700ff",
+    "bloomIntensity": 1.2,
+    "chromaticAberration": 0.003,
+    "vignetteIntensity": 0.7
+  },
+  "corrupted": {
+    "name": "Corrupted Zone",
+    "ambientColor": "#1a0a0a",
+    "fogColor": "#2b0d0d",
+    "fogDensity": 0.04,
+    "floorColor": "#221111",
+    "neonPrimary": "#ff2040",
+    "neonSecondary": "#ff6600",
+    "neonAccent": "#ff0044",
+    "bloomIntensity": 1.8,
+    "chromaticAberration": 0.008,
+    "vignetteIntensity": 0.85
+  },
+  "victory": {
+    "name": "Clear Sky",
+    "ambientColor": "#0a1a2a",
+    "fogColor": "#0d1b3b",
+    "fogDensity": 0.01,
+    "floorColor": "#112233",
+    "neonPrimary": "#00ff88",
+    "neonSecondary": "#00ccff",
+    "neonAccent": "#44ffaa",
+    "bloomIntensity": 2.0,
+    "chromaticAberration": 0.001,
+    "vignetteIntensity": 0.4
+  }
+}

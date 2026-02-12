@@ -560,6 +560,9 @@ export const useTimerStore = defineStore('timer', () => {
   const completeSession = async () => {
     const session = currentSession.value
     if (!session) return
+    // BUG: Capture KDE widget state BEFORE clearing currentSession
+    // isKdeWidgetActive checks currentSession.value which gets set to null below
+    const wasKdeWidgetActive = isKdeWidgetActive.value
     pauseTimerInterval()
     pauseHeartbeat()
 
@@ -615,7 +618,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // TASK-1009: Send notification via Service Worker for action buttons
     // Browser Notification API doesn't support action buttons - only SW notifications do
-    await showTimerNotification(session.id, wasBreak, lastTaskId)
+    await showTimerNotification(session.id, wasBreak, lastTaskId, wasKdeWidgetActive)
 
     // TASK-1009: Removed auto-start behavior
     // User must explicitly choose via notification action buttons
@@ -625,7 +628,7 @@ export const useTimerStore = defineStore('timer', () => {
 
   // TASK-1009: Service Worker Notification with Action Buttons
   // BUG-1112: Enhanced to always show notification and log issues
-  const showTimerNotification = async (sessionId: string, wasBreak: boolean, taskId: string) => {
+  const showTimerNotification = async (sessionId: string, wasBreak: boolean, taskId: string, kdeActive: boolean = false) => {
     // Get task name for notification body
     let taskName: string | undefined
     if (taskId && taskId !== 'general' && taskId !== 'break') {
@@ -641,7 +644,7 @@ export const useTimerStore = defineStore('timer', () => {
     // The Tauri notification plugin panics on Linux (block_on inside tokio runtime).
     // Browser Notification API works in Tauri webview on all platforms.
     // BUG-1112: Only show notification when KDE widget is NOT active
-    if (isTauri() && isKdeWidgetActive.value) {
+    if (isTauri() && kdeActive) {
       console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
       return  // KDE widget shows its own notification
     }

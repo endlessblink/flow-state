@@ -720,7 +720,9 @@ export function useTaskOperations(
             duration: task.estimatedDuration || 60
         }
         // BUG-1090: AWAIT to ensure instance is persisted before navigation
-        await updateTask(taskId, { instances: [newInstance], status: 'in_progress' })
+        // BUG-1291: APPEND new instance instead of replacing — preserves existing start times
+        const existingInstances = task.instances || []
+        await updateTask(taskId, { instances: [...existingInstances, newInstance], status: 'in_progress' })
     }
 
     const moveTaskToSmartGroup = async (taskId: string, type: string) => {

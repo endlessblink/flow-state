@@ -1,22 +1,21 @@
 import { ref, watch, onUnmounted, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent } from '@/types/tasks'
 
 /**
  * TASK-1285: Timer-Calendar Integration
+ * BUG-1291: Fix — no move/duplicate, resize to actual time
  *
  * Bridges the timer and calendar systems:
  * - Start timer from calendar event play button
  * - Grow the time block visually in real-time while timer runs
- * - If clicked instance is completed, create a new instance at current time
- * - Persist final duration on timer stop/complete
+ * - If clicked instance is completed, reuse it (don't create new)
+ * - Persist final duration on timer stop/complete using cumulative time
  */
 export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
   const taskStore = useTaskStore()
   const timerStore = useTimerStore()
-  const { getDateString } = useCalendarCore()
 
   // Track which instance is being grown by the timer
   // Maps instanceId → extra minutes added by timer
@@ -27,15 +26,33 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
     taskId: string
     instanceId: string
     originalDuration: number
-    startedAt: number // timestamp when timer started
+    startedAt: number // timestamp when THIS Pomodoro started
+    instanceStartTimestamp: number // when the calendar block originally started (parsed from scheduledTime)
   } | null>(null)
+
+  /**
+   * Parse an instance's scheduledDate + scheduledTime into a timestamp.
+   * Returns Date.now() as fallback if parsing fails.
+   */
+  const parseInstanceStartTimestamp = (scheduledDate: string, scheduledTime?: string): number => {
+    try {
+      const [year, month, day] = scheduledDate.split('-').map(Number)
+      if (scheduledTime) {
+        const [hours, minutes] = scheduledTime.split(':').map(Number)
+        return new Date(year, month - 1, day, hours, minutes).getTime()
+      }
+      return new Date(year, month - 1, day).getTime()
+    } catch {
+      return Date.now()
+    }
+  }
 
   /**
    * Start timer from a calendar event's play button
    *
    * Logic:
    * 1. If the clicked instance is NOT completed → track it for growth
-   * 2. If the clicked instance IS completed → create NEW instance at current time
+   * 2. If the clicked instance IS completed → reset to in_progress, reuse it
    * 3. Start the timer via timerStore
    */
   const startTimerOnCalendarEvent = async (calEvent: CalendarEvent) => {
@@ -64,23 +81,20 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
     let targetDuration = calEvent.duration
 
     if (isInstanceCompleted && calEvent.instanceId) {
-      // Instance already done — create a NEW instance at current time
-      const now = new Date()
-      const todayStr = getDateString(now)
-      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-      const newInstance = taskStore.createTaskInstance(calEvent.taskId, {
-        scheduledDate: todayStr,
-        scheduledTime: timeStr,
-        duration: task.estimatedDuration || 30,
+      // BUG-1291: Reuse existing instance — reset status, keep original time
+      console.log('🎯 [CALENDAR-TIMER] Instance completed, resetting to in_progress (reusing)')
+      taskStore.updateTaskInstance(calEvent.taskId, calEvent.instanceId, {
         status: 'scheduled'
       })
-
-      if (newInstance?.id) {
-        targetInstanceId = newInstance.id
-        targetDuration = newInstance.duration || task.estimatedDuration || 30
-      }
+      targetInstanceId = calEvent.instanceId
+      targetDuration = calEvent.duration
     }
+
+    // Look up the actual instance to get scheduledDate/scheduledTime for cumulative tracking
+    const instance = task.instances?.find(i => i.id === targetInstanceId)
+    const instanceStartTs = instance
+      ? parseInstanceStartTimestamp(instance.scheduledDate, instance.scheduledTime)
+      : Date.now()
 
     // Set up growth tracking
     if (targetInstanceId) {
@@ -88,7 +102,8 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
         taskId: calEvent.taskId,
         instanceId: targetInstanceId,
         originalDuration: targetDuration,
-        startedAt: Date.now()
+        startedAt: Date.now(),
+        instanceStartTimestamp: instanceStartTs
       }
       timerGrowthMap.value.set(targetInstanceId, 0)
     }
@@ -103,6 +118,7 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
   }
 
   // Watch timer's remaining time to update growth map every minute
+  // Growth is cumulative: total elapsed since instance original start
   let lastGrowthMinute = 0
 
   const stopWatcher = watch(
@@ -111,13 +127,16 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
       if (!activeTimerTracking.value || remainingTime === undefined || remainingTime === null) return
 
       const tracking = activeTimerTracking.value
-      const elapsedMs = Date.now() - tracking.startedAt
-      const elapsedMinutes = Math.floor(elapsedMs / 60000)
+      // Cumulative elapsed from the instance's original start time
+      const totalElapsedMs = Date.now() - tracking.instanceStartTimestamp
+      const totalElapsedMinutes = Math.floor(totalElapsedMs / 60000)
+      // Growth = how much the block needs to extend beyond its original duration
+      const growthMinutes = Math.max(0, totalElapsedMinutes - tracking.originalDuration)
 
       // Only update when we cross a minute boundary
-      if (elapsedMinutes > lastGrowthMinute) {
-        lastGrowthMinute = elapsedMinutes
-        timerGrowthMap.value.set(tracking.instanceId, elapsedMinutes)
+      if (growthMinutes > lastGrowthMinute) {
+        lastGrowthMinute = growthMinutes
+        timerGrowthMap.value.set(tracking.instanceId, growthMinutes)
       }
     }
   )
@@ -134,20 +153,27 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
   )
 
   /**
-   * Persist the elapsed growth to the instance duration
+   * Persist the elapsed growth to the instance duration.
+   * Uses cumulative time from the instance's original start to now.
    */
   const persistTimerGrowth = () => {
     if (!activeTimerTracking.value) return
 
     const tracking = activeTimerTracking.value
-    const growthMinutes = timerGrowthMap.value.get(tracking.instanceId) || 0
+    // Calculate total elapsed from the instance's original start
+    const totalElapsedMinutes = Math.ceil((Date.now() - tracking.instanceStartTimestamp) / 60000)
+    const newDuration = Math.max(tracking.originalDuration, totalElapsedMinutes)
 
-    if (growthMinutes > 0) {
-      const newDuration = tracking.originalDuration + growthMinutes
-
-      // Update instance duration
+    if (newDuration > tracking.originalDuration) {
+      // Update instance duration to reflect actual time spent
       taskStore.updateTaskInstance(tracking.taskId, tracking.instanceId, {
         duration: newDuration
+      })
+      console.log('🎯 [CALENDAR-TIMER] Persisted growth:', {
+        instanceId: tracking.instanceId,
+        originalDuration: tracking.originalDuration,
+        newDuration,
+        totalElapsedMinutes
       })
     }
 

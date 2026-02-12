@@ -53,6 +53,33 @@ async function getRouter() {
 }
 
 // ============================================================================
+// Language Detection
+// ============================================================================
+
+/**
+ * Detect if text is primarily RTL/non-Latin (Hebrew, Arabic, etc.)
+ * Returns a language instruction to append to system prompts.
+ */
+function detectLanguageInstruction(text: string): string {
+  if (!text) return ''
+  // Hebrew range: \u0590-\u05FF, Arabic range: \u0600-\u06FF
+  const rtlChars = text.match(/[\u0590-\u05FF\u0600-\u06FF]/g)
+  if (rtlChars && rtlChars.length > text.replace(/\s/g, '').length * 0.3) {
+    // Check if Hebrew specifically
+    const hebrewChars = text.match(/[\u0590-\u05FF]/g)
+    if (hebrewChars && hebrewChars.length > 0) {
+      return ' IMPORTANT: The user writes in Hebrew. Write ALL text values (subtask titles, reasoning, titles, summaries) in Hebrew. JSON keys must remain in English.'
+    }
+    const arabicChars = text.match(/[\u0600-\u06FF]/g)
+    if (arabicChars && arabicChars.length > 0) {
+      return ' IMPORTANT: The user writes in Arabic. Write ALL text values in Arabic. JSON keys must remain in English.'
+    }
+    return ' IMPORTANT: Respond with text values in the same language as the user\'s task. JSON keys must remain in English.'
+  }
+  return ''
+}
+
+// ============================================================================
 // JSON Parsing
 // ============================================================================
 
@@ -72,6 +99,13 @@ function parseAIResponse<T>(content: string): T | null {
   const braceMatch = content.match(/\{[\s\S]*\}/)
   if (braceMatch) {
     try { return JSON.parse(braceMatch[0]) }
+    catch { /* continue */ }
+  }
+
+  // Try finding first [ ... ] (some models return raw arrays)
+  const arrayMatch = content.match(/\[[\s\S]*\]/)
+  if (arrayMatch) {
+    try { return JSON.parse(arrayMatch[0]) as T }
     catch { /* continue */ }
   }
 
@@ -131,10 +165,11 @@ export function useAITaskAssist() {
   async function suggestSubtasks(task: Task) {
     resetState('suggestSubtasks')
     try {
+      const langHint = detectLanguageInstruction(task.title)
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'You are a task planning assistant. Given a task title and optional description, suggest 3-5 actionable subtasks. Return ONLY valid JSON: { "subtasks": ["subtask1", "subtask2", ...] }'
+          content: 'You are a task planning assistant. Given a task title and optional description, suggest 3-5 actionable subtasks. Return ONLY valid JSON: { "subtasks": ["subtask1", "subtask2", ...] }' + langHint
         },
         {
           role: 'user',
@@ -145,9 +180,16 @@ export function useAITaskAssist() {
       const raw = await streamAI(messages)
       if (aborted) return
 
-      const parsed = parseAIResponse<{ subtasks: string[] }>(raw)
+      let parsed = parseAIResponse<{ subtasks: string[] }>(raw)
+      // Handle case where AI returns a raw array instead of { subtasks: [...] }
+      if (!parsed?.subtasks) {
+        const arr = parseAIResponse<string[]>(raw)
+        if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] === 'string') {
+          parsed = { subtasks: arr }
+        }
+      }
       if (!parsed?.subtasks || !Array.isArray(parsed.subtasks)) {
-        finishWithError('Failed to parse subtask suggestions from AI response.')
+        finishWithError('AI response could not be parsed. Try again or check your AI provider connection.')
         return
       }
 
@@ -165,6 +207,7 @@ export function useAITaskAssist() {
   async function suggestPriorityDuration(task: Task) {
     resetState('suggestPriorityDuration')
     try {
+      const langHint = detectLanguageInstruction(task.title)
       const currentInfo: string[] = []
       if (task.priority) currentInfo.push(`Current priority: ${task.priority}`)
       if (task.estimatedDuration) currentInfo.push(`Current estimated duration: ${task.estimatedDuration} minutes`)
@@ -172,7 +215,7 @@ export function useAITaskAssist() {
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Analyze this task and suggest priority (low/medium/high) and estimated duration in minutes. Return ONLY valid JSON: { "priority": "medium", "duration": 30, "reasoning": "..." }'
+          content: 'Analyze this task and suggest priority (low/medium/high) and estimated duration in minutes. Return ONLY valid JSON: { "priority": "medium", "duration": 30, "reasoning": "..." }' + langHint
         },
         {
           role: 'user',
@@ -185,7 +228,7 @@ export function useAITaskAssist() {
 
       const parsed = parseAIResponse<{ priority: string; duration: number; reasoning: string }>(raw)
       if (!parsed?.priority || typeof parsed.duration !== 'number') {
-        finishWithError('Failed to parse priority/duration suggestion from AI response.')
+        finishWithError('AI response could not be parsed. Try again or check your AI provider connection.')
         return
       }
 
@@ -203,10 +246,11 @@ export function useAITaskAssist() {
   async function breakDownTask(task: Task) {
     resetState('breakDownTask')
     try {
+      const langHint = detectLanguageInstruction(task.title)
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Break this task into 2-4 smaller, actionable tasks. Return ONLY valid JSON: { "tasks": [{ "title": "...", "priority": "medium" }, ...] }'
+          content: 'Break this task into 2-4 smaller, actionable tasks. Return ONLY valid JSON: { "tasks": [{ "title": "...", "priority": "medium" }, ...] }' + langHint
         },
         {
           role: 'user',
@@ -219,7 +263,7 @@ export function useAITaskAssist() {
 
       const parsed = parseAIResponse<{ tasks: Array<{ title: string; priority?: string }> }>(raw)
       if (!parsed?.tasks || !Array.isArray(parsed.tasks)) {
-        finishWithError('Failed to parse task breakdown from AI response.')
+        finishWithError('AI response could not be parsed. Try again or check your AI provider connection.')
         return
       }
 
@@ -237,13 +281,14 @@ export function useAITaskAssist() {
   async function suggestDate(task: Task) {
     resetState('suggestDate')
     try {
+      const langHint = detectLanguageInstruction(task.title)
       const today = new Date().toISOString().split('T')[0]
       const dateInfo = task.dueDate ? `\nCurrent due date: ${task.dueDate}` : ''
 
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Suggest the optimal date to work on this task. Consider the task nature. Return ONLY valid JSON: { "date": "YYYY-MM-DD", "reasoning": "..." }'
+          content: 'Suggest the optimal date to work on this task. Consider the task nature. Return ONLY valid JSON: { "date": "YYYY-MM-DD", "reasoning": "..." }' + langHint
         },
         {
           role: 'user',
@@ -256,7 +301,7 @@ export function useAITaskAssist() {
 
       const parsed = parseAIResponse<{ date: string; reasoning: string }>(raw)
       if (!parsed?.date) {
-        finishWithError('Failed to parse date suggestion from AI response.')
+        finishWithError('AI response could not be parsed. Try again or check your AI provider connection.')
         return
       }
 
@@ -274,10 +319,11 @@ export function useAITaskAssist() {
   async function improveTitle(currentTitle: string) {
     resetState('improveTitle')
     try {
+      const langHint = detectLanguageInstruction(currentTitle)
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Rewrite this vague task title to be specific and actionable. Keep it concise (under 60 chars). Return ONLY valid JSON: { "title": "..." }'
+          content: 'Rewrite this vague task title to be specific and actionable. Keep it concise (under 60 chars). Return ONLY valid JSON: { "title": "..." }' + langHint
         },
         {
           role: 'user',
@@ -290,7 +336,7 @@ export function useAITaskAssist() {
 
       const parsed = parseAIResponse<{ title: string }>(raw)
       if (!parsed?.title) {
-        finishWithError('Failed to parse improved title from AI response.')
+        finishWithError('AI response could not be parsed. Try again or check your AI provider connection.')
         return
       }
 
@@ -373,11 +419,12 @@ export function useAITaskAssist() {
       }
 
       const taskList = tasks.map((t, i) => `${i + 1}. ${t.title}`).join('\n')
+      const langHint = detectLanguageInstruction(tasks[0]?.title || '')
 
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Summarize what these tasks have in common and suggest how to group them. Return ONLY valid JSON: { "summary": "...", "suggestedGroup": "..." }'
+          content: 'Summarize what these tasks have in common and suggest how to group them. Return ONLY valid JSON: { "summary": "...", "suggestedGroup": "..." }' + langHint
         },
         {
           role: 'user',
@@ -390,7 +437,7 @@ export function useAITaskAssist() {
 
       const parsed = parseAIResponse<{ summary: string; suggestedGroup: string }>(raw)
       if (!parsed?.summary) {
-        finishWithError('Failed to parse batch summary from AI response.')
+        finishWithError('AI response could not be parsed. Try again or check your AI provider connection.')
         return
       }
 

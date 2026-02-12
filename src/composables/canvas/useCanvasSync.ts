@@ -784,7 +784,7 @@ export function useCanvasSync() {
             nextTick(() => {
                 isWritingBackStaleParents.value = true
                 const writePromises = staleParentCleanups.map(({ taskId }) =>
-                    taskStore.updateTask(taskId, { parentId: null }, 'RECONCILE')
+                    taskStore.updateTask(taskId, { parentId: undefined }, 'RECONCILE')
                 )
                 Promise.all(writePromises)
                     .catch(err => {

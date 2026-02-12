@@ -5,6 +5,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
+import { formatDateKey } from '@/utils/dateUtils'
 
 // Dispatch event to trigger brief flash animation on task card
 function flashTaskCard(taskId: string): void {
@@ -223,17 +224,27 @@ export function useTaskContextMenuActions(
         })
 
         if (taskId && !isBatch) {
-            // Step 1: Create calendar instance (may fail independently)
-            try {
-                console.log('🎯 [CONTEXT-MENU] Starting task now, creating calendar instance...')
-                await taskStore.startTaskNowWithUndo(taskId)
-                console.log('🎯 [CONTEXT-MENU] Task instance created successfully')
-            } catch (error) {
-                console.error('🎯 [CONTEXT-MENU] Failed to create calendar instance:', error)
-                // Continue to start timer anyway - the task exists even if instance creation failed
+            // Step 1: Only create calendar instance if task doesn't already have one today
+            const task = taskStore.getTask(taskId)
+            // BUG-1291: Use formatDateKey (local time) — not toISOString (UTC) which breaks after 10PM in UTC+ timezones
+            const todayStr = formatDateKey(new Date())
+            const hasInstanceToday = task?.instances?.some(
+                (i: { scheduledDate?: string }) => i.scheduledDate === todayStr
+            )
+
+            if (!hasInstanceToday) {
+                try {
+                    console.log('🎯 [CONTEXT-MENU] No instance today, creating calendar instance...')
+                    await taskStore.startTaskNowWithUndo(taskId)
+                    console.log('🎯 [CONTEXT-MENU] Task instance created successfully')
+                } catch (error) {
+                    console.error('🎯 [CONTEXT-MENU] Failed to create calendar instance:', error)
+                }
+            } else {
+                console.log('🎯 [CONTEXT-MENU] Task already has instance today, skipping creation')
             }
 
-            // Step 2: Start timer (independent of instance creation)
+            // Step 2: Always start timer (independent of instance creation)
             try {
                 console.log('🎯 [CONTEXT-MENU] Starting timer...')
                 await timerStore.startTimer(taskId, timerStore.settings.workDuration, false)

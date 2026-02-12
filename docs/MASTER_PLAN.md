@@ -2857,6 +2857,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1292** | **P0** | **👀 Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (pomoflow-kde repo)** |
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
 | ~~**BUG-1294**~~ | **P1** | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task** |
+| ~~**BUG-1296**~~ | **P1** | ✅ **Time block notifications never fire — _rawTasks → rawTasks property name mismatch** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
 | ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
@@ -3726,6 +3727,21 @@ Awaiting user testing to confirm all 4 symptoms resolved.
 **Files**:
 - `src/stores/timer.ts`
 - `src/composables/calendar/useCalendarTimerIntegration.ts`
+
+---
+
+### ~~BUG-1296~~: Time Block Notifications Never Fire (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-10)
+
+**Problem**: `useTimeBlockNotifications.ts` accessed `taskStore._rawTasks` (private internal ref) instead of `taskStore.rawTasks` (public computed). This returned `undefined`, so the `Array.isArray()` fallback always produced `[]` — zero blocks found, zero notifications fired.
+
+**Root Cause**: Property name mismatch. `_rawTasks` is an internal `ref` inside `useTaskStates()`. The store exposes it publicly as `rawTasks` via a computed.
+
+**Fix**: Changed all 3 occurrences of `taskStore._rawTasks` → `taskStore.rawTasks` in `useTimeBlockNotifications.ts` (lines 71, 286, 355).
+
+**Files**:
+- `src/composables/useTimeBlockNotifications.ts`
 
 ---
 

@@ -107,6 +107,12 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
   return mod ? mod.getFailedOperations() : []
 }
 
+// BUG-1301: Recover stale syncing operations on startup/process cycle
+const recoverStaleSyncing = async (): Promise<number> => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.recoverStaleSyncing() : 0
+}
+
 const clearFailedOperations = async (): Promise<number> => {
   const mod = await getWriteQueueModule()
   if (!mod) return 0
@@ -433,6 +439,12 @@ async function processQueue(): Promise<void> {
   isProcessing.value = true
 
   try {
+    // BUG-1301: Recover operations stuck in 'syncing' from a previous session crash.
+    // These ops were marked 'syncing' but never completed — reset them to 'pending'
+    // so they can be retried. Without this, they're stuck forever because
+    // getPendingOperations() only returns 'pending' and 'failed'.
+    await recoverStaleSyncing()
+
     // Get pending operations FIRST before setting status
     const operations = await getPendingOperations()
 

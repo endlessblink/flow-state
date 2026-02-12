@@ -2844,7 +2844,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
-| **BUG-1291** | **P0** | **🔄 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
+| **BUG-1291** | **P0** | **👀 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
 | **TASK-1292** | **P0** | **👀 Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (pomoflow-kde repo)** |
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
@@ -3651,9 +3651,9 @@ TASK-1223 tokenization commit introduced broken CSS in TaskNode.vue and GroupNod
 
 ---
 
-### BUG-1291: Timer & Context Menu Broken Across Views (🔄 IN PROGRESS)
+### BUG-1291: Timer & Context Menu Broken Across Views (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW
 
 **Symptoms** (4 bugs, likely shared root causes):
 1. **Calendar play button**: Pressing play icon on a calendar task doesn't start the timer
@@ -3665,7 +3665,13 @@ TASK-1223 tokenization commit introduced broken CSS in TaskNode.vue and GroupNod
 - Timer bugs (1, 2, 4): `timerStore.startTimer()` fails silently — likely `clearExistingSession()` async failure or error in `startTaskNowWithUndo()` preventing timer from being called
 - Context menu bug (3): Global `task-context-menu` event dispatch exists and ModalManager listens, but event may not reach handler or task lookup may fail silently
 
-**Progress (2026-02-10):** Fixed timer.ts silently aborting when leadership claim fails, split context menu startTaskNow into independent try blocks, added diagnostic logging across the pipeline. Fixed timezone mismatch in context menu guard (UTC vs local time broke after 10PM in UTC+ zones). Fixed `startTaskNow` destroying existing instances (replaced array instead of appending). Fixed calendar play button to reuse completed instances. Needs user testing in calendar.
+**Progress (2026-02-10):** All 4 symptoms addressed:
+1. ✅ Calendar play button — fixed timer.ts leadership claim silent abort; calendar timer integration reuses completed instances with cumulative time tracking
+2. ✅ Context menu "Start" — fixed timezone mismatch in guard (UTC vs local); fixed `startTaskNow` appending instances instead of replacing; split into independent try blocks
+3. ✅ Calendar right-click — fixed `handleEventContextMenu` using `taskStore.tasks` (filtered) instead of `getTask()` (raw). Tasks not in active filter were silently not found.
+4. ✅ Canvas play button — same timer.ts leadership fix applies; canvas uses context menu "Start"/"Timer" which flows through the same fixed paths
+
+Awaiting user testing to confirm all 4 symptoms resolved.
 
 **Files**:
 - `src/composables/calendar/useCalendarTimerIntegration.ts` — Calendar play button handler

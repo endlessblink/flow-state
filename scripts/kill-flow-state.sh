@@ -32,7 +32,8 @@ fi
 # Function to check if a PID belongs to flow-state
 is_flow_state_process() {
   local pid=$1
-  local pwd_output=$(pwdx "$pid" 2>/dev/null)
+  local pwd_output
+  pwd_output=$(timeout 1 pwdx "$pid" 2>/dev/null) || return 1
 
   if [[ $pwd_output == *"flow-state"* ]]; then
     return 0

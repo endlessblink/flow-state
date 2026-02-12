@@ -19,6 +19,9 @@ export { default as GamificationToasts } from './GamificationToasts.vue'
 export { default as GamificationTooltipWrapper } from './GamificationTooltipWrapper.vue'
 export { default as ChallengePips } from './ChallengePips.vue'
 
+// RPG HUD (header widget)
+export { default as GamificationHUD } from './GamificationHUD.vue'
+
 // Challenge system (FEATURE-1132)
 export { default as ChallengeCard } from './ChallengeCard.vue'
 export { default as DailyChallengesPanel } from './DailyChallengesPanel.vue'
@@ -26,3 +29,8 @@ export { default as BossFightPanel } from './BossFightPanel.vue'
 export { default as ARIAMessage } from './ARIAMessage.vue'
 export { default as ChallengeComplete } from './ChallengeComplete.vue'
 export { default as CorruptionOverlay } from './CorruptionOverlay.vue'
+
+// Arena game mode (TASK-1301)
+export { default as ArenaView } from './arena/ArenaView.vue'
+export { default as ArenaScene } from './arena/ArenaScene.vue'
+export { default as ArenaHUD } from './arena/ArenaHUD.vue'

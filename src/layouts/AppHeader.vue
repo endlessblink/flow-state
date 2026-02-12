@@ -1,6 +1,6 @@
 <template>
   <header class="app-header">
-    <div class="header-section">
+    <div class="header-section" :class="{ 'header-section--panel-open': showGamificationPanel }">
       <!-- USER PROFILE (Left side) - Firebase Auth disabled -->
       <div class="user-profile-container">
         <!-- UserProfile v-if="authStore.isAuthenticated" /-->
@@ -47,56 +47,33 @@
 
       <!-- INTEGRATED CONTROL PANEL: Gamification + Sync + AI + Clock + Timer -->
       <div class="control-panel">
-        <!-- FEATURE-1118: Gamification Widgets -->
-        <template v-if="settingsStore.gamificationEnabled">
+        <!-- FEATURE-1118: Gamification HUD -->
+        <template v-if="settingsStore.gamificationEnabled || !authStore.isAuthenticated">
           <div class="gamification-widgets">
-            <!-- TASK-1287: Per-widget tooltip wrappers (div replaces button for per-widget hover) -->
-            <div
-              class="gamification-trigger"
-              :class="{ 'gamification-trigger--glow': isIntense }"
-              role="group"
-              tabindex="0"
-              @click="showGamificationPanel = !showGamificationPanel"
-              @keydown.enter="showGamificationPanel = !showGamificationPanel"
-            >
-              <GamificationTooltipWrapper :disabled="!showAtIntensity('moderate')" :panel-open="showGamificationPanel">
-                <LevelBadge :level-event="latestLevelEvent" />
-                <template #tooltip><LevelTooltipContent /></template>
-              </GamificationTooltipWrapper>
+            <GamificationHUD
+              :panel-open="showGamificationPanel"
+              @toggle-panel="showGamificationPanel = !showGamificationPanel"
+            />
 
-              <GamificationTooltipWrapper v-if="showAtIntensity('moderate')" :panel-open="showGamificationPanel">
-                <XpBar class="header-xp-bar" :xp-event="latestXpEvent" />
-                <template #tooltip><XpTooltipContent /></template>
-              </GamificationTooltipWrapper>
-
-              <GamificationTooltipWrapper v-if="showAtIntensity('moderate')" :panel-open="showGamificationPanel">
-                <StreakCounter :shield-event="latestShieldEvent" />
-                <template #tooltip><StreakTooltipContent /></template>
-              </GamificationTooltipWrapper>
-
-              <GamificationTooltipWrapper v-if="showAtIntensity('moderate') && hasChallenges" :panel-open="showGamificationPanel">
-                <ChallengePips />
-                <template #tooltip><ChallengeTooltipContent /></template>
-              </GamificationTooltipWrapper>
-            </div>
-
-            <!-- Gamification Panel Dropdown -->
-            <div
-              v-if="showGamificationPanel"
-              class="gamification-dropdown"
-            >
-              <GamificationPanel
-                @open-achievements="showAchievementsModal = true; showGamificationPanel = false"
-                @open-shop="showShopModal = true; showGamificationPanel = false"
-              />
-            </div>
-
-            <!-- Click outside to close -->
+            <!-- Click outside to close (rendered before dropdown so it sits behind) -->
             <div
               v-if="showGamificationPanel"
               class="gamification-backdrop"
               @click="showGamificationPanel = false"
             />
+
+            <!-- Gamification Panel Dropdown (after backdrop so it paints on top) -->
+            <div
+              v-if="showGamificationPanel"
+              class="gamification-dropdown"
+              @click.stop
+            >
+              <GamificationPanel
+                @open-achievements="showAchievementsModal = true; showGamificationPanel = false"
+                @open-shop="showShopModal = true; showGamificationPanel = false"
+                @close="showGamificationPanel = false"
+              />
+            </div>
           </div>
           <div class="control-divider" />
 
@@ -260,14 +237,9 @@ import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-n
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
-import { LevelBadge, XpBar, StreakCounter, GamificationPanel, AchievementsModal, ShopModal, GamificationTooltipWrapper, ChallengePips } from '@/components/gamification'
-import LevelTooltipContent from '@/components/gamification/tooltips/LevelTooltipContent.vue'
-import XpTooltipContent from '@/components/gamification/tooltips/XpTooltipContent.vue'
-import StreakTooltipContent from '@/components/gamification/tooltips/StreakTooltipContent.vue'
-import ChallengeTooltipContent from '@/components/gamification/tooltips/ChallengeTooltipContent.vue'
+import { GamificationHUD, GamificationPanel, AchievementsModal, ShopModal } from '@/components/gamification'
+import { useAuthStore } from '@/stores/auth'
 import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
-import { useXpAnimations } from '@/composables/useXpAnimations'
-import { useChallengesStore } from '@/stores/challenges'
 import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 
 const router = useRouter()
@@ -275,12 +247,8 @@ const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
-const challengesStore = useChallengesStore()
+const authStore = useAuthStore()
 const { showAtIntensity, isIntense } = useCyberflowTheme()
-const { latestXpEvent, latestLevelEvent, latestShieldEvent } = useXpAnimations()
-
-// TASK-1287: Whether challenge pips should show
-const hasChallenges = computed(() => challengesStore.hasActiveChallenges)
 
 // FEATURE-1118: Gamification panel/modal states
 const showGamificationPanel = ref(false)
@@ -444,6 +412,12 @@ const startLongBreak = async () => {
   pointer-events: none;
   position: relative;
   z-index: 5;
+}
+
+/* Raise above .content-header when gamification panel is open
+   so the fixed backdrop blocks clicks on nav tabs */
+.header-section--panel-open {
+  z-index: 10;
 }
 
 /* USER PROFILE CONTAINER */
@@ -829,32 +803,14 @@ const startLongBreak = async () => {
   position: relative;
 }
 
-.gamification-trigger {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  background: transparent;
-  border: none;
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--spring-smooth);
-}
-
-.gamification-trigger:hover {
-  background: var(--state-hover-bg);
-}
-
-.header-xp-bar {
-  width: 100px;
-}
-
 .gamification-dropdown {
   position: absolute;
   top: calc(100% + var(--space-2));
   right: 0;
   z-index: 100;
   min-width: 320px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
   animation: slideDown 0.2s ease-out;
 }
 
@@ -873,13 +829,6 @@ const startLongBreak = async () => {
   position: fixed;
   inset: 0;
   z-index: 99;
-}
-
-/* Cyberflow intensity: intense glow on gamification trigger */
-.gamification-trigger--glow {
-  box-shadow: 0 0 8px var(--neon-cyan, rgba(0, 255, 255, 0.4)),
-              0 0 16px var(--neon-cyan, rgba(0, 255, 255, 0.2));
-  animation: cyberflowPulse 2s ease-in-out infinite;
 }
 
 /* Cyberflow intensity: intense glow on Cyberflow nav tab */

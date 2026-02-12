@@ -19,6 +19,7 @@ const router = useRouter()
 const emit = defineEmits<{
   openAchievements: []
   openShop: []
+  close: []
 }>()
 
 function goToCyberflow() {
@@ -88,7 +89,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
     <!-- Daily Challenges (FEATURE-1132) -->
     <div class="panel-section">
-      <DailyChallengesPanel :compact="true" />
+      <DailyChallengesPanel :compact="true" @pick-challenge="emit('close')" />
     </div>
 
     <!-- Recent Achievements -->

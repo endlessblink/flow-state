@@ -1840,17 +1840,20 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### BUG-1295: Canvas Ctrl+Click Toggle Selection Broken (🔄 IN PROGRESS)
+### ~~BUG-1295~~: Canvas Ctrl+Click Toggle Selection Broken (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-10)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-10)
 
-**Problem**: Ctrl+Click on canvas tasks doesn't toggle individual selection (select/deselect). When multiple tasks are selected, Ctrl+Click should add/remove individual tasks from the selection.
+**Problem**: Ctrl+Click on canvas tasks didn't toggle individual selection when multiple tasks were selected.
 
-**Root Cause**: Vue Flow renders a `nodesselection-rect` overlay with `pointer-events: all` that covers ALL selected nodes, blocking clicks from reaching individual TaskNode components. The existing Shift+Click global capture interceptor handles this for Shift but not Ctrl/Meta. Additionally, Vue Flow's click handler on the selection rect clears all selection for Ctrl+Click.
+**Root Cause**: Vue Flow's `nodesselection-rect` overlay (`pointer-events: all`) blocked clicks from reaching TaskNode components. Previous capture-phase mousedown interceptor worked for Shift but not Ctrl because Vue Flow uses `pointerdown` events (which fire before mousedown).
 
-**WIP Fix**: Extended global capture interceptor to handle Ctrl/Meta+Click (not just Shift). Added click capture blocker to prevent Vue Flow from clearing selection. Still has issues with Ctrl+Click deselecting all instead of individual toggle.
+**Fix**: 3-layer approach:
+1. `useCanvasSelection.ts`: keydown/keyup listeners toggle `pointer-events: none` on `.vue-flow__nodesselection-rect` when Ctrl/Meta/Shift held
+2. `useTaskNodeActions.ts`: New `handlePointerDown` handler stops pointerdown propagation to prevent Vue Flow's internal selection handling
+3. `TaskNode.vue`: Wired `@pointerdown="handlePointerDown"` on root div
 
-**Files**: `src/composables/canvas/useCanvasSelection.ts`, `src/composables/canvas/node/useTaskNodeActions.ts`
+**Files**: `src/composables/canvas/useCanvasSelection.ts`, `src/composables/canvas/node/useTaskNodeActions.ts`, `src/components/canvas/TaskNode.vue`
 
 ---
 
@@ -2157,16 +2160,21 @@ npm run tasks:bugs     # Filter by BUG type
 
 - [ ] **TASK-1240**: Supabase chat persistence — `ai_conversations` + `ai_messages` tables, cross-device sync
 - [ ] **TASK-1241**: Mobile bottom sheet — replace side panel with bottom sheet on mobile
-- [ ] **TASK-1242**: Corruption-influenced AI personality — glitchy tone at high corruption levels
 - [ ] **TASK-1243**: AI Game Master boss fights — real-time narrated boss encounters via chat
-- [ ] **TASK-1244**: Inline AI in views — AI suggestions embedded in canvas/board/calendar (Linear-inspired)
 - [ ] **TASK-1245**: Dynamic prompt assembly — only include relevant tool definitions per request type
+- [ ] **TASK-1296**: AI Assist composable — `useAITaskAssist` with 7 actions (subtasks, priority, breakdown, date, title, related, summarize)
+- [ ] **TASK-1297**: AI Assist popover component — `AITaskAssistPopover.vue` with action buttons + result display
+- [ ] **TASK-1298**: Context menu AI Assist — ✨ button in TaskContextMenu with AI popover
+- [ ] **TASK-1299**: Edit modal AI Assist — ✨ button in TaskEditModal footer, auto-populate form fields
+- [ ] **TASK-1300**: Quick create AI Assist — ✨ button in QuickTaskCreate next to title input
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
 - `src/components/ai/AIChatPanel.vue` — panel layout, settings, quick actions, full-screen nav
+- `src/components/ai/AITaskAssistPopover.vue` — AI assist popover with context-aware actions + results (Phase 4)
 - `src/views/AIChatView.vue` — full-screen AI chat with conversation sidebar (Phase 3)
 - `src/composables/useAIChat.ts` — chat logic, tool execution, agent chains, ReAct loop
+- `src/composables/useAITaskAssist.ts` — 7 AI-powered task assist actions (Phase 4)
 - `src/composables/useAgentChains.ts` — deterministic multi-step tool chains (Phase 3)
 - `src/composables/useAIChallengeNarrator.ts` — gamification event narrator (Phase 3)
 - `src/stores/aiChat.ts` — conversation model, multi-chat persistence
@@ -3598,6 +3606,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
   - UI: CorruptionOverlay, ChallengeCard, DailyChallengesPanel, BossFightPanel
   - Integration: `useGamificationHooks.ts` tracks challenge progress
   - Skill: `.claude/skills/cyberflow-rpg/SKILL.md`
+- [ ] **TASK-1242**: Corruption-influenced AI personality — glitchy tone at high corruption levels (moved from Phase 4)
 
 **Blocking**: BUG-1204 - Apply migration to database (table returns 404)
 

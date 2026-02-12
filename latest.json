@@ -1,11 +1,11 @@
 {
-  "version": "1.2.48",
-  "notes": "v1.2.48: BUG-1295 canvas Ctrl+Click fix, BUG-1294 calendar timer fix",
-  "pub_date": "2026-02-10T12:03:25.569Z",
+  "version": "1.2.49",
+  "notes": "BUG-1296: Fix time block notifications never firing — _rawTasks → rawTasks property name mismatch",
+  "pub_date": "2026-02-10T17:06:11.722Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXpWdHBINWlMOHRQT1gycWkrbldTeS9POEtpM1hzdmZBc1pRdXlPc1dXWW1HYmJVUGluVC84WGZnTFZ4bCszTUFDamZTYVVMUi94dVhPTnkrbXVUREFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNzI1MDA1CWZpbGU6Rmxvd1N0YXRlXzEuMi40OF9hbWQ2NC5BcHBJbWFnZQp0N2toU2RYbHBrdmJzL0x4KzNmWlhyY3RIbk1PN0huWkpxV21zTjRLQnlFRWs4ZVFyN21mdjFpUW42V3MxdXYrWWRSbFJPUE1qcTFnM0E3OHN6VS9Cdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.48_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS9BYyt0UGdYMlRzVXRwdm5GUnpFcFJFMEFrYXpJcmFKTElieXR2QmxLWFN2aldGR0FaTE9lU2pEYjZkRHdUODh3ZjI5VmRCRlAzazJlUHVMM2ltbndzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwNzQzMTcxCWZpbGU6Rmxvd1N0YXRlXzEuMi40OV9hbWQ2NC5BcHBJbWFnZQpOTXh4bjR3T0lhbFg3WVlCbXhmenE4K2J5NjBwQWZjc2oyWWFocUFtYTF2UWQ4YnIrbGpmTDhsYzlqb2plSDNsa0R1anJjYjJJZTZlUU5DZ0liRWJEQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.49_amd64.AppImage"
     }
   }
 }

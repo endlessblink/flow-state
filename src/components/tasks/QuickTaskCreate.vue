@@ -8,19 +8,30 @@
     @click.self="$emit('close')"
   >
     <div class="quick-create-modal">
-      <!-- Task Title Input -->
-      <input
-        ref="titleInput"
-        v-model="taskTitle"
-        type="text"
-        placeholder="Task name"
-        aria-label="Task name"
-        class="title-input"
-        :class="[titleAlignmentClasses]"
-        :style="titleAlignmentStyles"
-        @keydown.enter="handleCreate"
-        @keydown.esc="$emit('close')"
-      >
+      <!-- Task Title Input with AI Assist -->
+      <div class="title-row">
+        <input
+          ref="titleInput"
+          v-model="taskTitle"
+          type="text"
+          placeholder="Task name"
+          aria-label="Task name"
+          class="title-input"
+          :class="[titleAlignmentClasses]"
+          :style="titleAlignmentStyles"
+          @keydown.enter="handleCreate"
+          @keydown.esc="$emit('close')"
+        >
+        <button
+          ref="aiAssistBtnRef"
+          class="ai-assist-btn"
+          :disabled="!taskTitle.trim()"
+          title="AI Assist"
+          @click="openAIAssist"
+        >
+          <Sparkles :size="14" />
+        </button>
+      </div>
 
       <!-- Description Input -->
       <input
@@ -159,16 +170,30 @@
           Add task
         </button>
       </div>
+
+      <!-- AI Assist Popover -->
+      <AITaskAssistPopover
+        :is-visible="showAIAssist"
+        :task="aiAssistTaskProxy"
+        :x="aiAssistPosition.x"
+        :y="aiAssistPosition.y"
+        context="quick-create"
+        @close="showAIAssist = false"
+        @accept-priority="handleAIAcceptPriority"
+        @accept-date="handleAIAcceptDate"
+        @accept-title="handleAIAcceptTitle"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Calendar, Flag, Clock, Inbox } from 'lucide-vue-next'
+import { Calendar, Flag, Clock, Inbox, Sparkles } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {
@@ -193,6 +218,11 @@ const taskDescription = ref('')
 const priority = ref<'low' | 'medium' | 'high'>('medium')
 const duration = ref(props.duration)
 const projectId = ref('')
+
+// AI Assist
+const showAIAssist = ref(false)
+const aiAssistBtnRef = ref<HTMLElement | null>(null)
+const aiAssistPosition = ref({ x: 0, y: 0 })
 
 // Date and time state
 const localDate = ref('')
@@ -283,6 +313,50 @@ const updateDate = (event: Event) => {
 // Format time from Date to HH:MM string
 const formatTimeForInput = (date: Date) => {
   return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+}
+
+// Proxy task for AI Assist (QuickTaskCreate doesn't have a full Task yet)
+const aiAssistTaskProxy = computed(() => ({
+  id: '',
+  title: taskTitle.value,
+  description: taskDescription.value,
+  status: 'planned' as const,
+  priority: priority.value,
+  progress: 0,
+  completedPomodoros: 0,
+  subtasks: [],
+  dueDate: localDate.value,
+  estimatedDuration: duration.value,
+  projectId: projectId.value,
+  createdAt: new Date(),
+  updatedAt: new Date()
+}))
+
+// AI Assist handlers
+function openAIAssist() {
+  const btn = aiAssistBtnRef.value
+  if (btn) {
+    const rect = btn.getBoundingClientRect()
+    aiAssistPosition.value = { x: rect.right + 4, y: rect.top }
+  }
+  showAIAssist.value = true
+}
+
+function handleAIAcceptPriority(p: string, dur: number) {
+  const validPriority = ['low', 'medium', 'high'].includes(p) ? p as 'low' | 'medium' | 'high' : undefined
+  if (validPriority) priority.value = validPriority
+  if (dur && dur > 0) duration.value = dur
+  showAIAssist.value = false
+}
+
+function handleAIAcceptDate(date: string) {
+  localDate.value = date
+  showAIAssist.value = false
+}
+
+function handleAIAcceptTitle(title: string) {
+  taskTitle.value = title
+  showAIAssist.value = false
 }
 
 const handleCreate = async () => {
@@ -394,6 +468,45 @@ watch(() => props.isOpen, (isOpen) => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Title Row with AI Assist */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.title-row .title-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.ai-assist-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--brand-primary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.ai-assist-btn:hover:not(:disabled) {
+  background: var(--brand-bg-subtle);
+  border-color: var(--brand-primary);
+}
+
+.ai-assist-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  color: var(--text-muted);
 }
 
 .title-input {

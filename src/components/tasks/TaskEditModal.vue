@@ -63,8 +63,31 @@
             </div>
           </div>
 
+          <!-- AI Assist Popover -->
+          <AITaskAssistPopover
+            :is-visible="showAIAssist"
+            :task="editedTask"
+            :x="aiAssistPosition.x"
+            :y="aiAssistPosition.y"
+            context="edit-modal"
+            @close="showAIAssist = false"
+            @accept-subtasks="handleAIAcceptSubtasks"
+            @accept-priority="handleAIAcceptPriority"
+            @accept-date="handleAIAcceptDate"
+            @accept-title="handleAIAcceptTitle"
+          />
+
           <!-- Sticky Action Buttons -->
           <div class="modal-actions-sticky">
+            <button
+              ref="aiAssistBtnRef"
+              class="btn btn-ai btn-action"
+              @click="openAIAssist"
+            >
+              <Sparkles :size="14" />
+              AI Assist
+            </button>
+            <div class="spacer" />
             <button class="btn btn-secondary btn-action" @click="$emit('close')">
               Cancel
             </button>
@@ -88,7 +111,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X, Sparkles } from 'lucide-vue-next'
 import { type Task, useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 
@@ -102,6 +125,7 @@ import TaskEditMetadata from './edit/TaskEditMetadata.vue'
 import TaskEditSubtasks from './edit/TaskEditSubtasks.vue'
 import TaskEditChildTasks from './edit/TaskEditChildTasks.vue'
 import RecurrenceSelector from './edit/RecurrenceSelector.vue'
+import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 
 // Props & Emitters
 const props = defineProps<{
@@ -119,6 +143,11 @@ const canvasStore = useCanvasStore()
 // Template Refs
 const headerRef = ref<InstanceType<typeof TaskEditHeader> | null>(null)
 const titleInputRef = computed(() => headerRef.value?.titleInput || undefined)
+
+// AI Assist
+const showAIAssist = ref(false)
+const aiAssistBtnRef = ref<HTMLElement | null>(null)
+const aiAssistPosition = ref({ x: 0, y: 0 })
 
 // State Composable
 const {
@@ -195,6 +224,49 @@ const handleKeyDown = (event: KeyboardEvent) => {
     event.preventDefault()
     saveTask()
   }
+}
+
+// --- AI Assist Handlers ---
+
+function openAIAssist() {
+  const btn = aiAssistBtnRef.value
+  if (btn) {
+    const rect = btn.getBoundingClientRect()
+    aiAssistPosition.value = { x: rect.left, y: rect.top - 8 }
+  }
+  showAIAssist.value = true
+}
+
+function handleAIAcceptSubtasks(subtasks: string[]) {
+  for (const title of subtasks) {
+    addSubtask()
+    const subs = editedTask.value.subtasks
+    if (subs.length > 0) {
+      subs[subs.length - 1].title = title
+    }
+  }
+  showAIAssist.value = false
+}
+
+function handleAIAcceptPriority(priority: string, duration: number) {
+  const validPriority = ['low', 'medium', 'high'].includes(priority) ? priority as 'low' | 'medium' | 'high' : undefined
+  if (validPriority) {
+    editedTask.value.priority = validPriority
+  }
+  if (duration && duration > 0) {
+    editedTask.value.estimatedDuration = duration
+  }
+  showAIAssist.value = false
+}
+
+function handleAIAcceptDate(date: string) {
+  editedTask.value.dueDate = date
+  showAIAssist.value = false
+}
+
+function handleAIAcceptTitle(title: string) {
+  editedTask.value.title = title
+  showAIAssist.value = false
 }
 
 onMounted(() => document.addEventListener('keydown', handleKeyDown))
@@ -464,6 +536,24 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeyDown))
 /* Secondary button hover enhancement */
 .btn-secondary.btn-action:hover {
   transform: translateY(-1px);
+}
+
+/* AI Assist Button */
+.btn-ai {
+  background: transparent;
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-ai:hover {
+  background: var(--brand-bg-subtle);
+}
+
+.spacer {
+  flex: 1;
 }
 
 /* Mobile responsiveness for sticky buttons */

@@ -19,6 +19,12 @@
 
     <div v-if="!isBatchOperation" class="menu-divider" />
 
+    <!-- AI Assist -->
+    <button class="menu-item menu-item--ai" @click="openAIAssist">
+      <Sparkles :size="16" class="menu-icon menu-icon--ai" />
+      <span class="menu-text">AI Assist</span>
+    </button>
+
     <!-- Date Section - Compact Pills -->
     <div class="menu-section menu-section--tight">
       <div class="section-header section-header--inline">
@@ -227,6 +233,19 @@
       <Trash2 :size="16" class="menu-icon" />
       <span class="menu-text">{{ deleteText }}</span>
     </button>
+
+    <!-- AI Assist Popover -->
+    <AITaskAssistPopover
+      :is-visible="showAIAssist"
+      :task="currentTask"
+      :x="aiAssistPosition.x"
+      :y="aiAssistPosition.y"
+      context="context-menu"
+      @close="closeAIAssist"
+      @accept-priority="handleAIAcceptPriority"
+      @accept-breakdown="handleAIAcceptBreakdown"
+      @accept-date="handleAIAcceptDate"
+    />
   </div>
 </template>
 
@@ -247,7 +266,8 @@ import {
   ChevronDown,
   Pencil,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Sparkles
 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
@@ -262,6 +282,7 @@ import { statusOptions } from './context-menu/constants'
 import StatusSubmenu from './context-menu/StatusSubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
 import MoreSubmenu from './context-menu/MoreSubmenu.vue'
+import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 
 interface Props {
   isVisible: boolean
@@ -315,6 +336,10 @@ const canvasStore = useCanvasStore()
 
 const menuRef = ref<HTMLElement | null>(null)
 const showDatePicker = ref(false)
+
+// AI Assist popover state
+const showAIAssist = ref(false)
+const aiAssistPosition = ref({ x: 0, y: 0 })
 
 // Submenu state
 const showStatusSubmenu = ref(false)
@@ -439,6 +464,57 @@ const pinAsQuickTask = async () => {
         console.error('Error pinning quick task:', error)
         showToast('Failed to pin task', 'error')
     }
+}
+
+// AI Assist handlers
+const openAIAssist = (event: MouseEvent) => {
+  const menuRect = menuRef.value?.getBoundingClientRect()
+  if (menuRect) {
+    aiAssistPosition.value = {
+      x: menuRect.right + 4,
+      y: menuRect.top
+    }
+  } else {
+    aiAssistPosition.value = { x: props.x + 240, y: props.y }
+  }
+  showAIAssist.value = true
+}
+
+const closeAIAssist = () => {
+  showAIAssist.value = false
+}
+
+const handleAIAcceptPriority = (priority: string, duration: number) => {
+  if (!currentTask.value) return
+  const validPriority = ['low', 'medium', 'high'].includes(priority) ? priority as 'low' | 'medium' | 'high' : undefined
+  if (validPriority) setPriority(validPriority)
+  if (duration) setDuration(duration)
+  emit('close')
+}
+
+const handleAIAcceptBreakdown = async (tasks: Array<{ title: string; priority?: string }>) => {
+  for (const t of tasks) {
+    const validPriority = ['low', 'medium', 'high'].includes(t.priority || '') ? t.priority as 'low' | 'medium' | 'high' : 'medium'
+    await taskStore.createTask({
+      title: t.title,
+      priority: validPriority,
+      status: 'planned'
+    })
+  }
+  showAIAssist.value = false
+  emit('close')
+}
+
+const handleAIAcceptDate = async (date: string) => {
+  if (!currentTask.value) return
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { dueDate: date })
+    canvasStore.requestSync('user:context-menu')
+  } catch (error) {
+    console.error('Error updating task due date from AI:', error)
+  }
+  showAIAssist.value = false
+  emit('close')
 }
 
 // Menu positioning
@@ -583,6 +659,7 @@ watch(() => props.isVisible, (isVisible) => {
     showStatusSubmenu.value = false
     showDurationSubmenu.value = false
     showMoreSubmenu.value = false
+    showAIAssist.value = false
   }
 })
 
@@ -899,6 +976,20 @@ onUnmounted(() => {
 .action-btn--focus:hover { background: var(--status-on-hold-bg); border-color: var(--color-focus); }
 
 .action-label { font-size: var(--text-xs); font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* AI Assist Menu Item */
+.menu-item--ai {
+  color: var(--brand-primary);
+}
+
+.menu-item--ai:hover {
+  background: var(--brand-bg-subtle);
+}
+
+.menu-icon--ai {
+  color: var(--brand-primary);
+  opacity: 1;
+}
 
 /* Submenu */
 .has-submenu { position: relative; }

@@ -69,8 +69,12 @@ function sortGroupsByHierarchy<T extends HierarchicalGroup>(groups: T[]): Array<
 // useCanvasInteractions checks this flag to skip processing during sync operations.
 const canvasSyncInProgress = ref(false)
 
+// BUG-1203: Guard flag to prevent re-sync loop when writing back stale parentId corrections.
+// When true, the store update from reconciliation should not trigger another sync cycle.
+const isWritingBackStaleParents = ref(false)
+
 // Export for useCanvasInteractions to check
-export { canvasSyncInProgress }
+export { canvasSyncInProgress, isWritingBackStaleParents }
 
 /**
  * Canvas Sync Composable
@@ -761,14 +765,35 @@ export function useCanvasSync() {
             isSyncing.value = false
         }
 
-        // BUG-1207 Fix 5.1: Removed sync write-back for stale parent cleanup.
-        // Writing to taskStore from sync violates the read-only invariant (TASK-255)
-        // and can cause feedback loops. Stale parent cleanup is handled by drag handlers
-        // in useCanvasInteractions where geometry writes ARE allowed.
-        if (staleParentCleanups.length > 0 && import.meta.env.DEV) {
-            for (const { taskId, oldParentId } of staleParentCleanups) {
-                console.warn(`[BUG-1207] Stale parentId detected: task ${taskId.slice(0, 8)}... has parentId ${oldParentId.slice(0, 8)} but is outside group bounds. Will be cleaned up on next drag interaction.`)
+        // BUG-1203: Deferred write-back for stale parentId corrections.
+        // This is an explicit exception to the read-only invariant (TASK-255) for
+        // corruption repair only. Without write-back, stale parentIds persist forever
+        // if the task is never manually dragged.
+        //
+        // Guard: isWritingBackStaleParents prevents re-sync loop. The orchestrator
+        // watches the task store, so updating parentId would trigger another sync.
+        // The guard causes syncStoreToCanvas to early-return during write-back.
+        if (staleParentCleanups.length > 0 && !isWritingBackStaleParents.value) {
+            if (import.meta.env.DEV) {
+                for (const { taskId, oldParentId } of staleParentCleanups) {
+                    console.warn(`[BUG-1203] Stale parentId detected: task ${taskId.slice(0, 8)}... had parentId ${oldParentId.slice(0, 8)} but is outside group bounds. Writing back correction.`)
+                }
             }
+
+            // Defer until after current sync completes and Vue has flushed
+            nextTick(() => {
+                isWritingBackStaleParents.value = true
+                const writePromises = staleParentCleanups.map(({ taskId }) =>
+                    taskStore.updateTask(taskId, { parentId: null }, 'RECONCILE')
+                )
+                Promise.all(writePromises)
+                    .catch(err => {
+                        console.error('[BUG-1203] Failed to write back stale parentId corrections:', err)
+                    })
+                    .finally(() => {
+                        isWritingBackStaleParents.value = false
+                    })
+            })
         }
     }
 

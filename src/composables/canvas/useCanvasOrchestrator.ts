@@ -380,36 +380,6 @@ export function useCanvasOrchestrator() {
         // Initialize Realtime
         persistence.initRealtimeSubscription()
 
-        // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
-        // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
-        // This guards against remounts from: tab focus, auth refresh, route changes
-        // BUG-1084 FIX: Also guard against empty groups - reconciliation needs groups to determine containment
-        if (!hasReconciledThisSession && canvasStore.groups.length > 0) {
-            hasReconciledThisSession = true
-            console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
-            await reconcileTaskParentsByContainment(
-                taskStore.tasks,
-                canvasStore.groups,
-                async (taskId, updates) => {
-                    // Update store (will auto-sync to Supabase via existing persistence)
-                    // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
-                    console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
-                    taskStore.updateTask(taskId, updates, 'RECONCILE')
-                },
-                { writeToDb: true, silent: false }
-            )
-        } else {
-            console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
-        }
-
-        // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
-        canvasStore.recalculateAllTaskCounts(taskStore.tasks)
-
-        // Log hierarchy summary once on load (dev only)
-        if (import.meta.env.DEV) {
-            logHierarchySummary(canvasStore._rawGroups || [])
-        }
-
         // BUG-1084 v5: Wait for stores to be ready before initial sync
         // The root cause of empty canvas on initial load was calling syncNodes() before
         // stores were populated. Now we use a watcher to wait for initialization.
@@ -421,7 +391,7 @@ export function useCanvasOrchestrator() {
                 () => taskStore._hasInitializedOnce,
                 () => canvasStore._hasInitializedOnce
             ],
-            ([tasksReady, groupsReady]) => {
+            async ([tasksReady, groupsReady]) => {
                 // Run initial sync once BOTH stores have finished loading
                 if (tasksReady && groupsReady && !isInitialized.value) {
                     console.log('🚀 [ORCHESTRATOR] Stores initialized, running initial sync', {
@@ -432,6 +402,39 @@ export function useCanvasOrchestrator() {
                     syncEdges()
                     isInitialized.value = true
                     console.log('✅ [ORCHESTRATOR] Initialization complete')
+
+                    // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
+                    // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
+                    // This guards against remounts from: tab focus, auth refresh, route changes
+                    // BUG-1084 FIX: Also guard against empty groups - reconciliation needs groups to determine containment
+                    // RACE FIX: Moved from onMounted into init watcher so reconciliation runs AFTER
+                    // both stores are fully loaded — prevents incorrect parentId from partial task data
+                    if (!hasReconciledThisSession && canvasStore.groups.length > 0) {
+                        hasReconciledThisSession = true
+                        console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
+                        await reconcileTaskParentsByContainment(
+                            taskStore.tasks,
+                            canvasStore.groups,
+                            async (taskId, updates) => {
+                                // Update store (will auto-sync to Supabase via existing persistence)
+                                // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
+                                console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
+                                taskStore.updateTask(taskId, updates, 'RECONCILE')
+                            },
+                            { writeToDb: true, silent: false }
+                        )
+                    } else if (hasReconciledThisSession) {
+                        console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
+                    }
+
+                    // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
+                    canvasStore.recalculateAllTaskCounts(taskStore.tasks)
+
+                    // Log hierarchy summary once on load (dev only)
+                    if (import.meta.env.DEV) {
+                        logHierarchySummary(canvasStore._rawGroups || [])
+                    }
+
                     // Defer stop to next tick to ensure stopInitWatcher is assigned
                     if (stopInitWatcher) stopInitWatcher()
                 }

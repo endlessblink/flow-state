@@ -5,7 +5,6 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import type { Task } from '@/stores/tasks'
-import { formatDateKey } from '@/utils/dateUtils'
 
 // Dispatch event to trigger brief flash animation on task card
 function flashTaskCard(taskId: string): void {
@@ -224,27 +223,15 @@ export function useTaskContextMenuActions(
         })
 
         if (taskId && !isBatch) {
-            // Step 1: Only create calendar instance if task doesn't already have an ACTIVE one today
-            // BUG-1291: If all today's instances are completed, allow creating a new one
-            // (startTaskNow appends — it won't replace existing instances)
-            const task = taskStore.getTask(taskId)
-            // BUG-1291: Use formatDateKey (local time) — not toISOString (UTC) which breaks after 10PM in UTC+ timezones
-            const todayStr = formatDateKey(new Date())
-            const hasActiveInstanceToday = task?.instances?.some(
-                (i: { scheduledDate?: string; status?: string }) =>
-                    i.scheduledDate === todayStr && i.status !== 'completed'
-            )
-
-            if (!hasActiveInstanceToday) {
-                try {
-                    console.log('🎯 [CONTEXT-MENU] No active instance today, creating calendar instance...')
-                    await taskStore.startTaskNowWithUndo(taskId)
-                    console.log('🎯 [CONTEXT-MENU] Task instance created successfully')
-                } catch (error) {
-                    console.error('🎯 [CONTEXT-MENU] Failed to create calendar instance:', error)
-                }
-            } else {
-                console.log('🎯 [CONTEXT-MENU] Task already has active instance today, skipping creation')
+            // Step 1: Create calendar instance at current time
+            // BUG-1291: startTaskNow APPENDS (never replaces), so existing instances are preserved.
+            // No guard needed — append logic is the protection against the "start time moves" bug.
+            try {
+                console.log('🎯 [CONTEXT-MENU] Creating calendar instance at current time...')
+                await taskStore.startTaskNowWithUndo(taskId)
+                console.log('🎯 [CONTEXT-MENU] Task instance created successfully')
+            } catch (error) {
+                console.error('🎯 [CONTEXT-MENU] Failed to create calendar instance:', error)
             }
 
             // Step 2: Always start timer (independent of instance creation)

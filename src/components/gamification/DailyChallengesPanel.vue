@@ -4,9 +4,11 @@
  * FEATURE-1132: Display 3 daily missions with generation trigger
  */
 import { computed, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useChallengesStore } from '@/stores/challenges'
 import { createAIRouter } from '@/services/ai/router'
 import type { ChatMessage } from '@/services/ai/types'
+import type { Challenge } from '@/types/challenges'
 import { storeToRefs } from 'pinia'
 import ChallengeCard from './ChallengeCard.vue'
 import ARIAMessage from './ARIAMessage.vue'
@@ -15,6 +17,10 @@ import { RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 // Props
 const props = defineProps<{
   compact?: boolean
+}>()
+
+const emit = defineEmits<{
+  pickChallenge: [challenge: Challenge]
 }>()
 
 // Store
@@ -96,9 +102,37 @@ async function generateChallenges() {
   }
 }
 
-function handleChallengeClick(challenge: unknown) {
-  // Could open a detail modal or navigate to related tasks
-  console.log('Challenge clicked:', challenge)
+const pickedChallengeId = ref<string | null>(null)
+const vueRouter = useRouter()
+
+function handleChallengeClick(challenge: Challenge) {
+  if (pickedChallengeId.value) return // Already picking
+  pickedChallengeId.value = challenge.id
+  emit('pickChallenge', challenge)
+
+  // Navigate to the best view for this challenge after animation
+  setTimeout(() => {
+    const route = getRouteForChallenge(challenge)
+    if (route) vueRouter.push(route)
+  }, 600)
+}
+
+function getRouteForChallenge(challenge: Challenge): string | null {
+  switch (challenge.objectiveType) {
+    case 'complete_tasks':
+    case 'complete_high_priority':
+    case 'clear_overdue':
+    case 'complete_variety':
+    case 'complete_project_tasks':
+      return '/board'
+    case 'complete_pomodoros':
+    case 'focus_time_minutes':
+      return '/' // Canvas (has timer)
+    case 'complete_before_hour':
+      return '/board'
+    default:
+      return null
+  }
 }
 </script>
 
@@ -137,6 +171,10 @@ function handleChallengeClick(challenge: unknown) {
         :key="challenge.id"
         :challenge="challenge"
         :compact="compact"
+        :class="{
+          'card--picked': pickedChallengeId === challenge.id,
+          'card--dismissed': pickedChallengeId && pickedChallengeId !== challenge.id
+        }"
         @click="handleChallengeClick(challenge)"
       />
     </div>
@@ -364,5 +402,41 @@ function handleChallengeClick(challenge: unknown) {
 .loading-state p {
   margin: 0;
   font-size: var(--text-sm);
+}
+
+/* Pick animation: selected card glows and pulses */
+.card--picked {
+  animation: cardPick 0.5s ease-out forwards;
+  border-color: var(--cf-cyan, rgba(0, 240, 255, 0.8)) !important;
+  box-shadow:
+    0 0 8px rgba(0, 240, 255, 0.5),
+    0 0 16px rgba(0, 240, 255, 0.2) !important;
+}
+
+/* Dismiss animation: other cards fade out and shrink */
+.card--dismissed {
+  animation: cardDismiss 0.4s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes cardPick {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes cardDismiss {
+  0% { opacity: 1; max-height: 200px; margin-bottom: var(--space-2); }
+  100% { opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; overflow: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card--picked,
+  .card--dismissed {
+    animation: none;
+  }
+  .card--dismissed {
+    display: none;
+  }
 }
 </style>

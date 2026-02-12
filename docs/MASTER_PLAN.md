@@ -185,17 +185,18 @@
 
 ---
 
-### BUG-1197: Canvas Group Drag Moves Unrelated Tasks (🔄 IN PROGRESS)
+### ~~BUG-1197~~: Canvas Group Drag Moves Unrelated Tasks (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-05)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
 
 **Problem**: Dragging a group (e.g., "Wednesday") on the canvas also drags tasks that don't belong to that group.
 
 **Root Cause**: Tasks can have stale `parentId` pointing to a group they're no longer spatially inside. `syncStoreToCanvas` blindly sets Vue Flow `parentNode` from `task.parentId` without spatial validation. When the group is dragged, Vue Flow includes all nodes with matching `parentNode` — including stale children — moving them to wrong positions.
 
-**Fix (Two-Part)**:
+**Fix (Two-Part + Write-Back)**:
 1. **Sync spatial validation** (`useCanvasSync.ts`): Before setting `parentNode`, validate task's center is actually inside claimed parent group. If outside, treat as root node.
 2. **Drag stale detection** (`useCanvasInteractions.ts`): In `onNodeDragStop`, detect when `node.parentNode` doesn't match `task.parentId`. Restore correct position and skip processing.
+3. **Stale parentId write-back** (`useCanvasSync.ts`): After sync cycle, deferred write-back clears stale parentIds in the store/DB via source 'RECONCILE', guarded by `isWritingBackStaleParents` to prevent re-sync loops.
 
 **Files**: `src/composables/canvas/useCanvasSync.ts`, `src/composables/canvas/useCanvasInteractions.ts`
 
@@ -215,23 +216,25 @@
 
 ---
 
-### TASK-1289: Investigate severe task position drift episode (🔄 IN PROGRESS)
+### ~~TASK-1289~~: Investigate severe task position drift episode (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-09)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
 
 **Problem**: User experienced a moment of severe task position drift. Root cause unknown — may be a regression of BUG-1209 fixes or a new drift vector. Needs investigation of recent changes to canvas sync, drag handlers, and position persistence.
 
 **Related**: BUG-1203, BUG-1209, BUG-1061
 
+**Resolution (2026-02-12)**: Full 5-bug audit found 4 remaining vulnerabilities. Fixed: (1) stale parentId now written back to DB after sync detection, (2) reconciliation moved after full store initialization, (3) legacy syncTasksToCanvas removed, (4) auto-archive geometry exception documented. All drift protections verified intact.
+
 ---
 
-### BUG-1203: Canvas Position Drift in Tauri Desktop App (🔄 IN PROGRESS)
+### ~~BUG-1203~~: Canvas Position Drift in Tauri Desktop App (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
 
 **Problem**: Task positions drift/shift on the canvas in the Tauri desktop app. Positions change unexpectedly, causing tasks to end up in wrong locations.
 
-**Investigation**: TBD - checking canvas sync, drag handlers, and geometry invariant violations.
+**Resolution (2026-02-12)**: No Tauri-specific drift paths found. All drift vectors covered by BUG-1209 comprehensive fixes (PositionManager, lock system, timestamp guards, spatial validation). Subsumed by BUG-1209.
 
 ---
 
@@ -340,9 +343,9 @@
 
 ---
 
-### BUG-1212: Sync Queue CREATE Retry Causes "Duplicate Key" Corruption (📋 PLANNED)
+### ~~BUG-1212~~: Sync Queue CREATE Retry Causes "Duplicate Key" Corruption (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: When a task CREATE operation fails in the offline sync queue (network issue, timeout), retries attempt `.insert()` again. If the original insert actually succeeded server-side before the client detected the error, the retry hits `duplicate key value violates unique constraint "tasks_pkey"`. The operation gets stuck as "corrupted" in the sync queue — cannot retry, cannot auto-resolve.
 
@@ -485,9 +488,9 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 
 ---
 
-### BUG-1209: Comprehensive Canvas Position Drift - All Causes (👀 REVIEW)
+### ~~BUG-1209~~: Comprehensive Canvas Position Drift - All Causes (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
 
 **Problem**: Task positions still drift when moving tasks on canvas. 47 drift vectors identified across 6 subsystems. Subsumes BUG-1203, relates to BUG-1197.
 
@@ -1542,9 +1545,9 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 
 ---
 
-### BUG-1061: Canvas Position Drift on Cross-Browser Sync (👀 REVIEW)
+### ~~BUG-1061~~: Canvas Position Drift on Cross-Browser Sync (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-01-25)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
 
 **Problem**: Tasks appear in different positions across browser tabs.
 
@@ -2843,14 +2846,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
-| **TASK-1289** | **P0** | **🔄 Investigate severe task position drift episode** |
+| ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
 | **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
-| BUG-1212 | P0 | Sync queue CREATE retry causes "duplicate key" corruption |
+| ~~BUG-1212~~ | P0 | ✅ Sync queue CREATE retry causes "duplicate key" corruption |
 | BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | **BUG-1291** | **P0** | **👀 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
@@ -2858,6 +2861,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
 | ~~**BUG-1294**~~ | **P1** | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task** |
 | ~~**BUG-1296**~~ | **P1** | ✅ **Time block notifications never fire — _rawTasks → rawTasks property name mismatch** |
+| **BUG-1302** | **P1** | **👀 Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
+| **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
+| **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
@@ -3646,6 +3652,18 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 **Progress (2026-02-08):** Phases 1-3 complete + P0 anti-chore constants applied. 624 tests passing, zero TS errors. Next: P1 items (streak multiplier, corruption XP modifier, partial boss credit).
 
+**Phase 4: RPG HUD Header Redesign** (TASK-1305, 🔄 IN PROGRESS)
+- Created `GamificationHUD.vue` — single RPG-styled component replacing inline header widgets
+- 4 visual states: unauth CTA ("CONNECT TO THE GRID"), minimal (text only), moderate (full bar), intense (glow + shine + narrative)
+- Uses cyberflow design tokens: corner-cut-sm clip-path, cf-dark-3 bg, cf-cyan border/glow, Space Mono typography
+- Backdrop blur via `::before` pseudo-element (clip-path + backdrop-filter incompatibility fix)
+- Refactored AppHeader.vue: removed ~80 lines of inline widgets, replaced with `<GamificationHUD />`
+- Added challenge pick animation to DailyChallengesPanel (glow + collapse + auto-navigate)
+- Fixed kill-flow-state.sh hanging on zombie PIDs (added timeout to pwdx)
+- Fixed missing verify-auth script reference in package.json dev script
+
+**Progress (2026-02-12):** Phase 4 HUD implemented. Challenge pick animations working. User testing in progress — multiplier and penalty visualization discussed but not yet implemented.
+
 ---
 
 ### ~~BUG-1293~~: Canvas CSS Tokenization Damage (✅ DONE)
@@ -3743,6 +3761,34 @@ Awaiting user testing to confirm all 4 symptoms resolved.
 
 **Files**:
 - `src/composables/useTimeBlockNotifications.ts`
+
+---
+
+### BUG-1302: Time Block Notifications Still Not Firing (👀 REVIEW)
+
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-12)
+
+**Problem**: Despite BUG-1296 fix (`_rawTasks` → `rawTasks`), time block notifications are still not firing. User has a 120-min calendar block scheduled and received no milestone alerts (halfway, 1-min-before, ended).
+
+**Root Causes Found** (multi-agent investigation):
+1. **Late tolerance too tight** (2 min) — desktop apps sleep/background, `setInterval` skips ticks, milestones silently missed
+2. **Singleton guard fragile** — module-level `isInitialized` survives but interval could die, `start()` refuses to restart
+3. **Silent notification delivery** — `deliverNotification()` had no error handling, no logging, failed invisibly
+4. **Missing permission request** — Timer store requests Notification permission at init, but time blocks didn't
+5. **Instance data not in sync queue** — `createTaskInstance` was fire-and-forget, instances not backed up by sync queue
+6. **Toast too short** — 5s duration easy to miss
+
+**Fixes Applied** (4 files):
+1. `useTimeBlockNotifications.ts` — Late tolerance 2min→10min, resilient singleton (restarts if interval died), delivery logging, toast duration 5s→8s, skip completed/soft-deleted tasks
+2. `notificationDelivery.ts` — Added try-catch, logging on permission denied/API unavailable/delivery success, returns boolean
+3. `useAppInitialization.ts` — Explicit `Notification.requestPermission()` before starting time block polling
+4. `taskOperations.ts` — Added `instances` to sync queue payload for offline backup
+
+**Files**:
+- `src/composables/useTimeBlockNotifications.ts` — Core composable (polling, milestone detection, delivery)
+- `src/utils/notificationDelivery.ts` — Browser Notification API wrapper
+- `src/composables/app/useAppInitialization.ts` — Where composable is mounted
+- `src/stores/tasks/taskOperations.ts` — Sync queue payload for instance persistence
 
 ---
 

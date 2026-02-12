@@ -331,7 +331,7 @@ watch(() => props.isVisible, (visible) => {
         <div v-if="result.type === 'subtasks'" class="result-subtasks">
           <div class="result-label">Suggested subtasks</div>
           <div v-for="(sub, i) in result.subtasks" :key="i" class="subtask-item">
-            <span class="subtask-text">{{ sub }}</span>
+            <span class="subtask-text" dir="auto">{{ sub }}</span>
           </div>
           <div class="result-actions">
             <button class="accept-btn" @click="acceptSubtasks">Add all</button>
@@ -348,7 +348,7 @@ watch(() => props.isVisible, (visible) => {
             </span>
             <span class="duration-badge">{{ result.priority?.duration }}min</span>
           </div>
-          <p class="reasoning-text">{{ result.priority?.reasoning }}</p>
+          <p class="reasoning-text" dir="auto">{{ result.priority?.reasoning }}</p>
           <div class="result-actions">
             <button class="accept-btn" @click="acceptPriority">Apply</button>
             <button class="dismiss-btn" @click="clearResult">Dismiss</button>
@@ -359,7 +359,7 @@ watch(() => props.isVisible, (visible) => {
         <div v-if="result.type === 'breakdown'" class="result-breakdown">
           <div class="result-label">Break into tasks</div>
           <div v-for="(t, i) in result.breakdown" :key="i" class="breakdown-item">
-            <span class="breakdown-title">{{ t.title }}</span>
+            <span class="breakdown-title" dir="auto">{{ t.title }}</span>
             <span v-if="t.priority" class="priority-badge small" :class="t.priority">
               {{ t.priority }}
             </span>
@@ -374,7 +374,7 @@ watch(() => props.isVisible, (visible) => {
         <div v-if="result.type === 'date'" class="result-date">
           <div class="result-label">Suggested date</div>
           <div class="date-suggestion">{{ formatDate(result.date?.date) }}</div>
-          <p class="reasoning-text">{{ result.date?.reasoning }}</p>
+          <p class="reasoning-text" dir="auto">{{ result.date?.reasoning }}</p>
           <div class="result-actions">
             <button class="accept-btn" @click="acceptDate">Apply</button>
             <button class="dismiss-btn" @click="clearResult">Dismiss</button>
@@ -413,7 +413,7 @@ watch(() => props.isVisible, (visible) => {
         <!-- SUMMARY result -->
         <div v-if="result.type === 'summary'" class="result-summary">
           <div class="result-label">Summary</div>
-          <p class="summary-text">{{ result.summary?.summary }}</p>
+          <p class="summary-text" dir="auto">{{ result.summary?.summary }}</p>
           <div v-if="result.summary?.suggestedGroup" class="suggested-group">
             Suggested group: <strong>{{ result.summary.suggestedGroup }}</strong>
           </div>

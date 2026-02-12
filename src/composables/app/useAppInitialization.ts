@@ -139,8 +139,13 @@ export function useAppInitialization() {
             console.warn('⚠️ Safari ITP check failed:', error)
         }
 
-        // TASK-1219: Time block progress notifications
+        // TASK-1219 + BUG-1302: Time block progress notifications
+        // Ensure notification permission is granted before starting polling
         try {
+            if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                const perm = await Notification.requestPermission()
+                console.log('[TIME-BLOCK] Notification permission:', perm)
+            }
             const timeBlockNotifications = useTimeBlockNotifications()
             timeBlockNotifications.start()
             console.log('[TIME-BLOCK] Initialized successfully')

@@ -106,6 +106,15 @@ Only specific user-initiated actions may mutate `canvasPosition`, `position`, or
 
 **All other modules (Sync, Smart Groups, Auto-Collectors) must treat geometry as READ-ONLY.**
 
+#### Accepted Exceptions
+
+The following geometry writes from non-drag contexts are **intentional** and documented:
+
+| Exception | Source | What it writes | Why it's allowed |
+|-----------|--------|----------------|------------------|
+| **Auto-archive on done** | `taskOperations.ts` `updateTask` (any source) | Clears `canvasPosition` + `parentId` | Done tasks must leave the canvas. Direction is always "remove", never "reposition", so no drift risk. |
+| **Stale parentId reconciliation** | `useCanvasSync.ts` post-sync write-back | Clears stale `parentId` via `'RECONCILE'` source | Repairs corruption where task claims parent membership but is spatially outside. Without write-back, stale parentId persists if task is never dragged. Guarded by `isWritingBackStaleParents` to prevent re-sync loops. |
+
 ### Invariant 2: Hierarchy Consistency
 *   If `group.parentGroupId === null` → `node.parentNode` must be undefined.
 *   If `group.parentGroupId !== null` → `node.parentNode` must match `section-{parentGroupId}`.

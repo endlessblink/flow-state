@@ -6,6 +6,8 @@ import { guardTaskCreation } from '@/utils/demoContentGuard'
 import { formatDateKey } from '@/utils/dateUtils'
 // FEATURE-1118: Gamification hooks for task completion
 import { useGamificationHooks } from '@/composables/useGamificationHooks'
+// BUG-1303: Stop timer when task marked done
+import { useTimerStore } from '@/stores/timer'
 // TASK-1177: Offline-first sync queue integration
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 // TASK-089 FIX: Unlock position when removing from canvas
@@ -354,8 +356,32 @@ export function useTaskOperations(
                         console.warn('[Gamification] Hook error:', e)
                     }
 
+                    // BUG-1303: Stop timer if it's running on the completed task
+                    try {
+                        const timerStore = useTimerStore()
+                        if (timerStore.currentTaskId === taskId && timerStore.isTimerActive) {
+                            await timerStore.stopTimer()
+                            console.log(`⏱️ [TIMER] Auto-stopped timer for completed task "${task.title?.slice(0, 30)}"`)
+                        }
+                    } catch (e) {
+                        console.warn('[Timer] Auto-stop on task completion failed:', e)
+                    }
+
+                    // ================================================================
                     // AUTO-ARCHIVE: Move done tasks off canvas to inbox
-                    // This prevents position/sync issues with done tasks on canvas
+                    // ================================================================
+                    // INTENTIONAL GEOMETRY INVARIANT EXCEPTION (TASK-255)
+                    //
+                    // This clears canvasPosition and parentId, which are geometry
+                    // properties normally restricted to drag handlers only.
+                    // This is ALLOWED because:
+                    //   1. Done tasks must leave the canvas — keeping them causes
+                    //      position/sync drift and visual clutter
+                    //   2. The write is always triggered by an explicit status change
+                    //      (user or sync marking task as 'done'), not by background sync
+                    //   3. The direction is always "remove from canvas" (clear), never
+                    //      "move to a new position" — so it cannot cause position drift
+                    // ================================================================
                     if (task.canvasPosition) {
                         updates.canvasPosition = undefined
                         updates.isInInbox = true
@@ -436,6 +462,11 @@ export function useTaskOperations(
                 if (updatedTask.doneForNowUntil !== undefined) {
                     const doneForNowUntil = updatedTask.doneForNowUntil
                     payload.done_for_now_until = (!doneForNowUntil || doneForNowUntil === 'null' || doneForNowUntil === 'undefined') ? null : doneForNowUntil
+                }
+                // BUG-1302: Include instances in sync queue payload
+                // Without this, calendar time blocks aren't backed up by the sync queue
+                if (updatedTask.instances !== undefined) {
+                    payload.instances = JSON.parse(JSON.stringify(updatedTask.instances))
                 }
 
                 await syncOrchestrator.enqueue({

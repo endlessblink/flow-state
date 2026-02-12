@@ -170,49 +170,9 @@ export const useCanvasStore = defineStore('canvas', () => {
   // }
 
   // 8. Visual Logic
-  const syncTasksToCanvas = (tasks: Task[]) => {
-    try {
-      const onCanvasTasks = tasks.filter(t => !t.isInInbox && t.canvasPosition)
-      const existingTaskNodes = new Map(nodes.value.filter(n => n.type === 'taskNode' || n.type === 'task').map(n => [n.id, n]))
-
-      const updatedTaskNodes = onCanvasTasks.map(t => {
-        const existingNode = existingTaskNodes.get(t.id)
-        if (existingNode) {
-          const oldTask = existingNode.data?.task
-          const posUnchanged = existingNode.position.x === t.canvasPosition?.x && existingNode.position.y === t.canvasPosition?.y
-          const dataUnchanged = oldTask &&
-            oldTask.status === t.status &&
-            oldTask.priority === t.priority &&
-            oldTask.title === t.title &&
-            oldTask.updatedAt === t.updatedAt &&
-            oldTask.progress === t.progress &&
-            oldTask.dueDate === t.dueDate &&
-            oldTask.estimatedDuration === t.estimatedDuration
-
-          if (posUnchanged && dataUnchanged) {
-            existingTaskNodes.delete(t.id)
-            return existingNode
-          }
-        }
-        existingTaskNodes.delete(t.id)
-        return {
-          id: t.id,
-          type: 'taskNode',
-          position: { ...t.canvasPosition } as { x: number; y: number },
-          data: { task: t },
-          draggable: true,
-          connectable: true,
-          selectable: true,
-          zIndex: 10
-        }
-      })
-
-      const otherNodes = nodes.value.filter(n => n.type !== 'task' && n.type !== 'taskNode')
-      nodes.value = [...otherNodes, ...updatedTaskNodes] as Node[]
-    } catch (e) {
-      console.error('[CANVAS:SYNC] Sync tasks to canvas failed:', e)
-    }
-  }
+  // REMOVED: syncTasksToCanvas (legacy flat-node sync without parentNode, spatial validation,
+  // or PositionManager integration). Canonical sync path is useCanvasSync.syncStoreToCanvas().
+  // performanceBenchmark.ts guards with typeof check, so removal is safe.
 
   const calculateContentBounds = (tasks: Task[]) => {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -332,7 +292,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       const groupAbsolutePos = getGroupAbsolutePosition(sectionId, groupsModule._rawGroups.value)
       return isNodeCompletelyInside({ position: task.canvasPosition }, { position: groupAbsolutePos, width: g.position.width, height: g.position.height })
     },
-    syncTasksToCanvas, requestSync, setSelectionMode, startSelection, updateSelection, endSelection, selectNodesInRect,
+    requestSync, setSelectionMode, startSelection, updateSelection, endSelection, selectNodesInRect,
     toggleMultiSelectMode,
     togglePriorityIndicator: () => { showPriorityIndicator.value = !showPriorityIndicator.value },
     toggleStatusBadge: () => { showStatusBadge.value = !showStatusBadge.value },

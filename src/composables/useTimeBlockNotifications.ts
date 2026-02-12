@@ -6,6 +6,9 @@
  * Dedup: In-memory Set keyed by `taskId-instanceIndex-milestoneId`, reset at midnight.
  * Delivery: Reads settingsStore each tick; fires toast (in-app) and/or OS notification.
  * DND: Checks notification store's existing DND config.
+ *
+ * BUG-1302: Increased late tolerance from 2min to 10min, added delivery logging,
+ * made singleton guard resilient to interval death.
  */
 
 import { ref } from 'vue'
@@ -16,7 +19,7 @@ import { useToast } from '@/composables/useToast'
 import { deliverNotification } from '@/utils/notificationDelivery'
 import type { TimeBlockMilestone } from '@/types/timeBlockNotifications'
 import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotifications'
-import type { Task, TaskInstance } from '@/types/tasks'
+import type { TaskInstance } from '@/types/tasks'
 
 interface ActiveTimeBlock {
   taskId: string
@@ -31,10 +34,12 @@ interface ActiveTimeBlock {
 // Module-level singleton guard
 let isInitialized = false
 let tickCount = 0
+let activeIntervalId: ReturnType<typeof setInterval> | null = null
 
 const POLL_INTERVAL_MS = 15_000  // 15 seconds
-// Tolerance: don't fire milestones that are more than 2 minutes old
-const LATE_TOLERANCE_MS = 2 * 60 * 1000
+// BUG-1302: Increased from 2 min to 10 min — desktop apps may sleep/background,
+// causing setInterval to skip ticks. 10 min ensures milestones are caught on wake.
+const LATE_TOLERANCE_MS = 10 * 60 * 1000
 
 export function useTimeBlockNotifications() {
   const taskStore = useTaskStore()
@@ -44,7 +49,6 @@ export function useTimeBlockNotifications() {
 
   const shownMilestones = ref(new Set<string>())
   const currentDate = ref(getTodayStr())
-  let intervalId: ReturnType<typeof setInterval> | null = null
 
   /**
    * Defensive settings getter — falls back to defaults if settings store
@@ -66,11 +70,14 @@ export function useTimeBlockNotifications() {
     const today = getTodayStr()
     const blocks: ActiveTimeBlock[] = []
 
-    // IMPORTANT: Use _rawTasks (unfiltered) — taskStore.tasks is filtered by
+    // IMPORTANT: Use rawTasks (unfiltered) — taskStore.tasks is filtered by
     // active smart view/project/status filters and would miss tasks not in the current view
     const tasks = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : []
 
     for (const task of tasks) {
+      // Skip completed/soft-deleted tasks
+      if (task.status === 'done' || task._soft_deleted) continue
+
       // Path 1: Instance-based scheduling (primary path)
       if (task.instances && Array.isArray(task.instances)) {
         for (let i = 0; i < task.instances.length; i++) {
@@ -229,6 +236,7 @@ export function useTimeBlockNotifications() {
 
   /**
    * Fire notifications for a milestone via configured channels
+   * BUG-1302: Added delivery logging for diagnostics
    */
   function fireMilestone(milestone: TimeBlockMilestone, block: ActiveTimeBlock): void {
     const settings = getSettings()
@@ -238,9 +246,16 @@ export function useTimeBlockNotifications() {
     const message = getMessage(milestone, block)
     const title = milestone.id === 'ended' ? 'Time Block Ended' : 'Time Block Alert'
 
+    console.log(`[TIME-BLOCK] Delivering milestone "${milestone.id}" via channels:`, {
+      inAppToast: channels.inAppToast,
+      osNotification: channels.osNotification,
+      sound: channels.sound
+    })
+
     if (channels.inAppToast) {
       const toastType = milestone.id === 'ended' ? 'warning' : 'info'
-      showToast(message, toastType, { duration: 5000 })
+      showToast(message, toastType, { duration: 8000 })
+      console.log('[TIME-BLOCK] Toast delivered:', message)
     }
 
     if (channels.osNotification) {
@@ -249,6 +264,14 @@ export function useTimeBlockNotifications() {
         body: message,
         tag: `timeblock-${block.taskId}-${milestone.id}`,
         sound: channels.sound
+      }).then(success => {
+        if (success) {
+          console.log('[TIME-BLOCK] OS notification delivered')
+        } else {
+          console.warn('[TIME-BLOCK] OS notification failed — check permission status')
+        }
+      }).catch(err => {
+        console.error('[TIME-BLOCK] OS notification error:', err)
       })
     }
   }
@@ -286,7 +309,7 @@ export function useTimeBlockNotifications() {
         const tasks = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : []
         const tasksWithInstances = tasks.filter(t => t.instances?.length)
         const tasksWithSchedule = tasks.filter(t => t.scheduledDate === today)
-        console.log(`[TIME-BLOCK] Tick #${tickCount}: ${blocks.length} blocks found | ${tasks.length} total tasks | ${tasksWithInstances.length} with instances | ${tasksWithSchedule.length} with scheduledDate=today(${today})`)
+        console.log(`[TIME-BLOCK] Tick #${tickCount}: ${blocks.length} blocks found | ${tasks.length} total tasks | ${tasksWithInstances.length} with instances | ${tasksWithSchedule.length} with scheduledDate=today(${today}) | Notification.permission=${typeof Notification !== 'undefined' ? Notification.permission : 'N/A'}`)
 
         if (blocks.length === 0 && (tasksWithInstances.length > 0 || tasksWithSchedule.length > 0)) {
           // We have tasks but no blocks detected — log WHY
@@ -305,7 +328,7 @@ export function useTimeBlockNotifications() {
         }
       }
 
-      if (blocks.length > 0) {
+      if (blocks.length > 0 && (tickCount <= 4 || tickCount % 20 === 0)) {
         console.log(`[TIME-BLOCK] Active blocks:`, blocks.map(b => ({
           task: b.taskTitle,
           start: b.startTime.toLocaleTimeString(),
@@ -327,8 +350,10 @@ export function useTimeBlockNotifications() {
           const triggerMs = triggerTime.getTime()
 
           // Fire if trigger time has passed and we're within the tolerance window
+          // BUG-1302: Tolerance increased to 10 min for desktop sleep/background resilience
           if (now >= triggerMs && now - triggerMs <= LATE_TOLERANCE_MS) {
-            console.log(`[TIME-BLOCK] 🔔 FIRING milestone "${milestone.id}" for "${block.taskTitle}"`)
+            const lateBy = Math.round((now - triggerMs) / 1000)
+            console.log(`[TIME-BLOCK] 🔔 FIRING milestone "${milestone.id}" for "${block.taskTitle}" (${lateBy}s after trigger)`)
             shownMilestones.value.add(key)
             fireMilestone(milestone, block)
           }
@@ -340,31 +365,40 @@ export function useTimeBlockNotifications() {
   }
 
   function start(): void {
-    if (isInitialized) {
+    // BUG-1302: Resilient singleton — if interval died (e.g., GC), allow restart
+    if (isInitialized && activeIntervalId !== null) {
       console.log('[TIME-BLOCK] Already initialized, skipping')
       return
+    }
+
+    // Clean up dead state if needed
+    if (isInitialized && activeIntervalId === null) {
+      console.warn('[TIME-BLOCK] Singleton guard was set but interval was dead — restarting')
     }
 
     isInitialized = true
 
     const settings = getSettings()
+    const permissionStatus = typeof Notification !== 'undefined' ? Notification.permission : 'N/A'
     console.log('[TIME-BLOCK] Starting with settings:', {
       enabled: settings.enabled,
       milestones: settings.milestones.map(m => `${m.id}(${m.enabled ? 'on' : 'off'})`),
       channels: settings.deliveryChannels,
-      totalTasks: taskStore.rawTasks?.length ?? 0
+      totalTasks: taskStore.rawTasks?.length ?? 0,
+      notificationPermission: permissionStatus,
+      lateTolerance: `${LATE_TOLERANCE_MS / 60000} min`
     })
 
     // Run immediately once, then every 15 seconds
     tick()
-    intervalId = setInterval(tick, POLL_INTERVAL_MS)
+    activeIntervalId = setInterval(tick, POLL_INTERVAL_MS)
     console.log('[TIME-BLOCK] Notification polling started (15s interval)')
   }
 
   function stop(): void {
-    if (intervalId) {
-      clearInterval(intervalId)
-      intervalId = null
+    if (activeIntervalId) {
+      clearInterval(activeIntervalId)
+      activeIntervalId = null
     }
     isInitialized = false
     console.log('[TIME-BLOCK] Notification polling stopped')
@@ -372,7 +406,7 @@ export function useTimeBlockNotifications() {
 
   // NOTE: No onUnmounted — this composable is called inside onMounted (outside
   // Vue setup context), so lifecycle hooks don't attach. The singleton guard
-  // + module-level intervalId ensure cleanup via stop() if ever needed.
+  // + module-level activeIntervalId ensure cleanup via stop() if ever needed.
 
   return {
     start,

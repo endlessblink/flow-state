@@ -305,7 +305,7 @@ onUnmounted(() => {
 .task-row__tag {
   padding: var(--space-0_5) var(--space-1_5);
   background: rgba(var(--color-slate-900), 0.2);
-  border: var(--space-0_5) solid var(--glass-border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: rgba(var(--color-slate-50), 0.6);

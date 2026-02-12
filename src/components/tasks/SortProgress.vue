@@ -114,7 +114,7 @@ const percentage = computed(() => {
 
 .progress-bar-track {
   position: relative;
-  height: var(--space-2);
+  height: var(--space-5);
   background: var(--glass-border);
   border-radius: var(--radius-sm);
   overflow: hidden;

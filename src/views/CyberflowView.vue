@@ -34,6 +34,9 @@
 
       <!-- ACHIEVEMENTS Tab -->
       <CyberAchievements v-else-if="activeSection === 'achievements'" :show-all="true" />
+
+      <!-- ARENA Tab (TASK-1301) -->
+      <ArenaView v-else-if="activeSection === 'arena'" />
     </div>
 
     <!-- Character Drawer (overlay, not a tab) -->
@@ -54,10 +57,11 @@ import CyberBossFight from '@/components/gamification/cyber/CyberBossFight.vue'
 import CyberSkillTree from '@/components/gamification/cyber/CyberSkillTree.vue'
 import CyberAchievements from '@/components/gamification/cyber/CyberAchievements.vue'
 import CyberCharacterDrawer from '@/components/gamification/cyber/CyberCharacterDrawer.vue'
+import ArenaView from '@/components/gamification/arena/ArenaView.vue'
 
 const { cyberflowClasses } = useCyberflowTheme()
 
-type SectionId = 'overview' | 'missions' | 'boss' | 'upgrades' | 'achievements'
+type SectionId = 'overview' | 'missions' | 'boss' | 'upgrades' | 'achievements' | 'arena'
 
 // Active section tab state
 const activeSection = ref<SectionId>('overview')

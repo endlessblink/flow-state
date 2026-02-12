@@ -4,7 +4,6 @@
  * FEATURE-1132: Display 3 daily missions with generation trigger
  */
 import { computed, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useChallengesStore } from '@/stores/challenges'
 import { createAIRouter } from '@/services/ai/router'
 import type { ChatMessage } from '@/services/ai/types'
@@ -103,36 +102,11 @@ async function generateChallenges() {
 }
 
 const pickedChallengeId = ref<string | null>(null)
-const vueRouter = useRouter()
 
 function handleChallengeClick(challenge: Challenge) {
   if (pickedChallengeId.value) return // Already picking
   pickedChallengeId.value = challenge.id
   emit('pickChallenge', challenge)
-
-  // Navigate to the best view for this challenge after animation
-  setTimeout(() => {
-    const route = getRouteForChallenge(challenge)
-    if (route) vueRouter.push(route)
-  }, 600)
-}
-
-function getRouteForChallenge(challenge: Challenge): string | null {
-  switch (challenge.objectiveType) {
-    case 'complete_tasks':
-    case 'complete_high_priority':
-    case 'clear_overdue':
-    case 'complete_variety':
-    case 'complete_project_tasks':
-      return '/board'
-    case 'complete_pomodoros':
-    case 'focus_time_minutes':
-      return '/' // Canvas (has timer)
-    case 'complete_before_hour':
-      return '/board'
-    default:
-      return null
-  }
 }
 </script>
 

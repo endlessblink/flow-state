@@ -2170,6 +2170,7 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1298**: Context menu AI Assist — ✨ button in TaskContextMenu with AI popover
 - [ ] **TASK-1299**: Edit modal AI Assist — ✨ button in TaskEditModal footer, auto-populate form fields
 - [ ] **TASK-1300**: Quick create AI Assist — ✨ button in QuickTaskCreate next to title input
+  **Progress (2026-02-12):** All 5 files implemented + integrated. Hebrew/RTL language detection added. Sticky bar translucency fixed. Awaiting user testing.
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS

@@ -25,7 +25,7 @@ import LevelTooltipContent from '@/components/gamification/tooltips/LevelTooltip
 import XpTooltipContent from '@/components/gamification/tooltips/XpTooltipContent.vue'
 import StreakTooltipContent from '@/components/gamification/tooltips/StreakTooltipContent.vue'
 import ChallengeTooltipContent from '@/components/gamification/tooltips/ChallengeTooltipContent.vue'
-import { Flame, ChevronDown } from 'lucide-vue-next'
+import { Flame, ChevronDown, Target } from 'lucide-vue-next'
 
 const props = defineProps<{
   panelOpen: boolean
@@ -56,6 +56,15 @@ const streakInfo = computed(() => gamificationStore.streakInfo)
 const streak = computed(() => streakInfo.value.currentStreak)
 const isActiveToday = computed(() => streakInfo.value.isActiveToday)
 const hasChallenges = computed(() => challengesStore.hasActiveChallenges)
+
+// Active mission for HUD display
+const firstActiveDaily = computed(() => challengesStore.activeDailies[0])
+const missionLabel = computed(() => {
+  const c = firstActiveDaily.value
+  if (!c) return null
+  const title = c.title.length > 15 ? c.title.slice(0, 14) + '…' : c.title
+  return `${title} ${c.objectiveCurrent}/${c.objectiveTarget}`
+})
 
 // Narrative (intense only)
 const narrative = computed(() =>

@@ -8,7 +8,7 @@
       tabindex="-1"
       @click.stop="$emit('startTimer')"
     >
-      <Play :size="12" aria-hidden="true" />
+      <Play :size="14" aria-hidden="true" />
     </button>
     <button
       class="action-btn edit-btn"
@@ -18,7 +18,7 @@
       tabindex="-1"
       @click.stop="$emit('edit')"
     >
-      <Edit :size="12" aria-hidden="true" />
+      <Edit :size="14" aria-hidden="true" />
     </button>
   </div>
 </template>
@@ -44,8 +44,8 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -55,10 +55,14 @@ defineEmits<{
   transition: all var(--duration-fast);
 }
 
+.action-btn :deep(svg) {
+  shape-rendering: crispEdges;
+  stroke-width: 2.5;
+}
+
 .action-btn:hover {
   background: var(--glass-bg-base);
   color: var(--text-primary);
   border-color: var(--glass-border-hover);
-  transform: translateY(-1px);
 }
 </style>

@@ -52,7 +52,9 @@ export function useCalendarInteractionHandlers(
             mouseY: mouseEvent.clientY
         })
 
-        const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
+        // BUG-1291: Use getTask() (searches _rawTasks) instead of tasks.find()
+        // taskStore.tasks is filtered by smart views/projects — calendar tasks may not be in it
+        const task = taskStore.getTask(calendarEvent.taskId)
         if (!task) {
             console.error('📋 [CALENDAR-CTX] Task NOT FOUND in store for calendarEvent:', {
                 taskId: calendarEvent.taskId,

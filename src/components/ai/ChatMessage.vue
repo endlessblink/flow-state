@@ -222,6 +222,23 @@ function priorityColor(priority?: string): string {
 // Quick-Edit Popover
 // ============================================================================
 
+// Collapse long task lists — show max 3, expandable
+const MAX_VISIBLE_TASKS = 3
+const expandedSections = ref<Set<string>>(new Set())
+
+function toggleSection(key: string) {
+  if (expandedSections.value.has(key)) {
+    expandedSections.value.delete(key)
+  } else {
+    expandedSections.value.add(key)
+  }
+}
+
+function visibleTasks(tasks: any[], sectionKey: string): any[] {
+  if (expandedSections.value.has(sectionKey) || tasks.length <= MAX_VISIBLE_TASKS) return tasks
+  return tasks.slice(0, MAX_VISIBLE_TASKS)
+}
+
 const quickEditTask = ref<{ id: string; title: string; priority?: string | null; status?: string; dueDate?: string | null; estimatedDuration?: number | null } | null>(null)
 const quickEditPos = ref({ x: 0, y: 0 })
 
@@ -395,9 +412,12 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
             </div>
             <!-- Overdue task list if any -->
             <div v-if="result.data.overdueTasks?.length > 0" class="task-list">
-              <div class="summary-section-label">Overdue Tasks</div>
+              <div class="summary-section-label">
+                Overdue Tasks
+                <span class="section-count">({{ result.data.overdueTasks.length }})</span>
+              </div>
               <button
-                v-for="task in result.data.overdueTasks"
+                v-for="task in visibleTasks(result.data.overdueTasks, 'overdue-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -440,12 +460,24 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   </span>
                 </div>
               </button>
+              <button
+                v-if="result.data.overdueTasks.length > MAX_VISIBLE_TASKS"
+                class="show-more-btn"
+                @click="toggleSection('overdue-' + result.tool)"
+              >
+                {{ expandedSections.has('overdue-' + result.tool)
+                  ? 'Show less'
+                  : `Show all ${result.data.overdueTasks.length} overdue tasks` }}
+              </button>
             </div>
             <!-- Due today task list if any -->
             <div v-if="result.data.dueTodayTasks?.length > 0" class="task-list">
-              <div class="summary-section-label">Due Today</div>
+              <div class="summary-section-label">
+                Due Today
+                <span class="section-count">({{ result.data.dueTodayTasks.length }})</span>
+              </div>
               <button
-                v-for="task in result.data.dueTodayTasks"
+                v-for="task in visibleTasks(result.data.dueTodayTasks, 'duetoday-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -491,6 +523,15 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                     <Play :size="12" /> Timer started
                   </span>
                 </div>
+              </button>
+              <button
+                v-if="result.data.dueTodayTasks.length > MAX_VISIBLE_TASKS"
+                class="show-more-btn"
+                @click="toggleSection('duetoday-' + result.tool)"
+              >
+                {{ expandedSections.has('duetoday-' + result.tool)
+                  ? 'Show less'
+                  : `Show all ${result.data.dueTodayTasks.length} tasks` }}
               </button>
             </div>
           </div>
@@ -772,10 +813,11 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
             <div class="tool-result-header" :class="'tool-' + (result.type || 'read')">
               <component :is="toolIcon(result.type)" :size="14" class="tool-result-icon" />
               <span class="tool-result-title">{{ result.message }}</span>
+              <span v-if="getTasksFromResult(result).length > MAX_VISIBLE_TASKS" class="section-count">({{ getTasksFromResult(result).length }})</span>
             </div>
             <div class="task-list">
               <button
-                v-for="task in getTasksFromResult(result)"
+                v-for="task in visibleTasks(getTasksFromResult(result), 'tasklist-' + result.tool)"
                 :key="task.id"
                 class="task-list-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
@@ -826,6 +868,15 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                     <Play :size="12" /> Timer started
                   </span>
                 </div>
+              </button>
+              <button
+                v-if="getTasksFromResult(result).length > MAX_VISIBLE_TASKS"
+                class="show-more-btn"
+                @click="toggleSection('tasklist-' + result.tool)"
+              >
+                {{ expandedSections.has('tasklist-' + result.tool)
+                  ? 'Show less'
+                  : `Show all ${getTasksFromResult(result).length} tasks` }}
               </button>
             </div>
           </div>
@@ -1286,6 +1337,8 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 .task-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
 }
 
 .task-list-item {
@@ -1295,23 +1348,21 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   gap: var(--space-0_5) var(--space-2);
   align-items: start;
   padding: var(--space-2) var(--space-3);
-  border: none;
-  background: transparent;
+  border: 1px solid var(--glass-border-faint);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
   color: var(--text-primary);
   font-size: var(--text-meta);
   text-align: start;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition: all 0.12s ease;
   width: 100%;
   position: relative;
 }
 
 .task-list-item:hover {
   background: var(--glass-bg-light);
-}
-
-.task-list-item + .task-list-item {
-  border-top: 1px solid var(--glass-border-faint);
+  border-color: var(--glass-border);
 }
 
 .task-priority-dot {
@@ -1426,6 +1477,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 }
 
 .summary-section-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--text-secondary);
@@ -1433,6 +1487,32 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-top: 1px solid var(--glass-border-faint);
+}
+
+.section-count {
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.show-more-btn {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--accent-primary, #8b5cf6);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  text-align: center;
+  border-top: 1px solid var(--glass-border-faint);
+  transition: background var(--duration-fast) ease;
+}
+
+.show-more-btn:hover {
+  background: var(--purple-bg-subtle);
 }
 
 /* ============================================================================

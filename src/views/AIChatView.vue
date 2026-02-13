@@ -784,9 +784,10 @@ onMounted(() => {
 
 .ai-chat-view {
   display: flex;
-  height: 100vh;
-  width: 100vw;
-  background: var(--overlay-component-bg);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(28, 25, 45);
   color: var(--text-primary);
 }
 

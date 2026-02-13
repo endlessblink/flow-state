@@ -2866,6 +2866,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1302** | **P1** | **👀 Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
 | **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
+| **BUG-1305** | **P2** | **📋 TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |

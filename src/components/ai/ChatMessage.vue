@@ -1347,16 +1347,16 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 
 .task-list-item {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   grid-template-rows: auto auto;
   gap: var(--space-0_5) var(--space-2);
-  align-items: start;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--glass-border-faint);
+  align-items: center;
+  padding: var(--space-2_5) var(--space-3);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--glass-bg-soft);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
-  font-size: var(--text-meta);
+  font-size: var(--text-sm);
   text-align: start;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -1385,7 +1385,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 
 .task-meta-row {
   grid-row: 2;
-  grid-column: 2;
+  grid-column: 2 / -1;
   display: flex;
   gap: var(--space-1);
   flex-wrap: wrap;
@@ -1403,6 +1403,8 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   word-break: break-word;
   text-align: start;
   unicode-bidi: plaintext;
+  font-weight: var(--font-medium);
+  line-height: 1.4;
 }
 
 .task-overdue-badge {
@@ -2027,14 +2029,12 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
    ============================================================================ */
 
 .task-inline-actions {
-  position: absolute;
-  inset-inline-end: var(--space-2);
-  top: 50%;
-  transform: translateY(-50%);
+  grid-row: 1;
+  grid-column: 3;
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  opacity: 0;
+  opacity: 0.7;
   transition: opacity 0.15s ease;
 }
 
@@ -2046,9 +2046,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--glass-border-faint);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.15s ease;

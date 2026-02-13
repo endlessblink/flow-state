@@ -787,7 +787,9 @@ onMounted(() => {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgb(28, 25, 45);
+  background: rgba(28, 25, 45, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   color: var(--text-primary);
 }
 

@@ -104,61 +104,83 @@ export interface ArenaRun {
 
 // ─── Abilities ───
 
+export type AbilityType = 'aoe_blast' | 'shield' | 'overclock' | 'heal' | 'emp_blast' | 'firewall' | 'purge'
+
 export interface AbilityDefinition {
   id: string
+  type: AbilityType
   name: string
+  iconName: string
   key: number
   damage: number
   radius: number
   duration: number
   chargeCost: number
   cooldown: number
+  cooldownMs: number
+  effect: string
   description: string
 }
 
 export const ABILITY_DEFINITIONS: AbilityDefinition[] = [
   {
     id: 'emp_blast',
+    type: 'aoe_blast',
     name: 'EMP Blast',
+    iconName: 'Zap',
     key: 1,
     damage: 100,
     radius: 6,
     duration: 0,
     chargeCost: 1,
     cooldown: 30_000,
+    cooldownMs: 30_000,
+    effect: 'AOE damage to all enemies within radius',
     description: 'AOE damage to all enemies within radius',
   },
   {
     id: 'firewall',
+    type: 'shield',
     name: 'Firewall',
+    iconName: 'Shield',
     key: 2,
     damage: 0,
     radius: 0,
     duration: 60_000,
     chargeCost: 1,
     cooldown: 45_000,
+    cooldownMs: 45_000,
+    effect: 'Freeze corruption gain for 60 seconds',
     description: 'Freeze corruption gain for 60 seconds',
   },
   {
     id: 'overclock',
+    type: 'overclock',
     name: 'Overclock',
+    iconName: 'Cpu',
     key: 3,
     damage: 0,
     radius: 0,
     duration: 30_000,
     chargeCost: 1,
     cooldown: 60_000,
+    cooldownMs: 60_000,
+    effect: '2x damage for 30 seconds from all sources',
     description: '2x damage for 30 seconds from all sources',
   },
   {
     id: 'purge',
+    type: 'heal',
     name: 'Purge',
+    iconName: 'Heart',
     key: 4,
     damage: 999999,
     radius: 0,
     duration: 0,
     chargeCost: 2,
     cooldown: 90_000,
+    cooldownMs: 90_000,
+    effect: 'Instant kill weakest enemy',
     description: 'Instant kill weakest enemy',
   },
 ]

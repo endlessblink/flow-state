@@ -1,6 +1,21 @@
 // Arena abilities — 4 abilities with effect objects (Rewritten from scratch)
-import type { EnemyEntity, Buff } from '@/types/arena'
+import type { EnemyEntity, Buff, AbilityType } from '@/types/arena'
 import { ABILITY_DEFINITIONS } from '@/types/arena'
+
+// ─── Ability Availability Check ───
+
+export function canActivateAbility(
+  abilityType: AbilityType,
+  charges: number,
+  cooldowns: Map<AbilityType, number>
+): boolean {
+  const def = ABILITY_DEFINITIONS.find(a => a.type === abilityType)
+  if (!def) return false
+  if (charges < def.chargeCost) return false
+  const cooldownEnd = cooldowns.get(abilityType)
+  if (cooldownEnd && Date.now() < cooldownEnd) return false
+  return true
+}
 
 // ─── Effect Types ───
 

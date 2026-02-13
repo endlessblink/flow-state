@@ -19,6 +19,7 @@
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
       :search-query="searchQuery"
+      v-model:sort-by="sortBy"
       @toggle-hide-done-tasks="toggleHideDoneTasks"
       @clear-all-filters="clearAllFilters"
       @update:search-query="searchQuery = $event"
@@ -77,6 +78,7 @@ const {
   selectedDurations,
   selectedCanvasGroups,
   searchQuery, // TASK-1075
+  sortBy, // TASK-1303
   hideCalendarDoneTasks,
   canvasGroupOptions,
   baseInboxTasks,

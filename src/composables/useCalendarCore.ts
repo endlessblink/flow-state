@@ -61,12 +61,12 @@ export function useCalendarCore() {
   }
 
   const getPriorityClass = (event: CalendarEvent): string => {
-    const task = taskStore.tasks.find(t => t.id === event.taskId)
+    const task = taskStore.rawTasks.find(t => t.id === event.taskId)
     return task?.priority || 'medium'
   }
 
   const getPriorityLabel = (event: CalendarEvent): string => {
-    const task = taskStore.tasks.find(t => t.id === event.taskId)
+    const task = taskStore.rawTasks.find(t => t.id === event.taskId)
     const priority = task?.priority || 'medium'
     return priority.charAt(0).toUpperCase() + priority.slice(1).replace('_', ' ')
   }
@@ -123,7 +123,7 @@ export function useCalendarCore() {
   // Consolidated project helpers (from useCalendarEventHelpers)
 
   const getTaskProject = (event: CalendarEvent) => {
-    const task = taskStore.tasks.find(t => t.id === event.taskId)
+    const task = taskStore.rawTasks.find(t => t.id === event.taskId)
     return task ? taskStore.getProjectById(task.projectId) : null
   }
 

@@ -126,6 +126,7 @@
         :selected-projects="selectedProjects"
         :selected-durations="selectedDurations"
         :hide-done-tasks="hideDoneTasks"
+        :sort-by="sortBy"
         :tasks="baseTasks"
         :projects="rootProjects"
         @update:unscheduled-only="$emit('update:unscheduledOnly', $event)"
@@ -133,6 +134,7 @@
         @update:selected-projects="$emit('update:selectedProjects', $event)"
         @update:selected-durations="$emit('update:selectedDurations', $event)"
         @update:hide-done-tasks="$emit('toggleHideDoneTasks')"
+        @update:sort-by="$emit('update:sortBy', $event)"
         @clear-all="$emit('clearAllFilters')"
       />
     </Transition>
@@ -148,6 +150,7 @@ import CustomSelect from '@/components/common/CustomSelect.vue'
 import InboxFilters from '@/components/canvas/InboxFilters.vue'
 import { type Task } from '@/stores/tasks'
 import { type DurationCategory } from '@/utils/durationCategories'
+import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
 
 defineProps<{
   isCollapsed: boolean
@@ -167,6 +170,7 @@ defineProps<{
   baseTasks: Task[]
   rootProjects: any[]
   searchQuery: string // TASK-1075
+  sortBy?: SortByType // TASK-1303
 }>()
 
 const emit = defineEmits<{
@@ -179,6 +183,7 @@ const emit = defineEmits<{
   (e: 'update:selectedProjects', value: Set<string>): void
   (e: 'update:selectedDurations', value: Set<DurationCategory>): void
   (e: 'update:searchQuery', value: string): void // TASK-1075
+  (e: 'update:sortBy', value: SortByType): void // TASK-1303
   (e: 'toggleHideDoneTasks'): void
   (e: 'clearAllFilters'): void
 }>()
@@ -211,11 +216,11 @@ const clearSearch = () => {
 <style scoped>
 .inbox-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
+  min-width: 0;
 }
 
 .collapse-btn {
@@ -243,6 +248,10 @@ const clearSearch = () => {
   color: var(--text-primary);
   margin: 0;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .today-quick-filter {
@@ -260,6 +269,7 @@ const clearSearch = () => {
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .today-quick-filter:hover {

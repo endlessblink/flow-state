@@ -7,7 +7,7 @@ const pinia = createPinia()
 setActivePinia(pinia)
 
 const meta: Meta<typeof SearchModal> = {
-  title: '🪟 Modals & Dialogs/SearchModal',
+  title: '🎯 Modals/SearchModal',
   component: SearchModal,
   tags: ['autodocs'],
   parameters: {

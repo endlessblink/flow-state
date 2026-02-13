@@ -7,7 +7,7 @@ const pinia = createPinia()
 setActivePinia(pinia)
 
 const meta: Meta<typeof BatchEditModal> = {
-  title: '🪟 Modals & Dialogs/BatchEditModal',
+  title: '🎯 Modals/BatchEditModal',
   component: BatchEditModal,
   tags: ['autodocs'],
   parameters: {

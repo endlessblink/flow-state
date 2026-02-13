@@ -268,21 +268,21 @@ export const useProjectStore = defineStore('projects', () => {
         return project?.name || 'Uncategorized'
     }
 
-    const getProjectEmoji = (projectId: string | null | undefined): string => {
-        if (!projectId) return '📁'
+    const getProjectEmoji = (projectId: string | null | undefined): string | undefined => {
+        if (!projectId) return undefined
         const project = getProjectById(projectId)
-        return project?.emoji || '📁'
+        return project?.emoji || undefined
     }
 
     const getProjectVisual = (projectId: string | null | undefined) => {
-        if (!projectId) return { type: 'default', content: '📁' }
+        if (!projectId) return { type: 'css-circle', content: '', color: '#6B7280' }
         const project = getProjectById(projectId)
-        if (!project) return { type: 'default', content: '📁' }
+        if (!project) return { type: 'css-circle', content: '', color: '#6B7280' }
         if (project.emoji) return { type: 'emoji', content: project.emoji }
         if (project.colorType === 'hex' && typeof project.color === 'string') {
             return { type: 'css-circle', content: '', color: project.color }
         }
-        return { type: 'default', content: '📁' }
+        return { type: 'css-circle', content: '', color: '#6B7280' }
     }
 
     const isDescendantOf = (projectId: string, potentialAncestorId: string): boolean => {

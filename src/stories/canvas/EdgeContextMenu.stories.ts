@@ -24,7 +24,7 @@ export default meta
 export const Default = {
   args: {
     isVisible: true,
-    x: 0,
-    y: 0
+    x: 300,
+    y: 250
   }
 }

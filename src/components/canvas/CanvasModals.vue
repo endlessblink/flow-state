@@ -63,7 +63,7 @@
     :is-open="modals.isBulkDeleteModalOpen"
     :title="modals.bulkDeleteTitle"
     :message="modals.bulkDeleteMessage"
-    :details="modals.bulkDeleteItems.map(item => `${item.type === 'section' ? '📁' : '📌'} ${item.name}`)"
+    :details="modals.bulkDeleteItems.map(item => `${item.type === 'section' ? '▤' : '📌'} ${item.name}`)"
     :confirm-text="modals.bulkDeleteIsPermanent ? 'Delete Permanently' : 'Remove'"
     @confirm="handleBulkDeleteConfirm"
     @cancel="modals.closeBulkDeleteModal"

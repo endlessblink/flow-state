@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import ResetPasswordView from '@/components/auth/ResetPasswordView.vue'
 
 const meta: Meta<typeof ResetPasswordView> = {
-  title: 'Auth/ResetPasswordView',
+  title: '🔐 Auth/ResetPasswordView',
   component: ResetPasswordView,
   tags: ['autodocs'],
   parameters: {

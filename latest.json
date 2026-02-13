@@ -1,11 +1,11 @@
 {
-  "version": "1.2.53",
-  "notes": "BUG-1303: Fix Tauri infinite loading — skip Notification.requestPermission() in WebKitGTK",
-  "pub_date": "2026-02-13T14:31:54.898Z",
+  "version": "1.2.54",
+  "notes": "v1.2.54: gamification improvements, arena feature, UI fixes",
+  "pub_date": "2026-02-13T17:43:16.774Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTZVQys0VFhtMG41cklxaU4zdDdPZXAvWUlQRGJnRDMzd3NoWGczZ0hlMTZzTFVFS2hzc2VXaGFhaWpjS0lSRDZiaUxaSUdOSzlVVXVVNzBMbjBKR1EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcwOTkzMTE0CWZpbGU6Rmxvd1N0YXRlXzEuMi41M19hbWQ2NC5BcHBJbWFnZQp6MGx2aTRvZjJ6SUlRcVhXV1pRSkt4S28zZDhBem45a1hyeHg5M3hrdjFiZE9zeHRGOW1TWE9OZkM5RkQ0Z2JFMjZ3U2NRUmJJa3lYTnlZV3dPaDVBdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.53_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXhkWmhURU80ZkZnMjZRd1hrUGd0NlhwRlZXWUp2d3VkQWZwckFUeHVQYzdIR0V6Smwrb1BWYURxZHVtYm9KVXcvZkU5SnAvaXMrNUxTSHZpR0FpMkFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDA0NTk2CWZpbGU6Rmxvd1N0YXRlXzEuMi41NF9hbWQ2NC5BcHBJbWFnZQpYcmlXVzdOWG1JbWZGOC9XdHYzZmNrN1VSb01EbWZvb25HeGtZd014ODAyNXhvbkFvMG43TVprN2FNSytvZVRFWDU4L1diUWUzMGtXNnAvVzV2Um1DUT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.54_amd64.AppImage"
     }
   }
 }

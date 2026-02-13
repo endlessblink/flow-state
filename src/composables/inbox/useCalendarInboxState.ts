@@ -1,11 +1,14 @@
 import { ref, computed } from 'vue'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
+import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
 
 export function useCalendarInboxState() {
     const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
 
     // --- State ---
@@ -36,6 +39,9 @@ export function useCalendarInboxState() {
 
     // TASK-1075: Search query
     const searchQuery = ref('')
+
+    // TASK-1303: Sort state (persistent per calendar inbox)
+    const sortBy = usePersistentRef<SortByType>('flowstate:cal-inbox-sort-by', 'newest')
 
     // --- Computed ---
 
@@ -143,6 +149,64 @@ export function useCalendarInboxState() {
             })
         }
 
+        // TASK-1303: Apply sorting
+        const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 }
+
+        tasks = [...tasks].sort((a, b) => {
+            switch (sortBy.value) {
+                case 'priority': {
+                    const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 3
+                    const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 3
+                    if (aPriority !== bPriority) return aPriority - bPriority
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                }
+                case 'dueDate': {
+                    const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+                    const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+                    if (aDue !== bDue) return aDue - bDue
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                }
+                case 'canvasOrder': {
+                    // TASK-1303: Sort by group column (left→right), then top→bottom within group
+                    const groups = canvasStore.groups || []
+                    const aGroup = a.parentId ? groups.find(g => g.id === a.parentId) : null
+                    const bGroup = b.parentId ? groups.find(g => g.id === b.parentId) : null
+                    // Group X position determines column order (Today=left, Tomorrow=right)
+                    const aGroupX = aGroup?.position?.x ?? Infinity
+                    const bGroupX = bGroup?.position?.x ?? Infinity
+
+                    // DEBUG: Log sort data (remove after verification)
+                    if (tasks.indexOf(a) === 0) {
+                        console.log('[TASK-1303] Canvas sort debug:', {
+                            groupCount: groups.length,
+                            groupNames: groups.map(g => `${g.name}(x:${g.position?.x})`),
+                            sampleTasks: tasks.slice(0, 5).map(t => ({
+                                title: t.title?.slice(0, 25),
+                                parentId: t.parentId?.slice(0, 8),
+                                groupName: groups.find(g => g.id === t.parentId)?.name,
+                                groupX: groups.find(g => g.id === t.parentId)?.position?.x,
+                                canvasPos: t.canvasPosition,
+                            }))
+                        })
+                    }
+
+                    if (aGroupX !== bGroupX) return aGroupX - bGroupX
+                    // Within same group: sort by task Y (top to bottom)
+                    const aPos = a.canvasPosition
+                    const bPos = b.canvasPosition
+                    if (!aPos && !bPos) return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                    if (!aPos) return 1
+                    if (!bPos) return -1
+                    if (aPos.y !== bPos.y) return aPos.y - bPos.y
+                    if (aPos.x !== bPos.x) return aPos.x - bPos.x
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                }
+                case 'newest':
+                default:
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            }
+        })
+
         return tasks
     })
 
@@ -172,6 +236,7 @@ export function useCalendarInboxState() {
         selectedDurations,
         selectedCanvasGroups,
         searchQuery, // TASK-1075
+        sortBy, // TASK-1303
 
         // Computed
         hideCalendarDoneTasks,

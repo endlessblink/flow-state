@@ -143,6 +143,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                   taskId: task.id,
                   instanceId: instance.id,
                   title: task.title,
+                  projectId: task.projectId,
                   startTime,
                   endTime,
                   duration,

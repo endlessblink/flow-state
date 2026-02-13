@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 
 const meta: Meta<typeof ConfirmationModal> = {
-  title: '🪟 Modals & Dialogs/ConfirmationModal',
+  title: '🎯 Modals/ConfirmationModal',
   component: ConfirmationModal,
   tags: ['autodocs'],
   parameters: {

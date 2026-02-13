@@ -22,7 +22,7 @@ const mockProject = {
 
 const meta = {
   component: KanbanSwimlane,
-  title: '✨ Features/📋 Board View/KanbanSwimlane',
+  title: '📋 Board/KanbanSwimlane',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

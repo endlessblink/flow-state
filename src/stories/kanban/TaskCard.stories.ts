@@ -6,7 +6,7 @@ import { PROGRESSIVE_DISCLOSURE_KEY } from '@/composables/useProgressiveDisclosu
 
 const meta = {
   component: TaskCard,
-  title: '✨ Features/📋 Board View/TaskCard',
+  title: '📋 Board/TaskCard',
   tags: ['autodocs'],
   decorators: [
     (story: any) => ({

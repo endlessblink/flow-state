@@ -135,7 +135,7 @@
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step active">
-            <span class="flow-icon">📁</span>
+            <span class="flow-icon">🏷️</span>
             <span class="flow-label">Assign</span>
           </div>
           <div class="flow-arrow">→</div>
@@ -420,7 +420,7 @@
                     class="recent-project-chip"
                     @click="handleAssignProject(project.id)"
                   >
-                    <span class="chip-emoji">{{ project.emoji || '📁' }}</span>
+                    <span class="chip-emoji">{{ project.emoji || project.name.charAt(0) }}</span>
                     <span class="chip-name">{{ project.name }}</span>
                   </button>
                 </div>

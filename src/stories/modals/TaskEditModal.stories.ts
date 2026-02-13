@@ -36,7 +36,7 @@ const createMockTask = (overrides: Partial<Task> = {}): Task => ({
 })
 
 const meta: Meta<typeof TaskEditModal> = {
-  title: '🪟 Modals & Dialogs/TaskEditModal',
+  title: '🎯 Modals/TaskEditModal',
   component: TaskEditModal,
   tags: ['autodocs'],
   parameters: {

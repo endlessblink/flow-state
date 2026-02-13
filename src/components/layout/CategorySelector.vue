@@ -223,7 +223,7 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-5);
   background: var(--glass-bg-light);
   backdrop-filter: blur(10px);
   border: 2px solid var(--glass-border);

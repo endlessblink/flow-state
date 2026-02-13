@@ -1,7 +1,7 @@
 import InboxTimeFilters from '@/components/canvas/InboxTimeFilters.vue'
 
 const meta = {
-  title: 'Canvas/InboxTimeFilters',
+  title: '🎨 Canvas/InboxTimeFilters',
   component: InboxTimeFilters,
   tags: ['autodocs'],
   parameters: {

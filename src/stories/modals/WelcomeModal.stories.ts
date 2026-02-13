@@ -14,7 +14,7 @@ import WelcomeModal from '@/components/ui/WelcomeModal.vue'
  * - Returning user welcome
  */
 const meta: Meta<typeof WelcomeModal> = {
-  title: 'Modals/WelcomeModal',
+  title: '🎯 Modals/WelcomeModal',
   component: WelcomeModal,
   tags: ['autodocs'],
   parameters: {

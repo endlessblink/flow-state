@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import { useCanvasStore } from '@/stores/canvas'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 // TASK-144: Use centralized duration categories
@@ -14,10 +15,11 @@ export interface InboxContextProps {
 }
 
 export type TimeFilterType = 'all' | 'today' | 'next3days' | 'week' | 'month'
-export type SortByType = 'newest' | 'priority' | 'dueDate'
+export type SortByType = 'newest' | 'priority' | 'dueDate' | 'canvasOrder'
 
 export function useUnifiedInboxState(props: InboxContextProps) {
     const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
     const { isTodayTask, isNext3DaysTask, isWeekTask, isThisMonthTask } = useSmartViews()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
 
@@ -247,6 +249,25 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                     if (aDue !== bDue) return aDue - bDue
                     // Secondary: newest first
                     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+
+                case 'canvasOrder': {
+                    // TASK-1303: Sort by group column (left→right), then top→bottom within group
+                    const groups = canvasStore.groups || []
+                    const aGroup = a.parentId ? groups.find(g => g.id === a.parentId) : null
+                    const bGroup = b.parentId ? groups.find(g => g.id === b.parentId) : null
+                    const aGroupX = aGroup?.position?.x ?? Infinity
+                    const bGroupX = bGroup?.position?.x ?? Infinity
+                    if (aGroupX !== bGroupX) return aGroupX - bGroupX
+                    // Within same group: sort by task Y (top to bottom)
+                    const aPos = a.canvasPosition
+                    const bPos = b.canvasPosition
+                    if (!aPos && !bPos) return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                    if (!aPos) return 1
+                    if (!bPos) return -1
+                    if (aPos.y !== bPos.y) return aPos.y - bPos.y
+                    if (aPos.x !== bPos.x) return aPos.x - bPos.x
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                }
 
                 case 'newest':
                 default:

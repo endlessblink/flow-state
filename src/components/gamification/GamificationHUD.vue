@@ -57,10 +57,12 @@ const streak = computed(() => streakInfo.value.currentStreak)
 const isActiveToday = computed(() => streakInfo.value.isActiveToday)
 const hasChallenges = computed(() => challengesStore.hasActiveChallenges)
 
-// Active mission for HUD display
-const firstActiveDaily = computed(() => challengesStore.activeDailies[0])
+// Active mission for HUD display — prefer picked challenge, fallback to first active
+const activeMission = computed(() =>
+  challengesStore.pickedChallenge ?? challengesStore.activeDailies[0] ?? null
+)
 const missionLabel = computed(() => {
-  const c = firstActiveDaily.value
+  const c = activeMission.value
   if (!c) return null
   const title = c.title.length > 15 ? c.title.slice(0, 14) + '…' : c.title
   return `${title} ${c.objectiveCurrent}/${c.objectiveTarget}`
@@ -139,9 +141,13 @@ function goToSignIn() {
         <template #tooltip><StreakTooltipContent /></template>
       </GamificationTooltipWrapper>
 
-      <!-- Challenge pips -->
+      <!-- Mission indicator / Challenge pips -->
       <GamificationTooltipWrapper v-if="hasChallenges" :panel-open="panelOpen">
-        <div class="hud-section hud-challenges">
+        <div v-if="activeMission" class="hud-section hud-mission">
+          <Target :size="12" class="hud-mission-icon" />
+          <span class="hud-mission-label">{{ missionLabel }}</span>
+        </div>
+        <div v-else class="hud-section hud-challenges">
           <ChallengePips />
         </div>
         <template #tooltip><ChallengeTooltipContent /></template>
@@ -335,6 +341,23 @@ function goToSignIn() {
 .hud-flame--active {
   color: var(--streak-flame-color, rgb(255, 107, 53));
   filter: drop-shadow(0 0 4px rgba(255, 107, 53, 0.6));
+}
+
+/* ============================================
+   Mission indicator (active daily challenge)
+   ============================================ */
+.hud-mission-icon {
+  color: var(--cf-cyan, #00f0ff);
+  flex-shrink: 0;
+}
+
+.hud-mission-label {
+  font-family: var(--font-cyber-data, 'Space Mono', monospace);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--cf-cyan-50, rgba(0, 240, 255, 0.5));
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 /* ============================================

@@ -25,6 +25,8 @@
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
             @click="updatePriority('low')"
+            aria-label="Set priority to Low"
+            :aria-pressed="task.priority === 'low'"
           >
             Low
           </button>
@@ -32,6 +34,8 @@
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
             @click="updatePriority('medium')"
+            aria-label="Set priority to Medium"
+            :aria-pressed="task.priority === 'medium'"
           >
             Med
           </button>
@@ -39,6 +43,8 @@
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
             @click="updatePriority('high')"
+            aria-label="Set priority to High"
+            :aria-pressed="task.priority === 'high'"
           >
             High
           </button>
@@ -49,6 +55,8 @@
             class="quick-date-btn"
             :class="{ active: isToday }"
             @click.stop="setToday"
+            aria-label="Set due date to Today"
+            :aria-pressed="isToday"
           >
             ☀️ Today
           </button>
@@ -56,6 +64,8 @@
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
             @click.stop="setTomorrow"
+            aria-label="Set due date to Tomorrow"
+            :aria-pressed="isTomorrow"
           >
             🌅 +1
           </button>
@@ -63,6 +73,8 @@
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
             @click.stop="setNextWeek"
+            aria-label="Set due date to Next Week"
+            :aria-pressed="isNextWeek"
           >
             📆 +7
           </button>
@@ -70,6 +82,8 @@
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
             @click.stop="clearDate"
+            aria-label="Clear due date"
+            :aria-pressed="hasNoDate"
           >
             Clear
           </button>
@@ -77,7 +91,7 @@
       </div>
 
       <!-- Swipe Indicator (visible during drag) -->
-      <div v-if="isSwiping" class="swipe-indicator" :class="swipeDirection">
+      <div v-if="isSwiping" class="swipe-indicator" :class="swipeDirection" aria-hidden="true">
         <ArrowRight v-if="swipeDirection === 'right'" :size="32" />
         <ArrowLeft v-if="swipeDirection === 'left'" :size="32" />
       </div>

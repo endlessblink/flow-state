@@ -93,8 +93,12 @@ const renderedContent = computed(() => {
   if (isAssistant.value) {
     // Strip ```json tool call blocks
     content = content.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
-    // Strip "I'll use the X tool" preamble lines
+    // Strip bare JSON tool calls (models sometimes output without code fences)
+    content = content.replace(/\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"parameters"\s*:\s*\{[^}]*\}\s*\}/g, '')
+    // Strip "I'll use the X tool" preamble lines (EN)
     content = content.replace(/^I['']ll (?:use|call|invoke) the \w[\w\s]* tool.*$/gm, '')
+    // Strip standalone tool name references (e.g. "list_tasks" on its own or at end of line)
+    content = content.replace(/\b(list_tasks|get_overdue_tasks|search_tasks|get_daily_summary|get_timer_status|get_productivity_stats|suggest_next_task|get_weekly_summary|get_gamification_status|get_active_challenges|get_achievements_near_completion|list_projects|list_groups|create_task|update_task|delete_task|mark_task_done|start_timer|stop_timer|bulk_update_tasks|bulk_delete_tasks)\b/g, '')
     // Strip raw HTML tags that AI models may hallucinate (with html:false they appear as raw text)
     content = content.replace(/<[^>]+>/g, '')
     // Clean up extra blank lines left behind

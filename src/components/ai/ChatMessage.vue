@@ -95,6 +95,8 @@ const renderedContent = computed(() => {
     content = content.replace(/```json\s*\{[\s\S]*?\}\s*```/g, '')
     // Strip "I'll use the X tool" preamble lines
     content = content.replace(/^I['']ll (?:use|call|invoke) the \w[\w\s]* tool.*$/gm, '')
+    // Strip raw HTML tags that AI models may hallucinate (with html:false they appear as raw text)
+    content = content.replace(/<[^>]+>/g, '')
     // Clean up extra blank lines left behind
     content = content.replace(/\n{3,}/g, '\n\n').trim()
   }

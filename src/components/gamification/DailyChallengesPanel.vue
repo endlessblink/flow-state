@@ -11,7 +11,7 @@ import type { Challenge } from '@/types/challenges'
 import { storeToRefs } from 'pinia'
 import ChallengeCard from './ChallengeCard.vue'
 import ARIAMessage from './ARIAMessage.vue'
-import { RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-vue-next'
+import { RefreshCw, Sparkles, CheckCircle2, AlertCircle, Target } from 'lucide-vue-next'
 
 // Props
 const props = defineProps<{
@@ -30,6 +30,8 @@ const {
   isGenerating,
   lastDailyGeneration,
   completedTodayCount,
+  pickedChallengeId,
+  pickedChallenge,
 } = storeToRefs(challengesStore)
 
 // AI Router for challenge generation
@@ -101,11 +103,13 @@ async function generateChallenges() {
   }
 }
 
-const pickedChallengeId = ref<string | null>(null)
-
 function handleChallengeClick(challenge: Challenge) {
-  if (pickedChallengeId.value) return // Already picking
-  pickedChallengeId.value = challenge.id
+  // Toggle: click again to deselect
+  if (pickedChallengeId.value === challenge.id) {
+    challengesStore.pickChallengeById(null)
+    return
+  }
+  challengesStore.pickChallengeById(challenge.id)
   emit('pickChallenge', challenge)
 }
 </script>
@@ -138,6 +142,17 @@ function handleChallengeClick(challenge: Challenge) {
       :type="allDailiesComplete ? 'success' : isGenerating ? 'loading' : 'info'"
     />
 
+    <!-- Active Mission Banner -->
+    <div v-if="pickedChallenge" class="active-mission-banner">
+      <div class="mission-banner-indicator" />
+      <Target :size="14" class="mission-banner-icon" />
+      <div class="mission-banner-content">
+        <span class="mission-banner-label">ACTIVE MISSION</span>
+        <span class="mission-banner-title">{{ pickedChallenge.title }}</span>
+      </div>
+      <span class="mission-banner-progress">{{ pickedChallenge.objectiveCurrent }}/{{ pickedChallenge.objectiveTarget }}</span>
+    </div>
+
     <!-- Challenge Cards -->
     <div v-if="activeDailies.length > 0" class="challenges-list">
       <ChallengeCard
@@ -147,7 +162,7 @@ function handleChallengeClick(challenge: Challenge) {
         :compact="compact"
         :class="{
           'card--picked': pickedChallengeId === challenge.id,
-          'card--dismissed': pickedChallengeId && pickedChallengeId !== challenge.id
+          'card--other': pickedChallengeId && pickedChallengeId !== challenge.id
         }"
         @click="handleChallengeClick(challenge)"
       />
@@ -378,39 +393,123 @@ function handleChallengeClick(challenge: Challenge) {
   font-size: var(--text-sm);
 }
 
-/* Pick animation: selected card glows and pulses */
+/* ============================================
+   Active Mission Banner
+   ============================================ */
+.active-mission-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: var(--radius-md);
+  animation: bannerAppear 0.4s ease-out;
+}
+
+.mission-banner-indicator {
+  width: 3px;
+  height: 24px;
+  background: var(--cf-cyan, #00f0ff);
+  border-radius: 2px;
+  flex-shrink: 0;
+  animation: indicatorPulse 2s ease-in-out infinite;
+}
+
+.mission-banner-icon {
+  color: var(--cf-cyan, #00f0ff);
+  flex-shrink: 0;
+}
+
+.mission-banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mission-banner-label {
+  font-family: var(--font-cyber-data, 'Space Mono', monospace);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--cf-cyan, #00f0ff);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.mission-banner-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.mission-banner-progress {
+  font-family: var(--font-cyber-data, 'Space Mono', monospace);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--cf-cyan, #00f0ff);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Picked card: persistent cyan glow + pulse
+   ============================================ */
 .card--picked {
-  animation: cardPick 0.5s ease-out forwards;
   border-color: var(--cf-cyan, rgba(0, 240, 255, 0.8)) !important;
   box-shadow:
-    0 0 8px rgba(0, 240, 255, 0.5),
-    0 0 16px rgba(0, 240, 255, 0.2) !important;
+    0 0 8px rgba(0, 240, 255, 0.4),
+    0 0 20px rgba(0, 240, 255, 0.15) !important;
+  animation: pickedGlow 2.5s ease-in-out infinite;
 }
 
-/* Dismiss animation: other cards fade out and shrink */
-.card--dismissed {
-  animation: cardDismiss 0.4s ease-in forwards;
-  pointer-events: none;
+/* Other cards: dimmed when one is picked */
+.card--other {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
 }
 
-@keyframes cardPick {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.03); }
-  100% { transform: scale(1); }
+.card--other:hover {
+  opacity: 0.8;
 }
 
-@keyframes cardDismiss {
-  0% { opacity: 1; max-height: 200px; margin-bottom: var(--space-2); }
-  100% { opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; overflow: hidden; }
+@keyframes pickedGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 8px rgba(0, 240, 255, 0.4),
+      0 0 20px rgba(0, 240, 255, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 12px rgba(0, 240, 255, 0.6),
+      0 0 28px rgba(0, 240, 255, 0.25);
+  }
+}
+
+@keyframes bannerAppear {
+  0% { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes indicatorPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card--picked,
-  .card--dismissed {
+  .card--picked {
     animation: none;
   }
-  .card--dismissed {
-    display: none;
+  .active-mission-banner {
+    animation: none;
+  }
+  .mission-banner-indicator {
+    animation: none;
   }
 }
 </style>

@@ -72,6 +72,9 @@ export const useChallengesStore = defineStore('challenges', () => {
   // Progress tracking mutex to prevent race conditions
   const progressInProgress = ref(false)
 
+  // Picked challenge (session-level, survives panel close/open)
+  const pickedChallengeId = ref<string | null>(null)
+
   // Midnight refresh timeout
   let midnightTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -99,6 +102,12 @@ export const useChallengesStore = defineStore('challenges', () => {
 
   const hasActiveChallenges = computed(() => activeDailies.value.length > 0)
 
+  const pickedChallenge = computed(() =>
+    pickedChallengeId.value
+      ? activeChallenges.value.find(c => c.id === pickedChallengeId.value) ?? null
+      : null
+  )
+
   const corruptionTier = computed((): CorruptionTierConfig =>
     getCorruptionTier(corruptionLevel.value)
   )
@@ -109,6 +118,14 @@ export const useChallengesStore = defineStore('challenges', () => {
       c => c.challengeType === 'daily' && c.status === 'completed' && isToday(c.completedAt)
     ).length >= 3
   )
+
+  // ===========================================================================
+  // Pick / Unpick Challenge
+  // ===========================================================================
+
+  function pickChallengeById(id: string | null) {
+    pickedChallengeId.value = id
+  }
 
   // ===========================================================================
   // Initialization
@@ -833,12 +850,14 @@ export const useChallengesStore = defineStore('challenges', () => {
     lastWeeklyGeneration,
     corruptionLevel,
     activeMultiplier,
+    pickedChallengeId,
 
     // Computed
     activeDailies,
     activeBoss,
     completedTodayCount,
     hasActiveChallenges,
+    pickedChallenge,
     corruptionTier,
     allDailiesComplete,
 
@@ -850,6 +869,7 @@ export const useChallengesStore = defineStore('challenges', () => {
     completeChallenge,
     failChallenge,
     processExpiredChallenges,
+    pickChallengeById,
     updateCorruption,
 
     // Narratives

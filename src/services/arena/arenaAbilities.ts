@@ -1,86 +1,92 @@
-// Arena ability system — activation logic and cooldown management
-import type { AbilityType, PlayerEntity, EnemyEntity, AbilityResult } from '@/types/arena'
+// Arena abilities — 4 abilities with effect objects (Rewritten from scratch)
+import type { EnemyEntity, Buff } from '@/types/arena'
 import { ABILITY_DEFINITIONS } from '@/types/arena'
-import { calculateAbilityDamage } from '@/services/arena/arenaCombat'
 
-/**
- * Check if an ability can be activated (has charges and is off cooldown).
- */
-export function canActivateAbility(
-  type: AbilityType,
-  charges: number,
-  cooldowns: Map<AbilityType, number>
-): boolean {
-  if (charges <= 0) return false
-  const cooldownEnd = cooldowns.get(type) ?? 0
-  return Date.now() >= cooldownEnd
+// ─── Effect Types ───
+
+export interface EmpBlastEffect {
+  type: 'emp_blast'
+  affectedEnemyIds: string[]
+  damagePerEnemy: number
 }
 
-/**
- * Get remaining cooldown time in ms for an ability. Returns 0 if ready.
- */
-export function getAbilityCooldownRemaining(
-  type: AbilityType,
-  cooldowns: Map<AbilityType, number>
-): number {
-  const cooldownEnd = cooldowns.get(type) ?? 0
-  return Math.max(0, cooldownEnd - Date.now())
+export interface FirewallEffect {
+  type: 'firewall'
+  buff: Buff
 }
 
-/**
- * Activate an ability. Returns result describing what happened.
- */
-export function activateAbility(
-  type: AbilityType,
-  player: PlayerEntity,
-  enemies: EnemyEntity[]
-): AbilityResult {
-  const definition = ABILITY_DEFINITIONS.find((d) => d.type === type)
-  if (!definition) {
-    return { affectedEnemies: [], damageDealt: 0 }
+export interface OverclockEffect {
+  type: 'overclock'
+  buff: Buff
+}
+
+export interface PurgeEffect {
+  type: 'purge'
+  killedEnemyId: string | null
+}
+
+export type AbilityEffect = EmpBlastEffect | FirewallEffect | OverclockEffect | PurgeEffect
+
+// ─── Activation ───
+
+export function activateEmpBlast(
+  enemies: EnemyEntity[],
+  playerX: number,
+  playerZ: number
+): EmpBlastEffect {
+  const def = ABILITY_DEFINITIONS.find(a => a.id === 'emp_blast')!
+  const radius = def.radius
+  const damage = def.damage
+
+  const affected = enemies.filter(e => {
+    if (e.state === 'dying' || e.state === 'dead') return false
+    const dx = e.position.x - playerX
+    const dz = e.position.z - playerZ
+    return Math.sqrt(dx * dx + dz * dz) <= radius
+  })
+
+  return {
+    type: 'emp_blast',
+    affectedEnemyIds: affected.map(e => e.id),
+    damagePerEnemy: damage,
   }
+}
 
-  switch (type) {
-    case 'aoe_blast': {
-      const damage = calculateAbilityDamage('aoe_blast', player)
-      const affected = enemies
-        .filter((e) => e.state !== 'dead' && e.state !== 'dying')
-        .map((e) => e.id)
-      return {
-        affectedEnemies: affected,
-        damageDealt: damage * affected.length,
-        playerEffect: 'AOE Blast unleashed!',
-      }
-    }
+export function activateFirewall(): FirewallEffect {
+  const def = ABILITY_DEFINITIONS.find(a => a.id === 'firewall')!
+  return {
+    type: 'firewall',
+    buff: {
+      id: `buff-firewall-${Date.now()}`,
+      type: 'firewall',
+      duration: def.duration,
+      startTime: Date.now(),
+      multiplier: 0,
+    },
+  }
+}
 
-    case 'shield': {
-      return {
-        affectedEnemies: [],
-        damageDealt: 0,
-        playerEffect: 'Shield active — corruption frozen',
-        duration: definition.duration,
-      }
-    }
+export function activateOverclock(): OverclockEffect {
+  const def = ABILITY_DEFINITIONS.find(a => a.id === 'overclock')!
+  return {
+    type: 'overclock',
+    buff: {
+      id: `buff-overclock-${Date.now()}`,
+      type: 'overclock',
+      duration: def.duration,
+      startTime: Date.now(),
+      multiplier: 2,
+    },
+  }
+}
 
-    case 'overclock': {
-      return {
-        affectedEnemies: [],
-        damageDealt: 0,
-        playerEffect: 'Overclock active — 2x damage',
-        duration: definition.duration,
-      }
-    }
+export function activatePurge(enemies: EnemyEntity[]): PurgeEffect {
+  const alive = enemies
+    .filter(e => e.state !== 'dying' && e.state !== 'dead')
+    .sort((a, b) => a.health - b.health)
 
-    case 'heal': {
-      const healAmount = Math.floor(player.maxHealth * 0.2)
-      return {
-        affectedEnemies: [],
-        damageDealt: 0,
-        playerEffect: `Healed ${healAmount} HP`,
-      }
-    }
-
-    default:
-      return { affectedEnemies: [], damageDealt: 0 }
+  return {
+    type: 'purge',
+    killedEnemyId: alive.length > 0 ? alive[0].id : null,
   }
 }

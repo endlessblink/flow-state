@@ -1,75 +1,73 @@
-// Arena game mode store — manages 3D cyberpunk arena state
-// FEATURE: Cyberflow Arena — tasks become enemies, productivity = combat
+// Arena store — Pinia setup store for Cyberflow Arena (Rewritten from scratch)
+// Manages game state, entities, combat, abilities
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type {
   GamePhase,
   PlayerEntity,
   EnemyEntity,
-  AbilityType,
-  ArenaRunData,
+  ProjectileEntity,
+  Buff,
+  CombatLogEntry,
+  ArenaRun,
 } from '@/types/arena'
 import { BASE_PLAYER_STATS, ABILITY_DEFINITIONS } from '@/types/arena'
-import { generateEnemyWave, generateDailySeed } from '@/services/arena/arenaGenerator'
+import { canTransition } from '@/services/arena/arenaStateMachine'
 import { arenaEventBus } from '@/services/arena/arenaEventBus'
-import { createArenaStateMachine } from '@/services/arena/arenaStateMachine'
+import { generateEnemyWave } from '@/services/arena/arenaGenerator'
 import {
-  applyDamageToEnemy,
   calculateAutoAttackDamage,
+  calculateManualShotDamage,
   calculateFocusDamage,
+  calculateCorruptionFromReach,
   calculateLoot,
 } from '@/services/arena/arenaCombat'
 import {
-  canActivateAbility,
-  activateAbility as activateAbilityService,
+  activateEmpBlast,
+  activateFirewall,
+  activateOverclock,
+  activatePurge,
 } from '@/services/arena/arenaAbilities'
-import { useTaskStore } from '@/stores/tasks'
-import { useGamificationStore } from '@/stores/gamification'
+import type { Task } from '@/types/tasks'
 
-const DEATH_ANIMATION_MS = 1000
-const ARENA_RADIUS = 10 // Movement boundary
+const ARENA_RADIUS = 10
 const COMBAT_LOG_MAX = 50
-
-export interface CombatLogEntry {
-  id: string
-  message: string
-  type: 'damage' | 'kill' | 'ability' | 'system' | 'xp'
-  time: number
+const SPAWN_INTERVAL = 2000
+const DEATH_ANIMATION_MS = 800
+const LOG_COLORS: Record<CombatLogEntry['type'], string> = {
+  damage: '#14b8ff',
+  kill: '#00ff88',
+  ability: '#f60056',
+  system: '#888888',
 }
 
 export const useArenaStore = defineStore('arena', () => {
-  const taskStore = useTaskStore()
-  const gamificationStore = useGamificationStore()
-
-  // ─── Internal State Machine ───
-  const stateMachine = createArenaStateMachine()
-
-  // ─── Reactive State ───
+  // ─── Core State ───
   const phase = ref<GamePhase>('idle')
-  const player = ref<PlayerEntity | null>(null)
+  const player = ref<PlayerEntity>({
+    position: { x: 0, y: 0, z: 0 },
+    health: BASE_PLAYER_STATS.health,
+    maxHealth: BASE_PLAYER_STATS.maxHealth,
+    attackDamage: BASE_PLAYER_STATS.attackDamage,
+    attackSpeed: BASE_PLAYER_STATS.attackSpeed,
+    focusDamage: BASE_PLAYER_STATS.focusDamage,
+  })
   const enemies = ref<EnemyEntity[]>([])
-  const targetedEnemyId = ref<string | null>(null)
-  const corruption = ref(0)
-  const waveNumber = ref(0)
-  const currentRun = ref<ArenaRunData | null>(null)
-  const abilityCooldowns = ref<Map<AbilityType, number>>(new Map())
-  const arenaTheme = ref('default')
-  const isInitialized = ref(false)
-
-  // ─── Combat Log ───
+  const projectiles = ref<ProjectileEntity[]>([])
+  const buffs = ref<Buff[]>([])
   const combatLog = ref<CombatLogEntry[]>([])
+  const corruption = ref(0)
+  const waveNumber = ref(1)
+  const currentRun = ref<ArenaRun | null>(null)
+  const targetedEnemyId = ref<string | null>(null)
 
-  function addLog(message: string, type: CombatLogEntry['type']) {
-    combatLog.value.unshift({
-      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      message,
-      type,
-      time: Date.now(),
-    })
-    if (combatLog.value.length > COMBAT_LOG_MAX) {
-      combatLog.value = combatLog.value.slice(0, COMBAT_LOG_MAX)
-    }
-  }
+  // ─── Spawn Queue ───
+  const spawnQueue = ref<EnemyEntity[]>([])
+  const spawnTimer = ref<ReturnType<typeof setInterval> | null>(null)
+
+  // ─── Ability Tracking ───
+  const abilityCharges = ref(3)
+  const abilityCooldowns = ref<Record<string, number>>({})
 
   // ─── Computed ───
   const activeEnemies = computed(() =>
@@ -83,198 +81,258 @@ export const useArenaStore = defineStore('arena', () => {
   )
 
   const enemiesKilled = computed(() =>
-    enemies.value.filter(e => e.state === 'dead')
+    enemies.value.filter(e => e.state === 'dead').length
   )
 
   const isWaveActive = computed(() => phase.value === 'wave_active')
   const isBossPhase = computed(() => phase.value === 'boss_phase')
   const isVictory = computed(() => phase.value === 'victory')
-  const corruptionPercent = computed(() => corruption.value * 100)
+  const isDefeated = computed(() => phase.value === 'defeat')
 
-  // Enemy breakdown for briefing
+  const corruptionPercent = computed(() => Math.round(corruption.value * 100))
+
   const enemyBreakdown = computed(() => {
-    const counts = { grunt: 0, standard: 0, elite: 0, boss: 0 }
-    const overdueCount = enemies.value.filter(e => e.isOverdue).length
+    const counts = { grunt: 0, standard: 0, elite: 0, boss: 0, overdue: 0, total: 0 }
     for (const e of enemies.value) {
       counts[e.tier]++
+      if (e.isOverdue) counts.overdue++
+      counts.total++
     }
-    return { ...counts, overdue: overdueCount, total: enemies.value.length }
+    return counts
+  })
+
+  // ─── Active Buff ───
+  const activeBuff = computed(() => {
+    const now = Date.now()
+    return buffs.value.find(b => now - b.startTime < b.duration) ?? null
+  })
+
+  const hasFirewall = computed(() => {
+    const now = Date.now()
+    return buffs.value.some(b => b.type === 'firewall' && now - b.startTime < b.duration)
   })
 
   // ─── Phase Transitions ───
   function setPhase(newPhase: GamePhase): boolean {
-    const ok = stateMachine.transition(newPhase)
-    if (ok) {
-      phase.value = newPhase
+    if (!canTransition(phase.value, newPhase)) {
+      console.warn(`[Arena] Invalid transition: ${phase.value} → ${newPhase}`)
+      return false
     }
-    return ok
+    phase.value = newPhase
+    return true
   }
 
-  // ─── Player Movement (WASD) ───
-  function movePlayer(dx: number, dz: number) {
-    if (!player.value) return
-    const newX = Math.max(-ARENA_RADIUS, Math.min(ARENA_RADIUS, player.value.position.x + dx))
-    const newZ = Math.max(-ARENA_RADIUS, Math.min(ARENA_RADIUS, player.value.position.z + dz))
-    player.value = {
-      ...player.value,
-      position: { x: newX, y: player.value.position.y, z: newZ },
+  // ─── Combat Log ───
+  function addLog(message: string, type: CombatLogEntry['type'], color?: string) {
+    combatLog.value.unshift({
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      message,
+      type,
+      timestamp: Date.now(),
+      color: color ?? LOG_COLORS[type],
+    })
+    if (combatLog.value.length > COMBAT_LOG_MAX) {
+      combatLog.value = combatLog.value.slice(0, COMBAT_LOG_MAX)
     }
   }
 
-  // ─── Shoot Enemy (click to attack) ───
-  function shootEnemy(enemyId: string) {
-    if (!player.value) return
-    const enemy = enemies.value.find(e => e.id === enemyId)
-    if (!enemy || enemy.state === 'dead' || enemy.state === 'dying') return
+  // ─── Initialize ───
+  function initializeArena(tasks: Task[]) {
+    // Reset everything
+    enemies.value = []
+    projectiles.value = []
+    buffs.value = []
+    combatLog.value = []
+    corruption.value = 0
+    waveNumber.value = 1
+    targetedEnemyId.value = null
+    abilityCharges.value = 3
+    abilityCooldowns.value = {}
+    if (spawnTimer.value) {
+      clearInterval(spawnTimer.value)
+      spawnTimer.value = null
+    }
 
-    // Target + damage
-    targetedEnemyId.value = enemyId
-    const damage = Math.floor(calculateAutoAttackDamage(player.value))
-    damageEnemy(enemyId, damage)
-    addLog(`Shot "${enemy.taskTitle}" → -${damage} HP`, 'damage')
-  }
-
-  // ─── Actions ───
-
-  function initializeArena() {
-    // Build player from gamification data
-    const level = gamificationStore.currentLevel ?? 1
-    const streak = gamificationStore.streakInfo?.currentStreak ?? 0
-    const totalXp = gamificationStore.totalXp ?? 0
-
-    const streakMultiplier = 1.0 + Math.min(streak, 10) * 0.05
-
+    // Reset player
     player.value = {
-      id: 'player',
-      type: 'player',
       position: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
       health: BASE_PLAYER_STATS.health,
       maxHealth: BASE_PLAYER_STATS.maxHealth,
-      modelPath: '/models/player.glb',
-      state: 'idle',
-      scale: 1.0,
-      metadata: {},
-      level,
-      totalXp,
-      attackDamage: BASE_PLAYER_STATS.attackDamage + Math.floor(level * 2),
+      attackDamage: BASE_PLAYER_STATS.attackDamage,
       attackSpeed: BASE_PLAYER_STATS.attackSpeed,
-      focusDamage: BASE_PLAYER_STATS.focusDamage + Math.floor(level * 5),
-      activeAbilities: ABILITY_DEFINITIONS.map(a => a.type),
-      abilityCharges: BASE_PLAYER_STATS.abilityCharges,
-      streakMultiplier,
+      focusDamage: BASE_PLAYER_STATS.focusDamage,
     }
 
-    // Generate enemies from tasks
-    const seed = generateDailySeed()
-    const rawTasks = taskStore._rawTasks ?? []
-    enemies.value = generateEnemyWave(rawTasks, level, seed)
+    // Generate enemies from tasks and put into spawn queue
+    const generated = generateEnemyWave(tasks)
+    spawnQueue.value = generated
 
-    // Initialize run data
+    // Initialize run
     currentRun.value = {
-      id: `run-${Date.now()}`,
-      userId: '',
-      runDate: new Date().toISOString().split('T')[0],
-      seed,
-      enemyCount: enemies.value.length,
+      date: new Date().toISOString().split('T')[0],
+      seed: Date.now(),
+      enemyCount: generated.length,
       enemiesKilled: 0,
       bossDefeated: false,
       abilitiesUsed: 0,
       totalXpEarned: 0,
       maxCorruptionReached: 0,
       status: 'active',
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      metadata: {},
     }
 
-    // Reset state
-    corruption.value = 0
-    waveNumber.value = 1
-    targetedEnemyId.value = null
-    abilityCooldowns.value = new Map()
-    arenaTheme.value = 'default'
-    combatLog.value = []
-
-    // Transition: idle → loading → briefing
-    stateMachine.reset()
+    // Transition to briefing
+    phase.value = 'idle'
     setPhase('loading')
     setPhase('briefing')
 
-    isInitialized.value = true
-    addLog('ARIA: Arena initialized. Threats detected.', 'system')
+    addLog(`ARIA: ${generated.length} hostile signatures detected.`, 'system')
   }
 
+  // ─── Start Wave ───
   function startWave() {
     if (!setPhase('wave_active')) return
 
-    enemies.value = enemies.value.map(e =>
-      e.state === 'spawning' ? { ...e, state: 'approaching' as const } : e
-    )
+    addLog(`WAVE ${waveNumber.value} — ENGAGE!`, 'system')
 
-    addLog(`WAVE ${waveNumber.value} — ${enemies.value.length} hostiles approaching!`, 'system')
-    addLog('Use WASD to move. Click enemies to shoot.', 'system')
+    // Start staggered spawning
+    spawnTimer.value = setInterval(() => {
+      spawnNextEnemy()
+    }, SPAWN_INTERVAL)
+
+    // Spawn first enemy immediately
+    spawnNextEnemy()
   }
 
-  function damageEnemy(enemyId: string, damage: number) {
+  // ─── Spawn Next Enemy ───
+  function spawnNextEnemy() {
+    if (spawnQueue.value.length === 0) {
+      if (spawnTimer.value) {
+        clearInterval(spawnTimer.value)
+        spawnTimer.value = null
+      }
+      return
+    }
+
+    const enemy = spawnQueue.value.shift()!
+    enemies.value.push(enemy)
+
+    arenaEventBus.emit('enemy_spawned', { enemyId: enemy.id, tier: enemy.tier })
+    addLog(`Hostile spawned: ${enemy.tier} tier`, 'system')
+
+    if (enemy.tier === 'boss') {
+      arenaEventBus.emit('boss_spawned', { enemyId: enemy.id })
+    }
+  }
+
+  // ─── Shoot Enemy (click-to-shoot) ───
+  function shootEnemy(enemyId: string) {
+    const enemy = enemies.value.find(e => e.id === enemyId)
+    if (!enemy || enemy.state === 'dead' || enemy.state === 'dying') return
+    if (phase.value !== 'wave_active' && phase.value !== 'boss_phase') return
+
+    const p = player.value
+    const damage = calculateManualShotDamage(p, buffs.value)
+
+    // Create projectile — damage applied on arrival in game loop
+    const projectile: ProjectileEntity = {
+      id: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      fromX: p.position.x,
+      fromZ: p.position.z,
+      toX: enemy.position.x,
+      toZ: enemy.position.z,
+      targetEnemyId: enemyId,
+      speed: 20,
+      progress: 0,
+      color: '#14b8ff',
+      damage,
+    }
+
+    projectiles.value.push(projectile)
+    targetedEnemyId.value = enemyId
+
+    arenaEventBus.emit('enemy_targeted', { enemyId })
+  }
+
+  // ─── Projectile Impact ───
+  function handleProjectileImpact(projectileId: string) {
+    const idx = projectiles.value.findIndex(p => p.id === projectileId)
+    if (idx === -1) return
+
+    const proj = projectiles.value[idx]
+    projectiles.value.splice(idx, 1)
+
+    // Apply damage
+    damageEnemy(proj.targetEnemyId, proj.damage)
+
+    arenaEventBus.emit('projectile_impact', {
+      projectileId: proj.id,
+      enemyId: proj.targetEnemyId,
+      damage: proj.damage,
+    })
+  }
+
+  // ─── Damage Enemy ───
+  function damageEnemy(enemyId: string, amount: number) {
     const idx = enemies.value.findIndex(e => e.id === enemyId)
     if (idx === -1) return
 
     const enemy = enemies.value[idx]
     if (enemy.state === 'dead' || enemy.state === 'dying') return
 
-    const result = applyDamageToEnemy(enemy, damage)
-    enemies.value[idx] = result.enemy
+    const newHealth = Math.max(0, enemy.health - amount)
+    enemies.value[idx] = { ...enemy, health: newHealth }
 
-    arenaEventBus.emit({
-      type: 'enemy_damaged',
+    arenaEventBus.emit('enemy_damaged', {
       enemyId,
-      damage,
-      remainingHp: result.enemy.health,
+      damage: amount,
+      remainingHp: newHealth,
     })
 
-    if (result.killed) {
+    addLog(`Hit ${enemy.tier} → -${amount} HP (${newHealth} left)`, 'damage')
+
+    if (newHealth <= 0) {
       killEnemy(enemyId)
     }
   }
 
+  // ─── Kill Enemy ───
   function killEnemy(enemyId: string) {
     const idx = enemies.value.findIndex(e => e.id === enemyId)
     if (idx === -1) return
 
     const enemy = enemies.value[idx]
-    if (enemy.state === 'dead') return
+    if (enemy.state === 'dead' || enemy.state === 'dying') return
 
-    enemies.value[idx] = { ...enemy, state: 'dying' }
+    // Set dying state
+    enemies.value[idx] = { ...enemy, state: 'dying', health: 0 }
 
     const loot = calculateLoot(enemy)
 
-    gamificationStore.awardXp(loot.xpAmount, 'arena_kill', {
-      taskId: enemy.taskId,
-    })
-
-    if (loot.abilityCharges > 0 && player.value) {
-      player.value = {
-        ...player.value,
-        abilityCharges: player.value.abilityCharges + loot.abilityCharges,
-      }
-    }
-
+    // Update run stats
     if (currentRun.value) {
       currentRun.value = {
         ...currentRun.value,
         enemiesKilled: currentRun.value.enemiesKilled + 1,
-        totalXpEarned: currentRun.value.totalXpEarned + loot.xpAmount,
+        totalXpEarned: currentRun.value.totalXpEarned + loot.xp,
+        bossDefeated: currentRun.value.bossDefeated || enemy.tier === 'boss',
       }
     }
 
-    addLog(`ELIMINATED: "${enemy.taskTitle}" → +${loot.xpAmount} XP`, 'kill')
-    if (loot.abilityCharges > 0) {
-      addLog(`+${loot.abilityCharges} ability charge${loot.abilityCharges > 1 ? 's' : ''}!`, 'xp')
+    // Award ability charges
+    if (loot.charges > 0) {
+      abilityCharges.value += loot.charges
+      addLog(`+${loot.charges} ability charge${loot.charges > 1 ? 's' : ''}`, 'ability')
     }
 
-    arenaEventBus.emit({ type: 'enemy_killed', enemyId, loot, taskId: enemy.taskId })
+    addLog(`ELIMINATED: ${enemy.tier} → +${loot.xp} XP`, 'kill')
 
+    arenaEventBus.emit('enemy_killed', {
+      enemyId,
+      taskId: enemy.taskId,
+      xp: loot.xp,
+    })
+
+    // Transition to dead after animation
     setTimeout(() => {
       const i = enemies.value.findIndex(e => e.id === enemyId)
       if (i !== -1) {
@@ -284,47 +342,40 @@ export const useArenaStore = defineStore('arena', () => {
     }, DEATH_ANIMATION_MS)
   }
 
-  function targetEnemy(enemyId: string | null) {
-    targetedEnemyId.value = enemyId
-    arenaEventBus.emit({ type: 'enemy_targeted', enemyId })
+  // ─── Player Movement (WASD) ───
+  function movePlayer(dx: number, dz: number) {
+    const p = player.value
+    player.value = {
+      ...p,
+      position: {
+        x: Math.max(-ARENA_RADIUS, Math.min(ARENA_RADIUS, p.position.x + dx)),
+        y: p.position.y,
+        z: Math.max(-ARENA_RADIUS, Math.min(ARENA_RADIUS, p.position.z + dz)),
+      },
+    }
   }
 
-  function activateAbility(type: AbilityType) {
-    if (!player.value) return
+  // ─── Activate Ability (1-4 keys) ───
+  function activateAbility(index: number) {
+    if (index < 0 || index >= ABILITY_DEFINITIONS.length) return
+    const def = ABILITY_DEFINITIONS[index]
 
-    if (!canActivateAbility(type, player.value.abilityCharges, abilityCooldowns.value)) {
+    // Check charges
+    if (abilityCharges.value < def.chargeCost) {
+      addLog(`Not enough charges for ${def.name}`, 'system')
       return
     }
 
-    const result = activateAbilityService(type, player.value, enemies.value)
-
-    player.value = {
-      ...player.value,
-      abilityCharges: player.value.abilityCharges - 1,
+    // Check cooldown
+    const cooldownEnd = abilityCooldowns.value[def.id] ?? 0
+    if (Date.now() < cooldownEnd) {
+      addLog(`${def.name} on cooldown`, 'system')
+      return
     }
 
-    const definition = ABILITY_DEFINITIONS.find(d => d.type === type)
-    if (definition) {
-      abilityCooldowns.value.set(type, Date.now() + definition.cooldownMs)
-      addLog(`ABILITY: ${definition.name} activated!`, 'ability')
-    }
-
-    if (type === 'aoe_blast' && result.affectedEnemies.length > 0) {
-      const damagePerEnemy = Math.floor(result.damageDealt / result.affectedEnemies.length)
-      for (const eid of result.affectedEnemies) {
-        damageEnemy(eid, damagePerEnemy)
-      }
-      addLog(`AOE hit ${result.affectedEnemies.length} enemies for ${damagePerEnemy} each!`, 'ability')
-    }
-
-    if (type === 'heal' && player.value) {
-      const healAmount = Math.floor(player.value.maxHealth * 0.2)
-      player.value = {
-        ...player.value,
-        health: Math.min(player.value.maxHealth, player.value.health + healAmount),
-      }
-      addLog(`Healed +${healAmount} HP`, 'ability')
-    }
+    // Spend charges and set cooldown
+    abilityCharges.value -= def.chargeCost
+    abilityCooldowns.value[def.id] = Date.now() + def.cooldown
 
     if (currentRun.value) {
       currentRun.value = {
@@ -333,36 +384,73 @@ export const useArenaStore = defineStore('arena', () => {
       }
     }
 
-    arenaEventBus.emit({ type: 'ability_activated', ability: type, result })
+    // Execute ability
+    switch (def.id) {
+      case 'emp_blast': {
+        const effect = activateEmpBlast(enemies.value, player.value.position.x, player.value.position.z)
+        for (const eid of effect.affectedEnemyIds) {
+          damageEnemy(eid, effect.damagePerEnemy)
+        }
+        addLog(`EMP BLAST → ${effect.affectedEnemyIds.length} enemies hit for ${effect.damagePerEnemy} each`, 'ability')
+        break
+      }
+      case 'firewall': {
+        const effect = activateFirewall()
+        buffs.value.push(effect.buff)
+        addLog('FIREWALL → Corruption frozen for 60s', 'ability')
+        break
+      }
+      case 'overclock': {
+        const effect = activateOverclock()
+        buffs.value.push(effect.buff)
+        addLog('OVERCLOCK → 2x damage for 30s', 'ability')
+        break
+      }
+      case 'purge': {
+        const effect = activatePurge(enemies.value)
+        if (effect.killedEnemyId) {
+          killEnemy(effect.killedEnemyId)
+          addLog('PURGE → Weakest enemy instantly killed', 'ability')
+        } else {
+          addLog('PURGE → No targets', 'system')
+        }
+        break
+      }
+    }
+
+    arenaEventBus.emit('ability_activated', { abilityId: def.id, name: def.name })
   }
 
+  // ─── Task/Pomodoro Integration (called by sync composable) ───
   function handleTaskCompleted(taskId: string) {
-    const enemy = enemies.value.find(e => e.taskId === taskId)
-    if (enemy && enemy.state !== 'dead' && enemy.state !== 'dying') {
+    const enemy = enemies.value.find(e => e.taskId === taskId && e.state !== 'dead' && e.state !== 'dying')
+    if (enemy) {
       damageEnemy(enemy.id, enemy.health)
-      addLog(`TASK COMPLETED → "${enemy.taskTitle}" instantly destroyed!`, 'kill')
+      addLog(`TASK COMPLETED → Enemy instantly destroyed!`, 'kill')
     }
   }
 
   function handlePomodoroStart(taskId: string) {
-    const enemy = enemies.value.find(e => e.taskId === taskId)
-    if (enemy && enemy.state !== 'dead' && enemy.state !== 'dying') {
-      targetEnemy(enemy.id)
-      addLog(`FOCUS MODE: Pomodoro started → targeting "${enemy.taskTitle}"`, 'system')
+    const enemy = enemies.value.find(e => e.taskId === taskId && e.state !== 'dead' && e.state !== 'dying')
+    if (enemy) {
+      targetedEnemyId.value = enemy.id
+      addLog('FOCUS MODE → Targeting enemy', 'system')
     }
   }
 
-  function handlePomodoroComplete(taskId: string) {
-    if (!player.value) return
+  function handlePomodoroComplete() {
     const enemy = targetedEnemy.value
-    if (enemy && enemy.taskId === taskId && enemy.state !== 'dead' && enemy.state !== 'dying') {
-      const damage = calculateFocusDamage(player.value)
+    if (enemy && enemy.state !== 'dead' && enemy.state !== 'dying') {
+      const damage = calculateFocusDamage(player.value, buffs.value)
       damageEnemy(enemy.id, damage)
-      addLog(`FOCUS STRIKE: "${enemy.taskTitle}" → -${damage} HP!`, 'damage')
+      addLog(`FOCUS STRIKE → -${damage} HP!`, 'damage')
     }
   }
 
+  // ─── Corruption ───
   function addCorruption(amount: number) {
+    if (hasFirewall.value) return
+
     const prev = corruption.value
     corruption.value = Math.max(0, Math.min(1, corruption.value + amount))
 
@@ -370,68 +458,137 @@ export const useArenaStore = defineStore('arena', () => {
       currentRun.value = { ...currentRun.value, maxCorruptionReached: corruption.value }
     }
 
-    if (corruption.value > 0.5 && prev <= 0.5) {
-      arenaTheme.value = 'corrupted'
-      addLog('WARNING: Corruption exceeding 50%!', 'system')
-    } else if (corruption.value <= 0.5 && prev > 0.5) {
-      arenaTheme.value = 'default'
-    }
+    arenaEventBus.emit('corruption_changed', { corruption: corruption.value, delta: amount })
 
-    arenaEventBus.emit({ type: 'corruption_changed', corruption: corruption.value, delta: amount })
+    if (corruption.value >= 1 && prev < 1) {
+      // Defeat
+      setPhase('defeat')
+      if (currentRun.value) {
+        currentRun.value = { ...currentRun.value, status: 'abandoned' }
+      }
+      addLog('SYSTEM CORRUPTED — DEFEAT', 'system', '#ff0000')
+      arenaEventBus.emit('defeat', {
+        corruption: corruption.value,
+        enemiesKilled: enemiesKilled.value,
+      })
+    }
   }
 
+  // ─── Wave Check ───
   function checkWaveCleared() {
+    if (spawnQueue.value.length > 0) return
+
     const alive = enemies.value.filter(e => e.state !== 'dead' && e.state !== 'dying')
     if (alive.length > 0) return
 
-    setPhase('wave_cleared')
+    if (!setPhase('wave_cleared')) return
 
-    arenaEventBus.emit({
-      type: 'wave_cleared',
+    arenaEventBus.emit('wave_cleared', {
       waveNumber: waveNumber.value,
-      enemiesKilled: enemiesKilled.value.length,
+      enemiesKilled: enemiesKilled.value,
     })
 
-    if (phase.value === 'wave_cleared') {
-      setPhase('victory')
+    // Go to victory
+    setPhase('victory')
 
-      if (currentRun.value) {
-        currentRun.value = {
-          ...currentRun.value,
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-        }
-      }
-
-      addLog('ALL THREATS ELIMINATED — SECTOR CLEARED!', 'system')
-      addLog(`Total XP earned: ${currentRun.value?.totalXpEarned ?? 0}`, 'xp')
+    if (currentRun.value) {
+      currentRun.value = { ...currentRun.value, status: 'completed' }
     }
+
+    addLog('ALL THREATS ELIMINATED — SECTOR CLEARED!', 'system', '#00ff88')
+    arenaEventBus.emit('victory', {
+      totalXp: currentRun.value?.totalXpEarned ?? 0,
+      enemiesKilled: enemiesKilled.value,
+    })
   }
 
+  // ─── Buff Management ───
+  function applyBuff(buff: Buff) {
+    buffs.value.push(buff)
+  }
+
+  function checkBuffExpiry() {
+    const now = Date.now()
+    buffs.value = buffs.value.filter(b => now - b.startTime < b.duration)
+  }
+
+  // ─── Cleanup ───
   function cleanup() {
+    if (spawnTimer.value) {
+      clearInterval(spawnTimer.value)
+      spawnTimer.value = null
+    }
     phase.value = 'idle'
-    player.value = null
+    player.value = {
+      position: { x: 0, y: 0, z: 0 },
+      health: BASE_PLAYER_STATS.health,
+      maxHealth: BASE_PLAYER_STATS.maxHealth,
+      attackDamage: BASE_PLAYER_STATS.attackDamage,
+      attackSpeed: BASE_PLAYER_STATS.attackSpeed,
+      focusDamage: BASE_PLAYER_STATS.focusDamage,
+    }
     enemies.value = []
-    targetedEnemyId.value = null
-    corruption.value = 0
-    waveNumber.value = 0
-    currentRun.value = null
-    abilityCooldowns.value = new Map()
-    arenaTheme.value = 'default'
-    isInitialized.value = false
+    projectiles.value = []
+    buffs.value = []
     combatLog.value = []
+    corruption.value = 0
+    waveNumber.value = 1
+    currentRun.value = null
+    targetedEnemyId.value = null
+    spawnQueue.value = []
+    abilityCharges.value = 3
+    abilityCooldowns.value = {}
     arenaEventBus.clear()
-    stateMachine.reset()
   }
 
   return {
-    phase, player, enemies, targetedEnemyId, corruption, waveNumber,
-    currentRun, abilityCooldowns, arenaTheme, isInitialized, combatLog,
-    activeEnemies, targetedEnemy, enemiesKilled, isWaveActive, isBossPhase,
-    isVictory, corruptionPercent, enemyBreakdown,
-    initializeArena, startWave, damageEnemy, killEnemy, targetEnemy,
-    activateAbility, handleTaskCompleted, handlePomodoroStart,
-    handlePomodoroComplete, addCorruption, checkWaveCleared, cleanup,
-    movePlayer, shootEnemy, addLog,
+    // State
+    phase,
+    player,
+    enemies,
+    projectiles,
+    buffs,
+    combatLog,
+    corruption,
+    waveNumber,
+    currentRun,
+    targetedEnemyId,
+    spawnQueue,
+    spawnTimer,
+    abilityCharges,
+    abilityCooldowns,
+
+    // Computed
+    activeEnemies,
+    targetedEnemy,
+    enemiesKilled,
+    isWaveActive,
+    isBossPhase,
+    isVictory,
+    isDefeated,
+    corruptionPercent,
+    enemyBreakdown,
+    activeBuff,
+    hasFirewall,
+
+    // Actions
+    initializeArena,
+    startWave,
+    shootEnemy,
+    handleProjectileImpact,
+    damageEnemy,
+    killEnemy,
+    movePlayer,
+    activateAbility,
+    handleTaskCompleted,
+    handlePomodoroStart,
+    handlePomodoroComplete,
+    addCorruption,
+    checkWaveCleared,
+    spawnNextEnemy,
+    applyBuff,
+    checkBuffExpiry,
+    cleanup,
+    addLog,
   }
 })

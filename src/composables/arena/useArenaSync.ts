@@ -1,24 +1,24 @@
-// Arena sync composable — watches task/timer stores and bridges to arena store
+// Arena sync — bridges task/timer stores to arena store.
+// Watches for task completions and pomodoro events, calls arena store actions.
 import { watch, onUnmounted } from 'vue'
 import { useArenaStore } from '@/stores/arena'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
+import type { Task } from '@/types/tasks'
 
-/**
- * Bridges external store changes (task completions, pomodoro events)
- * into the arena store. Call from the arena view/component.
- */
 export function useArenaSync() {
   const arenaStore = useArenaStore()
   const taskStore = useTaskStore()
   const timerStore = useTimerStore()
 
-  // Watch for task completions — detect status transitions to 'done'
+  // ─── Watch Task Completions ───
+  // Track status transitions to 'done' for tasks that have enemy counterparts.
+
   const stopTaskWatch = watch(
     () => taskStore._rawTasks.map(t => ({ id: t.id, status: t.status })),
     (current, previous) => {
-      if (!arenaStore.isWaveActive) return
       if (!previous) return
+      if (arenaStore.phase !== 'wave_active' && arenaStore.phase !== 'boss_phase') return
 
       for (const task of current) {
         const prev = previous.find(p => p.id === task.id)
@@ -30,31 +30,53 @@ export function useArenaSync() {
     { deep: true }
   )
 
-  // Watch pomodoro timer start
-  const stopTimerWatch = watch(
+  // ─── Watch Pomodoro Timer ───
+  // When timer starts for a task with an enemy, focus on that enemy.
+  // When timer completes, deal focus damage.
+
+  const stopTimerActiveWatch = watch(
     () => timerStore.isTimerActive,
-    (active) => {
-      if (!arenaStore.isWaveActive) return
+    (active, wasActive) => {
+      if (arenaStore.phase !== 'wave_active' && arenaStore.phase !== 'boss_phase') return
+
       if (active && timerStore.currentTaskId) {
         arenaStore.handlePomodoroStart(timerStore.currentTaskId)
-      } else if (!active && timerStore.currentTaskId) {
-        // Pomodoro completed (timer went from active to inactive)
-        arenaStore.handlePomodoroComplete(timerStore.currentTaskId)
+      } else if (!active && wasActive && timerStore.currentTaskId) {
+        arenaStore.handlePomodoroComplete()
       }
     }
   )
 
-  // Auto-initialize when arena is opened
+  // ─── Init ───
+  // Load overdue + today tasks and initialize arena if not already done.
+
   function initIfNeeded() {
-    if (!arenaStore.isInitialized) {
-      arenaStore.initializeArena()
+    if (arenaStore.phase !== 'idle') return
+
+    // Get all tasks from raw store, filter to overdue + due today
+    const allTasks = taskStore._rawTasks
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const eligible = allTasks.filter((t: Task) => {
+      if (t.status === 'done') return false
+      if (!t.dueDate) return false
+
+      const due = new Date(t.dueDate)
+      due.setHours(0, 0, 0, 0)
+
+      // Overdue or due today
+      return due <= today
+    })
+
+    if (eligible.length > 0) {
+      arenaStore.initializeArena(eligible)
     }
   }
 
   onUnmounted(() => {
-    // Stop watchers but don't cleanup arena state — it persists across tab switches
     stopTaskWatch()
-    stopTimerWatch()
+    stopTimerActiveWatch()
   })
 
   return { initIfNeeded }

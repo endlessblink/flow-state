@@ -1,35 +1,32 @@
-// Arena event bus — typed pub/sub for game events
-import type { GameEvent } from '@/types/arena'
+// Arena event bus — typed pub/sub for game events (Rewritten from scratch)
+import type { ArenaEventMap } from '@/types/arena'
 
-type GameEventHandler<T extends GameEvent['type']> = (
-  event: Extract<GameEvent, { type: T }>
-) => void
+type EventHandler<K extends keyof ArenaEventMap> = (payload: ArenaEventMap[K]) => void
 
 class ArenaEventBus {
-  private handlers = new Map<GameEvent['type'], Set<GameEventHandler<any>>>()
+  private listeners = new Map<keyof ArenaEventMap, Set<EventHandler<never>>>()
 
-  on<T extends GameEvent['type']>(type: T, handler: GameEventHandler<T>): void {
-    if (!this.handlers.has(type)) {
-      this.handlers.set(type, new Set())
+  on<K extends keyof ArenaEventMap>(event: K, handler: EventHandler<K>): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set())
     }
-    this.handlers.get(type)!.add(handler)
+    this.listeners.get(event)!.add(handler as EventHandler<never>)
   }
 
-  off<T extends GameEvent['type']>(type: T, handler: GameEventHandler<T>): void {
-    this.handlers.get(type)?.delete(handler)
+  off<K extends keyof ArenaEventMap>(event: K, handler: EventHandler<K>): void {
+    this.listeners.get(event)?.delete(handler as EventHandler<never>)
   }
 
-  emit(event: GameEvent): void {
-    const handlers = this.handlers.get(event.type)
-    if (handlers) {
-      for (const handler of handlers) {
-        handler(event)
-      }
+  emit<K extends keyof ArenaEventMap>(event: K, payload: ArenaEventMap[K]): void {
+    const handlers = this.listeners.get(event)
+    if (!handlers) return
+    for (const handler of handlers) {
+      (handler as EventHandler<K>)(payload)
     }
   }
 
   clear(): void {
-    this.handlers.clear()
+    this.listeners.clear()
   }
 }
 

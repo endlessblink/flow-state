@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * ArenaPlayer.vue — Player character in the 3D arena
- * WASD-controlled position from store. Cyan sphere body + blue cone visor + attack beam.
+ * Position from arenaStore.player.position. Cyan sphere body + blue cone visor.
+ * Attack beam toward targeted enemy when wave active.
  */
 import { computed, ref } from 'vue'
 import { useLoop } from '@tresjs/core'
@@ -11,7 +12,7 @@ import { useTimerStore } from '@/stores/timer'
 const arenaStore = useArenaStore()
 const timerStore = useTimerStore()
 
-// Player position from store (WASD driven)
+// Player position from store (WASD driven by game loop)
 const playerX = computed(() => arenaStore.player?.position.x ?? 0)
 const playerZ = computed(() => arenaStore.player?.position.z ?? 0)
 
@@ -24,19 +25,26 @@ onBeforeRender(() => {
   bobY.value = Math.sin(Date.now() * 0.002) * 0.1
 })
 
-// Calculate beam direction toward targeted enemy (relative to player position)
+// Targeted enemy for beam direction
 const targetedEnemy = computed(() => arenaStore.targetedEnemy)
 
 const showBeam = computed(() =>
-  (arenaStore.isWaveActive || arenaStore.isBossPhase) && targetedEnemy.value && beamLength.value > 0.5
+  (arenaStore.isWaveActive || arenaStore.isBossPhase)
+  && targetedEnemy.value
+  && targetedEnemy.value.state !== 'dead'
+  && targetedEnemy.value.state !== 'dying'
+  && beamLength.value > 0.5
 )
 
-// Beam color: magenta during pomodoro focus, cyan for auto-attack
+// Beam color: magenta during pomodoro focus on this task's enemy, cyan otherwise
 const beamColor = computed(() => {
-  if (timerStore.isTimerActive && targetedEnemy.value?.taskId === timerStore.currentTaskId) {
-    return '#ff00ff'
+  if (
+    timerStore.isTimerActive
+    && targetedEnemy.value?.taskId === timerStore.currentTaskId
+  ) {
+    return '#f60056'
   }
-  return '#00ffff'
+  return '#14b8ff'
 })
 
 const beamLength = computed(() => {

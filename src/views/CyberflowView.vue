@@ -35,8 +35,10 @@
       <!-- ACHIEVEMENTS Tab -->
       <CyberAchievements v-else-if="activeSection === 'achievements'" :show-all="true" />
 
-      <!-- ARENA Tab (TASK-1301) -->
-      <ArenaView v-else-if="activeSection === 'arena'" />
+      <!-- ARENA Tab (FEATURE-1306) — coming soon -->
+      <div v-else-if="activeSection === 'arena'" class="cf-content" style="display:flex;align-items:center;justify-content:center;color:rgba(var(--neon-cyan),0.5);font-family:'JetBrains Mono',monospace;font-size:0.9rem;">
+        ARENA // OFFLINE — AWAITING ASSET GENERATION
+      </div>
     </div>
 
     <!-- Character Drawer (overlay, not a tab) -->
@@ -57,7 +59,7 @@ import CyberBossFight from '@/components/gamification/cyber/CyberBossFight.vue'
 import CyberSkillTree from '@/components/gamification/cyber/CyberSkillTree.vue'
 import CyberAchievements from '@/components/gamification/cyber/CyberAchievements.vue'
 import CyberCharacterDrawer from '@/components/gamification/cyber/CyberCharacterDrawer.vue'
-import ArenaView from '@/components/gamification/arena/ArenaView.vue'
+
 
 const { cyberflowClasses } = useCyberflowTheme()
 

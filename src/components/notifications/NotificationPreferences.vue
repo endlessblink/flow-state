@@ -381,12 +381,42 @@ watch(() => props.initialPreferences, (newPreferences) => {
 }
 
 .checkbox-input {
-  width: 16px;
-  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--glass-bg-soft);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
   cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+}
+
+.checkbox-input:checked {
+  background: var(--state-active-bg);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 8px rgba(78, 205, 196, 0.2);
+}
+
+.checkbox-input:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-input:hover {
+  border-color: var(--glass-border-hover);
+  background: var(--glass-bg-medium);
 }
 
 .checkbox-label {

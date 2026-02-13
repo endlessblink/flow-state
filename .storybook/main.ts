@@ -15,6 +15,18 @@ const config: StorybookConfig = {
     '@storybook/addon-vitest'
   ],
 
+  // Tag-based sidebar filters — allows filtering "New" vs "Reviewed" stories
+  tags: {
+    new: {
+      title: '🆕 New',
+      description: 'Newly added stories that need design review',
+    },
+    reviewed: {
+      title: '✅ Reviewed',
+      description: 'Stories that have been reviewed and approved',
+    },
+  },
+
   viteFinal: async (config) => {
     return {
       ...config,

@@ -6,7 +6,7 @@ import EmojiPicker from '@/components/common/EmojiPicker.vue'
 
 const meta = {
   component: BaseModal,
-  title: '🪟 Modals & Dialogs/BaseModal Redesign Preview',
+  title: '🎯 Modals/BaseModal Redesign Preview',
   tags: ['autodocs'],
   parameters: {
     layout: 'padded',
@@ -107,7 +107,7 @@ export const ProjectModalStyle: Story = {
     components: { BaseModal, BaseInput, EmojiPicker },
     setup() {
       const selectedColor = ref('#4ecdc4')
-      const selectedEmoji = ref('📁')
+      const selectedEmoji = ref('🎯')
       const showPicker = ref(false)
 
       const handlePickerSelect = (data: { type: 'emoji' | 'color'; value: string }) => {

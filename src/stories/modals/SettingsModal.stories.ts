@@ -7,7 +7,7 @@ const pinia = createPinia()
 setActivePinia(pinia)
 
 const meta: Meta<typeof SettingsModal> = {
-  title: '🪟 Modals & Dialogs/SettingsModal',
+  title: '🎯 Modals/SettingsModal',
   component: SettingsModal,
   tags: ['autodocs'],
   parameters: {

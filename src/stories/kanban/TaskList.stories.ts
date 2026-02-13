@@ -3,7 +3,7 @@ import TaskList from '@/components/tasks/TaskList.vue'
 import { useTaskStore } from '@/stores/tasks'
 
 const meta = {
-  title: '📊 Kanban/TaskList',
+  title: '📋 Board/TaskList',
   component: TaskList,
   tags: ['autodocs'],
   parameters: {

@@ -9,7 +9,8 @@
           class="project-expand-icon"
           :class="{ 'project-expand-icon--expanded': expandedProjects.has(project.id) }"
         />
-        <ProjectEmojiIcon :emoji="project.emoji || '📁'" size="xs" />
+        <ProjectEmojiIcon v-if="project.emoji" :emoji="project.emoji" size="xs" />
+        <div v-else class="project-color-dot" :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : (project.color || '#6B7280') }" />
         <span class="project-name">{{ project.name }}</span>
         <span class="project-task-count">{{ project.tasks.length }}</span>
       </div>
@@ -101,6 +102,7 @@ const projectGroups = computed(() => {
       id: projectId,
       name: project?.name || 'Uncategorized',
       emoji: project?.emoji,
+      color: project?.color,
       tasks: tasks,
       parentTasks: parentTasks
     }
@@ -226,6 +228,13 @@ defineExpose({
 .project-task-count {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+.project-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
 
 .empty-state {

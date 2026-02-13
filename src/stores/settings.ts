@@ -39,11 +39,6 @@ export interface AppSettings {
     // FEATURE-1194: Auto-updater
     autoUpdateEnabled: boolean
 
-    // TASK-1301: Arena game mode
-    arenaEnabled: boolean
-    arenaAutoOpen: boolean
-    arenaShowAbilityHints: boolean
-
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
 
@@ -89,11 +84,6 @@ export const useSettingsStore = defineStore('settings', {
 
         // FEATURE-1194: Auto-updater defaults
         autoUpdateEnabled: false,
-
-        // TASK-1301: Arena game mode defaults
-        arenaEnabled: false,
-        arenaAutoOpen: false,
-        arenaShowAbilityHints: true,
 
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },

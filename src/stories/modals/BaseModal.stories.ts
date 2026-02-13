@@ -1,7 +1,7 @@
 import BaseModal from '@/components/base/BaseModal.vue'
 
 const meta = {
-  title: 'Modals/BaseModal',
+  title: '🎯 Modals/BaseModal',
   component: BaseModal,
   tags: ['autodocs'],
   parameters: {

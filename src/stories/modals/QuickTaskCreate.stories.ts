@@ -9,7 +9,7 @@ setActivePinia(pinia)
 
 const meta = {
   component: QuickTaskCreate,
-  title: '🪟 Modals & Dialogs/QuickTaskCreate',
+  title: '🎯 Modals/QuickTaskCreate',
   tags: ['autodocs'],
 
   parameters: {
@@ -532,7 +532,7 @@ export const AllVariants: Story = {
               </div>
             </div>
             <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">📁</span>
+              <span style="font-size: 16px;">🏷️</span>
               <div style="color: var(--text-secondary);">
                 <strong>Project Assignment</strong> - Organize by project
               </div>

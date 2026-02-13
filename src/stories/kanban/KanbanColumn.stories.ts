@@ -21,7 +21,7 @@ const mockTasks = {
 
 const meta = {
   component: KanbanColumn,
-  title: '✨ Features/📋 Board View/KanbanColumn',
+  title: '📋 Board/KanbanColumn',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

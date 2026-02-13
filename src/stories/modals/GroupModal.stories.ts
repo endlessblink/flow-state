@@ -7,7 +7,7 @@ const pinia = createPinia()
 setActivePinia(pinia)
 
 const meta: Meta<typeof GroupModal> = {
-  title: '🪟 Modals & Dialogs/GroupModal',
+  title: '🎯 Modals/GroupModal',
   component: GroupModal,
   tags: ['autodocs'],
   parameters: {

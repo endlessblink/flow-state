@@ -21,7 +21,7 @@ export function useCalendarModals() {
      * Open edit modal for a specific task
      */
     const handleEditTask = (taskId: string) => {
-        const task = taskStore.tasks.find(t => t.id === taskId)
+        const task = taskStore.rawTasks.find(t => t.id === taskId)
         if (task) {
             selectedTask.value = task
             isEditModalOpen.value = true

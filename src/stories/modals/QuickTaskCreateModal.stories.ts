@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 
 const meta: Meta<typeof QuickTaskCreateModal> = {
-  title: '🪟 Modals & Dialogs/QuickTaskCreateModal',
+  title: '🎯 Modals/QuickTaskCreateModal',
   component: QuickTaskCreateModal,
   tags: ['autodocs'],
   parameters: {

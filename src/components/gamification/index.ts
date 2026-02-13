@@ -30,7 +30,3 @@ export { default as ARIAMessage } from './ARIAMessage.vue'
 export { default as ChallengeComplete } from './ChallengeComplete.vue'
 export { default as CorruptionOverlay } from './CorruptionOverlay.vue'
 
-// Arena game mode (TASK-1301)
-export { default as ArenaView } from './arena/ArenaView.vue'
-export { default as ArenaScene } from './arena/ArenaScene.vue'
-export { default as ArenaHUD } from './arena/ArenaHUD.vue'

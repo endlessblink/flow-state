@@ -15,7 +15,7 @@ export interface MonthDay {
  * Month view specific logic for calendar
  * Handles month grid, day cells, and event aggregation
  */
-export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<string | null>) {
+export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
 
@@ -42,11 +42,8 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
 
       // Get events for this day
       const dayEvents: CalendarEvent[] = []
-      taskStore.filteredTasks
-        .filter(task => {
-          if (statusFilter.value === null) return true
-          return task.status === statusFilter.value
-        })
+      // Use calendarFilteredTasks to bypass smart view filters (consistent with week/day views)
+      taskStore.calendarFilteredTasks
         .forEach(task => {
           const instances = getTaskInstances(task)
           instances
@@ -60,6 +57,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, statusFilter: Ref<s
                 taskId: task.id,
                 instanceId: instance.id,
                 title: task.title,
+                projectId: task.projectId,
                 startTime: new Date(`${instance.scheduledDate}T${instance.scheduledTime}`),
                 endTime: new Date(new Date(`${instance.scheduledDate}T${instance.scheduledTime}`).getTime() + duration * 60000),
                 duration,

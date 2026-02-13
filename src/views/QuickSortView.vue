@@ -195,6 +195,13 @@
       :is-open="showProjectModal"
       @close="showProjectModal = false"
     />
+
+    <!-- Task Edit Modal -->
+    <TaskEditModal
+      :is-open="showEditModal"
+      :task="taskToEdit"
+      @close="showEditModal = false; taskToEdit = null"
+    />
   </div>
 </template>
 
@@ -210,6 +217,7 @@ import QuickCaptureTab from '@/components/quicksort/QuickCaptureTab.vue'
 import CategorySelector from '@/components/layout/CategorySelector.vue'
 import SortProgress from '@/components/tasks/SortProgress.vue'
 import ProjectModal from '@/components/projects/ProjectModal.vue'
+import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 
@@ -684,22 +692,24 @@ function formatTime(milliseconds: number): string {
   display: flex;
   gap: var(--space-3);
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .action-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-4);
-  background: transparent;
-  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
 }
 
 .action-btn:hover {
@@ -709,11 +719,13 @@ function formatTime(milliseconds: number): string {
 
 .action-btn kbd {
   padding: var(--space-0_5) var(--space-1_5);
-  background: var(--glass-bg-light);
+  background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-family: var(--font-mono);
+  color: var(--text-muted);
+  line-height: 1;
 }
 
 .action-btn.done {

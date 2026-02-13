@@ -4,7 +4,7 @@ import type { Task } from '@/stores/tasks'
 
 const meta = {
   component: TaskRow,
-  title: '🧩 Components/📋 Board/TaskRow',
+  title: '📋 Board/TaskRow',
   tags: ['autodocs'],
 
   args: {

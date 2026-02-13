@@ -65,20 +65,34 @@ export function useCalendarNavigation() {
     })
 
     /**
-     * Navigate to previous day
+     * Navigate to previous period (view-mode-aware)
+     * Day: -1 day, Week: -7 days, Month: -1 month
      */
     const previousDay = () => {
         const date = new Date(currentDate.value)
-        date.setDate(date.getDate() - 1)
+        if (viewMode.value === 'month') {
+            date.setMonth(date.getMonth() - 1)
+        } else if (viewMode.value === 'week') {
+            date.setDate(date.getDate() - 7)
+        } else {
+            date.setDate(date.getDate() - 1)
+        }
         currentDate.value = date
     }
 
     /**
-     * Navigate to next day
+     * Navigate to next period (view-mode-aware)
+     * Day: +1 day, Week: +7 days, Month: +1 month
      */
     const nextDay = () => {
         const date = new Date(currentDate.value)
-        date.setDate(date.getDate() + 1)
+        if (viewMode.value === 'month') {
+            date.setMonth(date.getMonth() + 1)
+        } else if (viewMode.value === 'week') {
+            date.setDate(date.getDate() + 7)
+        } else {
+            date.setDate(date.getDate() + 1)
+        }
         currentDate.value = date
     }
 

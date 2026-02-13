@@ -31,6 +31,15 @@
           <CalendarDays :size="12" />
           Due
         </button>
+        <button
+          class="sort-btn"
+          :class="{ active: sortBy === 'canvasOrder' }"
+          title="Sort by canvas position (top to bottom)"
+          @click="$emit('update:sortBy', 'canvasOrder')"
+        >
+          <LayoutGrid :size="12" />
+          Canvas
+        </button>
       </div>
     </div>
 
@@ -205,7 +214,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check } from 'lucide-vue-next'
+import { CalendarOff, Flag, FolderOpen, ChevronDown, X, List, Clock, CheckCircle2, CalendarDays, Check, LayoutGrid } from 'lucide-vue-next'
 import type { Task, Project } from '@/stores/tasks'
 import type { SortByType } from '@/composables/inbox/useUnifiedInboxState'
 // TASK-144: Use centralized duration categories

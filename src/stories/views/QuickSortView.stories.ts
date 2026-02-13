@@ -28,7 +28,7 @@ import { useTaskStore, type Task, type Project } from '@/stores/tasks'
  * - SortProgress: Progress indicator
  */
 const meta: Meta = {
-  title: '✨ Features/QuickSortView',
+  title: '✨ Views/QuickSortView',
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',

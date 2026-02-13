@@ -126,17 +126,19 @@ const clearAllFilters = () => {
   min-width: 120px;
 }
 
-/* Clear button styling */
+/* Clear button styling - matches CustomSelect height (22px) */
 .clear-filters-btn {
   background: var(--danger-bg-subtle);
   border: 1px solid var(--danger-border-medium);
   color: var(--color-danger);
-  border-radius: var(--radius-md);
-  padding: var(--space-1_5) var(--space-3);
-  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1_5);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  line-height: 1;
   outline: none;
   cursor: pointer;
-  height: 32px;
+  height: 22px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;

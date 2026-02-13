@@ -101,6 +101,10 @@ export const globalTypes = {
 }
 
 const preview: Preview = {
+  tags: ['autodocs'],
+  initialGlobals: {
+    // Enable tag-based sidebar filtering
+  },
   parameters: {
     layout: 'fullscreen',
     docs: {

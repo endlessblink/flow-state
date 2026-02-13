@@ -137,6 +137,14 @@ export const useNotificationStore = defineStore('notifications', () => {
    * Request notification permission (must be called from user event handler)
    */
   const requestNotificationPermission = async (): Promise<boolean> => {
+    // BUG-1303: Skip browser Notification.requestPermission() in Tauri — WebKitGTK
+    // can hang indefinitely on this call. Tauri uses its own notification plugin.
+    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
+    if (isTauriRuntime) {
+      isPermissionGranted.value = false
+      return false
+    }
+
     if (!('Notification' in window)) {
       errorHandler.report({
         severity: ErrorSeverity.INFO,

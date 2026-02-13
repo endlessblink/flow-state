@@ -1,12 +1,12 @@
 /**
  * TASK-1219: Shared notification delivery utility
- * Uses Browser Notification API (works in both Tauri webview and browsers).
  *
  * BUG-1289: tauri-plugin-notification v2.3.3 on Linux calls block_on() inside
- * the tokio runtime, causing a fatal panic: "Cannot start a runtime from within
- * a runtime". The Browser Notification API avoids this by not going through Rust.
+ * the tokio runtime, causing a fatal panic. Browser Notification API avoids Rust.
  *
- * BUG-1302: Added logging and error handling — previously failed silently.
+ * BUG-1302: Added logging, error handling, and native Linux notify-send support.
+ * In Tauri on Linux, Browser Notification API doesn't integrate with KDE Plasma.
+ * We use `notify-send` (freedesktop DBus) which shows in KDE's notification area.
  */
 
 interface DeliveryOptions {
@@ -16,15 +16,49 @@ interface DeliveryOptions {
   sound?: boolean
 }
 
+/** Detect if running inside Tauri */
+function isTauri(): boolean {
+  return !!(window as any).__TAURI_INTERNALS__
+}
+
 /**
- * Deliver a notification via the Browser Notification API.
- * Works in Tauri webview (all platforms) and browsers.
+ * Send native Linux desktop notification via notify-send (freedesktop DBus).
+ * Works with KDE Plasma, GNOME, XFCE, and other freedesktop-compliant DEs.
  */
-export async function deliverNotification(options: DeliveryOptions): Promise<boolean> {
+async function deliverViaNativeLinux(options: DeliveryOptions): Promise<boolean> {
+  try {
+    const { Command } = await import('@tauri-apps/plugin-shell')
+
+    const args = [
+      '--app-name=FlowState',
+      '--icon=dialog-information',
+      options.title,
+      options.body
+    ]
+
+    const result = await Command.create('notify-send', args).execute()
+
+    if (result.code === 0) {
+      console.log('[NOTIFY] Native Linux notification delivered via notify-send')
+      return true
+    } else {
+      console.warn('[NOTIFY] notify-send failed:', result.stderr)
+      return false
+    }
+  } catch (error) {
+    console.warn('[NOTIFY] Native Linux delivery failed:', error)
+    return false
+  }
+}
+
+/**
+ * Deliver a notification via Browser Notification API (fallback for non-Tauri).
+ */
+async function deliverViaBrowserAPI(options: DeliveryOptions): Promise<boolean> {
   const { title, body, tag, sound = true } = options
 
   if (!('Notification' in window)) {
-    console.warn('[NOTIFY] Browser Notification API not available in this environment')
+    console.warn('[NOTIFY] Browser Notification API not available')
     return false
   }
 
@@ -38,6 +72,11 @@ export async function deliverNotification(options: DeliveryOptions): Promise<boo
       })
       return true
     } else if (Notification.permission === 'default') {
+      // BUG-1303: Skip Notification.requestPermission() in Tauri — WebKitGTK hangs
+      if (isTauri()) {
+        console.warn('[NOTIFY] Skipping permission request in Tauri (WebKitGTK hangs)')
+        return false
+      }
       console.log('[NOTIFY] Permission not yet granted, requesting...')
       const permission = await Notification.requestPermission()
       console.log('[NOTIFY] Permission result:', permission)
@@ -57,7 +96,24 @@ export async function deliverNotification(options: DeliveryOptions): Promise<boo
       return false
     }
   } catch (error) {
-    console.error('[NOTIFY] Failed to deliver notification:', error)
+    console.error('[NOTIFY] Browser API failed:', error)
     return false
   }
+}
+
+/**
+ * Deliver a notification using the best available method:
+ * - Tauri + Linux → notify-send (KDE Plasma / freedesktop compatible)
+ * - Browser / PWA → Browser Notification API
+ */
+export async function deliverNotification(options: DeliveryOptions): Promise<boolean> {
+  // In Tauri on Linux, use notify-send for native KDE Plasma integration
+  if (isTauri() && navigator.platform?.toLowerCase().includes('linux')) {
+    const nativeSuccess = await deliverViaNativeLinux(options)
+    if (nativeSuccess) return true
+    // Fall through to Browser API if notify-send fails (e.g., not installed)
+    console.log('[NOTIFY] Falling back to Browser Notification API')
+  }
+
+  return deliverViaBrowserAPI(options)
 }

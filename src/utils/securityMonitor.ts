@@ -281,7 +281,11 @@ export class SecurityMonitor {
         tag: event.id
       })
     } else if ('Notification' in window && Notification.permission !== 'denied') {
-      Notification.requestPermission()
+      // BUG-1303: Skip in Tauri — WebKitGTK hangs on requestPermission()
+      const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
+      if (!isTauriRuntime) {
+        Notification.requestPermission()
+      }
     }
   }
 

@@ -850,10 +850,13 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   const requestNotificationPermission = async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
+    // BUG-1303: Skip browser Notification.requestPermission() in Tauri — WebKitGTK
+    // can hang indefinitely on this call. Tauri uses its own notification plugin.
+    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI__' in window
+    if (!isTauriRuntime && 'Notification' in window && Notification.permission === 'default') {
       await Notification.requestPermission()
     }
-    return Notification.permission === 'granted'
+    return !isTauriRuntime && 'Notification' in window && Notification.permission === 'granted'
   }
 
   const initializeStore = async () => {

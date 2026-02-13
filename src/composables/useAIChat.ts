@@ -374,11 +374,11 @@ export function useAIChat() {
       return sendMessageWithReAct(content, options)
     }
 
-    // Client-side intent detection: only for Ollama / small local models
-    // that can't reliably emit JSON tool blocks. Cloud providers (Groq, OpenRouter)
-    // handle tool calling natively via the AI model.
+    // Client-side intent detection: runs for ALL providers.
+    // Fast, deterministic, and avoids model latency for common queries.
+    // Falls through to model for complex/ambiguous messages.
     const useNativeTools = !isLocalProvider
-    const detectedTool = isLocalProvider ? detectToolIntent(content) : null
+    const detectedTool = detectToolIntent(content)
     if (detectedTool && !options.systemPrompt) {
       await executeDirectTool(content, detectedTool)
       return
@@ -965,8 +965,10 @@ export function useAIChat() {
   }
 
   /**
-   * Execute a quick action by calling the tool directly (no AI model call).
-   * Used when quick actions have a directTool property or intent detection matches.
+   * Execute a quick action by calling the tool directly.
+   * After the tool returns data, streams a brief AI explanation of WHY the
+   * results are relevant (matching the user's language). The rich task cards
+   * render from metadata while the explanation streams above them.
    */
   async function executeDirectTool(
     displayMessage: string,
@@ -988,18 +990,9 @@ export function useAIChat() {
       const result = await executeTool(toolCall)
       console.log('[AIChat] Direct tool result:', result)
 
-      // Build a short summary
-      const summary = result.success
-        ? result.message
-        : `Error: ${result.message}`
-
-      // Set the message content
       const lastMsg = store.messages[store.messages.length - 1]
       if (lastMsg && lastMsg.isStreaming) {
-        lastMsg.content = summary
-        store.streamingContent = summary
-
-        // Attach tool results for rich rendering
+        // Attach tool results for rich rendering immediately
         if (result.success) {
           const toolDef = AI_TOOLS.find(t => t.name === toolCall.tool)
           lastMsg.metadata = {
@@ -1013,6 +1006,11 @@ export function useAIChat() {
             }],
           } as any
         }
+
+        // Stream a contextual explanation from the AI model
+        const explanation = await streamToolExplanation(displayMessage, toolCall, result)
+        lastMsg.content = explanation
+        store.streamingContent = explanation
       }
 
       // Push undo entry if available
@@ -1031,6 +1029,65 @@ export function useAIChat() {
       const errorMessage = err instanceof Error ? err.message : 'Tool execution failed'
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat] Direct tool error:', err)
+    }
+  }
+
+  /**
+   * Stream a brief contextual explanation of tool results via the AI model.
+   * Updates store.streamingContent in real-time so the user sees it appearing.
+   * Falls back to the dry result summary if the model call fails.
+   */
+  async function streamToolExplanation(
+    userMessage: string,
+    toolCall: ToolCall,
+    result: ToolResult
+  ): Promise<string> {
+    // For errors, just return the error message directly
+    if (!result.success) {
+      return `Error: ${result.message}`
+    }
+
+    try {
+      const router = await getRouter()
+
+      // Build a concise data preview (avoid sending megabytes to the model)
+      const dataPreview = result.data
+        ? JSON.stringify(result.data).slice(0, 800)
+        : 'No data'
+
+      const explanationMessages: RouterChatMessage[] = [
+        {
+          role: 'system',
+          content: [
+            'You are a concise task assistant. A tool was just executed based on the user\'s request.',
+            'Write 1-3 short sentences explaining what was found and why these results are relevant to what the user asked.',
+            'RULES:',
+            '- Match the user\'s language exactly (if they wrote in Hebrew, respond in Hebrew).',
+            '- Do NOT list individual tasks or items — they are displayed separately as interactive cards below your message.',
+            '- Focus on the "why": what pattern connects these results, what stands out, or what the user should pay attention to.',
+            '- Be warm, helpful, and specific. Reference counts or notable details from the data.',
+          ].join(' ')
+        },
+        {
+          role: 'user',
+          content: `User asked: "${userMessage}"\nTool: ${toolCall.tool}\nResult: ${result.message}\nData: ${dataPreview}`
+        }
+      ]
+
+      let explanation = ''
+      for await (const chunk of router.chatStream(explanationMessages, {
+        taskType: 'chat' as TaskType,
+        forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+        model: selectedModel.value || undefined,
+      })) {
+        explanation += chunk.content
+        store.streamingContent = explanation
+      }
+
+      return explanation || result.message
+    } catch (e) {
+      console.warn('[AIChat] Tool explanation stream failed, using fallback:', e)
+      return result.message
     }
   }
 

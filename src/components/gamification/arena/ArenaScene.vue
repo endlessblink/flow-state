@@ -1,20 +1,31 @@
 <script setup lang="ts">
 /**
  * ArenaScene.vue — TresJS 3D canvas with all arena objects
- * Camera: top-down isometric (Ruiner-style), looking at origin
- * Contains: environment, player, enemies, post-processing
+ * Camera: top-down isometric (Ruiner-style), follows player with smooth lerp
+ * Contains: environment, player, enemies, projectiles, game engine, post-processing
  */
+import { computed } from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import { useArenaStore } from '@/stores/arena'
 import { useArenaRenderer } from '@/composables/arena/useArenaRenderer'
 import ArenaEnvironment from './ArenaEnvironment.vue'
 import ArenaPlayer from './ArenaPlayer.vue'
 import ArenaEnemy from './ArenaEnemy.vue'
+import ArenaProjectile from './ArenaProjectile.vue'
 import ArenaPostProcessing from './ArenaPostProcessing.vue'
 import ArenaGameEngine from './ArenaGameEngine.vue'
 
 const arenaStore = useArenaStore()
-const { cameraPosition, themeColors } = useArenaRenderer()
+const { cameraPosition, screenShake, themeColors } = useArenaRenderer()
+
+// Camera offset includes screen shake
+const camX = computed(() => cameraPosition.value.x + screenShake.value.x)
+const camY = computed(() => cameraPosition.value.y)
+const camZ = computed(() => cameraPosition.value.z + screenShake.value.y)
+
+// Camera look-at targets the player position (not always origin)
+const lookAtX = computed(() => arenaStore.player?.position.x ?? 0)
+const lookAtZ = computed(() => arenaStore.player?.position.z ?? 0)
 </script>
 
 <template>
@@ -24,38 +35,38 @@ const { cameraPosition, themeColors } = useArenaRenderer()
     shadows
     window-size
   >
-    <!-- Camera -->
+    <!-- Camera: follows player with screen shake -->
     <TresPerspectiveCamera
-      :position="[cameraPosition.x, cameraPosition.y, cameraPosition.z]"
-      :look-at="[0, 0, 0]"
+      :position="[camX, camY, camZ]"
+      :look-at="[lookAtX, 0, lookAtZ]"
       :fov="50"
       :near="0.1"
       :far="100"
     />
 
-    <!-- Fixed camera — no orbit controls, Ruiner-style isometric lock -->
-
-    <!-- Lighting -->
-    <TresAmbientLight :color="themeColors.ambientColor" :intensity="0.3" />
+    <!-- Lighting (Ruiner-style cyberpunk) -->
+    <TresAmbientLight :color="themeColors.fogColor" :intensity="0.3" />
     <TresDirectionalLight
       :position="[5, 15, 5]"
       :intensity="0.6"
       color="#8888ff"
       cast-shadow
     />
-    <!-- Colored point lights for cyberpunk atmosphere -->
+    <!-- Magenta point light -->
     <TresPointLight
       :position="[-8, 4, -8]"
       color="#ff0066"
       :intensity="2"
       :distance="20"
     />
+    <!-- Cyan point light -->
     <TresPointLight
       :position="[8, 4, -8]"
       color="#00ffff"
       :intensity="2"
       :distance="20"
     />
+    <!-- Purple point light -->
     <TresPointLight
       :position="[0, 4, 8]"
       color="#8800ff"
@@ -66,7 +77,7 @@ const { cameraPosition, themeColors } = useArenaRenderer()
     <!-- Fog -->
     <TresFog :color="themeColors.fogColor" :near="10" :far="40" />
 
-    <!-- Environment (floor, grid, pillars) -->
+    <!-- Environment (floor, grid, boundary) -->
     <ArenaEnvironment />
 
     <!-- Player -->
@@ -79,7 +90,14 @@ const { cameraPosition, themeColors } = useArenaRenderer()
       :enemy="enemy"
     />
 
-    <!-- Game engine (invisible — drives auto-attack, enemy movement) -->
+    <!-- Projectiles -->
+    <ArenaProjectile
+      v-for="proj in arenaStore.projectiles"
+      :key="proj.id"
+      :projectile="proj"
+    />
+
+    <!-- Game engine (invisible — drives game loop) -->
     <ArenaGameEngine />
 
     <!-- Post-processing -->

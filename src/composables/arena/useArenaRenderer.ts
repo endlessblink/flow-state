@@ -1,84 +1,88 @@
-// Arena renderer composable — TresJS scene management (camera, post-processing, screen shake)
-import { ref, computed } from 'vue'
+// Arena renderer — camera follow, screen shake, theme colors.
+// Does NOT require TresCanvas context. Exports updateCamera() for the game engine to call.
+import { ref, onUnmounted } from 'vue'
 import { useArenaStore } from '@/stores/arena'
+import { arenaEventBus } from '@/services/arena/arenaEventBus'
 
-/**
- * Manages 3D rendering parameters: camera, post-processing intensities,
- * screen shake, and theme colors. Reactive to arena store state.
- */
+const CAMERA_Y = 15
+const CAMERA_Z_OFFSET = 10
+const LERP_FACTOR = 0.08
+
 export function useArenaRenderer() {
-  const arenaStore = useArenaStore()
+  const store = useArenaStore()
 
-  // Camera position (top-down isometric view)
-  const cameraPosition = ref({ x: 0, y: 12, z: 8 })
-  const cameraLookAt = ref({ x: 0, y: 0, z: 0 })
+  // ─── Camera Position (lerps toward player) ───
 
-  // ─── Post-processing intensities (reactive to game state) ───
+  const cameraPosition = ref({ x: 0, y: CAMERA_Y, z: CAMERA_Z_OFFSET })
+  const cameraOffset = ref({ x: 0, z: 0 })
 
-  const bloomIntensity = computed(() => {
-    const base = 1.2
-    if (arenaStore.isBossPhase) return base * 1.8
-    if (arenaStore.isWaveActive) return base * 1.2
-    if (arenaStore.isVictory) return base * 2.0
-    return base
-  })
+  function updateCamera(_delta: number) {
+    const targetX = store.player.position.x
+    const targetZ = store.player.position.z + CAMERA_Z_OFFSET
 
-  const chromaticAberration = computed(() => {
-    const base = 0.003
-    if (arenaStore.isBossPhase) return base * 3
-    return base + arenaStore.corruption * 0.01
-  })
-
-  const vignetteIntensity = computed(() => {
-    return 0.5 + arenaStore.corruption * 0.3
-  })
-
-  const noiseOpacity = computed(() => {
-    return 0.04 + arenaStore.corruption * 0.08
-  })
-
-  // ─── Screen shake ───
-
-  const screenShake = ref({ x: 0, y: 0 })
-
-  function triggerScreenShake(intensity = 0.3, durationMs = 200) {
-    const start = Date.now()
-    const shake = () => {
-      const elapsed = Date.now() - start
-      if (elapsed > durationMs) {
-        screenShake.value = { x: 0, y: 0 }
-        return
-      }
-      const decay = 1 - elapsed / durationMs
-      screenShake.value = {
-        x: (Math.random() - 0.5) * intensity * decay,
-        y: (Math.random() - 0.5) * intensity * decay,
-      }
-      requestAnimationFrame(shake)
+    cameraPosition.value = {
+      x: cameraPosition.value.x + (targetX - cameraPosition.value.x) * LERP_FACTOR,
+      y: CAMERA_Y,
+      z: cameraPosition.value.z + (targetZ - cameraPosition.value.z) * LERP_FACTOR,
     }
-    requestAnimationFrame(shake)
   }
 
-  // ─── Theme colors (reactive to corruption level) ───
+  // ─── Screen Shake ───
 
-  const themeColors = computed(() => {
-    const corrupted = arenaStore.corruption > 0.5
-    return {
-      ambientColor: corrupted ? '#1a0a0a' : '#0a0a1a',
-      fogColor: corrupted ? '#2b0d0d' : '#0d0d2b',
-      neonPrimary: corrupted ? '#ff2040' : '#00ffff',
-      neonSecondary: '#ff0066',
+  let shakeAnimId = 0
+
+  function triggerScreenShake(intensity: number, duration: number) {
+    const startTime = Date.now()
+
+    if (shakeAnimId) cancelAnimationFrame(shakeAnimId)
+
+    const shake = () => {
+      const elapsed = Date.now() - startTime
+      if (elapsed > duration) {
+        cameraOffset.value = { x: 0, z: 0 }
+        shakeAnimId = 0
+        return
+      }
+      const decay = 1 - elapsed / duration
+      cameraOffset.value = {
+        x: (Math.random() - 0.5) * intensity * decay * 0.1,
+        z: (Math.random() - 0.5) * intensity * decay * 0.1,
+      }
+      shakeAnimId = requestAnimationFrame(shake)
     }
+    shake()
+  }
+
+  // ─── Event Bus Subscriptions ───
+
+  const onEnemyKilled = () => {
+    triggerScreenShake(5, 200)
+  }
+
+  const onAbilityActivated = () => {
+    triggerScreenShake(8, 300)
+  }
+
+  arenaEventBus.on('enemy_killed', onEnemyKilled)
+  arenaEventBus.on('ability_activated', onAbilityActivated)
+
+  onUnmounted(() => {
+    arenaEventBus.off('enemy_killed', onEnemyKilled)
+    arenaEventBus.off('ability_activated', onAbilityActivated)
+    if (shakeAnimId) cancelAnimationFrame(shakeAnimId)
   })
+
+  // ─── Theme Colors (Ruiner palette) ───
+
+  const themeColors = {
+    fogColor: '#0a0520',
+    ambientColor: '#050510',
+  }
 
   return {
     cameraPosition,
-    cameraLookAt,
-    bloomIntensity,
-    chromaticAberration,
-    vignetteIntensity,
-    noiseOpacity,
-    screenShake,
+    cameraOffset,
+    updateCamera,
     triggerScreenShake,
     themeColors,
   }

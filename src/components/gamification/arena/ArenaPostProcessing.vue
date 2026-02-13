@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * ArenaPostProcessing.vue — TresJS post-processing effects chain
- * Bloom + ChromaticAberration + Vignette + Noise with reactive intensities
- * Gracefully degrades if post-processing fails to initialize
+ * ArenaPostProcessing.vue — Post-processing effects chain
+ * Bloom + ChromaticAberration + Vignette + Noise
+ * Intensities reactive to game phase (combat/boss/victory)
+ * Gracefully degrades if WebGL2 or post-processing unavailable
  */
 import { ref, computed, onMounted } from 'vue'
 import { Vector2 } from 'three'
@@ -22,7 +23,10 @@ const {
   noiseOpacity,
 } = useArenaRenderer()
 
-const aberrationOffset = computed(() => new Vector2(chromaticAberration.value, chromaticAberration.value))
+const aberrationOffset = computed(() =>
+  new Vector2(chromaticAberration.value, chromaticAberration.value)
+)
+
 const postProcessingAvailable = ref(true)
 
 onMounted(() => {

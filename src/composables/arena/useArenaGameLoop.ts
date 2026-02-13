@@ -1,31 +1,35 @@
-// Arena game loop — drives WASD movement, enemy approach, slow auto-attack
-// Must be called inside TresCanvas context (uses useLoop from @tresjs/core)
-import { ref, onMounted, onUnmounted } from 'vue'
+// Arena game loop — WASD input, enemy approach, projectile movement,
+// auto-attack, buff expiry, defeat check.
+// MUST be called inside a component that is a child of <TresCanvas>.
+import { onMounted, onUnmounted } from 'vue'
 import { useLoop } from '@tresjs/core'
 import { useArenaStore } from '@/stores/arena'
-import {
-  calculateAutoAttackDamage,
-  updateEnemyApproach,
-  calculateCorruptionFromReach,
-} from '@/services/arena/arenaCombat'
+import { calculateAutoAttackDamage } from '@/services/arena/arenaCombat'
 
-const PLAYER_SPEED = 5.0 // units per second
-const AUTO_ATTACK_INTERVAL = 4.0 // seconds (slow supplemental auto-attack)
+const PLAYER_SPEED = 5 // units per second
+const AUTO_ATTACK_INTERVAL = 4 // seconds
 
 export function useArenaGameLoop() {
-  const arenaStore = useArenaStore()
+  const store = useArenaStore()
 
-  // ─── Keyboard state ───
-  const keys = ref<Set<string>>(new Set())
+  // ─── Keyboard Input ───
+
+  const pressed = new Set<string>()
 
   function onKeyDown(e: KeyboardEvent) {
-    // Don't capture if user is typing in an input
-    if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return
-    keys.value.add(e.key.toLowerCase())
+    const tag = (e.target as HTMLElement)?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return
+    pressed.add(e.key.toLowerCase())
+
+    // Ability keys 1-4
+    const num = parseInt(e.key, 10)
+    if (num >= 1 && num <= 4) {
+      store.activateAbility(num - 1)
+    }
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    keys.value.delete(e.key.toLowerCase())
+    pressed.delete(e.key.toLowerCase())
   }
 
   onMounted(() => {
@@ -36,94 +40,123 @@ export function useArenaGameLoop() {
   onUnmounted(() => {
     window.removeEventListener('keydown', onKeyDown)
     window.removeEventListener('keyup', onKeyUp)
+    pressed.clear()
   })
 
-  // Auto-attack timing
-  const attackCooldown = ref(0)
+  // ─── Timers ───
+
+  let autoAttackTimer = 0
+
+  // ─── Game Loop ───
 
   const { onBeforeRender } = useLoop()
 
   onBeforeRender(({ delta }) => {
-    if (arenaStore.phase !== 'wave_active' && arenaStore.phase !== 'boss_phase') {
-      return
-    }
-    if (!arenaStore.player) return
+    const phase = store.phase
+    if (phase !== 'wave_active' && phase !== 'boss_phase') return
 
-    const player = arenaStore.player
-
-    // ─── 1. WASD Player Movement ───
+    // 1. WASD Player Movement
     let dx = 0
     let dz = 0
-    if (keys.value.has('w') || keys.value.has('arrowup')) dz -= 1
-    if (keys.value.has('s') || keys.value.has('arrowdown')) dz += 1
-    if (keys.value.has('a') || keys.value.has('arrowleft')) dx -= 1
-    if (keys.value.has('d') || keys.value.has('arrowright')) dx += 1
+    if (pressed.has('w') || pressed.has('arrowup')) dz -= 1
+    if (pressed.has('s') || pressed.has('arrowdown')) dz += 1
+    if (pressed.has('a') || pressed.has('arrowleft')) dx -= 1
+    if (pressed.has('d') || pressed.has('arrowright')) dx += 1
 
     if (dx !== 0 || dz !== 0) {
-      // Normalize diagonal movement
       const len = Math.sqrt(dx * dx + dz * dz)
       dx = (dx / len) * PLAYER_SPEED * delta
       dz = (dz / len) * PLAYER_SPEED * delta
-      arenaStore.movePlayer(dx, dz)
+      store.movePlayer(dx, dz)
     }
 
-    // ─── 2. Move enemies toward center ───
-    let enemiesUpdated = false
-    const updatedEnemies = arenaStore.enemies.map(enemy => {
-      if (enemy.state !== 'approaching') return enemy
+    // 2. Enemy Movement — each enemy approaches center (0,0) at its approachSpeed
+    for (let i = 0; i < store.enemies.length; i++) {
+      const enemy = store.enemies[i]
+      if (enemy.state !== 'approaching') continue
 
-      const updated = updateEnemyApproach(enemy, delta * 1000)
-      if (updated !== enemy) enemiesUpdated = true
+      const ex = enemy.position.x
+      const ez = enemy.position.z
+      const dist = Math.sqrt(ex * ex + ez * ez)
 
-      // Enemy reached center
-      if (updated.state === 'combat' && enemy.state === 'approaching') {
-        const corruptionAmount = calculateCorruptionFromReach()
-        arenaStore.addCorruption(corruptionAmount)
-
-        if (player) {
-          arenaStore.player = {
-            ...player,
-            health: Math.max(0, player.health - updated.damageOnReach),
-          }
-        }
-        arenaStore.addLog(`"${enemy.taskTitle}" reached the core! +10% corruption`, 'system')
+      if (dist < 0.5) {
+        // Enemy reached center — add corruption, mark as combat
+        store.enemies[i] = { ...enemy, state: 'combat' }
+        store.addCorruption(0.05)
+        store.addLog('Hostile reached the core! +5% corruption', 'system')
+        continue
       }
 
-      return updated
-    })
-
-    if (enemiesUpdated) {
-      arenaStore.enemies = updatedEnemies
+      // Move toward origin (0,0)
+      const step = enemy.approachSpeed * delta
+      const ratio = Math.min(step / dist, 1)
+      store.enemies[i] = {
+        ...enemy,
+        position: {
+          x: ex * (1 - ratio),
+          y: enemy.position.y,
+          z: ez * (1 - ratio),
+        },
+      }
     }
 
-    // ─── 3. Slow supplemental auto-attack ───
-    attackCooldown.value -= delta
-    if (attackCooldown.value <= 0) {
-      attackCooldown.value = AUTO_ATTACK_INTERVAL
+    // 3. Projectile Movement — update progress, trigger impact on arrival
+    for (let i = store.projectiles.length - 1; i >= 0; i--) {
+      const proj = store.projectiles[i]
+      const pdx = proj.toX - proj.fromX
+      const pdz = proj.toZ - proj.fromZ
+      const totalDist = Math.sqrt(pdx * pdx + pdz * pdz)
 
-      const aliveEnemies = arenaStore.enemies.filter(
+      if (totalDist === 0) {
+        store.handleProjectileImpact(proj.id)
+        continue
+      }
+
+      const newProgress = proj.progress + (proj.speed * delta) / totalDist
+      if (newProgress >= 1.0) {
+        store.handleProjectileImpact(proj.id)
+      } else {
+        store.projectiles[i] = { ...proj, progress: newProgress }
+      }
+    }
+
+    // 4. Auto-Attack — every 4 seconds, deal direct damage to nearest enemy
+    //    (15 HP base, boosted by overclock). This is chip damage, not a projectile.
+    autoAttackTimer += delta
+    if (autoAttackTimer >= AUTO_ATTACK_INTERVAL) {
+      autoAttackTimer -= AUTO_ATTACK_INTERVAL
+
+      const alive = store.enemies.filter(
         e => e.state !== 'dead' && e.state !== 'dying'
       )
-      if (aliveEnemies.length === 0) return
+      if (alive.length > 0) {
+        const px = store.player.position.x
+        const pz = store.player.position.z
+        let nearest = alive[0]
+        let nearestDistSq = Infinity
 
-      // Auto-target nearest if no target
-      let targetId = arenaStore.targetedEnemyId
-      if (!targetId || !aliveEnemies.find(e => e.id === targetId)) {
-        let nearestDist = Infinity
-        for (const e of aliveEnemies) {
-          const dist = Math.sqrt(e.position.x ** 2 + e.position.y ** 2 + e.position.z ** 2)
-          if (dist < nearestDist) {
-            nearestDist = dist
-            targetId = e.id
+        for (const e of alive) {
+          const edx = e.position.x - px
+          const edz = e.position.z - pz
+          const dSq = edx * edx + edz * edz
+          if (dSq < nearestDistSq) {
+            nearestDistSq = dSq
+            nearest = e
           }
         }
-        if (targetId) arenaStore.targetEnemy(targetId)
-      }
 
-      if (targetId) {
-        const damage = Math.floor(calculateAutoAttackDamage(player))
-        arenaStore.damageEnemy(targetId, damage)
+        const damage = calculateAutoAttackDamage(store.player, store.buffs)
+        store.damageEnemy(nearest.id, damage)
       }
+    }
+
+    // 5. Buff Expiry
+    store.checkBuffExpiry()
+
+    // 6. Defeat Check — store.addCorruption handles the phase transition,
+    //    but guard against edge cases where corruption was set externally.
+    if (store.corruption >= 1 && store.phase !== 'defeat') {
+      store.addCorruption(0)
     }
   })
 }

@@ -2849,6 +2849,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 |------|----------|-------------|
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
+| **FEATURE-1306** | **P1** | **🔄 Cyberflow Arena — 3D Wave-Based Productivity Combat (Ruiner-style, from-scratch rewrite)** |
 | **FEATURE-1293** | **P2** | **🔄 Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
 | FEATURE-1198 | P2 | Task image attachments + cloud storage (GDrive/Dropbox) + compression |
 | BUG-1199 | P1 | 👀 Canvas inbox right-click acts as Ctrl+Click |
@@ -3845,6 +3846,95 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 - **Geometry write policy**: Only drag handlers + explicit move actions may change `parentId`, `canvasPosition`, `parentGroupId`, `position`
 - **Sync is read-only**: `syncStoreToCanvas` does NOT write to stores
 - **Smart Groups metadata-only**: May update `dueDate`/`status`/`priority`, never geometry
+
+---
+
+### FEATURE-1306: Cyberflow Arena — 3D Wave-Based Productivity Combat (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-12)
+
+**Parent**: FEATURE-1118 (Gamification)
+
+**Goal**: Complete from-scratch rewrite of the Cyberflow Arena — a Ruiner-style 3D cyberpunk combat arena where overdue + today's tasks become enemies. Click-to-shoot with visible projectiles, WASD movement with camera follow, screen shake, damage numbers, and heavy post-processing. Morning "fight your backlog" ritual.
+
+**Skill**: `.claude/skills/cyberflow-arena/SKILL.md`
+
+**Key Design Decisions (from user):**
+- **Combat**: Click-to-shoot — click on enemy fires visible cyan projectile
+- **Intensity**: Ruiner-level — fast, screen shake, particle chaos, full arcade
+- **VFX**: All — projectiles, sparks, screen shake, damage numbers, heavy post-processing
+- **Enemy Source**: ONLY overdue + today's due tasks (NOT all tasks). Morning backlog fight.
+- **Camera**: Fixed isometric, follows player with smooth lerp
+- **Abilities**: 1/2/3/4 keys (NOT Q/W/E/R — conflicts with WASD)
+
+**Existing Files (20 total — ALL being rewritten from scratch):**
+- Types: `src/types/arena.ts`
+- Store: `src/stores/arena.ts`
+- Services (5): `src/services/arena/` (generator, combat, abilities, eventBus, stateMachine)
+- Composables (3): `src/composables/arena/` (sync, renderer, gameLoop)
+- Components (9): `src/components/gamification/arena/` (View, Scene, Enemy, Player, Environment, PostProcessing, HUD, AbilityBar, GameEngine)
+
+---
+
+#### Phase 1: Core Foundation — Types, Store, State Machine (TASK-1306-P1)
+
+**Goal**: Solid type system, game store with state machine, event bus with consumers
+
+- [ ] **TASK-1306-P1a**: Rewrite `src/types/arena.ts` — Entity types (Player, Enemy, Projectile), game state, events, config. Add ProjectileEntity, BuffSystem, DefeatState.
+- [ ] **TASK-1306-P1b**: Rewrite `src/stores/arena.ts` — Pinia setup store with: state machine (idle→briefing→wave→victory/defeat), entity management, projectile spawning, buff system, combat log. Manual shoot = 50 HP, auto = 15 HP.
+- [ ] **TASK-1306-P1c**: Rewrite `src/services/arena/arenaStateMachine.ts` — Add 'defeat' phase. Transitions: idle→loading→briefing→wave_active→(wave_cleared→boss_phase|victory|defeat).
+- [ ] **TASK-1306-P1d**: Rewrite `src/services/arena/arenaEventBus.ts` — Keep typed events, ADD consumer registration for VFX hooks (screen shake, damage numbers, particles).
+- [ ] **TASK-1306-P1e**: Rewrite `src/services/arena/arenaGenerator.ts` — Enemy query: ONLY `isOverdue(t) || isDueToday(t)`. Max 15 enemies. Approach speed 0.05-0.15 units/sec (NOT 1.5). Staggered spawning (1 per 2s).
+- [ ] **TASK-1306-P1f**: Rewrite `src/services/arena/arenaCombat.ts` — Manual shot damage 50, auto-attack 15, focus DPS 75/sec. Corruption +5% per enemy reaching center (not +10%).
+- [ ] **TASK-1306-P1g**: Rewrite `src/services/arena/arenaAbilities.ts` — 4 abilities (EMP Blast, Firewall, Overclock, Purge) with REAL effects that modify store state (buff system).
+
+#### Phase 2: Game Loop + Input — WASD, Click-to-Shoot, Projectiles (TASK-1306-P2)
+
+**Goal**: Player moves with WASD, camera follows, clicking enemies fires visible projectiles
+
+- [ ] **TASK-1306-P2a**: Rewrite `src/composables/arena/useArenaGameLoop.ts` — WASD input (Set<string>), player movement (5 units/sec), enemy AI (approach center at 0.05-0.15/sec), projectile updates (20 units/sec), auto-attack (every 4s, 15 HP), staggered spawn timer.
+- [ ] **TASK-1306-P2b**: Rewrite `src/composables/arena/useArenaRenderer.ts` — Camera follow player (smooth lerp factor 0.08), screen shake function (intensity/duration), isometric camera position {x:0, y:15, z:10+playerZ}.
+- [ ] **TASK-1306-P2c**: Rewrite `src/composables/arena/useArenaSync.ts` — Watch task completions → kill corresponding enemy. Watch timer start → focus attack. Watch new tasks → spawn if overdue/today. READ-ONLY (never mutate task/timer stores).
+
+#### Phase 3: 3D Scene — Player, Enemies, Projectiles, Environment (TASK-1306-P3)
+
+**Goal**: Visible, interactive 3D arena with all entities rendered
+
+- [ ] **TASK-1306-P3a**: Rewrite `ArenaScene.vue` — TresCanvas with PerspectiveCamera reading from renderer composable (camera follow position). Fixed isometric, no OrbitControls. Lighting per skill spec (3 colored point lights + directional + ambient + fog).
+- [ ] **TASK-1306-P3b**: Rewrite `ArenaPlayer.vue` — Cyan sphere body + blue cone visor at store position. Bob animation. Attack beam toward targeted enemy (cyan auto, magenta focus).
+- [ ] **TASK-1306-P3c**: Rewrite `ArenaEnemy.vue` — Tier-based visuals (size, color, glow). Click handler fires `store.shootEnemy()`. Hit flash on damage (white 150ms). Death explosion (particles + flash). Health bar above enemy. Overdue corruption visual (red glow, size scale).
+- [ ] **TASK-1306-P3d**: Create `ArenaProjectile.vue` — NEW COMPONENT. Elongated cyan cylinder/sphere traveling from player to target. Emissive glow. On arrival: destroy, spawn hit sparks, apply damage via store.
+- [ ] **TASK-1306-P3e**: Rewrite `ArenaEnvironment.vue` — Hexagonal arena floor with grid lines, neon edge boundary, atmospheric fog. Ruiner color palette (deep purple, near-black).
+- [ ] **TASK-1306-P3f**: Rewrite `ArenaPostProcessing.vue` — Bloom (1.0 base, dynamic), ChromaticAberration, Vignette, Film Noise. Intensity scales with game state (combat/boss/victory).
+- [ ] **TASK-1306-P3g**: Rewrite `ArenaGameEngine.vue` — Invisible component inside TresCanvas that calls useArenaGameLoop composable within the TresJS context (useLoop requires canvas parent).
+
+#### Phase 4: VFX System — Screen Shake, Damage Numbers, Particles (TASK-1306-P4)
+
+**Goal**: Ruiner-level game feel — every action has visual feedback
+
+- [ ] **TASK-1306-P4a**: Implement screen shake — Hook into event bus 'enemy_killed', 'ability_activated', 'player_damaged'. Camera offset jitter with decay.
+- [ ] **TASK-1306-P4b**: Implement damage numbers — HTML overlay positioned via 3D→2D projection. Float up + fade out over 800ms. Color-coded (white normal, yellow crit, red player damage, green "ELIMINATED").
+- [ ] **TASK-1306-P4c**: Implement hit sparks — Particle burst on projectile impact. 8-12 particles, 200-400ms lifetime, shrink to zero. Cyan for normal, magenta for focused.
+- [ ] **TASK-1306-P4d**: Implement death explosion — 20-30 particles on enemy kill, sphere spread. Combined with screen shake, bloom spike, "ELIMINATED" text.
+
+#### Phase 5: HUD + UI Overlays — Minimal, Corner-Based (TASK-1306-P5)
+
+**Goal**: Clean HUD that doesn't obscure gameplay, with briefing/victory/defeat overlays
+
+- [ ] **TASK-1306-P5a**: Rewrite `ArenaHUD.vue` — Minimal corner-based: top-left (corruption bar + wave counter), top-right (player HP), bottom-center (mini combat feed, 5 entries max, LTR forced). ALL `pointer-events: none` except interactive elements.
+- [ ] **TASK-1306-P5b**: Rewrite `ArenaAbilityBar.vue` — Bottom bar with 4 ability slots (1/2/3/4 keys). Cooldown sweep animation. Charge counter. pointer-events: auto only on buttons.
+- [ ] **TASK-1306-P5c**: Rewrite `ArenaView.vue` — Briefing overlay (ARIA narrative + threat analysis + controls + "ENGAGE HOSTILES" button). Victory overlay (stats grid + XP + "EXIT ARENA"). NEW: Defeat overlay ("SYSTEM COMPROMISED" + retry button).
+
+#### Phase 6: Integration + Polish (TASK-1306-P6)
+
+**Goal**: Arena integrated into CyberflowView, connected to task/timer stores
+
+- [ ] **TASK-1306-P6a**: Wire CyberflowView.vue — Add 'arena' to SectionId, add ArenaView component, add ARENA tab to CyberSectionNav.vue.
+- [ ] **TASK-1306-P6b**: Settings integration — Add `arenaEnabled` toggle to settings store. Gate arena tab visibility.
+- [ ] **TASK-1306-P6c**: Full E2E test — Open arena, see enemies (overdue + today only), WASD movement, click-to-shoot with projectile, enemy dies on task completion, victory screen, 30+ FPS.
+- [ ] **TASK-1306-P6d**: Build verification — `npm run build` passes, `npm run test` passes, no TypeScript errors.
+
+**Progress (2026-02-12):** V1 prototype existed but was fundamentally broken (instant corruption, no visible projectiles, camera not following player, approach speed 30x too fast). Full research completed (Ruiner visual style, combat mechanics, VFX patterns). Detailed skill created. Starting from-scratch rewrite with agent team.
 
 ---
 

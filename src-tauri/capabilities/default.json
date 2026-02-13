@@ -85,6 +85,11 @@
           "name": "curl",
           "cmd": "curl",
           "args": true
+        },
+        {
+          "name": "notify-send",
+          "cmd": "notify-send",
+          "args": true
         }
       ]
     },

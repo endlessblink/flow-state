@@ -75,7 +75,8 @@ export function useCalendarCore() {
   // Consolidated status helpers (from useCalendarEventHelpers)
 
   const getTaskStatus = (event: CalendarEvent): Task['status'] => {
-    const task = taskStore.tasks.find(t => t.id === event.taskId)
+    // BUG-1304: Use rawTasks (unfiltered) — taskStore.tasks may filter out done tasks
+    const task = taskStore.rawTasks.find(t => t.id === event.taskId)
     return task?.status || 'planned'
   }
 
@@ -99,7 +100,8 @@ export function useCalendarCore() {
     event.preventDefault()
     event.stopPropagation()
 
-    const task = taskStore.tasks.find(t => t.id === calendarEvent.taskId)
+    // BUG-1304: Use rawTasks — done tasks may be filtered from taskStore.tasks
+    const task = taskStore.rawTasks.find(t => t.id === calendarEvent.taskId)
     if (!task) return
 
     const statusCycle: Task['status'][] = ['planned', 'in_progress', 'done', 'backlog', 'on_hold']
@@ -195,7 +197,7 @@ export function useCalendarCore() {
    * Get project visual (emoji or color) for a calendar event
    */
   const getProjectVisual = (event: { projectId?: string }): { type: 'color' | 'emoji'; content: string } => {
-    if (!event.projectId) return { type: 'emoji', content: '📁' }
+    if (!event.projectId) return { type: 'color', content: '#6B7280' }
 
     const visual = taskStore.getProjectVisual(event.projectId)
 
@@ -207,8 +209,8 @@ export function useCalendarCore() {
       return { type: 'color', content: visual.color || '#808080' }
     }
 
-    // Default fallback
-    return { type: 'emoji', content: '📁' }
+    // Default fallback - color dot instead of emoji
+    return { type: 'color', content: '#6B7280' }
   }
 
   return {

@@ -134,7 +134,8 @@ const {
               'dragging': isDragging && draggedEventId === calEvent.id,
               'is-hovered': hoveredEventId === calEvent.id,
               'has-overlap': calEvent.totalColumns > 1,
-              'is-compact': calEvent.duration <= 30
+              'is-compact': calEvent.duration <= 30,
+              'status-done': getTaskStatus(calEvent) === 'done'
             }"
             :style="getSlotTaskStyle(calEvent)"
             draggable="true"
@@ -743,5 +744,15 @@ const {
 @keyframes timer-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.85; }
+}
+
+/* BUG-1304: Visual indicator for done tasks */
+.slot-task.status-done {
+  filter: grayscale(0.6) brightness(0.85);
+  opacity: 0.65;
+}
+
+.slot-task.status-done .task-title {
+  text-decoration: line-through;
 }
 </style>

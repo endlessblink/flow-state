@@ -102,7 +102,8 @@ const {
             :style="getWeekEventStyle(event)"
             :class="{
               'multi-slot': event.slotSpan > 1,
-              'timer-active-event': currentTaskId === event.taskId
+              'timer-active-event': currentTaskId === event.taskId,
+              'status-done': getTaskStatus(event) === 'done'
             }"
             draggable="true"
             @dragstart="$emit('eventDragStart', $event, event)"
@@ -482,5 +483,15 @@ const {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
+}
+
+/* BUG-1304: Visual indicator for done tasks */
+.week-event.status-done {
+  filter: grayscale(0.6) brightness(0.85);
+  opacity: 0.65;
+}
+
+.week-event.status-done .event-title {
+  text-decoration: line-through;
 }
 </style>

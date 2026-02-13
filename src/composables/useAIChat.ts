@@ -152,7 +152,11 @@ async function fetchOllamaModels(): Promise<string[]> {
  * Strip tool JSON blocks from displayed content so users don't see raw JSON.
  */
 function stripToolBlocks(content: string): string {
-  return content.replace(/```(?:tool|json)?\s*\n?\{[\s\S]*?"tool"\s*:[\s\S]*?\}\n?```/g, '').trim()
+  // Strip code-fenced tool blocks
+  let cleaned = content.replace(/```(?:tool|json)?\s*\n?\{[\s\S]*?"tool"\s*:[\s\S]*?\}\n?```/g, '')
+  // Strip bare JSON tool calls (models sometimes omit code fences)
+  cleaned = cleaned.replace(/\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"parameters"\s*:\s*\{[^}]*\}\s*\}/g, '')
+  return cleaned.trim()
 }
 
 /**
@@ -906,9 +910,9 @@ export function useAIChat() {
       return { tool: 'get_daily_summary', parameters: {} }
     }
 
-    // List/show tasks (EN + HE) — broader Hebrew patterns
-    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(tasks?|משימות)/i.test(m) ||
-        /איזה\s*משימות|מה\s*המשימות|הראה?\s*(לי\s*)?משימות|משימות\s*(שלי|רלוונטיות|פתוחות|קיימות)/.test(m)) {
+    // List/show tasks (EN + HE) — broad catch: any mention of "tasks" in context of listing/showing
+    if (/^(list|show|display|give|get|fetch)\s*(me\s*)?(all\s*)?(my\s*)?(tasks?|to.?dos?)/i.test(m) ||
+        /המשימות|משימות\s+ש|תן\s.*משימ|צריך\s+ל(ארגן|עשות|סיים|תכנן)|איזה\s*משימות|מה\s*המשימות|הראה?\s*(לי\s*)?משימות|משימות\s*(שלי|רלוונטיות|פתוחות|קיימות)/.test(m)) {
       return { tool: 'list_tasks', parameters: { status: 'all', limit: 50 } }
     }
 
@@ -937,8 +941,8 @@ export function useAIChat() {
       return { tool: 'suggest_next_task', parameters: {} }
     }
 
-    // Weekly summary
-    if (/weekly\s*summary|week\s*review|this\s*week|סיכום\s*שבועי|השבוע/.test(m)) {
+    // Weekly summary (EN + HE) — any mention of "week" in task/planning context
+    if (/weekly\s*summary|week\s*review|this\s*week|next\s*week|for\s*the\s*week|סיכום\s*שבועי|השבוע|לשבוע/.test(m)) {
       return { tool: 'get_weekly_summary', parameters: {} }
     }
 

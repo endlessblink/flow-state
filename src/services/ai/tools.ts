@@ -1473,7 +1473,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 export function parseToolCalls(content: string): ToolCall[] {
   const calls: ToolCall[] = []
 
-  // Look for ```tool or ```json blocks containing tool calls
+  // 1. Look for ```tool or ```json blocks containing tool calls (preferred format)
   const toolBlockRegex = /```(?:tool|json)?\s*\n?([\s\S]*?)\n?```/g
   let match
 
@@ -1493,6 +1493,24 @@ export function parseToolCalls(content: string): ToolCall[] {
       }
     } catch {
       // Not valid JSON, skip
+    }
+  }
+
+  // 2. Fallback: detect bare JSON tool calls without code fences
+  //    Models (especially Ollama/small) often output { "tool": "...", "parameters": {...} } as plain text
+  if (calls.length === 0) {
+    const bareJsonRegex = /\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"parameters"\s*:\s*(\{[^}]*\})\s*\}/g
+    let bareMatch
+    while ((bareMatch = bareJsonRegex.exec(content)) !== null) {
+      try {
+        const fullMatch = bareMatch[0]
+        const parsed = JSON.parse(fullMatch)
+        if (parsed.tool && typeof parsed.tool === 'string') {
+          calls.push(parsed as ToolCall)
+        }
+      } catch {
+        // Not valid JSON, skip
+      }
     }
   }
 

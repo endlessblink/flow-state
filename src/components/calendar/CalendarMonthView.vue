@@ -59,7 +59,7 @@ const {
             v-for="event in day.events"
             :key="event.id"
             class="month-event"
-            :class="{ 'timer-active-event': currentTaskId === event.taskId }"
+            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'status-done': getTaskStatus(event) === 'done' }"
             :style="{ backgroundColor: event.color }"
             draggable="true"
             @dragstart="$emit('eventDragStart', $event, event)"
@@ -234,5 +234,15 @@ const {
 .event-title-short {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* BUG-1304: Visual indicator for done tasks */
+.month-event.status-done {
+  filter: grayscale(0.6) brightness(0.85);
+  opacity: 0.65;
+}
+
+.month-event.status-done .event-title-short {
+  text-decoration: line-through;
 }
 </style>

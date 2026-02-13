@@ -901,13 +901,14 @@ export function useAIChat() {
       return { tool: 'get_timer_status', parameters: {} }
     }
 
-    // Daily summary / plan day
-    if (/daily\s*summary|plan\s*(my\s*)?day|תכנן.*יום|סיכום\s*יומי|what('s| is) (on )?my day/.test(m)) {
+    // Daily summary / plan day / what's for today (EN + HE)
+    if (/daily\s*summary|plan\s*(my\s*)?day|תכנן.*יום|סיכום\s*יומי|what('s| is) (on )?my day|משימות.*היום|מה\s*(יש\s*לי\s*)?היום|מה\s*על\s*הפרק|רלוונטי.*היום|לעבודה\s*היום/.test(m)) {
       return { tool: 'get_daily_summary', parameters: {} }
     }
 
-    // List tasks
-    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(tasks?|משימות)/i.test(m)) {
+    // List/show tasks (EN + HE) — broader Hebrew patterns
+    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(tasks?|משימות)/i.test(m) ||
+        /איזה\s*משימות|מה\s*המשימות|הראה?\s*(לי\s*)?משימות|משימות\s*(שלי|רלוונטיות|פתוחות|קיימות)/.test(m)) {
       return { tool: 'list_tasks', parameters: { status: 'all', limit: 50 } }
     }
 
@@ -931,8 +932,8 @@ export function useAIChat() {
       return { tool: 'get_productivity_stats', parameters: {} }
     }
 
-    // Suggest next task
-    if (/what\s*(should\s*i|to)\s*(do|work\s*on)\s*next|suggest.*task|next\s*task|מה\s*לעשות|המשימה\s*הבאה/.test(m)) {
+    // Suggest next task (EN + HE)
+    if (/what\s*(should\s*i|to)\s*(do|work\s*on)\s*next|suggest.*task|next\s*task|מה\s*לעשות|המשימה\s*הבאה|על\s*מה\s*לעבוד|מה\s*הלאה/.test(m)) {
       return { tool: 'suggest_next_task', parameters: {} }
     }
 

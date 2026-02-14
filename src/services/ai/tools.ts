@@ -955,7 +955,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
         const created: Array<{ id: string; title: string }> = []
         for (const sub of subtaskDefs) {
           if (!sub.title || typeof sub.title !== 'string') continue
-          const result = taskStore.createSubtask(parentTaskId, { title: sub.title })
+          const result = await taskStore.createSubtask(parentTaskId, { title: sub.title })
           if (result) {
             created.push({ id: result.id, title: result.title })
           }

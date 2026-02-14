@@ -455,7 +455,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       } else {
         // Drag from inbox or other sources
         // Create task instance and update task to remove from inbox
-        const instance = taskStore.createTaskInstance(taskId, {
+        // BUG-1321: await for proper sync queue + echo protection
+        const instance = await taskStore.createTaskInstance(taskId, {
           scheduledDate: slot.date,
           scheduledTime: timeStr
         })

@@ -88,8 +88,8 @@ export function useTaskOperations(
         manualOperationInProgress.value = true
 
         try {
-            const instances: TaskInstance[] = []
-            if (taskData.scheduledDate && taskData.scheduledTime) {
+            const instances: TaskInstance[] = taskData.instances ? [...taskData.instances] : []
+            if (instances.length === 0 && taskData.scheduledDate && taskData.scheduledTime) {
                 const now = new Date()
                 instances.push({
                     id: `instance-${taskId}-${Date.now()}`,
@@ -103,6 +103,24 @@ export function useTaskOperations(
                     updatedAt: now
                 })
             }
+            // BUG-1321: If dueDate is set but no instance exists for that date, create one
+            // This ensures tasks created via Weekly Plan or Canvas appear on Calendar
+            // Compute effective dueDate using same default as the Task constructor below
+            const _d = new Date()
+            const effectiveDueDate = taskData.dueDate || `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
+            if (effectiveDueDate && instances.length === 0) {
+                instances.push({
+                    id: `auto-${taskId}-${Date.now()}`,
+                    taskId: taskId,
+                    scheduledDate: effectiveDueDate,
+                    scheduledTime: taskData.scheduledTime || '09:00',
+                    duration: taskData.estimatedDuration || 30,
+                    status: 'scheduled',
+                    isRecurring: false,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                } as TaskInstance)
+            }
 
             // Keep 'uncategorized' as frontend placeholder, sanitize to null when sending to DB
             let projectId = taskData.projectId || UNCATEGORIZED_PROJECT_ID
@@ -111,7 +129,8 @@ export function useTaskOperations(
                 if (parentTask) projectId = parentTask.projectId
             }
 
-            const { canvasPosition: explicitCanvasPosition, ...taskDataWithoutPosition } = taskData
+            // BUG-1321: Exclude instances and canvasPosition from spread to prevent overwriting computed values
+            const { canvasPosition: explicitCanvasPosition, instances: _taskDataInstances, ...taskDataWithoutPositionAndInstances } = taskData
 
             const newTask: Task = {
                 id: taskId,
@@ -122,16 +141,18 @@ export function useTaskOperations(
                 progress: 0,
                 completedPomodoros: 0,
                 subtasks: [],
-                dueDate: taskData.dueDate || new Date().toISOString().split('T')[0],
+                // BUG-1321: Use local date (not UTC) for default dueDate
+                dueDate: taskData.dueDate || effectiveDueDate,
                 projectId,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                instances,
                 isInInbox: taskData.isInInbox !== false,
                 canvasPosition: explicitCanvasPosition || undefined,
                 positionVersion: 1, // Start at version 1
                 positionFormat: taskData.positionFormat || 'absolute', // Default to absolute
-                ...taskDataWithoutPosition
+                ...taskDataWithoutPositionAndInstances,
+                // BUG-1321: instances MUST come AFTER spread to preserve auto-created instances
+                instances,
             }
 
             _rawTasks.value.push(newTask)
@@ -218,6 +239,84 @@ export function useTaskOperations(
         } finally {
             manualOperationInProgress.value = false
         }
+    }
+
+    /**
+     * BUG-1321: Bidirectional date field sync
+     * When dueDate, scheduledDate, or instances change, keep the others in sync.
+     * Called BEFORE the save in updateTask() — augments the updates object.
+     * NO new watchers, NO recursive updateTask() calls — just object augmentation.
+     */
+    function syncDateFields(task: Task, updates: Partial<Task>): Partial<Task> {
+        const synced = { ...updates }
+
+        // GUARD: If caller explicitly set multiple date fields, trust them
+        const dateFieldsInUpdate = [
+            updates.dueDate !== undefined,
+            updates.scheduledDate !== undefined,
+            updates.instances !== undefined
+        ].filter(Boolean).length
+        if (dateFieldsInUpdate > 1) return synced // Caller knows what they're doing
+
+        // CASE 1: dueDate changed → ensure calendar instance exists
+        if (updates.dueDate !== undefined && updates.instances === undefined) {
+            const newDueDate = updates.dueDate
+            if (newDueDate && newDueDate !== 'null') {
+                // Only create instance if task has NO instance for this date yet
+                const existing = (task.instances || []).find(i => i.scheduledDate === newDueDate)
+                if (!existing) {
+                    synced.instances = [
+                        ...(task.instances || []),
+                        {
+                            id: `auto-${task.id}-${Date.now()}`,
+                            scheduledDate: newDueDate,
+                            scheduledTime: '09:00',
+                            duration: task.estimatedDuration || 30
+                        } as TaskInstance
+                    ]
+                }
+                synced.scheduledDate = newDueDate
+                synced.scheduledTime = synced.scheduledTime || task.scheduledTime || '09:00'
+                synced.isInInbox = false
+            }
+            // dueDate cleared — DON'T clear instances (user may have scheduled independently)
+        }
+
+        // CASE 2: instances changed (calendar interaction) → always sync dueDate to earliest instance
+        if (updates.instances !== undefined && updates.dueDate === undefined) {
+            const instances = updates.instances || []
+            if (instances.length > 0) {
+                const earliest = instances.reduce((a, b) =>
+                    (a.scheduledDate || '') < (b.scheduledDate || '') ? a : b
+                )
+                if (earliest.scheduledDate) {
+                    synced.dueDate = earliest.scheduledDate
+                }
+            }
+            // DON'T clear dueDate when instances are cleared (keep deadline even if unscheduled)
+        }
+
+        // CASE 3: scheduledDate changed (legacy/calendar drag) → sync dueDate + create instance
+        if (updates.scheduledDate !== undefined && updates.dueDate === undefined && updates.instances === undefined) {
+            if (updates.scheduledDate) {
+                synced.dueDate = updates.scheduledDate
+                // Also create an instance for the new date if none exists
+                const existing = (task.instances || []).find(i => i.scheduledDate === updates.scheduledDate)
+                if (!existing) {
+                    synced.instances = [
+                        ...(task.instances || []),
+                        {
+                            id: `auto-${task.id}-${Date.now()}`,
+                            scheduledDate: updates.scheduledDate,
+                            scheduledTime: (updates as Record<string, unknown>).scheduledTime as string || task.scheduledTime || '09:00',
+                            duration: task.estimatedDuration || 30
+                        } as TaskInstance
+                    ]
+                }
+            }
+        }
+
+        return synced
     }
 
     /**
@@ -396,9 +495,12 @@ export function useTaskOperations(
                 }
             }
 
+            // BUG-1321: Sync date fields bidirectionally before save
+            const syncedUpdates = syncDateFields(task, updates)
+
             _rawTasks.value[index] = {
                 ...task,
-                ...updates,
+                ...syncedUpdates,
                 positionVersion: newVersion,
                 updatedAt: new Date()
             }
@@ -467,6 +569,11 @@ export function useTaskOperations(
                 // Without this, calendar time blocks aren't backed up by the sync queue
                 if (updatedTask.instances !== undefined) {
                     payload.instances = JSON.parse(JSON.stringify(updatedTask.instances))
+                }
+                // BUG-1321: Include subtasks in sync queue payload
+                // Without this, offline subtask changes are silently dropped
+                if (updatedTask.subtasks !== undefined) {
+                    payload.subtasks = JSON.parse(JSON.stringify(updatedTask.subtasks))
                 }
 
                 await syncOrchestrator.enqueue({
@@ -618,7 +725,10 @@ export function useTaskOperations(
         selectedTaskIds.value = []
     }
 
-    const createSubtask = (taskId: string, subtaskData: Partial<Subtask>) => {
+    // BUG-1321: Subtask methods now route through updateTask() for proper
+    // echo protection, sync queue enrollment, and pending write registration.
+
+    const createSubtask = async (taskId: string, subtaskData: Partial<Subtask>) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return null
         const newSubtask: Subtask = {
@@ -631,68 +741,58 @@ export function useTaskOperations(
             createdAt: new Date(),
             updatedAt: new Date()
         }
-        task.subtasks.push(newSubtask)
-        task.updatedAt = new Date()
-        saveSpecificTasks([task], `createSubtask-${newSubtask.id}`)
+        const updatedSubtasks = [...(task.subtasks || []), newSubtask]
+        await updateTask(taskId, { subtasks: updatedSubtasks })
         return newSubtask
     }
 
-    const updateSubtask = (taskId: string, subtaskId: string, updates: Partial<Subtask>) => {
+    const updateSubtask = async (taskId: string, subtaskId: string, updates: Partial<Subtask>) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
         const idx = task.subtasks.findIndex(st => st.id === subtaskId)
-        if (idx !== -1) {
-            task.subtasks[idx] = { ...task.subtasks[idx], ...updates, updatedAt: new Date() }
-            task.updatedAt = new Date()
-            saveSpecificTasks([task], `updateSubtask-${subtaskId}`)
-        }
+        if (idx === -1) return
+        const updatedSubtasks = [...task.subtasks]
+        updatedSubtasks[idx] = { ...updatedSubtasks[idx], ...updates, updatedAt: new Date() }
+        await updateTask(taskId, { subtasks: updatedSubtasks })
     }
 
-    const deleteSubtask = (taskId: string, subtaskId: string) => {
+    const deleteSubtask = async (taskId: string, subtaskId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
-        const idx = task.subtasks.findIndex(st => st.id === subtaskId)
-        if (idx !== -1) {
-            task.subtasks.splice(idx, 1)
-            task.updatedAt = new Date()
-            saveSpecificTasks([task], `deleteSubtask-${subtaskId}`)
-        }
+        const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId)
+        await updateTask(taskId, { subtasks: updatedSubtasks })
     }
 
-    const createTaskInstance = (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
+    // BUG-1321: Instance methods now route through updateTask() for proper
+    // echo protection, sync queue enrollment, and bidirectional date sync.
+
+    const createTaskInstance = async (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return null
         const newInstance: TaskInstance = {
             id: Date.now().toString(),
             ...instanceData
         }
-        if (!task.instances) task.instances = []
-        task.instances.push(newInstance)
-        task.updatedAt = new Date()
-        saveSpecificTasks([task], `createInstance-${newInstance.id}`)
+        const updatedInstances = [...(task.instances || []), newInstance]
+        await updateTask(taskId, { instances: updatedInstances })
         return newInstance
     }
 
-    const updateTaskInstance = (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => {
+    const updateTaskInstance = async (taskId: string, instanceId: string, updates: Partial<TaskInstance>) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.instances) return
         const idx = task.instances.findIndex(inst => inst.id === instanceId)
-        if (idx !== -1) {
-            task.instances[idx] = { ...task.instances[idx], ...updates }
-            task.updatedAt = new Date()
-            saveSpecificTasks([task], `updateInstance-${instanceId}`)
-        }
+        if (idx === -1) return
+        const updatedInstances = [...task.instances]
+        updatedInstances[idx] = { ...updatedInstances[idx], ...updates }
+        await updateTask(taskId, { instances: updatedInstances })
     }
 
-    const deleteTaskInstance = (taskId: string, instanceId: string) => {
+    const deleteTaskInstance = async (taskId: string, instanceId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.instances) return
-        const idx = task.instances.findIndex(inst => inst.id === instanceId)
-        if (idx !== -1) {
-            task.instances.splice(idx, 1)
-            task.updatedAt = new Date()
-            saveSpecificTasks([task], `deleteInstance-${instanceId}`)
-        }
+        const updatedInstances = task.instances.filter(inst => inst.id !== instanceId)
+        await updateTask(taskId, { instances: updatedInstances })
     }
 
     /**
@@ -956,19 +1056,9 @@ export function useTaskOperations(
         moveTaskToDate,
         unscheduleTask,
         moveTaskToPriority,
+        // BUG-1321: Route through updateTask() for echo protection + sync queue
         moveTaskToProject: async (taskId: string, targetProjectId: string) => {
-            const task = _rawTasks.value.find(t => t.id === taskId)
-            if (task) {
-                manualOperationInProgress.value = true
-                try {
-                    task.projectId = targetProjectId
-                    task.updatedAt = new Date()
-                    console.log(`Task "${task.title}" moved to project "${projectStore.getProjectDisplayName(targetProjectId)}"`)
-                    await saveTasksToStorage(_rawTasks.value, `moveTaskToProject-${taskId}`)
-                } finally {
-                    manualOperationInProgress.value = false
-                }
-            }
+            await updateTask(taskId, { projectId: targetProjectId })
         },
         setActiveProject,
         setSmartView,

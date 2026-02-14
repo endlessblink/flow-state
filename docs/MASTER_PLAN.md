@@ -73,15 +73,15 @@
 
 ---
 
-### BUG-1323: Quick Sort card overflow from long URLs on mobile (🔄 IN PROGRESS)
+### ~~BUG-1323~~: Quick Sort card overflow from long URLs on mobile (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
 
-**Problem**: On mobile devices, the Quick Sort card (and potentially other task cards) overflow when the task title contains a long URL. Long URLs cause text to exceed the card width, pushing interactive elements (SKIP/EXIT buttons, priority selector) off-screen and making them inaccessible.
+**Problem**: On mobile devices, the Quick Sort card overflowed when task title contained a long URL, pushing SKIP/EXIT buttons and priority selector off-screen.
 
-**Scope**: Quick Sort card layout on mobile, potential overflow in other mobile card components.
+**Root Cause**: `.task-title` in MobileQuickSortView.vue had `overflow-wrap: anywhere` but no line/height limit. Long URLs wrapped into 10+ lines consuming the entire 260px card.
 
-**Root Cause**: TBD — needs investigation of card layout constraints, overflow handling, and URL word-breaking.
+**Fix**: Added `max-height: 5.2em` + `-webkit-line-clamp: 3` to `.task-title` in both MobileQuickSortView.vue and QuickSortCard.vue. Added `@media (max-height: 700px)` breakpoint for small screens (shrinks card, hides process flow indicator).
 
 ---
 

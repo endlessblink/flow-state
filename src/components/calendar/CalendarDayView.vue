@@ -205,7 +205,7 @@ const {
                 </div>
               </div>
               <div class="task-meta">
-                <span class="task-time">{{ formatEventTime(calEvent) }}</span>
+                <span v-if="formatEventTime(calEvent)" class="task-time">{{ formatEventTime(calEvent) }}</span>
                 <span class="task-duration">{{ calEvent.duration }}min</span>
               </div>
             </div>

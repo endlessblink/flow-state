@@ -102,10 +102,11 @@ const {
               :class="`priority-${getPriorityClass(event)}`"
               :title="`Priority: ${getPriorityLabel(event)}`"
             />
-            <span class="event-time">{{ formatEventTime(event) }}</span>
-            <span 
+            <span v-if="formatEventTime(event)" class="event-time">{{ formatEventTime(event) }}</span>
+            <span
               class="event-title-short"
-              :title="`Status: ${getStatusLabel(event)} (click to change)`"
+              dir="auto"
+              :title="event.title"
               @click.stop="$emit('cycleStatus', $event, event)"
             >
               {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}

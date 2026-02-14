@@ -409,6 +409,22 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     // Success - mark completed
     await markCompleted(operation.id)
     state.value.lastSyncAt = Date.now()
+
+    // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
+    // Without this, the local store silently diverges from VPS truth.
+    if (result.serverData && operation.entityType === 'task') {
+      try {
+        const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+        const { useTaskStore } = await import('@/stores/tasks')
+        const taskStore = useTaskStore()
+        const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
+        taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
+        console.log(`🔄 [SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+      } catch (e) {
+        console.warn(`[SYNC] Failed to apply LWW server data to store:`, e)
+      }
+    }
+
     console.log(`✅ [SYNC] ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)} synced`)
   } else if (result.isConflict) {
     // Conflict - need resolution

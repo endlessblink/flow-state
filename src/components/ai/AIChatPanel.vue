@@ -20,7 +20,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { onClickOutside } from '@vueuse/core'
-import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap, ExternalLink } from 'lucide-vue-next'
+import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap, History, Plus, PanelRight } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTimerStore } from '@/stores/timer'
@@ -90,6 +90,8 @@ const inputRef = ref<HTMLTextAreaElement | null>(null)
 const settingsContainerRef = ref<HTMLElement | null>(null)
 const showSettings = ref(false)
 const showApiKeys = ref(false)
+const showChatHistory = ref(false)
+const chatHistoryContainerRef = ref<HTMLElement | null>(null)
 const lastUserMessage = ref<string>('')
 
 // Panel sizing mode: compact (380px) | expanded (600px) | fullscreen
@@ -107,9 +109,53 @@ const panelStyle = computed(() => {
   return { width: '380px' }
 })
 
+// Resize tooltip
+const resizeTooltip = computed(() => {
+  if (panelMode.value === 'compact') return 'Expand panel'
+  if (panelMode.value === 'expanded') return 'Full-width panel'
+  return 'Compact panel'
+})
+
+// Chat history
+const sortedConversations = computed(() => store.sortedConversations)
+const activeConversationId = computed(() => store.activeConversationId)
+
+function handleNewChat() {
+  store.createConversation()
+  showChatHistory.value = false
+}
+
+function handleSwitchChat(id: string) {
+  store.switchConversation(id)
+  showChatHistory.value = false
+}
+
+function handleDeleteChat(id: string) {
+  store.deleteConversation(id)
+}
+
+function formatRelativeDate(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'now'
+  if (diffMins < 60) return `${diffMins}m`
+  if (diffHours < 24) return `${diffHours}h`
+  if (diffDays < 7) return `${diffDays}d`
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 // Close settings dropdown on click outside
 onClickOutside(settingsContainerRef, () => {
   showSettings.value = false
+})
+
+// Close chat history dropdown on click outside
+onClickOutside(chatHistoryContainerRef, () => {
+  showChatHistory.value = false
 })
 
 // Provider status refs (for health checks only)
@@ -752,20 +798,63 @@ onUnmounted(() => {
           >
             <Trash2 :size="16" />
           </button>
+          <!-- Chat History -->
+          <div ref="chatHistoryContainerRef" class="chat-history-container">
+            <button
+              class="header-btn history-btn"
+              :class="{ active: showChatHistory }"
+              title="Chat history"
+              @click="showChatHistory = !showChatHistory"
+            >
+              <History :size="16" />
+            </button>
+
+            <Transition name="dropdown">
+              <div v-if="showChatHistory" class="chat-history-dropdown">
+                <button class="new-chat-btn" @click="handleNewChat">
+                  <Plus :size="14" />
+                  <span>New Chat</span>
+                </button>
+                <div class="chat-history-list">
+                  <button
+                    v-for="conv in sortedConversations"
+                    :key="conv.id"
+                    class="chat-history-item"
+                    :class="{ active: conv.id === activeConversationId }"
+                    @click="handleSwitchChat(conv.id)"
+                  >
+                    <span class="chat-history-title">{{ conv.title }}</span>
+                    <span class="chat-history-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
+                    <button
+                      class="chat-history-delete"
+                      title="Delete conversation"
+                      @click.stop="handleDeleteChat(conv.id)"
+                    >
+                      <X :size="12" />
+                    </button>
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- Resize panel (compact / expanded / fullscreen panel) -->
           <button
-            class="header-btn expand-btn"
-            :title="panelMode === 'fullscreen' ? 'Minimize (Ctrl+Shift+F)' : 'Expand (Ctrl+Shift+F)'"
+            class="header-btn resize-btn"
+            :title="resizeTooltip"
             @click="cyclePanelMode"
           >
             <Minimize2 v-if="panelMode === 'fullscreen'" :size="16" />
-            <Maximize2 v-else :size="16" />
+            <PanelRight v-else :size="16" />
           </button>
+
+          <!-- Open full-screen chat (navigates to dedicated route) -->
           <button
             class="header-btn fullscreen-btn"
             title="Open full-screen chat"
             @click="openFullScreenChat"
           >
-            <ExternalLink :size="16" />
+            <Maximize2 :size="16" />
           </button>
           <button
             class="header-btn close-btn"
@@ -898,9 +987,9 @@ onUnmounted(() => {
   width: 380px;
   max-width: 100vw;
   height: 100vh;
-  background: rgba(28, 25, 45, 0.55);
-  backdrop-filter: blur(32px) saturate(1.3);
-  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  background: rgba(20, 18, 35, 0.45);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
   border-inline-start: 1px solid var(--overlay-component-border-color);
   display: flex;
   flex-direction: column;
@@ -1026,9 +1115,14 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
-.expand-btn:hover,
+.resize-btn:hover,
 .fullscreen-btn:hover {
   background: var(--purple-bg-subtle);
+  color: var(--accent-primary, #8b5cf6);
+}
+
+.history-btn.active {
+  background: var(--surface-hover);
   color: var(--accent-primary, #8b5cf6);
 }
 
@@ -1159,6 +1253,138 @@ onUnmounted(() => {
 .provider-option.active {
   background: var(--accent-primary, #8b5cf6);
   color: white;
+}
+
+/* ============================================================================
+   Chat History Dropdown
+   ============================================================================ */
+
+.chat-history-container {
+  position: relative;
+}
+
+.chat-history-dropdown {
+  position: absolute;
+  top: 100%;
+  inset-inline-end: 0;
+  margin-top: var(--space-2);
+  min-width: 260px;
+  max-width: 320px;
+  background: var(--overlay-component-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  box-shadow: var(--overlay-component-shadow);
+  z-index: 100;
+}
+
+.new-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-2_5);
+  border: 1px dashed var(--border-medium);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  margin-bottom: var(--space-2);
+}
+
+.new-chat-btn:hover {
+  border-color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary, #8b5cf6);
+  background: var(--purple-bg-subtle);
+}
+
+.chat-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.chat-history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-2_5);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  text-align: start;
+}
+
+.chat-history-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.chat-history-item.active {
+  background: var(--purple-bg-subtle);
+  color: var(--accent-primary, #8b5cf6);
+}
+
+.chat-history-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-history-date {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.chat-history-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-5);
+  height: var(--space-5);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--duration-fast) ease;
+  flex-shrink: 0;
+}
+
+.chat-history-item:hover .chat-history-delete {
+  opacity: 1;
+}
+
+.chat-history-delete:hover {
+  background: var(--danger-bg-subtle);
+  color: var(--color-danger);
+}
+
+/* Chat history scrollbar */
+.chat-history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-history-list::-webkit-scrollbar-thumb {
+  background: var(--glass-border-hover);
+  border-radius: var(--radius-full);
 }
 
 /* ============================================================================

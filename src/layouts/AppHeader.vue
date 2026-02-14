@@ -182,11 +182,8 @@
           Quick Sort
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
-        <router-link to="/weekly-plan" class="view-tab" active-class="active">
-          Weekly Plan
-        </router-link>
-        <router-link to="/ai-chat" class="view-tab" active-class="active">
-          AI Chat
+        <router-link to="/ai" class="view-tab" active-class="active">
+          AI
         </router-link>
       </div>
     </div>
@@ -230,8 +227,7 @@ const routeNameToTitle = {
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
   'design-system': 'Design System',
-  'ai-chat': 'AI Chat',
-  'weekly-plan': 'Weekly Plan',
+  'ai': 'AI Hub',
 }
 
 // Define proper types for page title info
@@ -320,11 +316,8 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
       case 'quick-sort':
         filterContext = 'Triage'
         break
-      case 'ai-chat':
+      case 'ai':
         filterContext = 'Assistant'
-        break
-      case 'weekly-plan':
-        filterContext = 'Start My Week'
         break
       default:
         filterContext = ''

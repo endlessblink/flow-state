@@ -1003,7 +1003,7 @@ defineExpose({
 
 .sidebar-header {
   padding: var(--space-10) var(--space-6) var(--space-6) var(--space-6);
-  border-bottom: 1px solid var(--glass-border);
+  /* border-bottom removed — shared layout-header-border in MainLayout handles this */
   background: var(--glass-bg-medium);
 }
 

@@ -20,7 +20,7 @@ export type { WeekEvent } from '@/types/tasks'
  */
 export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>) {
   const taskStore = useTaskStore()
-  const { getPriorityColor, getDateString } = useCalendarCore()
+  const { getPriorityColor, getDateString, getWeekStart } = useCalendarCore()
 
   // --- MEMORY LEAK FIX: Listener Registry ---
   let currentMouseMoveHandler: ((e: MouseEvent) => void) | null = null
@@ -69,17 +69,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   const workingHours = Array.from({ length: 17 }, (_, i) => i + 6) // 6 AM to 10 PM
   const dragMode = ref<string | null>(null)
 
-  // Get week start (Monday)
-  const getWeekStart = (date: Date): Date => {
-    const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    d.setDate(diff)
-    d.setHours(0, 0, 0, 0)
-    return d
-  }
-
-  // Week days computation
+  // Week days computation (TASK-1321: uses shared getWeekStart from useCalendarCore)
   const weekDays = computed<WeekDay[]>(() => {
     const weekStart = getWeekStart(currentDate.value)
     const days: WeekDay[] = []

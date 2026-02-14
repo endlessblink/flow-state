@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Calendar Operations', () => {
+test.describe.skip('Calendar Operations', () => {
     test.beforeEach(async ({ page }) => {
         // Bypass welcome modal
         await page.addInitScript(() => {

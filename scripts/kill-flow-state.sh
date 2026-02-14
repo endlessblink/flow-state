@@ -108,6 +108,10 @@ if [ -n "$NPM_PIDS" ]; then
   done
 fi
 
+# Clean up PID file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+rm -f "$SCRIPT_DIR/.dev-server.pid"
+
 # Summary
 log ""
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

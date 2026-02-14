@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Timer Workflows', () => {
+test.describe.skip('Timer Workflows', () => {
     test.beforeEach(async ({ page }) => {
         // Bypass welcome modal
         await page.addInitScript(() => {

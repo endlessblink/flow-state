@@ -2,11 +2,21 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Task Management', () => {
     test.beforeEach(async ({ page }) => {
-        // Bypass welcome modal
-        await page.addInitScript(() => {
-            localStorage.setItem('flowstate-welcome-seen', 'true');
-        });
         await page.goto('/#/tasks');
+
+        // Explicitly handle welcome modal if present
+        const welcomeModal = page.locator('.modal-overlay').filter({ hasText: 'Welcome to FlowState' });
+        // Short timeout for the check to avoid waiting too long if it's not there
+        try {
+            if (await welcomeModal.isVisible({ timeout: 2000 })) {
+                console.log('[TEST] Welcome modal detected, dismissing...');
+                await page.getByRole('button', { name: 'Get Started' }).click();
+                await expect(welcomeModal).toBeHidden();
+            }
+        } catch (e) {
+            // Ignore timeout, meaning modal didn't appear
+        }
+
         // Wait for the view to load
         await page.waitForSelector('.all-tasks-view');
     });
@@ -20,8 +30,17 @@ test.describe('Task Management', () => {
         await expect(quickAddInput).toBeVisible();
 
         const taskTitle = `New Test Task ${Date.now()}`;
+        console.log(`[TEST] Creating task: ${taskTitle}`);
         await quickAddInput.fill(taskTitle);
         await quickAddInput.press('Enter');
+        console.log('[TEST] Task creation submitted');
+
+        // Wait a bit to ensure UI updates
+        await page.waitForTimeout(1000);
+
+        // Debug: Log the page content or search for the task
+        const isVisible = await page.getByText(taskTitle).isVisible();
+        console.log(`[TEST] Is task visible? ${isVisible}`);
 
         // Verify task appears in the list
         // The AllTasksView has a TaskList or TaskTable. 

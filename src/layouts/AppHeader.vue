@@ -52,6 +52,17 @@
 
         <div class="control-divider" />
 
+        <!-- TASK-1319: Keyboard Shortcuts Help -->
+        <button
+          class="help-btn"
+          title="Keyboard Shortcuts (?)"
+          @click="uiStore.toggleShortcutsPanel()"
+        >
+          <HelpCircle :size="18" />
+        </button>
+
+        <div class="control-divider" />
+
         <!-- AI Assistant Toggle (TASK-1120) -->
         <button
           class="ai-toggle-btn"
@@ -189,7 +200,8 @@ import { useTaskStore, type Project } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useSettingsStore } from '@/stores/settings'
-import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-next'
+import { useUIStore } from '@/stores/ui'
+import { Timer, Play, Pause, Coffee, Square, User, Sparkles, HelpCircle } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
@@ -202,6 +214,7 @@ const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
+const uiStore = useUIStore()
 
 // Route name to display title mapping
 const routeNameToTitle = {
@@ -626,7 +639,7 @@ const startLongBreak = async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--nav-tabs-spacing-below);
-  border-bottom: 1px solid var(--glass-border-hover);
+  /* border-bottom removed — shared layout-header-border in MainLayout handles this */
   padding-bottom: var(--nav-tabs-padding-bottom);
   margin-left: calc(var(--space-12) * -1);
   margin-right: calc(var(--space-12) * -1);
@@ -748,6 +761,26 @@ const startLongBreak = async () => {
   height: 24px;
   background: var(--border-subtle, rgba(255, 255, 255, 0.1));
   margin: 0 var(--space-2);
+}
+
+/* HELP BUTTON (TASK-1319) */
+.help-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--spring-smooth);
+}
+
+.help-btn:hover {
+  color: var(--brand-primary);
+  background: var(--state-hover-bg);
 }
 
 /* GAMIFICATION WIDGETS (FEATURE-1118) */

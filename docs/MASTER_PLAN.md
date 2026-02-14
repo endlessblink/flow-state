@@ -22,6 +22,18 @@
 
 ---
 
+### BUG-1321: Task property changes don't propagate across all views (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+
+**Problem**: When a task's properties change (e.g., dragging to "Today" group in canvas sets dueDate), the change doesn't consistently propagate to all views (Board, Calendar, Weekly Plan, Canvas). Each view/interaction point may update task properties through different code paths, leading to desynchronized state.
+
+**Scope**: Full audit of all task property mutation paths and their propagation to reactive consumers.
+
+**Root Cause**: TBD — multi-agent investigation in progress.
+
+---
+
 ### BUG-1320: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (👀 REVIEW)
 
 **Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-14)
@@ -2494,32 +2506,41 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### FEATURE-1317: AI Work Profile / Persistent Memory — Learn User Work Patterns for Smarter Weekly Plans (📋 PLANNED)
+### FEATURE-1317: AI Work Profile / Persistent Memory — Learn User Work Patterns for Smarter Weekly Plans (🔄 IN PROGRESS)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: 🔄 IN PROGRESS (2026-02-14)
 
 **Problem/Opportunity**: The AI Weekly Plan (FEATURE-1314) starts from scratch every time — it doesn't know the user's work capacity, preferred task distribution, energy patterns, or past scheduling accuracy. A persistent "work profile" would make each week's plan progressively smarter.
 
-**Concept**:
-1. **Work capacity tracking** — Learn how many tasks/hours the user actually completes per day and per week
-2. **Energy pattern modeling** — Track which days the user schedules heavy vs light work (e.g., deep work Mon-Wed, admin Thu-Fri)
-3. **Scheduling accuracy feedback** — After a planned week, compare plan vs actual (which tasks were completed, moved, or skipped)
-4. **Persistent profile storage** — Store learned preferences in Supabase `user_settings` or a new `ai_work_profile` table
-5. **Context injection** — Feed the work profile into the weekly plan AI prompt for personalized suggestions
+**Implementation Complete (Pending User Testing)**:
 
-**Key Questions**:
-- [ ] Storage: extend `user_settings` JSON blob or new dedicated table?
-- [ ] How to collect feedback: automatic (compare plan vs actual) or explicit (user rates the plan)?
-- [ ] Privacy: should profile data stay local-only or sync to Supabase?
-- [ ] How many weeks of history to retain for pattern detection?
+**Database Layer**:
+- [x] New `ai_work_profiles` table (migration with profile metadata, capacity metrics, energy patterns, learned patterns)
+- [x] Type mappers in `supabaseMappers.ts` (WorkProfile ↔ DbWorkProfile)
+- [x] CRUD operations in `useSupabaseDatabase.ts` (fetchWorkProfile, saveWorkProfile, insertPomodoroHistory, fetchPomodoroHistory)
 
-**Subtasks**:
-- [ ] Design work profile data schema (capacity, patterns, preferences)
-- [ ] Implement post-week feedback collection (plan vs actual comparison)
-- [ ] Build profile persistence layer (Supabase or local storage)
-- [ ] Inject profile context into `useWeeklyPlanAI.ts` system prompt
-- [ ] Add Settings UI for viewing/resetting work profile
-- [ ] Week-over-week accuracy metrics (optional dashboard)
+**Composable Layer**:
+- [x] `useWorkProfile.ts` — Load/save profile, compute capacity metrics from Pomodoro history, record weekly outcomes, get profile context for AI
+- [x] Automatic Pomodoro history writes in `timer.ts` (fire-and-forget on session complete)
+
+**UI Layer**:
+- [x] `WeeklyPlanView.vue` — Profile loading, form pre-populate, work style question, save preferences to profile
+- [x] `WeeklyPlanSettingsTab.vue` — New settings tab with user preferences + learned patterns display
+- [x] `SettingsModal.vue` — Added "Weekly Plan" tab to settings
+
+**AI Integration**:
+- [x] `useWeeklyPlanAI.ts` — WorkProfile injected into AI system prompt (capacity metrics, energy patterns, learned patterns, work style)
+- [x] `useWeeklyPlan.ts` — Profile pass-through to AI, feedback loop in `applyPlan()` for learning
+
+**Key Features**:
+- Work capacity tracking from Pomodoro session history (tasks/day, hours/week)
+- Energy pattern modeling (learns heavy vs light work days)
+- User preferences (work style, recurring task patterns)
+- Context injection into weekly plan AI for personalized suggestions
+- Settings UI for viewing/resetting work profile
+
+**Pending**:
+- [ ] User testing and confirmation (per CLAUDE.md completion protocol)
 
 ---
 
@@ -2995,7 +3016,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
 | **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
-| **FEATURE-1317** | **P3** | **📋 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
+| **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | **TASK-1316** | **P2** | **📋 AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | **TASK-1319** | **P0** | **🔄 Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** |
 | ~~**TASK-1320**~~ | **P1** | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)** |

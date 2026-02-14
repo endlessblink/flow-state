@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { inject, computed } from 'vue'
 import { Play } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
 
-defineProps<{
+const props = defineProps<{
   timeSlots: TimeSlot[]
   hours: number[]
   isViewingToday: boolean
@@ -22,7 +23,25 @@ defineProps<{
     previewDuration: number
     direction: 'top' | 'bottom'
   } | null
+  externalEvents?: ExternalCalendarEvent[]
 }>()
+
+// Compute positioned external events for time grid
+const positionedExternalEvents = computed(() => {
+  if (!props.externalEvents?.length) return []
+  return props.externalEvents
+    .filter(e => !e.isAllDay)
+    .map(e => {
+      const startMinutes = e.startTime.getHours() * 60 + e.startTime.getMinutes()
+      const durationMinutes = Math.max(15, (e.endTime.getTime() - e.startTime.getTime()) / 60000)
+      return {
+        ...e,
+        top: startMinutes,
+        height: durationMinutes,
+        formattedTime: `${e.startTime.getHours().toString().padStart(2, '0')}:${e.startTime.getMinutes().toString().padStart(2, '0')}`
+      }
+    })
+})
 defineEmits<{
   (e: 'dragover', event: DragEvent, slot: TimeSlot): void
   (e: 'dragenter', event: DragEvent, slot: TimeSlot): void
@@ -236,6 +255,23 @@ const {
             </div>
           </div>
         </TransitionGroup>
+      </div>
+
+      <!-- TASK-1317: External calendar events (read-only overlays) -->
+      <div
+        v-for="ext in positionedExternalEvents"
+        :key="`ext-${ext.id}`"
+        class="external-event"
+        :style="{
+          top: `${ext.top}px`,
+          height: `${ext.height}px`,
+          backgroundColor: ext.color + '25',
+          borderColor: ext.color
+        }"
+        :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
+      >
+        <span class="external-event-time">{{ ext.formattedTime }}</span>
+        <span class="external-event-title" dir="auto">{{ ext.title }}</span>
       </div>
     </div>
   </div>
@@ -750,5 +786,40 @@ const {
 .slot-task.status-done {
   filter: grayscale(0.6) brightness(0.85);
   opacity: 0.55;
+}
+
+/* TASK-1317: External calendar events (read-only overlays) */
+.external-event {
+  position: absolute;
+  right: 4px;
+  width: 35%;
+  min-height: 20px;
+  border-left: 3px solid;
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  pointer-events: auto;
+  z-index: 3;
+  overflow: hidden;
+  border-style: solid;
+  border-width: 1px 1px 1px 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  cursor: default;
+}
+
+.external-event-time {
+  font-weight: var(--font-semibold);
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.external-event-title {
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

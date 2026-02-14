@@ -75,6 +75,9 @@ export const useUIStore = defineStore('ui', () => {
   // Settings modal state
   const settingsModalOpen = ref(false)
 
+  // Keyboard shortcuts panel state (TASK-1319)
+  const shortcutsPanelOpen = ref(false)
+
   // Actions
   const toggleProjectSelection = (projectId: string, multiSelect: boolean = true) => {
     if (!multiSelect) {
@@ -173,6 +176,19 @@ export const useUIStore = defineStore('ui', () => {
 
   const closeSettingsModal = () => {
     settingsModalOpen.value = false
+  }
+
+  // Keyboard shortcuts panel actions (TASK-1319)
+  const openShortcutsPanel = () => {
+    shortcutsPanelOpen.value = true
+  }
+
+  const closeShortcutsPanel = () => {
+    shortcutsPanelOpen.value = false
+  }
+
+  const toggleShortcutsPanel = () => {
+    shortcutsPanelOpen.value = !shortcutsPanelOpen.value
   }
 
   // Language and direction actions
@@ -299,6 +315,10 @@ export const useUIStore = defineStore('ui', () => {
     switchAuthView,
     openSettingsModal,
     closeSettingsModal,
+    shortcutsPanelOpen,
+    openShortcutsPanel,
+    closeShortcutsPanel,
+    toggleShortcutsPanel,
     setLanguage,
     setDirectionPreference,
     toggleDirection,

@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
 import { useTaskStore, getTaskInstances } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
+import { useSettingsStore } from '@/stores/settings'
 import type { CalendarEvent } from '@/types/tasks'
 
 export interface MonthDay {
@@ -17,6 +18,7 @@ export interface MonthDay {
  */
 export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>) {
   const taskStore = useTaskStore()
+  const settings = useSettingsStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
 
   // Month days computation
@@ -27,9 +29,11 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
     const firstDay = new Date(year, month, 1)
     const startDate = new Date(firstDay)
 
-    // Adjust to start on Monday
+    // TASK-1321: Adjust to start on the configured week start day
     const dayOfWeek = firstDay.getDay()
-    startDate.setDate(startDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+    const weekStartsOn = settings.weekStartsOn ?? 1
+    const daysToSubtract = (dayOfWeek - weekStartsOn + 7) % 7
+    startDate.setDate(startDate.getDate() - daysToSubtract)
 
     const days: MonthDay[] = []
     const today = getDateString(new Date())

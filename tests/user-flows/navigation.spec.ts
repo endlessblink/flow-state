@@ -2,10 +2,19 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Navigation', () => {
     test.beforeEach(async ({ page }) => {
-        // Bypass welcome modal
-        await page.addInitScript(() => {
-            localStorage.setItem('flowstate-welcome-seen', 'true');
-        });
+        await page.goto('/');
+
+        // Explicitly handle welcome modal if present
+        const welcomeModal = page.locator('.modal-overlay').filter({ hasText: 'Welcome to FlowState' });
+        try {
+            if (await welcomeModal.isVisible({ timeout: 2000 })) {
+                console.log('[TEST] Welcome modal detected, dismissing...');
+                await page.getByRole('button', { name: 'Get Started' }).click();
+                await expect(welcomeModal).toBeHidden();
+            }
+        } catch (e) {
+            // Ignore timeout
+        }
     });
 
     test('should navigate between main views', async ({ page }) => {

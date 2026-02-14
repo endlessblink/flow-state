@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, inject } from 'vue'
+import { ref, inject, computed } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import { useCalendarCore } from '@/composables/useCalendarCore'
 import type { CalendarEvent } from '@/types/tasks'
 import type { MonthDay } from '@/composables/calendar/useCalendarMonthView'
+import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
 
-defineProps<{
+const props = defineProps<{
   monthDays: MonthDay[]
   currentTaskId?: string | null
+  externalEvents?: ExternalCalendarEvent[]
 }>()
 const emit = defineEmits<{
   (e: 'monthDrop', event: DragEvent, dateString: string): void
@@ -53,6 +56,19 @@ const handleEventDragEnd = (event: DragEvent) => {
   emit('eventDragEnd', event)
 }
 
+// External events grouped by date
+const externalEventsByDate = computed(() => {
+  const map = new Map<string, ExternalCalendarEvent[]>()
+  if (!props.externalEvents?.length) return map
+  for (const event of props.externalEvents) {
+    const d = event.startTime
+    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    if (!map.has(dateString)) map.set(dateString, [])
+    map.get(dateString)!.push(event)
+  }
+  return map
+})
+
 // Inject helpers from parent CalendarView
 const helpers = inject('calendar-helpers') as any
 const {
@@ -67,13 +83,17 @@ const {
   formatEventTime
 } = helpers
 
+// TASK-1321: Dynamic weekday headers based on weekStartsOn setting
+const { getWeekDayHeaders } = useCalendarCore()
+const weekDayHeaders = computed(() => getWeekDayHeaders())
+
 </script>
 
 <template>
   <div class="month-view">
     <!-- Day-of-week header row -->
     <div class="month-weekday-header">
-      <div v-for="day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']" :key="day" class="weekday-label">
+      <div v-for="day in weekDayHeaders" :key="day" class="weekday-label">
         {{ day }}
       </div>
     </div>
@@ -150,6 +170,18 @@ const {
               {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
             </span>
           </div>
+
+          <!-- TASK-1317: External calendar events (read-only pills) -->
+          <div
+            v-for="ext in (externalEventsByDate.get(day.dateString) || [])"
+            :key="`ext-${ext.id}`"
+            class="month-event month-event--external"
+            :style="{ borderColor: ext.color, backgroundColor: ext.color + '20' }"
+            :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
+          >
+            <div class="external-dot" :style="{ backgroundColor: ext.color }" />
+            <span class="event-title-short" dir="auto">{{ ext.title }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -209,8 +241,9 @@ const {
 }
 
 .month-day-cell.drag-over {
-  background: rgba(99, 102, 241, 0.12);
-  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.2) !important;
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.5) !important;
+  opacity: 1 !important;
 }
 
 .month-day-cell.other-month {
@@ -312,6 +345,27 @@ const {
 }
 
 .month-event.dragging {
-  opacity: 0.35;
+  opacity: 0.35 !important;
+  transform: scale(0.95);
+}
+
+/* TASK-1317: External calendar events */
+.month-event--external {
+  background: transparent !important;
+  border: 1px solid;
+  color: var(--text-secondary) !important;
+  cursor: default;
+  padding-left: var(--space-1);
+}
+
+.month-event--external:hover {
+  filter: brightness(1.1);
+}
+
+.external-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 </style>

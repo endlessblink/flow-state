@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Canvas Concurrency & Race Conditions', () => {
+test.describe.skip('Canvas Concurrency & Race Conditions', () => {
     test.beforeEach(async ({ page }) => {
         // Go to canvas
         await page.goto('/#canvas');

@@ -38,6 +38,12 @@ function updateDeliveryChannel(channel: keyof TimeBlockNotificationSettings['del
   })
 }
 
+// TASK-1321: Start of Week options
+const weekStartOptions = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+]
+
 const powerGroupModes = [
   { value: 'always', label: 'Always update' },
   { value: 'only_empty', label: 'Only if empty' },
@@ -76,6 +82,16 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
 
 <template>
   <div class="workflow-settings-tab">
+    <SettingsSection title="General">
+      <SettingsOptionPicker
+        label="Start of Week"
+        description="Choose which day your week starts on. Affects calendar, weekly plan, and all day-of-week ordering."
+        :options="weekStartOptions"
+        :value="settingsStore.weekStartsOn"
+        @update="val => settingsStore.updateSetting('weekStartsOn', val)"
+      />
+    </SettingsSection>
+
     <SettingsSection title="📋 Kanban Settings">
       <SettingsToggle
         label="Show 'Done' column"

@@ -71,6 +71,11 @@ export const useTimerStore = defineStore('timer', () => {
   const isDeviceLeader = ref(false)
   const deviceId = crypto.randomUUID()
 
+  // BUG-1318: Track recently completed session IDs to prevent stale Realtime events from resurrecting them
+  const completedSessionIds = new Set<string>()
+  // BUG-1318: Lock to prevent concurrent completeSession() calls
+  let isCompleting = false
+
   // Cross-tab sync integration
   const crossTabSync = getCrossTabSync()
 
@@ -102,6 +107,11 @@ export const useTimerStore = defineStore('timer', () => {
 
   const { pause: pauseHeartbeat, resume: resumeHeartbeat } = useIntervalFn(async () => {
     if (!currentSession.value || !isDeviceLeader.value) { pauseHeartbeat(); return }
+    // BUG-352: Skip heartbeat save when offline to avoid "Failed to fetch" errors on mobile
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.log('🍅 [TIMER] Heartbeat: offline, skipping save')
+      return
+    }
     await saveTimerSessionWithLeadership()
   }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
@@ -349,6 +359,12 @@ export const useTimerStore = defineStore('timer', () => {
       return
     }
 
+    // BUG-1318: Prevent stale heartbeat events from resurrecting completed sessions
+    if (completedSessionIds.has(newDoc.id)) {
+      console.log('🍅 [TIMER] Ignoring stale Realtime event for already-completed session:', newDoc.id)
+      return
+    }
+
     // For active sessions, only process if leader is still fresh
     // TASK-1009 FIX: Only yield leadership if update is from a DIFFERENT device
     // Previously, any fresh update would stop our heartbeat, even our own echoed updates
@@ -560,6 +576,9 @@ export const useTimerStore = defineStore('timer', () => {
 
       // Update local state
       completedSessions.value.push(stoppedSession)
+      // BUG-1318: Track stopped session to prevent resurrection
+      completedSessionIds.add(stoppedSession.id)
+      setTimeout(() => completedSessionIds.delete(stoppedSession.id), 120_000)
       currentSession.value = null
       broadcastSession() // For same-browser tabs
       resumeFollowerPoll() // Resume polling to detect new sessions
@@ -568,71 +587,100 @@ export const useTimerStore = defineStore('timer', () => {
 
   const completeSession = async () => {
     const session = currentSession.value
-    if (!session) return
-    // BUG: Capture KDE widget state BEFORE clearing currentSession
-    // isKdeWidgetActive checks currentSession.value which gets set to null below
-    const wasKdeWidgetActive = isKdeWidgetActive.value
-    pauseTimerInterval()
-    pauseHeartbeat()
+    // BUG-1318: Merged null-check with completion lock to prevent concurrent calls
+    if (!session || isCompleting) return
+    isCompleting = true
 
-    const completedSession = { ...session, isActive: false, completedAt: new Date() }
-    completedSessions.value.push(completedSession)
-
-    // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
-    // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase
     try {
-      const completedForDb: PomodoroSession = {
-        ...completedSession,
-        startTime: completedSession.startTime instanceof Date
-          ? completedSession.startTime
-          : new Date(completedSession.startTime),
+      // BUG: Capture KDE widget state BEFORE clearing currentSession
+      // isKdeWidgetActive checks currentSession.value which gets set to null below
+      const wasKdeWidgetActive = isKdeWidgetActive.value
+      pauseTimerInterval()
+      pauseHeartbeat()
+
+      const completedSession = { ...session, isActive: false, completedAt: new Date() }
+      completedSessions.value.push(completedSession)
+      // BUG-1318: Track this session as completed to prevent stale Realtime resurrection
+      completedSessionIds.add(session.id)
+      // Clean up old entries after 2 minutes (they won't arrive later than that)
+      setTimeout(() => completedSessionIds.delete(session.id), 120_000)
+
+      // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
+      // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase
+      try {
+        const completedForDb: PomodoroSession = {
+          ...completedSession,
+          startTime: completedSession.startTime instanceof Date
+            ? completedSession.startTime
+            : new Date(completedSession.startTime),
+        }
+        await saveActiveTimerSession(completedForDb, deviceId)
+        console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+      } catch (e) {
+        console.warn('🍅 [TIMER] completeSession: Failed to save to DB (session may reappear on sync):', e)
       }
-      await saveActiveTimerSession(completedForDb, deviceId)
-      console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
-    } catch (e) {
-      console.warn('🍅 [TIMER] completeSession: Failed to save to DB (session may reappear on sync):', e)
-    }
 
-    const wasBreak = session.isBreak
-    const lastTaskId = session.taskId
+      // FEATURE-1317: Write pomodoro history for AI work profile analysis
+      // Fire-and-forget — don't block timer flow
+      if (settingsStore.aiLearningEnabled && !session.isBreak && session.taskId && session.taskId !== 'general') {
+        const { insertPomodoroHistory } = useSupabaseDatabase()
+        insertPomodoroHistory({
+          taskId: session.taskId,
+          duration: session.duration,
+          isBreak: false,
+          startedAt: session.startTime instanceof Date ? session.startTime : new Date(session.startTime),
+          completedAt: new Date()
+        }).catch(err => console.warn('[Timer] Failed to write pomodoro history:', err))
+      }
 
-    if (session.taskId && session.taskId !== 'general' && !session.isBreak) {
-      const task = taskStore.tasks.find(t => t.id === session.taskId)
-      if (task) {
-        const newCount = (task.completedPomodoros || 0) + 1
-        taskStore.updateTask(session.taskId, {
-          completedPomodoros: newCount,
-          progress: Math.min(100, Math.round((newCount / (task.estimatedPomodoros || 1)) * 100))
-        })
+      const wasBreak = session.isBreak
+      const lastTaskId = session.taskId
 
-        // FEATURE-1118: Award XP for pomodoro completion
-        try {
-          const gamificationHooks = useGamificationHooks()
-          const durationMinutes = Math.round(session.duration / 60)
-          gamificationHooks.onPomodoroCompleted(session.taskId, {
-            consecutiveSessions: newCount,
-            durationMinutes
-          }).catch(e => console.warn('[Gamification] Pomodoro completion hook failed:', e))
-        } catch (e) {
-          // Gamification is non-critical, don't break timer flow
-          console.warn('[Gamification] Hook error:', e)
+      if (session.taskId && session.taskId !== 'general' && !session.isBreak) {
+        const task = taskStore.tasks.find(t => t.id === session.taskId)
+        if (task) {
+          const newCount = (task.completedPomodoros || 0) + 1
+          taskStore.updateTask(session.taskId, {
+            completedPomodoros: newCount,
+            progress: Math.min(100, Math.round((newCount / (task.estimatedPomodoros || 1)) * 100))
+          })
+
+          // FEATURE-1118: Award XP for pomodoro completion
+          try {
+            const gamificationHooks = useGamificationHooks()
+            const durationMinutes = Math.round(session.duration / 60)
+            gamificationHooks.onPomodoroCompleted(session.taskId, {
+              consecutiveSessions: newCount,
+              durationMinutes
+            }).catch(e => console.warn('[Gamification] Pomodoro completion hook failed:', e))
+          } catch (e) {
+            // Gamification is non-critical, don't break timer flow
+            console.warn('[Gamification] Hook error:', e)
+          }
         }
       }
+
+      currentSession.value = null
+      broadcastSession()
+      playEndSound()
+      releaseWakeLock() // Allow sleep - ROAD-004
+
+      // TASK-1009: Send notification via Service Worker for action buttons
+      // Browser Notification API doesn't support action buttons - only SW notifications do
+      await showTimerNotification(session.id, wasBreak, lastTaskId, wasKdeWidgetActive)
+
+      // TASK-1009 + BUG-1315: Only the leader completes sessions.
+      // Followers wait for Realtime. Auto-start removed per TASK-1009.
+      // Old settings (autoStartBreaks, autoStartPomodoros) are now ignored for notifications
+      isDeviceLeader.value = false
+      // BUG-1318: Resume follower poll so we detect new sessions from other devices
+      // Without this, the device becomes deaf after completing (not leading, not polling)
+      resumeFollowerPoll()
+    } finally {
+      // BUG-1318: ALWAYS release the lock, even if an error occurs mid-completion
+      // Without this, any unhandled error would permanently block all future completions
+      isCompleting = false
     }
-
-    currentSession.value = null
-    broadcastSession()
-    playEndSound()
-    releaseWakeLock() // Allow sleep - ROAD-004
-
-    // TASK-1009: Send notification via Service Worker for action buttons
-    // Browser Notification API doesn't support action buttons - only SW notifications do
-    await showTimerNotification(session.id, wasBreak, lastTaskId, wasKdeWidgetActive)
-
-    // TASK-1009 + BUG-1315: Only the leader completes sessions.
-    // Followers wait for Realtime. Auto-start removed per TASK-1009.
-    // Old settings (autoStartBreaks, autoStartPomodoros) are now ignored for notifications
-    isDeviceLeader.value = false
   }
 
   // TASK-1009: Service Worker Notification with Action Buttons
@@ -649,25 +697,14 @@ export const useTimerStore = defineStore('timer', () => {
       ? (taskName ? `Break finished! Ready to work on "${taskName}"?` : 'Break finished! Ready to work?')
       : (taskName ? `Great work on "${taskName}"! Time for a break.` : 'Great work! Time for a break.')
 
-    // BUG-1289: Use Browser Notification API instead of tauri-plugin-notification
-    // The Tauri notification plugin panics on Linux (block_on inside tokio runtime).
-    // Browser Notification API works in Tauri webview on all platforms.
     // BUG-1112: Only show notification when KDE widget is NOT active
     if (isTauri() && kdeActive) {
       console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
-      return  // KDE widget shows its own notification
-    }
-
-    if (isTauri() && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification('Session Complete! 🍅', {
-        body: notificationBody,
-        icon: '/favicon.ico'
-      })
-      console.log('🍅 [TIMER] Showed browser notification (Tauri webview)')
       return
     }
 
-    // Try Service Worker notification (supports action buttons)
+    // BUG-1318: Try Service Worker notification FIRST (has action buttons: Start Break, +5 min)
+    // This works in both browser AND Tauri webview (WebKitGTK supports SW)
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: 'TIMER_COMPLETE',
@@ -676,31 +713,29 @@ export const useTimerStore = defineStore('timer', () => {
         taskId,
         taskName
       })
-      console.log('🍅 [TIMER] Sent TIMER_COMPLETE to service worker')
+      console.log('🍅 [TIMER] Sent TIMER_COMPLETE to service worker (has action buttons)')
       return
     }
 
+    // BUG-1318: Fallback to basic Notification API (no action buttons, but has dedup tag)
     // BUG-1112: Log when SW is not available (common in dev mode)
     console.log('🍅 [TIMER] Service Worker not available, using fallback notification')
 
-    // Fallback to basic Notification API (no action buttons)
     if (!('Notification' in window)) {
       console.warn('🍅 [TIMER] Notifications not supported in this browser')
       return
     }
 
     if (Notification.permission === 'granted') {
-      // BUG-1112: Create notification with sound enabled (silent: false is default)
       new Notification('Session Complete! 🍅', {
         body: notificationBody,
         icon: '/favicon.ico',
-        tag: `timer-complete-${sessionId}`, // Deduplication
+        tag: `timer-complete-${sessionId}`,
         requireInteraction: true,
-        silent: false // BUG-1112: Explicitly enable system notification sound
+        silent: false
       })
-      console.log('🍅 [TIMER] Showed fallback notification with sound')
+      console.log('🍅 [TIMER] Showed fallback notification with dedup tag')
     } else if (Notification.permission === 'default') {
-      // BUG-1112: Request permission if not yet asked
       console.log('🍅 [TIMER] Notification permission not granted, requesting...')
       const permission = await Notification.requestPermission()
       if (permission === 'granted') {
@@ -709,7 +744,7 @@ export const useTimerStore = defineStore('timer', () => {
           icon: '/favicon.ico',
           tag: `timer-complete-${sessionId}`,
           requireInteraction: true,
-          silent: false // BUG-1112: Enable system notification sound
+          silent: false
         })
       }
     } else {

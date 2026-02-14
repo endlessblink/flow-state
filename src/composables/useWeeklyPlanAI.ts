@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import type { Ref } from 'vue'
 import { createAIRouter } from '@/services/ai/router'
 import type { ChatMessage } from '@/services/ai/types'
+import type { WorkProfile } from '@/utils/supabaseMappers'
+import { useSettingsStore } from '@/stores/settings'
 
 // ============================================================================
 // Types
@@ -18,7 +20,7 @@ export interface WeeklyPlan {
   unscheduled: string[]
 }
 
-export type WeeklyPlanStatus = 'idle' | 'loading' | 'review' | 'applying' | 'applied' | 'error'
+export type WeeklyPlanStatus = 'idle' | 'interview' | 'loading' | 'review' | 'applying' | 'applied' | 'error'
 
 export interface WeeklyPlanState {
   status: WeeklyPlanStatus
@@ -27,6 +29,7 @@ export interface WeeklyPlanState {
   error: string | null
   weekStart: Date
   weekEnd: Date
+  interviewAnswers: InterviewAnswers | null
 }
 
 export interface TaskSummary {
@@ -37,6 +40,17 @@ export interface TaskSummary {
   estimatedDuration?: number
   status: string
   projectId: string
+  description?: string
+  subtaskCount?: number
+  completedSubtaskCount?: number
+}
+
+export interface InterviewAnswers {
+  topPriority?: string
+  daysOff?: string[]
+  heavyMeetingDays?: string[]
+  maxTasksPerDay?: number
+  preferredWorkStyle?: 'frontload' | 'balanced' | 'backload'
 }
 
 // ============================================================================
@@ -48,12 +62,20 @@ type DayKey = typeof DAY_KEYS[number]
 
 const WEEKDAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
 
-function getWeekBounds(): { weekStart: Date; weekEnd: Date } {
+// TASK-1321: Parameterized to support Sunday or Monday week start
+function getWeekBounds(weekStartsOn: 0 | 1 = 0): { weekStart: Date; weekEnd: Date } {
   const now = new Date()
-  const day = now.getDay() // 0=Sun, 1=Mon
-  // If today is Monday (1), use today. Otherwise calculate next Monday.
-  // But if today is Sun (0), next Monday is tomorrow (+1).
-  const diff = day === 0 ? 1 : day === 1 ? 0 : 8 - day
+  const day = now.getDay() // 0=Sun, 1=Mon...6=Sat
+
+  let diff: number
+  if (weekStartsOn === 1) {
+    // Monday start: go back to this week's Monday
+    diff = day === 0 ? -6 : 1 - day
+  } else {
+    // Sunday start: go back to this week's Sunday
+    diff = -day
+  }
+
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() + diff)
   weekStart.setHours(0, 0, 0, 0)
@@ -65,16 +87,17 @@ function getWeekBounds(): { weekStart: Date; weekEnd: Date } {
   return { weekStart, weekEnd }
 }
 
+// BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
 function formatDate(d: Date): string {
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 // ============================================================================
 // Prompt builders
 // ============================================================================
 
-function buildSystemPrompt(): string {
-  return `You are a productivity assistant that plans a user's work week.
+function buildSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null): string {
+  let base = `You are a productivity assistant that plans a user's work week.
 
 Your job: distribute the given tasks across Monday through Sunday.
 
@@ -91,6 +114,62 @@ Rules:
 - Prefer weekdays (Mon-Fri) for work tasks; use Sat/Sun only for overflow.
 - Each task ID must appear in exactly ONE day or in unscheduled — no duplicates.
 - If there are more tasks than a week can hold, put extras in unscheduled.`
+
+  if (interview) {
+    const extras: string[] = []
+    if (interview.topPriority) {
+      extras.push(`- The user's TOP PRIORITY this week: "${interview.topPriority}". Schedule related tasks earliest.`)
+    }
+    if (interview.daysOff && interview.daysOff.length > 0) {
+      extras.push(`- Days OFF (schedule ZERO tasks): ${interview.daysOff.join(', ')}.`)
+    }
+    if (interview.heavyMeetingDays && interview.heavyMeetingDays.length > 0) {
+      extras.push(`- Heavy MEETING days (schedule fewer/lighter tasks): ${interview.heavyMeetingDays.join(', ')}.`)
+    }
+    if (interview.maxTasksPerDay) {
+      extras.push(`- Maximum tasks per day: ${interview.maxTasksPerDay}.`)
+    }
+    if (interview.preferredWorkStyle === 'frontload') {
+      extras.push('- User prefers front-loading: schedule more tasks Mon-Tue, lighter Thu-Fri.')
+    } else if (interview.preferredWorkStyle === 'backload') {
+      extras.push('- User prefers ramping up: lighter Mon-Tue, heavier Thu-Fri.')
+    }
+    if (extras.length > 0) {
+      base += `\n\nUser preferences for this week:\n${extras.join('\n')}`
+    }
+  }
+
+  if (profile) {
+    const insights: string[] = []
+
+    if (profile.avgTasksCompletedPerDay) {
+      insights.push(`- Historical capacity: user completes ~${profile.avgTasksCompletedPerDay} tasks/day on average`)
+    }
+    if (profile.avgWorkMinutesPerDay) {
+      insights.push(`- Average focused work time: ~${Math.round(profile.avgWorkMinutesPerDay)} minutes/day`)
+    }
+    if (profile.peakProductivityDays?.length) {
+      insights.push(`- Most productive days: ${profile.peakProductivityDays.join(', ')}. Schedule demanding tasks here.`)
+    }
+    if (profile.avgPlanAccuracy) {
+      if (profile.avgPlanAccuracy < 60) {
+        insights.push(`- Past plans were only ${profile.avgPlanAccuracy}% accurate. Schedule FEWER tasks than requested.`)
+      } else if (profile.avgPlanAccuracy > 90) {
+        insights.push(`- Past plans were ${profile.avgPlanAccuracy}% accurate. User executes well — schedule confidently.`)
+      }
+    }
+    if (profile.preferredWorkStyle === 'frontload') {
+      insights.push('- User prefers front-loading: schedule more tasks Mon-Tue, lighter Thu-Fri.')
+    } else if (profile.preferredWorkStyle === 'backload') {
+      insights.push('- User prefers ramping up: lighter Mon-Tue, heavier Thu-Fri.')
+    }
+
+    if (insights.length > 0) {
+      base += `\n\nLearned work patterns:\n${insights.join('\n')}`
+    }
+  }
+
+  return base
 }
 
 function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date): string {
@@ -116,6 +195,39 @@ Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
 Distribute these tasks across the week. Return ONLY the JSON object.`
+}
+
+function buildDayResuggestPrompt(
+  dayKey: DayKey,
+  currentPlan: WeeklyPlan,
+  allTasks: TaskSummary[]
+): string {
+  const taskMap = new Map(allTasks.map(t => [t.id, t]))
+
+  const otherDays = DAY_KEYS.filter(k => k !== dayKey)
+  const otherScheduled: Record<string, string[]> = {}
+  for (const d of otherDays) {
+    if (currentPlan[d].length > 0) {
+      otherScheduled[d] = currentPlan[d]
+    }
+  }
+
+  const currentDayTasks = currentPlan[dayKey].map(id => taskMap.get(id)).filter(Boolean)
+  const unscheduledTasks = currentPlan.unscheduled.map(id => taskMap.get(id)).filter(Boolean)
+  const availableTasks = [...currentDayTasks, ...unscheduledTasks]
+
+  return `Re-suggest tasks for ${dayKey}.
+
+Currently scheduled on other days (DO NOT move these):
+${JSON.stringify(otherScheduled, null, 2)}
+
+Available tasks for ${dayKey} (pick from these):
+${JSON.stringify(availableTasks.map(t => ({ id: t!.id, title: t!.title, priority: t!.priority, estimatedDuration: t!.estimatedDuration })), null, 2)}
+
+Return ONLY a JSON object with two keys:
+- "${dayKey}": array of task ID strings for this day
+- "unscheduled": array of remaining task IDs not placed on ${dayKey}
+- "reasoning": brief explanation`
 }
 
 // ============================================================================
@@ -239,7 +351,9 @@ export function useWeeklyPlanAI() {
   const isGenerating = ref(false) as Ref<boolean>
 
   async function generatePlan(
-    tasks: TaskSummary[]
+    tasks: TaskSummary[],
+    interview?: InterviewAnswers,
+    profile?: WorkProfile | null
   ): Promise<{ plan: WeeklyPlan; reasoning: string | null }> {
     if (tasks.length === 0) {
       return {
@@ -251,7 +365,7 @@ export function useWeeklyPlanAI() {
       }
     }
 
-    const { weekStart, weekEnd } = getWeekBounds()
+    const { weekStart, weekEnd } = getWeekBounds(useSettingsStore().weekStartsOn)
     const validTaskIds = new Set(tasks.map(t => t.id))
 
     isGenerating.value = true
@@ -261,7 +375,7 @@ export function useWeeklyPlanAI() {
       await router.initialize()
 
       const messages: ChatMessage[] = [
-        { role: 'system', content: buildSystemPrompt() },
+        { role: 'system', content: buildSystemPrompt(interview, profile) },
         { role: 'user', content: buildUserPrompt(tasks, weekStart, weekEnd) },
       ]
 
@@ -297,8 +411,69 @@ export function useWeeklyPlanAI() {
     }
   }
 
+  async function regenerateDay(
+    dayKey: DayKey,
+    currentPlan: WeeklyPlan,
+    allTasks: TaskSummary[],
+    profile?: WorkProfile | null
+  ): Promise<{ dayTasks: string[]; unscheduled: string[]; reasoning: string | null }> {
+    const validTaskIds = new Set(allTasks.map(t => t.id))
+
+    isGenerating.value = true
+
+    try {
+      const router = createAIRouter()
+      await router.initialize()
+
+      const messages: ChatMessage[] = [
+        { role: 'system', content: buildSystemPrompt(undefined, profile) },
+        { role: 'user', content: buildDayResuggestPrompt(dayKey, currentPlan, allTasks) },
+      ]
+
+      try {
+        const response = await router.chat(messages, {
+          taskType: 'planning',
+          temperature: 0.5,
+        })
+
+        let json = response.content.trim()
+        const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
+        if (codeBlockMatch) json = codeBlockMatch[1].trim()
+
+        const parsed = JSON.parse(json) as Record<string, unknown>
+        const dayTasks = (Array.isArray(parsed[dayKey]) ? parsed[dayKey] : [])
+          .filter((id: unknown): id is string => typeof id === 'string' && validTaskIds.has(id as string))
+        const unscheduled = (Array.isArray(parsed.unscheduled) ? parsed.unscheduled : [])
+          .filter((id: unknown): id is string => typeof id === 'string' && validTaskIds.has(id as string))
+        const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
+
+        return { dayTasks, unscheduled, reasoning }
+      } catch (err) {
+        console.warn('[WeeklyPlanAI] Day re-suggest failed, shuffling by priority', err)
+
+        // Fallback: shuffle current day + unscheduled by priority
+        const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
+        const taskMap = new Map(allTasks.map(t => [t.id, t]))
+        const available = [...currentPlan[dayKey], ...currentPlan.unscheduled]
+        available.sort((a, b) => {
+          const ta = taskMap.get(a)
+          const tb = taskMap.get(b)
+          const pa = ta?.priority ? priorityOrder[ta.priority] ?? 3 : 3
+          const pb = tb?.priority ? priorityOrder[tb.priority] ?? 3 : 3
+          return pa - pb
+        })
+        const dayTasks = available.slice(0, 6)
+        const unscheduled = available.slice(6)
+        return { dayTasks, unscheduled, reasoning: 'Shuffled by priority (AI unavailable).' }
+      }
+    } finally {
+      isGenerating.value = false
+    }
+  }
+
   return {
     generatePlan,
+    regenerateDay,
     isGenerating,
   }
 }

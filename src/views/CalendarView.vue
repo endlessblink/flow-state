@@ -54,11 +54,14 @@
         :format-current-date="formatCurrentDate"
         :hide-calendar-done-tasks="hideCalendarDoneTasks"
         :view-mode="viewMode"
+        :external-calendar-enabled="externalCalendar.hasEnabledCalendars.value"
+        :external-calendar-loading="externalCalendar.isLoading.value"
         @previous-day="previousDay"
         @next-day="nextDay"
         @go-to-today="goToToday"
         @toggle-done-tasks="taskStore.toggleCalendarDoneTasks()"
         @update:view-mode="viewMode = $event"
+        @sync-external-calendar="externalCalendar.syncNow"
       />
 
       <!-- Calendar Grid - Day View -->
@@ -75,6 +78,7 @@
         :dragged-event-id="draggedEventId"
         :hovered-event-id="hoveredEventId"
         :resize-preview="resizePreview"
+        :external-events="externalCalendar.getEventsForDate(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`)"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -105,6 +109,7 @@
         :is-dragging="isDragging"
         :dragged-event-id="draggedEventId"
         :resize-preview="resizePreview"
+        :external-events="externalCalendar.allEvents.value"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
         @dragleave="onDragLeave"
@@ -125,6 +130,7 @@
         v-else-if="viewMode === 'month'"
         :month-days="monthDays"
         :current-task-id="timerStore.currentTaskId"
+        :external-events="externalCalendar.allEvents.value"
         @month-drop="handleMonthDrop"
         @month-day-click="handleMonthDayClick"
         @event-drag-start="handleMonthDragStart"
@@ -150,6 +156,7 @@ import { useCalendarDayView } from '@/composables/calendar/useCalendarDayView'
 import { useCalendarWeekView } from '@/composables/calendar/useCalendarWeekView'
 import { useCalendarTimerIntegration } from '@/composables/calendar/useCalendarTimerIntegration'
 import { useCalendarMonthView } from '@/composables/calendar/useCalendarMonthView'
+import { useExternalCalendar } from '@/composables/calendar/useExternalCalendar'
 import { useCalendarInteractionHandlers } from '@/composables/calendar/useCalendarInteractionHandlers'
 import { useCalendarModals } from '@/composables/calendar/useCalendarModals'
 import { useCalendarNavigation } from '@/composables/calendar/useCalendarNavigation'
@@ -260,6 +267,9 @@ const dayView = useCalendarDayView(currentDate, statusFilter, timerGrowthMap)
 const weekView = useCalendarWeekView(currentDate, statusFilter, timerGrowthMap)
 const monthView = useCalendarMonthView(currentDate, statusFilter)
 
+// TASK-1317: External calendar sync
+const externalCalendar = useExternalCalendar()
+
 // Reactive current time for time indicator
 const currentTime = ref(new Date())
 
@@ -331,7 +341,8 @@ provide('calendar-helpers', {
   getSlotTaskStyle,
   handleRemoveFromCalendar,
   getWeekEventStyle,
-  isCurrentWeekTimeCell
+  isCurrentWeekTimeCell,
+  getExternalEventsForDate: externalCalendar.getEventsForDate
 })
 
 // Positioning and sizing for slot tasks are handled by getSlotTaskStyle from useCalendarDayView

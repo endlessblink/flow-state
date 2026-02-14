@@ -230,6 +230,16 @@
 
 ---
 
+### BUG-1315: Timer auto-starts work after break without user action (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
+
+**Problem**: When a break timer completes, the timer automatically transitions to a work session without waiting for the user to explicitly start it. Expected behavior: timer should stop after break and wait for user to manually start the next work session.
+
+**Files**: `src/stores/timer.ts`
+
+---
+
 ### ~~TASK-1289~~: Investigate severe task position drift episode (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
@@ -2423,6 +2433,32 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
+### FEATURE-1314: AI Weekly Quick Sort — Sort Week's Tasks with AI + Push to Canvas Date Groups (📋 PLANNED)
+
+**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+
+**Problem/Opportunity**: Starting a new week requires manually reviewing and organizing all tasks for the upcoming week. There's no AI-assisted workflow to quickly sort/prioritize the week's tasks and distribute them to the appropriate day-groups on the canvas.
+
+**Concept**:
+1. **AI-powered weekly sort** — A new Quick Sort mode for "Start My Week" that uses AI to analyze upcoming tasks (due dates, priorities, estimated effort, dependencies) and suggest an optimal daily distribution
+2. **Canvas date-group push** — After sorting, tasks can be pushed to their corresponding date-based groups on the canvas (e.g., "Monday", "Tuesday" groups)
+3. **User review + override** — AI suggests, user confirms or adjusts before committing
+
+**Key Questions**:
+- [ ] Should this extend the existing Quick Sort system or be a separate workflow?
+- [ ] What AI model/provider for sorting (Groq/Ollama, same as AI Chat)?
+- [ ] Should it create canvas date groups if they don't exist?
+- [ ] What sorting criteria: priority, estimated duration, project balance, energy level?
+
+**Subtasks**:
+- [ ] Design the "Start My Week" AI sort UX flow
+- [ ] Implement AI sorting logic (task analysis + daily distribution)
+- [ ] Build canvas date-group push mechanism
+- [ ] Add review/confirmation step before pushing
+- [ ] Integration with existing Quick Sort infrastructure
+
+---
+
 ### BUG-1311: Storybook Story Import Failures (📋 PLANNED)
 
 **Priority**: P3 | **Status**: 📋 PLANNED
@@ -2889,11 +2925,12 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1302** | **P1** | **👀 Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
 | **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
-| **BUG-1305** | **P2** | **👀 TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
+| ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
 | **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
+| **FEATURE-1314** | **P2** | **📋 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |

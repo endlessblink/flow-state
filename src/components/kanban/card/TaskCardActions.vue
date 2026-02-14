@@ -1,40 +1,53 @@
 <template>
   <div class="compact-actions" role="group" aria-label="Task actions">
-    <button
-      class="action-btn focus-btn"
-      title="Focus Mode (F)"
-      aria-label="Enter focus mode for this task"
-      type="button"
-      tabindex="-1"
-      @click.stop="$emit('focusMode')"
-    >
-      <Eye :size="14" aria-hidden="true" />
-    </button>
-    <button
-      class="action-btn timer-btn"
-      title="Start Pomodoro Timer"
-      aria-label="Start Pomodoro timer for this task"
-      type="button"
-      tabindex="-1"
-      @click.stop="$emit('startTimer')"
-    >
-      <Play :size="14" aria-hidden="true" />
-    </button>
-    <button
-      class="action-btn edit-btn"
-      title="Edit Task"
-      aria-label="Edit this task"
-      type="button"
-      tabindex="-1"
-      @click.stop="$emit('edit')"
-    >
-      <Edit :size="14" aria-hidden="true" />
-    </button>
+    <NTooltip trigger="hover" :delay="400">
+      <template #trigger>
+        <button
+          class="action-btn focus-btn"
+          aria-label="Enter focus mode for this task"
+          type="button"
+          tabindex="-1"
+          @click.stop="$emit('focusMode')"
+        >
+          <Eye :size="14" aria-hidden="true" />
+        </button>
+      </template>
+      Focus Mode
+    </NTooltip>
+    <NTooltip trigger="hover" :delay="400">
+      <template #trigger>
+        <button
+          class="action-btn timer-btn"
+          aria-label="Start Pomodoro timer for this task"
+          type="button"
+          tabindex="-1"
+          @click.stop="$emit('startTimer')"
+        >
+          <Play :size="14" aria-hidden="true" />
+        </button>
+      </template>
+      Start Timer
+    </NTooltip>
+    <NTooltip trigger="hover" :delay="400">
+      <template #trigger>
+        <button
+          class="action-btn edit-btn"
+          aria-label="Edit this task"
+          type="button"
+          tabindex="-1"
+          @click.stop="$emit('edit')"
+        >
+          <Edit :size="14" aria-hidden="true" />
+        </button>
+      </template>
+      Edit Task
+    </NTooltip>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Eye, Play, Edit } from 'lucide-vue-next'
+import { NTooltip } from 'naive-ui'
 
 defineEmits<{
   (e: 'focusMode'): void
@@ -46,6 +59,7 @@ defineEmits<{
 <style scoped>
 .compact-actions {
   display: flex;
+  flex-direction: column;
   gap: var(--space-1);
   flex-shrink: 0;
   /* Hidden by default - parent handles hover visibility */

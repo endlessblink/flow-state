@@ -28,7 +28,7 @@
     @blur="handleBlur"
   >
     <!-- Status icon and title row -->
-    <div class="card-header">
+    <div class="card-header" :dir="isRtl ? 'rtl' : undefined">
       <!-- Priority Dot -->
       <TaskCardStatus
         :priority="task.priority"

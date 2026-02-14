@@ -25,6 +25,7 @@ import {
   Settings,
   ChevronDown,
   ChevronUp,
+  X,
   Zap,
   MessageSquare,
   Calendar,
@@ -446,6 +447,13 @@ const activeConversationTitle = computed(() => {
 // Lifecycle
 // ============================================================================
 
+// Escape to exit full-screen view
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    goBack()
+  }
+}
+
 onMounted(() => {
   initialize()
   // Close the sidebar panel when full-screen view opens
@@ -453,10 +461,15 @@ onMounted(() => {
     store.closePanel()
   }
   refreshProviderHealth()
+  window.addEventListener('keydown', handleGlobalKeydown)
   nextTick(() => {
     inputRef.value?.focus()
     scrollToBottom()
   })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
 })
 </script>
 
@@ -534,8 +547,9 @@ onMounted(() => {
       <!-- Header -->
       <header class="chat-header">
         <div class="chat-header-left">
-          <button class="header-btn back-btn" title="Go back" @click="goBack">
-            <ArrowLeft :size="18" />
+          <button class="back-btn" title="Go back" @click="goBack">
+            <ArrowLeft :size="16" />
+            <span>Back</span>
           </button>
           <div class="header-title-area">
             <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
@@ -576,6 +590,15 @@ onMounted(() => {
             @click="clearMessages"
           >
             <Trash2 :size="16" />
+          </button>
+
+          <!-- Close / Exit full-screen -->
+          <button
+            class="header-btn close-btn"
+            title="Close (Esc)"
+            @click="goBack"
+          >
+            <X :size="18" />
           </button>
         </div>
       </header>
@@ -784,13 +807,16 @@ onMounted(() => {
 
 .ai-chat-view {
   display: flex;
-  position: fixed;
-  inset: 0;
-  z-index: 100;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: rgba(28, 25, 45, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   color: var(--text-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 /* ============================================================================
@@ -1014,7 +1040,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
@@ -1022,7 +1048,7 @@ onMounted(() => {
 .chat-header-left {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -1114,8 +1140,31 @@ onMounted(() => {
   color: var(--accent-primary, #8b5cf6);
 }
 
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: var(--space-1_5) var(--space-3);
+  border: 1px solid var(--border-medium);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  flex-shrink: 0;
+}
+
 .back-btn:hover {
-  background: var(--glass-bg-light);
+  background: var(--surface-hover);
+  border-color: var(--accent-primary, #8b5cf6);
+  color: var(--accent-primary, #8b5cf6);
+}
+
+.close-btn:hover {
+  background: var(--danger-bg-subtle);
+  color: var(--color-danger);
 }
 
 .undo-btn {
@@ -1491,7 +1540,7 @@ onMounted(() => {
 
 .chat-input-area {
   border-top: 1px solid var(--border-subtle);
-  background: var(--surface-tertiary);
+  background: transparent;
   flex-shrink: 0;
   max-width: 900px;
   width: 100%;

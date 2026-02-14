@@ -3,16 +3,37 @@
     <!-- Schedule -->
     <div class="metadata-box">
       <span class="metadata-label">SCHEDULE</span>
-      <div class="metadata-field" title="Due date - When this task must be completed by">
-        <Calendar :size="14" />
-        <span class="field-label">Due</span>
-        <input
-          :value="formattedDueDate"
-          type="date"
-          class="inline-input"
-          @input="updateDate('dueDate', $event)"
-        >
-      </div>
+      <NPopover
+        trigger="click"
+        placement="bottom"
+        raw
+        :show="showDueDatePicker"
+        @update:show="showDueDatePicker = $event"
+      >
+        <template #trigger>
+          <div class="metadata-field metadata-field--clickable" title="Due date - When this task must be completed by">
+            <Calendar :size="14" />
+            <span class="field-label">Due</span>
+            <span class="date-display">{{ formattedDueDate || 'Not set' }}</span>
+          </div>
+        </template>
+        <div class="date-picker-popover" @click.stop>
+          <NDatePicker
+            panel
+            type="date"
+            :value="dueDateTimestamp"
+            :actions="null"
+            @update:value="handleDueDateSelect"
+          />
+          <button
+            v-if="modelValue.dueDate"
+            class="date-clear-btn"
+            @click="clearDueDate"
+          >
+            Clear date
+          </button>
+        </div>
+      </NPopover>
 
       <div class="metadata-field">
         <TimerReset :size="14" />
@@ -79,11 +100,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref } from 'vue'
 import {
   Calendar, TimerReset, Flag, Zap, Circle,
   PlayCircle, CheckCircle, Archive, AlertCircle, Layers
 } from 'lucide-vue-next'
+import { NPopover, NDatePicker } from 'naive-ui'
 import { type Task } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SectionSelector from '@/components/canvas/SectionSelector.vue'
@@ -95,18 +117,23 @@ const props = defineProps<{
   statusOptions: { label: string; value: string }[]
 }>()
 
-// BUG-1097 FIX: Convert ISO timestamp to YYYY-MM-DD format for HTML date input
-const formatDateForInput = (dateValue: string | undefined | null): string => {
-  if (!dateValue) return ''
-  // If already in YYYY-MM-DD format, return as-is
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue
-  // If ISO timestamp (2026-01-30T00:00:00+00:00), extract date part
-  if (dateValue.includes('T')) return dateValue.split('T')[0]
-  return dateValue
-}
+const showDueDatePicker = ref(false)
 
-// Computed properties for properly formatted dates
-const formattedDueDate = computed(() => formatDateForInput(props.modelValue.dueDate))
+// Format date for display (human-readable)
+const formattedDueDate = computed(() => {
+  const dateValue = props.modelValue.dueDate
+  if (!dateValue) return ''
+  const d = new Date(dateValue)
+  if (isNaN(d.getTime())) return dateValue
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+})
+
+// Timestamp for NDatePicker (milliseconds)
+const dueDateTimestamp = computed(() => {
+  if (!props.modelValue.dueDate) return null
+  const d = new Date(props.modelValue.dueDate)
+  return isNaN(d.getTime()) ? null : d.getTime()
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: Task): void
@@ -116,11 +143,22 @@ const emit = defineEmits<{
 
 // --- Update Helpers ---
 
-const updateDate = (field: 'dueDate' | 'scheduledDate', event: Event) => {
-  const target = event.target as HTMLInputElement
-  const newTask = { ...props.modelValue, [field]: target.value }
+const handleDueDateSelect = (timestamp: number | null) => {
+  if (timestamp) {
+    const date = new Date(timestamp)
+    date.setHours(0, 0, 0, 0)
+    const newTask = { ...props.modelValue, dueDate: date.toISOString() }
+    emit('update:modelValue', newTask)
+  } else {
+    clearDueDate()
+  }
+  showDueDatePicker.value = false
+}
+
+const clearDueDate = () => {
+  const newTask = { ...props.modelValue, dueDate: '' }
   emit('update:modelValue', newTask)
-  if (field === 'scheduledDate') emit('schedule-change')
+  showDueDatePicker.value = false
 }
 
 const updatePriority = (value: string | number) => {
@@ -255,7 +293,42 @@ const statusIconClass = computed(() => {
   text-decoration: underline;
 }
 
-.priority-low { color: var(--color-priority-low); } 
+.metadata-field--clickable {
+  cursor: pointer;
+}
+
+.date-display {
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+}
+
+.date-picker-popover {
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.date-clear-btn {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.date-clear-btn:hover {
+  background: var(--glass-bg-soft);
+  color: var(--danger);
+}
+
+.priority-low { color: var(--color-priority-low); }
 .priority-medium { color: var(--color-priority-medium); }
 .priority-high { color: var(--color-priority-high); }
 
@@ -263,10 +336,4 @@ const statusIconClass = computed(() => {
 .status-progress { color: var(--color-active); }
 .status-done { color: var(--color-success); }
 .status-backlog { color: var(--text-tertiary); }
-
-/* Remove calendar icon from date inputs */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  display: none;
-  -webkit-appearance: none;
-}
 </style>

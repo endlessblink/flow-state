@@ -2892,6 +2892,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1305** | **P2** | **👀 TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
 | **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
+| ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
+| ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |

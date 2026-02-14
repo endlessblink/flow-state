@@ -69,7 +69,7 @@ try {
 const PRIORITY_OPTIONS = [
   { value: 'high', label: 'H', color: '#ef4444' },
   { value: 'medium', label: 'M', color: '#f97316' },
-  { value: 'low', label: 'L', color: '#22c55e' },
+  { value: 'low', label: 'L', color: '#3b82f6' },
   { value: null, label: '—', color: 'rgba(255,255,255,0.3)' },
 ] as const
 

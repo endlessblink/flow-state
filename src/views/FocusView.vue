@@ -24,9 +24,9 @@
         >
           <div
             class="focus-subtask-check"
-            :class="{ 'focus-subtask-check--done': subtask.status === 'done' }"
+            :class="{ 'focus-subtask-check--done': subtask.isCompleted }"
           />
-          <span :class="{ 'focus-subtask-text--done': subtask.status === 'done' }">
+          <span :class="{ 'focus-subtask-text--done': subtask.isCompleted }">
             {{ subtask.title }}
           </span>
         </div>
@@ -59,8 +59,15 @@
         <button class="focus-btn focus-btn--complete" @click="handleComplete">
           Complete <kbd>C</kbd>
         </button>
-        <button class="focus-btn focus-btn--skip" @click="handleSkip">
-          Skip <kbd>Esc</kbd>
+        <button
+          v-if="timerStore.isTimerActive && !timerStore.isPaused"
+          class="focus-btn focus-btn--pause-leave"
+          @click="handlePauseAndLeave"
+        >
+          Pause & Leave <kbd>P</kbd>
+        </button>
+        <button class="focus-btn focus-btn--skip" @click="handleStop">
+          Stop <kbd>Esc</kbd>
         </button>
       </div>
     </template>
@@ -69,7 +76,7 @@
     <template v-else>
       <div class="focus-empty">
         <p class="focus-empty-text">Task not found</p>
-        <button class="focus-btn focus-btn--skip" @click="handleSkip">
+        <button class="focus-btn focus-btn--skip" @click="handleStop">
           Go Back <kbd>Esc</kbd>
         </button>
       </div>
@@ -104,11 +111,10 @@ const subtasks = computed(() => {
   return currentTask.value.subtasks
 })
 
-const toggleSubtask = (subtask: { id: string; status: string }) => {
+const toggleSubtask = (subtask: { id: string; isCompleted: boolean }) => {
   if (!currentTask.value) return
-  const newStatus = subtask.status === 'done' ? 'planned' : 'done'
   const updatedSubtasks = currentTask.value.subtasks?.map(s =>
-    s.id === subtask.id ? { ...s, status: newStatus } : s
+    s.id === subtask.id ? { ...s, isCompleted: !subtask.isCompleted } : s
   )
   tasksStore.updateTaskWithUndo(currentTask.value.id, { subtasks: updatedSubtasks })
 }
@@ -127,17 +133,26 @@ const handleComplete = () => {
   router.back()
 }
 
-const handleSkip = () => {
+const handlePauseAndLeave = () => {
+  timerStore.pauseTimer()
+  router.back()
+}
+
+const handleStop = () => {
   timerStore.stopTimer()
   router.back()
 }
 
 const handleKeydown = (e: KeyboardEvent) => {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
   if (e.key === 'Escape') {
-    handleSkip()
+    handleStop()
   } else if (e.key === 'c' || e.key === 'C') {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
     handleComplete()
+  } else if (e.key === 'p' || e.key === 'P') {
+    if (timerStore.isTimerActive && !timerStore.isPaused) {
+      handlePauseAndLeave()
+    }
   } else if (e.key === ' ') {
     e.preventDefault()
     if (!timerStore.isTimerActive) {
@@ -316,6 +331,16 @@ onUnmounted(() => {
   background: rgba(78, 205, 196, 0.1);
   border-color: var(--brand-primary-hover);
   color: var(--brand-primary-hover);
+}
+
+.focus-btn--pause-leave {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.focus-btn--pause-leave:hover {
+  background: rgba(234, 179, 8, 0.1);
+  border-color: var(--color-warning);
 }
 
 .focus-btn--skip {

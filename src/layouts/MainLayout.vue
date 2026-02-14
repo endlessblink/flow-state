@@ -115,7 +115,7 @@ defineExpose({
   top: 50%;
   inset-inline-start: 0;
   transform: translateY(-50%);
-  z-index: 1000;
+  z-index: var(--z-sticky);
   width: 36px;
   height: 48px;
   background: var(--state-active-bg);

@@ -327,7 +327,7 @@ onMounted(() => {
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  width: 100vw;
+  width: 100%;
   background: var(--app-background-gradient);
   overflow: hidden;
 }
@@ -355,6 +355,7 @@ onMounted(() => {
 .mobile-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: var(--space-20);
   position: relative;
   -webkit-overflow-scrolling: touch;

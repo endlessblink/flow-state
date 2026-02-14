@@ -449,14 +449,9 @@
   --spring-bouncy: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
   /* ===== Z-INDEX LAYERS ===== */
-  --z-base: 0;
-  --z-dropdown: 100;
-  --z-sticky: 200;
-  --z-overlay: 300;
-  --z-modal: 400;
-  --z-popover: 500;
-  --z-toast: 600;
-  --z-tooltip: 700;
+  /* Canonical scale defined later in this :root block (1000-series).
+     Single definition to avoid token shadowing confusion.
+     See "Z-INDEX SCALE" section below. */
 
   /* ===== TIER 3: FUNCTIONAL COLORS (Context-specific) ===== */
 
@@ -972,6 +967,7 @@
   --z-overlay: 1200;
   --z-modal: 1300;
   --z-popover: 1400;
+  --z-toast: 1450;
   --z-tooltip: 1500;
 }
 

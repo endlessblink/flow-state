@@ -898,12 +898,14 @@ onUnmounted(() => {
   width: 380px;
   max-width: 100vw;
   height: 100vh;
-  background: var(--overlay-component-bg);
-  border-inline-start: 1px solid var(--border-subtle);
+  background: rgba(28, 25, 45, 0.55);
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border-inline-start: 1px solid var(--overlay-component-border-color);
   display: flex;
   flex-direction: column;
-  z-index: var(--z-tooltip);
-  box-shadow: var(--shadow-xl);
+  z-index: var(--z-overlay);
+  box-shadow: var(--overlay-component-shadow);
   transition: width var(--duration-normal) ease;
 }
 
@@ -914,7 +916,7 @@ onUnmounted(() => {
   height: 100vh;
   border-radius: 0;
   border-inline-start: none;
-  z-index: var(--z-tooltip);
+  z-index: var(--z-overlay);
   box-shadow: none;
 }
 
@@ -933,14 +935,9 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: var(--overlay-component-bg-lighter);
-  z-index: var(--z-tooltip);
-  display: none;
-}
-
-@media (max-width: 640px) {
-  .ai-chat-backdrop {
-    display: block;
-  }
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: calc(var(--z-overlay) - 1);
 }
 
 /* ============================================================================

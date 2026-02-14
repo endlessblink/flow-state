@@ -256,7 +256,14 @@ function openQuickEdit(task: any, event: MouseEvent) {
     dueDate: task.dueDate || null,
     estimatedDuration: task.estimatedDuration || null,
   }
-  quickEditPos.value = { x: event.clientX, y: event.clientY }
+  // Position to the left of the AI chat panel so the popover doesn't overlap
+  const panel = document.querySelector('.ai-chat-panel')
+  if (panel) {
+    const panelRect = panel.getBoundingClientRect()
+    quickEditPos.value = { x: panelRect.left, y: event.clientY }
+  } else {
+    quickEditPos.value = { x: event.clientX, y: event.clientY }
+  }
 }
 
 function closeQuickEdit() {
@@ -951,6 +958,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
       :task="quickEditTask"
       :x="quickEditPos.x"
       :y="quickEditPos.y"
+      position="left"
       @close="closeQuickEdit"
       @open-full-editor="openFullEditor"
     />

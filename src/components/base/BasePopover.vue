@@ -194,10 +194,10 @@ onUnmounted(() => {
 .base-popover {
   position: fixed;
 
-  /* Standardized overlay styling */
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  /* Glassmorphism overlay styling */
+  background: rgba(28, 25, 45, 0.65);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--overlay-component-shadow);

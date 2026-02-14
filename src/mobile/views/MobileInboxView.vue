@@ -1,19 +1,21 @@
 <template>
   <div class="mobile-inbox">
-    <!-- Debug Banner (tap to toggle) -->
-    <div v-if="showDebug" class="debug-banner" @click="showDebug = false">
-      <div><strong>Sync Debug</strong> (tap to hide)</div>
-      <div>Auth: {{ authStatus }}</div>
-      <div>User: {{ userId || 'none' }}</div>
-      <div>Tasks loaded: {{ taskStore.tasks.length }}</div>
-      <div>Filtered: {{ filteredTasks.length }}</div>
-      <div v-if="syncError" class="error">
-        Error: {{ syncError }}
+    <!-- Debug Banner (tap to toggle) — dev user only -->
+    <template v-if="isDevUser">
+      <div v-if="showDebug" class="debug-banner" @click="showDebug = false">
+        <div><strong>Sync Debug</strong> (tap to hide)</div>
+        <div>Auth: {{ authStatus }}</div>
+        <div>User: {{ userId || 'none' }}</div>
+        <div>Tasks loaded: {{ taskStore.tasks.length }}</div>
+        <div>Filtered: {{ filteredTasks.length }}</div>
+        <div v-if="syncError" class="error">
+          Error: {{ syncError }}
+        </div>
       </div>
-    </div>
-    <button v-else class="debug-toggle" @click="showDebug = true">
-      ?
-    </button>
+      <button v-else class="debug-toggle" @click="showDebug = true">
+        ?
+      </button>
+    </template>
 
     <!-- Header -->
     <div class="mobile-inbox-header">
@@ -334,6 +336,7 @@ const {
 const newTaskTitle = ref('')
 const taskInput = ref<HTMLInputElement | null>(null)
 const showDebug = ref(false)
+const isDevUser = computed(() => authStore.user?.email === 'endlessblink@gmail.com')
 const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
 
 // TASK-1104: Enhanced filtering state (view-specific)
@@ -1428,6 +1431,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   bottom: 64px; /* Above nav */
   left: 0;
   right: 0;
+  max-width: 100vw;
   padding: var(--space-3) var(--space-4);
   padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   background: var(--surface-primary);
@@ -1435,6 +1439,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
   z-index: 50;
   box-shadow: var(--shadow-md);
   transition: all var(--duration-slow) var(--spring-smooth);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .quick-add-bar.expanded {
@@ -1447,6 +1453,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .quick-add-row {
   display: flex;
   gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
 }
 
 .quick-add-input {

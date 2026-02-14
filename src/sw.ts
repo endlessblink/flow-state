@@ -50,20 +50,29 @@ registerRoute(
 // RUNTIME CACHING STRATEGIES
 // ============================================================================
 
-// TASK-1083: CRITICAL - Never cache Supabase API responses
-// This prevents stale position data from being served across devices
-// Research: Browser HTTP caching can serve old data even with SWR invalidation
+// BUG-352: Use NetworkFirst with short timeout instead of NetworkOnly.
+// On flaky mobile networks, NetworkOnly hangs until the browser's default timeout (~60s).
+// NetworkFirst with networkTimeoutSeconds fails fast and falls back to a minimal cache.
 registerRoute(
   new Route(
     ({ url }) => {
-      // Match Supabase API endpoints — never cache these
+      // Match Supabase API endpoints
       // Uses path-based detection so self-hosted instances work on any hostname
       const isRestAPI = url.pathname.includes('/rest/v1/')
       const isRealtime = url.pathname.includes('/realtime/')
       const isAuth = url.pathname.includes('/auth/v1/')
       return isRestAPI || isRealtime || isAuth
     },
-    new NetworkOnly() // Never cache - always fetch from network
+    new NetworkFirst({
+      cacheName: 'supabase-api-fallback',
+      networkTimeoutSeconds: 8,
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 1,
+          maxAgeSeconds: 10  // 10s — essentially no caching, just timeout fallback
+        })
+      ]
+    })
   )
 )
 

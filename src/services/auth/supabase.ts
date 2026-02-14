@@ -127,12 +127,20 @@ try {
         // TASK-1083: Prevent browser HTTP caching of Supabase responses
         // Note: Cannot add Cache-Control/Pragma headers - Supabase CORS doesn't allow them
         // Using cache: 'no-store' fetch option only (this is a Request option, not a header)
+        // BUG-352: Add 10s fetch timeout for mobile PWA resilience + cache bypass
         global: {
             fetch: (url: RequestInfo | URL, options: RequestInit = {}) => {
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 10_000) // 10s timeout
+                // Merge signals: if caller already has a signal, respect it too
+                const signal = options.signal
+                    ? AbortSignal.any([options.signal, controller.signal])
+                    : controller.signal
                 return fetch(url, {
                     ...options,
+                    signal,
                     cache: 'no-store', // Bypass browser HTTP cache entirely
-                })
+                }).finally(() => clearTimeout(timeoutId))
             },
         },
     }) : null

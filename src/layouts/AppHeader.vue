@@ -171,6 +171,9 @@
           Quick Sort
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
+        <router-link to="/ai-chat" class="view-tab" active-class="active">
+          AI Chat
+        </router-link>
       </div>
     </div>
   </header>
@@ -211,6 +214,7 @@ const routeNameToTitle = {
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
   'design-system': 'Design System',
+  'ai-chat': 'AI Chat',
 }
 
 // Define proper types for page title info
@@ -298,6 +302,9 @@ const pageTitleInfo = computed<PageTitleInfo>(() => {
         break
       case 'quick-sort':
         filterContext = 'Triage'
+        break
+      case 'ai-chat':
+        filterContext = 'Assistant'
         break
       default:
         filterContext = ''

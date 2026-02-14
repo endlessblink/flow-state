@@ -100,6 +100,7 @@
         :working-hours="workingHours"
         :week-events="weekEvents"
         :current-task-id="timerStore.currentTaskId"
+        :is-dragging="isDragging"
         @week-drag-over="handleWeekDragOver"
         @week-drop="handleWeekDrop"
         @event-drag-start="handleEventDragStart"

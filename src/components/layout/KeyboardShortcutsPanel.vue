@@ -29,292 +29,64 @@
           </button>
         </div>
 
+        <!-- Search -->
+        <div class="shortcuts-search">
+          <Search :size="16" class="search-icon" />
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            type="text"
+            class="search-input"
+            placeholder="Search shortcuts..."
+            aria-label="Filter keyboard shortcuts"
+            @keydown.escape.stop="handleSearchEscape"
+          />
+          <button
+            v-if="searchQuery"
+            class="search-clear"
+            aria-label="Clear search"
+            @click="searchQuery = ''"
+          >
+            <X :size="14" />
+          </button>
+        </div>
+
         <!-- Scrollable Content -->
         <div class="shortcuts-content">
-          <!-- Global Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Sparkles :size="18" class="category-icon" />
-              <h3 class="category-title">Global</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>Z</kbd>
-                </div>
-                <span class="shortcut-description">Undo</span>
+          <template v-if="filteredCategories.length > 0">
+            <div
+              v-for="category in filteredCategories"
+              :key="category.title"
+              class="shortcut-category"
+            >
+              <div class="category-header">
+                <component :is="category.icon" :size="18" class="category-icon" />
+                <h3 class="category-title">{{ category.title }}</h3>
+                <span v-if="searchQuery" class="category-count">{{ category.shortcuts.length }}</span>
               </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd>
+              <div class="shortcut-list">
+                <div
+                  v-for="shortcut in category.shortcuts"
+                  :key="shortcut.description"
+                  class="shortcut-item"
+                >
+                  <div class="shortcut-keys">
+                    <template v-for="(part, i) in shortcut.keys" :key="i">
+                      <span v-if="part === '/'" class="key-separator">/</span>
+                      <kbd v-else>{{ part }}</kbd>
+                    </template>
+                  </div>
+                  <span class="shortcut-description">{{ shortcut.description }}</span>
                 </div>
-                <span class="shortcut-description">Redo</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>N</kbd>
-                </div>
-                <span class="shortcut-description">New task</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>K</kbd>
-                </div>
-                <span class="shortcut-description">Command palette</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>P</kbd>
-                </div>
-                <span class="shortcut-description">Search</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>E</kbd>
-                </div>
-                <span class="shortcut-description">Edit selected task</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Alt</kbd><kbd>N</kbd>
-                </div>
-                <span class="shortcut-description">Quick task create</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>Del</kbd>
-                </div>
-                <span class="shortcut-description">Delete selected</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>?</kbd>
-                </div>
-                <span class="shortcut-description">Show this panel</span>
               </div>
             </div>
-          </div>
+          </template>
 
-          <!-- Navigation Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Compass :size="18" class="category-icon" />
-              <h3 class="category-title">Navigation</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>1</kbd>
-                </div>
-                <span class="shortcut-description">Board view</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>2</kbd>
-                </div>
-                <span class="shortcut-description">Calendar view</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>3</kbd>
-                </div>
-                <span class="shortcut-description">Canvas view</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>4</kbd>
-                </div>
-                <span class="shortcut-description">Catalog view</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>5</kbd>
-                </div>
-                <span class="shortcut-description">Quick Sort view</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Canvas Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Grid3x3 :size="18" class="category-icon" />
-              <h3 class="category-title">Canvas</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Del</kbd> / <kbd>Backspace</kbd>
-                </div>
-                <span class="shortcut-description">Delete selected nodes</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>Del</kbd>
-                </div>
-                <span class="shortcut-description">Permanent delete</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>G</kbd>
-                </div>
-                <span class="shortcut-description">Create new group</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Hold Shift</kbd>
-                </div>
-                <span class="shortcut-description">Box selection mode</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Hold Ctrl</kbd>
-                </div>
-                <span class="shortcut-description">Multi-select mode</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Focus Mode Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Target :size="18" class="category-icon" />
-              <h3 class="category-title">Focus Mode</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Space</kbd>
-                </div>
-                <span class="shortcut-description">Start/Pause timer</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>C</kbd>
-                </div>
-                <span class="shortcut-description">Complete task</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>P</kbd>
-                </div>
-                <span class="shortcut-description">Pause & leave</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Esc</kbd>
-                </div>
-                <span class="shortcut-description">Stop & go back</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Sort Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Layers :size="18" class="category-icon" />
-              <h3 class="category-title">Quick Sort</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>D</kbd>
-                </div>
-                <span class="shortcut-description">Mark done & advance</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>S</kbd>
-                </div>
-                <span class="shortcut-description">Save & advance</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Space</kbd>
-                </div>
-                <span class="shortcut-description">Skip task</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>E</kbd>
-                </div>
-                <span class="shortcut-description">Edit task</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Del</kbd>
-                </div>
-                <span class="shortcut-description">Delete task</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Ctrl</kbd><kbd>Z</kbd>
-                </div>
-                <span class="shortcut-description">Undo last action</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Esc</kbd>
-                </div>
-                <span class="shortcut-description">Exit session</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Command Palette Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Terminal :size="18" class="category-icon" />
-              <h3 class="category-title">Command Palette</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Enter</kbd>
-                </div>
-                <span class="shortcut-description">Create task & close</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Shift</kbd><kbd>Enter</kbd>
-                </div>
-                <span class="shortcut-description">Create & continue</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Esc</kbd>
-                </div>
-                <span class="shortcut-description">Close</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Search Shortcuts -->
-          <div class="shortcut-category">
-            <div class="category-header">
-              <Search :size="18" class="category-icon" />
-              <h3 class="category-title">Search</h3>
-            </div>
-            <div class="shortcut-list">
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>↑</kbd> / <kbd>↓</kbd>
-                </div>
-                <span class="shortcut-description">Navigate results</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Enter</kbd>
-                </div>
-                <span class="shortcut-description">Open selected</span>
-              </div>
-              <div class="shortcut-item">
-                <div class="shortcut-keys">
-                  <kbd>Esc</kbd>
-                </div>
-                <span class="shortcut-description">Close</span>
-              </div>
-            </div>
+          <!-- No Results -->
+          <div v-else class="no-results">
+            <SearchX :size="40" class="no-results-icon" />
+            <p class="no-results-text">No shortcuts match "{{ searchQuery }}"</p>
+            <button class="no-results-clear" @click="searchQuery = ''">Clear search</button>
           </div>
         </div>
 
@@ -328,10 +100,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { X, Keyboard, Sparkles, Compass, Grid3x3, Target, Layers, Terminal, Search } from 'lucide-vue-next'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, type Component } from 'vue'
+import { X, Keyboard, Sparkles, Compass, Grid3x3, Target, Layers, Terminal, Search, SearchX } from 'lucide-vue-next'
 
-defineProps<{
+interface Shortcut {
+  keys: string[]  // Array of key labels. Use '/' as separator between alternatives
+  description: string
+  searchTerms?: string  // Extra terms for search matching
+}
+
+interface ShortcutCategory {
+  title: string
+  icon: Component
+  shortcuts: Shortcut[]
+}
+
+const props = defineProps<{
   isOpen: boolean
 }>()
 
@@ -339,12 +123,137 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+// All shortcut data
+const categories: ShortcutCategory[] = [
+  {
+    title: 'Global',
+    icon: Sparkles,
+    shortcuts: [
+      { keys: ['Ctrl', 'Z'], description: 'Undo', searchTerms: 'revert back' },
+      { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo', searchTerms: 'forward repeat' },
+      { keys: ['Ctrl', 'N'], description: 'New task', searchTerms: 'create add' },
+      { keys: ['Ctrl', 'K'], description: 'Command palette', searchTerms: 'quick action menu' },
+      { keys: ['Ctrl', 'P'], description: 'Search', searchTerms: 'find lookup' },
+      { keys: ['Ctrl', 'E'], description: 'Edit selected task', searchTerms: 'modify change' },
+      { keys: ['Alt', 'N'], description: 'Quick task create', searchTerms: 'add new fast' },
+      { keys: ['Shift', 'Del'], description: 'Delete selected', searchTerms: 'remove trash' },
+      { keys: ['?'], description: 'Show this panel', searchTerms: 'help shortcuts keyboard' },
+    ]
+  },
+  {
+    title: 'Navigation',
+    icon: Compass,
+    shortcuts: [
+      { keys: ['Shift', '1'], description: 'Board view', searchTerms: 'kanban columns' },
+      { keys: ['Shift', '2'], description: 'Calendar view', searchTerms: 'schedule dates' },
+      { keys: ['Shift', '3'], description: 'Canvas view', searchTerms: 'whiteboard spatial' },
+      { keys: ['Shift', '4'], description: 'Catalog view', searchTerms: 'list all' },
+      { keys: ['Shift', '5'], description: 'Quick Sort view', searchTerms: 'triage categorize' },
+    ]
+  },
+  {
+    title: 'Canvas',
+    icon: Grid3x3,
+    shortcuts: [
+      { keys: ['Del', '/', 'Backspace'], description: 'Delete selected nodes', searchTerms: 'remove' },
+      { keys: ['Shift', 'Del'], description: 'Permanent delete', searchTerms: 'hard remove forever' },
+      { keys: ['Shift', 'G'], description: 'Create new group', searchTerms: 'section container' },
+      { keys: ['Hold Shift'], description: 'Box selection mode', searchTerms: 'drag select area' },
+      { keys: ['Hold Ctrl'], description: 'Multi-select mode', searchTerms: 'multiple pick' },
+    ]
+  },
+  {
+    title: 'Focus Mode',
+    icon: Target,
+    shortcuts: [
+      { keys: ['Space'], description: 'Start/Pause timer', searchTerms: 'pomodoro play stop' },
+      { keys: ['C'], description: 'Complete task', searchTerms: 'done finish' },
+      { keys: ['P'], description: 'Pause & leave', searchTerms: 'exit stop' },
+      { keys: ['Esc'], description: 'Stop & go back', searchTerms: 'cancel return escape' },
+    ]
+  },
+  {
+    title: 'Quick Sort',
+    icon: Layers,
+    shortcuts: [
+      { keys: ['D'], description: 'Mark done & advance', searchTerms: 'complete next' },
+      { keys: ['S'], description: 'Save & advance', searchTerms: 'keep next' },
+      { keys: ['Space'], description: 'Skip task', searchTerms: 'pass next' },
+      { keys: ['E'], description: 'Edit task', searchTerms: 'modify change' },
+      { keys: ['Del'], description: 'Delete task', searchTerms: 'remove trash' },
+      { keys: ['Ctrl', 'Z'], description: 'Undo last action', searchTerms: 'revert back' },
+      { keys: ['Esc'], description: 'Exit session', searchTerms: 'close leave quit' },
+    ]
+  },
+  {
+    title: 'Command Palette',
+    icon: Terminal,
+    shortcuts: [
+      { keys: ['Enter'], description: 'Create task & close', searchTerms: 'submit confirm' },
+      { keys: ['Shift', 'Enter'], description: 'Create & continue', searchTerms: 'submit add more' },
+      { keys: ['Esc'], description: 'Close', searchTerms: 'cancel exit' },
+    ]
+  },
+  {
+    title: 'Search',
+    icon: Search,
+    shortcuts: [
+      { keys: ['↑', '/', '↓'], description: 'Navigate results', searchTerms: 'arrow up down move' },
+      { keys: ['Enter'], description: 'Open selected', searchTerms: 'confirm go' },
+      { keys: ['Esc'], description: 'Close', searchTerms: 'cancel exit' },
+    ]
+  },
+]
+
+// Filter categories and shortcuts based on search
+const filteredCategories = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+  if (!query) return categories
+
+  return categories
+    .map(category => {
+      const matchingShortcuts = category.shortcuts.filter(shortcut => {
+        const descMatch = shortcut.description.toLowerCase().includes(query)
+        const keyMatch = shortcut.keys.some(k => k.toLowerCase().includes(query))
+        const termMatch = shortcut.searchTerms?.toLowerCase().includes(query) ?? false
+        const categoryMatch = category.title.toLowerCase().includes(query)
+        return descMatch || keyMatch || termMatch || categoryMatch
+      })
+
+      return matchingShortcuts.length > 0
+        ? { ...category, shortcuts: matchingShortcuts }
+        : null
+    })
+    .filter((c): c is ShortcutCategory => c !== null)
+})
+
+// Auto-focus search when panel opens
+watch(() => props.isOpen, (open) => {
+  if (open) {
+    searchQuery.value = ''
+    nextTick(() => {
+      searchInputRef.value?.focus()
+    })
+  }
+})
+
 const handleBackdropClick = () => {
   emit('close')
 }
 
+const handleSearchEscape = () => {
+  if (searchQuery.value) {
+    searchQuery.value = ''
+  } else {
+    emit('close')
+  }
+}
+
 const handleEscape = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && !searchQuery.value) {
     emit('close')
   }
 }
@@ -395,8 +304,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-6) var(--space-6) var(--space-4);
 }
 
 .shortcuts-title-row {
@@ -437,11 +345,70 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
+/* Search */
+.shortcuts-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 var(--space-6) var(--space-4);
+}
+
+.search-icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: var(--space-2_5) var(--space-10);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  transition: all var(--duration-fast);
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-medium);
+  box-shadow: 0 0 0 2px var(--brand-primary-alpha-20);
+}
+
+.search-clear {
+  position: absolute;
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.search-clear:hover {
+  background: var(--glass-bg-medium);
+  color: var(--text-secondary);
+}
+
 /* Content */
 .shortcuts-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-6);
+  padding: var(--space-2) var(--space-6) var(--space-6);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--space-6);
@@ -471,6 +438,15 @@ onUnmounted(() => {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
+}
+
+.category-count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
 }
 
 /* Shortcut List */
@@ -504,6 +480,12 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.key-separator {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  padding: 0 2px;
+}
+
 .shortcut-description {
   font-size: var(--text-sm);
   color: var(--text-secondary);
@@ -529,6 +511,45 @@ kbd {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* No Results */
+.no-results {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+.no-results-icon {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.no-results-text {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+
+.no-results-clear {
+  padding: var(--space-2) var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--brand-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.no-results-clear:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary-alpha-40);
 }
 
 /* Footer */

@@ -58,10 +58,13 @@
       raw
     >
       <template #trigger>
-        <button class="time-filter-dropdown" :class="{ active: selectedCanvasGroups.size > 0 }">
+        <button
+          class="icon-filter-btn"
+          :class="{ active: selectedCanvasGroups.size > 0 }"
+          :title="groupFilterLabel"
+        >
           <Layers :size="14" />
-          <span>{{ groupFilterLabel }}</span>
-          <ChevronDown :size="12" />
+          <span v-if="selectedCanvasGroups.size > 0" class="filter-active-dot" />
         </button>
       </template>
       <div class="group-filter-chips">
@@ -134,6 +137,7 @@
     <Transition name="slide-down">
       <InboxFilters
         v-if="showAdvancedFilters"
+        :context="context"
         :unscheduled-only="unscheduledOnly"
         :selected-priorities="selectedPriorities"
         :selected-projects="selectedProjects"
@@ -404,6 +408,45 @@ const handleTimeFilterSelect = (key: string) => {
   color: var(--brand-primary);
   border-color: var(--brand-primary-dim);
   font-weight: var(--font-medium);
+}
+
+/* Icon-only filter button (Groups) */
+.icon-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.icon-filter-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.icon-filter-btn.active {
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary-dim);
+}
+
+.filter-active-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
 }
 
 /* TASK-1246: Filter Chips (now inside popover) */

@@ -113,3 +113,4 @@ audit-reports/
 /full-dead-code.json
 /health-results.json
 /pwa-report.json
+.dev-server.pid

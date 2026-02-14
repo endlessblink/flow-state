@@ -90,6 +90,12 @@
       @cancel="showSectionSelectionModal = false"
       @confirm="confirmMoveToSection"
     />
+
+    <!-- KEYBOARD SHORTCUTS PANEL (TASK-1319) -->
+    <KeyboardShortcutsPanel
+      :is-open="uiStore.shortcutsPanelOpen"
+      @close="uiStore.closeShortcutsPanel()"
+    />
   </div>
 </template>
 
@@ -115,6 +121,7 @@ import ContextMenu, { type ContextMenuItem } from '@/components/ContextMenu.vue'
 import SearchModal from '@/components/layout/SearchModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import SectionSelectionModal from '@/components/canvas/SectionSelectionModal.vue'
+import KeyboardShortcutsPanel from '@/components/layout/KeyboardShortcutsPanel.vue'
 const CommandPalette = createLazyModal(() => import('@/components/layout/CommandPalette.vue'))
 
 import { useSettingsStore } from '@/stores/settings'
@@ -432,6 +439,7 @@ onMounted(() => {
   window.addEventListener('open-search', () => { showSearchModal.value = true })
   window.addEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
   window.addEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
+  window.addEventListener('open-shortcuts-panel', () => { uiStore.toggleShortcutsPanel() })
 })
 
 onUnmounted(() => {
@@ -442,6 +450,7 @@ onUnmounted(() => {
   window.removeEventListener('open-search', () => { showSearchModal.value = true })
   window.removeEventListener('open-quick-task-create', () => { showQuickTaskCreate.value = true })
   window.removeEventListener('confirm-delete-selected', handleConfirmDeleteSelected)
+  window.removeEventListener('open-shortcuts-panel', () => { uiStore.toggleShortcutsPanel() })
 })
 
 // Expose methods for App.vue or parent triggers

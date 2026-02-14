@@ -2,6 +2,7 @@ import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
 import { calculateOverlappingPositions as _calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
+import { useSettingsStore } from '@/stores/settings'
 
 // Re-export CalendarEvent for consumers that import from this file
 export type { CalendarEvent } from '@/types/tasks'
@@ -39,15 +40,47 @@ export function useCalendarCore() {
   }
 
   // === WEEK CALCULATION UTILITIES ===
-  // Unified week-start calculation (found in 3 different files with variations)
+  // TASK-1321: Settings-aware week start calculation
 
   const getWeekStart = (date: Date): Date => {
+    const settings = useSettingsStore()
+    const weekStartsOn = settings.weekStartsOn ?? 1
     const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    d.setDate(diff)
+    const day = d.getDay() // 0=Sun...6=Sat
+
+    if (weekStartsOn === 1) {
+      // Monday start (original logic)
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+      d.setDate(diff)
+    } else {
+      // Sunday start
+      d.setDate(d.getDate() - day)
+    }
     d.setHours(0, 0, 0, 0)
     return d
+  }
+
+  /**
+   * TASK-1321: Returns short weekday headers in the correct order based on setting.
+   * e.g. ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] or ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+   */
+  const getWeekDayHeaders = (): string[] => {
+    const settings = useSettingsStore()
+    const all = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const startDay = settings.weekStartsOn ?? 1
+    return [...all.slice(startDay), ...all.slice(0, startDay)]
+  }
+
+  /**
+   * TASK-1321: Returns day keys in order based on weekStartsOn setting.
+   * Monday start: ['monday','tuesday',...,'sunday']
+   * Sunday start: ['sunday','monday',...,'saturday']
+   */
+  const getOrderedDayKeys = (): string[] => {
+    const settings = useSettingsStore()
+    const all = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const startDay = settings.weekStartsOn ?? 1
+    return [...all.slice(startDay), ...all.slice(0, startDay)]
   }
 
   // === PRIORITY UTILITIES ===
@@ -222,6 +255,8 @@ export function useCalendarCore() {
 
     // Week calculation utilities
     getWeekStart,
+    getWeekDayHeaders,
+    getOrderedDayKeys,
 
     // Priority utilities
     getPriorityColor,

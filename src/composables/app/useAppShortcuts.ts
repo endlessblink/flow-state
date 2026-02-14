@@ -92,6 +92,12 @@ export function useAppShortcuts() {
                 }
             }
         }
+
+        // ? to toggle keyboard shortcuts panel (TASK-1319)
+        if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            event.preventDefault()
+            window.dispatchEvent(new CustomEvent('open-shortcuts-panel'))
+        }
     }
 
     return {

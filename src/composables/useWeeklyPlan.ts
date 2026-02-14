@@ -1,8 +1,10 @@
 import { ref, computed } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword, DAY_OF_WEEK_KEYWORDS } from '@/composables/usePowerKeywords'
-import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary } from './useWeeklyPlanAI'
+import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers } from './useWeeklyPlanAI'
+import { useWorkProfile } from '@/composables/useWorkProfile'
 
 // ============================================================================
 // Helpers
@@ -11,27 +13,38 @@ import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlan
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 type DayKey = typeof DAY_KEYS[number]
 
-function getWeekStart(): Date {
+// TASK-1321: Parameterized week start to support Sunday or Monday start
+function getWeekStart(weekStartsOn: 0 | 1 = 0): Date {
   const now = new Date()
   const day = now.getDay() // 0=Sun, 1=Mon...6=Sat
-  // If today is Monday, use today. Otherwise advance to next Monday.
-  const diff = day === 0 ? 1 : day === 1 ? 0 : 8 - day
-  const monday = new Date(now)
-  monday.setDate(now.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
+
+  if (weekStartsOn === 1) {
+    // Monday start: go back to this week's Monday
+    const diff = day === 0 ? -6 : 1 - day
+    const start = new Date(now)
+    start.setDate(now.getDate() + diff)
+    start.setHours(0, 0, 0, 0)
+    return start
+  } else {
+    // Sunday start: go back to this week's Sunday
+    const start = new Date(now)
+    start.setDate(now.getDate() - day)
+    start.setHours(0, 0, 0, 0)
+    return start
+  }
 }
 
-function getWeekEnd(): Date {
-  const monday = getWeekStart()
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
-  return sunday
+function getWeekEnd(weekStartsOn: 0 | 1 = 0): Date {
+  const start = getWeekStart(weekStartsOn)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  end.setHours(23, 59, 59, 999)
+  return end
 }
 
+// BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
 function formatDateISO(d: Date): string {
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 // ============================================================================
@@ -39,16 +52,20 @@ function formatDateISO(d: Date): string {
 // ============================================================================
 
 export function useWeeklyPlan() {
+  const settings = useSettingsStore()
+
   const state = ref<WeeklyPlanState>({
     status: 'idle',
     plan: null,
     reasoning: null,
     error: null,
-    weekStart: getWeekStart(),
-    weekEnd: getWeekEnd(),
+    weekStart: getWeekStart(settings.weekStartsOn),
+    weekEnd: getWeekEnd(settings.weekStartsOn),
+    interviewAnswers: null,
   })
 
-  const { generatePlan: aiGeneratePlan } = useWeeklyPlanAI()
+  const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay } = useWeeklyPlanAI()
+  const { loadProfile, recordWeeklyOutcome, profile: workProfile } = useWorkProfile()
 
   // --------------------------------------------------------------------------
   // Eligible tasks
@@ -96,6 +113,9 @@ export function useWeeklyPlan() {
       estimatedDuration: t.estimatedDuration,
       status: t.status,
       projectId: t.projectId || '',
+      description: t.description || '',
+      subtaskCount: t.subtasks?.length || 0,
+      completedSubtaskCount: t.subtasks?.filter(s => s.isCompleted).length || 0,
     }))
   }
 
@@ -116,9 +136,12 @@ export function useWeeklyPlan() {
   // Generate plan via AI
   // --------------------------------------------------------------------------
 
-  async function generatePlan() {
+  async function generatePlan(interview?: InterviewAnswers) {
     state.value.status = 'loading'
     state.value.error = null
+    if (interview) {
+      state.value.interviewAnswers = interview
+    }
 
     try {
       const tasks = getEligibleTasks()
@@ -128,7 +151,11 @@ export function useWeeklyPlan() {
         return
       }
 
-      const result = await aiGeneratePlan(tasks)
+      // FEATURE-1317: Load work profile for AI context (if learning enabled)
+      const settingsStore = useSettingsStore()
+      const profile = settingsStore.aiLearningEnabled ? await loadProfile() : null
+
+      const result = await aiGeneratePlan(tasks, state.value.interviewAnswers || undefined, profile)
       state.value.plan = result.plan
       state.value.reasoning = result.reasoning
       state.value.status = 'review'
@@ -150,6 +177,92 @@ export function useWeeklyPlan() {
       fromArr.splice(idx, 1)
     }
     state.value.plan[toDay].push(taskId)
+  }
+
+  // --------------------------------------------------------------------------
+  // Interview mode
+  // --------------------------------------------------------------------------
+
+  function startInterview() {
+    state.value.status = 'interview'
+    state.value.interviewAnswers = null
+  }
+
+  function skipInterview() {
+    generatePlan()
+  }
+
+  function submitInterview(answers: InterviewAnswers) {
+    generatePlan(answers)
+  }
+
+  // --------------------------------------------------------------------------
+  // Quick actions: remove, snooze, priority cycle
+  // --------------------------------------------------------------------------
+
+  function removeTaskFromPlan(taskId: string) {
+    if (!state.value.plan) return
+    const allKeys = [...DAY_KEYS, 'unscheduled'] as const
+    for (const key of allKeys) {
+      const arr = state.value.plan[key]
+      const idx = arr.indexOf(taskId)
+      if (idx !== -1) {
+        arr.splice(idx, 1)
+        break
+      }
+    }
+    // Move to unscheduled
+    state.value.plan.unscheduled.push(taskId)
+  }
+
+  function snoozeTask(taskId: string) {
+    if (!state.value.plan) return
+    // Remove from all days (including unscheduled)
+    const allKeys = [...DAY_KEYS, 'unscheduled'] as const
+    for (const key of allKeys) {
+      const arr = state.value.plan[key]
+      const idx = arr.indexOf(taskId)
+      if (idx !== -1) {
+        arr.splice(idx, 1)
+        break
+      }
+    }
+    // Task is simply removed from the plan — it stays in the task store
+    // and will appear next week as an eligible task
+  }
+
+  function changePriority(taskId: string) {
+    const taskStore = useTaskStore()
+    const task = taskStore.tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    const cycle: Array<'low' | 'medium' | 'high' | null> = ['low', 'medium', 'high', null]
+    const currentIdx = cycle.indexOf(task.priority)
+    const nextPriority = cycle[(currentIdx + 1) % cycle.length]
+    taskStore.updateTask(taskId, { priority: nextPriority })
+  }
+
+  // --------------------------------------------------------------------------
+  // Re-suggest a single day via AI
+  // --------------------------------------------------------------------------
+
+  async function regenerateDay(dayKey: typeof DAY_KEYS[number]) {
+    if (!state.value.plan) return
+
+    try {
+      const tasks = getEligibleTasks()
+      const profile = workProfile.value
+      const result = await aiRegenerateDay(dayKey, state.value.plan, tasks, profile)
+
+      // Merge result into existing plan
+      state.value.plan[dayKey] = result.dayTasks
+      state.value.plan.unscheduled = result.unscheduled
+      if (result.reasoning) {
+        state.value.reasoning = result.reasoning
+      }
+    } catch (err) {
+      console.warn('[WeeklyPlan] Day re-suggest failed', err)
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -225,6 +338,25 @@ export function useWeeklyPlan() {
         }
       }
 
+      // FEATURE-1317: Record weekly outcome for feedback loop
+      const settingsStoreForFeedback = useSettingsStore()
+      if (settingsStoreForFeedback.aiLearningEnabled) {
+        // Collect all planned task IDs from this plan
+        const allPlannedIds: string[] = []
+        for (const dayKey of DAY_KEYS) {
+          allPlannedIds.push(...plan[dayKey])
+        }
+        if (allPlannedIds.length > 0) {
+          // Get completed task IDs from the task store
+          const completedIds = taskStore.tasks
+            .filter(t => t.status === 'done' && allPlannedIds.includes(t.id))
+            .map(t => t.id)
+          // Fire-and-forget: record outcome
+          recordWeeklyOutcome(allPlannedIds, completedIds)
+            .catch(err => console.warn('[WeeklyPlan] Failed to record weekly outcome:', err))
+        }
+      }
+
       state.value.status = 'applied'
     } catch (err) {
       state.value.status = 'error'
@@ -261,8 +393,9 @@ export function useWeeklyPlan() {
       plan: null,
       reasoning: null,
       error: null,
-      weekStart: getWeekStart(),
-      weekEnd: getWeekEnd(),
+      weekStart: getWeekStart(settings.weekStartsOn),
+      weekEnd: getWeekEnd(settings.weekStartsOn),
+      interviewAnswers: null,
     }
   }
 
@@ -273,6 +406,13 @@ export function useWeeklyPlan() {
     taskMap,
     generatePlan,
     moveTask,
+    removeTaskFromPlan,
+    snoozeTask,
+    changePriority,
+    regenerateDay,
+    startInterview,
+    skipInterview,
+    submitInterview,
     applyPlan,
     reset,
   }

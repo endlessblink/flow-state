@@ -5,6 +5,17 @@ import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/useP
 import type { TimeBlockNotificationSettings } from '@/types/timeBlockNotifications'
 import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotifications'
 
+// TASK-1317: External calendar (iCal) sync config
+export interface ExternalCalendarConfig {
+    id: string
+    name: string
+    url: string
+    color: string
+    enabled: boolean
+    lastSynced?: string
+    error?: string
+}
+
 export interface AppSettings {
     // Timer
     workDuration: number
@@ -18,6 +29,9 @@ export interface AppSettings {
     showDoneColumn: boolean
     powerGroupOverrideMode: 'always' | 'only_empty' | 'ask'
     boardDensity: 'comfortable' | 'compact' | 'ultrathin'
+
+    // TASK-1321: Start of Week
+    weekStartsOn: 0 | 1  // 0 = Sunday, 1 = Monday
 
     // Appearance
     language: string
@@ -39,8 +53,15 @@ export interface AppSettings {
     // FEATURE-1194: Auto-updater
     autoUpdateEnabled: boolean
 
+    // FEATURE-1317: AI Work Profile learning
+    aiLearningEnabled: boolean
+
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
+
+    // TASK-1317: External calendar (iCal) sync
+    externalCalendars: ExternalCalendarConfig[]
+    externalCalendarSyncInterval: number // minutes, 0 = manual only
 
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
@@ -65,6 +86,9 @@ export const useSettingsStore = defineStore('settings', {
         powerGroupOverrideMode: 'only_empty',
         boardDensity: 'comfortable',
 
+        // TASK-1321: Start of Week (default: Monday)
+        weekStartsOn: 0 as 0 | 1,
+
         // Appearance defaults
         language: 'en',
         textDirection: 'auto',
@@ -85,8 +109,15 @@ export const useSettingsStore = defineStore('settings', {
         // FEATURE-1194: Auto-updater defaults
         autoUpdateEnabled: false,
 
+        // FEATURE-1317: AI Work Profile learning (default: on)
+        aiLearningEnabled: true,
+
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },
+
+        // TASK-1317: External calendar defaults
+        externalCalendars: [],
+        externalCalendarSyncInterval: 30,
 
         // Miscellaneous defaults
         sidebarCollapsed: false,
@@ -186,6 +217,17 @@ export const useSettingsStore = defineStore('settings', {
                     if (!this.$state.timeBlockNotifications) {
                         this.$state.timeBlockNotifications = JSON.parse(JSON.stringify(DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS))
                         try { this.saveToStorage() } catch (_) { /* non-fatal */ }
+                    }
+                    // TASK-1317: Backfill external calendar fields
+                    if (!this.$state.externalCalendars) {
+                        this.$state.externalCalendars = []
+                    }
+                    if (this.$state.externalCalendarSyncInterval === undefined) {
+                        this.$state.externalCalendarSyncInterval = 30
+                    }
+                    // TASK-1321: Backfill weekStartsOn
+                    if (this.$state.weekStartsOn === undefined) {
+                        this.$state.weekStartsOn = 0
                     }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)

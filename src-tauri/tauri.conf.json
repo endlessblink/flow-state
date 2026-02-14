@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowState",
-  "version": "1.2.61",
+  "version": "1.2.62",
   "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",

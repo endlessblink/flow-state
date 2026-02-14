@@ -95,6 +95,176 @@ const INPUT_RATIO = 0.3
 const OUTPUT_RATIO = 0.7
 
 // ============================================================================
+// Model Pricing Catalog
+// ============================================================================
+
+/**
+ * Pricing info for a single model.
+ */
+export interface ModelPricingInfo {
+  /** Model identifier as used by the provider */
+  model: string
+  /** Human-readable model name */
+  displayName: string
+  /** Provider this model belongs to */
+  provider: string
+  /** Input cost per 1M tokens (USD) */
+  inputPer1M: number
+  /** Output cost per 1M tokens (USD) */
+  outputPer1M: number
+  /** Context window size in tokens */
+  contextWindow: number
+  /** Whether this is the default model for its provider in FlowState */
+  isDefault?: boolean
+}
+
+/**
+ * Full pricing catalog for all supported models.
+ * Updated: February 2026
+ * Sources: https://groq.com/pricing, https://openrouter.ai/pricing
+ */
+export const MODEL_PRICING_CATALOG: ModelPricingInfo[] = [
+  // --- Ollama (Local, Free) ---
+  {
+    model: 'llama3.2',
+    displayName: 'Llama 3.2 3B',
+    provider: 'ollama',
+    inputPer1M: 0,
+    outputPer1M: 0,
+    contextWindow: 128_000,
+    isDefault: true
+  },
+  {
+    model: 'llama3.1:8b',
+    displayName: 'Llama 3.1 8B',
+    provider: 'ollama',
+    inputPer1M: 0,
+    outputPer1M: 0,
+    contextWindow: 128_000
+  },
+  {
+    model: 'mistral',
+    displayName: 'Mistral 7B',
+    provider: 'ollama',
+    inputPer1M: 0,
+    outputPer1M: 0,
+    contextWindow: 32_000
+  },
+  {
+    model: 'gemma2',
+    displayName: 'Gemma 2 9B',
+    provider: 'ollama',
+    inputPer1M: 0,
+    outputPer1M: 0,
+    contextWindow: 8_192
+  },
+
+  // --- Groq (Cloud, Fast Inference) ---
+  // Source: https://groq.com/pricing (Feb 2026)
+  {
+    model: 'llama-3.3-70b-versatile',
+    displayName: 'Llama 3.3 70B Versatile',
+    provider: 'groq',
+    inputPer1M: 0.59,
+    outputPer1M: 0.79,
+    contextWindow: 128_000,
+    isDefault: true
+  },
+  {
+    model: 'llama-3.1-8b-instant',
+    displayName: 'Llama 3.1 8B Instant',
+    provider: 'groq',
+    inputPer1M: 0.05,
+    outputPer1M: 0.08,
+    contextWindow: 128_000
+  },
+  {
+    model: 'llama-4-scout-17bx16e',
+    displayName: 'Llama 4 Scout (17Bx16E)',
+    provider: 'groq',
+    inputPer1M: 0.11,
+    outputPer1M: 0.34,
+    contextWindow: 128_000
+  },
+  {
+    model: 'llama-4-maverick-17bx128e',
+    displayName: 'Llama 4 Maverick (17Bx128E)',
+    provider: 'groq',
+    inputPer1M: 0.20,
+    outputPer1M: 0.60,
+    contextWindow: 128_000
+  },
+  {
+    model: 'qwen-3-32b',
+    displayName: 'Qwen 3 32B',
+    provider: 'groq',
+    inputPer1M: 0.29,
+    outputPer1M: 0.59,
+    contextWindow: 131_000
+  },
+
+  // --- OpenRouter (Cloud, Premium Models) ---
+  // Source: https://openrouter.ai/pricing (Feb 2026)
+  {
+    model: 'anthropic/claude-sonnet-4.5',
+    displayName: 'Claude Sonnet 4.5',
+    provider: 'openrouter',
+    inputPer1M: 3.00,
+    outputPer1M: 15.00,
+    contextWindow: 200_000,
+    isDefault: true
+  },
+  {
+    model: 'anthropic/claude-sonnet-4',
+    displayName: 'Claude Sonnet 4',
+    provider: 'openrouter',
+    inputPer1M: 3.00,
+    outputPer1M: 15.00,
+    contextWindow: 200_000
+  },
+  {
+    model: 'anthropic/claude-opus-4',
+    displayName: 'Claude Opus 4',
+    provider: 'openrouter',
+    inputPer1M: 15.00,
+    outputPer1M: 75.00,
+    contextWindow: 200_000
+  },
+  {
+    model: 'openai/gpt-4o',
+    displayName: 'GPT-4o',
+    provider: 'openrouter',
+    inputPer1M: 2.50,
+    outputPer1M: 10.00,
+    contextWindow: 128_000
+  },
+  {
+    model: 'openai/gpt-4o-mini',
+    displayName: 'GPT-4o Mini',
+    provider: 'openrouter',
+    inputPer1M: 0.15,
+    outputPer1M: 0.60,
+    contextWindow: 128_000
+  },
+  {
+    model: 'google/gemini-2.0-flash',
+    displayName: 'Gemini 2.0 Flash',
+    provider: 'openrouter',
+    inputPer1M: 0.10,
+    outputPer1M: 0.40,
+    contextWindow: 1_000_000
+  },
+  {
+    model: 'deepseek/deepseek-v3',
+    displayName: 'DeepSeek V3',
+    provider: 'openrouter',
+    inputPer1M: 0.30,
+    outputPer1M: 0.88,
+    contextWindow: 128_000
+  }
+]
+
+// ============================================================================
 // Composable
 // ============================================================================
 
@@ -109,14 +279,67 @@ const OUTPUT_RATIO = 0.7
  * const { usageSummary, providerUsageByProvider } = useAIUsageTracking()
  * ```
  */
+/**
+ * Time period for filtering usage data.
+ */
+export type UsagePeriod = 'week' | 'month' | 'all'
+
+/**
+ * Get the start-of-period Date for a given period.
+ */
+function getPeriodStart(period: UsagePeriod): Date | null {
+  if (period === 'all') return null
+  const now = new Date()
+  if (period === 'week') {
+    const day = now.getDay()
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1) // Monday start
+    return new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0)
+  }
+  // month
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+}
+
+/**
+ * Pricing catalog grouped by provider for display.
+ */
+export interface ProviderPricingGroup {
+  provider: string
+  displayName: string
+  models: ModelPricingInfo[]
+}
+
+/**
+ * Get the pricing catalog grouped by provider.
+ */
+export function getPricingByProvider(): ProviderPricingGroup[] {
+  const groups = new Map<string, ModelPricingInfo[]>()
+
+  for (const model of MODEL_PRICING_CATALOG) {
+    if (!groups.has(model.provider)) {
+      groups.set(model.provider, [])
+    }
+    groups.get(model.provider)!.push(model)
+  }
+
+  const order = ['ollama', 'groq', 'openrouter']
+  return order
+    .filter(p => groups.has(p))
+    .map(p => ({
+      provider: p,
+      displayName: PROVIDER_DISPLAY_NAMES[p] || p,
+      models: groups.get(p)!
+    }))
+}
+
 export function useAIUsageTracking() {
   const aiChatStore = useAIChatStore()
 
   /**
-   * Compute usage summary from all conversations.
+   * Aggregate usage from conversations, optionally filtered by time period.
    */
-  const usageSummary = computed<UsageSummary>(() => {
-    // Aggregate data from all conversations
+  function aggregateUsage(period: UsagePeriod): UsageSummary {
+    const periodStart = getPeriodStart(period)
+
     const providerMap = new Map<string, {
       totalTokens: number
       totalRequests: number
@@ -124,15 +347,20 @@ export function useAIUsageTracking() {
       models: Map<string, { tokens: number; requests: number; cost: number }>
     }>()
 
-    // Iterate all conversations and their messages
     for (const conversation of aiChatStore.conversations) {
       for (const message of conversation.messages) {
-        // Only count messages with metadata (AI responses)
         if (!message.metadata?.provider || !message.metadata.tokens) continue
+
+        // Filter by time period
+        if (periodStart) {
+          const msgDate = message.timestamp instanceof Date
+            ? message.timestamp
+            : new Date(message.timestamp)
+          if (msgDate < periodStart) continue
+        }
 
         const { provider, model, tokens } = message.metadata
 
-        // Get or create provider entry
         if (!providerMap.has(provider)) {
           providerMap.set(provider, {
             totalTokens: 0,
@@ -143,13 +371,17 @@ export function useAIUsageTracking() {
         }
 
         const providerData = providerMap.get(provider)!
-
-        // Update provider totals
         providerData.totalTokens += tokens
         providerData.totalRequests += 1
 
-        // Calculate cost for this message
-        const pricing = PROVIDER_PRICING[provider] || { input: 0, output: 0 }
+        // Look up model-specific pricing from catalog, fall back to provider default
+        const catalogEntry = MODEL_PRICING_CATALOG.find(
+          m => m.model === model && m.provider === provider
+        )
+        const pricing = catalogEntry
+          ? { input: catalogEntry.inputPer1M, output: catalogEntry.outputPer1M }
+          : PROVIDER_PRICING[provider] || { input: 0, output: 0 }
+
         const inputTokens = Math.floor(tokens * INPUT_RATIO)
         const outputTokens = Math.floor(tokens * OUTPUT_RATIO)
         const inputCost = (inputTokens / 1_000_000) * pricing.input
@@ -158,7 +390,6 @@ export function useAIUsageTracking() {
 
         providerData.totalCost += messageCost
 
-        // Update model stats
         const modelKey = model || 'unknown'
         if (!providerData.models.has(modelKey)) {
           providerData.models.set(modelKey, { tokens: 0, requests: 0, cost: 0 })
@@ -171,17 +402,13 @@ export function useAIUsageTracking() {
       }
     }
 
-    // Convert map to array of ProviderUsage
     const providers: ProviderUsage[] = Array.from(providerMap.entries()).map(([provider, data]) => {
-      // Convert model map to array
       const models: ModelUsage[] = Array.from(data.models.entries()).map(([model, modelData]) => ({
         model,
         tokens: modelData.tokens,
         requests: modelData.requests,
         costUSD: modelData.cost
       }))
-
-      // Sort models by tokens (highest first)
       models.sort((a, b) => b.tokens - a.tokens)
 
       return {
@@ -194,40 +421,48 @@ export function useAIUsageTracking() {
       }
     })
 
-    // Sort providers by total tokens (highest first)
     providers.sort((a, b) => b.totalTokens - a.totalTokens)
 
-    // Calculate totals
-    const totalTokens = providers.reduce((sum, p) => sum + p.totalTokens, 0)
-    const totalRequests = providers.reduce((sum, p) => sum + p.totalRequests, 0)
-    const totalCostUSD = providers.reduce((sum, p) => sum + p.estimatedCostUSD, 0)
+    const periodLabels: Record<UsagePeriod, string> = {
+      week: 'This Week',
+      month: 'This Month',
+      all: 'All Time'
+    }
 
     return {
-      totalTokens,
-      totalRequests,
-      totalCostUSD,
+      totalTokens: providers.reduce((s, p) => s + p.totalTokens, 0),
+      totalRequests: providers.reduce((s, p) => s + p.totalRequests, 0),
+      totalCostUSD: providers.reduce((s, p) => s + p.estimatedCostUSD, 0),
       providers,
-      periodLabel: 'All Time'
+      periodLabel: periodLabels[period]
     }
-  })
+  }
 
-  /**
-   * Get usage for a specific provider.
-   */
+  /** All time usage (reactive) */
+  const usageSummary = computed<UsageSummary>(() => aggregateUsage('all'))
+
+  /** This week usage (reactive) */
+  const weekUsage = computed<UsageSummary>(() => aggregateUsage('week'))
+
+  /** This month usage (reactive) */
+  const monthUsage = computed<UsageSummary>(() => aggregateUsage('month'))
+
+  /** Pricing catalog grouped by provider */
+  const pricingCatalog = computed(() => getPricingByProvider())
+
+  /** Check if there is any usage data */
+  const hasUsageData = computed(() => usageSummary.value.totalTokens > 0)
+
   function getProviderUsage(provider: string): ProviderUsage | null {
     return usageSummary.value.providers.find(p => p.provider === provider) || null
   }
 
-  /**
-   * Check if there is any usage data.
-   */
-  const hasUsageData = computed(() => {
-    return usageSummary.value.totalTokens > 0
-  })
-
   return {
     usageSummary,
+    weekUsage,
+    monthUsage,
     hasUsageData,
+    pricingCatalog,
     getProviderUsage
   }
 }

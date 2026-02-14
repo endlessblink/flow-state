@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, SlidersHorizontal, RefreshCw } from 'lucide-vue-next'
 import ProjectFilterDropdown from '@/components/projects/ProjectFilterDropdown.vue'
 
 defineProps<{
   formatCurrentDate: string
   hideCalendarDoneTasks: boolean
   viewMode: 'day' | 'week' | 'month'
+  externalCalendarEnabled?: boolean
+  externalCalendarLoading?: boolean
 }>()
 
 defineEmits<{
@@ -15,6 +17,7 @@ defineEmits<{
   (e: 'goToToday'): void
   (e: 'toggleDoneTasks'): void
   (e: 'update:viewMode', value: 'day' | 'week' | 'month'): void
+  (e: 'syncExternalCalendar'): void
 }>()
 
 // TASK-157: Filters hidden by default for cleaner look
@@ -49,6 +52,17 @@ const showFilters = ref(false)
         @click="showFilters = !showFilters"
       >
         <SlidersHorizontal :size="20" :stroke-width="1.5" />
+      </button>
+
+      <!-- TASK-1317: External Calendar Sync Button -->
+      <button
+        v-if="externalCalendarEnabled"
+        class="sync-btn"
+        :class="{ syncing: externalCalendarLoading }"
+        title="Sync external calendars"
+        @click="$emit('syncExternalCalendar')"
+      >
+        <RefreshCw :size="16" :stroke-width="1.5" />
       </button>
 
       <div class="view-selector view-selector--minimal">
@@ -305,6 +319,36 @@ const showFilters = ref(false)
 .filter-toggle.active {
   background: var(--color-indigo-bg-medium);
   color: var(--color-indigo);
+}
+
+/* TASK-1317: Sync button */
+.sync-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.sync-btn:hover {
+  background: var(--glass-bg-heavy);
+  color: var(--text-primary);
+}
+
+.sync-btn.syncing {
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .view-selector--minimal {

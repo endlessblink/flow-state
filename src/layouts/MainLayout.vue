@@ -29,6 +29,13 @@
       </router-view>
     </main>
 
+    <!-- Full-width header border spanning both columns -->
+    <div
+      v-if="uiStore.mainSidebarVisible"
+      class="layout-header-border"
+      :style="{ top: headerBorderY + 'px' }"
+    />
+
     <!-- AI CHAT PANEL (TASK-1120) -->
     <AIChatPanel />
 
@@ -42,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useDirection } from '@/i18n/useDirection'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
@@ -54,6 +61,34 @@ import WelcomeModal from '@/components/ui/WelcomeModal.vue'
 
 const uiStore = useUIStore()
 const { direction } = useDirection()
+
+// Shared header border — tracks content-header bottom position
+const headerBorderY = ref(0)
+let borderObserver: ResizeObserver | null = null
+
+function updateBorderPosition() {
+  const contentHeader = document.querySelector('.content-header')
+  if (contentHeader) {
+    const rect = contentHeader.getBoundingClientRect()
+    headerBorderY.value = rect.bottom
+  }
+}
+
+onMounted(() => {
+  nextTick(() => {
+    updateBorderPosition()
+    // Observe the main-content for layout changes
+    const mainContent = document.querySelector('.main-content')
+    if (mainContent) {
+      borderObserver = new ResizeObserver(updateBorderPosition)
+      borderObserver.observe(mainContent)
+    }
+  })
+})
+
+onUnmounted(() => {
+  borderObserver?.disconnect()
+})
 
 // Welcome modal — show on first launch
 const WELCOME_KEY = 'flowstate-welcome-seen'
@@ -169,6 +204,17 @@ defineExpose({
   flex-direction: column;
   min-height: 0;
   width: 100%;
+}
+
+/* Full-width header border that spans both sidebar and content columns */
+.layout-header-border {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--glass-border);
+  z-index: 2;
+  pointer-events: none;
 }
 
 </style>

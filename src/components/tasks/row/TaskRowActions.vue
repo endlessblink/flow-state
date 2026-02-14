@@ -1,6 +1,14 @@
 <template>
   <div class="task-row__actions">
     <button
+      class="task-row__action-btn task-row__action-btn--focus"
+      title="Focus Mode (F)"
+      aria-label="Enter focus mode"
+      @click.stop="$emit('focusMode')"
+    >
+      <Eye :size="14" />
+    </button>
+    <button
       class="task-row__action-btn"
       title="Start Timer"
       aria-label="Start timer"
@@ -28,9 +36,10 @@
 </template>
 
 <script setup lang="ts">
-import { Play, Edit, Copy } from 'lucide-vue-next'
+import { Eye, Play, Edit, Copy } from 'lucide-vue-next'
 
 defineEmits<{
+  (e: 'focusMode'): void
   (e: 'startTimer'): void
   (e: 'edit'): void
   (e: 'duplicate'): void
@@ -73,5 +82,10 @@ defineEmits<{
   background-color: var(--glass-bg-medium);
   color: var(--text-primary);
   border-color: var(--glass-border);
+}
+
+.task-row__action-btn--focus:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 </style>

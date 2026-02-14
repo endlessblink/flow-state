@@ -65,6 +65,7 @@
 
       <!-- Action Buttons -->
       <TaskCardActions
+        @focus-mode="enterFocusMode"
         @start-timer="$emit('startTimer', task.id)"
         @edit="$emit('edit', task.id)"
       />
@@ -81,6 +82,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Task } from '@/stores/tasks'
 import { useTaskCardState } from '@/composables/tasks/card/useTaskCardState'
 import { useTaskCardActions } from '@/composables/tasks/card/useTaskCardActions'
@@ -115,6 +117,7 @@ const emit = defineEmits<{
 }>()
 
 // --- Logic ---
+const router = useRouter()
 const timerStore = useTimerStore()
 const state = useTaskCardState(props)
 const actions = useTaskCardActions(props, emit as any, state)
@@ -136,6 +139,11 @@ const {
   handleCardClick, handleKeydown, handleFocus,
   handleBlur, handleRightClick, cycleStatus
 } = actions
+
+// Focus mode navigation
+const enterFocusMode = () => {
+  router.push(`/focus/${props.task.id}`)
+}
 
 // TASK-1074: Flash animation when date is set via context menu
 const isFlashing = ref(false)

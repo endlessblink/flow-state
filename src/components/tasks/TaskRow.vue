@@ -69,6 +69,13 @@
     <!-- Quick Actions (hover only) -->
     <div class="task-row__actions">
       <button
+        class="task-row__action-btn task-row__action-btn--focus"
+        title="Focus Mode (F)"
+        @click.stop="enterFocusMode"
+      >
+        <Eye :size="14" />
+      </button>
+      <button
         class="task-row__action-btn"
         title="Start Timer"
         @click.stop="$emit('startTimer', task.id)"
@@ -88,9 +95,10 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import { Play, Edit } from 'lucide-vue-next'
+import { Eye, Play, Edit } from 'lucide-vue-next'
 import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowProject from '@/components/tasks/row/TaskRowProject.vue'
@@ -125,6 +133,7 @@ const statusOptions = [
   { label: 'On Hold', value: 'on_hold' }
 ]
 
+const router = useRouter()
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
 
@@ -135,6 +144,11 @@ const { getAlignmentClasses } = useHebrewAlignment()
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
 })
+
+// Focus mode navigation
+const enterFocusMode = () => {
+  router.push(`/focus/${props.task.id}`)
+}
 
 // ADHD-friendly: Every 5th row gets visual anchor
 const isAnchorRow = computed(() => (props.rowIndex + 1) % 5 === 0)
@@ -353,6 +367,11 @@ onUnmounted(() => {
   color: var(--text-primary);
   transform: scale(1.1);
   box-shadow: 0 0 var(--space-2_5) rgba(var(--color-slate-50), 0.1);
+}
+
+.task-row__action-btn--focus:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 /* Priority Indicator */

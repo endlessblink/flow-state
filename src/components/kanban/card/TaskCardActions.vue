@@ -1,6 +1,16 @@
 <template>
   <div class="compact-actions" role="group" aria-label="Task actions">
     <button
+      class="action-btn focus-btn"
+      title="Focus Mode (F)"
+      aria-label="Enter focus mode for this task"
+      type="button"
+      tabindex="-1"
+      @click.stop="$emit('focusMode')"
+    >
+      <Eye :size="14" aria-hidden="true" />
+    </button>
+    <button
       class="action-btn timer-btn"
       title="Start Pomodoro Timer"
       aria-label="Start Pomodoro timer for this task"
@@ -24,9 +34,10 @@
 </template>
 
 <script setup lang="ts">
-import { Play, Edit } from 'lucide-vue-next'
+import { Eye, Play, Edit } from 'lucide-vue-next'
 
 defineEmits<{
+  (e: 'focusMode'): void
   (e: 'startTimer'): void
   (e: 'edit'): void
 }>()
@@ -64,5 +75,10 @@ defineEmits<{
   background: var(--glass-bg-base);
   color: var(--text-primary);
   border-color: var(--glass-border-hover);
+}
+
+.focus-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 </style>

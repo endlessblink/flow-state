@@ -176,7 +176,7 @@ const {
             <!-- Task Content - dir="auto" detects RTL/LTR from content -->
             <div class="task-content--calendar" dir="auto">
               <div class="task-header">
-                <div class="task-title" dir="auto">
+                <div class="task-title" dir="auto" :title="calEvent.title">
                   {{ calEvent.title }}
                 </div>
                 <div class="task-actions">
@@ -746,13 +746,9 @@ const {
   50% { opacity: 0.85; }
 }
 
-/* BUG-1304: Visual indicator for done tasks */
+/* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
 .slot-task.status-done {
   filter: grayscale(0.6) brightness(0.85);
-  opacity: 0.65;
-}
-
-.slot-task.status-done .task-title {
-  text-decoration: line-through;
+  opacity: 0.55;
 }
 </style>

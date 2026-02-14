@@ -150,7 +150,7 @@ const {
               @contextmenu.prevent="$emit('eventContextMenu', $event, event)"
             >
               <div class="event-header">
-                <div class="event-title">
+                <div class="event-title" :title="event.title">
                   {{ event.title }}
                 </div>
                 <div class="event-actions">
@@ -239,7 +239,7 @@ const {
 .week-day-header {
   padding: var(--space-3) var(--space-2);
   text-align: center;
-  border-left: 1px solid var(--border-faint);
+  border-left: 1px solid var(--glass-border-light);
 }
 
 .week-day-name {
@@ -277,7 +277,7 @@ const {
   padding-right: var(--space-4);
   color: var(--text-muted);
   font-size: var(--text-xs);
-  border-bottom: 1px solid var(--border-faint);
+  border-bottom: 1px solid var(--glass-border-light);
 }
 
 .week-days-grid {
@@ -293,12 +293,12 @@ const {
 }
 
 .week-day-column {
-  border-left: 1px solid var(--border-faint);
+  border-left: 1px solid var(--glass-border-light);
 }
 
 .week-time-cell {
   height: 60px;
-  border-bottom: 1px solid var(--border-faint);
+  border-bottom: 1px solid var(--glass-border-light);
 }
 
 .week-events-layer {
@@ -354,7 +354,10 @@ const {
   font-weight: var(--font-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .event-actions {
@@ -484,13 +487,9 @@ const {
   cursor: pointer;
 }
 
-/* BUG-1304: Visual indicator for done tasks */
+/* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
 .week-event.status-done {
   filter: grayscale(0.6) brightness(0.85);
-  opacity: 0.65;
-}
-
-.week-event.status-done .event-title {
-  text-decoration: line-through;
+  opacity: 0.55;
 }
 </style>

@@ -270,7 +270,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
         // Check for version conflict (no rows updated)
         if (!result.error && (!result.data || result.data.length === 0)) {
-          console.log(`⚠️ [SYNC] Version conflict detected for ${entityType}:${entityId}, attempting LWW resolution`)
+          console.debug(`[SYNC] Version conflict detected for ${entityType}:${entityId}, attempting LWW resolution`)
 
           // Fetch current server state
           const serverState = await supabase
@@ -316,11 +316,12 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
             result = forceResult
           } else {
             // BUG-1211 FIX: Server change is newer — our local change is discarded.
-            // Log prominently so this is traceable. The local Pinia state will remain
-            // stale until the next loadFromDatabase() call picks up the server version
-            // via smart merge. This is not data loss (server has the newer version),
-            // but the local UI may show stale data temporarily.
-            console.warn(`⚠️ [SYNC] LWW: Server wins for ${entityType}:${entityId}. Local change DISCARDED (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()}). Local state will update on next sync.`)
+            // BUG-1320: Downgrade log for echo pattern (direct save + sync queue race).
+            // When delta < 2s, this is almost always the sync queue echoing a direct save
+            // that already succeeded — not a real conflict. Only warn for real conflicts.
+            const deltaMs = serverUpdatedAt - localUpdatedAt
+            const logFn = deltaMs < 2000 ? console.debug : console.warn
+            logFn(`⚠️ [SYNC] LWW: Server wins for ${entityType}:${entityId} (delta=${deltaMs}ms). Local change DISCARDED (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()}).${deltaMs < 2000 ? ' [echo — direct save already applied]' : ' Local state will update on next sync.'}`)
 
             return {
               success: true,

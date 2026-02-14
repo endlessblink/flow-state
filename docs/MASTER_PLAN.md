@@ -1618,10 +1618,10 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 3. `handleError()` treats transient `Failed to fetch` as `ErrorSeverity.ERROR` with `showNotification: true` — red popup for network blips
 
 **Fix Plan**:
-- [ ] Fix 1: Add `withRetry()` to `saveActiveTimerSession` + `deleteTimerSession` (critical path)
-- [ ] Fix 2: Make timer heartbeat network-aware (`navigator.onLine` check)
-- [ ] Fix 3: Make `handleError` suppress notifications for transient network errors
-- [ ] Fix 4: Add `withRetry()` to all remaining 19 write functions
+- [x] Fix 1: Add `withRetry()` to `saveActiveTimerSession` + `deleteTimerSession` (critical path)
+- [x] Fix 2: Make timer heartbeat network-aware (`navigator.onLine` check)
+- [x] Fix 3: Make `handleError` suppress notifications for transient network errors
+- [x] Fix 4: Add `withRetry()` to all remaining 19 write functions
 
 **Files**: `src/composables/useSupabaseDatabase.ts`, `src/stores/timer.ts`
 

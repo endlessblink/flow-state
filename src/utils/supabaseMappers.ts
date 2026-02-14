@@ -25,6 +25,9 @@ const isValidUUID = (str: string | null | undefined): boolean => {
 /**
  * Sanitizes a potential UUID field - returns null for invalid/placeholder values
  */
+// BUG-1320: Track already-warned invalid UUIDs to avoid log spam on every sync cycle
+const warnedInvalidUUIDs = new Set<string>()
+
 const sanitizeUUID = (value: string | null | undefined): string | null => {
     // Handle null/undefined
     if (value === null || value === undefined) return null
@@ -34,7 +37,10 @@ const sanitizeUUID = (value: string | null | undefined): string | null => {
     if (value === UNCATEGORIZED_PROJECT_ID || value === '1') return null
     // Validate UUID format
     if (!isValidUUID(value)) {
-        console.warn(`[SUPABASE-MAPPER] Invalid UUID detected: "${value}", converting to null`)
+        if (!warnedInvalidUUIDs.has(value)) {
+            warnedInvalidUUIDs.add(value)
+            console.warn(`[SUPABASE-MAPPER] Invalid UUID detected: "${value}", converting to null`)
+        }
         return null
     }
     return value
@@ -251,14 +257,67 @@ export interface SupabasePinnedTask {
     updated_at?: string
 }
 
+// -- Work Profile Types (FEATURE-1317) --
+
+export interface SupabaseWorkProfile {
+    id: string
+    user_id: string
+    work_days: string[]
+    days_off: string[]
+    heavy_meeting_days: string[]
+    max_tasks_per_day: number
+    preferred_work_style: string
+    top_priority_note: string | null
+    avg_work_minutes_per_day: number | null
+    avg_tasks_completed_per_day: number | null
+    peak_productivity_days: string[] | null
+    avg_plan_accuracy: number | null
+    weekly_history: unknown[]
+    profile_version: number
+    interview_completed: boolean
+    created_at?: string
+    updated_at?: string
+}
+
+export interface WorkProfile {
+    id: string
+    userId: string
+    workDays: string[]
+    daysOff: string[]
+    heavyMeetingDays: string[]
+    maxTasksPerDay: number
+    preferredWorkStyle: 'frontload' | 'balanced' | 'backload'
+    topPriorityNote: string | null
+    avgWorkMinutesPerDay: number | null
+    avgTasksCompletedPerDay: number | null
+    peakProductivityDays: string[] | null
+    avgPlanAccuracy: number | null
+    weeklyHistory: Array<{
+        weekStart: string
+        plannedCount: number
+        completedCount: number
+        accuracy: number
+    }>
+    profileVersion: number
+    interviewCompleted: boolean
+    createdAt?: string
+    updatedAt?: string
+}
+
 // -- Mappers --
+
+// BUG-1320: Track legacy group IDs we've already warned about to avoid log spam
+const warnedLegacyGroupIds = new Set<string>()
 
 export function toSupabaseGroup(group: CanvasGroup, userId: string): SupabaseGroup | null {
     // BUG-1184: Validate group ID is valid UUID - skip legacy timestamp IDs gracefully
     // Legacy groups created before UUID requirement have IDs like "group-1768138473081-54fxz7t"
     // These can't sync to Supabase but shouldn't break user's workflow
     if (!isValidUUID(group.id)) {
-        console.warn(`[SUPABASE-MAPPER] Group "${group.name}" has legacy ID: "${group.id}" - skipping Supabase sync (local only)`)
+        if (!warnedLegacyGroupIds.has(group.id)) {
+            warnedLegacyGroupIds.add(group.id)
+            console.warn(`[SUPABASE-MAPPER] Group "${group.name}" has legacy ID: "${group.id}" - skipping Supabase sync (local only)`)
+        }
         return null
     }
 
@@ -430,11 +489,14 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
         depends_on: sanitizedDependsOn.length > 0 ? sanitizedDependsOn : null,
 
         // JSONB mappings
-        // TASK-1183: Sanitize parentId in position - must be valid UUID (group IDs) or undefined
+        // TASK-1183: parentId in position JSONB — allow legacy group IDs (e.g. "group-1768138473081-54fxz7t")
+        // BUG-FIX: sanitizeUUID was stripping valid legacy group IDs to null on every save.
+        // Realtime echo then overwrote the correct local parentId with undefined → tasks lost their parent group.
+        // Position is a JSONB column — no UUID constraint. Pass through any non-placeholder value.
         position: task.canvasPosition ? {
             x: task.canvasPosition.x,
             y: task.canvasPosition.y,
-            parentId: sanitizeUUID(task.parentId) ?? undefined, // Only valid UUID group IDs, not legacy timestamp IDs
+            parentId: (task.parentId && task.parentId !== 'NONE' && task.parentId !== 'undefined' && task.parentId !== 'null' && task.parentId !== '') ? task.parentId : undefined,
             format: 'absolute' // Default for existing tasks during migration
         } : null,
         // Note: position_version is managed by DB triggers, not sent on update
@@ -706,5 +768,48 @@ export function fromSupabasePinnedTask(record: SupabasePinnedTask): PinnedTask {
         sortOrder: record.sort_order || 0,
         createdAt: new Date(record.created_at || Date.now()),
         updatedAt: new Date(record.updated_at || Date.now())
+    }
+}
+
+// -- Work Profile Mappers (FEATURE-1317) --
+
+export function toSupabaseWorkProfile(profile: Partial<WorkProfile>, userId: string): Partial<SupabaseWorkProfile> {
+    return {
+        user_id: userId,
+        ...(profile.workDays !== undefined && { work_days: profile.workDays }),
+        ...(profile.daysOff !== undefined && { days_off: profile.daysOff }),
+        ...(profile.heavyMeetingDays !== undefined && { heavy_meeting_days: profile.heavyMeetingDays }),
+        ...(profile.maxTasksPerDay !== undefined && { max_tasks_per_day: profile.maxTasksPerDay }),
+        ...(profile.preferredWorkStyle !== undefined && { preferred_work_style: profile.preferredWorkStyle }),
+        ...(profile.topPriorityNote !== undefined && { top_priority_note: profile.topPriorityNote }),
+        ...(profile.avgWorkMinutesPerDay !== undefined && { avg_work_minutes_per_day: profile.avgWorkMinutesPerDay }),
+        ...(profile.avgTasksCompletedPerDay !== undefined && { avg_tasks_completed_per_day: profile.avgTasksCompletedPerDay }),
+        ...(profile.peakProductivityDays !== undefined && { peak_productivity_days: profile.peakProductivityDays }),
+        ...(profile.avgPlanAccuracy !== undefined && { avg_plan_accuracy: profile.avgPlanAccuracy }),
+        ...(profile.weeklyHistory !== undefined && { weekly_history: profile.weeklyHistory }),
+        ...(profile.interviewCompleted !== undefined && { interview_completed: profile.interviewCompleted }),
+        updated_at: new Date().toISOString()
+    }
+}
+
+export function fromSupabaseWorkProfile(record: SupabaseWorkProfile): WorkProfile {
+    return {
+        id: record.id,
+        userId: record.user_id,
+        workDays: record.work_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        daysOff: record.days_off || [],
+        heavyMeetingDays: record.heavy_meeting_days || [],
+        maxTasksPerDay: record.max_tasks_per_day || 6,
+        preferredWorkStyle: (record.preferred_work_style as WorkProfile['preferredWorkStyle']) || 'balanced',
+        topPriorityNote: record.top_priority_note || null,
+        avgWorkMinutesPerDay: record.avg_work_minutes_per_day,
+        avgTasksCompletedPerDay: record.avg_tasks_completed_per_day,
+        peakProductivityDays: record.peak_productivity_days,
+        avgPlanAccuracy: record.avg_plan_accuracy,
+        weeklyHistory: (record.weekly_history || []) as WorkProfile['weeklyHistory'],
+        profileVersion: record.profile_version || 1,
+        interviewCompleted: record.interview_completed || false,
+        createdAt: record.created_at,
+        updatedAt: record.updated_at
     }
 }

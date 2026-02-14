@@ -1,6 +1,6 @@
 # Canvas System Documentation
 
-**Last Updated**: January 18, 2026
+**Last Updated**: February 14, 2026
 
 The canvas view uses Vue Flow for a node-based task visualization system. This directory contains all canvas-related SOPs and architectural documentation.
 
@@ -11,6 +11,7 @@ The canvas view uses Vue Flow for a node-based task visualization system. This d
 | Document | Purpose |
 |----------|---------|
 | [CANVAS-POSITION-SYSTEM.md](./CANVAS-POSITION-SYSTEM.md) | Position/coordinate architecture, geometry invariants |
+| [CANVAS-NODE-EXTENT.md](./CANVAS-NODE-EXTENT.md) | Node extent system, invisible barrier debugging (BUG-1310) |
 | [CANVAS-DRAG-DROP.md](./CANVAS-DRAG-DROP.md) | Drag, drop, and selection behavior |
 | [CANVAS-DEBUGGING.md](./CANVAS-DEBUGGING.md) | Troubleshooting tools and debugging techniques |
 | [CANVAS-DUPLICATE-DETECTION.md](./CANVAS-DUPLICATE-DETECTION.md) | Duplicate ID diagnostics across data pipeline |

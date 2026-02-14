@@ -708,6 +708,16 @@ export function useCanvasOrchestrator() {
             isVueFlowMounted.value = true
             setOperationLoading('loading', false)
             setOperationLoading('syncing', false)
+
+            // BUG-1310: Log nodeExtent at VueFlow init for invisible barrier diagnosis
+            if (import.meta.env.DEV) {
+                const extent = dynamicNodeExtent.value
+                console.log('[BUG-1310:INIT] VueFlow pane ready — dynamicNodeExtent:', {
+                    extent: extent ? { minX: Math.round(extent[0][0]), minY: Math.round(extent[0][1]), maxX: Math.round(extent[1][0]), maxY: Math.round(extent[1][1]) } : 'null',
+                    nodeCount: nodes.value?.length ?? 0,
+                    tasksWithPos: tasksWithCanvasPosition.value?.length ?? 0
+                })
+            }
         },
         fitCanvas,
         zoomToSelection,

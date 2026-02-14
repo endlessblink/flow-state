@@ -8,13 +8,17 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1310: Canvas invisible barrier blocks drag operations (🔄 IN PROGRESS)
+### ~~BUG-1310~~: Canvas invisible barrier blocks drag operations (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
 
 **Problem**: Items on the canvas cannot be dragged past an invisible boundary. An unseen element or clipping region blocks pointer events, preventing free movement across the canvas area.
 
-**Investigation**: In progress
+**Root Cause**: `dynamicNodeExtent` only computed bounds from task positions, ignoring group positions. When `taskNodes: 0` (timing issue during init), the default extent was `[-2000, 5000]` — groups near x=4556 hit the x=5000 wall.
+
+**Fix**: Extended `dynamicNodeExtent` in `useCanvasFilteredState.ts` to include both task AND group bounds. Expanded default extent to `[-50000, 50000]`. Added diagnostic logging for future debugging.
+
+**SOP**: `docs/sop/canvas/CANVAS-NODE-EXTENT.md`
 
 ---
 

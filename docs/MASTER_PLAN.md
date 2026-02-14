@@ -28,15 +28,27 @@
 
 ---
 
-### BUG-1321: Task property changes don't propagate across all views (🔄 IN PROGRESS)
+### ~~BUG-1321~~: Task property changes don't propagate across all views (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
 
 **Problem**: When a task's properties change (e.g., dragging to "Today" group in canvas sets dueDate), the change doesn't consistently propagate to all views (Board, Calendar, Weekly Plan, Canvas). Each view/interaction point may update task properties through different code paths, leading to desynchronized state.
 
-**Scope**: Full audit of all task property mutation paths and their propagation to reactive consumers.
+**Root Causes Found**:
+1. Three independent date fields (`dueDate`, `scheduledDate`, `instances[]`) never synced bidirectionally
+2. Seven store methods bypassed canonical `updateTask()` pipeline (missing echo protection + sync queue)
+3. Weekly Plan and 6+ views used UTC dates for "today" (timezone false positive for overdue)
+4. `createTask()` didn't auto-create calendar instances from dueDate
+5. LWW "server wins" never applied serverData back to Pinia store
 
-**Root Cause**: TBD — multi-agent investigation in progress.
+**Fixes Applied** (19 files, 10 core):
+- `syncDateFields()` utility in `updateTask()` — bidirectional sync for all 3 date fields
+- 7 bypass methods (subtask/instance CRUD, moveTaskToProject) routed through `updateTask()`
+- UTC→local timezone fix in 8 files for overdue detection
+- `createTask()` auto-creates calendar instance from dueDate
+- `getTaskInstances()` bridge enhanced for legacy data
+- LWW serverData applied back to store via `fromSupabaseTask()` mapper
+- Subtasks added to sync queue payload
 
 ---
 

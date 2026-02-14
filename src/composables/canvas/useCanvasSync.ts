@@ -437,7 +437,9 @@ export function useCanvasSync() {
                         // Use 0 padding to be permissive (only check center containment)
                         if (!isNodeCompletelyInside(taskSpatial, parentBounds, 0)) {
                             if (import.meta.env.DEV) {
+                                if (import.meta.env.DEV) {
                                 console.warn(`[BUG-1203] Task "${task.title?.slice(0, 25)}" has stale parentId ${parentId.slice(0, 8)} - not spatially inside. Clearing.`)
+                            }
                             }
                             // BUG-1203: Queue deferred store cleanup to eliminate split-brain
                             staleParentCleanups.push({ taskId: task.id, oldParentId: parentId })
@@ -446,7 +448,9 @@ export function useCanvasSync() {
                     } else {
                         // Parent group doesn't exist - clear parentId
                         if (import.meta.env.DEV) {
+                            if (import.meta.env.DEV) {
                             console.warn(`[BUG-1203] Task "${task.title?.slice(0, 25)}" parentId ${parentId.slice(0, 8)} not found. Clearing.`)
+                        }
                         }
                         // BUG-1203: Queue deferred store cleanup
                         staleParentCleanups.push({ taskId: task.id, oldParentId: parentId })
@@ -606,12 +610,6 @@ export function useCanvasSync() {
                         })
                     }
 
-                    console.debug('[NODE-BUILDER]', {
-                        totalNodes: newNodes.length,
-                        taskNodes: taskNodeCheck.totalCount,
-                        uniqueTaskIds: taskNodeCheck.uniqueIdCount,
-                        hasDuplicates: taskNodeCheck.hasDuplicates
-                    })
 
                     // 3. Check group nodes for duplicates
                     const groupNodes = newNodes.filter((n: any) => n.type === 'sectionNode')
@@ -629,11 +627,6 @@ export function useCanvasSync() {
                         })
                     }
 
-                    console.debug('[GROUP-NODE-BUILDER]', {
-                        totalNodes: newNodes.length,
-                        groupNodes: groupNodeCheck.totalCount,
-                        uniqueGroupIds: groupNodeCheck.uniqueIdCount
-                    })
 
                     // ================================================================
                     // GEOMETRY DRIFT DETECTION - Compare store positions vs node positions
@@ -698,12 +691,6 @@ export function useCanvasSync() {
                     }
                 }
 
-                if (import.meta.env.DEV) {
-                    console.log(`[CANVAS:SYNC] Updating ${newNodes.length} nodes`, {
-                        taskNodes: newNodes.filter((n: any) => n.type === 'taskNode').length,
-                        groupNodes: newNodes.filter((n: any) => n.type === 'sectionNode').length
-                    })
-                }
 
                 // BUG-1062 FIX: Preserve selection state from canvasStore.selectedNodeIds
                 // When setNodes() replaces all nodes, the `selected` property is lost.

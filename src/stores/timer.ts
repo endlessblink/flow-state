@@ -87,10 +87,6 @@ export const useTimerStore = defineStore('timer', () => {
     const session = currentSession.value
     if (session && session.isActive && !session.isPaused) {
       session.remainingTime -= 1
-      // Log every 10 seconds
-      if (session.remainingTime % 10 === 0) {
-        console.log('🍅 [TIMER] Tick:', session.remainingTime, 'seconds remaining')
-      }
       if (session.remainingTime % 5 === 0 && isDeviceLeader.value) broadcastSession()
       if (session.remainingTime <= 0) {
         if (isDeviceLeader.value) {
@@ -755,16 +751,8 @@ export const useTimerStore = defineStore('timer', () => {
   // TASK-1009: Handle messages from Service Worker (notification action clicks)
   // BUG-1178: Enhanced with detailed logging to debug message delivery issues
   const handleServiceWorkerMessage = (event: MessageEvent) => {
-    console.log('🍅 [TIMER] SW MESSAGE RAW:', {
-      data: event.data,
-      origin: event.origin,
-      source: event.source ? 'has source' : 'no source'
-    })
-
     const data = event.data
     if (!data || !data.type) return
-
-    console.log('🍅 [TIMER] Processing SW message:', data.type, data)
 
     switch (data.type) {
       case 'START_BREAK':

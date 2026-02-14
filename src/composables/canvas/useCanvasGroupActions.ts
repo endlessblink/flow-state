@@ -53,11 +53,13 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
     // --- Actions ---
 
     const createGroup = async (screenPos?: { x: number; y: number }) => {
-        console.log('[BUG-1126] useCanvasGroupActions.createGroup called', {
-            screenPos,
-            hasState: !!deps.state,
-            hasGroupModalPosition: !!deps.state?.groupModalPosition
-        })
+        if (import.meta.env.DEV) {
+            console.log('[BUG-1126] useCanvasGroupActions.createGroup called', {
+                screenPos,
+                hasState: !!deps.state,
+                hasGroupModalPosition: !!deps.state?.groupModalPosition
+            })
+        }
 
         const vueFlowElement = document.querySelector('.vue-flow') as HTMLElement
         const viewport = deps.viewport?.value || { x: 0, y: 0, zoom: 1 }
@@ -70,7 +72,9 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
                 x: -viewport.x / viewport.zoom + (window.innerWidth / 2) / viewport.zoom,
                 y: -viewport.y / viewport.zoom + (window.innerHeight / 2) / viewport.zoom
             }
-            console.log('[BUG-1126] No screenPos provided, using viewport center:', flowCoords)
+            if (import.meta.env.DEV) {
+                console.log('[BUG-1126] No screenPos provided, using viewport center:', flowCoords)
+            }
         } else {
             // BUG-1126 FIX: Manual coordinate conversion to ensure accuracy
             // screenToFlowCoordinate may have issues with container offset detection
@@ -83,21 +87,27 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
                     x: (containerX - viewport.x) / viewport.zoom,
                     y: (containerY - viewport.y) / viewport.zoom
                 }
-                console.log('[BUG-1126] Manual conversion:', {
-                    screenPos,
-                    containerRect: { left: containerRect.left, top: containerRect.top },
-                    containerRelative: { x: containerX, y: containerY },
-                    viewport,
-                    flowCoords
-                })
+                if (import.meta.env.DEV) {
+                    console.log('[BUG-1126] Manual conversion:', {
+                        screenPos,
+                        containerRect: { left: containerRect.left, top: containerRect.top },
+                        containerRelative: { x: containerX, y: containerY },
+                        viewport,
+                        flowCoords
+                    })
+                }
             } else {
                 // Fallback to Vue Flow's built-in conversion
                 flowCoords = deps.screenToFlowCoordinate(screenPos)
-                console.log('[BUG-1126] Fallback to screenToFlowCoordinate:', { screenPos, flowCoords })
+                if (import.meta.env.DEV) {
+                    console.log('[BUG-1126] Fallback to screenToFlowCoordinate:', { screenPos, flowCoords })
+                }
             }
         }
 
-        console.log('[BUG-1126] Setting groupModalPosition to:', flowCoords)
+        if (import.meta.env.DEV) {
+            console.log('[BUG-1126] Setting groupModalPosition to:', flowCoords)
+        }
         groupModalPosition.value = flowCoords
         selectedGroup.value = null // Ensure create mode
 

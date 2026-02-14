@@ -90,10 +90,15 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
-      path: '/weekly-plan',
-      name: 'weekly-plan',
-      component: () => import('@/views/WeeklyPlanView.vue'),
+      path: '/ai',
+      name: 'ai',
+      component: () => import('@/views/AIHubView.vue'),
       meta: { requiresAuth: false }
+    },
+    // FEATURE-1317: Redirects for old bookmarks
+    {
+      path: '/weekly-plan',
+      redirect: '/ai?tab=plan'
     },
     {
       path: '/mobile-quick-sort',
@@ -116,11 +121,10 @@ const router = createRouter({
         component: () => import('@/components/debug/KeyboardDeletionTest.vue')
       }
     ] : []),
+    // FEATURE-1317: Redirect old AI chat route
     {
       path: '/ai-chat',
-      name: 'ai-chat',
-      component: () => import('@/views/AIChatView.vue'),
-      meta: { requiresAuth: false }
+      redirect: '/ai?tab=chat'
     },
     {
       path: '/performance',

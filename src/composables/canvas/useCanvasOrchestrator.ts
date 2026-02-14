@@ -158,11 +158,9 @@ export function useCanvasOrchestrator() {
         // TASK-241: State Machine Guard
         // Block READ-PATH syncs if user is interacting (dragging/resizing)
         if (!canAcceptRemoteUpdate.value) {
-            console.debug('🛡️ [ORCHESTRATOR] syncNodes BLOCKED by operation state (User Interaction)')
             return
         }
 
-        console.debug('👉 [ORCHESTRATOR] Calling syncNodes', { hasTasks: !!tasks })
         try {
             const tasksToSync = tasks || tasksWithCanvasPosition.value
             persistence.syncStoreToCanvas(tasksToSync)
@@ -559,14 +557,12 @@ export function useCanvasOrchestrator() {
     // REACTIVITY FIX: Watch for manual sync requests from context menus
     watch(() => canvasStore.syncTrigger, () => {
         if (!isInitialized.value) return
-        console.log('🔔 [ORCHESTRATOR] canvasStore.syncTrigger changed - forcing sync')
         batchedSyncNodes()
         batchedSyncEdges()
     })
 
     watch(() => canvasUiStore.syncTrigger, () => {
         if (!isInitialized.value) return
-        console.log('🔔 [ORCHESTRATOR] canvasUiStore.syncTrigger changed - forcing sync')
         batchedSyncNodes()
     })
 
@@ -599,7 +595,6 @@ export function useCanvasOrchestrator() {
         isSyncingFromWatcher = true
         try {
             if (persistence.isSyncing.value) return
-            console.log('👀 [ORCHESTRATOR] canvasStore.groups changed', { count: canvasStore.groups.length })
             canvasStore.recalculateAllTaskCounts(taskStore.tasks)
             batchedSyncNodes()
         } finally {
@@ -730,33 +725,6 @@ export function useCanvasOrchestrator() {
             // TASK-262 FIX: Allow all changes to pass through including deselection
             // Previously, deselection was blocked which prevented clicking on empty canvas
             // from clearing selection. Vue Flow's default behavior is correct - let it work.
-
-            // DRIFT LOGGING: Log ALL changes from Vue Flow to catch position drift
-            // BUG-1216: DEV-gated — these fire on every drag frame in production
-            if (import.meta.env.DEV) {
-                const positionChanges = changes.filter((c: any) => c.type === 'position')
-                if (positionChanges.length > 0) {
-                    console.log(`📍[VUEFLOW-CHANGE] ${positionChanges.length} position changes`,
-                        positionChanges.map((c: any) => ({
-                            id: c.id?.slice(0, 8),
-                            position: c.position ? { x: Math.round(c.position.x), y: Math.round(c.position.y) } : null,
-                            positionAbsolute: c.positionAbsolute ? { x: Math.round(c.positionAbsolute.x), y: Math.round(c.positionAbsolute.y) } : null,
-                            dragging: c.dragging
-                        }))
-                    )
-                }
-
-                // Also log dimension changes which might affect layout
-                const dimensionChanges = changes.filter((c: any) => c.type === 'dimensions')
-                if (dimensionChanges.length > 0) {
-                    console.log(`📍[VUEFLOW-DIMENSIONS] ${dimensionChanges.length} dimension changes`,
-                        dimensionChanges.map((c: any) => ({
-                            id: c.id?.slice(0, 8),
-                            dimensions: c.dimensions
-                        }))
-                    )
-                }
-            }
 
             applyNodeChanges(changes)
         },

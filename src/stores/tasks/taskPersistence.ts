@@ -296,6 +296,7 @@ export function useTaskPersistence(
                         // Remote is newer or equal -> Accept remote
                         // BUG-1206 DEBUG: Log when remote description overwrites local
                         if (localTask.description !== remoteTask.description) {
+                            if (import.meta.env.DEV) {
                             console.warn('🐛 [BUG-1206] SMART-MERGE OVERWRITE - description changed!', {
                                 taskId: localTask.id?.slice(0, 8),
                                 localDescLength: localTask.description?.length,
@@ -306,6 +307,7 @@ export function useTaskPersistence(
                                 remoteTime: new Date(remoteTime).toISOString(),
                                 isVeryRecent
                             })
+                        }
                         }
                         mergedTasks.push(remoteTask)
                     }

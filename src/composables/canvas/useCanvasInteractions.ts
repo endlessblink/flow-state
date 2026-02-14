@@ -387,24 +387,6 @@ export function useCanvasInteractions(deps?: {
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
 
-        if (import.meta.env.DEV) {
-            // BUG-1310: Enhanced drag start logging with extent and constraint info
-            console.log(`[BUG-1310:DRAG-START] Drag start - ${involvedNodes.length} nodes`,
-                involvedNodes.map((n: any) => ({
-                    id: n.id?.slice(0, 12),
-                    type: n.type,
-                    position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
-                    positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
-                    computedPosition: n.computedPosition ? { x: Math.round(n.computedPosition.x), y: Math.round(n.computedPosition.y) } : null,
-                    parentNode: n.parentNode ?? null,
-                    extent: n.extent ?? 'none',
-                    expandParent: n.expandParent ?? false,
-                    dimensions: n.dimensions ?? null,
-                    width: n.width ?? null,
-                    height: n.height ?? null
-                }))
-            )
-        }
 
         // Guard: Only proceed if we can start a new drag (operation state is idle)
         // This is the AUTHORITATIVE guard that prevents duplicate drag starts
@@ -423,29 +405,8 @@ export function useCanvasInteractions(deps?: {
         // If startDrag() returned false, we are already dragging - ignore duplicate event
     }
 
-    // BUG-1310: Throttle drag logging to avoid console flood
-    let lastDragLogTime = 0
-
     const onNodeDrag = (event: NodeDragEvent) => {
         // Vue Flow updates node.position automatically (Visuals)
-
-        // BUG-1310: Log drag position vs extent periodically (every 500ms)
-        if (import.meta.env.DEV) {
-            const now = Date.now()
-            if (now - lastDragLogTime > 500) {
-                lastDragLogTime = now
-                event.nodes.forEach((n: any) => {
-                    console.log(`[BUG-1310:DRAGGING] Node ${n.id?.slice(0, 12)}`, {
-                        position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
-                        computedPosition: n.computedPosition ? { x: Math.round(n.computedPosition.x), y: Math.round(n.computedPosition.y) } : null,
-                        positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
-                        parentNode: n.parentNode ?? null,
-                        extent: n.extent ?? 'none',
-                        dragging: n.dragging
-                    })
-                })
-            }
-        }
 
         // TASK-213: Update PositionManager (Truth)
         const allGroups = canvasStore._rawGroups || canvasStore.groups || []
@@ -547,15 +508,6 @@ export function useCanvasInteractions(deps?: {
                         allGroups,
                     })
 
-                    if (import.meta.env.DEV) {
-                        const beforeGroupPos = group.position
-                        console.log(`[CANVAS:INTERACT] Group drag write "${group.name?.slice(0, 20)}" (${groupId.slice(0, 8)})`, {
-                            before: beforeGroupPos ? { x: Math.round(beforeGroupPos.x), y: Math.round(beforeGroupPos.y) } : null,
-                            after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
-                            parentChange: parentResult.transitionType !== 'no-change' ? parentResult.transitionType : 'same',
-                            source: 'onNodeDragStop'
-                        })
-                    }
 
                     // Update store with ABSOLUTE position AND parentGroupId
                     canvasStore.updateSection(groupId, {
@@ -673,9 +625,6 @@ export function useCanvasInteractions(deps?: {
                     // We should NOT recalculate parentId/Smart Groups for tasks that stayed in their group.
                     // Check: if task has a parent AND is still inside that parent, skip processing.
                     const oldParentId = task.parentId
-                    if (import.meta.env.DEV) {
-                        console.log(`[CANVAS:INTERACT] Task "${task.title?.slice(0, 20)}" oldParentId=${oldParentId?.slice(0, 8) ?? 'none'}`)
-                    }
                     if (oldParentId) {
                         const currentParent = taskAllGroups.find(g => g.id === oldParentId)
                         if (currentParent) {
@@ -688,12 +637,6 @@ export function useCanvasInteractions(deps?: {
                             // If task center is still inside current parent, skip processing
                             // BUG-1084 FIX: Reduced padding from 10 to 2 to prevent false "outside" detection
                             const stillInside = isNodeCompletelyInside(spatialTask, parentBounds, 2)
-                            if (import.meta.env.DEV) {
-                                console.log(`[CANVAS:INTERACT] stillInside=${stillInside}`, {
-                                    taskCenter: { x: Math.round(spatialTask.position.x + (spatialTask.width || 200) / 2), y: Math.round(spatialTask.position.y + (spatialTask.height || 40) / 2) },
-                                    parentBounds: { x: Math.round(parentBounds.position.x), y: Math.round(parentBounds.position.y), w: parentBounds.width, h: parentBounds.height }
-                                })
-                            }
                             if (stillInside) {
                                 // Task just moved with its group - only sync position, skip parent/Smart Group recalc
                                 const posChanged = !task.canvasPosition ||
@@ -737,17 +680,11 @@ export function useCanvasInteractions(deps?: {
                             const stillInCurrentParent = isNodeCompletelyInside(spatialTask, parentBounds, 2)
                             if (stillInCurrentParent) {
                                 // Task is inside BOTH current parent and detected group - prefer current
-                                if (import.meta.env.DEV) {
-                                    console.log(`[CANVAS:INTERACT] Task inside both "${targetGroup?.name}" and current "${currentParent.name}" - keeping current`)
-                                }
                                 targetGroup = currentParent
                             }
                         }
                     }
                     const newParentId = targetGroup?.id ?? null
-                    if (import.meta.env.DEV) {
-                        console.log(`[CANVAS:INTERACT] Task "${task.title?.slice(0, 20)}" detected in "${targetGroup?.name ?? 'none'}" (${newParentId?.slice(0, 8) ?? 'root'})`)
-                    }
 
                     // Skip if position didn't change meaningfully
                     // (prevents drift when task just followed parent group)
@@ -763,16 +700,6 @@ export function useCanvasInteractions(deps?: {
                     // 4. Optimistic Store Update (Absolute position + parentId)
                     // GEOMETRY WRITER: Primary drag handler (TASK-255)
 
-                    if (import.meta.env.DEV) {
-                        const beforePos = task.canvasPosition
-                        console.log(`[CANVAS:INTERACT] Task drag write "${task.title?.slice(0, 20)}" (${task.id.slice(0, 8)})`, {
-                            before: beforePos ? { x: Math.round(beforePos.x), y: Math.round(beforePos.y) } : null,
-                            after: { x: Math.round(absolutePos.x), y: Math.round(absolutePos.y) },
-                            parentChange: oldParentId !== newParentId ? `${oldParentId?.slice(0, 8) ?? 'root'} → ${newParentId?.slice(0, 8) ?? 'root'}` : 'same',
-                            source: 'onNodeDragStop'
-                        })
-                    }
-
                     // TASK-1083: Combine position + smart-group updates into SINGLE save to prevent race condition
                     // Previously: two separate updateTask calls could race with realtime events
                     const dragUpdates: Record<string, any> = {
@@ -785,34 +712,22 @@ export function useCanvasInteractions(deps?: {
                     // METADATA ONLY: Smart groups update dueDate/priority/status, never geometry (TASK-255)
                     // TASK-1177: Pass allGroups to enable parent chain property inheritance
                     if (targetGroup) {
-                        if (import.meta.env.DEV) {
-                            console.log(`[CANVAS:INTERACT] Smart Group check - Group: "${targetGroup.name}", Task: "${task.title}"`)
-                        }
                         // TASK-1177: Pass allGroups to getSectionProperties for parent chain inheritance
                         // This allows child groups to inherit properties (like dueDate) from parent groups
                         const smartUpdates = getSectionProperties(
                             targetGroup as CanvasSection,
                             taskAllGroups as CanvasGroup[]
                         )
-                        if (import.meta.env.DEV) {
-                            console.log(`[CANVAS:INTERACT] Smart updates:`, smartUpdates)
-                        }
                         // Filter out updates where the task already has the same value
                         // TASK-1177 FIX: Also skip empty/null dueDate values to prevent DB errors
                         for (const [key, value] of Object.entries(smartUpdates)) {
                             // Skip invalid dueDate values (empty string, null, undefined, "null" string)
                             if (key === 'dueDate' && (!value || value === 'null')) {
-                                if (import.meta.env.DEV) {
-                                    console.log(`[CANVAS:INTERACT] Skipping invalid dueDate: "${value}"`)
-                                }
                                 continue
                             }
                             const taskKey = key as keyof typeof task
                             if (task[taskKey] !== value) {
                                 dragUpdates[key] = value
-                                if (import.meta.env.DEV) {
-                                    console.log(`[CANVAS:INTERACT] Adding "${key}" from "${targetGroup.name}" to combined update`)
-                                }
                             }
                         }
                     }

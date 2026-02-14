@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSettingsStore } from '@/stores/settings'
@@ -48,21 +48,46 @@ function formatDateISO(d: Date): string {
 }
 
 // ============================================================================
+// Singleton state — persists across navigations, expires after 1 day
+// ============================================================================
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000
+
+let _state: Ref<WeeklyPlanState> | null = null
+let _stateCreatedAt = 0
+
+function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
+  const now = Date.now()
+
+  // Expire after 1 day
+  if (_state && (now - _stateCreatedAt) > ONE_DAY_MS) {
+    _state = null
+  }
+
+  if (!_state) {
+    _state = ref<WeeklyPlanState>({
+      status: 'idle',
+      plan: null,
+      reasoning: null,
+      error: null,
+      weekStart: getWeekStart(weekStartsOn),
+      weekEnd: getWeekEnd(weekStartsOn),
+      interviewAnswers: null,
+    })
+    _stateCreatedAt = now
+  }
+
+  return _state
+}
+
+// ============================================================================
 // Composable
 // ============================================================================
 
 export function useWeeklyPlan() {
   const settings = useSettingsStore()
 
-  const state = ref<WeeklyPlanState>({
-    status: 'idle',
-    plan: null,
-    reasoning: null,
-    error: null,
-    weekStart: getWeekStart(settings.weekStartsOn),
-    weekEnd: getWeekEnd(settings.weekStartsOn),
-    interviewAnswers: null,
-  })
+  const state = getOrCreateState(settings.weekStartsOn)
 
   const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay } = useWeeklyPlanAI()
   const { loadProfile, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, profile: workProfile } = useWorkProfile()
@@ -401,6 +426,7 @@ export function useWeeklyPlan() {
       weekEnd: getWeekEnd(settings.weekStartsOn),
       interviewAnswers: null,
     }
+    _stateCreatedAt = Date.now()
   }
 
   return {

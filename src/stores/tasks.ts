@@ -354,7 +354,7 @@ export const useTaskStore = defineStore('tasks', () => {
           }
 
           // BUG-1206 DEBUG: Log description changes from sync
-          if (currentTask.description !== normalizedTask.description) {
+          if (import.meta.env.DEV && currentTask.description !== normalizedTask.description) {
             console.warn('🐛 [BUG-1206] SYNC OVERWRITE - description changed!', {
               taskId: taskId.slice(0, 8),
               localDescLength: currentTask.description?.length,

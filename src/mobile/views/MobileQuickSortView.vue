@@ -1751,6 +1751,13 @@ onMounted(() => {
   letter-spacing: -0.01em;
   overflow-wrap: anywhere; /* Break long URLs/strings that have no spaces */
   word-break: break-word;
+  /* Hard height cap — reliable fallback for all browsers */
+  max-height: 5.2em; /* ~3 lines at line-height 1.25 + small buffer */
+  overflow: hidden;
+  /* Progressive enhancement: show ellipsis where supported */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   /* RTL support */
   text-align: start;
   unicode-bidi: plaintext;
@@ -2574,6 +2581,41 @@ onMounted(() => {
 .assign-project-btn:active {
   background: var(--state-active-bg);
   transform: scale(0.98);
+}
+
+/* ================================
+   SMALL SCREEN ADAPTATIONS
+   ================================ */
+
+@media (max-height: 700px) {
+  .card-stack {
+    max-height: 200px;
+    min-height: 160px;
+  }
+
+  .task-card {
+    max-height: 180px;
+    min-height: 140px;
+  }
+
+  .stack-card {
+    height: 160px;
+  }
+
+  .card-content {
+    padding: var(--space-4);
+    padding-bottom: var(--space-5);
+  }
+
+  .task-title {
+    font-size: var(--text-lg);
+    max-height: 3.8em; /* ~3 lines */
+    -webkit-line-clamp: 2;
+  }
+
+  .process-flow-indicator {
+    display: none;
+  }
 }
 
 /* ================================

@@ -131,25 +131,6 @@ const isLoadingModels = ref(false)
 const providerModelMemory = ref<Record<string, string | null>>({})
 
 /**
- * Build usage metadata for a completed AI response.
- * Estimates tokens from content length (~4 chars/token).
- * TASK-1316: Feeds the AI Pricing & Options settings tab.
- */
-async function buildUsageMetadata(fullContent: string): Promise<{ provider?: string; model?: string; tokens?: number; latencyMs?: number } | undefined> {
-  try {
-    const router = await getRouter()
-    const provider = router.getLastUsedProvider()
-    const model = selectedModel.value || undefined
-    const estimatedTokens = Math.ceil(fullContent.length / 4)
-    if (!provider) return undefined
-    return { provider, model, tokens: estimatedTokens }
-  } catch (e) {
-    console.error('[USAGE-META] Error:', e)
-    return undefined
-  }
-}
-
-/**
  * Fetch available models from local Ollama instance.
  */
 async function fetchOllamaModels(): Promise<string[]> {
@@ -576,9 +557,7 @@ export function useAIChat() {
 
       // Build actions (including confirmation buttons if needed)
       const actions = buildMessageActions(fullContent, confirmationTools)
-      // TASK-1316: Attach usage metadata for AI Pricing tracking
-      const usageMeta = await buildUsageMetadata(fullContent)
-      store.completeStreamingMessage({ actions, metadata: usageMeta })
+      store.completeStreamingMessage({ actions })
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get response'
@@ -780,9 +759,7 @@ export function useAIChat() {
         lastMsg.content = stripToolBlocks(lastMsg.content || '')
       }
 
-      // TASK-1316: Attach usage metadata for AI Pricing tracking
-      const reactUsageMeta = await buildUsageMetadata(lastMsg?.content || '')
-      store.completeStreamingMessage({ metadata: reactUsageMeta })
+      store.completeStreamingMessage()
 
       // Update provider badge
       try {

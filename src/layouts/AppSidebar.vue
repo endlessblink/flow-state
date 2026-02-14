@@ -40,10 +40,12 @@
         </div>
       </div>
 
-      <!-- Quick Task Creation - REBUILT -->
+      <!-- Quick Task Creation - REBUILT with TASK-1324 enhancements -->
       <div class="quick-task-section">
         <div class="quick-task-row">
+          <!-- Single-line input (shown when not expanded) -->
           <input
+            v-if="!isQuickAddExpanded"
             ref="quickTaskRef"
             v-model="quickTaskText"
             type="text"
@@ -52,7 +54,25 @@
             :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
             aria-label="Quick add task"
             @keydown.enter.prevent="createQuickTask"
+            @keydown.escape="collapseQuickAdd"
+            @focus="quickTaskFocused = true"
+            @blur="quickTaskFocused = false"
           >
+          <!-- Multi-line textarea (shown when expanded) -->
+          <textarea
+            v-else
+            ref="quickTaskExpandedRef"
+            v-model="quickTaskText"
+            class="quick-task-textarea"
+            :class="{ 'voice-active': isListening }"
+            :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
+            aria-label="Quick add task"
+            rows="3"
+            @keydown.enter.exact.prevent="createQuickTask"
+            @keydown.escape="collapseQuickAdd"
+            @focus="quickTaskFocused = true"
+            @blur="quickTaskFocused = false"
+          />
           <!-- Mic button (TASK-1024) - ALWAYS SHOW FOR DEBUG -->
           <button
             class="mic-btn"
@@ -64,6 +84,73 @@
             <MicOff v-else :size="16" />
           </button>
         </div>
+
+        <!-- Metadata row (date + priority pickers) - TASK-1324 Feature 2 & 3 -->
+        <Transition name="fade-slide">
+          <div v-if="showMetadataRow" class="metadata-row">
+            <!-- Date picker -->
+            <div class="metadata-picker">
+              <button
+                class="metadata-btn"
+                :class="{ 'has-value': quickTaskDueDate }"
+                :style="quickTaskDueDate ? { color: 'var(--brand-primary)' } : {}"
+                @click="toggleDatePicker"
+              >
+                <CalendarDays :size="14" />
+                <span v-if="quickTaskDueDate" class="metadata-label">{{ formatDateLabel(quickTaskDueDate) }}</span>
+                <span v-else class="metadata-label">No date</span>
+              </button>
+
+              <!-- Date dropdown -->
+              <Transition name="fade">
+                <div v-if="showDatePicker" class="metadata-dropdown date-dropdown">
+                  <button class="dropdown-option" @click="selectDate('today')">Today</button>
+                  <button class="dropdown-option" @click="selectDate('tomorrow')">Tomorrow</button>
+                  <button class="dropdown-option" @click="selectDate('weekend')">This Weekend</button>
+                  <button class="dropdown-option" @click="selectDate(null)">No Date</button>
+                </div>
+              </Transition>
+            </div>
+
+            <span class="metadata-divider">·</span>
+
+            <!-- Priority picker -->
+            <div class="metadata-picker">
+              <button
+                class="metadata-btn"
+                :class="{ 'has-value': quickTaskPriority }"
+                :style="getPriorityColor(quickTaskPriority)"
+                @click="togglePriorityPicker"
+              >
+                <Flag :size="14" />
+                <span class="metadata-label">{{ formatPriorityLabel(quickTaskPriority) }}</span>
+              </button>
+
+              <!-- Priority dropdown -->
+              <Transition name="fade">
+                <div v-if="showPriorityPicker" class="metadata-dropdown priority-dropdown">
+                  <button class="dropdown-option" @click="selectPriority(null)">
+                    <Flag :size="12" />
+                    <span>None</span>
+                  </button>
+                  <button class="dropdown-option priority-low" @click="selectPriority('low')">
+                    <Flag :size="12" />
+                    <span>Low</span>
+                  </button>
+                  <button class="dropdown-option priority-medium" @click="selectPriority('medium')">
+                    <Flag :size="12" />
+                    <span>Medium</span>
+                  </button>
+                  <button class="dropdown-option priority-high" @click="selectPriority('high')">
+                    <Flag :size="12" />
+                    <span>High</span>
+                  </button>
+                </div>
+              </Transition>
+            </div>
+          </div>
+        </Transition>
+
         <!-- Voice feedback (when recording) -->
         <div v-if="isListening || isProcessingVoice" class="voice-feedback">
           <div class="voice-waveform">
@@ -379,7 +466,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Project } from '@/stores/tasks'
@@ -389,7 +476,7 @@ import {
   Plus, PanelLeftClose, Settings, FolderOpen,
   Calendar, List, Inbox, Zap, Clock, HelpCircle,
   ChevronRight, Coffee, Hourglass, Mountain, Trash2, X,
-  Layers, Mic, MicOff
+  Layers, Mic, MicOff, CalendarDays, Flag
 } from 'lucide-vue-next'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 
@@ -540,18 +627,131 @@ const handleProjectKeydown = (event: KeyboardEvent) => {
   }
 }
 
-// Lifecycle - add/remove keyboard listener
+// Lifecycle - add/remove keyboard listener and outside click handler
 onMounted(() => {
   window.addEventListener('keydown', handleProjectKeydown)
+  window.addEventListener('click', handleOutsideClick)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleProjectKeydown)
+  window.removeEventListener('click', handleOutsideClick)
 })
 
 // Quick Task Logic
 const quickTaskRef = ref<HTMLInputElement | null>(null)
+const quickTaskExpandedRef = ref<HTMLTextAreaElement | null>(null)
 const quickTaskText = ref('')
+const quickTaskFocused = ref(false)
+
+// TASK-1324: Quick task metadata (date + priority)
+const quickTaskDueDate = ref<string | null>(null)
+const quickTaskPriority = ref<'low' | 'medium' | 'high' | null>(null)
+const showDatePicker = ref(false)
+const showPriorityPicker = ref(false)
+
+// TASK-1324 Feature 1: Auto-expand when text gets long
+const isQuickAddExpanded = computed(() => {
+  const text = quickTaskText.value.trim()
+  if (!text) return false
+  const wordCount = text.split(/\s+/).length
+  return wordCount >= 6 || text.length > 40
+})
+
+// Show metadata row when input is focused OR has values set
+const showMetadataRow = computed(() => {
+  return quickTaskFocused.value || quickTaskDueDate.value !== null || quickTaskPriority.value !== null
+})
+
+// Auto-focus the textarea when expanding
+watch(isQuickAddExpanded, (expanded) => {
+  if (expanded) {
+    nextTick(() => quickTaskExpandedRef.value?.focus())
+  }
+})
+
+// Collapse quick add (clear text)
+const collapseQuickAdd = () => {
+  quickTaskText.value = ''
+}
+
+// TASK-1324 Feature 2: Date picker
+const toggleDatePicker = () => {
+  showDatePicker.value = !showDatePicker.value
+  showPriorityPicker.value = false
+}
+
+const selectDate = (option: 'today' | 'tomorrow' | 'weekend' | null) => {
+  if (option === null) {
+    quickTaskDueDate.value = null
+  } else if (option === 'today') {
+    const today = new Date()
+    quickTaskDueDate.value = today.toISOString().split('T')[0]
+  } else if (option === 'tomorrow') {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    quickTaskDueDate.value = tomorrow.toISOString().split('T')[0]
+  } else if (option === 'weekend') {
+    const today = new Date()
+    const dayOfWeek = today.getDay()
+    const daysUntilSaturday = (6 - dayOfWeek + 7) % 7
+    const saturday = new Date()
+    saturday.setDate(today.getDate() + daysUntilSaturday)
+    quickTaskDueDate.value = saturday.toISOString().split('T')[0]
+  }
+  showDatePicker.value = false
+}
+
+const formatDateLabel = (date: string | null): string => {
+  if (!date) return 'No date'
+  const d = new Date(date + 'T00:00:00')
+  const today = new Date()
+  const tomorrow = new Date()
+  tomorrow.setDate(today.getDate() + 1)
+
+  const dateStr = d.toISOString().split('T')[0]
+  const todayStr = today.toISOString().split('T')[0]
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+  if (dateStr === todayStr) return 'Today'
+  if (dateStr === tomorrowStr) return 'Tomorrow'
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+// TASK-1324 Feature 3: Priority picker
+const togglePriorityPicker = () => {
+  showPriorityPicker.value = !showPriorityPicker.value
+  showDatePicker.value = false
+}
+
+const selectPriority = (priority: 'low' | 'medium' | 'high' | null) => {
+  quickTaskPriority.value = priority
+  showPriorityPicker.value = false
+}
+
+const formatPriorityLabel = (priority: 'low' | 'medium' | 'high' | null): string => {
+  if (!priority) return 'None'
+  return priority.charAt(0).toUpperCase() + priority.slice(1)
+}
+
+const getPriorityColor = (priority: 'low' | 'medium' | 'high' | null) => {
+  if (!priority) return {}
+  const colors: Record<string, string> = {
+    low: 'var(--color-priority-low)',
+    medium: 'var(--color-priority-medium)',
+    high: 'var(--color-priority-high)'
+  }
+  return { color: colors[priority] }
+}
+
+// Close dropdowns when clicking outside
+const handleOutsideClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.metadata-picker')) {
+    showDatePicker.value = false
+    showPriorityPicker.value = false
+  }
+}
 
 // TASK-1322: Whisper-only voice input (browser speech recognition removed)
 const {
@@ -569,7 +769,7 @@ const {
     console.log('[Whisper Sidebar] Result:', result)
     if (result.transcript.trim()) {
       quickTaskText.value = result.transcript.trim()
-      createQuickTask()
+      // Don't auto-submit — let user review and press Enter
     }
   },
   onError: (err) => {
@@ -607,9 +807,13 @@ const createQuickTask = async () => {
       title,
       description: '',
       status: 'planned',
-      projectId: undefined
+      projectId: undefined,
+      ...(quickTaskDueDate.value && { dueDate: quickTaskDueDate.value }),
+      ...(quickTaskPriority.value && { priority: quickTaskPriority.value })
     })
     quickTaskText.value = ''
+    quickTaskDueDate.value = null
+    quickTaskPriority.value = null
   } catch (error) {
     console.error('Error creating quick task:', error)
   }
@@ -1444,5 +1648,163 @@ defineExpose({
 
 .delete-btn:hover {
   background: #dc2626;
+}
+
+/* TASK-1324: Textarea for expanded quick add (Feature 1) */
+.quick-task-textarea {
+  flex: 1;
+  padding: var(--space-2_5);
+  background: var(--glass-bg-tint);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  resize: none;
+  transition: all var(--duration-normal);
+  line-height: 1.4;
+}
+
+.quick-task-textarea:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-light);
+}
+
+.quick-task-textarea.voice-active {
+  border-color: var(--danger-text, #ef4444);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+/* TASK-1324: Metadata row for date + priority pickers (Features 2 & 3) */
+.metadata-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+}
+
+.metadata-divider {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  user-select: none;
+}
+
+.metadata-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.metadata-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.metadata-btn:hover {
+  background: var(--glass-bg);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.metadata-btn.has-value {
+  border-color: var(--brand-primary);
+}
+
+.metadata-label {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* Metadata dropdowns */
+.metadata-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: var(--z-tooltip);
+  min-width: 140px;
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.dropdown-option:hover {
+  background: var(--glass-bg-soft);
+  color: var(--text-primary);
+}
+
+/* Priority color variants */
+.dropdown-option.priority-low {
+  color: var(--color-priority-low);
+}
+
+.dropdown-option.priority-low:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dropdown-option.priority-medium {
+  color: var(--color-priority-medium);
+}
+
+.dropdown-option.priority-medium:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.dropdown-option.priority-high {
+  color: var(--color-priority-high);
+}
+
+.dropdown-option.priority-high:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Fade-slide transition for metadata row */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.fade-slide-enter-to,
+.fade-slide-leave-from {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

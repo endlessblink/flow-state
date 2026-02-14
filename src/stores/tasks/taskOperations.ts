@@ -354,7 +354,7 @@ export function useTaskOperations(
                         task.canvasPosition?.y !== updates.canvasPosition?.y))
 
             // Warn if non-allowed sources try to change geometry
-            if (hasGeometryChange && (source === 'SYNC' || source === 'SMART-GROUP')) {
+            if (import.meta.env.DEV && hasGeometryChange && (source === 'SYNC' || source === 'SMART-GROUP')) {
                 console.warn(`⚠️ [GEOMETRY-DRIFT] Source '${source}' is changing geometry - this may cause position drift!`, {
                     taskId: taskId.slice(0, 8),
                     taskTitle: task.title?.slice(0, 30),
@@ -365,22 +365,24 @@ export function useTaskOperations(
 
             // DRIFT LOGGING: Track when parentId or canvasPosition is changed
             // This helps identify non-drag flows that mutate hierarchy/positions
-            if ('parentId' in updates && updates.parentId !== task.parentId) {
-                console.log(`📍 [GEOMETRY-${source}] Task ${taskId.slice(0, 8)}... parentId: "${task.parentId ?? 'none'}" → "${updates.parentId ?? 'none'}"`, {
-                    taskTitle: task.title?.slice(0, 30),
-                    source,
-                    stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
-                })
-            }
-            if ('canvasPosition' in updates && updates.canvasPosition !== undefined) {
-                const oldPos = task.canvasPosition
-                const newPos = updates.canvasPosition
-                if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
-                    console.log(`📍 [GEOMETRY-${source}] Task ${taskId.slice(0, 8)}... pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? 'null'},${newPos?.y?.toFixed(0) ?? 'null'})`, {
+            if (import.meta.env.DEV) {
+                if ('parentId' in updates && updates.parentId !== task.parentId) {
+                    console.log(`📍 [GEOMETRY-${source}] Task ${taskId.slice(0, 8)}... parentId: "${task.parentId ?? 'none'}" → "${updates.parentId ?? 'none'}"`, {
                         taskTitle: task.title?.slice(0, 30),
                         source,
                         stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
                     })
+                }
+                if ('canvasPosition' in updates && updates.canvasPosition !== undefined) {
+                    const oldPos = task.canvasPosition
+                    const newPos = updates.canvasPosition
+                    if (oldPos?.x !== newPos?.x || oldPos?.y !== newPos?.y) {
+                        console.log(`📍 [GEOMETRY-${source}] Task ${taskId.slice(0, 8)}... pos: (${oldPos?.x?.toFixed(0) ?? '?'},${oldPos?.y?.toFixed(0) ?? '?'}) → (${newPos?.x?.toFixed(0) ?? 'null'},${newPos?.y?.toFixed(0) ?? 'null'})`, {
+                            taskTitle: task.title?.slice(0, 30),
+                            source,
+                            stack: new Error().stack?.split('\n').slice(2, 5).join(' <- ')
+                        })
+                    }
                 }
             }
 

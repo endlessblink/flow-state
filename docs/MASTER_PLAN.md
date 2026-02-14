@@ -73,6 +73,18 @@
 
 ---
 
+### BUG-1323: Quick Sort card overflow from long URLs on mobile (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+
+**Problem**: On mobile devices, the Quick Sort card (and potentially other task cards) overflow when the task title contains a long URL. Long URLs cause text to exceed the card width, pushing interactive elements (SKIP/EXIT buttons, priority selector) off-screen and making them inaccessible.
+
+**Scope**: Quick Sort card layout on mobile, potential overflow in other mobile card components.
+
+**Root Cause**: TBD — needs investigation of card layout constraints, overflow handling, and URL word-breaking.
+
+---
+
 ### ~~BUG-1310~~: Canvas invisible barrier blocks drag operations (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
@@ -1942,15 +1954,26 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ## Active Tasks (IN PROGRESS)
 
-### TASK-1322: Remove Browser Transcription — Whisper Only (🔄 IN PROGRESS)
+### ~~TASK-1322~~: Remove Browser Transcription — Whisper Only (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-14)
+
+**Removed**: 3 files deleted (~888 lines), 8 files simplified. Web Speech API fully removed. Whisper via Groq is sole voice input.
+
+**Completes**: TASK-1119 (was partial — mobile only)
+
+---
+
+### TASK-1324: Sidebar Quick Add — Auto-Expand + Date/Priority Pickers (🔄 IN PROGRESS)
 
 **Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-14)
 
-**Problem**: Browser transcription (Web Speech API) is unused — Whisper via Groq is the only voice input method. Browser button and all underlying code is dead weight.
+**Features**:
+1. Auto-expand quick add input to larger window when text exceeds ~6 words or gets truncated
+2. Add small date picker icon below the quick add input
+3. Add small priority picker icon below the quick add input
 
-**Scope**: Complete removal of Web Speech API from all components. Whisper remains sole voice input.
-
-**Completes**: TASK-1119 (was partial — mobile only)
+**Files**: `src/layouts/AppSidebar.vue`
 
 ---
 
@@ -3048,8 +3071,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | **TASK-1316** | **P2** | **📋 AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
+| **TASK-1323** | **P1** | **📋 Console Log Cleanup — reduce verbose/debug logging noise across app** |
 | **TASK-1322** | **P1** | **🔄 Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** |
-| **TASK-1319** | **P0** | **🔄 Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** |
+| ~~**TASK-1319**~~ | **P0** | ✅ **Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** (✅ DONE 2026-02-14) |
 | ~~**TASK-1320**~~ | **P1** | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |

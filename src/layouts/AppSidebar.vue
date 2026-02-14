@@ -48,6 +48,7 @@
             v-if="!isQuickAddExpanded"
             ref="quickTaskRef"
             v-model="quickTaskText"
+            :dir="quickTaskDirection"
             type="text"
             class="quick-task-input"
             :class="{ 'voice-active': isListening }"
@@ -63,6 +64,7 @@
             v-else
             ref="quickTaskExpandedRef"
             v-model="quickTaskText"
+            :dir="quickTaskDirection"
             class="quick-task-textarea"
             :class="{ 'voice-active': isListening }"
             :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
@@ -650,6 +652,14 @@ const quickTaskPriority = ref<'low' | 'medium' | 'high' | null>(null)
 const showDatePicker = ref(false)
 const showPriorityPicker = ref(false)
 
+// RTL detection for Hebrew input
+const quickTaskDirection = computed(() => {
+  const text = quickTaskText.value.trim()
+  if (!text) return 'ltr'
+  const rtlRegex = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+  return rtlRegex.test(text[0]) ? 'rtl' : 'ltr'
+})
+
 // TASK-1324 Feature 1: Auto-expand when text gets long
 const isQuickAddExpanded = computed(() => {
   const text = quickTaskText.value.trim()
@@ -833,6 +843,8 @@ const selectSmartView = (view: string) => {
   // BUG-1219 fix: Use setSmartView() to trigger persistFilters()
   // Previously set .activeSmartView directly, bypassing persistence
   taskStore.setSmartView(view)
+  // TASK-1330: Verify navigation to tasks view when selecting a smart view
+  router.push('/tasks')
 }
 
 const handleStartQuickSort = () => {

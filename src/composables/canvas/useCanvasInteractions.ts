@@ -343,7 +343,9 @@ export function useCanvasInteractions(deps?: {
     try {
         if (!deps) vueFlow = useVueFlow()
     } catch (e) {
-        console.warn('⚠️ [CANVAS-INTERACTIONS] useVueFlow context fallback')
+        if (import.meta.env.DEV) {
+            console.warn('⚠️ [CANVAS-INTERACTIONS] useVueFlow context fallback')
+        }
     }
 
     const { getNodes } = useCanvasCore()
@@ -468,8 +470,8 @@ export function useCanvasInteractions(deps?: {
         // handlers see "not dragging" while async save is still in progress.
         // Moved to the finally block below, after all saves complete.
 
+        const callId = import.meta.env.DEV ? Math.random().toString(36).slice(2, 8) : ''
         if (import.meta.env.DEV) {
-            const callId = Math.random().toString(36).slice(2, 8)
             console.log(`[CANVAS:INTERACT] Drag stop - callId=${callId}, involvedNodes=${involvedNodes.length}`,
                 involvedNodes.map(n => `${n.id.slice(0, 12)}(${n.type})`))
         }

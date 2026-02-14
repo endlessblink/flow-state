@@ -171,7 +171,9 @@ function setupOnlineListeners() {
   if (listenersSetUp || typeof window === 'undefined') return
 
   const handleOnline = () => {
-    console.log('[SYNC] Network online - resuming sync')
+    if (import.meta.env.DEV) {
+      console.log('[SYNC] Network online - resuming sync')
+    }
     state.value.isOnline = true
     updateStatus()
     // Trigger immediate sync attempt
@@ -179,7 +181,9 @@ function setupOnlineListeners() {
   }
 
   const handleOffline = () => {
-    console.log('[SYNC] Network offline - pausing sync')
+    if (import.meta.env.DEV) {
+      console.log('[SYNC] Network offline - pausing sync')
+    }
     state.value.isOnline = false
     updateStatus()
   }
@@ -306,7 +310,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
           if (localUpdatedAt >= serverUpdatedAt) {
             // Our change is newer - force update without version check
             if (import.meta.env.DEV) {
-              console.log(`✅ [SYNC] LWW: Local wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
+              console.log(`[SYNC] LWW: Local wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
             }
 
             const forceResult = await supabase
@@ -426,7 +430,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
         const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
         taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
         if (import.meta.env.DEV) {
-          console.log(`🔄 [SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+          console.log(`[SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
         }
       } catch (e) {
         console.warn(`[SYNC] Failed to apply LWW server data to store:`, e)

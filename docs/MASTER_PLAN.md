@@ -1636,9 +1636,9 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 
 ---
 
-### BUG-352: Mobile PWA "Failed to Fetch" (🔄 IN PROGRESS)
+### ~~BUG-352~~: Mobile PWA "Failed to Fetch" (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
 
 **Problem**: Mobile PWA shows red "Sync Error(saveActiveTimerSession): TypeError: Failed to fetch" popup when network connectivity is intermittent (WiFi/cell handoff, signal dips). Timer heartbeat saves every 10s — any network blip triggers alarming error notification.
 

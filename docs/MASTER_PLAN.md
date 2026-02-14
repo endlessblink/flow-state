@@ -1930,6 +1930,18 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ## Active Tasks (IN PROGRESS)
 
+### TASK-1322: Remove Browser Transcription — Whisper Only (🔄 IN PROGRESS)
+
+**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-14)
+
+**Problem**: Browser transcription (Web Speech API) is unused — Whisper via Groq is the only voice input method. Browser button and all underlying code is dead weight.
+
+**Scope**: Complete removal of Web Speech API from all components. Whisper remains sole voice input.
+
+**Completes**: TASK-1119 (was partial — mobile only)
+
+---
+
 ### TASK-1060: Infrastructure & E2E Sync Stability (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (Started: 2026-01-24)
@@ -3024,6 +3036,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | **TASK-1316** | **P2** | **📋 AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
+| **TASK-1322** | **P1** | **🔄 Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** |
 | **TASK-1319** | **P0** | **🔄 Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** |
 | ~~**TASK-1320**~~ | **P1** | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
@@ -3780,6 +3793,26 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 - [ ] **TASK-1242**: Corruption-influenced AI personality — glitchy tone at high corruption levels (moved from Phase 4)
 
 **Blocking**: BUG-1204 - Apply migration to database (table returns 404)
+
+---
+
+### TASK-1322: Calendar Month View Fixes (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
+
+**Problem**: Multiple month/week view calendar issues degrading usability:
+1. Tasks with only `dueDate` (no explicit scheduling) pollute calendar with fake 9:00 AM events
+2. Month view events too wide (single-line, stretching full cell width)
+3. Dragging events between dates in month view duplicates instead of moving
+4. No hover tooltips with task details in week/month views
+
+**Fixes**:
+- [x] Removed dueDate fallback from `getTaskInstances()` in `src/stores/tasks.ts`
+- [x] Restyled `.month-event` to vertical compact layout with 2-line text clamp
+- [x] Fixed `handleMonthDrop` to update `instances[]` when task uses modern scheduling
+- [x] Added `getEventTooltip()` to `CalendarMonthView.vue` and `CalendarWeekView.vue`
+
+**Files**: `src/stores/tasks.ts`, `src/components/calendar/CalendarMonthView.vue`, `src/components/calendar/CalendarWeekView.vue`, `src/composables/calendar/useCalendarMonthView.ts`
 
 ---
 

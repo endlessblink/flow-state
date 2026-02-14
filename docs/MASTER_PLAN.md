@@ -8,9 +8,9 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1318: Timer broken — doesn't stop on break, random numbers, duplicate notifications, extend not working (🔄 IN PROGRESS)
+### ~~BUG-1318~~: Timer broken — doesn't stop on break, random numbers, duplicate notifications, extend not working (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
 
 **Problem**: Multiple timer issues reported simultaneously:
 1. Timer doesn't stop when break starts
@@ -18,7 +18,13 @@
 3. Two notification messages fire one after the other
 4. "+5 more minutes" from notification doesn't work
 
-**Root Cause**: TBD — investigating
+**Root Cause**: Stale Realtime events resurrecting completed sessions + no completion deduplication + notification firing from both SW and basic API simultaneously + device going deaf after completion (not leading, not polling).
+
+**Fix** (v1.2.62):
+1. `completedSessionIds` Set prevents stale Realtime resurrection (2-min TTL)
+2. `isCompleting` lock with try/finally prevents concurrent completions
+3. SW notification first (action buttons), basic Notification as fallback with dedup `tag`
+4. `resumeFollowerPoll()` after completion so device detects new sessions
 
 ---
 

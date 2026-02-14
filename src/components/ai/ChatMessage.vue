@@ -979,6 +979,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   display: flex;
   gap: var(--space-3);
   padding: var(--space-3);
+  padding-inline-end: calc(var(--space-3) + 36px); /* Reserve space for copy button */
   border-radius: var(--radius-lg);
   animation: fadeIn 0.2s ease;
   position: relative;

@@ -1,18 +1,24 @@
 ---
 name: vue-flow-debug
-description: Expert skill for debugging Vue Flow parent-child relationships, coordinate systems, and nesting logic. Contains deep knowledge on coordinate conversion and event handling.
+description: Expert skill for debugging Vue Flow parent-child relationships, coordinate systems, node extent barriers, and nesting logic. Contains deep knowledge on coordinate conversion and event handling.
 triggers:
   - debug vue flow
   - fix nested nodes
   - node parent issues
   - dragging nodes wrong
   - group node bugs
+  - invisible barrier
+  - node extent
+  - cant drag node
 keywords:
   - vue flow
   - nested
   - coordinates
   - parent
   - computedPosition
+  - extent
+  - barrier
+  - nodeExtent
 ---
 
 # Vue Flow Nested Nodes & Parent-Child Debugging
@@ -283,6 +289,32 @@ After implementing, verify:
 - [ ] Refresh page → state persists correctly
 - [ ] Move task between groups → counts update correctly
 - [ ] Rapid drops → no race conditions
+
+## 6. Node Extent Barriers (BUG-1310) {#node-extent}
+
+### The Problem
+Nodes hit an invisible barrier when dragged. Some groups can be dragged, others cannot. No error messages appear.
+
+### Root Cause
+Vue Flow's `nodeExtent` prop constrains where nodes can be positioned. In FlowState, `dynamicNodeExtent` is computed in `useCanvasFilteredState.ts`. If the extent is too small, nodes near the edge hit an invisible wall.
+
+**Common scenario**: When `taskNodes=0` (tasks not rendered), the extent used to default to `[[-2000, -2000], [5000, 5000]]` — only 7000px. Groups at x=4556 had just 444px of room.
+
+### Diagnostic Steps
+1. Check console for `[BUG-1310:EXTENT]` — what are the extent bounds?
+2. Check `[NODE-BUILDER]` — are `taskNodes > 0`?
+3. Check `[BUG-1310:DRAG-START]` — does node have `extent: 'parent'`? (should be `'none'`)
+4. Compare node position vs extent bounds — is it near the edge?
+
+### Key Files
+- `src/composables/canvas/useCanvasFilteredState.ts` — `dynamicNodeExtent` computed
+- `src/views/CanvasView.vue` — `:node-extent="dynamicNodeExtent"` prop
+
+### Fix Pattern
+`dynamicNodeExtent` must include BOTH task AND group positions. Default should be very large (`[-50000, 50000]`).
+
+### SOP Reference
+See `docs/sop/canvas/CANVAS-NODE-EXTENT.md` for full details.
 
 ## Resources
 

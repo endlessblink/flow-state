@@ -388,12 +388,20 @@ export function useCanvasInteractions(deps?: {
         const { nodes: involvedNodes } = event
 
         if (import.meta.env.DEV) {
-            console.log(`[CANVAS:INTERACT] Drag start - ${involvedNodes.length} nodes`,
+            // BUG-1310: Enhanced drag start logging with extent and constraint info
+            console.log(`[BUG-1310:DRAG-START] Drag start - ${involvedNodes.length} nodes`,
                 involvedNodes.map((n: any) => ({
                     id: n.id?.slice(0, 12),
+                    type: n.type,
                     position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
                     positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
-                    parentNode: n.parentNode?.slice(0, 12) ?? null
+                    computedPosition: n.computedPosition ? { x: Math.round(n.computedPosition.x), y: Math.round(n.computedPosition.y) } : null,
+                    parentNode: n.parentNode ?? null,
+                    extent: n.extent ?? 'none',
+                    expandParent: n.expandParent ?? false,
+                    dimensions: n.dimensions ?? null,
+                    width: n.width ?? null,
+                    height: n.height ?? null
                 }))
             )
         }
@@ -415,8 +423,29 @@ export function useCanvasInteractions(deps?: {
         // If startDrag() returned false, we are already dragging - ignore duplicate event
     }
 
+    // BUG-1310: Throttle drag logging to avoid console flood
+    let lastDragLogTime = 0
+
     const onNodeDrag = (event: NodeDragEvent) => {
         // Vue Flow updates node.position automatically (Visuals)
+
+        // BUG-1310: Log drag position vs extent periodically (every 500ms)
+        if (import.meta.env.DEV) {
+            const now = Date.now()
+            if (now - lastDragLogTime > 500) {
+                lastDragLogTime = now
+                event.nodes.forEach((n: any) => {
+                    console.log(`[BUG-1310:DRAGGING] Node ${n.id?.slice(0, 12)}`, {
+                        position: n.position ? { x: Math.round(n.position.x), y: Math.round(n.position.y) } : null,
+                        computedPosition: n.computedPosition ? { x: Math.round(n.computedPosition.x), y: Math.round(n.computedPosition.y) } : null,
+                        positionAbsolute: n.positionAbsolute ? { x: Math.round(n.positionAbsolute.x), y: Math.round(n.positionAbsolute.y) } : null,
+                        parentNode: n.parentNode ?? null,
+                        extent: n.extent ?? 'none',
+                        dragging: n.dragging
+                    })
+                })
+            }
+        }
 
         // TASK-213: Update PositionManager (Truth)
         const allGroups = canvasStore._rawGroups || canvasStore.groups || []

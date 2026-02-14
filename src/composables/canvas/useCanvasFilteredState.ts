@@ -8,9 +8,15 @@ interface TaskStoreSettings {
     hideCanvasOverdueTasks?: boolean
 }
 
+interface CanvasGroup {
+    id: string
+    position: { x: number; y: number; width: number; height: number }
+}
+
 interface CanvasStore {
     calculateContentBounds: (tasks: Task[]) => { x: number; y: number; width: number; height: number }
     taskStore?: TaskStoreSettings
+    groups?: CanvasGroup[]
 }
 
 export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: CanvasStore) {
@@ -124,36 +130,75 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
 
     const dynamicNodeExtent = computed(() => {
         const tasks = tasksWithCanvasPosition.value
-        if (!tasks.length) {
-            return [[-2000, -2000], [5000, 5000]] as [[number, number], [number, number]]
+        const groups = canvasStore.groups || []
+
+        // BUG-1310 FIX: When no tasks have canvas positions, the old default [-2000, 5000]
+        // was too small — groups near x=4556 hit an invisible wall at x=5000.
+        // Now we also consider group positions to compute the extent.
+        if (!tasks.length && !groups.length) {
+            return [[-50000, -50000], [50000, 50000]] as [[number, number], [number, number]]
         }
 
-        const currentHash = tasks.map(t => `${t.id}:${t.canvasPosition?.x || 0}:${t.canvasPosition?.y || 0}`).join('|')
+        // Build a hash from both tasks AND groups for cache invalidation
+        const taskHash = tasks.map(t => `${t.id}:${t.canvasPosition?.x || 0}:${t.canvasPosition?.y || 0}`).join('|')
+        const groupHash = groups.map(g => `${g.id}:${g.position?.x || 0}:${g.position?.y || 0}`).join('|')
+        const currentHash = `${taskHash}##${groupHash}`
         if (currentHash === lastDynamicNodeExtentHash && lastDynamicNodeExtent) {
             return lastDynamicNodeExtent
         }
 
         try {
-            const bounds = canvasStore.calculateContentBounds(tasks)
             const padding = 1000
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
 
-            // Convert {x,y,w,h} to extent [[minX, minY], [maxX, maxY]]
-            const minX = bounds.x
-            const minY = bounds.y
-            const maxX = bounds.x + bounds.width
-            const maxY = bounds.y + bounds.height
+            // Include task bounds
+            if (tasks.length) {
+                const bounds = canvasStore.calculateContentBounds(tasks)
+                minX = Math.min(minX, bounds.x)
+                minY = Math.min(minY, bounds.y)
+                maxX = Math.max(maxX, bounds.x + bounds.width)
+                maxY = Math.max(maxY, bounds.y + bounds.height)
+            }
+
+            // BUG-1310: Also include group bounds (critical when taskNodes=0)
+            for (const group of groups) {
+                if (!group.position) continue
+                const gx = group.position.x
+                const gy = group.position.y
+                const gw = group.position.width || 0
+                const gh = group.position.height || 0
+                minX = Math.min(minX, gx)
+                minY = Math.min(minY, gy)
+                maxX = Math.max(maxX, gx + gw)
+                maxY = Math.max(maxY, gy + gh)
+            }
+
+            // Fallback if somehow no valid bounds found
+            if (!isFinite(minX)) {
+                return [[-50000, -50000], [50000, 50000]] as [[number, number], [number, number]]
+            }
 
             const result = [
                 [minX - padding * 10, minY - padding * 10],
                 [maxX + padding * 10, maxY + padding * 10]
             ] as [[number, number], [number, number]]
 
+            // BUG-1310: Diagnostic logging for invisible barrier investigation
+            if (import.meta.env.DEV) {
+                console.log('[BUG-1310:EXTENT] dynamicNodeExtent recalculated', {
+                    contentBounds: { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) },
+                    extent: { minX: Math.round(result[0][0]), minY: Math.round(result[0][1]), maxX: Math.round(result[1][0]), maxY: Math.round(result[1][1]) },
+                    taskCount: tasks.length,
+                    groupCount: groups.length
+                })
+            }
+
             lastDynamicNodeExtent = result
             lastDynamicNodeExtentHash = currentHash
             return result
         } catch (error) {
             console.warn('⚠️ [COMPUTED] Error calculating dynamic node extent:', error)
-            return [[-2000, -2000], [5000, 5000]] as [[number, number], [number, number]]
+            return [[-50000, -50000], [50000, 50000]] as [[number, number], [number, number]]
         }
     })
 

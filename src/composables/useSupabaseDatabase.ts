@@ -230,7 +230,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
                 // 3. Network / Connection / Timeout Errors
                 // BUG-352: Also catch AbortError (from fetch timeout) and timeout strings
-                if (message.includes('Failed to fetch') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || message.includes('timeout') || message.includes('Timeout') || message.includes('aborted')) {
+                // BUG-1311: Firefox/Zen reports "NetworkError" (no space), Chrome reports "Network Error" (space)
+                const lowerMsg = message.toLowerCase()
+                if (message.includes('Failed to fetch') || lowerMsg.includes('networkerror') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || lowerMsg.includes('timeout') || message.includes('aborted')) {
                     console.warn(`🌐 [NETWORK-RETRY] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
                     await new Promise(resolve => setTimeout(resolve, delay))
                     continue
@@ -426,12 +428,15 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         const userId = getUserIdSafe()
         if (!userId) return []
         try {
-            const { data, error } = await supabase
-                .from('tombstones')
-                .select('entity_type, entity_id')
-                .eq('user_id', userId)
-            if (error) throw error
-            return data?.map((t: any) => ({ entityType: t.entity_type, entityId: t.entity_id })) || []
+            // BUG-1311: Wrap in withRetry for network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('tombstones')
+                    .select('entity_type, entity_id')
+                    .eq('user_id', userId)
+                if (error) throw error
+                return data?.map((t: any) => ({ entityType: t.entity_type, entityId: t.entity_id })) || []
+            }, 'fetchTombstones')
         } catch (e: unknown) {
             console.error('[TASK-317] Failed to fetch tombstones:', e)
             return []
@@ -993,14 +998,17 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const userId = getUserIdSafe()
             if (!userId) return []
 
-            const { data, error } = await supabase
-                .from('tasks')
-                .select('id')
-                .eq('is_deleted', true)
-                .eq('user_id', userId)
+            // BUG-1311: Wrap in withRetry for network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('id')
+                    .eq('is_deleted', true)
+                    .eq('user_id', userId)
 
-            if (error) throw error
-            return data?.map((d: any) => d.id) || []
+                if (error) throw error
+                return data?.map((d: any) => d.id) || []
+            }, 'fetchDeletedTaskIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted task IDs:', e)
             return []
@@ -1013,14 +1021,17 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const userId = getUserIdSafe()
             if (!userId) return []
 
-            const { data, error } = await supabase
-                .from('projects')
-                .select('id')
-                .eq('is_deleted', true)
-                .eq('user_id', userId)
+            // BUG-1311: Wrap in withRetry for network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('projects')
+                    .select('id')
+                    .eq('is_deleted', true)
+                    .eq('user_id', userId)
 
-            if (error) throw error
-            return data?.map((d: any) => d.id) || []
+                if (error) throw error
+                return data?.map((d: any) => d.id) || []
+            }, 'fetchDeletedProjectIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted project IDs:', e)
             return []
@@ -1033,14 +1044,17 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const userId = getUserIdSafe()
             if (!userId) return []
 
-            const { data, error } = await supabase
-                .from('groups')
-                .select('id')
-                .eq('is_deleted', true)
-                .eq('user_id', userId)
+            // BUG-1311: Wrap in withRetry for network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('groups')
+                    .select('id')
+                    .eq('is_deleted', true)
+                    .eq('user_id', userId)
 
-            if (error) throw error
-            return data?.map((d: any) => d.id) || []
+                if (error) throw error
+                return data?.map((d: any) => d.id) || []
+            }, 'fetchDeletedGroupIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted group IDs:', e)
             return []
@@ -1366,16 +1380,19 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const userId = getUserIdSafe()
             if (!userId) return null
 
-            const { data, error } = await supabase
-                .from('user_settings')
-                .select('*')
-                .eq('user_id', userId)
-                .maybeSingle()
+            // BUG-1311: Wrap in withRetry for network resilience
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('user_settings')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .maybeSingle()
 
-            if (error) throw error
-            if (!data) return null
+                if (error) throw error
+                if (!data) return null
 
-            return fromSupabaseUserSettings(data as SupabaseUserSettings)
+                return fromSupabaseUserSettings(data as SupabaseUserSettings)
+            }, 'fetchUserSettings')
         } catch (e: unknown) {
             console.error('Fetch User Settings Error:', e)
             return null
@@ -1406,15 +1423,18 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const fetchQuickSortHistory = async (): Promise<SessionSummary[]> => {
         try {
-            const { data, error } = await supabase
-                .from('quick_sort_sessions')
-                .select('*')
-                .order('completed_at', { ascending: false })
+            // BUG-1311: Wrap in withRetry for network resilience (was missing)
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('quick_sort_sessions')
+                    .select('*')
+                    .order('completed_at', { ascending: false })
 
-            if (error) throw error
-            if (!data) return []
+                if (error) throw error
+                if (!data) return []
 
-            return (data as SupabaseQuickSortSession[]).map(fromSupabaseQuickSortSession)
+                return (data as SupabaseQuickSortSession[]).map(fromSupabaseQuickSortSession)
+            }, 'fetchQuickSortHistory')
         } catch (e: unknown) {
             handleError(e, 'fetchQuickSortHistory')
             return []

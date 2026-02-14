@@ -53,7 +53,7 @@ class PositionManager {
 
         // DRIFT LOGGING: Track ALL position changes through PositionManager
         // BUG-1216: DEV-gated — this fires on every drag frame for every dragged node
-        if (current && import.meta.env.DEV) {
+        if (import.meta.env.DEV && current) {
             console.log(`📍[PM-UPDATE] ${nodeId.slice(0, 8)}`, {
                 before: { x: Math.round(current.position.x), y: Math.round(current.position.y) },
                 after: { x: Math.round(position.x), y: Math.round(position.y) },

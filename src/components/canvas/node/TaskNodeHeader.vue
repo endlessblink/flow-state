@@ -1,7 +1,7 @@
 <template>
   <div class="task-node-header">
     <!-- Title -->
-    <div class="task-title" :class="alignmentClasses">
+    <div class="task-title" :class="alignmentClasses" :title="title">
       {{ title || 'Untitled Task' }}
     </div>
 
@@ -30,6 +30,11 @@ defineProps<{
   margin-bottom: var(--space-2);
   line-height: 1.4;
   word-break: break-word;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* RTL Support */

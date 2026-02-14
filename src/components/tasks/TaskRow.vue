@@ -171,9 +171,7 @@ const projectVisual = computed(() =>
 const isFlashing = ref(false)
 const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
-  console.log('[FLASH] TaskRow received event:', customEvent.detail.taskId, 'my id:', props.task?.id)
   if (customEvent.detail.taskId === props.task?.id) {
-    console.log('[FLASH] TaskRow match! Setting isFlashing=true')
     isFlashing.value = true
     setTimeout(() => { isFlashing.value = false }, 600)
   }

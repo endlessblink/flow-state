@@ -53,6 +53,16 @@ export interface InterviewAnswers {
   preferredWorkStyle?: 'frontload' | 'balanced' | 'backload'
 }
 
+export interface BehavioralContext {
+  recentlyCompletedTitles: string[]        // Titles of tasks completed in last 2 weeks
+  activeProjectNames: string[]             // Projects with recent activity
+  avgTasksCompletedPerDay: number | null   // From work profile
+  avgWorkMinutesPerDay: number | null      // From work profile
+  peakProductivityDays: string[]           // Days when user is most productive
+  completionRate: number | null            // % of planned tasks actually completed
+  frequentlyMissedProjects: string[]       // Projects where tasks often get skipped
+}
+
 // ============================================================================
 // Day keys and helpers
 // ============================================================================
@@ -93,30 +103,36 @@ function formatDate(d: Date): string {
 }
 
 // ============================================================================
-// Prompt builders
+// Prompt builders (distribution — the ONLY LLM job)
+// Research consensus: deterministic rules for filtering, LLM for distribution.
 // ============================================================================
 
 function buildSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null): string {
-  let base = `You are a productivity assistant that plans a user's work week.
+  let base = `You are a productivity assistant that distributes tasks across a user's work week.
 
-Your job: distribute the given tasks across Monday through Sunday.
+ALL tasks given to you have already been pre-filtered for relevance. Your ONLY job is to distribute them across Monday through Sunday.
 
 Rules:
 - Return ONLY valid JSON (no markdown, no explanation outside the JSON).
 - The JSON must have these keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning.
 - Each day key is an array of task ID strings.
-- "unscheduled" contains task IDs that don't fit the week.
+- "unscheduled" contains task IDs that don't fit the available capacity.
 - "reasoning" is a brief string explaining your distribution logic.
-- Schedule high-priority tasks earlier in the week.
-- Overdue tasks (due date in the past) should be scheduled on Monday or Tuesday.
-- In-progress tasks should be prioritized over pending ones.
-- Keep daily load to 5-8 tasks maximum.
-- Prefer weekdays (Mon-Fri) for work tasks; use Sat/Sun only for overflow.
+
+SCHEDULING PRIORITY:
+1. Overdue tasks (due date in the past) — MUST go on Monday or Tuesday.
+2. In-progress tasks — already started, schedule early in the week.
+3. Tasks due this week — place on or before their due date.
+4. High-priority tasks — schedule on weekdays.
+5. Lower priority / no-date tasks — fill remaining capacity, or put in unscheduled if the week is full.
+
+DISTRIBUTION:
+- Keep daily load to 3-6 tasks maximum per day.
+- Prefer weekdays (Mon-Fri) for work tasks; use Sat/Sun only for overflow or light tasks.
 - Each task ID must appear in exactly ONE day or in unscheduled — no duplicates.
-- If there are more tasks than a week can hold, put extras in unscheduled.
-- IMPORTANT: Consider task COMPLEXITY when distributing. Tasks with many subtasks are complex multi-step projects — spread them across different days. Do NOT stack all complex tasks on the same day.
-- Simple tasks (0-1 subtasks, short duration) can be grouped. Complex tasks (2+ subtasks, long duration) need breathing room.
-- Distribute tasks EVENLY across the working week unless the user explicitly prefers front-loading or back-loading.`
+- Consider task COMPLEXITY: tasks with many subtasks need their own day. Don't stack complex tasks.
+- Distribute EVENLY across the working week unless the user prefers otherwise.
+- It's OK to put tasks in unscheduled if the week is already full.`
 
   if (interview) {
     const extras: string[] = []
@@ -175,31 +191,68 @@ Rules:
   return base
 }
 
-function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date): string {
+function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date, behavioral?: BehavioralContext): string {
   const today = formatDate(new Date())
+  const weekEndStr = formatDate(weekEnd)
   const overdueTasks = tasks.filter(t => t.dueDate && t.dueDate < today)
+  const dueThisWeek = tasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= weekEndStr)
+  const inProgress = tasks.filter(t => t.status === 'in_progress')
 
-  const taskList = tasks.map(t => ({
-    id: t.id,
-    title: t.title,
-    priority: t.priority,
-    dueDate: t.dueDate,
-    estimatedDuration: t.estimatedDuration,
-    status: t.status,
-    overdue: t.dueDate ? t.dueDate < today : false,
-    subtasks: t.subtaskCount || 0,
-    completedSubtasks: t.completedSubtaskCount || 0,
-  }))
+  const taskList = tasks.map(t => {
+    // Compute urgency category for the AI
+    let urgency = 'normal'
+    if (t.dueDate && t.dueDate < today) urgency = 'OVERDUE'
+    else if (t.status === 'in_progress') urgency = 'IN_PROGRESS'
+    else if (t.dueDate && t.dueDate <= weekEndStr) urgency = 'DUE_THIS_WEEK'
+
+    return {
+      id: t.id,
+      title: t.title,
+      priority: t.priority,
+      dueDate: t.dueDate || null,
+      estimatedDuration: t.estimatedDuration,
+      status: t.status,
+      urgency,
+      subtasks: t.subtaskCount || 0,
+      completedSubtasks: t.completedSubtaskCount || 0,
+    }
+  })
+
+  // Build behavioral section
+  let behavioralSection = ''
+  if (behavioral) {
+    const lines: string[] = []
+    if (behavioral.recentlyCompletedTitles.length > 0) {
+      lines.push(`Recently completed (user momentum): ${behavioral.recentlyCompletedTitles.slice(0, 8).join(', ')}`)
+    }
+    if (behavioral.activeProjectNames.length > 0) {
+      lines.push(`Active projects: ${behavioral.activeProjectNames.join(', ')}`)
+    }
+    if (behavioral.peakProductivityDays.length > 0) {
+      lines.push(`Most productive days: ${behavioral.peakProductivityDays.join(', ')} — schedule demanding tasks here`)
+    }
+    if (behavioral.avgTasksCompletedPerDay) {
+      lines.push(`User capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
+    }
+    if (behavioral.frequentlyMissedProjects.length > 0) {
+      lines.push(`Often skipped projects: ${behavioral.frequentlyMissedProjects.join(', ')} — put these in unscheduled unless high priority`)
+    }
+    if (lines.length > 0) {
+      behavioralSection = `\nUser behavior data:\n${lines.join('\n')}\n`
+    }
+  }
 
   return `Today: ${today}
-Week range: ${formatDate(weekStart)} (Monday) to ${formatDate(weekEnd)} (Sunday)
-Total tasks: ${tasks.length}
-Overdue tasks: ${overdueTasks.length}
+Week: ${formatDate(weekStart)} to ${weekEndStr}
+Tasks: ${tasks.length} (${overdueTasks.length} overdue, ${dueThisWeek.length} due this week, ${inProgress.length} in-progress)
+${behavioralSection}
+All tasks below are pre-filtered for this week's relevance. Distribute them across Mon-Sun.
+Urgency guide: OVERDUE → must be Mon/Tue. IN_PROGRESS → early in week. DUE_THIS_WEEK → on/before due date.
 
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Distribute these tasks across the week. Return ONLY the JSON object.`
+Return ONLY the JSON object with monday...sunday, unscheduled, reasoning keys.`
 }
 
 function buildDayResuggestPrompt(
@@ -358,7 +411,8 @@ export function useWeeklyPlanAI() {
   async function generatePlan(
     tasks: TaskSummary[],
     interview?: InterviewAnswers,
-    profile?: WorkProfile | null
+    profile?: WorkProfile | null,
+    behavioral?: BehavioralContext
   ): Promise<{ plan: WeeklyPlan; reasoning: string | null }> {
     if (tasks.length === 0) {
       return {
@@ -371,7 +425,6 @@ export function useWeeklyPlanAI() {
     }
 
     const { weekStart, weekEnd } = getWeekBounds(useSettingsStore().weekStartsOn)
-    const validTaskIds = new Set(tasks.map(t => t.id))
 
     isGenerating.value = true
 
@@ -379,9 +432,16 @@ export function useWeeklyPlanAI() {
       const router = createAIRouter()
       await router.initialize()
 
+      // Architecture: Deterministic filtering (done by caller) → LLM distribution.
+      // Research consensus: LLMs are unreliable at scoring/filtering tasks.
+      // The caller (useWeeklyPlan) already hard-filtered to only relevant tasks.
+      // The LLM's only job is to distribute them across Mon-Sun.
+      console.log(`[WeeklyPlanAI] Distributing ${tasks.length} pre-filtered tasks across week ${formatDate(weekStart)}-${formatDate(weekEnd)}`)
+
+      const validTaskIds = new Set(tasks.map(t => t.id))
       const messages: ChatMessage[] = [
         { role: 'system', content: buildSystemPrompt(interview, profile) },
-        { role: 'user', content: buildUserPrompt(tasks, weekStart, weekEnd) },
+        { role: 'user', content: buildUserPrompt(tasks, weekStart, weekEnd, behavioral) },
       ]
 
       // First attempt
@@ -392,7 +452,7 @@ export function useWeeklyPlanAI() {
         })
         return parseWeeklyPlanResponse(response.content, validTaskIds)
       } catch (firstError) {
-        console.warn('[WeeklyPlanAI] First attempt failed, retrying...', firstError)
+        console.warn('[WeeklyPlanAI] Distribution attempt failed, retrying...', firstError)
       }
 
       // Retry once

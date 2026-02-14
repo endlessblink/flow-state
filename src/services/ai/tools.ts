@@ -341,6 +341,21 @@ export const AI_TOOLS: ToolDefinition[] = [
     parameters: { type: 'object', properties: {}, required: [] },
   },
   {
+    name: 'generate_weekly_plan',
+    description: 'Generate an AI-powered weekly plan that distributes tasks across Monday through Sunday based on priority, due dates, and workload. Use when the user asks to plan their week or schedule tasks.',
+    category: 'read',
+    parameters: {
+      type: 'object',
+      properties: {
+        topPriority: { type: 'string', description: 'The user\'s top priority or focus area for the week (optional)' },
+        maxTasksPerDay: { type: 'number', description: 'Maximum tasks to schedule per day (default 5)' },
+        daysOff: { type: 'array', description: 'Days to keep free (e.g. ["saturday", "sunday"])', items: { type: 'string' } },
+        preferredWorkStyle: { type: 'string', description: 'How to distribute workload', enum: ['frontload', 'balanced', 'backload'] },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'get_gamification_status',
     description: 'Get gamification profile: XP, level, streak, corruption, equipped theme, and level progress',
     category: 'read',
@@ -1445,6 +1460,120 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           success: true,
           message: `${nearComplete.length} achievements near completion`,
           data: nearComplete,
+        }
+      }
+
+      case 'generate_weekly_plan': {
+        // Bridge to the existing weekly planning system
+        const { useWeeklyPlanAI } = await import('@/composables/useWeeklyPlanAI')
+        // Get eligible tasks using the same sort logic as useWeeklyPlan
+        const allTasks = taskStore.tasks
+        const today = new Date().toISOString().split('T')[0]
+        const priorityScore: Record<string, number> = { high: 3, medium: 2, low: 1 }
+
+        const eligible = allTasks
+          .filter(t => !t._soft_deleted && t.status !== 'done')
+          .sort((a, b) => {
+            // Overdue first
+            const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
+            const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
+            if (aOverdue !== bOverdue) return bOverdue - aOverdue
+            // In-progress next
+            const aProgress = a.status === 'in_progress' ? 1 : 0
+            const bProgress = b.status === 'in_progress' ? 1 : 0
+            if (aProgress !== bProgress) return bProgress - aProgress
+            // By priority
+            const pa = a.priority ? priorityScore[a.priority] ?? 0 : 0
+            const pb = b.priority ? priorityScore[b.priority] ?? 0 : 0
+            if (pa !== pb) return pb - pa
+            // By due date
+            if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+            if (a.dueDate) return -1
+            if (b.dueDate) return 1
+            return 0
+          })
+          .map(t => ({
+            id: t.id,
+            title: t.title,
+            priority: t.priority as 'low' | 'medium' | 'high' | null,
+            dueDate: t.dueDate || '',
+            estimatedDuration: t.estimatedDuration,
+            status: t.status || 'planned',
+            projectId: t.projectId || '',
+            description: t.description,
+            subtaskCount: t.subtasks?.length ?? 0,
+            completedSubtaskCount: t.subtasks?.filter(s => s.isCompleted).length ?? 0,
+          }))
+
+        if (eligible.length === 0) {
+          return {
+            success: true,
+            message: 'No tasks available to plan. All tasks are done or deleted.',
+            data: {
+              plan: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] },
+              unscheduled: [],
+              reasoning: 'No tasks to schedule.',
+              totalScheduled: 0,
+              daysUsed: 0,
+            },
+          }
+        }
+
+        // Build interview answers from tool parameters
+        const interview: Record<string, unknown> = {}
+        if (call.parameters.topPriority) interview.topPriority = call.parameters.topPriority as string
+        if (call.parameters.maxTasksPerDay) interview.maxTasksPerDay = call.parameters.maxTasksPerDay as number
+        if (call.parameters.daysOff) interview.daysOff = call.parameters.daysOff as string[]
+        if (call.parameters.preferredWorkStyle) {
+          interview.preferredWorkStyle = call.parameters.preferredWorkStyle as 'frontload' | 'balanced' | 'backload'
+        }
+
+        // Load work profile if available
+        let workProfile = null
+        try {
+          const { useWorkProfile } = await import('@/composables/useWorkProfile')
+          const wp = useWorkProfile()
+          workProfile = await wp.loadProfile()
+        } catch { /* work profile not available */ }
+
+        // Generate the plan
+        const { generatePlan } = useWeeklyPlanAI()
+        const { plan, reasoning } = await generatePlan(eligible, interview, workProfile)
+
+        // Build task lookup for rich output
+        const taskLookup = new Map(eligible.map(t => [t.id, t]))
+        const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+        const planWithDetails: Record<string, Array<{ id: string; title: string; priority: string | null }>> = {}
+        let totalScheduled = 0
+        let daysUsed = 0
+
+        for (const day of dayKeys) {
+          const taskIds = plan[day] || []
+          planWithDetails[day] = taskIds.map(id => {
+            const t = taskLookup.get(id)
+            return { id, title: t?.title || id, priority: t?.priority || null }
+          })
+          if (taskIds.length > 0) {
+            totalScheduled += taskIds.length
+            daysUsed++
+          }
+        }
+
+        const unscheduledDetails = (plan.unscheduled || []).map(id => {
+          const t = taskLookup.get(id)
+          return { id, title: t?.title || id, priority: t?.priority || null }
+        })
+
+        return {
+          success: true,
+          message: `Weekly plan: ${totalScheduled} tasks across ${daysUsed} days`,
+          data: {
+            plan: planWithDetails,
+            unscheduled: unscheduledDetails,
+            reasoning,
+            totalScheduled,
+            daysUsed,
+          },
         }
       }
 

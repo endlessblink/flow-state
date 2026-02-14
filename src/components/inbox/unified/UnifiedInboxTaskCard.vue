@@ -28,7 +28,7 @@
 
     <!-- Task Content -->
     <div class="task-content--inbox">
-      <div class="task-title" dir="auto">
+      <div class="task-title" dir="auto" :title="task.title">
         {{ task.title }}
       </div>
 
@@ -267,6 +267,10 @@ const dueStatus = computed(() => {
   word-break: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .task-metadata {

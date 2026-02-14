@@ -79,18 +79,6 @@
               {{ profile?.peakProductivityDays?.length ? profile.peakProductivityDays.map(capitalize).join(', ') : '--' }}
             </span>
           </div>
-          <div class="metric-card">
-            <span class="metric-label">Streak</span>
-            <span class="metric-value">
-              {{ streakDays !== null ? streakDays + ' days' : '--' }}
-            </span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">On-Time Rate</span>
-            <span class="metric-value">
-              {{ onTimeRate !== null ? onTimeRate + '%' : '--' }}
-            </span>
-          </div>
         </div>
 
         <div class="metrics-actions">
@@ -167,7 +155,6 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useWorkProfile } from '@/composables/useWorkProfile'
-import { useGamificationStore } from '@/stores/gamification'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
 import type { MemoryObservation } from '@/utils/supabaseMappers'
@@ -177,7 +164,6 @@ import {
 } from 'lucide-vue-next'
 
 const { profile, loadProfile, reloadProfile, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
-const gamStore = useGamificationStore()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 
@@ -204,14 +190,6 @@ const observations = computed<MemoryObservation[]>(() =>
 const weeklyHistory = computed(() =>
   (profile.value?.weeklyHistory || []).slice().reverse()
 )
-
-const streakDays = computed(() => gamStore.streakInfo?.currentStreak ?? null)
-const onTimeRate = computed(() => {
-  const s = gamStore.stats
-  return s && s.tasksCompleted > 0
-    ? Math.round((s.tasksCompletedOnTime / s.tasksCompleted) * 100)
-    : null
-})
 
 function formatEntity(entity: string): string {
   if (entity.startsWith('project:')) return entity.replace('project:', '')
@@ -251,15 +229,14 @@ async function handleRecalculate() {
     await loadProfile()
     const result = await computeCapacityMetrics()
     await reloadProfile()
-
-    if (result.totalTasksCompleted === 0 && result.avgMinutesPerDay === null) {
-      showStatus('No activity found in the last 28 days.', 'warning')
+    if (result.dataSources.length === 0) {
+      showStatus('No data found in the last 28 days. Complete some tasks or timer sessions first.', 'warning')
     } else {
       const parts: string[] = []
-      if (result.totalTasksCompleted > 0) parts.push(`${result.totalTasksCompleted} tasks completed`)
-      if (result.avgMinutesPerDay) parts.push(`${Math.round(result.avgMinutesPerDay)} min/day focus`)
-      if (result.avgTasksPerDay) parts.push(`${result.avgTasksPerDay.toFixed(1)} tasks/day`)
-      showStatus(`Updated from ${parts.join(', ')}`, 'success')
+      if (result.avgMinutesPerDay !== null) parts.push(`${Math.round(result.avgMinutesPerDay)} min/day`)
+      if (result.avgTasksPerDay !== null) parts.push(`${result.avgTasksPerDay.toFixed(1)} tasks/day`)
+      const sources = result.dataSources.join(' + ')
+      showStatus(`Updated from ${sources}: ${parts.join(', ')}`, 'success')
     }
   } catch (e) {
     console.warn('[AIInsights] Recalculate failed:', e)

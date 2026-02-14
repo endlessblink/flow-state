@@ -136,10 +136,6 @@ export function useCanvasGroups() {
             node.data.aggregatedTaskCount = aggregatedCount
             node.data.taskCount = aggregatedCount // Legacy compat
 
-            // Log when counts actually change for debugging
-            if (oldDirect !== directCount || oldAggregated !== aggregatedCount) {
-                console.log(`📊 [COUNT-UPDATE] ${sectionId.slice(0, 8)}: direct ${oldDirect}→${directCount}, aggregated ${oldAggregated}→${aggregatedCount}`)
-            }
         }
     }
 

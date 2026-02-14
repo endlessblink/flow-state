@@ -164,15 +164,11 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
 
         if (import.meta.env.DEV) {
             const sectionInGroups = allGroups.find(g => g.id === section.id)
-            // TASK-1177 DEBUG: Comprehensive logging to diagnose inheritance
-            console.log(`[CANVAS:SECTION-PROPS] TASK-1177 DEBUG for "${section.name}" (${section.id.slice(0, 8)}):`, {
+            console.log(`[TASK-1177] Section "${section.name}" (${section.id.slice(0, 8)}):`, {
                 chainLength: chain.length,
                 chainNames: chain.map(g => g.name),
-                // The section object passed to this function
                 sectionDirectParentGroupId: section.parentGroupId ?? 'UNDEFINED',
-                // The same section looked up from allGroups
                 sectionInGroupsParentGroupId: sectionInGroups?.parentGroupId ?? 'NOT IN ARRAY',
-                // All groups that have parentGroupId set
                 groupsWithParents: allGroups.filter(g => g.parentGroupId && g.parentGroupId !== 'NONE').map(g => ({
                     name: g.name,
                     id: g.id.slice(0, 8),
@@ -195,7 +191,7 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             if (!group || !group.name) continue // Safety: skip invalid groups
             const props = getSingleSectionProperties(group as CanvasSection)
             if (import.meta.env.DEV) {
-                console.log(`[CANVAS:SECTION-PROPS] Chain[${i}] "${group.name}":`, {
+                console.log(`[TASK-1177] Chain[${i}] "${group.name}":`, {
                     props,
                     hasDateKeyword: detectPowerKeyword(group.name)?.category === 'date'
                 })
@@ -204,7 +200,7 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         }
 
         if (import.meta.env.DEV && chain.length > 1) {
-            console.log(`[CANVAS:SECTION-PROPS] Inherited from ${chain.length} levels:`,
+            console.log(`[TASK-1177] Inherited from ${chain.length} levels:`,
                 chain.map(g => g.name).reverse().join(' → '),
                 mergedUpdates
             )

@@ -36,16 +36,20 @@ test.describe('Task Management', () => {
         console.log('[TEST] Task creation submitted');
 
         // Wait a bit to ensure UI updates
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(2000);
 
         // Debug: Log the page content or search for the task
         const isVisible = await page.getByText(taskTitle).isVisible();
         console.log(`[TEST] Is task visible? ${isVisible}`);
 
+        if (!isVisible) {
+            console.log('[TEST] Task not found. Dumping task list items:');
+            const tasks = await page.locator('.task-item').allTextContents();
+            console.log(tasks);
+        }
+
         // Verify task appears in the list
-        // The AllTasksView has a TaskList or TaskTable. 
-        // We look for the text.
-        await expect(page.getByText(taskTitle)).toBeVisible();
+        await expect(page.getByText(taskTitle)).toBeVisible({ timeout: 10000 });
     });
 
     test('should allow properly filtering tasks', async ({ page }) => {

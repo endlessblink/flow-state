@@ -201,6 +201,61 @@ const chains: AgentChain[] = [
       },
     ],
   },
+
+  // ── Chain 4: Plan My Week ──────────────────────────────────────────────
+  {
+    id: 'plan_my_week',
+    name: 'Plan My Week',
+    description: 'Generate an AI-powered weekly plan distributing your tasks across the week',
+    icon: 'CalendarDays',
+    steps: [
+      {
+        type: 'tool',
+        tool: 'get_overdue_tasks',
+        parameters: {},
+      },
+      {
+        type: 'tool',
+        tool: 'get_daily_summary',
+        parameters: {},
+      },
+      {
+        type: 'tool',
+        tool: 'generate_weekly_plan',
+        parameters: {},
+      },
+      {
+        type: 'prompt',
+        promptFn: (results) => {
+          const overdue = results[0]?.data as any
+          const daily = results[1]?.data as any
+          const weeklyPlan = results[2]?.data as any
+
+          const parts = [
+            'Present this weekly plan to the user in a friendly, encouraging way.',
+            'CRITICAL: Respond in the SAME LANGUAGE the user\'s app is in. If context suggests Hebrew, respond in Hebrew.',
+            '',
+            '## Current Situation',
+            overdue && Array.isArray(overdue) && overdue.length > 0
+              ? `${overdue.length} overdue tasks need attention`
+              : 'No overdue tasks',
+            daily ? `Today: ${daily.dueToday || 0} due, ${daily.completedToday || 0} completed, ${daily.inProgress || 0} in progress` : '',
+            '',
+            '## Weekly Plan',
+            weeklyPlan ? JSON.stringify(weeklyPlan, null, 2) : 'Plan generation failed',
+            '',
+            'Instructions:',
+            '- Summarize the plan day-by-day with task names',
+            '- Highlight overdue tasks that need priority attention',
+            '- Add a brief motivational note',
+            '- Keep it concise — the detailed plan card renders below your message',
+          ]
+
+          return parts.join('\n')
+        },
+      },
+    ],
+  },
 ]
 
 // ============================================================================

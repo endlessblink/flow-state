@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useTaskStore } from '@/stores/tasks'
-import { useGamificationStore } from '@/stores/gamification'
 import type { WorkProfile, MemoryObservation } from '@/utils/supabaseMappers'
 
 const cachedProfile = ref<WorkProfile | null>(null)
@@ -74,121 +73,125 @@ export function useWorkProfile() {
     avgMinutesPerDay: number | null
     avgTasksPerDay: number | null
     peakDays: string[]
-    estimationAccuracy: number | null
-    currentStreak: number | null
-    onTimeRate: number | null
-    totalTasksCompleted: number
+    dataSources: string[]
   }> {
-    // 1. Gather data from pomodoro history
-    const history = await db.fetchPomodoroHistory(28) // Last 4 weeks
+    const taskStore = useTaskStore()
+    const now = new Date()
+    const sinceDate = new Date()
+    sinceDate.setDate(now.getDate() - 28)
 
-    // Group pomodoro data by day
-    const dayMap = new Map<string, { minutes: number; tasks: Set<string> }>()
-    const dayOfWeekMinutes = new Map<string, number[]>()
+    // --- Source 1: Pomodoro history (focused time tracking) ---
+    const history = await db.fetchPomodoroHistory(28)
+    const pomodoroMap = new Map<string, { minutes: number; tasks: Set<string> }>()
+    const pomoDayOfWeek = new Map<string, number[]>()
 
     for (const entry of history) {
       if (entry.isBreak) continue
       const date = entry.completedAt.split('T')[0]
       const dayOfWeek = new Date(entry.completedAt).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
 
-      if (!dayMap.has(date)) {
-        dayMap.set(date, { minutes: 0, tasks: new Set() })
+      if (!pomodoroMap.has(date)) {
+        pomodoroMap.set(date, { minutes: 0, tasks: new Set() })
       }
-      const dayData = dayMap.get(date)!
+      const dayData = pomodoroMap.get(date)!
       dayData.minutes += Math.round(entry.duration / 60)
       if (entry.taskId) dayData.tasks.add(entry.taskId)
 
-      if (!dayOfWeekMinutes.has(dayOfWeek)) {
-        dayOfWeekMinutes.set(dayOfWeek, [])
+      if (!pomoDayOfWeek.has(dayOfWeek)) {
+        pomoDayOfWeek.set(dayOfWeek, [])
       }
-      dayOfWeekMinutes.get(dayOfWeek)!.push(Math.round(entry.duration / 60))
+      pomoDayOfWeek.get(dayOfWeek)!.push(Math.round(entry.duration / 60))
     }
 
-    const pomoDays = Array.from(dayMap.values())
-    const avgMinutesPerDay = pomoDays.length > 0
-      ? Math.round(pomoDays.reduce((sum, d) => sum + d.minutes, 0) / pomoDays.length * 10) / 10
-      : null
-    const avgTasksPerDayFromPomo = pomoDays.length > 0
-      ? Math.round(pomoDays.reduce((sum, d) => sum + d.tasks.size, 0) / pomoDays.length * 10) / 10
-      : null
-
-    // 2. Count completed tasks from task store (primary source for tasks/day)
-    const taskStore = useTaskStore()
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 28)
-    const recentCompletedTasks = taskStore.tasks.filter(t => {
+    // --- Source 2: Completed tasks (from task store) ---
+    const completedTasks = taskStore.tasks.filter(t => {
       if (t.status !== 'done') return false
-      const completedDate = t.completedAt ? new Date(t.completedAt) : null
-      return completedDate && completedDate >= cutoff
+      const cat = t.completedAt
+      if (!cat) return false
+      const completedDate = cat instanceof Date ? cat : new Date(cat)
+      return completedDate >= sinceDate && completedDate <= now
     })
 
-    // Group completed tasks by day
-    const taskDayMap = new Map<string, number>()
-    for (const task of recentCompletedTasks) {
-      const date = new Date(task.completedAt!).toISOString().split('T')[0]
-      taskDayMap.set(date, (taskDayMap.get(date) || 0) + 1)
+    const taskCompletionMap = new Map<string, number>()
+    const taskDayOfWeek = new Map<string, number[]>()
+
+    for (const task of completedTasks) {
+      const completedDate = task.completedAt instanceof Date ? task.completedAt : new Date(task.completedAt!)
+      const dateStr = completedDate.toISOString().split('T')[0]
+      const dayOfWeek = completedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+
+      taskCompletionMap.set(dateStr, (taskCompletionMap.get(dateStr) || 0) + 1)
+
+      if (!taskDayOfWeek.has(dayOfWeek)) {
+        taskDayOfWeek.set(dayOfWeek, [])
+      }
+      taskDayOfWeek.get(dayOfWeek)!.push(1)
     }
-    const taskDays = Array.from(taskDayMap.values())
-    const avgTasksFromCompletions = taskDays.length > 0
-      ? Math.round(taskDays.reduce((sum, c) => sum + c, 0) / taskDays.length * 10) / 10
-      : null
 
-    // 3. Get estimation accuracy from tasks with both estimated_pomodoros and completed_pomodoros
-    const tasksWithEstimates = recentCompletedTasks.filter(t =>
-      t.estimatedPomodoros && t.estimatedPomodoros > 0 && t.completedPomodoros !== undefined && t.completedPomodoros > 0
-    )
-    const estimationAccuracy = tasksWithEstimates.length >= 3
-      ? Math.round(tasksWithEstimates.reduce((sum, t) => {
-          const ratio = (t.completedPomodoros || 0) / t.estimatedPomodoros!
-          return sum + Math.min(ratio, 2) // Cap at 200% to avoid outlier skew
-        }, 0) / tasksWithEstimates.length * 100) / 100
-      : null
+    const hasPomodoroData = pomodoroMap.size > 0
+    const hasTaskData = taskCompletionMap.size > 0
+    const dataSources: string[] = []
 
-    // 4. Get streak and on-time data from gamification store
-    const gamStore = useGamificationStore()
-    const currentStreak = gamStore.streakInfo?.currentStreak ?? null
-    const onTimeRate = gamStore.stats?.tasksCompleted && gamStore.stats.tasksCompleted > 0
-      ? Math.round((gamStore.stats.tasksCompletedOnTime / gamStore.stats.tasksCompleted) * 100)
-      : null
+    if (!hasPomodoroData && !hasTaskData) {
+      return { avgMinutesPerDay: null, avgTasksPerDay: null, peakDays: [], dataSources: [] }
+    }
 
-    // 5. Combine all data sources — use task completions as PRIMARY for tasks/day, pomodoro for focus time
-    const finalAvgTasksPerDay = avgTasksFromCompletions ?? avgTasksPerDayFromPomo
-    const finalAvgMinutesPerDay = avgMinutesPerDay
+    // --- Compute avgMinutesPerDay from pomodoro (only source for time) ---
+    let avgMinutesPerDay: number | null = null
+    if (hasPomodoroData) {
+      const pomoDays = Array.from(pomodoroMap.values())
+      avgMinutesPerDay = Math.round(pomoDays.reduce((sum, d) => sum + d.minutes, 0) / pomoDays.length * 10) / 10
+      dataSources.push('pomodoro')
+    }
 
-    // Find peak days (top 2 by avg minutes)
-    const dayAvgs = Array.from(dayOfWeekMinutes.entries())
-      .map(([day, mins]) => ({
-        day,
-        avg: mins.reduce((a, b) => a + b, 0) / mins.length
-      }))
-      .sort((a, b) => b.avg - a.avg)
-    const peakDays = dayAvgs.slice(0, 2).map(d => d.day)
+    // --- Compute avgTasksPerDay from task completions (more accurate than pomodoro alone) ---
+    let avgTasksPerDay: number | null = null
+    if (hasTaskData) {
+      const taskDays = Array.from(taskCompletionMap.values())
+      avgTasksPerDay = Math.round(taskDays.reduce((sum, count) => sum + count, 0) / taskDays.length * 10) / 10
+      dataSources.push('tasks')
+    } else if (hasPomodoroData) {
+      // Fallback: count unique tasks from pomodoro sessions
+      const pomoDays = Array.from(pomodoroMap.values())
+      avgTasksPerDay = Math.round(pomoDays.reduce((sum, d) => sum + d.tasks.size, 0) / pomoDays.length * 10) / 10
+    }
+
+    // --- Compute peakDays from whichever source has data ---
+    let peakDays: string[] = []
+    if (hasTaskData) {
+      // Prefer task completions for peak days (captures all work, not just timed)
+      const dayTotals = new Map<string, number>()
+      for (const [day, counts] of taskDayOfWeek) {
+        dayTotals.set(day, counts.length)
+      }
+      peakDays = Array.from(dayTotals.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([day]) => day)
+    } else if (hasPomodoroData) {
+      const dayAvgs = Array.from(pomoDayOfWeek.entries())
+        .map(([day, mins]) => ({ day, avg: mins.reduce((a, b) => a + b, 0) / mins.length }))
+        .sort((a, b) => b.avg - a.avg)
+      peakDays = dayAvgs.slice(0, 2).map(d => d.day)
+    }
 
     // Save computed metrics to profile
     await db.saveWorkProfile({
-      avgWorkMinutesPerDay: finalAvgMinutesPerDay,
-      avgTasksCompletedPerDay: finalAvgTasksPerDay,
+      avgWorkMinutesPerDay: avgMinutesPerDay,
+      avgTasksCompletedPerDay: avgTasksPerDay,
       peakProductivityDays: peakDays
     })
 
     if (cachedProfile.value) {
-      cachedProfile.value.avgWorkMinutesPerDay = finalAvgMinutesPerDay
-      cachedProfile.value.avgTasksCompletedPerDay = finalAvgTasksPerDay
+      cachedProfile.value.avgWorkMinutesPerDay = avgMinutesPerDay
+      cachedProfile.value.avgTasksCompletedPerDay = avgTasksPerDay
       cachedProfile.value.peakProductivityDays = peakDays
     }
 
     // FEATURE-1317 Phase 2: Generate structured observations from stats
     await generateObservationsFromStats()
 
-    return {
-      avgMinutesPerDay: finalAvgMinutesPerDay,
-      avgTasksPerDay: finalAvgTasksPerDay,
-      peakDays,
-      estimationAccuracy,
-      currentStreak,
-      onTimeRate,
-      totalTasksCompleted: recentCompletedTasks.length
-    }
+    return { avgMinutesPerDay, avgTasksPerDay, peakDays, dataSources }
   }
 
   async function recordWeeklyOutcome(

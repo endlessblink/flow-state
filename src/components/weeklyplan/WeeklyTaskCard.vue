@@ -39,24 +39,19 @@
       </button>
     </div>
 
-    <div class="card-top-row">
-      <div
-        class="priority-dot"
-        :style="{ backgroundColor: priorityColor }"
-      />
-      <div class="card-content">
-        <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="task.title">{{ task.title }}</span>
-        <div class="card-meta">
-          <span v-if="projectName" class="project-badge">
-            {{ projectName }}
-          </span>
-          <span v-if="task.estimatedDuration" class="duration-badge">
-            {{ formattedDuration }}
-          </span>
-          <span v-if="isOverdue" class="overdue-badge">
-            Overdue
-          </span>
-        </div>
+    <div class="card-content">
+      <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="task.title">{{ task.title }}</span>
+      <div class="card-meta">
+        <span class="priority-indicator" :style="{ backgroundColor: priorityColor }" />
+        <span v-if="projectName" class="project-badge">
+          {{ projectName }}
+        </span>
+        <span v-if="task.estimatedDuration" class="duration-badge">
+          {{ formattedDuration }}
+        </span>
+        <span v-if="isOverdue" class="overdue-badge">
+          Overdue
+        </span>
       </div>
     </div>
 
@@ -192,28 +187,10 @@ const statusLabel = computed(() => {
   cursor: default;
 }
 
-/* RTL: flip the row so dot is on the right */
-.weekly-task-card.is-rtl .card-top-row {
-  flex-direction: row-reverse;
-}
-
-.weekly-task-card.is-rtl .card-meta {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-}
-
-.card-top-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-  margin-top: 7px;
+/* RTL: flip action buttons to the left to avoid text overlap */
+.weekly-task-card.is-rtl .card-actions {
+  right: auto;
+  left: 6px;
 }
 
 .card-content {
@@ -222,6 +199,13 @@ const statusLabel = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+.priority-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
 
 .task-title {

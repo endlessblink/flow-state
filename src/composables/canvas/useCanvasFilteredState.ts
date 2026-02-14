@@ -91,11 +91,6 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
                     totalCount: checkResult.totalCount,
                     uniqueIdCount: checkResult.uniqueIdCount
                 })
-            } else if (result.length > 0) {
-                console.debug('[TASK-ID-HISTOGRAM] tasksWithCanvasPosition', {
-                    uniqueIdCount: checkResult.uniqueIdCount,
-                    totalCount: checkResult.totalCount
-                })
             }
         }
 
@@ -183,7 +178,6 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
                 [maxX + padding * 10, maxY + padding * 10]
             ] as [[number, number], [number, number]]
 
-            // BUG-1310: Diagnostic logging for invisible barrier investigation
             if (import.meta.env.DEV) {
                 console.log('[BUG-1310:EXTENT] dynamicNodeExtent recalculated', {
                     contentBounds: { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) },

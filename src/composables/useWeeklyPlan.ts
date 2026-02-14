@@ -3,8 +3,9 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSettingsStore } from '@/stores/settings'
 import { detectPowerKeyword, DAY_OF_WEEK_KEYWORDS } from '@/composables/usePowerKeywords'
-import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers } from './useWeeklyPlanAI'
+import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers, type BehavioralContext } from './useWeeklyPlanAI'
 import { useWorkProfile } from '@/composables/useWorkProfile'
+import { useProjectStore } from '@/stores/projects'
 
 // ============================================================================
 // Helpers
@@ -98,39 +99,57 @@ export function useWeeklyPlan() {
 
   function getEligibleTasks(): TaskSummary[] {
     const taskStore = useTaskStore()
+    const today = formatDateISO(new Date())
+    const weekEnd = formatDateISO(state.value.weekEnd)
 
-    // Include all active tasks — the AI decides what fits the week
+    // ── HARD FILTER: Deterministic rules decide what's eligible ──
+    // Research consensus: production apps (Motion, Reclaim) use deterministic
+    // rules for filtering. LLMs are unreliable at deciding task relevance.
     const eligible = taskStore.tasks.filter(t => {
       if (t._soft_deleted) return false
       if (t.status === 'done') return false
+
+      // HARD EXCLUDE: Task has due date AFTER this week
+      // If the user set a future date, they decided it's not for this week.
+      // Exception: in_progress tasks (user started it, keep it regardless)
+      if (t.dueDate && t.dueDate > weekEnd && t.status !== 'in_progress') return false
+
+      // HARD EXCLUDE: on_hold — user explicitly paused
+      if (t.status === 'on_hold') return false
+
       return true
     })
 
-    // Priority score for sorting (higher = more important)
-    const today = formatDateISO(new Date())
+    // ── SCORING: Sort remaining by relevance (for top-N selection) ──
     const priorityScore: Record<string, number> = { high: 3, medium: 2, low: 1 }
 
-    eligible.sort((a, b) => {
-      // Overdue tasks first
-      const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
-      const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
-      if (aOverdue !== bOverdue) return bOverdue - aOverdue
-      // In-progress tasks next
-      const aProgress = a.status === 'in_progress' ? 1 : 0
-      const bProgress = b.status === 'in_progress' ? 1 : 0
-      if (aProgress !== bProgress) return bProgress - aProgress
-      // Then by priority
-      const pa = a.priority ? priorityScore[a.priority] ?? 0 : 0
-      const pb = b.priority ? priorityScore[b.priority] ?? 0 : 0
-      if (pa !== pb) return pb - pa
-      // Then by due date (earlier first, no date last)
-      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-      if (a.dueDate) return -1
-      if (b.dueDate) return 1
-      return 0
-    })
+    function relevanceScore(t: typeof eligible[0]): number {
+      let score = 0
 
-    return eligible.slice(0, 50).map(t => ({
+      // Overdue: MUST be scheduled
+      if (t.dueDate && t.dueDate < today) score += 100
+      // Due this week: highly relevant
+      else if (t.dueDate && t.dueDate <= weekEnd) score += 80
+
+      // In-progress: already started, must continue
+      if (t.status === 'in_progress') score += 60
+      // Planned: user has actively planned this
+      else if (t.status === 'planned') score += 30
+
+      // Priority
+      score += (priorityScore[t.priority || ''] || 0) * 10
+
+      // Has estimated duration: user has thought about it
+      if (t.estimatedDuration) score += 5
+
+      return score
+    }
+
+    // Score, sort, and take top 25 (tighter — only real candidates)
+    const scored = eligible.map(t => ({ task: t, score: relevanceScore(t) }))
+    scored.sort((a, b) => b.score - a.score)
+
+    const result = scored.slice(0, 25).map(({ task: t }) => ({
       id: t.id,
       title: t.title,
       priority: t.priority,
@@ -142,6 +161,9 @@ export function useWeeklyPlan() {
       subtaskCount: t.subtasks?.length || 0,
       completedSubtaskCount: t.subtasks?.filter(s => s.isCompleted).length || 0,
     }))
+
+    console.log(`[WeeklyPlan] Eligible: ${eligible.length} tasks after hard filter (${taskStore.tasks.length} total), sending top ${result.length} to AI`)
+    return result
   }
 
   // --------------------------------------------------------------------------
@@ -156,6 +178,68 @@ export function useWeeklyPlan() {
     }
     return map
   })
+
+  // --------------------------------------------------------------------------
+  // Behavioral context from actual usage data
+  // --------------------------------------------------------------------------
+
+  function computeBehavioralContext(profile: ReturnType<typeof useWorkProfile>['profile']['value']): BehavioralContext {
+    const taskStore = useTaskStore()
+    const projectStore = useProjectStore()
+
+    const twoWeeksAgo = new Date()
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+
+    // Recently completed tasks (last 2 weeks)
+    const recentlyCompleted = taskStore.tasks.filter(t => {
+      if (t.status !== 'done') return false
+      const completedDate = t.completedAt ? new Date(t.completedAt as string) : null
+      return completedDate && completedDate >= twoWeeksAgo
+    })
+
+    const recentlyCompletedTitles = recentlyCompleted
+      .sort((a, b) => {
+        const da = a.completedAt ? new Date(a.completedAt as string).getTime() : 0
+        const db = b.completedAt ? new Date(b.completedAt as string).getTime() : 0
+        return db - da
+      })
+      .slice(0, 15)
+      .map(t => t.title)
+
+    // Active projects — projects with recently completed or in-progress tasks
+    const activeProjectIds = new Set<string>()
+    for (const t of recentlyCompleted) {
+      if (t.projectId) activeProjectIds.add(t.projectId)
+    }
+    for (const t of taskStore.tasks) {
+      if (t.status === 'in_progress' && t.projectId) activeProjectIds.add(t.projectId)
+    }
+    const activeProjectNames = Array.from(activeProjectIds)
+      .map(id => projectStore.getProjectDisplayName(id))
+      .filter(Boolean) as string[]
+
+    // Frequently missed projects from memory observations
+    const frequentlyMissedProjects: string[] = []
+    if (profile?.memoryGraph) {
+      for (const obs of profile.memoryGraph) {
+        if (obs.relation === 'frequently_missed' && obs.entity.startsWith('project:')) {
+          const projId = obs.entity.replace('project:', '')
+          const name = projectStore.getProjectDisplayName(projId)
+          if (name) frequentlyMissedProjects.push(name)
+        }
+      }
+    }
+
+    return {
+      recentlyCompletedTitles,
+      activeProjectNames,
+      avgTasksCompletedPerDay: profile?.avgTasksCompletedPerDay ?? null,
+      avgWorkMinutesPerDay: profile?.avgWorkMinutesPerDay ?? null,
+      peakProductivityDays: profile?.peakProductivityDays ?? [],
+      completionRate: profile?.avgPlanAccuracy ?? null,
+      frequentlyMissedProjects,
+    }
+  }
 
   // --------------------------------------------------------------------------
   // Generate plan via AI
@@ -180,7 +264,16 @@ export function useWeeklyPlan() {
       const settingsStore = useSettingsStore()
       const profile = settingsStore.aiLearningEnabled ? await loadProfile() : null
 
-      const result = await aiGeneratePlan(tasks, state.value.interviewAnswers || undefined, profile)
+      // Compute behavioral context from actual app usage data
+      const behavioral = computeBehavioralContext(profile)
+      console.log('[WeeklyPlan] Behavioral context:', {
+        recentCompleted: behavioral.recentlyCompletedTitles.length,
+        activeProjects: behavioral.activeProjectNames,
+        avgTasks: behavioral.avgTasksCompletedPerDay,
+        completionRate: behavioral.completionRate,
+      })
+
+      const result = await aiGeneratePlan(tasks, state.value.interviewAnswers || undefined, profile, behavioral)
       state.value.plan = result.plan
       state.value.reasoning = result.reasoning
       state.value.status = 'review'

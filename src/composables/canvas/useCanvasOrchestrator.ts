@@ -246,11 +246,13 @@ export function useCanvasOrchestrator() {
             x: events.canvasContextMenuX.value,
             y: events.canvasContextMenuY.value
         }
-        console.log('[BUG-1126] createGroup wrapper called', {
-            storedContextMenuX: events.canvasContextMenuX.value,
-            storedContextMenuY: events.canvasContextMenuY.value,
-            screenPos
-        })
+        if (import.meta.env.DEV) {
+            console.log('[BUG-1126] createGroup wrapper called', {
+                storedContextMenuX: events.canvasContextMenuX.value,
+                storedContextMenuY: events.canvasContextMenuY.value,
+                screenPos
+            })
+        }
         actions.createGroup(screenPos)
     }
 
@@ -369,7 +371,9 @@ export function useCanvasOrchestrator() {
 
     // Initial sync
     onMounted(async () => {
-        console.log('🚀 [ORCHESTRATOR] onMounted starting...')
+        if (import.meta.env.DEV) {
+            console.log('🚀 [ORCHESTRATOR] onMounted starting...')
+        }
 
         await canvasStore.loadSavedViewport()
         await nextTick()
@@ -391,14 +395,18 @@ export function useCanvasOrchestrator() {
             async ([tasksReady, groupsReady]) => {
                 // Run initial sync once BOTH stores have finished loading
                 if (tasksReady && groupsReady && !isInitialized.value) {
-                    console.log('🚀 [ORCHESTRATOR] Stores initialized, running initial sync', {
-                        tasks: taskStore.tasks.length,
-                        groups: canvasStore.groups.length
-                    })
+                    if (import.meta.env.DEV) {
+                        console.log('🚀 [ORCHESTRATOR] Stores initialized, running initial sync', {
+                            tasks: taskStore.tasks.length,
+                            groups: canvasStore.groups.length
+                        })
+                    }
                     syncNodes()
                     syncEdges()
                     isInitialized.value = true
-                    console.log('✅ [ORCHESTRATOR] Initialization complete')
+                    if (import.meta.env.DEV) {
+                        console.log('✅ [ORCHESTRATOR] Initialization complete')
+                    }
 
                     // CONTAINMENT RECONCILIATION: Fix legacy tasks with incorrect parentId
                     // DRIFT FIX: Only run ONCE per browser session to prevent repeated parent changes
@@ -408,20 +416,26 @@ export function useCanvasOrchestrator() {
                     // both stores are fully loaded — prevents incorrect parentId from partial task data
                     if (!hasReconciledThisSession && canvasStore.groups.length > 0) {
                         hasReconciledThisSession = true
-                        console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
+                        if (import.meta.env.DEV) {
+                            console.log('🔧 [ORCHESTRATOR] Starting ONE-TIME reconciliation with', taskStore.tasks.length, 'tasks')
+                        }
                         await reconcileTaskParentsByContainment(
                             taskStore.tasks,
                             canvasStore.groups,
                             async (taskId, updates) => {
                                 // Update store (will auto-sync to Supabase via existing persistence)
                                 // GEOMETRY WRITER: One-time reconciliation only (TASK-255)
-                                console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
+                                if (import.meta.env.DEV) {
+                                    console.log(`🔧[RECONCILE-WRITE] Task ${taskId.slice(0, 8)}... parentId → ${updates.parentId ?? 'none'}`)
+                                }
                                 taskStore.updateTask(taskId, updates, 'RECONCILE')
                             },
                             { writeToDb: true, silent: false }
                         )
                     } else if (hasReconciledThisSession) {
-                        console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
+                        if (import.meta.env.DEV) {
+                            console.log('⏭️ [ORCHESTRATOR] Skipping reconciliation - already ran this session')
+                        }
                     }
 
                     // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)

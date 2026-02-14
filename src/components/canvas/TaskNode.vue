@@ -203,9 +203,7 @@ const {
 const isFlashing = ref(false)
 const handleTaskFlash = (event: Event) => {
   const customEvent = event as CustomEvent<{ taskId: string }>
-  console.log('[FLASH] TaskNode received event:', customEvent.detail.taskId, 'my id:', props.task?.id)
   if (customEvent.detail.taskId === props.task?.id) {
-    console.log('[FLASH] Match! Setting isFlashing=true')
     isFlashing.value = true
     setTimeout(() => { isFlashing.value = false }, 600)
   }

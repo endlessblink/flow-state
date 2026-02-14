@@ -8,6 +8,20 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1318: Timer broken — doesn't stop on break, random numbers, duplicate notifications, extend not working (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
+
+**Problem**: Multiple timer issues reported simultaneously:
+1. Timer doesn't stop when break starts
+2. New work session starts with random/wrong numbers
+3. Two notification messages fire one after the other
+4. "+5 more minutes" from notification doesn't work
+
+**Root Cause**: TBD — investigating
+
+---
+
 ### ~~BUG-1310~~: Canvas invisible barrier blocks drag operations (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
@@ -109,59 +123,24 @@
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-07)
 
-**Problem**: Tasks may still be disappearing across platforms — PWA on mobile, Tauri desktop app, and web. A task created or edited on one platform can vanish when synced to another. This is the highest severity data loss bug possible.
+**Problem**: Tasks disappearing across platforms (PWA, Tauri, Web). A task created/edited on one platform vanishes when synced to another. 100% blast radius on all task deletions.
 
-**5-Agent Investigation (2026-02-06)** — 5 Opus agents investigated independent hypotheses and debated findings:
+**Root Cause**: `useSyncOrchestrator.ts:329` writes `{ _soft_deleted: true }` but DB column is `is_deleted`. Update always fails, fallback at line 335 escalates to permanent HARD DELETE + tombstone + realtime DELETE broadcast to all devices.
 
-**ROOT CAUSE FOUND: `_soft_deleted` Column Mismatch Kill Chain**
+**Fix**: Changed line 329 to `{ is_deleted: true, deleted_at: new Date().toISOString() }`, removed hard-delete fallback.
 
-`useSyncOrchestrator.ts:329` writes `{ _soft_deleted: true }` but DB column is `is_deleted`. The sync orchestrator bypasses `supabaseMappers.ts`, so the update ALWAYS fails. Fallback at line 335 escalates to a HARD DELETE (`supabase.from(tableName).delete()`). This fires on 100% of task deletions:
-
-1. User deletes task → direct path soft-deletes correctly (`is_deleted: true`) ✅
-2. 0-5s later → sync queue tries `_soft_deleted: true` → **FAILS** (column doesn't exist)
-3. Fallback → `DELETE FROM tasks WHERE id = X` → **HARD DELETE** (permanent)
-4. DB trigger `trg_task_tombstone` → permanent tombstone created
-5. Realtime broadcasts DELETE event to ALL connected devices
-6. All devices blindly splice task from local state (`tasks.ts:205-208`)
-7. Any pending updates on other devices silently discarded as "not found" (`useSyncOrchestrator.ts:277-284`)
-
-**Secondary Bugs Found (6 total, ranked by severity):**
+**Secondary Bugs Found (6 total):**
 
 | Rank | Bug | Severity | File:Line | Fix |
 |------|-----|----------|-----------|-----|
-| **1** | `_soft_deleted` → `is_deleted` column mismatch | **CRITICAL** | `useSyncOrchestrator.ts:329` | Change to `{ is_deleted: true, deleted_at: new Date().toISOString() }` |
-| **2** | Hard-delete fallback should not exist | **CRITICAL** | `useSyncOrchestrator.ts:335` | Remove fallback or add logging/alerting |
+| **1** | `_soft_deleted` → `is_deleted` column mismatch | **CRITICAL** | `useSyncOrchestrator.ts:329` | Change to `{ is_deleted: true, deleted_at: ... }` |
+| **2** | Hard-delete fallback should not exist | **CRITICAL** | `useSyncOrchestrator.ts:335` | Remove fallback |
 | **3** | LWW "server wins" drops local changes silently | HIGH | `useSyncOrchestrator.ts:309-318` | Apply `serverData` to local state |
 | **4** | CREATE upsert overwrites newer server data | HIGH | `useSyncOrchestrator.ts:237-242` | Add timestamp comparison before upsert |
 | **5** | Entity "not found" discards queued updates silently | HIGH | `useSyncOrchestrator.ts:277-284` | Log warning, don't mark as `success: true` |
 | **6** | No `addPendingWrite` for delete operations | MEDIUM | `taskOperations.ts:474` | Add `addPendingWrite(taskId)` before delete |
 
-**Disproved Hypotheses:**
-- ~~Tombstones cause false-positive deletions~~ → Tombstones are passive/defensive only (checked during restore/import, never during sync)
-- ~~Store init race conditions~~ → Fixed by BUG-1207 (auth await, reentrancy guard, `appInitLoadComplete` flag)
-- ~~Smart merge drops local tasks~~ → TASK-1177 fix preserves ALL local-only tasks (never drops them)
-- ~~PiniaSharedState overwrites~~ → Globally disabled at `main.ts:106-111`
-
-**Zombie Resurrection Risk:** Smart merge preserves local-only tasks and re-queues CREATE via sync orchestrator. However, the DB tombstone (created by `trg_task_tombstone` trigger during the hard delete) may block re-creation depending on whether the upsert path checks tombstones (it does NOT — raw `upsert` bypasses `safeCreateTask`). Debate conclusion: 1-2 resurrection cycles possible before realtime DELETE propagates to all devices, then tombstone causes permanent ID poisoning. Not an infinite loop but makes deleted task IDs permanently unusable.
-
-**Debate Consensus (5/5 agents agree):**
-1. `_soft_deleted` kill chain is the **#1 confirmed cause** — deterministic, 100% blast radius, cross-platform
-2. Zombie resurrection is **real but self-dampening** (1-2 cycles, not infinite)
-3. Cross-tab create path (`useCrossTabSync.ts:84`) — H3 found `broadcastTaskOperation` is **dead code** (never called from outside the file), downgrading this from MEDIUM to NOT A VECTOR
-4. Two BUG-1211 sub-scenarios identified: (a) intentionally deleted tasks become unrecoverable (primary), (b) tasks disappearing without user action requires additional trigger (LWW silent discard or recovery reload)
-
-**Residual Risks (lower priority):**
-- `isVeryRecent` window (30s) misaligned with recovery cooldown (60s) (`taskPersistence.ts:284`)
-- Auth SIGNED_IN handler has no interaction cooldown (`auth.ts:316-320`)
-- `deleteTask()` missing `addPendingWrite` causes echo processing (`taskOperations.ts:474`)
-
-**Investigation Areas** (original, now resolved):
-1. ~~Sync orchestrator~~ → **ROOT CAUSE** (`_soft_deleted` mismatch + 5 secondary bugs)
-2. ~~Tombstones~~ → **DISPROVED** (passive/defensive only, but amplified by kill chain)
-3. ~~Realtime subscriptions~~ → **CONFIRMED** as propagation mechanism (DELETE handler has zero validation)
-4. ~~Store initialization~~ → **DISPROVED** (fixed by BUG-1207)
-5. ~~Cross-platform sync~~ → **DISPROVED** (smart merge safe, cross-tab sync is dead code)
-6. ~~BUG-1207~~ ✅ regression — task changes resetting in Tauri app (FIXED 2026-02-06)
+**Files**: `src/composables/sync/useSyncOrchestrator.ts`, `src/stores/tasks/taskOperations.ts`
 
 ---
 
@@ -183,9 +162,9 @@
 
 ---
 
-### BUG-1290: Week View Not Loading (🔄 IN PROGRESS)
+### BUG-1290: Week View Not Loading (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-09)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-09)
 
 **Problem**: Calendar week view doesn't render at all. Switching to week mode shows blank content.
 
@@ -216,9 +195,9 @@
 
 ---
 
-### TASK-1287: Play Button Should Switch Timer Task Without Resetting (🔄 IN PROGRESS)
+### TASK-1287: Play Button Should Switch Timer Task Without Resetting (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-10)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-10)
 
 **Problem**: Clicking the play button on a different task resets the Pomodoro timer to full duration instead of just switching the associated task. Expected: if 15 min remain on Task A and user clicks play on Task B, the timer should continue at 15 min but now be associated with Task B.
 
@@ -246,6 +225,20 @@
 
 ---
 
+### ~~BUG-1312~~: Mobile quick-add bar "+" button clipped on right side (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-14)
+
+**Problem**: The `+` button on the right side of the quick-add bar (bottom of MobileInboxView) was being clipped on the user's mobile phone. Multiple CSS fixes (box-sizing, overflow, width changes) didn't work.
+
+**Root Cause**: The quick-add bar used `position: fixed` inside `.mobile-content`, which is a scrollable container with `overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch`. On mobile WebKit/Blink browsers, fixed positioning breaks when the containing block becomes the scroll container instead of the viewport.
+
+**Fix**: Used Vue's `<Teleport to="body">` to render the quick-add bar at the `<body>` level, bypassing the scroll container entirely. Cleaned up CSS (replaced `width: 100%` with `left: 0; right: 0`, removed workaround safe-area paddings, added `min-width: 0` to input). Removed `overflow-x: hidden` from MobileLayout.vue's `.mobile-content`.
+
+**Files**: `src/mobile/views/MobileInboxView.vue`, `src/mobile/layouts/MobileLayout.vue`
+
+---
+
 ### ~~TASK-1289~~: Investigate severe task position drift episode (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-12)
@@ -268,9 +261,9 @@
 
 ---
 
-### BUG-1218: RTL Missing in Calendar Task Create Dialog and Timer Task Name (🔄 IN PROGRESS)
+### BUG-1218: RTL Missing in Calendar Task Create Dialog and Timer Task Name (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-07)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-07)
 
 **Problem**: The Calendar-specific QuickTaskCreate dialog and the header timer task name don't support RTL/Hebrew text, while the rest of the app does. Hebrew text in the calendar task title input shows LTR cursor position. Timer task name in the header bar doesn't auto-detect Hebrew direction.
 
@@ -357,9 +350,9 @@
 
 ---
 
-### ~~BUG-1216~~: Canvas Mouse Drift + Performance on Tauri (👀 REVIEW)
+### ~~BUG-1216~~: Canvas Mouse Drift + Performance on Tauri (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-07)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-07)
 
 **Problem**: Canvas drag drift, sluggish pan/zoom, and typing lag on Tauri desktop app.
 
@@ -390,9 +383,9 @@
 
 ---
 
-### BUG-1286: PWA Today View Shows 2:00 AM on All Tasks Due to UTC Timezone Parsing (🔄 IN PROGRESS)
+### BUG-1286: PWA Today View Shows 2:00 AM on All Tasks Due to UTC Timezone Parsing (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-08)
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-08)
 
 **Problem**: Tasks in the Mobile Today View all showed "2:00 AM" even though the user never set any due time. Additionally, the time-based grouping broke — all untimed tasks landed in "Evening" instead of "Anytime Today".
 
@@ -454,9 +447,9 @@
 
 ---
 
-### BUG-1210: "This Week" Filter Shows Tasks From Next Week (🔄 IN PROGRESS)
+### BUG-1210: "This Week" Filter Shows Tasks From Next Week (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
 
 **Problem**: The "This Week" view/filter displays tasks due after Saturday 23:59 (next week). Two root causes:
 
@@ -858,6 +851,8 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 - [ ] Check CORS headers: `curl -I https://api.in-theflow.com/rest/v1/`
 - [ ] Redeploy if needed: `doppler run -- npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/`
 
+**Status Note (2026-02-14):** Investigation stale. Production appears functional.
+
 **Files**: VPS `/var/www/flowstate/`, `/etc/caddy/Caddyfile`, `/opt/supabase/docker/`
 
 ---
@@ -888,6 +883,8 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 1. Worktrees should be cleaned up after task completion (merge OR discard)
 2. Automatic cleanup of worktrees older than 24 hours
 3. Manual cleanup command available in UI
+
+**Status Note (2026-02-14):** No activity since 2026-01-27. Likely resolved or superseded.
 
 **Related**: BUG-1019 (Swarm agent cleanup + OOM prevention)
 
@@ -1211,9 +1208,9 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 
 ---
 
-### ~~BUG-1193~~: Kanban Drag-and-Drop Deep Regression - Drags Wrong Tasks, Groups Don't Move Children (👀 REVIEW)
+### ~~BUG-1193~~: Kanban Drag-and-Drop Deep Regression - Drags Wrong Tasks, Groups Don't Move Children (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW (2026-02-06)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-06)
 
 **Problem**: Deep regression in Kanban/Board view drag-and-drop:
 1. Dragging a task in kanban drags unrelated tasks instead
@@ -1415,9 +1412,9 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### BUG-1127: Cannot Create Group Inside Another Group (Nested Groups) (🔄 IN PROGRESS)
+### BUG-1127: Cannot Create Group Inside Another Group (Nested Groups) (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW
 
 **Problem**: It's not possible to create a new group inside an existing group. Nested group creation is blocked or ignored.
 
@@ -1433,9 +1430,9 @@ const tasksToSync = (tasks || taskStore.tasks)
 
 ---
 
-### TASK-1128: Add "Create Group From Selection" Context Menu Option (🔄 IN PROGRESS)
+### TASK-1128: Add "Create Group From Selection" Context Menu Option (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-04)
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-04)
 
 **Feature**: When multiple tasks are selected on canvas, right-click should show "Add to New Group" option that:
 1. Creates a new group at the bounding box location of selected tasks
@@ -1504,9 +1501,9 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 
 ---
 
-### BUG-1103: Local Dev Auth Signs Out Both Tabs on Second Tab Sign-In (🔄 IN PROGRESS)
+### BUG-1103: Local Dev Auth Signs Out Both Tabs on Second Tab Sign-In (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-01-28)
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-01-28)
 
 **Problem**: In local development, when user has two browser tabs open:
 1. Sign in on first tab - works
@@ -1928,9 +1925,9 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-1214: Child Groups Inherit Parent Group Properties (🔄 IN PROGRESS)
+### TASK-1214: Child Groups Inherit Parent Group Properties (👀 REVIEW)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (Started: 2026-02-06)
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (Started: 2026-02-06)
 
 **Problem**: When dropping a task into a nested child group, the task only inherits properties from the immediate child group. Parent group properties (especially dates like "Today") are NOT inherited.
 
@@ -2948,7 +2945,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | BUG-1206 | P0 | 🔄 Task details not saved when pressing Save in canvas (Tauri-specific, debug logging added) |
 | ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
 | ~~BUG-1212~~ | P0 | ✅ Sync queue CREATE retry causes "duplicate key" corruption |
-| BUG-1286 | P2 | 🔄 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
+| BUG-1286 | P2 | 👀 PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
 | **BUG-1291** | **P0** | **👀 Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
 | ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
 | **TASK-1292** | **P0** | **👀 Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (pomoflow-kde repo)** |
@@ -3723,7 +3720,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 
 ---
 
-### TASK-1287: Cyberflow RPG — Full Cyberpunk Game UI Overhaul (🔄 IN PROGRESS)
+### TASK-1317: Cyberflow RPG — Full Cyberpunk Game UI Overhaul (🔄 IN PROGRESS)
 
 **Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS (2026-02-07)
 
@@ -3895,9 +3892,9 @@ Awaiting user testing to confirm all 4 symptoms resolved.
 
 ---
 
-### BUG-1307: Week View Events Render as Thin Slivers on Thu-Sun Columns (🔄 IN PROGRESS)
+### BUG-1307: Week View Events Render as Thin Slivers on Thu-Sun Columns (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-14)
 
 **Problem**: In the calendar week view, events on Monday and Tuesday render correctly with proper width, title, time, and duration. However, events on Thursday through Sunday appear as nearly invisible thin vertical lines/slivers instead of proper event blocks.
 
@@ -3913,9 +3910,9 @@ Awaiting user testing to confirm all 4 symptoms resolved.
 
 ---
 
-### BUG-1308: Month View Shows Only 2 Columns Instead of 7 (🔄 IN PROGRESS)
+### BUG-1308: Month View Shows Only 2 Columns Instead of 7 (👀 REVIEW)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P1-HIGH | **Status**: 👀 REVIEW (2026-02-14)
 
 **Problem**: The calendar month view grid was missing day-of-week header row (MON-SUN).
 

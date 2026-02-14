@@ -26,6 +26,7 @@ export interface WeeklyPlanState {
   status: WeeklyPlanStatus
   plan: WeeklyPlan | null
   reasoning: string | null
+  taskReasons: Record<string, string>
   error: string | null
   weekStart: Date
   weekEnd: Date
@@ -118,6 +119,7 @@ Rules:
 - Each day key is an array of task ID strings.
 - "unscheduled" contains task IDs that don't fit the available capacity.
 - "reasoning" is a brief string explaining your distribution logic.
+- "taskReasons" is an object mapping each task ID to a short (5-15 word) explanation of WHY you placed it on that specific day. Write from the AI's perspective, e.g. "Overdue — needs immediate attention", "Continues momentum from recent project work", "Light task for your heavy meeting day".
 
 SCHEDULING PRIORITY:
 1. Overdue tasks (due date in the past) — MUST go on Monday or Tuesday.
@@ -252,7 +254,8 @@ Urgency guide: OVERDUE → must be Mon/Tue. IN_PROGRESS → early in week. DUE_T
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Return ONLY the JSON object with monday...sunday, unscheduled, reasoning keys.`
+Return ONLY the JSON object with monday...sunday, unscheduled, reasoning, and taskReasons keys.
+taskReasons example: { "task-id-1": "Overdue — needs immediate attention", "task-id-2": "Continues your recent frontend work" }`
 }
 
 function buildDayResuggestPrompt(
@@ -295,7 +298,7 @@ Return ONLY a JSON object with two keys:
 function parseWeeklyPlanResponse(
   response: string,
   validTaskIds: Set<string>
-): { plan: WeeklyPlan; reasoning: string | null } {
+): { plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string> } {
   // Strip markdown code fences if present
   let json = response.trim()
   const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -321,6 +324,16 @@ function parseWeeklyPlanResponse(
   }
 
   const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
+
+  // Extract per-task AI reasons
+  const taskReasons: Record<string, string> = {}
+  if (parsed.taskReasons && typeof parsed.taskReasons === 'object') {
+    for (const [id, reason] of Object.entries(parsed.taskReasons as Record<string, unknown>)) {
+      if (typeof reason === 'string' && validTaskIds.has(id)) {
+        taskReasons[id] = reason
+      }
+    }
+  }
 
   // Filter invalid IDs and deduplicate across days
   const seen = new Set<string>()
@@ -351,7 +364,7 @@ function parseWeeklyPlanResponse(
     throw new Error('Parsed plan contains no valid task assignments')
   }
 
-  return { plan, reasoning }
+  return { plan, reasoning, taskReasons }
 }
 
 // ============================================================================
@@ -413,7 +426,7 @@ export function useWeeklyPlanAI() {
     interview?: InterviewAnswers,
     profile?: WorkProfile | null,
     behavioral?: BehavioralContext
-  ): Promise<{ plan: WeeklyPlan; reasoning: string | null }> {
+  ): Promise<{ plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string> }> {
     if (tasks.length === 0) {
       return {
         plan: {
@@ -421,6 +434,7 @@ export function useWeeklyPlanAI() {
           friday: [], saturday: [], sunday: [], unscheduled: [],
         },
         reasoning: 'No tasks to schedule.',
+        taskReasons: {},
       }
     }
 
@@ -470,6 +484,7 @@ export function useWeeklyPlanAI() {
       return {
         plan: generateFallbackPlan(tasks, weekStart),
         reasoning: 'AI was unavailable. Tasks distributed by priority using a round-robin schedule.',
+        taskReasons: {},
       }
     } finally {
       isGenerating.value = false

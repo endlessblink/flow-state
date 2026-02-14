@@ -40,7 +40,8 @@
     </div>
 
     <div class="card-content">
-      <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="task.title">{{ task.title }}</span>
+      <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="cardTooltip">{{ task.title }}</span>
+      <span class="task-reason">{{ taskReason }}</span>
       <div class="card-meta">
         <span class="priority-indicator" :style="{ backgroundColor: priorityColor }" />
         <span v-if="projectName" class="project-badge">
@@ -86,10 +87,12 @@ import type { TaskSummary } from '@/composables/useWeeklyPlanAI'
 interface Props {
   task: TaskSummary
   isOverdue?: boolean
+  aiReason?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isOverdue: false,
+  aiReason: '',
 })
 
 defineEmits<{
@@ -149,6 +152,44 @@ const statusLabel = computed(() => {
     case 'on_hold': return 'On Hold'
     default: return props.task.status
   }
+})
+
+// AI-generated reasoning takes priority; deterministic fallback if AI didn't provide one
+const taskReason = computed(() => {
+  if (props.aiReason) return props.aiReason
+
+  // Deterministic fallback
+  const reasons: string[] = []
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  if (props.task.dueDate && props.task.dueDate < todayStr) {
+    reasons.push('Overdue')
+  } else if (props.task.dueDate && props.task.dueDate <= todayStr) {
+    reasons.push('Due today')
+  } else if (props.task.dueDate) {
+    reasons.push(`Due ${props.task.dueDate}`)
+  }
+
+  if (props.task.status === 'in_progress') {
+    reasons.push('In progress')
+  }
+
+  if (props.task.priority === 'high') {
+    reasons.push('High priority')
+  }
+
+  if (reasons.length === 0) {
+    if (props.task.priority === 'medium') return 'Medium priority'
+    return 'Available this week'
+  }
+
+  return reasons.join(' · ')
+})
+
+// Full tooltip: title + reason
+const cardTooltip = computed(() => {
+  return `${props.task.title}\n─\n${taskReason.value}`
 })
 </script>
 
@@ -219,6 +260,18 @@ const statusLabel = computed(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.task-reason {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: var(--leading-none);
+  opacity: 0.7;
+}
+
+.weekly-task-card.is-overdue .task-reason {
+  color: var(--color-danger);
+  opacity: 1;
 }
 
 .card-meta {

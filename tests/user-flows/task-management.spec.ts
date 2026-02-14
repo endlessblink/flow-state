@@ -35,6 +35,10 @@ test.describe('Task Management', () => {
         await quickAddInput.press('Enter');
         console.log('[TEST] Task creation submitted');
 
+        // Explicitly click 'Inbox' in sidebar to ensure we are in the right view
+        // The quick add task goes to Inbox by default
+        await page.getByText('Inbox', { exact: true }).click();
+
         // Wait a bit to ensure UI updates
         await page.waitForTimeout(2000);
 
@@ -44,8 +48,10 @@ test.describe('Task Management', () => {
 
         if (!isVisible) {
             console.log('[TEST] Task not found. Dumping task list items:');
-            const tasks = await page.locator('.task-item').allTextContents();
-            console.log(tasks);
+            // Try simpler selector if .task-item is not found
+            // Update to use the correct class from HierarchicalTaskRow.vue
+            const items = await page.locator('.hierarchical-task-row').allTextContents();
+            console.log(items);
         }
 
         // Verify task appears in the list

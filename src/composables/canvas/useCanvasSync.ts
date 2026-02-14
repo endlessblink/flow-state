@@ -243,7 +243,7 @@ export function useCanvasSync() {
             // Commit updates (locks will prevent overwrites of dragged items)
             const batchResult = positionManager.batchUpdate(updates, 'remote-sync')
             const rejectedIds = batchResult?.rejectedIds ?? []
-            if (rejectedIds.length > 0) {
+            if (rejectedIds.length > 0 && import.meta.env.DEV) {
                 console.log(`[CANVAS:SYNC] Deferred ${rejectedIds.length} locked nodes (will retry next sync)`)
             }
 

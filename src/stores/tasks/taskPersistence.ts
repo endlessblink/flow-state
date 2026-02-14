@@ -55,7 +55,9 @@ export function useTaskPersistence(
     const saveTasksToLocalStorage = () => {
         try {
             localStorage.setItem(GUEST_TASKS_KEY, JSON.stringify(_rawTasks.value))
-            console.log(`💾 [GUEST-MODE] Saved ${_rawTasks.value.length} tasks to localStorage`)
+            if (import.meta.env.DEV) {
+                console.log(`💾 [GUEST-MODE] Saved ${_rawTasks.value.length} tasks to localStorage`)
+            }
         } catch (e) {
             console.error('❌ [GUEST-MODE] Failed to save tasks to localStorage:', e)
         }
@@ -71,7 +73,9 @@ export function useTaskPersistence(
                 const seenIds = new Set<string>()
                 const uniqueTasks = tasks.filter(task => {
                     if (seenIds.has(task.id)) {
-                        console.warn(`🔄 [GUEST-MODE] Removing duplicate task: ${task.id}`)
+                        if (import.meta.env.DEV) {
+                            console.warn(`🔄 [GUEST-MODE] Removing duplicate task: ${task.id}`)
+                        }
                         return false
                     }
                     seenIds.add(task.id)
@@ -79,12 +83,16 @@ export function useTaskPersistence(
                 })
 
                 if (uniqueTasks.length < tasks.length) {
-                    console.log(`🧹 [GUEST-MODE] Removed ${tasks.length - uniqueTasks.length} duplicate tasks`)
+                    if (import.meta.env.DEV) {
+                        console.log(`🧹 [GUEST-MODE] Removed ${tasks.length - uniqueTasks.length} duplicate tasks`)
+                    }
                     // Save cleaned data back
                     localStorage.setItem(GUEST_TASKS_KEY, JSON.stringify(uniqueTasks))
                 }
 
-                console.log(`📦 [GUEST-MODE] Loaded ${uniqueTasks.length} tasks from localStorage`)
+                if (import.meta.env.DEV) {
+                    console.log(`📦 [GUEST-MODE] Loaded ${uniqueTasks.length} tasks from localStorage`)
+                }
                 return uniqueTasks
             }
         } catch (e) {
@@ -94,7 +102,9 @@ export function useTaskPersistence(
     }
 
     const deleteTaskFromStorage = async (taskId: string): Promise<void> => {
-        console.log(`🗑️ [PERSISTENCE] deleteTaskFromStorage called for: ${taskId}`)
+        if (import.meta.env.DEV) {
+            console.log(`🗑️ [PERSISTENCE] deleteTaskFromStorage called for: ${taskId}`)
+        }
 
         // NOTE: localStorage save happens in taskOperations.deleteTask AFTER splice
         // Don't save here - the task is still in _rawTasks at this point!
@@ -103,13 +113,17 @@ export function useTaskPersistence(
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
         if (!authStore.isAuthenticated) {
-            console.log(`✅ [PERSISTENCE] Task ${taskId} will be removed from localStorage after splice`)
+            if (import.meta.env.DEV) {
+                console.log(`✅ [PERSISTENCE] Task ${taskId} will be removed from localStorage after splice`)
+            }
             return
         }
 
         try {
             await deleteFromDB(taskId)
-            console.log(`✅ [PERSISTENCE] Task ${taskId} soft-deleted successfully`)
+            if (import.meta.env.DEV) {
+                console.log(`✅ [PERSISTENCE] Task ${taskId} soft-deleted successfully`)
+            }
         } catch (e) {
             console.error(`❌ [PERSISTENCE] Task deletion failed for ${taskId}:`, e)
             throw e  // Re-throw so deleteTask in taskOperations knows it failed

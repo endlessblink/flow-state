@@ -68,6 +68,7 @@ const {
             class="month-event"
             :class="{ 'timer-active-event': currentTaskId === event.taskId, 'status-done': getTaskStatus(event) === 'done' }"
             :style="{ backgroundColor: event.color }"
+            :title="event.title"
             draggable="true"
             @dragstart="$emit('eventDragStart', $event, event)"
             @dragend="$emit('eventDragEnd', $event)"
@@ -130,7 +131,7 @@ const {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
-  background: var(--border-faint);
+  background: var(--glass-border-light);
   flex-shrink: 0;
 }
 
@@ -149,7 +150,7 @@ const {
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(6, 1fr);
   gap: 1px;
-  background: var(--border-faint);
+  background: var(--glass-border-light);
   overflow-y: auto;
 }
 
@@ -260,13 +261,9 @@ const {
   text-overflow: ellipsis;
 }
 
-/* BUG-1304: Visual indicator for done tasks */
+/* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
 .month-event.status-done {
   filter: grayscale(0.6) brightness(0.85);
-  opacity: 0.65;
-}
-
-.month-event.status-done .event-title-short {
-  text-decoration: line-through;
+  opacity: 0.55;
 }
 </style>

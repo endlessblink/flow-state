@@ -1,11 +1,11 @@
 {
-  "version": "1.2.57",
-  "notes": "Fix mobile + button clipping, gate debug toggle to dev user only",
-  "pub_date": "2026-02-14T06:52:46.741Z",
+  "version": "1.2.58",
+  "notes": "BUG-1310: fix canvas invisible barrier blocking group drag",
+  "pub_date": "2026-02-14T07:06:54.788Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTdBNUIzVjNDVmdyd2tlZm1lOUMyZUJYU1UzcEJGN1NpZ1dhV1ByNDhCUXpicmU4ZkNmbnZ3aG5Sa3BJd2t3QThRa0xseXdKWUVINTl0eUxvVG5GZUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDUxOTY2CWZpbGU6Rmxvd1N0YXRlXzEuMi41N19hbWQ2NC5BcHBJbWFnZQpZaVBSNGt6KzBrNU1UQlM4SlVpSjBJeEZhTDhiczJPMzlRaGJNa0RLbk50OEFYUkFsclA0ckdvTlcxdzBPZkpXa3NVR1pqUXNUdXVwZ0ptNzhVUkZEZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.57_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS9uZ2p0bUhtd2N1d0lWU3NuL3RoWCtJMGtMTnhZSkk5VG5PYWtjQWx2V3FTWitaYmhDaytIYmxVY21RUXFyRHlaMXRTQi9kcW5xUVROTWh4bEt6VFE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDUyODE0CWZpbGU6Rmxvd1N0YXRlXzEuMi41OF9hbWQ2NC5BcHBJbWFnZQpub2h6alJEZFgxU2Vzcm5ValJ2eVlEeG1CL0RKUzJZOUlGcmR5bVVFNllRZ3pQeGtVbEl6eVJ2WkNlYzBtNWh1M0cyTk9wOFBQQ1pteDgyOHlEUGVEQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.58_amd64.AppImage"
     }
   }
 }

@@ -1465,7 +1465,6 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
 
       case 'generate_weekly_plan': {
         // Bridge to the existing weekly planning system
-        const { useWeeklyPlanAI } = await import('@/composables/useWeeklyPlanAI')
         // Get eligible tasks using the same sort logic as useWeeklyPlan
         const allTasks = taskStore.tasks
         const today = new Date().toISOString().split('T')[0]
@@ -1536,7 +1535,8 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           workProfile = await wp.loadProfile()
         } catch { /* work profile not available */ }
 
-        // Generate the plan
+        // Generate the plan via AI (with 30s timeout — falls back to deterministic)
+        const { useWeeklyPlanAI } = await import('@/composables/useWeeklyPlanAI')
         const { generatePlan } = useWeeklyPlanAI()
         const { plan, reasoning } = await generatePlan(eligible, interview, workProfile)
 

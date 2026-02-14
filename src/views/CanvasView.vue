@@ -377,14 +377,6 @@ const handleCreateTaskInGroupDebug = (section: CanvasGroup) => {
   const menuX = contextMenuStore.canvasContextMenuX
   const menuY = contextMenuStore.canvasContextMenuY
 
-  console.log('🔴 [CANVASVIEW] handleCreateTaskInGroupDebug called!', {
-    sectionId: section?.id,
-    sectionName: section?.name,
-    contextMenuX: menuX,
-    contextMenuY: menuY,
-    createTaskInGroupType: typeof createTaskInGroup,
-    createTaskInGroupFn: createTaskInGroup?.toString?.().slice(0, 100)
-  })
   createTaskInGroup(section)
 }
 
@@ -393,10 +385,7 @@ const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
 const handleEditTask = (task: Task) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
 // Handle double-click on nodes to open edit modal for tasks
 const handleNodeDoubleClick = ({ node }: NodeMouseEvent) => {
-    console.log('[TASK-279] handleNodeDoubleClick called', { nodeType: node.type, hasTask: !!node.data?.task })
-    // Only handle task nodes, not group nodes
     if (node.type === 'taskNode' && node.data?.task) {
-        console.log('[TASK-279] Opening edit modal for task', node.data.task.id)
         handleEditTask(node.data.task)
     }
 }
@@ -409,11 +398,6 @@ const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
 }
 
 const handleSectionContextMenu = (event: MouseEvent, section: CanvasGroup) => {
-    console.debug('[BUG-251] handleSectionContextMenu called', {
-        sectionId: section?.id,
-        sectionName: section?.name,
-        eventType: event?.type
-    })
     if (event) {
         event.preventDefault()
         event.stopPropagation() // STOP PROPAGATION to prevent pane menu

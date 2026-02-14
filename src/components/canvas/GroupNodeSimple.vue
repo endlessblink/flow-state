@@ -263,19 +263,6 @@ const handleResize = (event: unknown) => {
     const nearMin = nodeResizerHeight && nodeResizerHeight <= 120
     const nearMax = nodeResizerHeight && nodeResizerHeight >= 1950
 
-    if (nearMin || nearMax) {
-      console.log('🔍 Resize Debug:', {
-        sectionId: props.id,
-        nodeResizerHeight,
-        minHeight: 80,
-        maxHeight: 2000,
-        hitMinConstraint: nodeResizerHeight && nodeResizerHeight <= 80,
-        hitMaxConstraint: nodeResizerHeight && nodeResizerHeight >= 2000,
-        distanceFromMin: nodeResizerHeight ? nodeResizerHeight - 80 : 0,
-        distanceFromMax: nodeResizerHeight ? 2000 - nodeResizerHeight : 0
-      })
-    }
-
     emit('resize', { sectionId: props.id, event })
     rafId.value = null
   })

@@ -41,7 +41,13 @@
 
     <div class="card-content">
       <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="cardTooltip">{{ task.title }}</span>
-      <span class="task-reason">{{ taskReason }}</span>
+
+      <!-- AI reason bullets OR deterministic reason fallback -->
+      <ul v-if="aiReasonBullets.length > 0" class="ai-reason-list" :dir="isRtl ? 'rtl' : 'ltr'">
+        <li v-for="(bullet, idx) in aiReasonBullets" :key="idx">{{ bullet }}</li>
+      </ul>
+      <span v-else class="task-reason">{{ taskReason }}</span>
+
       <div class="card-meta">
         <span class="priority-indicator" :style="{ backgroundColor: priorityColor }" />
         <span v-if="projectName" class="project-badge">
@@ -154,7 +160,16 @@ const statusLabel = computed(() => {
   }
 })
 
-// AI-generated reasoning takes priority; deterministic fallback if AI didn't provide one
+// AI-generated reasoning as bullet points
+const aiReasonBullets = computed(() => {
+  if (!props.aiReason) return []
+  return props.aiReason
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+})
+
+// Deterministic fallback when AI didn't provide reasoning
 const taskReason = computed(() => {
   if (props.aiReason) return props.aiReason
 
@@ -194,13 +209,13 @@ const cardTooltip = computed(() => {
 </script>
 
 <style scoped>
-/* Match kanban TaskCard sizing: space-3 padding, 15px title, radius-md */
+/* Spacious cards with more breathing room */
 .weekly-task-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
+  gap: var(--space-1_5);
+  padding: var(--space-3) var(--space-4);
   background: rgba(35, 37, 50, 0.95);
   backdrop-filter: blur(var(--blur-sm));
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -239,7 +254,7 @@ const cardTooltip = computed(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-1_5);
 }
 
 .priority-indicator {
@@ -262,16 +277,64 @@ const cardTooltip = computed(() => {
   overflow: hidden;
 }
 
+/* AI reason bullet list */
+.ai-reason-list {
+  margin: var(--space-1) 0 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-reason-list li {
+  position: relative;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding-left: var(--space-3);
+  margin-bottom: var(--space-0_5);
+}
+
+.ai-reason-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Custom bullet marker */
+.ai-reason-list li::before {
+  content: '•';
+  position: absolute;
+  left: var(--space-1);
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* RTL alignment for bullets */
+.ai-reason-list[dir='rtl'] li {
+  padding-left: 0;
+  padding-right: var(--space-3);
+}
+
+.ai-reason-list[dir='rtl'] li::before {
+  left: auto;
+  right: var(--space-1);
+}
+
+/* Deterministic reason fallback (single line) */
 .task-reason {
   font-size: 11px;
   color: var(--text-muted);
   line-height: var(--leading-none);
   opacity: 0.7;
+  margin-top: var(--space-1);
 }
 
-.weekly-task-card.is-overdue .task-reason {
+.weekly-task-card.is-overdue .task-reason,
+.weekly-task-card.is-overdue .ai-reason-list li {
   color: var(--color-danger);
   opacity: 1;
+}
+
+.weekly-task-card.is-overdue .ai-reason-list li::before {
+  color: var(--color-danger);
+  opacity: 0.7;
 }
 
 .card-meta {
@@ -354,7 +417,7 @@ const cardTooltip = computed(() => {
 .expand-enter-to,
 .expand-leave-from {
   opacity: 1;
-  max-height: 150px;
+  max-height: 200px;
 }
 
 /* Hover quick actions — top-right corner */

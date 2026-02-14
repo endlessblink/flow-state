@@ -159,6 +159,7 @@
         :plan="state.plan"
         :task-map="taskMap"
         :week-start="state.weekStart"
+        :task-reasons="state.taskReasons"
         @move-task="onMoveTask"
         @resuggest="onResuggest"
         @remove-task="onRemoveTask"

@@ -385,7 +385,9 @@ export const useTimerStore = defineStore('timer', () => {
     const updateFromDifferentDevice = newDoc.device_leader_id !== deviceId
 
     if (timeSinceLastSeen < DEVICE_LEADER_TIMEOUT_MS && updateFromDifferentDevice) {
-      console.log('🍅 [TIMER] Yielding leadership to:', newDoc.device_leader_id)
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] Yielding leadership to:', newDoc.device_leader_id)
+      }
       isDeviceLeader.value = false
       pauseHeartbeat()
 
@@ -453,12 +455,14 @@ export const useTimerStore = defineStore('timer', () => {
         const lastSeen = existing.deviceLeaderLastSeen || 0
         const timeSinceLastSeen = Date.now() - lastSeen
 
-        console.log('🍅 [TIMER] Clearing existing session for new timer', {
-          sessionId: existing.id,
-          previousLeader: existing.deviceLeaderId,
-          lastSeen: new Date(lastSeen).toISOString(),
-          staleFor: Math.round(timeSinceLastSeen / 1000) + 's'
-        })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Clearing existing session for new timer', {
+            sessionId: existing.id,
+            previousLeader: existing.deviceLeaderId,
+            lastSeen: new Date(lastSeen).toISOString(),
+            staleFor: Math.round(timeSinceLastSeen / 1000) + 's'
+          })
+        }
 
         // Mark the existing session as inactive - user's explicit action takes precedence
         try {
@@ -484,14 +488,18 @@ export const useTimerStore = defineStore('timer', () => {
    */
   const switchTimerTask = async (taskId: string) => {
     if (!currentSession.value) return
-    console.log('🍅 [TIMER] switchTimerTask:', { from: currentSession.value.taskId, to: taskId })
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] switchTimerTask:', { from: currentSession.value.taskId, to: taskId })
+    }
     currentSession.value.taskId = taskId
     broadcastSession()
     await saveTimerSessionWithLeadership()
   }
 
   const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
-    console.log('🍅 [TIMER] startTimer called:', { taskId, duration, isBreak })
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] startTimer called:', { taskId, duration, isBreak })
+    }
 
     // TASK-1287 + BUG-1294: If a work timer is already running, don't reset
     if (currentSession.value?.isActive && !currentSession.value.isBreak && !isBreak) {
@@ -512,7 +520,9 @@ export const useTimerStore = defineStore('timer', () => {
     }
 
     const claimedLeadership = crossTabSync.claimTimerLeadership()
-    console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
+    }
     if (!claimedLeadership) {
       // BUG-1291: Don't silently abort for user-initiated timer starts
       // In single-window Tauri mode, stale leadership state shouldn't block the user
@@ -540,7 +550,9 @@ export const useTimerStore = defineStore('timer', () => {
     playStartSound()
     resumeTimerInterval()
     await requestWakeLock() // Keep screen on - ROAD-004
-    console.log('🍅 [TIMER] Timer started successfully, interval resumed')
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] Timer started successfully, interval resumed')
+    }
   }
 
   const pauseTimer = () => {
@@ -580,13 +592,17 @@ export const useTimerStore = defineStore('timer', () => {
 
       // TASK-1009: Save stopped state to DB - triggers Supabase Realtime for other devices
       // This ensures desktop app and KDE widget receive the stop event
-      console.log('🍅 [TIMER] stopTimer: Saving stopped session to DB for cross-device sync', {
-        sessionId: stoppedSession.id,
-        isActive: stoppedSession.isActive,
-        deviceId
-      })
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] stopTimer: Saving stopped session to DB for cross-device sync', {
+          sessionId: stoppedSession.id,
+          isActive: stoppedSession.isActive,
+          deviceId
+        })
+      }
       await saveActiveTimerSession(stoppedSession, deviceId)
-      console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+      }
 
       // Update local state
       completedSessions.value.push(stoppedSession)
@@ -629,7 +645,9 @@ export const useTimerStore = defineStore('timer', () => {
             : new Date(completedSession.startTime),
         }
         await saveActiveTimerSession(completedForDb, deviceId)
-        console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+        }
       } catch (e) {
         console.warn('🍅 [TIMER] completeSession: Failed to save to DB (session may reappear on sync):', e)
       }
@@ -713,7 +731,9 @@ export const useTimerStore = defineStore('timer', () => {
 
     // BUG-1112: Only show notification when KDE widget is NOT active
     if (isTauri() && kdeActive) {
-      console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] KDE widget is active, skipping notification (widget handles it)')
+      }
       return
     }
 
@@ -727,7 +747,9 @@ export const useTimerStore = defineStore('timer', () => {
         taskId,
         taskName
       })
-      console.log('🍅 [TIMER] Sent TIMER_COMPLETE to service worker (has action buttons)')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] Sent TIMER_COMPLETE to service worker (has action buttons)')
+      }
       return
     }
 

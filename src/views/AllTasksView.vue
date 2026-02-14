@@ -137,23 +137,11 @@ const filteredTasks = computed(() => {
     tasks = tasks.filter(t => t.status !== 'done')
   }
 
-  console.log('🔍 [AllTasksView] filteredTasks computed:', {
-    taskCount: tasks.length,
-    hideDoneTasks: hideDoneTasks.value,
-    tasks: tasks.slice(0, 3), // Show first 3 tasks for debugging
-    storeInitialized: taskStore.tasks.length > 0,
-    allTasksCount: taskStore.tasks.length
-  })
   return tasks
 })
 
 const sortedTasks = computed(() => {
   const tasks = [...filteredTasks.value]
-  console.log('🔍 [AllTasksView] sortedTasks computed:', {
-    beforeSort: tasks.length,
-    sortBy: sortBy.value,
-    viewType: viewType.value
-  })
 
   switch (sortBy.value) {
     case 'dueDate':
@@ -275,25 +263,8 @@ const handleMoveTask = async (taskId: string, targetProjectId: string | null, ta
 }
 
 // Debug function to test toggle functionality
-const handleToggleDoneTasksFromControl = (newValue?: boolean) => {
-  console.log('🔧 AllTasksView: Toggle button clicked from ViewControls!')
-  console.log('🔧 AllTasksView: New value requested:', newValue)
-  
-  try {
-    // We can just call toggle, or we can use the value if we exposed a setter.
-    // Since taskStore.toggleHideDoneTasks() is a toggle, let's use it. 
-    // Ideally we should set it to `newValue` if possible, but store only has toggle.
-    // However, if UI sends specific value, we should respect it if we can.
-    // But `hideDoneTasks` in store is a computed setter that updates canvas+calendar.
-    
-    // Simplest: just toggle. The UI in ViewControls emits `!props.hideDoneTasks`. 
-    // So it should align.
-    taskStore.toggleHideDoneTasks()
-    
-    console.log('🔧 AllTasksView: Method call successful')
-  } catch (error) {
-    console.error('🔧 AllTasksView: Error calling toggleHideDoneTasks:', error)
-  }
+const handleToggleDoneTasksFromControl = (_newValue?: boolean) => {
+  taskStore.toggleHideDoneTasks()
 }
 
 // Debug lifecycle hook

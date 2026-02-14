@@ -175,6 +175,7 @@ export class OpenRouterProxyProvider implements AIProvider {
     const startTime = Date.now()
 
     try {
+      const signal = AbortSignal.timeout(options.timeout || this.timeout)
       const response = await proxyAIChat({
         provider: 'openrouter',
         messages: messages.map(m => ({ role: m.role, content: m.content })),
@@ -185,7 +186,7 @@ export class OpenRouterProxyProvider implements AIProvider {
         stop_sequences: options.stopSequences,
         tools: options.tools?.map(t => ({ type: t.type, function: t.function })),
         tool_choice: options.toolChoice,
-      })
+      }, signal)
 
       return {
         content: response.content,

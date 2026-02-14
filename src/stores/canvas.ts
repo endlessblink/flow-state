@@ -242,7 +242,6 @@ export const useCanvasStore = defineStore('canvas', () => {
     const USER_ACTION_SOURCES = ['user:drag-drop', 'user:create', 'user:delete', 'user:undo', 'user:redo', 'user:resize', 'user:connect', 'user:context-menu', 'user:manual']
     if (USER_ACTION_SOURCES.includes(source)) {
       groupsModule.syncTrigger.value++
-      console.log(`[CANVAS] Sync triggered by ${source}`)
     }
   }
 

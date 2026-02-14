@@ -9,6 +9,7 @@
       :tasks="col.tasks"
       :is-today="col.isToday"
       :model-value="col.taskIds"
+      :task-reasons="props.taskReasons"
       @update:model-value="(ids) => onColumnUpdate(col.key, ids)"
       @resuggest="(dayKey) => $emit('resuggest', dayKey)"
       @remove-task="(id) => $emit('remove-task', id)"
@@ -28,9 +29,12 @@ interface Props {
   plan: WeeklyPlan
   taskMap: Map<string, TaskSummary>
   weekStart: Date
+  taskReasons?: Record<string, string>
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  taskReasons: () => ({}),
+})
 
 const emit = defineEmits<{
   'move-task': [taskId: string, fromDay: keyof WeeklyPlan, toDay: keyof WeeklyPlan]

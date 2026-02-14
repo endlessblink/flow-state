@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => ({
         // API caching is handled at the app level via useSupabaseDatabase
       },
       devOptions: {
-        enabled: true, // BUG-1112: Enable for dev to get system notifications
+        enabled: false, // Disabled: caused infinite reload loop in dev mode (BUG-1112 notifications work via browser API)
         type: 'module',
       },
     }),

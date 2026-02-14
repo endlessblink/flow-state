@@ -36,6 +36,7 @@ import {
 import {
   OllamaProvider,
 } from './providers/ollama'
+import { recordAIUsage } from './usageTracker'
 // BUG-1131: Proxy providers for secure API key handling (keys stay server-side)
 import { createGroqProxyProvider } from './providers/groqProxy'
 import { createOpenRouterProxyProvider } from './providers/openrouterProxy'
@@ -444,6 +445,14 @@ export class AIRouter {
         response.completionTokens ?? 0
       )
 
+      // TASK-1316: Record usage for the settings dashboard
+      recordAIUsage({
+        provider: providerType,
+        model: generateOptions.model || this.getDefaultModelForProvider(providerType),
+        inputTokens: response.promptTokens ?? 0,
+        outputTokens: response.completionTokens ?? 0
+      })
+
       return response
     } catch (error) {
       // Try fallback if enabled
@@ -507,12 +516,25 @@ export class AIRouter {
           tracking.totalRequests++
         }
 
+        // TASK-1316: Track content length for usage estimation
+        let streamedContentLength = 0
         for await (const chunk of provider.generateStream(messages, generateOptions)) {
+          if (chunk.content) streamedContentLength += chunk.content.length
           yield chunk
         }
 
         // If we got here, streaming succeeded — record the actual provider used
         this._lastUsedProvider = providerType
+
+        // TASK-1316: Record usage for the settings dashboard
+        const inputContentLength = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0)
+        recordAIUsage({
+          provider: providerType,
+          model: generateOptions.model || this.getDefaultModelForProvider(providerType),
+          inputTokens: Math.ceil(inputContentLength / 4),
+          outputTokens: Math.ceil(streamedContentLength / 4)
+        })
+
         return
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
@@ -581,6 +603,14 @@ export class AIRouter {
           response.promptTokens ?? 0,
           response.completionTokens ?? 0
         )
+
+        // TASK-1316: Record fallback usage
+        recordAIUsage({
+          provider: providerType,
+          model: options.model || this.getDefaultModelForProvider(providerType),
+          inputTokens: response.promptTokens ?? 0,
+          outputTokens: response.completionTokens ?? 0
+        })
 
         return response
       } catch (error) {

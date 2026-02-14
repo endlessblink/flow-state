@@ -394,8 +394,6 @@ watch([showLayoutSubmenu, submenuRef], () => {
 
 // Handle create group click (opens unified modal)
 const handleCreateGroup = () => {
-  console.log('🔧 CanvasContextMenu: Create Group button clicked!')
-  console.log('🔧 CanvasContextMenu: Emitting createGroup event (opens unified modal)')
   emit('createGroup')
   emit('close')
 }
@@ -403,7 +401,6 @@ const handleCreateGroup = () => {
 // TASK-068: Handler for creating task in group
 const handleCreateTaskInGroup = () => {
   if (props.contextSection) {
-    console.log('➕ CanvasContextMenu: Create Task in Group:', props.contextSection.name)
     emit('createTaskInGroup', props.contextSection)
     emit('close')
   }
@@ -412,7 +409,6 @@ const handleCreateTaskInGroup = () => {
 // TASK-068: Handler for opening group settings
 const handleOpenSettings = () => {
   if (props.contextSection) {
-    console.log('⚙️ CanvasContextMenu: Open Settings for:', props.contextSection.name)
     emit('openGroupSettings', props.contextSection)
     emit('close')
   }
@@ -421,7 +417,6 @@ const handleOpenSettings = () => {
 // TASK-068: Handler for toggling power mode
 const handleTogglePowerMode = () => {
   if (props.contextSection) {
-    console.log('⚡ CanvasContextMenu: Toggle Power Mode for:', props.contextSection.name)
     emit('togglePowerMode', props.contextSection)
     emit('close')
   }
@@ -430,7 +425,6 @@ const handleTogglePowerMode = () => {
 // TASK-068: Handler for collecting tasks
 const handleCollectTasks = () => {
   if (props.contextSection) {
-    console.log('🧲 CanvasContextMenu: Collect Tasks for:', props.contextSection.name)
     emit('collectTasks', props.contextSection)
     emit('close')
   }
@@ -439,7 +433,6 @@ const handleCollectTasks = () => {
 // TASK-1222: Handler for collecting overdue tasks near group
 const handleCollectOverdueTasks = () => {
   if (props.contextSection) {
-    console.log('⚠️ CanvasContextMenu: Collect Overdue Tasks for:', props.contextSection.name)
     emit('collectOverdueTasks', props.contextSection)
     emit('close')
   }
@@ -455,28 +448,24 @@ const handleDeleteGroup = () => {
 
 // TASK-1128: Handle create group from selection
 const handleCreateGroupFromSelection = () => {
-  console.log('📦 CanvasContextMenu: Create Group From Selection clicked')
   emit('createGroupFromSelection')
   emit('close')
 }
 
 // Handle move to inbox
 const handleMoveToInbox = () => {
-  console.log('📥 CanvasContextMenu: Move to Inbox clicked')
   emit('moveToInbox')
   emit('close')
 }
 
 // Handle done for now (reschedule to tomorrow)
 const handleDoneForNow = () => {
-  console.log('⏰ CanvasContextMenu: Done for now clicked')
   emit('doneForNow')
   emit('close')
 }
 
 // Handle delete tasks
 const handleDeleteTasks = () => {
-  console.log('🗑️ CanvasContextMenu: Delete Tasks clicked')
   emit('deleteTasks')
   emit('close')
 }
@@ -528,13 +517,11 @@ const handleAlignCenterVertical = () => {
 }
 
 const handleDistributeHorizontal = () => {
-  console.log('🔄 handleDistributeHorizontal called')
   emit('distributeHorizontal')
   emit('close')
 }
 
 const handleDistributeVertical = () => {
-  console.log('🔄 handleDistributeVertical called')
   emit('distributeVertical')
   emit('close')
 }

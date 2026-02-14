@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import { useTaskStore } from '@/stores/tasks'
 import type { WeekEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
@@ -52,8 +53,26 @@ const {
   getPriorityClass,
   getPriorityLabel,
   getTaskStatus,
-  getStatusIcon
+  getStatusIcon,
+  getStatusLabel
 } = helpers
+
+// TASK-1322: Tooltip with task description
+const taskStore = useTaskStore()
+
+const getEventTooltip = (event: any) => {
+  const task = taskStore.getTask(event.taskId)
+  const lines = [event.title]
+  if (task?.description) {
+    const plain = task.description.replace(/<[^>]*>/g, '').trim()
+    if (plain) lines.push(plain.substring(0, 200))
+  }
+  const time = formatEventTime(event)
+  if (time) lines.unshift(`🕐 ${time}`)
+  const status = getStatusLabel(getTaskStatus(event))
+  if (status) lines.push(`Status: ${status}`)
+  return lines.join('\n')
+}
 
 // Local drag cell tracking for ghost preview positioning
 const activeDragCell = ref<{ dayIndex: number; hour: number } | null>(null)
@@ -100,22 +119,7 @@ const externalEventsByCell = computed(() => {
   return map
 })
 
-// TASK-1322: Rich tooltip with task details on hover
-const getEventTooltip = (event: WeekEvent): string => {
-  const lines: string[] = [event.title]
-  const project = getProjectName(event)
-  if (project && project !== 'No Project') lines.push(`📁 ${project}`)
-  const priority = getPriorityLabel(event)
-  if (priority && priority !== 'None') lines.push(`⚡ ${priority}`)
-  const status = getStatusIcon(getTaskStatus(event))
-  if (status) lines.push(`${status} ${getTaskStatus(event)}`)
-  const time = formatEventTime(event)
-  if (time) lines.push(`🕐 ${time} · ${event.duration}min`)
-  else if (event.duration) lines.push(`⏱ ${event.duration}min`)
-  return lines.join('\n')
-}
-
-// Position event within its cell (like day view's getSlotTaskStyle)
+// Position event within its cell (kept for external events)
 const HALF_HOUR_HEIGHT = 30
 const getWeekEventCellStyle = (event: WeekEvent) => {
   const topOffset = (event.startSlot % 2) * HALF_HOUR_HEIGHT
@@ -217,18 +221,17 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                 </div>
               </div>
 
-              <!-- Events inside cell (same pattern as day view: events are children of slots) -->
+              <!-- TASK-1322: Week events as horizontal compact pills (like month view) -->
               <div
                 v-for="event in getEventsForCell(dayIndex, hour)"
                 :key="event.id"
                 class="week-event"
-                :style="getWeekEventCellStyle(event)"
                 :class="{
-                  'multi-slot': event.slotSpan > 1,
                   'timer-active-event': currentTaskId === event.taskId,
                   'dragging': isDragging && draggedEventId === event.id,
                   'status-done': getTaskStatus(event) === 'done'
                 }"
+                :style="{ backgroundColor: event.color }"
                 :title="getEventTooltip(event)"
                 draggable="true"
                 @dragstart="$emit('eventDragStart', $event, event)"
@@ -240,7 +243,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                 <!-- Project Stripe -->
                 <div
                   v-if="getProjectVisual(event).type === 'emoji'"
-                  class="project-stripe project-emoji-stripe"
+                  class="project-indicator project-emoji-indicator"
                   :title="`Project: ${getProjectName(event)}`"
                 >
                   <ProjectEmojiIcon
@@ -251,7 +254,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                 </div>
                 <div
                   v-else
-                  class="project-stripe project-color-stripe"
+                  class="project-indicator project-color-indicator"
                   :style="{ backgroundColor: getProjectColor(event) }"
                   :title="`Project: ${getProjectName(event)}`"
                 />
@@ -262,42 +265,15 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   :class="`priority-${getPriorityClass(event)}`"
                   :title="`Priority: ${getPriorityLabel(event)}`"
                 />
-
-                <!-- Event Content -->
-                <div class="event-content" dir="auto">
-                  <div class="event-title">
-                    {{ event.title }}
-                  </div>
-                  <div v-if="formatEventTime(event)" class="event-meta">
-                    <span class="event-time">{{ formatEventTime(event) }}</span>
-                    <span class="event-duration">{{ event.duration }}min</span>
-                  </div>
-                </div>
-
-                <!-- Resize Handles (same position as day view — after content) -->
-                <div
-                  class="resize-handle resize-top"
-                  title="Drag to change start time"
-                  @mousedown.stop="$emit('startResize', $event, event, 'top')"
-                />
-                <div
-                  class="resize-handle resize-bottom"
-                  title="Drag to change duration"
-                  @mousedown.stop="$emit('startResize', $event, event, 'bottom')"
-                />
-
-                <!-- Resize Preview (same as day view) -->
-                <div
-                  v-if="resizePreview?.isResizing && resizePreview.taskId === event.taskId"
-                  class="resize-preview-overlay"
-                  :style="{
-                    height: `${Math.ceil(resizePreview.previewDuration / 30) * 30}px`,
-                    top: resizePreview.direction === 'top' ? 'auto' : '0',
-                    bottom: resizePreview.direction === 'top' ? '0' : 'auto'
-                  }"
+                <span v-if="formatEventTime(event)" class="event-time">{{ formatEventTime(event) }}</span>
+                <span
+                  class="event-title"
+                  dir="auto"
+                  :title="event.title"
+                  @click.stop="$emit('cycleStatus', $event, event)"
                 >
-                  <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
-                </div>
+                  {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
+                </span>
               </div>
 
               <!-- TASK-1317: External calendar events in this cell -->
@@ -415,8 +391,13 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   height: 60px;
   border-bottom: 1px solid var(--glass-border-light);
   position: relative;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition: background var(--duration-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 1px;
 }
 
 .week-time-cell:hover {
@@ -433,154 +414,73 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   box-shadow: inset 0 -2px 0 var(--color-danger);
 }
 
-/* Week event — matches day view .slot-task styling (NO overflow: hidden) */
+/* TASK-1322: Week events as compact horizontal pills (like month view) */
 .week-event {
-  position: absolute;
-  background: var(--surface-tertiary);
-  border: 1px solid var(--border-subtle);
-  border-left: 4px solid var(--accent-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--space-1) var(--space-2);
-  padding-left: calc(var(--space-2) - 2px);
+  padding: var(--space-0_5) var(--space-1);
+  padding-left: var(--space-2_5);
+  border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  box-shadow: var(--shadow-sm);
+  color: white;
   cursor: grab;
-  z-index: 5;
-  transition: all var(--duration-normal) var(--spring-smooth);
-  pointer-events: auto;
-  min-height: 24px;
+  position: relative;
+  line-height: 1.3;
+  flex-shrink: 0;
 }
 
 .week-event:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  border-left-color: var(--accent-primary);
-  border-left-width: 4px;
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
-  z-index: 15;
+  filter: brightness(1.15);
 }
 
 .week-event.dragging {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: grabbing;
 }
 
-.event-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0_5);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
+.event-time {
+  font-weight: var(--font-bold);
+  opacity: 0.8;
+  font-size: 0.6rem;
+  display: block;
+  margin-bottom: 1px;
 }
 
 .event-title {
-  font-weight: var(--font-semibold);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
-.event-meta {
+.project-indicator {
+  width: 4px;
+  height: calc(100% - 4px);
+  border-radius: var(--radius-xs);
+  position: absolute;
+  left: var(--space-0_5);
+  top: var(--space-0_5);
+}
+
+.project-emoji-indicator {
+  width: 12px;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
+  justify-content: center;
 }
 
-.event-time {
-  opacity: 0.8;
-}
-
-.event-time::after {
-  content: " · ";
-  opacity: 0.5;
-}
-
-.event-duration {
-  font-weight: var(--font-medium);
-}
-
-.project-stripe {
-  width: 3px;
-  border-radius: var(--radius-xs);
-  height: calc(100% - 8px);
-  position: absolute;
-  left: 2px;
-  top: var(--space-1);
-}
-
-.project-emoji-stripe {
-  display: none;
+.project-color-indicator {
+  /* uses backgroundColor from :style binding */
 }
 
 .priority-stripe {
   width: 2px;
+  height: calc(100% - 6px);
   border-radius: 1px;
-  height: calc(100% - 12px);
   position: absolute;
   left: 0;
-  top: var(--space-1_5);
+  top: 3px;
 }
 
-/* Resize handles — IDENTICAL to day view (CalendarDayView.vue) */
-.resize-handle {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 8px;
-  background: transparent;
-  cursor: ns-resize;
-  z-index: 20;
-  opacity: 0;
-  transition: all var(--duration-fast);
-  pointer-events: none;
-}
-
-.resize-handle.resize-top {
-  top: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.resize-handle.resize-bottom {
-  bottom: 0;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-}
-
-.week-event:hover .resize-handle {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  background: rgba(99, 102, 241, 0.4) !important;
-  transition: none !important;
-}
-
-/* Resize preview — IDENTICAL to day view */
-.resize-preview-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: var(--color-indigo-bg-medium);
-  border: 2px dashed rgba(99, 102, 241, 0.6);
-  border-radius: var(--radius-md);
-  pointer-events: none;
-  z-index: 50;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: var(--space-1);
-}
-
-.resize-preview-overlay .preview-duration {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: rgba(99, 102, 241, 0.9);
-  background: rgba(255, 255, 255, 0.9);
-  padding: var(--space-0_5) var(--space-1_5);
-  border-radius: var(--radius-sm);
-}
 
 /* Ghost preview — IDENTICAL to day view */
 .ghost-preview-inline {
@@ -624,8 +524,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
 /* Timer active glow */
 .week-event.timer-active-event {
-  border-color: var(--timer-active-border);
-  box-shadow: var(--timer-active-glow), var(--timer-active-shadow);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   animation: timer-pulse 2s ease-in-out infinite;
 }
 

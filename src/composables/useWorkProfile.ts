@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { useTaskStore } from '@/stores/tasks'
+import { useGamificationStore } from '@/stores/gamification'
 import type { WorkProfile, MemoryObservation } from '@/utils/supabaseMappers'
 
 const cachedProfile = ref<WorkProfile | null>(null)
@@ -15,6 +17,19 @@ export function useWorkProfile() {
     if (cachedProfile.value) return cachedProfile.value
     if (isLoading.value) return null
 
+    isLoading.value = true
+    try {
+      const result = await db.fetchWorkProfile()
+      cachedProfile.value = result
+      return result
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /** Force-reload profile from DB (bypasses cache) */
+  async function reloadProfile(): Promise<WorkProfile | null> {
+    cachedProfile.value = null
     isLoading.value = true
     try {
       const result = await db.fetchWorkProfile()
@@ -59,13 +74,15 @@ export function useWorkProfile() {
     avgMinutesPerDay: number | null
     avgTasksPerDay: number | null
     peakDays: string[]
+    estimationAccuracy: number | null
+    currentStreak: number | null
+    onTimeRate: number | null
+    totalTasksCompleted: number
   }> {
+    // 1. Gather data from pomodoro history
     const history = await db.fetchPomodoroHistory(28) // Last 4 weeks
-    if (history.length === 0) {
-      return { avgMinutesPerDay: null, avgTasksPerDay: null, peakDays: [] }
-    }
 
-    // Group by day
+    // Group pomodoro data by day
     const dayMap = new Map<string, { minutes: number; tasks: Set<string> }>()
     const dayOfWeekMinutes = new Map<string, number[]>()
 
@@ -87,13 +104,56 @@ export function useWorkProfile() {
       dayOfWeekMinutes.get(dayOfWeek)!.push(Math.round(entry.duration / 60))
     }
 
-    const days = Array.from(dayMap.values())
-    const avgMinutesPerDay = days.length > 0
-      ? Math.round(days.reduce((sum, d) => sum + d.minutes, 0) / days.length * 10) / 10
+    const pomoDays = Array.from(dayMap.values())
+    const avgMinutesPerDay = pomoDays.length > 0
+      ? Math.round(pomoDays.reduce((sum, d) => sum + d.minutes, 0) / pomoDays.length * 10) / 10
       : null
-    const avgTasksPerDay = days.length > 0
-      ? Math.round(days.reduce((sum, d) => sum + d.tasks.size, 0) / days.length * 10) / 10
+    const avgTasksPerDayFromPomo = pomoDays.length > 0
+      ? Math.round(pomoDays.reduce((sum, d) => sum + d.tasks.size, 0) / pomoDays.length * 10) / 10
       : null
+
+    // 2. Count completed tasks from task store (primary source for tasks/day)
+    const taskStore = useTaskStore()
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 28)
+    const recentCompletedTasks = taskStore.tasks.filter(t => {
+      if (t.status !== 'done') return false
+      const completedDate = t.completedAt ? new Date(t.completedAt) : null
+      return completedDate && completedDate >= cutoff
+    })
+
+    // Group completed tasks by day
+    const taskDayMap = new Map<string, number>()
+    for (const task of recentCompletedTasks) {
+      const date = new Date(task.completedAt!).toISOString().split('T')[0]
+      taskDayMap.set(date, (taskDayMap.get(date) || 0) + 1)
+    }
+    const taskDays = Array.from(taskDayMap.values())
+    const avgTasksFromCompletions = taskDays.length > 0
+      ? Math.round(taskDays.reduce((sum, c) => sum + c, 0) / taskDays.length * 10) / 10
+      : null
+
+    // 3. Get estimation accuracy from tasks with both estimated_pomodoros and completed_pomodoros
+    const tasksWithEstimates = recentCompletedTasks.filter(t =>
+      t.estimatedPomodoros && t.estimatedPomodoros > 0 && t.completedPomodoros !== undefined && t.completedPomodoros > 0
+    )
+    const estimationAccuracy = tasksWithEstimates.length >= 3
+      ? Math.round(tasksWithEstimates.reduce((sum, t) => {
+          const ratio = (t.completedPomodoros || 0) / t.estimatedPomodoros!
+          return sum + Math.min(ratio, 2) // Cap at 200% to avoid outlier skew
+        }, 0) / tasksWithEstimates.length * 100) / 100
+      : null
+
+    // 4. Get streak and on-time data from gamification store
+    const gamStore = useGamificationStore()
+    const currentStreak = gamStore.streakInfo?.currentStreak ?? null
+    const onTimeRate = gamStore.stats?.tasksCompleted && gamStore.stats.tasksCompleted > 0
+      ? Math.round((gamStore.stats.tasksCompletedOnTime / gamStore.stats.tasksCompleted) * 100)
+      : null
+
+    // 5. Combine all data sources — use task completions as PRIMARY for tasks/day, pomodoro for focus time
+    const finalAvgTasksPerDay = avgTasksFromCompletions ?? avgTasksPerDayFromPomo
+    const finalAvgMinutesPerDay = avgMinutesPerDay
 
     // Find peak days (top 2 by avg minutes)
     const dayAvgs = Array.from(dayOfWeekMinutes.entries())
@@ -106,21 +166,29 @@ export function useWorkProfile() {
 
     // Save computed metrics to profile
     await db.saveWorkProfile({
-      avgWorkMinutesPerDay: avgMinutesPerDay,
-      avgTasksCompletedPerDay: avgTasksPerDay,
+      avgWorkMinutesPerDay: finalAvgMinutesPerDay,
+      avgTasksCompletedPerDay: finalAvgTasksPerDay,
       peakProductivityDays: peakDays
     })
 
     if (cachedProfile.value) {
-      cachedProfile.value.avgWorkMinutesPerDay = avgMinutesPerDay
-      cachedProfile.value.avgTasksCompletedPerDay = avgTasksPerDay
+      cachedProfile.value.avgWorkMinutesPerDay = finalAvgMinutesPerDay
+      cachedProfile.value.avgTasksCompletedPerDay = finalAvgTasksPerDay
       cachedProfile.value.peakProductivityDays = peakDays
     }
 
     // FEATURE-1317 Phase 2: Generate structured observations from stats
     await generateObservationsFromStats()
 
-    return { avgMinutesPerDay, avgTasksPerDay, peakDays }
+    return {
+      avgMinutesPerDay: finalAvgMinutesPerDay,
+      avgTasksPerDay: finalAvgTasksPerDay,
+      peakDays,
+      estimationAccuracy,
+      currentStreak,
+      onTimeRate,
+      totalTasksCompleted: recentCompletedTasks.length
+    }
   }
 
   async function recordWeeklyOutcome(
@@ -365,6 +433,7 @@ export function useWorkProfile() {
     hasCompletedInterview,
     isLoading: computed(() => isLoading.value),
     loadProfile,
+    reloadProfile,
     savePreferences,
     computeCapacityMetrics,
     recordWeeklyOutcome,

@@ -8,7 +8,7 @@
  */
 
 import { computed } from 'vue'
-import { useAIChatStore } from '@/stores/aiChat'
+import { getUsageEntries, clearUsageEntries } from '@/services/ai/usageTracker'
 
 // ============================================================================
 // Types
@@ -85,14 +85,6 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openrouter: 'OpenRouter'
 }
 
-/**
- * Estimated input/output token ratio.
- * Since we only have total tokens (not split), we estimate:
- * - 30% input (prompt)
- * - 70% output (completion)
- */
-const INPUT_RATIO = 0.3
-const OUTPUT_RATIO = 0.7
 
 // ============================================================================
 // Model Pricing Catalog
@@ -332,10 +324,12 @@ export function getPricingByProvider(): ProviderPricingGroup[] {
 }
 
 export function useAIUsageTracking() {
-  const aiChatStore = useAIChatStore()
+  const entries = getUsageEntries()
 
   /**
-   * Aggregate usage from conversations, optionally filtered by time period.
+   * Aggregate usage from the centralized tracker, optionally filtered by time period.
+   * Reads from the router-level usage log — captures ALL AI calls (chat, weekly plan,
+   * task assist, gamification, and any future AI consumer).
    */
   function aggregateUsage(period: UsagePeriod): UsageSummary {
     const periodStart = getPeriodStart(period)
@@ -347,63 +341,52 @@ export function useAIUsageTracking() {
       models: Map<string, { tokens: number; requests: number; cost: number }>
     }>()
 
-    let totalMessages = 0
-    let messagesWithMeta = 0
-    for (const conversation of aiChatStore.conversations) {
-      for (const message of conversation.messages) {
-        totalMessages++
-        if (!message.metadata?.provider || !message.metadata.tokens) continue
-        messagesWithMeta++
-
-        // Filter by time period
-        if (periodStart) {
-          const msgDate = message.timestamp instanceof Date
-            ? message.timestamp
-            : new Date(message.timestamp)
-          if (msgDate < periodStart) continue
-        }
-
-        const { provider, model, tokens } = message.metadata
-
-        if (!providerMap.has(provider)) {
-          providerMap.set(provider, {
-            totalTokens: 0,
-            totalRequests: 0,
-            totalCost: 0,
-            models: new Map()
-          })
-        }
-
-        const providerData = providerMap.get(provider)!
-        providerData.totalTokens += tokens
-        providerData.totalRequests += 1
-
-        // Look up model-specific pricing from catalog, fall back to provider default
-        const catalogEntry = MODEL_PRICING_CATALOG.find(
-          m => m.model === model && m.provider === provider
-        )
-        const pricing = catalogEntry
-          ? { input: catalogEntry.inputPer1M, output: catalogEntry.outputPer1M }
-          : PROVIDER_PRICING[provider] || { input: 0, output: 0 }
-
-        const inputTokens = Math.floor(tokens * INPUT_RATIO)
-        const outputTokens = Math.floor(tokens * OUTPUT_RATIO)
-        const inputCost = (inputTokens / 1_000_000) * pricing.input
-        const outputCost = (outputTokens / 1_000_000) * pricing.output
-        const messageCost = inputCost + outputCost
-
-        providerData.totalCost += messageCost
-
-        const modelKey = model || 'unknown'
-        if (!providerData.models.has(modelKey)) {
-          providerData.models.set(modelKey, { tokens: 0, requests: 0, cost: 0 })
-        }
-
-        const modelData = providerData.models.get(modelKey)!
-        modelData.tokens += tokens
-        modelData.requests += 1
-        modelData.cost += messageCost
+    for (const entry of entries.value) {
+      // Filter by time period
+      if (periodStart) {
+        const entryDate = new Date(entry.timestamp)
+        if (entryDate < periodStart) continue
       }
+
+      const { provider, model, inputTokens, outputTokens } = entry
+      const totalTokens = inputTokens + outputTokens
+
+      if (!providerMap.has(provider)) {
+        providerMap.set(provider, {
+          totalTokens: 0,
+          totalRequests: 0,
+          totalCost: 0,
+          models: new Map()
+        })
+      }
+
+      const providerData = providerMap.get(provider)!
+      providerData.totalTokens += totalTokens
+      providerData.totalRequests += 1
+
+      // Look up model-specific pricing from catalog, fall back to provider default
+      const catalogEntry = MODEL_PRICING_CATALOG.find(
+        m => m.model === model && m.provider === provider
+      )
+      const pricing = catalogEntry
+        ? { input: catalogEntry.inputPer1M, output: catalogEntry.outputPer1M }
+        : PROVIDER_PRICING[provider] || { input: 0, output: 0 }
+
+      const inputCost = (inputTokens / 1_000_000) * pricing.input
+      const outputCost = (outputTokens / 1_000_000) * pricing.output
+      const entryCost = inputCost + outputCost
+
+      providerData.totalCost += entryCost
+
+      const modelKey = model || 'unknown'
+      if (!providerData.models.has(modelKey)) {
+        providerData.models.set(modelKey, { tokens: 0, requests: 0, cost: 0 })
+      }
+
+      const modelData = providerData.models.get(modelKey)!
+      modelData.tokens += totalTokens
+      modelData.requests += 1
+      modelData.cost += entryCost
     }
 
     const providers: ProviderUsage[] = Array.from(providerMap.entries()).map(([provider, data]) => {
@@ -467,6 +450,7 @@ export function useAIUsageTracking() {
     monthUsage,
     hasUsageData,
     pricingCatalog,
-    getProviderUsage
+    getProviderUsage,
+    clearUsageData: clearUsageEntries
   }
 }

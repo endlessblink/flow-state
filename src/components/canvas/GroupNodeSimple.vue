@@ -231,11 +231,6 @@ const toggleCollapse = () => {
 // TASK-068: Removed toggleAutoCollect - feature consolidated
 
 const handleContextMenu = (event: MouseEvent) => {
-  console.debug('[BUG-251] GroupNodeSimple.handleContextMenu raw event', {
-    nodeId: props.id,
-    eventType: event.type,
-    target: (event.target as HTMLElement)?.className
-  })
   emit('contextMenu', event, props.data)
 }
 

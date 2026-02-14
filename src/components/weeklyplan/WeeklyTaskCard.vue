@@ -8,7 +8,7 @@
     }"
     @click="toggleExpand"
   >
-    <!-- Hover quick actions — tiny top-right corner -->
+    <!-- Hover quick actions — top-right corner -->
     <div class="card-actions" @click.stop>
       <button
         class="action-dot"
@@ -17,7 +17,7 @@
         type="button"
         @click.stop="$emit('remove', task.id)"
       >
-        <X :size="10" />
+        <X :size="12" />
       </button>
       <button
         class="action-dot"
@@ -26,7 +26,7 @@
         type="button"
         @click.stop="$emit('change-priority', task.id)"
       >
-        <Flag :size="10" />
+        <Flag :size="12" />
       </button>
       <button
         class="action-dot"
@@ -35,7 +35,7 @@
         type="button"
         @click.stop="$emit('snooze', task.id)"
       >
-        <Clock :size="10" />
+        <Clock :size="12" />
       </button>
     </div>
 
@@ -158,20 +158,22 @@ const statusLabel = computed(() => {
 </script>
 
 <style scoped>
+/* Match kanban TaskCard sizing: space-3 padding, 15px title, radius-md */
 .weekly-task-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: rgba(35, 37, 50, 0.95);
+  backdrop-filter: blur(var(--blur-sm));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
   cursor: grab;
-  transition: border-color var(--duration-fast) var(--spring-smooth);
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
   user-select: none;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .weekly-task-card:hover {
@@ -203,15 +205,15 @@ const statusLabel = computed(() => {
 .card-top-row {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-1_5);
+  gap: var(--space-2);
 }
 
 .priority-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-  margin-top: 5px;
+  margin-top: 7px;
 }
 
 .card-content {
@@ -223,13 +225,16 @@ const statusLabel = computed(() => {
 }
 
 .task-title {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-primary);
-  line-height: var(--leading-tight);
-  white-space: nowrap;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .card-meta {
@@ -241,9 +246,9 @@ const statusLabel = computed(() => {
 
 .project-badge,
 .duration-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .duration-badge {
@@ -251,10 +256,10 @@ const statusLabel = computed(() => {
 }
 
 .overdue-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--color-danger);
   font-weight: var(--font-semibold);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 /* Expanded details */
@@ -281,8 +286,8 @@ const statusLabel = computed(() => {
 }
 
 .meta-chip {
-  font-size: 10px;
-  padding: 1px var(--space-1_5);
+  font-size: 11px;
+  padding: 2px var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--glass-bg-medium);
   color: var(--text-muted);
@@ -312,16 +317,16 @@ const statusLabel = computed(() => {
 .expand-enter-to,
 .expand-leave-from {
   opacity: 1;
-  max-height: 120px;
+  max-height: 150px;
 }
 
-/* Hover quick actions — tiny top-right corner dots */
+/* Hover quick actions — top-right corner */
 .card-actions {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   display: flex;
-  gap: 1px;
+  gap: 2px;
   opacity: 0;
   transition: opacity var(--duration-fast);
   z-index: 2;
@@ -335,12 +340,12 @@ const statusLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
   border-radius: var(--radius-full);
-  background: transparent;
+  background: rgba(35, 37, 50, 0.9);
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--duration-fast);

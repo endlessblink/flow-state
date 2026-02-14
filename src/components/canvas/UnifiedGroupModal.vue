@@ -477,19 +477,21 @@ const saveGroup = async () => {
     let finalPosition = { x: props.position.x, y: props.position.y }
 
     // BUG-153 DEBUG: Log position and all groups for containment check
-    console.log(`[BUG-153 DEBUG] Checking containment for new group at:`, {
-      clickPosition: { x: props.position.x, y: props.position.y },
-      existingGroups: canvasStore.groups.map(g => ({
-        name: g.name,
-        id: g.id.substring(0, 10),
-        bounds: {
-          x: g.position?.x ?? 0,
-          y: g.position?.y ?? 0,
-          w: g.position?.width ?? 300,
-          h: g.position?.height ?? 200
-        }
-      }))
-    })
+    if (import.meta.env.DEV) {
+      console.log(`[BUG-153 DEBUG] Checking containment for new group at:`, {
+        clickPosition: { x: props.position.x, y: props.position.y },
+        existingGroups: canvasStore.groups.map(g => ({
+          name: g.name,
+          id: g.id.substring(0, 10),
+          bounds: {
+            x: g.position?.x ?? 0,
+            y: g.position?.y ?? 0,
+            w: g.position?.width ?? 300,
+            h: g.position?.height ?? 200
+          }
+        }))
+      })
+    }
 
     // Check all existing groups to see if creation position is inside any
     const containingGroups = canvasStore.groups.filter(group => {
@@ -499,7 +501,9 @@ const saveGroup = async () => {
       const gh = group.position?.height ?? 200
       const isInside = props.position.x >= gx && props.position.x <= gx + gw &&
                        props.position.y >= gy && props.position.y <= gy + gh
-      console.log(`[BUG-153 DEBUG] "${group.name}": click (${props.position.x.toFixed(0)}, ${props.position.y.toFixed(0)}) vs bounds (${gx.toFixed(0)}-${(gx+gw).toFixed(0)}, ${gy.toFixed(0)}-${(gy+gh).toFixed(0)}) → ${isInside ? 'INSIDE' : 'outside'}`)
+      if (import.meta.env.DEV) {
+        console.log(`[BUG-153 DEBUG] "${group.name}": click (${props.position.x.toFixed(0)}, ${props.position.y.toFixed(0)}) vs bounds (${gx.toFixed(0)}-${(gx+gw).toFixed(0)}, ${gy.toFixed(0)}-${(gy+gh).toFixed(0)}) → ${isInside ? 'INSIDE' : 'outside'}`)
+      }
       return isInside
     })
 
@@ -518,10 +522,12 @@ const saveGroup = async () => {
       // The "Fully Absolute Architecture" stores absolute coordinates in DB
       // Vue Flow conversion to relative happens in groupPositionToVueFlow()
       // So we keep finalPosition as the absolute click position
-      console.log(`[BUG-1127] Creating nested group inside "${parentGroup.name}" (${parentGroupId})`, {
-        absolutePos: { x: props.position.x, y: props.position.y },
-        parentPos: { x: parentGroup.position?.x, y: parentGroup.position?.y }
-      })
+      if (import.meta.env.DEV) {
+        console.log(`[BUG-1127] Creating nested group inside "${parentGroup.name}" (${parentGroupId})`, {
+          absolutePos: { x: props.position.x, y: props.position.y },
+          parentPos: { x: parentGroup.position?.x, y: parentGroup.position?.y }
+        })
+      }
     }
 
     // Create new group with undo support
@@ -600,11 +606,13 @@ watch(() => props.group, (newGroup) => {
 // Focus input when modal opens
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
-    console.log('[BUG-1126] UnifiedGroupModal opened with position:', {
-      x: props.position.x,
-      y: props.position.y,
-      isEditing: !!props.group
-    })
+    if (import.meta.env.DEV) {
+      console.log('[BUG-1126] UnifiedGroupModal opened with position:', {
+        x: props.position.x,
+        y: props.position.y,
+        isEditing: !!props.group
+      })
+    }
     await nextTick()
     nameInput.value?.focus()
   } else {

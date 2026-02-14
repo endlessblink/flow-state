@@ -2,6 +2,7 @@
 import { ref, inject, computed } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useCalendarCore } from '@/composables/useCalendarCore'
+import { useTaskStore } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
 import type { MonthDay } from '@/composables/calendar/useCalendarMonthView'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
@@ -87,18 +88,20 @@ const {
 const { getWeekDayHeaders } = useCalendarCore()
 const weekDayHeaders = computed(() => getWeekDayHeaders())
 
-// TASK-1322: Rich tooltip with task details on hover
-const getEventTooltip = (event: CalendarEvent): string => {
-  const lines: string[] = [event.title]
-  const project = getProjectName(event)
-  if (project && project !== 'No Project') lines.push(`📁 ${project}`)
-  const priority = getPriorityLabel(event)
-  if (priority && priority !== 'None') lines.push(`⚡ ${priority}`)
-  const status = getStatusLabel(getTaskStatus(event))
-  if (status) lines.push(`${getStatusIcon(getTaskStatus(event))} ${status}`)
+// TASK-1322: Tooltip with task description
+const taskStore = useTaskStore()
+
+const getEventTooltip = (event: any) => {
+  const task = taskStore.getTask(event.taskId)
+  const lines = [event.title]
+  if (task?.description) {
+    const plain = task.description.replace(/<[^>]*>/g, '').trim()
+    if (plain) lines.push(plain.substring(0, 200))
+  }
   const time = formatEventTime(event)
-  if (time) lines.push(`🕐 ${time} · ${event.duration}min`)
-  else if (event.duration) lines.push(`⏱ ${event.duration}min`)
+  if (time) lines.unshift(`🕐 ${time}`)
+  const status = getStatusLabel(getTaskStatus(event))
+  if (status) lines.push(`Status: ${status}`)
   return lines.join('\n')
 }
 

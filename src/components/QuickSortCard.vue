@@ -324,6 +324,12 @@ function handleSwipeEnd() {
   line-height: var(--leading-tight);
   overflow-wrap: anywhere; /* Break long URLs/strings that have no spaces */
   word-break: break-word;
+  /* Hard height cap + line-clamp for long URLs */
+  max-height: 5.2em; /* ~3 lines */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 /* RTL support for Hebrew/Arabic text */

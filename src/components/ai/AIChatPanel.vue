@@ -67,7 +67,7 @@ const vueRouter = useRouter()
 
 function openFullScreenChat() {
   closePanel()
-  vueRouter.push({ name: 'ai-chat' })
+  vueRouter.push({ path: '/ai', query: { tab: 'chat' } })
 }
 
 // Personality helpers

@@ -244,7 +244,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // When the direct save (createTask → saveSpecificTasks) succeeds before the
         // sync queue processes, the row already exists. Using upsert makes this
         // idempotent — matching the pattern in useSupabaseDatabase.ts saveTask/saveTasks.
-        console.debug(`🔄 [SYNC] CREATE via upsert for ${entityType}:${entityId} (idempotent)`)
+        if (import.meta.env.DEV) {
+          console.debug(`🔄 [SYNC] CREATE via upsert for ${entityType}:${entityId} (idempotent)`)
+        }
         result = await supabase.from(tableName).upsert(insertData, { onConflict: 'id' }).select()
         break
       }
@@ -270,7 +272,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
         // Check for version conflict (no rows updated)
         if (!result.error && (!result.data || result.data.length === 0)) {
-          console.debug(`[SYNC] Version conflict detected for ${entityType}:${entityId}, attempting LWW resolution`)
+          if (import.meta.env.DEV) {
+            console.debug(`[SYNC] Version conflict detected for ${entityType}:${entityId}, attempting LWW resolution`)
+          }
 
           // Fetch current server state
           const serverState = await supabase
@@ -301,7 +305,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
           if (localUpdatedAt >= serverUpdatedAt) {
             // Our change is newer - force update without version check
-            console.log(`✅ [SYNC] LWW: Local wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
+            if (import.meta.env.DEV) {
+              console.log(`✅ [SYNC] LWW: Local wins (local=${new Date(localUpdatedAt).toISOString()}, server=${new Date(serverUpdatedAt).toISOString()})`)
+            }
 
             const forceResult = await supabase
               .from(tableName)
@@ -419,13 +425,17 @@ async function processOperation(operation: WriteOperation): Promise<void> {
         const taskStore = useTaskStore()
         const mappedTask = fromSupabaseTask(result.serverData as unknown as Parameters<typeof fromSupabaseTask>[0])
         taskStore.updateTaskFromSync(operation.entityId, mappedTask, false)
-        console.log(`🔄 [SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+        if (import.meta.env.DEV) {
+          console.log(`🔄 [SYNC] LWW server data applied to store for ${operation.entityId.slice(0, 8)}`)
+        }
       } catch (e) {
         console.warn(`[SYNC] Failed to apply LWW server data to store:`, e)
       }
     }
 
-    console.log(`✅ [SYNC] ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)} synced`)
+    if (import.meta.env.DEV) {
+      console.log(`✅ [SYNC] ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)} synced`)
+    }
   } else if (result.isConflict) {
     // Conflict - need resolution
     await markConflict(operation.id, result.newVersion || 0)

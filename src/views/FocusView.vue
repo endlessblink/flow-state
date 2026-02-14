@@ -39,28 +39,28 @@
           class="focus-btn focus-btn--start"
           @click="startFocusSession"
         >
-          Start (Space)
+          Start <kbd>Space</kbd>
         </button>
         <button
           v-else-if="timerStore.isPaused"
           class="focus-btn focus-btn--start"
           @click="timerStore.resumeTimer()"
         >
-          Resume (Space)
+          Resume <kbd>Space</kbd>
         </button>
         <button
           v-else
           class="focus-btn focus-btn--pause"
           @click="timerStore.pauseTimer()"
         >
-          Pause (Space)
+          Pause <kbd>Space</kbd>
         </button>
 
         <button class="focus-btn focus-btn--complete" @click="handleComplete">
-          Complete (C)
+          Complete <kbd>C</kbd>
         </button>
         <button class="focus-btn focus-btn--skip" @click="handleSkip">
-          Skip (Esc)
+          Skip <kbd>Esc</kbd>
         </button>
       </div>
     </template>
@@ -70,7 +70,7 @@
       <div class="focus-empty">
         <p class="focus-empty-text">Task not found</p>
         <button class="focus-btn focus-btn--skip" @click="handleSkip">
-          Go Back (Esc)
+          Go Back <kbd>Esc</kbd>
         </button>
       </div>
     </template>
@@ -256,52 +256,75 @@ onUnmounted(() => {
 }
 
 .focus-btn {
-  padding: var(--space-3) var(--space-6);
-  border: 1px solid var(--glass-border);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2_5) var(--space-5);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--radius-lg);
   font-size: var(--text-base);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.focus-btn--start {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-slate-950);
-}
-
-.focus-btn--start:hover {
-  filter: brightness(1.1);
-}
-
-.focus-btn--pause {
-  background: var(--glass-bg-medium);
+  transition: all var(--duration-normal);
+  backdrop-filter: blur(8px);
   color: var(--text-primary);
 }
 
+.focus-btn:hover {
+  background: var(--glass-bg-medium);
+  transform: translateY(-2px);
+}
+
+.focus-btn kbd {
+  padding: var(--space-0_5) var(--space-1_5);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.focus-btn--start {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.focus-btn--start:hover {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--color-accent);
+}
+
+.focus-btn--pause {
+  border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+}
+
 .focus-btn--pause:hover {
-  background: var(--glass-bg-base);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .focus-btn--complete {
-  background: var(--color-success);
-  border-color: var(--color-success);
-  color: white;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .focus-btn--complete:hover {
-  filter: brightness(1.1);
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary-hover);
+  color: var(--brand-primary-hover);
 }
 
 .focus-btn--skip {
-  background: var(--glass-bg-medium);
-  border-color: var(--glass-border);
+  border-color: var(--glass-border-hover);
   color: var(--text-secondary);
 }
 
 .focus-btn--skip:hover {
-  background: var(--glass-bg-base);
+  background: var(--glass-bg-medium);
   color: var(--text-primary);
 }
 

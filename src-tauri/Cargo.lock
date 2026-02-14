@@ -1178,7 +1178,7 @@ dependencies = [
 
 [[package]]
 name = "flow-state"
-version = "1.2.58"
+version = "1.2.61"
 dependencies = [
  "log",
  "serde",

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.58",
-  "notes": "BUG-1310: fix canvas invisible barrier blocking group drag",
-  "pub_date": "2026-02-14T07:06:54.788Z",
+  "version": "1.2.61",
+  "notes": "Remove week view action buttons, fix invalid date, Hebrew RTL support, grid lines",
+  "pub_date": "2026-02-14T07:48:00.581Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRS9uZ2p0bUhtd2N1d0lWU3NuL3RoWCtJMGtMTnhZSkk5VG5PYWtjQWx2V3FTWitaYmhDaytIYmxVY21RUXFyRHlaMXRTQi9kcW5xUVROTWh4bEt6VFE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDUyODE0CWZpbGU6Rmxvd1N0YXRlXzEuMi41OF9hbWQ2NC5BcHBJbWFnZQpub2h6alJEZFgxU2Vzcm5ValJ2eVlEeG1CL0RKUzJZOUlGcmR5bVVFNllRZ3pQeGtVbEl6eVJ2WkNlYzBtNWh1M0cyTk9wOFBQQ1pteDgyOHlEUGVEQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.58_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTJxcGhIenhkQmk4bXM2czBhWlFIeEl2SlkwQm90RWxISGdja1NOMHNVYUV1ZWRuUE9SWGlvY2xsVHhsRkVQQVhKRmFEMFhHc0hYRmZvMUhXL2lmMWdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDU1MjgwCWZpbGU6Rmxvd1N0YXRlXzEuMi42MV9hbWQ2NC5BcHBJbWFnZQowS3dMS2RidDRYNXd6TU11TXNVaGo5QTl0eDM1VTUzTTMrU0xhcFo2RmRZbUFVNVZrc25PTG1JUG5YMVdidTFnRmJFN1FoZVNLOUpnTHc5dmcrOVNCUT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.61_amd64.AppImage"
     }
   }
 }

@@ -84,6 +84,14 @@ defineEmits<{
   cursor: not-allowed;
 }
 
+/* Focus state with visible indicator - Matching BaseButton */
+.base-icon-button:focus-visible {
+  outline: var(--space-0_5) solid var(--color-work);
+  outline-offset: var(--space-0_5);
+  box-shadow: 0 0 0 var(--space-1) rgba(var(--color-success), 0.1);
+  z-index: var(--z-sticky); /* Ensure focus ring is visible above siblings */
+}
+
 /* Size Variants */
 .base-icon-button.size-sm {
   width: var(--space-7);

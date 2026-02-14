@@ -12,6 +12,11 @@ export function useWakeLock() {
     const requestWakeLock = async () => {
         if (!isSupported || wakeLock.value) return
 
+        // BUG-1320: Guard against requesting wake lock when tab is hidden
+        // Browser rejects WakeLock requests when document is not visible,
+        // causing hundreds of DOMException spam from Realtime heartbeats
+        if (document.visibilityState === 'hidden') return
+
         try {
             wakeLock.value = await navigator.wakeLock.request('screen')
             console.log('💡 [WakeLock] Screen wake lock is active')
@@ -21,7 +26,8 @@ export function useWakeLock() {
                 wakeLock.value = null
             })
         } catch (err) {
-            console.error('⚠️ [WakeLock] Failed to request wake lock:', err)
+            // Only warn once - this can happen during rapid visibility transitions
+            console.debug('💡 [WakeLock] Wake lock request failed (tab may be hidden):', (err as Error).message)
         }
     }
 

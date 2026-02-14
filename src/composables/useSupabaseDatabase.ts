@@ -17,9 +17,10 @@ import {
     toSupabaseUserSettings, fromSupabaseUserSettings,
     toSupabaseQuickSortSession, fromSupabaseQuickSortSession,
     toSupabasePinnedTask, fromSupabasePinnedTask,
+    toSupabaseWorkProfile, fromSupabaseWorkProfile,
     type SupabaseTask, type SupabaseProject, type SupabaseGroup,
     type SupabaseNotification, type SupabaseTimerSession, type SupabaseUserSettings, type SupabaseQuickSortSession,
-    type SupabasePinnedTask
+    type SupabasePinnedTask, type SupabaseWorkProfile
 } from '@/utils/supabaseMappers'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
@@ -265,12 +266,21 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         const finalMessage = details ? `${message} (${details})` : message
         const err = error instanceof Error ? error : new Error(finalMessage)
 
+        // BUG-352: Suppress notifications for transient network errors (common on mobile WiFi/cell handoffs)
+        const lowerMsg = message.toLowerCase()
+        const isTransientNetwork = message.includes('Failed to fetch') ||
+            lowerMsg.includes('networkerror') ||
+            message.includes('Network Error') ||
+            message.includes('AbortError') ||
+            lowerMsg.includes('timeout') ||
+            message.includes('aborted')
+
         errorHandler.report({
             error: err,
             message: `Sync Error(${context}): ${finalMessage}`,
-            severity: ErrorSeverity.ERROR,
+            severity: isTransientNetwork ? ErrorSeverity.WARNING : ErrorSeverity.ERROR,
             category: ErrorCategory.SYNC,
-            showNotification: true
+            showNotification: !isTransientNetwork
         })
         lastSyncError.value = finalMessage
     }
@@ -318,8 +328,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             isSyncing.value = true
             const payload = toSupabaseProject(project, userId)
-            const { error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' })
+                if (error) throw error
+            }, 'saveProject')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveProject')
@@ -339,14 +352,17 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             isSyncing.value = true
             const payload = projects.map(p => toSupabaseProject(p, userId))
-            // BUG-171 FIX: Add .select() and verify data.length to detect RLS partial write failures
-            const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' }).select('id')
-            if (error) throw error
-            if (!data || data.length !== payload.length) {
-                const writtenCount = data?.length ?? 0
-                const failedCount = payload.length - writtenCount
-                throw new Error(`RLS blocked ${failedCount} of ${payload.length} project writes (only ${writtenCount} succeeded)`)
-            }
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                // BUG-171 FIX: Add .select() and verify data.length to detect RLS partial write failures
+                const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' }).select('id')
+                if (error) throw error
+                if (!data || data.length !== payload.length) {
+                    const writtenCount = data?.length ?? 0
+                    const failedCount = payload.length - writtenCount
+                    throw new Error(`RLS blocked ${failedCount} of ${payload.length} project writes (only ${writtenCount} succeeded)`)
+                }
+            }, 'saveProjects')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'saveProjects')
@@ -359,11 +375,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const deleteProject = async (projectId: string): Promise<void> => {
         try {
             isSyncing.value = true
-            const { error } = await supabase
-                .from('projects')
-                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-                .eq('id', projectId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase
+                    .from('projects')
+                    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                    .eq('id', projectId)
+                if (error) throw error
+            }, 'deleteProject')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'deleteProject')
@@ -376,11 +395,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const restoreProject = async (projectId: string): Promise<void> => {
         try {
             isSyncing.value = true
-            const { error } = await supabase
-                .from('projects')
-                .update({ is_deleted: false, deleted_at: null })
-                .eq('id', projectId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase
+                    .from('projects')
+                    .update({ is_deleted: false, deleted_at: null })
+                    .eq('id', projectId)
+                if (error) throw error
+            }, 'restoreProject')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'restoreProject')
@@ -405,18 +427,21 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 ? null  // Permanent for tasks
                 : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()  // 90 days for others
 
-            const { error } = await supabase.from('tombstones').upsert({
-                user_id: userId,
-                entity_type: entityType,
-                entity_id: entityId,
-                deleted_at: new Date().toISOString(),
-                expires_at: expiresAt
-            }, { onConflict: 'entity_type,entity_id,user_id' })
-            if (error) {
-                console.warn(`[TASK-317] Failed to record tombstone for ${entityType}:${entityId}:`, error.message)
-            } else {
-                console.log(`🪦 [TOMBSTONE] Recorded permanent deletion: ${entityType}:${entityId} (expires: ${expiresAt || 'never'})`)
-            }
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('tombstones').upsert({
+                    user_id: userId,
+                    entity_type: entityType,
+                    entity_id: entityId,
+                    deleted_at: new Date().toISOString(),
+                    expires_at: expiresAt
+                }, { onConflict: 'entity_type,entity_id,user_id' })
+                if (error) {
+                    console.warn(`[TASK-317] Failed to record tombstone for ${entityType}:${entityId}:`, error.message)
+                    throw error
+                }
+            }, 'recordTombstone')
+            console.log(`🪦 [TOMBSTONE] Recorded permanent deletion: ${entityType}:${entityId} (expires: ${expiresAt || 'never'})`)
         } catch (e: unknown) {
             // Non-fatal: tombstone recording failure shouldn't block deletion
             console.warn(`[TASK-317] Tombstone recording error:`, e)
@@ -747,11 +772,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
             // TASK-317: Record tombstone before permanent deletion
             await recordTombstone('project', projectId)
-            const { error } = await supabase
-                .from('projects')
-                .delete()
-                .eq('id', projectId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase
+                    .from('projects')
+                    .delete()
+                    .eq('id', projectId)
+                if (error) throw error
+            }, 'permanentlyDeleteProject')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteProject')
@@ -938,15 +966,20 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             isSyncing.value = true
 
-            const { error, count } = await supabase
-                .from('tasks')
-                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-                .eq('id', taskId)
-                .select('*', { count: 'exact' })
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            const { error, count } = await withRetry(async () => {
+                const { error, count } = await supabase
+                    .from('tasks')
+                    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                    .eq('id', taskId)
+                    .select('*', { count: 'exact' })
 
-            console.log(`🗑️ [SUPABASE-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
+                console.log(`🗑️ [SUPABASE-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
 
-            if (error) throw error
+                if (error) throw error
+                return { error, count }
+            }, 'deleteTask')
+
             lastSyncError.value = null
             console.log(`✅ [SUPABASE-DELETE] Task ${taskId} marked as deleted`)
         } catch (e: unknown) {
@@ -961,11 +994,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const restoreTask = async (taskId: string): Promise<void> => {
         try {
             isSyncing.value = true
-            const { error } = await supabase
-                .from('tasks')
-                .update({ is_deleted: false, deleted_at: null })
-                .eq('id', taskId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase
+                    .from('tasks')
+                    .update({ is_deleted: false, deleted_at: null })
+                    .eq('id', taskId)
+                if (error) throw error
+            }, 'restoreTask')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'restoreTask')
@@ -979,11 +1015,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
             // TASK-317: Record tombstone before permanent deletion
             await recordTombstone('task', taskId)
-            const { error } = await supabase
-                .from('tasks')
-                .delete()
-                .eq('id', taskId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('id', taskId)
+                if (error) throw error
+            }, 'permanentlyDeleteTask')
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteTask')
@@ -1073,16 +1112,21 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             isSyncing.value = true
 
-            const { error, count } = await supabase
-                .from('tasks')
-                // FIX: Schema compatibility - remove deleted_at if not in DB
-                .update({ is_deleted: true })
-                .in('id', taskIds)
-                .select('*', { count: 'exact' })
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            const { error, count } = await withRetry(async () => {
+                const { error, count } = await supabase
+                    .from('tasks')
+                    // FIX: Schema compatibility - remove deleted_at if not in DB
+                    .update({ is_deleted: true })
+                    .in('id', taskIds)
+                    .select('*', { count: 'exact' })
 
-            console.log(`🗑️ [SUPABASE-BULK-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
+                console.log(`🗑️ [SUPABASE-BULK-DELETE] Result - error: ${error?.message || 'none'}, affected rows: ${count ?? 'unknown'}`)
 
-            if (error) throw error
+                if (error) throw error
+                return { error, count }
+            }, 'bulkDeleteTasks')
+
             lastSyncError.value = null
             console.log(`✅ [SUPABASE-BULK-DELETE] ${taskIds.length} tasks marked as deleted atomically`)
         } catch (e: unknown) {
@@ -1189,18 +1233,22 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         try {
             isSyncing.value = true
 
-            // TASK-149 FIX: Add user_id filter and verify rows affected
-            // TASK-317: Now includes deleted_at after migration
-            const { data, error, count } = await supabase
-                .from('groups')
-                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-                .eq('id', groupId)
-                .eq('user_id', userId)
-                .select('id, is_deleted', { count: 'exact' })
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            const { data, error, count } = await withRetry(async () => {
+                // TASK-149 FIX: Add user_id filter and verify rows affected
+                // TASK-317: Now includes deleted_at after migration
+                const { data, error, count } = await supabase
+                    .from('groups')
+                    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+                    .eq('id', groupId)
+                    .eq('user_id', userId)
+                    .select('id, is_deleted', { count: 'exact' })
 
-            console.log(`🗑️ [SUPABASE-DELETE-GROUP] Result - error: ${error?.message || 'none'}, affected: ${count ?? 'unknown'}`)
+                console.log(`🗑️ [SUPABASE-DELETE-GROUP] Result - error: ${error?.message || 'none'}, affected: ${count ?? 'unknown'}`)
 
-            if (error) throw error
+                if (error) throw error
+                return { data, error, count }
+            }, 'deleteGroup')
 
             // Verify the delete actually worked
             if (!data || data.length === 0) {
@@ -1226,11 +1274,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
             // Record tombstone before permanent deletion
             await recordTombstone('group', groupId)
-            const { error } = await supabase
-                .from('groups')
-                .delete()
-                .eq('id', groupId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase
+                    .from('groups')
+                    .delete()
+                    .eq('id', groupId)
+                if (error) throw error
+            }, 'permanentlyDeleteGroup')
             lastSyncError.value = null
             console.log(`🪦 [PERMANENT-DELETE-GROUP] Group ${groupId} permanently deleted`)
         } catch (e: unknown) {
@@ -1270,8 +1321,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = toSupabaseNotification(notification, userId)
-            const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
+                if (error) throw error
+            }, 'saveNotification')
         } catch (e: unknown) {
             handleError(e, 'saveNotification')
             throw e // BUG-1051: Re-throw so caller knows save failed
@@ -1287,8 +1341,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = notifications.map(n => toSupabaseNotification(n, userId))
-            const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' })
+                if (error) throw error
+            }, 'saveNotifications')
         } catch (e: unknown) {
             handleError(e, 'saveNotifications')
             throw e // BUG-1051: Re-throw so caller knows save failed
@@ -1297,8 +1354,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const deleteNotification = async (id: string): Promise<void> => {
         try {
-            const { error } = await supabase.from('notifications').delete().eq('id', id)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('notifications').delete().eq('id', id)
+                if (error) throw error
+            }, 'deleteNotification')
         } catch (e: unknown) {
             handleError(e, 'deleteNotification')
             throw e // BUG-1051: Re-throw so caller knows save failed
@@ -1350,11 +1410,14 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
             const payload = toSupabaseTimerSession(session, userId, deviceId)
             console.log('🍅 [DB] saveActiveTimerSession:', { sessionId: session.id, userId, deviceId, isActive: session.isActive })
-            const { error } = await supabase.from('timer_sessions').upsert(payload, { onConflict: 'id' })
-            if (error) {
-                console.error('🍅 [DB] saveActiveTimerSession error:', error)
-                throw error
-            }
+            // BUG-352: Wrap in withRetry for mobile PWA network resilience (was missing from BUG-1107 fix)
+            await withRetry(async () => {
+                const { error } = await supabase.from('timer_sessions').upsert(payload, { onConflict: 'id' })
+                if (error) {
+                    console.error('🍅 [DB] saveActiveTimerSession error:', error)
+                    throw error
+                }
+            }, 'saveActiveTimerSession')
             console.log('🍅 [DB] saveActiveTimerSession success')
         } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')
@@ -1366,8 +1429,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const userId = getUserIdSafe()
             if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
 
-            const { error } = await supabase.from('timer_sessions').delete().eq('id', id)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile PWA network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('timer_sessions').delete().eq('id', id)
+                if (error) throw error
+            }, 'deleteTimerSession')
         } catch (e: unknown) {
             handleError(e, 'deleteTimerSession')
         }
@@ -1449,8 +1515,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = toSupabaseQuickSortSession(summary, userId)
-            const { error } = await supabase.from('quick_sort_sessions').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('quick_sort_sessions').upsert(payload, { onConflict: 'id' })
+                if (error) throw error
+            }, 'saveQuickSortSession')
         } catch (e: unknown) {
             handleError(e, 'saveQuickSortSession')
             throw e // BUG-1051: Re-throw so caller knows save failed
@@ -1582,7 +1651,10 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 }
 
                 else if (status === 'CLOSED' || status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-                    console.warn(`📡 [REALTIME] Connection dropped (${status}):`, err || 'unknown reason')
+                    // BUG-1320: Downgrade log when tab is hidden — browsers kill WebSockets
+                    // in background tabs, this is expected behavior, not an error
+                    const logFn = document.visibilityState === 'hidden' ? console.debug : console.warn
+                    logFn(`📡 [REALTIME] Connection dropped (${status}):`, err || 'unknown reason')
 
                     if (isExplicitlyClosed) return
 
@@ -1767,8 +1839,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         }
         try {
             const payload = toSupabasePinnedTask(pin, userId)
-            const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
+                if (error) throw error
+            }, 'savePinnedTask')
             invalidateCache.pinnedTasks()
         } catch (e: unknown) {
             handleError(e, 'savePinnedTask')
@@ -1778,8 +1853,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
 
     const deletePinnedTask = async (pinId: string): Promise<void> => {
         try {
-            const { error } = await supabase.from('pinned_tasks').delete().eq('id', pinId)
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('pinned_tasks').delete().eq('id', pinId)
+                if (error) throw error
+            }, 'deletePinnedTask')
             invalidateCache.pinnedTasks()
         } catch (e: unknown) {
             handleError(e, 'deletePinnedTask')
@@ -1794,12 +1872,116 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             const payload = pins.map((pin, index) => ({
                 ...toSupabasePinnedTask({ ...pin, sortOrder: index }, userId)
             }))
-            const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
-            if (error) throw error
+            // BUG-352: Wrap in withRetry for mobile network resilience
+            await withRetry(async () => {
+                const { error } = await supabase.from('pinned_tasks').upsert(payload, { onConflict: 'id' })
+                if (error) throw error
+            }, 'reorderPinnedTasks')
             invalidateCache.pinnedTasks()
         } catch (e: unknown) {
             handleError(e, 'reorderPinnedTasks')
             throw e
+        }
+    }
+
+    // -- Work Profile (FEATURE-1317) --
+
+    const fetchWorkProfile = async (): Promise<import('@/utils/supabaseMappers').WorkProfile | null> => {
+        const userId = getUserIdSafe()
+        if (!userId) return null
+        try {
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('ai_work_profiles')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .maybeSingle()
+                if (error) throw error
+                if (!data) return null
+                return fromSupabaseWorkProfile(data as SupabaseWorkProfile)
+            }, 'fetchWorkProfile')
+        } catch (e: unknown) {
+            console.warn('[FEATURE-1317] Failed to fetch work profile:', e)
+            return null
+        }
+    }
+
+    const saveWorkProfile = async (profile: Partial<import('@/utils/supabaseMappers').WorkProfile>): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) {
+            console.debug('⏭️ [GUEST] Skipping saveWorkProfile - not authenticated')
+            return
+        }
+        try {
+            const payload = toSupabaseWorkProfile(profile, userId)
+            const { error } = await supabase
+                .from('ai_work_profiles')
+                .upsert(payload, { onConflict: 'user_id' })
+            if (error) throw error
+        } catch (e: unknown) {
+            handleError(e, 'saveWorkProfile')
+            throw e
+        }
+    }
+
+    // -- Pomodoro History (FEATURE-1317) --
+
+    const insertPomodoroHistory = async (entry: {
+        taskId: string | null
+        duration: number
+        isBreak: boolean
+        startedAt: Date
+        completedAt: Date
+    }): Promise<void> => {
+        const userId = getUserIdSafe()
+        if (!userId) return
+        try {
+            const { error } = await supabase.from('pomodoro_history').insert({
+                user_id: userId,
+                task_id: entry.taskId,
+                duration: entry.duration,
+                is_break: entry.isBreak,
+                started_at: entry.startedAt.toISOString(),
+                completed_at: entry.completedAt.toISOString()
+            })
+            if (error) throw error
+        } catch (e: unknown) {
+            console.warn('[FEATURE-1317] Failed to insert pomodoro history:', e)
+        }
+    }
+
+    const fetchPomodoroHistory = async (sinceDaysAgo: number = 28): Promise<Array<{
+        taskId: string | null
+        duration: number
+        isBreak: boolean
+        startedAt: string
+        completedAt: string
+    }>> => {
+        const userId = getUserIdSafe()
+        if (!userId) return []
+        try {
+            const since = new Date()
+            since.setDate(since.getDate() - sinceDaysAgo)
+            return await withRetry(async () => {
+                const { data, error } = await supabase
+                    .from('pomodoro_history')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .gte('completed_at', since.toISOString())
+                    .order('completed_at', { ascending: false })
+                if (error) throw error
+                if (!data) return []
+                return data.map((row: any) => ({
+                    taskId: row.task_id,
+                    duration: row.duration,
+                    isBreak: row.is_break,
+                    startedAt: row.started_at,
+                    completedAt: row.completed_at
+                }))
+            }, 'fetchPomodoroHistory')
+        } catch (e: unknown) {
+            console.warn('[FEATURE-1317] Failed to fetch pomodoro history:', e)
+            return []
         }
     }
 
@@ -1850,6 +2032,11 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         savePinnedTask,
         deletePinnedTask,
         reorderPinnedTasks,
+        // FEATURE-1317: Work Profile
+        fetchWorkProfile,
+        saveWorkProfile,
+        insertPomodoroHistory,
+        fetchPomodoroHistory,
         initRealtimeSubscription
     }
 }

@@ -85,6 +85,20 @@
 
 ---
 
+### BUG-1325: Tasks appear in calendar without explicit user scheduling (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-14)
+
+**Problem**: Tasks that were never explicitly scheduled by the user appear in the Calendar view, polluting it. Tasks should ONLY appear in the calendar when:
+1. The user drags the task into the calendar
+2. The user explicitly sets a start and end time on the task
+
+Any other path that causes a task to show up in the calendar is a bug. Many tasks are currently visible in the calendar without meeting either condition.
+
+**Root Cause**: TBD — needs investigation of how tasks get calendar instances and what triggers calendar visibility.
+
+---
+
 ### ~~BUG-1310~~: Canvas invisible barrier blocks drag operations (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
@@ -3074,7 +3088,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |
-| **TASK-1323** | **P1** | **📋 Console Log Cleanup — reduce verbose/debug logging noise across app** |
+| ~~**TASK-1323**~~ | **P1** | ✅ **Console Log Cleanup — reduce verbose/debug logging noise across app** (✅ DONE 2026-02-14) |
 | **TASK-1322** | **P1** | **🔄 Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** |
 | ~~**TASK-1319**~~ | **P0** | ✅ **Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** (✅ DONE 2026-02-14) |
 | ~~**TASK-1320**~~ | **P1** | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)** |

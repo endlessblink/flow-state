@@ -40,12 +40,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X, Timer, Palette, Layout, User, Database, Bot } from 'lucide-vue-next'
+import { X, Timer, Palette, Layout, User, Database, Bot, Bell } from 'lucide-vue-next'
 
 // Tab components
 import AppearanceSettingsTab from '../settings/tabs/AppearanceSettingsTab.vue'
 import TimerSettingsTab from '../settings/tabs/TimerSettingsTab.vue'
 import WorkflowSettingsTab from '../settings/tabs/WorkflowSettingsTab.vue'
+import NotificationsSettingsTab from '../settings/tabs/NotificationsSettingsTab.vue'
 import AISettingsTab from '../settings/tabs/AISettingsTab.vue'
 import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
 import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
@@ -64,6 +65,7 @@ const tabs = [
   { id: 'general', label: 'General', icon: Palette, component: AppearanceSettingsTab },
   { id: 'timer', label: 'Timer', icon: Timer, component: TimerSettingsTab },
   { id: 'workflow', label: 'Workflow', icon: Layout, component: WorkflowSettingsTab },
+  { id: 'notifications', label: 'Notifications', icon: Bell, component: NotificationsSettingsTab },
   { id: 'ai', label: 'AI & Weekly Plan', icon: Bot, component: AISettingsTab },
   { id: 'data', label: 'Data & Backup', icon: Database, component: StorageSettingsTab },
   { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab }

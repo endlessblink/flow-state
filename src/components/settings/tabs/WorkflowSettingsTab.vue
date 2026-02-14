@@ -4,45 +4,8 @@ import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import SettingsOptionPicker from '../SettingsOptionPicker.vue'
-import type { TimeBlockNotificationSettings, TimeBlockMilestone } from '@/types/timeBlockNotifications'
 
 const settingsStore = useSettingsStore()
-
-// TASK-1219: Time block notification helpers
-const timeBlockSettings = computed(() => settingsStore.timeBlockNotifications)
-
-function updateTimeBlockEnabled(val: boolean) {
-  settingsStore.updateSetting('timeBlockNotifications', {
-    ...settingsStore.timeBlockNotifications,
-    enabled: val
-  })
-}
-
-function updateMilestoneEnabled(milestoneId: string, val: boolean) {
-  const updated = {
-    ...settingsStore.timeBlockNotifications,
-    milestones: settingsStore.timeBlockNotifications.milestones.map(m =>
-      m.id === milestoneId ? { ...m, enabled: val } : m
-    )
-  }
-  settingsStore.updateSetting('timeBlockNotifications', updated)
-}
-
-function updateDeliveryChannel(channel: keyof TimeBlockNotificationSettings['deliveryChannels'], val: boolean) {
-  settingsStore.updateSetting('timeBlockNotifications', {
-    ...settingsStore.timeBlockNotifications,
-    deliveryChannels: {
-      ...settingsStore.timeBlockNotifications.deliveryChannels,
-      [channel]: val
-    }
-  })
-}
-
-// TASK-1321: Start of Week options
-const weekStartOptions = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-]
 
 const powerGroupModes = [
   { value: 'always', label: 'Always update' },
@@ -82,16 +45,6 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
 
 <template>
   <div class="workflow-settings-tab">
-    <SettingsSection title="General">
-      <SettingsOptionPicker
-        label="Start of Week"
-        description="Choose which day your week starts on. Affects calendar, weekly plan, and all day-of-week ordering."
-        :options="weekStartOptions"
-        :value="settingsStore.weekStartsOn"
-        @update="val => settingsStore.updateSetting('weekStartsOn', val)"
-      />
-    </SettingsSection>
-
     <SettingsSection title="📋 Kanban Settings">
       <SettingsToggle
         label="Show 'Done' column"
@@ -117,67 +70,6 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
         :value="settingsStore.powerGroupOverrideMode"
         @update="val => settingsStore.updateSetting('powerGroupOverrideMode', val)"
       />
-    </SettingsSection>
-
-    <SettingsSection title="💬 Feedback">
-      <SettingsToggle
-        label="Show undo/redo notifications"
-        description="Display a brief toast when you undo (Ctrl+Z) or redo (Ctrl+Y) an action."
-        :value="settingsStore.showUndoRedoToasts"
-        @update="val => settingsStore.updateSetting('showUndoRedoToasts', val)"
-      />
-    </SettingsSection>
-
-    <SettingsSection title="Calendar Time Block Alerts">
-      <SettingsToggle
-        label="Enable time block alerts"
-        description="Get notified when calendar time blocks reach milestones (halfway, ending soon, ended)."
-        :value="timeBlockSettings.enabled"
-        @update="updateTimeBlockEnabled"
-      />
-
-      <template v-if="timeBlockSettings.enabled">
-        <div class="sub-settings-group">
-          <div class="setting-header">
-            <label class="setting-label">Milestones</label>
-            <p class="setting-description">Choose which progress points trigger alerts.</p>
-          </div>
-
-          <SettingsToggle
-            v-for="milestone in timeBlockSettings.milestones"
-            :key="milestone.id"
-            :label="milestone.label"
-            :value="milestone.enabled"
-            @update="val => updateMilestoneEnabled(milestone.id, val)"
-          />
-        </div>
-
-        <div class="sub-settings-group">
-          <div class="setting-header">
-            <label class="setting-label">Delivery Channels</label>
-            <p class="setting-description">How you receive time block alerts.</p>
-          </div>
-
-          <SettingsToggle
-            label="In-app toast"
-            description="Show a toast notification inside FlowState."
-            :value="timeBlockSettings.deliveryChannels.inAppToast"
-            @update="val => updateDeliveryChannel('inAppToast', val)"
-          />
-          <SettingsToggle
-            label="System notification"
-            description="Show an OS-level notification (requires permission)."
-            :value="timeBlockSettings.deliveryChannels.osNotification"
-            @update="val => updateDeliveryChannel('osNotification', val)"
-          />
-          <SettingsToggle
-            label="Sound"
-            description="Play a sound with system notifications."
-            :value="timeBlockSettings.deliveryChannels.sound"
-            @update="val => updateDeliveryChannel('sound', val)"
-          />
-        </div>
-      </template>
     </SettingsSection>
 
     <SettingsSection title="Gamification">
@@ -224,15 +116,6 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
 .workflow-settings-tab {
   display: flex;
   flex-direction: column;
-}
-
-/* TASK-1219: Sub-settings group for nested toggles */
-.sub-settings-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-left: var(--space-2);
-  border-left: 2px solid var(--glass-border);
 }
 
 /* Intensity selector */

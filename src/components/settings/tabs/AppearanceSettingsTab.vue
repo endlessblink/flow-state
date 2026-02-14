@@ -3,6 +3,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useTimerStore } from '@/stores/timer'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
+import SettingsOptionPicker from '../SettingsOptionPicker.vue'
 import LanguageSettings from '../LanguageSettings.vue'
 
 const settingsStore = useSettingsStore()
@@ -12,6 +13,11 @@ const updateSoundEffects = (value: boolean) => {
   settingsStore.updateSetting('playNotificationSounds', value)
   timerStore.settings.playNotificationSounds = value
 }
+
+const weekStartOptions = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+]
 </script>
 
 <template>
@@ -35,6 +41,25 @@ const updateSoundEffects = (value: boolean) => {
 
     <SettingsSection title="🌍 Language & Region">
       <LanguageSettings />
+    </SettingsSection>
+
+    <SettingsSection title="Calendar">
+      <SettingsOptionPicker
+        label="Start of Week"
+        description="Choose which day your week starts on. Affects calendar, weekly plan, and all day-of-week ordering."
+        :options="weekStartOptions"
+        :value="settingsStore.weekStartsOn"
+        @update="val => settingsStore.updateSetting('weekStartsOn', val)"
+      />
+    </SettingsSection>
+
+    <SettingsSection title="Feedback">
+      <SettingsToggle
+        label="Show undo/redo notifications"
+        description="Display a brief toast when you undo (Ctrl+Z) or redo (Ctrl+Y) an action."
+        :value="settingsStore.showUndoRedoToasts"
+        @update="val => settingsStore.updateSetting('showUndoRedoToasts', val)"
+      />
     </SettingsSection>
   </div>
 </template>

@@ -56,29 +56,31 @@ export function useWeeklyPlan() {
 
   function getEligibleTasks(): TaskSummary[] {
     const taskStore = useTaskStore()
-    const today = formatDateISO(new Date())
-    const weekStartStr = formatDateISO(state.value.weekStart)
-    const weekEndStr = formatDateISO(state.value.weekEnd)
 
+    // Include all active tasks — the AI decides what fits the week
     const eligible = taskStore.tasks.filter(t => {
-      if (t._soft_deleted || t.status === 'done') return false
-
-      // Include if: no dueDate, within week, overdue, or in-progress
-      if (!t.dueDate) return true
-      if (t.dueDate >= weekStartStr && t.dueDate <= weekEndStr) return true
-      if (t.dueDate < today) return true
-      if (t.status === 'in_progress') return true
-
-      return false
+      if (t._soft_deleted) return false
+      if (t.status === 'done') return false
+      return true
     })
 
-    // Priority score for sorting
+    // Priority score for sorting (higher = more important)
+    const today = formatDateISO(new Date())
     const priorityScore: Record<string, number> = { high: 3, medium: 2, low: 1 }
 
     eligible.sort((a, b) => {
+      // Overdue tasks first
+      const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
+      const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
+      if (aOverdue !== bOverdue) return bOverdue - aOverdue
+      // In-progress tasks next
+      const aProgress = a.status === 'in_progress' ? 1 : 0
+      const bProgress = b.status === 'in_progress' ? 1 : 0
+      if (aProgress !== bProgress) return bProgress - aProgress
+      // Then by priority
       const pa = a.priority ? priorityScore[a.priority] ?? 0 : 0
       const pb = b.priority ? priorityScore[b.priority] ?? 0 : 0
-      if (pa !== pb) return pb - pa // Higher priority first
+      if (pa !== pb) return pb - pa
       // Then by due date (earlier first, no date last)
       if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
       if (a.dueDate) return -1

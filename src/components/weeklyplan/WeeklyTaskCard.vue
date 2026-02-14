@@ -60,13 +60,15 @@ const formattedDuration = computed(() => {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   cursor: grab;
   transition: border-color var(--duration-fast) var(--spring-smooth);
   user-select: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .weekly-task-card:hover {
@@ -82,8 +84,8 @@ const formattedDuration = computed(() => {
 }
 
 .priority-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
   margin-top: 6px;
@@ -102,7 +104,9 @@ const formattedDuration = computed(() => {
   font-weight: var(--font-medium);
   color: var(--text-primary);
   line-height: var(--leading-tight);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
 }

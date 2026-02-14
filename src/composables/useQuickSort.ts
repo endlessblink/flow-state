@@ -10,53 +10,79 @@ export function useQuickSort() {
   const quickSortStore = useQuickSortStore()
   const { isUncategorizedTask } = useSmartViews()
 
-  // State
-  const currentIndex = ref(0)
+  // State - pin by ID instead of index
+  const currentTaskId = ref<string | null>(null)
+
+  // Session-scoped set of processed task IDs (saved/done/deleted)
+  const processedTaskIds = ref<Set<string>>(new Set())
+
+  // Dirty state tracking for save/undo
+  interface TaskSnapshot {
+    projectId: string | null | undefined
+    dueDate: string | undefined
+    priority: 'low' | 'medium' | 'high' | undefined
+  }
+
+  const taskSnapshot = ref<TaskSnapshot | null>(null)
+
+  function snapshotCurrentTask() {
+    const task = currentTask.value
+    if (task) {
+      taskSnapshot.value = {
+        projectId: task.projectId || null,
+        dueDate: task.dueDate || undefined,
+        priority: task.priority || undefined
+      }
+    } else {
+      taskSnapshot.value = null
+    }
+  }
+
+  const isTaskDirty = computed(() => {
+    if (!currentTask.value || !taskSnapshot.value) return false
+    const task = currentTask.value
+    const snap = taskSnapshot.value
+    return (
+      (task.projectId || null) !== (snap.projectId || null) ||
+      (task.dueDate || undefined) !== (snap.dueDate || undefined) ||
+      (task.priority || undefined) !== (snap.priority || undefined)
+    )
+  })
 
   // Getters
-  // Fixed: Use direct filtering instead of mutating store state (antipattern)
   // TASK-243: Use raw tasks so Quick Sort sees ALL uncategorized tasks regardless of active smart view
+  // Filter out processedTaskIds so saved/done tasks don't reappear
   const uncategorizedTasks = computed<Task[]>(() => {
-    return taskStore.rawTasks.filter(task => !task._soft_deleted && isUncategorizedTask(task))
+    return taskStore.rawTasks.filter(task =>
+      !task._soft_deleted &&
+      isUncategorizedTask(task) &&
+      !processedTaskIds.value.has(task.id)
+    )
   })
 
-  // Watch for list updates to clamp index
-  // This handles cases where tasks are removed or the list shrinks
-  watch(uncategorizedTasks, (newTasks) => {
-    if (newTasks.length === 0) {
-      if (quickSortStore.isActive && !isComplete.value) {
-          // Logic handled by isComplete view watcher mostly, but ensuring internal consistency
-      }
-    } else if (currentIndex.value >= newTasks.length) {
-      // If we were at the end and items were removed, wrap to start
-      // Or if list shrank significantly
-      currentIndex.value = 0
-    }
-  })
-
+  // Look up current task by ID from rawTasks (reactive to live edits)
   const currentTask = computed<Task | null>(() => {
-    if (currentIndex.value < 0 || currentIndex.value >= uncategorizedTasks.value.length) {
-      return null
-    }
-    return uncategorizedTasks.value[currentIndex.value]
+    if (!currentTaskId.value) return null
+    const task = taskStore.rawTasks.find(t => t.id === currentTaskId.value)
+    // If task was deleted externally or soft-deleted, return null
+    if (!task || task._soft_deleted) return null
+    return task
   })
-
-  const hasNext = computed(() => currentIndex.value < uncategorizedTasks.value.length - 1)
-
-  const hasPrevious = computed(() => currentIndex.value > 0)
 
   const progress = computed(() => {
-    const total = uncategorizedTasks.value.length
-    if (total === 0) return { current: 0, total: 0, percentage: 100 }
+    const processed = processedTaskIds.value.size
+    const remaining = uncategorizedTasks.value.length
+    const total = processed + remaining
+    if (total === 0) return { current: processed, total: 0, percentage: 100 }
 
     return {
-      current: currentIndex.value + 1,
+      current: processed,
       total,
-      percentage: Math.round(((currentIndex.value + 1) / total) * 100)
+      percentage: Math.round((processed / total) * 100)
     }
   })
 
-  const isComplete = computed(() => uncategorizedTasks.value.length === 0)
+  const isComplete = computed(() => uncategorizedTasks.value.length === 0 && currentTask.value === null)
 
   const motivationalMessage = computed(() => {
     const percent = progress.value.percentage
@@ -67,31 +93,63 @@ export function useQuickSort() {
     return "All done! 🎉"
   })
 
+  // Navigation helpers
+  function advanceToNextTask() {
+    const tasks = uncategorizedTasks.value
+    if (tasks.length === 0) {
+      currentTaskId.value = null
+      return
+    }
+    // Pick the first available task from the queue
+    currentTaskId.value = tasks[0].id
+    snapshotCurrentTask()
+  }
+
   // Actions
   function startSession() {
     quickSortStore.startSession()
-    currentIndex.value = 0
+    processedTaskIds.value.clear()
+    // Pin to first task
+    const tasks = uncategorizedTasks.value
+    if (tasks.length > 0) {
+      currentTaskId.value = tasks[0].id
+      snapshotCurrentTask()
+    } else {
+      currentTaskId.value = null
+    }
   }
 
   function endSession() {
     const summary = quickSortStore.endSession()
-    currentIndex.value = 0
+    currentTaskId.value = null
+    processedTaskIds.value.clear()
+    taskSnapshot.value = null
     return summary
   }
 
-  function handleTaskProcessed() {
-    // Called when a task is removed from the list (categorized, done, deleted)
-    // The list will update reactively.
-    // The watcher will handle clamping if currentIndex becomes invalid.
+  async function saveTask() {
+    if (!currentTask.value) return
 
-    // Check completion
-    if (isComplete.value) {
-      endSession()
+    const task = currentTask.value
+    const snap = taskSnapshot.value
+
+    // Record SAVE_TASK action for undo
+    const action: CategoryAction = {
+      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'SAVE_TASK',
+      taskId: task.id,
+      oldProjectId: snap?.projectId ?? null,
+      newProjectId: task.projectId || undefined,
+      oldDueDate: snap?.dueDate,
+      newDueDate: task.dueDate || undefined,
+      oldPriority: snap?.priority,
+      newPriority: task.priority || undefined,
+      timestamp: Date.now()
     }
 
-    // Note: We DO NOT increment currentIndex here.
-    // Because the current item was removed, the next item slides into this index.
-    // So we are effectively looking at the next item already.
+    quickSortStore.recordAction(action)
+    processedTaskIds.value.add(task.id)
+    advanceToNextTask()
   }
 
   async function categorizeTask(taskId: string, projectId: string) {
@@ -100,7 +158,6 @@ export function useQuickSort() {
 
     const oldProjectId = task.projectId || null
 
-    // Create action for undo/redo
     const action: CategoryAction = {
       id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: 'CATEGORIZE_TASK',
@@ -115,42 +172,92 @@ export function useQuickSort() {
 
     // Record action
     quickSortStore.recordAction(action)
-
-    handleTaskProcessed()
+    // NO handleTaskProcessed() - task stays visible for further edits
   }
 
-  // Renamed from moveToNext to avoid confusion - this is for SKIPPING
   function skipTask() {
-    if (uncategorizedTasks.value.length === 0) return
+    const tasks = uncategorizedTasks.value
+    if (tasks.length === 0) return
 
-    // Increment index
-    currentIndex.value++
+    // Find current task index in uncategorized list (it may not be there if edited)
+    const currentIdx = currentTaskId.value
+      ? tasks.findIndex(t => t.id === currentTaskId.value)
+      : -1
 
-    // Wrap around if we reach the end
-    if (currentIndex.value >= uncategorizedTasks.value.length) {
-      currentIndex.value = 0
-    }
+    // Move to next, wrapping around
+    const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % tasks.length : 0
+
+    // If we'd loop back to the same task (only one in queue), stay
+    if (tasks[nextIdx].id === currentTaskId.value && tasks.length === 1) return
+
+    currentTaskId.value = tasks[nextIdx].id
+    snapshotCurrentTask()
   }
 
-  function moveToPrevious() {
-    if (hasPrevious.value) {
-      currentIndex.value--
+  async function markTaskDone(taskId: string) {
+    // Mark task as done - AWAIT to ensure persistence (BUG-1051)
+    await taskStore.updateTask(taskId, { status: 'done' })
+
+    const action: CategoryAction = {
+      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'MARK_DONE',
+      taskId,
+      oldProjectId: undefined,
+      newProjectId: undefined,
+      timestamp: Date.now()
     }
+
+    quickSortStore.recordAction(action)
+    processedTaskIds.value.add(taskId)
+    advanceToNextTask()
+  }
+
+  async function markDoneAndDeleteTask(taskId: string) {
+    const action: CategoryAction = {
+      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'MARK_DONE_AND_DELETE',
+      taskId,
+      oldProjectId: undefined,
+      newProjectId: undefined,
+      timestamp: Date.now()
+    }
+
+    quickSortStore.recordAction(action)
+    processedTaskIds.value.add(taskId)
+    // Delete the task - MUST await so task is removed before advancing
+    await taskStore.deleteTask(taskId)
+    advanceToNextTask()
   }
 
   async function undoLastCategorization() {
     const action = quickSortStore.undo()
     if (!action) return
 
-    // Revert the task update - AWAIT to ensure persistence (BUG-1051)
-    await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
+    if (action.type === 'SAVE_TASK') {
+      // Restore snapshot fields
+      const updates: Record<string, unknown> = {}
+      if (action.oldProjectId !== undefined) updates.projectId = action.oldProjectId || undefined
+      if (action.oldDueDate !== undefined) updates.dueDate = action.oldDueDate || ''
+      if (action.oldPriority !== undefined) updates.priority = action.oldPriority || undefined
 
-    // Adjust index if needed
-    // If the restored task reappears at the current index, we might not need to move.
-    // But if we want to "go back" to it, we might need to decrement.
-    // Current logic:
-    if (currentIndex.value > 0) {
-      currentIndex.value--
+      if (Object.keys(updates).length > 0) {
+        await taskStore.updateTask(action.taskId, updates)
+      }
+
+      // Remove from processedTaskIds so it reappears
+      processedTaskIds.value.delete(action.taskId)
+      // Re-pin to this task
+      currentTaskId.value = action.taskId
+      snapshotCurrentTask()
+    } else if (action.type === 'CATEGORIZE_TASK') {
+      // Revert project assignment - AWAIT to ensure persistence (BUG-1051)
+      await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
+    } else {
+      // MARK_DONE or MARK_DONE_AND_DELETE - revert status
+      await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
+      processedTaskIds.value.delete(action.taskId)
+      currentTaskId.value = action.taskId
+      snapshotCurrentTask()
     }
   }
 
@@ -158,65 +265,43 @@ export function useQuickSort() {
     const action = quickSortStore.redo()
     if (!action) return
 
-    // Reapply the task update - AWAIT to ensure persistence (BUG-1051)
-    await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+    if (action.type === 'SAVE_TASK') {
+      // Re-apply changes
+      const updates: Record<string, unknown> = {}
+      if (action.newProjectId !== undefined) updates.projectId = action.newProjectId
+      if (action.newDueDate !== undefined) updates.dueDate = action.newDueDate || ''
+      if (action.newPriority !== undefined) updates.priority = action.newPriority || undefined
 
-    handleTaskProcessed()
+      if (Object.keys(updates).length > 0) {
+        await taskStore.updateTask(action.taskId, updates)
+      }
+      processedTaskIds.value.add(action.taskId)
+      advanceToNextTask()
+    } else if (action.type === 'CATEGORIZE_TASK') {
+      // Reapply project assignment - AWAIT to ensure persistence (BUG-1051)
+      await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+    } else {
+      // MARK_DONE or MARK_DONE_AND_DELETE
+      await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })
+      processedTaskIds.value.add(action.taskId)
+      advanceToNextTask()
+    }
   }
 
   function cancelSession() {
     quickSortStore.cancelSession()
-    currentIndex.value = 0
+    currentTaskId.value = null
+    processedTaskIds.value.clear()
+    taskSnapshot.value = null
   }
 
-  async function markTaskDone(taskId: string) {
-    // Mark task as done - AWAIT to ensure persistence (BUG-1051)
-    await taskStore.updateTask(taskId, { status: 'done' })
-
-    // Create action for undo/redo
-    const action: CategoryAction = {
-      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'CATEGORIZE_TASK',
-      taskId,
-      oldProjectId: undefined,
-      newProjectId: undefined,
-      timestamp: Date.now()
+  // Watch for external task deletion (task deleted while viewing)
+  watch(currentTask, (task) => {
+    if (!task && currentTaskId.value) {
+      // Task was deleted externally, advance
+      advanceToNextTask()
     }
-
-    // Record action
-    quickSortStore.recordAction(action)
-
-    handleTaskProcessed()
-  }
-
-  async function markDoneAndDeleteTask(taskId: string) {
-    // First mark as done (for consistent history tracking/logging usually)
-    // But here we just delete it.
-
-    // Create action for undo/redo - treat as categorize for now to keep simple
-    const action: CategoryAction = {
-      id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'CATEGORIZE_TASK',
-      taskId,
-      oldProjectId: undefined,
-      newProjectId: undefined,
-      timestamp: Date.now()
-    }
-
-    // Record action
-    quickSortStore.recordAction(action)
-
-    // Delete the task - MUST await so task is removed before handleTaskProcessed adjusts index
-    await taskStore.deleteTask(taskId)
-
-    handleTaskProcessed()
-  }
-
-  function goToTask(index: number) {
-    if (index >= 0 && index < uncategorizedTasks.value.length) {
-      currentIndex.value = index
-    }
-  }
+  })
 
   // Cleanup
   onUnmounted(() => {
@@ -228,15 +313,15 @@ export function useQuickSort() {
 
   return {
     // State
-    currentIndex,
+    currentTaskId,
+    processedTaskIds,
 
     // Getters
     uncategorizedTasks,
     currentTask,
-    hasNext,
-    hasPrevious,
     progress,
     isComplete,
+    isTaskDirty,
     motivationalMessage,
     canUndo: quickSortStore.canUndo,
     canRedo: quickSortStore.canRedo,
@@ -246,14 +331,12 @@ export function useQuickSort() {
     startSession,
     endSession,
     categorizeTask,
+    saveTask,
     markTaskDone,
     markDoneAndDeleteTask,
-    moveToNext: skipTask, // Alias for backward compatibility if needed, or just use skipTask
-    moveToPrevious,
     skipTask,
     undoLastCategorization,
     redoLastCategorization,
-    cancelSession,
-    goToTask
+    cancelSession
   }
 }

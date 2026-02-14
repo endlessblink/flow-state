@@ -5,10 +5,14 @@ import { useAuthStore } from '@/stores/auth'
 
 export interface CategoryAction {
   id: string
-  type: 'CATEGORIZE_TASK' | 'MARK_DONE' | 'MARK_DONE_AND_DELETE'
+  type: 'CATEGORIZE_TASK' | 'MARK_DONE' | 'MARK_DONE_AND_DELETE' | 'SAVE_TASK'
   taskId: string
   oldProjectId?: string | null
   newProjectId?: string
+  oldDueDate?: string
+  newDueDate?: string
+  oldPriority?: 'low' | 'medium' | 'high' | undefined
+  newPriority?: 'low' | 'medium' | 'high' | undefined
   oldStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   newStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   deletedTask?: import('./tasks').Task // Store full task data for undo of deleted tasks

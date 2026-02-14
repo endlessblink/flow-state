@@ -1,11 +1,11 @@
 {
-  "version": "1.2.54",
-  "notes": "v1.2.54: gamification improvements, arena feature, UI fixes",
-  "pub_date": "2026-02-13T17:43:16.774Z",
+  "version": "1.2.55",
+  "notes": "FlowState v1.2.55",
+  "pub_date": "2026-02-14T06:04:26.068Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXhkWmhURU80ZkZnMjZRd1hrUGd0NlhwRlZXWUp2d3VkQWZwckFUeHVQYzdIR0V6Smwrb1BWYURxZHVtYm9KVXcvZkU5SnAvaXMrNUxTSHZpR0FpMkFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDA0NTk2CWZpbGU6Rmxvd1N0YXRlXzEuMi41NF9hbWQ2NC5BcHBJbWFnZQpYcmlXVzdOWG1JbWZGOC9XdHYzZmNrN1VSb01EbWZvb25HeGtZd014ODAyNXhvbkFvMG43TVprN2FNSytvZVRFWDU4L1diUWUzMGtXNnAvVzV2Um1DUT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.54_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRThka3U4empKQlBGNWlrTVI5S0dQa3c3LzZIMVh3K1dWaU1CNHAwT2lob0FGejJSeFhIakQ2RGhrSVNjTlZGTUwweVFSYllkakRjOStPVnAyVXZKOUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDQ4OTQxCWZpbGU6Rmxvd1N0YXRlXzEuMi41NV9hbWQ2NC5BcHBJbWFnZQo5YU5HbVg2Y1Z5cFJUNSt5bXpSSFNBQWZoM2RlLzRDeDRGclpRU0w3VmFUTVJ2SE9NVElwWWlNZmxKN3V5cUNnVElER3I1TG5jZWtRdGFDRnR6cHFEZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.55_amd64.AppImage"
     }
   }
 }

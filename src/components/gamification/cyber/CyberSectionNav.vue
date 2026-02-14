@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Layout, Crosshair, Skull, Zap, Trophy, Swords } from 'lucide-vue-next'
+import { Layout, Crosshair, Skull, Zap, Trophy } from 'lucide-vue-next'
 
-type SectionId = 'overview' | 'missions' | 'boss' | 'upgrades' | 'achievements' | 'arena'
+type SectionId = 'overview' | 'missions' | 'boss' | 'upgrades' | 'achievements'
 
 defineProps<{
   activeSection: SectionId
@@ -17,7 +17,6 @@ const tabs = [
   { id: 'boss', label: 'BOSS', icon: Skull },
   { id: 'upgrades', label: 'UPGRADES', icon: Zap },
   { id: 'achievements', label: 'TROPHIES', icon: Trophy },
-  { id: 'arena', label: 'ARENA', icon: Swords },
 ] as const
 
 const handleTabClick = (tabId: typeof tabs[number]['id']) => {

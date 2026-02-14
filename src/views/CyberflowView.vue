@@ -35,10 +35,6 @@
       <!-- ACHIEVEMENTS Tab -->
       <CyberAchievements v-else-if="activeSection === 'achievements'" :show-all="true" />
 
-      <!-- ARENA Tab (FEATURE-1306) — coming soon -->
-      <div v-else-if="activeSection === 'arena'" class="cf-content" style="display:flex;align-items:center;justify-content:center;color:rgba(var(--neon-cyan),0.5);font-family:'JetBrains Mono',monospace;font-size:0.9rem;">
-        ARENA // OFFLINE — AWAITING ASSET GENERATION
-      </div>
     </div>
 
     <!-- Character Drawer (overlay, not a tab) -->
@@ -63,7 +59,7 @@ import CyberCharacterDrawer from '@/components/gamification/cyber/CyberCharacter
 
 const { cyberflowClasses } = useCyberflowTheme()
 
-type SectionId = 'overview' | 'missions' | 'boss' | 'upgrades' | 'achievements' | 'arena'
+type SectionId = 'overview' | 'missions' | 'boss' | 'upgrades' | 'achievements'
 
 // Active section tab state
 const activeSection = ref<SectionId>('overview')

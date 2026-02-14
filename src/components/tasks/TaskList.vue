@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
@@ -157,6 +157,17 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
 
 // Initialize with all projects expanded by default
 expandedProjects.value = new Set(projectGroups.value.map(g => g.id))
+
+// BUG-FIX: Watch for new groups and auto-expand them (e.g. when creating first task in a project)
+
+watch(projectGroups, (newGroups, oldGroups) => {
+  const oldIds = new Set(oldGroups?.map(g => g.id) || [])
+  newGroups.forEach(group => {
+    if (!oldIds.has(group.id)) {
+      expandedProjects.value.add(group.id)
+    }
+  })
+}, { deep: true })
 
 // Expose methods for parent component
 defineExpose({

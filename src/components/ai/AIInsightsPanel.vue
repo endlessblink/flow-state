@@ -236,7 +236,8 @@ async function handleRecalculate() {
       if (result.avgMinutesPerDay !== null) parts.push(`${Math.round(result.avgMinutesPerDay)} min/day`)
       if (result.avgTasksPerDay !== null) parts.push(`${result.avgTasksPerDay.toFixed(1)} tasks/day`)
       const sources = result.dataSources.join(' + ')
-      showStatus(`Updated from ${sources}: ${parts.join(', ')}`, 'success')
+      const obsCount = (profile.value?.memoryGraph || []).length
+      showStatus(`Updated from ${sources}: ${parts.join(', ')} · ${obsCount} observations generated`, 'success')
     }
   } catch (e) {
     console.warn('[AIInsights] Recalculate failed:', e)

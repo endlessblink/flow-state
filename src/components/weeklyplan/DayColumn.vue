@@ -47,6 +47,7 @@
             :key="taskId"
             :task="resolveTask(taskId)"
             :is-overdue="isTaskOverdue(taskId)"
+            :ai-reason="props.taskReasons[taskId] || ''"
             @remove="(id) => $emit('remove-task', id)"
             @change-priority="(id) => $emit('change-priority', id)"
             @snooze="(id) => $emit('snooze-task', id)"
@@ -77,11 +78,13 @@ interface Props {
   isToday?: boolean
   modelValue: string[]
   dailyCapacityMinutes?: number
+  taskReasons?: Record<string, string>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isToday: false,
   dailyCapacityMinutes: 360, // 6 hours
+  taskReasons: () => ({}),
 })
 
 const emit = defineEmits<{

@@ -340,12 +340,6 @@ export async function clearFailedOperations(): Promise<number> {
 
   // Get ALL non-completed operations to see what's in the queue
   const allOps = await db.operations.toArray()
-  console.log('[SYNC-CLEAR] All operations in queue:', allOps.map(op => ({
-    id: op.id,
-    status: op.status,
-    entityType: op.entityType,
-    retryCount: op.retryCount
-  })))
 
   // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
   // session crash and will never complete. Previously only cleared 'failed' and
@@ -357,19 +351,14 @@ export async function clearFailedOperations(): Promise<number> {
     op.retryCount >= 10 // Also clear anything stuck after 10+ retries
   )
 
-  console.log('[SYNC-CLEAR] Operations to delete:', toDelete.length)
-
   if (toDelete.length > 0) {
     const ids = toDelete.map(op => op.id!).filter(id => id !== undefined)
-    console.log('[SYNC-CLEAR] Deleting IDs:', ids)
     await db.operations.bulkDelete(ids)
-    console.log('[SYNC-CLEAR] Deleted successfully')
   }
 
   // BUG-1179: Also clear the conflicts table to reset error state
   const conflictCount = await db.conflicts.count()
   if (conflictCount > 0) {
-    console.log('[SYNC-CLEAR] Clearing', conflictCount, 'conflicts')
     await db.conflicts.clear()
   }
 

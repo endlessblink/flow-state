@@ -41,6 +41,7 @@ export interface TaskSummary {
   estimatedDuration?: number
   status: string
   projectId: string
+  projectName?: string
   description?: string
   subtaskCount?: number
   completedSubtaskCount?: number
@@ -119,7 +120,10 @@ Rules:
 - Each day key is an array of task ID strings.
 - "unscheduled" contains task IDs that don't fit the available capacity.
 - "reasoning" is a brief string explaining your distribution logic.
-- "taskReasons" is an object mapping each task ID to a short (5-15 word) explanation of WHY you placed it on that specific day. Write from the AI's perspective, e.g. "Overdue — needs immediate attention", "Continues momentum from recent project work", "Light task for your heavy meeting day".
+- "taskReasons" is an object mapping each task ID to 2-3 bullet points (separated by "\n") explaining WHY this task matters and why it's placed on that day. Go DEEPER than surface facts — connect to goals, project momentum, or workflow patterns. IMPORTANT: If the task title is in Hebrew, write the reason bullets in Hebrew too. Always match the language of the task title.
+  BAD: "Overdue task" or "High priority"
+  GOOD: "Blocking the auth refactor\nClear before Wednesday's API work\n3 subtasks left — close it out"
+  GOOD (Hebrew task): "חוסם את הפיצ'ר הבא\nצריך לסיים לפני אמצע השבוע\nכבר התחלת לעבוד על זה"
 
 SCHEDULING PRIORITY:
 1. Overdue tasks (due date in the past) — MUST go on Monday or Tuesday.
@@ -207,9 +211,14 @@ function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date, b
     else if (t.status === 'in_progress') urgency = 'IN_PROGRESS'
     else if (t.dueDate && t.dueDate <= weekEndStr) urgency = 'DUE_THIS_WEEK'
 
+    // Truncate description to save tokens but give AI meaningful context
+    const desc = t.description ? t.description.slice(0, 150).trim() : null
+
     return {
       id: t.id,
       title: t.title,
+      project: t.projectName || null,
+      description: desc,
       priority: t.priority,
       dueDate: t.dueDate || null,
       estimatedDuration: t.estimatedDuration,
@@ -255,7 +264,7 @@ Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
 Return ONLY the JSON object with monday...sunday, unscheduled, reasoning, and taskReasons keys.
-taskReasons example: { "task-id-1": "Overdue — needs immediate attention", "task-id-2": "Continues your recent frontend work" }`
+For taskReasons: 2-3 bullet lines per task separated by \\n. Explain WHY — connect to goals, momentum, dependencies. Match the task's language (Hebrew tasks get Hebrew reasons). Don't just restate priority or due date.`
 }
 
 function buildDayResuggestPrompt(
@@ -458,11 +467,12 @@ export function useWeeklyPlanAI() {
         { role: 'user', content: buildUserPrompt(tasks, weekStart, weekEnd, behavioral) },
       ]
 
-      // First attempt
+      // First attempt (30s timeout to prevent hanging during tool execution)
       try {
         const response = await router.chat(messages, {
           taskType: 'planning',
           temperature: 0.3,
+          timeout: 30000,
         })
         return parseWeeklyPlanResponse(response.content, validTaskIds)
       } catch (firstError) {
@@ -474,6 +484,7 @@ export function useWeeklyPlanAI() {
         const response = await router.chat(messages, {
           taskType: 'planning',
           temperature: 0.3,
+          timeout: 30000,
         })
         return parseWeeklyPlanResponse(response.content, validTaskIds)
       } catch (retryError) {

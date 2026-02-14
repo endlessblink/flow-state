@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useTaskStore } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import type { WorkProfile, MemoryObservation } from '@/utils/supabaseMappers'
 
 const cachedProfile = ref<WorkProfile | null>(null)
@@ -188,8 +189,9 @@ export function useWorkProfile() {
       cachedProfile.value.peakProductivityDays = peakDays
     }
 
-    // FEATURE-1317 Phase 2: Generate structured observations from stats
+    // FEATURE-1317 Phase 2: Generate structured observations from stats + task context
     await generateObservationsFromStats()
+    await generateObservationsFromTasks()
 
     return { avgMinutesPerDay, avgTasksPerDay, peakDays, dataSources }
   }
@@ -246,9 +248,9 @@ export function useWorkProfile() {
       updated = [...current, newObs]
     }
 
-    // Cap at 30 observations (FIFO)
-    if (updated.length > 30) {
-      updated = updated.slice(updated.length - 30)
+    // Cap at 50 observations (FIFO)
+    if (updated.length > 50) {
+      updated = updated.slice(updated.length - 50)
     }
 
     await db.saveWorkProfile({ memoryGraph: updated })
@@ -306,6 +308,188 @@ export function useWorkProfile() {
           source: 'weekly_history'
         })
       }
+    }
+
+    for (const obs of observations) {
+      await addMemoryObservation(obs)
+    }
+  }
+
+  async function generateObservationsFromTasks(): Promise<void> {
+    const taskStore = useTaskStore()
+    const projectStore = useProjectStore()
+    const now = new Date()
+    const sinceDate = new Date()
+    sinceDate.setDate(now.getDate() - 28)
+    const todayStr = now.toISOString().split('T')[0]
+
+    const allTasks = taskStore.tasks
+    if (allTasks.length === 0) return
+
+    const observations: Omit<MemoryObservation, 'createdAt'>[] = []
+
+    // --- 1. Status distribution snapshot ---
+    const statusCounts = { planned: 0, in_progress: 0, done: 0, backlog: 0, on_hold: 0 }
+    for (const t of allTasks) {
+      if (t.status in statusCounts) statusCounts[t.status as keyof typeof statusCounts]++
+    }
+    const total = allTasks.length
+    const backlogRatio = total > 0 ? statusCounts.backlog / total : 0
+    if (backlogRatio > 0.4 && statusCounts.backlog >= 5) {
+      observations.push({
+        entity: 'user',
+        relation: 'backlog_heavy',
+        value: `${statusCounts.backlog} of ${total} tasks (${Math.round(backlogRatio * 100)}%) in backlog`,
+        confidence: 0.8,
+        source: 'task_analysis'
+      })
+    }
+
+    // --- 2. Priority completion rate ---
+    const recentDone = allTasks.filter(t => {
+      if (t.status !== 'done') return false
+      const cat = t.completedAt
+      if (!cat) return false
+      const d = cat instanceof Date ? cat : new Date(cat)
+      return d >= sinceDate
+    })
+    const priorityDone = { high: 0, medium: 0, low: 0 }
+    const priorityTotal = { high: 0, medium: 0, low: 0 }
+    for (const t of allTasks) {
+      if (t.priority && t.priority in priorityTotal) {
+        priorityTotal[t.priority as keyof typeof priorityTotal]++
+      }
+    }
+    for (const t of recentDone) {
+      if (t.priority && t.priority in priorityDone) {
+        priorityDone[t.priority as keyof typeof priorityDone]++
+      }
+    }
+    if (priorityTotal.high >= 3) {
+      const rate = Math.round((priorityDone.high / priorityTotal.high) * 100)
+      observations.push({
+        entity: 'priority:high',
+        relation: 'completion_rate',
+        value: `${rate}% of high-priority tasks completed (${priorityDone.high}/${priorityTotal.high})`,
+        confidence: Math.min(0.9, 0.5 + priorityTotal.high * 0.04),
+        source: 'task_analysis'
+      })
+    }
+
+    // --- 3. Overdue pattern ---
+    const overdueTasks = allTasks.filter(t => {
+      if (t.status === 'done') return false
+      if (!t.dueDate) return false
+      return t.dueDate < todayStr
+    })
+    if (overdueTasks.length >= 3) {
+      observations.push({
+        entity: 'user',
+        relation: 'overdue_pattern',
+        value: `${overdueTasks.length} tasks past their due date`,
+        confidence: 0.85,
+        source: 'task_analysis'
+      })
+    }
+
+    // --- 4. Project activity (top active + stale projects) ---
+    const projectTaskCounts = new Map<string, { total: number; done: number; name: string }>()
+    for (const t of allTasks) {
+      if (!t.projectId) continue
+      if (!projectTaskCounts.has(t.projectId)) {
+        const proj = projectStore.projects.find(p => p.id === t.projectId)
+        projectTaskCounts.set(t.projectId, { total: 0, done: 0, name: proj?.name || 'Unknown' })
+      }
+      const counts = projectTaskCounts.get(t.projectId)!
+      counts.total++
+      if (t.status === 'done') counts.done++
+    }
+    // Most active project
+    const sortedProjects = Array.from(projectTaskCounts.entries())
+      .filter(([, c]) => c.total >= 3)
+      .sort((a, b) => b[1].total - a[1].total)
+    if (sortedProjects.length > 0) {
+      const [, top] = sortedProjects[0]
+      observations.push({
+        entity: `project:${top.name}`,
+        relation: 'most_active',
+        value: `${top.total} tasks (${top.done} done, ${top.total - top.done} remaining)`,
+        confidence: 0.75,
+        source: 'task_analysis'
+      })
+    }
+    // Stale projects (0 completions but 3+ open tasks)
+    for (const [, counts] of sortedProjects) {
+      if (counts.done === 0 && counts.total >= 3) {
+        observations.push({
+          entity: `project:${counts.name}`,
+          relation: 'stale',
+          value: `${counts.total} tasks, none completed`,
+          confidence: 0.7,
+          source: 'task_analysis'
+        })
+      }
+    }
+
+    // --- 5. Task completion speed (created → done) ---
+    const completionDays: number[] = []
+    for (const t of recentDone) {
+      if (!t.completedAt || !t.createdAt) continue
+      const created = t.createdAt instanceof Date ? t.createdAt : new Date(t.createdAt)
+      const completed = t.completedAt instanceof Date ? t.completedAt : new Date(t.completedAt)
+      const daysDiff = Math.round((completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
+      if (daysDiff >= 0) completionDays.push(daysDiff)
+    }
+    if (completionDays.length >= 3) {
+      const avgDays = Math.round(completionDays.reduce((a, b) => a + b, 0) / completionDays.length * 10) / 10
+      const sameDayRate = Math.round((completionDays.filter(d => d === 0).length / completionDays.length) * 100)
+      observations.push({
+        entity: 'user',
+        relation: 'avg_completion_speed',
+        value: `${avgDays} days avg from creation to done (${sameDayRate}% same-day)`,
+        confidence: Math.min(0.9, 0.5 + completionDays.length * 0.03),
+        source: 'task_analysis'
+      })
+    }
+
+    // --- 6. Estimation accuracy (estimatedPomodoros vs completedPomodoros) ---
+    const estimatedTasks = recentDone.filter(t => t.estimatedPomodoros && t.estimatedPomodoros > 0 && t.completedPomodoros > 0)
+    if (estimatedTasks.length >= 3) {
+      let totalEstimated = 0
+      let totalActual = 0
+      for (const t of estimatedTasks) {
+        totalEstimated += t.estimatedPomodoros!
+        totalActual += t.completedPomodoros
+      }
+      const ratio = totalActual / totalEstimated
+      if (ratio > 1.3) {
+        observations.push({
+          entity: 'user',
+          relation: 'underestimates',
+          value: `tasks take ${ratio.toFixed(1)}x more pomodoros than estimated (${totalActual} actual vs ${totalEstimated} estimated)`,
+          confidence: Math.min(0.9, 0.5 + estimatedTasks.length * 0.05),
+          source: 'task_analysis'
+        })
+      } else if (ratio < 0.7) {
+        observations.push({
+          entity: 'user',
+          relation: 'overestimates',
+          value: `tasks take ${ratio.toFixed(1)}x fewer pomodoros than estimated`,
+          confidence: Math.min(0.9, 0.5 + estimatedTasks.length * 0.05),
+          source: 'task_analysis'
+        })
+      }
+    }
+
+    // --- 7. In-progress WIP limit check ---
+    if (statusCounts.in_progress >= 5) {
+      observations.push({
+        entity: 'user',
+        relation: 'high_wip',
+        value: `${statusCounts.in_progress} tasks in progress simultaneously`,
+        confidence: 0.8,
+        source: 'task_analysis'
+      })
     }
 
     for (const obs of observations) {

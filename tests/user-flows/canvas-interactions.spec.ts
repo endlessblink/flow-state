@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('Canvas Interactions', () => {
+test.describe('Canvas Interactions', () => {
     test.beforeEach(async ({ page }) => {
         // Bypass welcome modal
         await page.addInitScript(() => {

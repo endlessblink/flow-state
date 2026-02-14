@@ -150,11 +150,10 @@ try {
         ...section,
         id: `section-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
       }
-      console.log('🔧 Storybook Canvas Store: Created section', newSection)
       return newSection
     },
-    updateSection: (id: string, updates: Record<string, unknown>) => {
-      console.log('🔧 Storybook Canvas Store: Updated section', id, updates)
+    updateSection: (_id: string, _updates: Record<string, unknown>) => {
+      // Storybook mock - no-op
     }
   } as any // Storybook mock doesn't need full type compliance
 }
@@ -322,16 +321,9 @@ watch(() => props.group, (newGroup) => {
 
 // Focus input when modal opens
 watch(() => props.isOpen, async (isOpen) => {
-  console.log('🔧 GroupModal: isOpen prop changed to:', isOpen)
-  console.log('🔧 GroupModal: props.isOpen =', props.isOpen)
-
   if (isOpen) {
-    console.log('🔧 GroupModal: Modal is opening, focusing input')
     await nextTick()
     nameInput.value?.focus()
-    console.log('🔧 GroupModal: Modal should now be visible')
-  } else {
-    console.log('🔧 GroupModal: Modal is closing')
   }
 })
 </script>

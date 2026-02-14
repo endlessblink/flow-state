@@ -1964,14 +1964,16 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ---
 
-### TASK-1324: Sidebar Quick Add — Auto-Expand + Date/Priority Pickers (🔄 IN PROGRESS)
+### ~~TASK-1324~~: Sidebar Quick Add — Auto-Expand + Date/Priority Pickers (✅ DONE)
 
-**Priority**: P2 | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P2 | **Status**: ✅ DONE (2026-02-14)
 
 **Features**:
-1. Auto-expand quick add input to larger window when text exceeds ~6 words or gets truncated
-2. Add small date picker icon below the quick add input
-3. Add small priority picker icon below the quick add input
+1. Auto-expand quick add input to larger textarea at 6+ words or 40+ chars
+2. Date picker icon (Today, Tomorrow, This Weekend, No Date) with CalendarDays icon
+3. Priority picker icon (None, Low/blue, Medium/orange, High/red) with Flag icon
+4. RTL support for Hebrew text direction
+5. Metadata row with fade-slide transition, visible when input focused or values set
 
 **Files**: `src/layouts/AppSidebar.vue`
 

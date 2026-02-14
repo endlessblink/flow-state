@@ -70,6 +70,7 @@ function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
       status: 'idle',
       plan: null,
       reasoning: null,
+      taskReasons: {},
       error: null,
       weekStart: getWeekStart(weekStartsOn),
       weekEnd: getWeekEnd(weekStartsOn),
@@ -99,6 +100,7 @@ export function useWeeklyPlan() {
 
   function getEligibleTasks(): TaskSummary[] {
     const taskStore = useTaskStore()
+    const projectStore = useProjectStore()
     const today = formatDateISO(new Date())
     const weekEnd = formatDateISO(state.value.weekEnd)
 
@@ -157,6 +159,7 @@ export function useWeeklyPlan() {
       estimatedDuration: t.estimatedDuration,
       status: t.status,
       projectId: t.projectId || '',
+      projectName: t.projectId ? (projectStore.getProjectDisplayName(t.projectId) || '') : '',
       description: t.description || '',
       subtaskCount: t.subtasks?.length || 0,
       completedSubtaskCount: t.subtasks?.filter(s => s.isCompleted).length || 0,
@@ -276,6 +279,7 @@ export function useWeeklyPlan() {
       const result = await aiGeneratePlan(tasks, state.value.interviewAnswers || undefined, profile, behavioral)
       state.value.plan = result.plan
       state.value.reasoning = result.reasoning
+      state.value.taskReasons = result.taskReasons
       state.value.status = 'review'
     } catch (err) {
       state.value.status = 'error'
@@ -514,6 +518,7 @@ export function useWeeklyPlan() {
       status: 'idle',
       plan: null,
       reasoning: null,
+      taskReasons: {},
       error: null,
       weekStart: getWeekStart(settings.weekStartsOn),
       weekEnd: getWeekEnd(settings.weekStartsOn),

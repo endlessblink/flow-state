@@ -481,7 +481,9 @@ export function useCanvasOrchestrator() {
             // If has custom viewport, only override if Today group exists
             const forceFallback = !hasCustomViewport
             const centered = centerOnTodayGroup(forceFallback)
-            console.log('🎯 [ORCHESTRATOR] Auto-center result:', centered ? 'SUCCESS' : 'USING_SAVED_VIEWPORT', { hasCustomViewport })
+            if (import.meta.env.DEV) {
+                console.log('🎯 [ORCHESTRATOR] Auto-center result:', centered ? 'SUCCESS' : 'USING_SAVED_VIEWPORT', { hasCustomViewport })
+            }
         }, 100)
 
         // TASK-213: Position Manager Subscription
@@ -490,7 +492,9 @@ export function useCanvasOrchestrator() {
         positionManagerUnsubscribe.value = positionManager.subscribe((event) => {
             const { nodeId, payload } = event
             if (payload.source !== 'user-drag' && payload.source !== 'remote-sync') {
-                console.log(`📡[ORCHESTRATOR] Applying external position update for ${nodeId} from ${payload.source}`)
+                if (import.meta.env.DEV) {
+                    console.log(`📡[ORCHESTRATOR] Applying external position update for ${nodeId} from ${payload.source}`)
+                }
 
                 const node = findNode(nodeId)
                 if (node) {

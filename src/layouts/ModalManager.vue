@@ -226,9 +226,8 @@ const handleSearchSelectTask = (task: Task) => {
   openEditTask(task)
 }
 
-const handleSearchSelectProject = (project: Project) => {
-  console.log('Selected project:', project)
-  // Logic from App.vue: // TODO: Navigate to project view or filter by project
+const handleSearchSelectProject = (_project: Project) => {
+  // TODO: Navigate to project view or filter by project
 }
 
 const closeQuickTaskCreate = () => {
@@ -398,7 +397,6 @@ const handleOpenTaskEdit = (event: Event) => {
 }
 
 const handleTaskContextMenu = (event: Event) => {
-  console.log('📋 [MODAL-MGR] handleTaskContextMenu received event')
   const customEvent = event as CustomEvent
   const { event: mouseEvent, task, instanceId, isCalendarEvent } = customEvent.detail
 

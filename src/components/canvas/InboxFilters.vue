@@ -32,6 +32,7 @@
           Due
         </button>
         <button
+          v-if="context !== 'canvas'"
           class="sort-btn"
           :class="{ active: sortBy === 'canvasOrder' }"
           title="Sort by canvas position (top to bottom)"
@@ -231,6 +232,7 @@ interface Props {
   selectedDurations: Set<DurationCategory>
   hideDoneTasks?: boolean // TASK-076: Separate done filter for each view
   sortBy?: SortByType // TASK-1073: Sort option
+  context?: string // Hide canvas sort when inside canvas view
 }
 
 const props = defineProps<Props>()

@@ -22,6 +22,27 @@
 
 ---
 
+### BUG-1320: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (👀 REVIEW)
+
+**Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-14)
+
+**Problem**: Production console (in-theflow.com) flooded with 5 categories of noise:
+1. Hundreds of `[WakeLock] Failed to request wake lock: DOMException` when tab is hidden
+2. `[SYNC] LWW: Server wins` on every sync cycle (echo from direct save + sync queue race)
+3. `[SUPABASE-MAPPER] Invalid UUID detected` on every sync for legacy group "Today"
+4. `[REALTIME] Connection dropped (CHANNEL_ERROR)` when browser suspends background WebSockets
+5. Transient CORS/network failures from ServiceWorker during tab sleep (handled by existing retry)
+
+**Fix**: 4 targeted changes:
+- `useWakeLock.ts`: Guard `requestWakeLock()` with `document.visibilityState === 'hidden'` check
+- `useSyncOrchestrator.ts`: Downgrade LWW echo logs (delta < 2s) from `warn` to `debug`
+- `supabaseMappers.ts`: Deduplicate warnings via `Set` — legacy group/UUID warnings fire once per session
+- `useSupabaseDatabase.ts`: Downgrade CHANNEL_ERROR/CLOSED to `debug` when tab is hidden
+
+**Files**: `src/composables/useWakeLock.ts`, `src/composables/sync/useSyncOrchestrator.ts`, `src/utils/supabaseMappers.ts`, `src/composables/useSupabaseDatabase.ts`
+
+---
+
 ### ~~BUG-1310~~: Canvas invisible barrier blocks drag operations (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
@@ -1585,11 +1606,24 @@ Type imports from `@/stores/tasks` instead of `@/types/tasks` triggered module e
 
 ---
 
-### BUG-352: Mobile PWA "Failed to Fetch" (📋 PLANNED)
+### BUG-352: Mobile PWA "Failed to Fetch" (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-14)
 
-Mobile device fails to fetch on fresh browser. Potential causes: SSL/Cert issue with `sslip.io`, mobile-specific hardcoded localhost, stricter CORS.
+**Problem**: Mobile PWA shows red "Sync Error(saveActiveTimerSession): TypeError: Failed to fetch" popup when network connectivity is intermittent (WiFi/cell handoff, signal dips). Timer heartbeat saves every 10s — any network blip triggers alarming error notification.
+
+**Root Cause (3 layers)**:
+1. `saveActiveTimerSession` (and 21 other write functions) missing `withRetry()` — BUG-1107 only added retries to read functions
+2. Timer heartbeat doesn't check `navigator.onLine` before saving — fires blindly every 10s
+3. `handleError()` treats transient `Failed to fetch` as `ErrorSeverity.ERROR` with `showNotification: true` — red popup for network blips
+
+**Fix Plan**:
+- [ ] Fix 1: Add `withRetry()` to `saveActiveTimerSession` + `deleteTimerSession` (critical path)
+- [ ] Fix 2: Make timer heartbeat network-aware (`navigator.onLine` check)
+- [ ] Fix 3: Make `handleError` suppress notifications for transient network errors
+- [ ] Fix 4: Add `withRetry()` to all remaining 19 write functions
+
+**Files**: `src/composables/useSupabaseDatabase.ts`, `src/stores/timer.ts`
 
 ---
 

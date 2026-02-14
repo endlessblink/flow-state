@@ -314,8 +314,7 @@ const {
 
 .week-event {
   position: absolute;
-  left: var(--space-1);
-  right: var(--space-1);
+  /* left/width set by getWeekEventStyle() — do NOT override here */
   background: var(--surface-tertiary);
   border-left: 3px solid var(--accent-primary);
   border-radius: var(--radius-md);

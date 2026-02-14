@@ -187,8 +187,8 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
       position: 'absolute',
       top: `${event.startSlot * HALF_HOUR_HEIGHT}px`,
       height: `${event.slotSpan * HALF_HOUR_HEIGHT}px`,
-      left: `${eventLeftOffset}%`,
-      width: `${eventWidthWithinDay}%`
+      left: `calc(${eventLeftOffset}% + 2px)`,
+      width: `calc(${eventWidthWithinDay}% - 4px)`
     }
   }
 

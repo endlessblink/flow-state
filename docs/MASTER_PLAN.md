@@ -751,26 +751,15 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1186: Tauri Today Group Not Counting Tasks or Moving Children (📋 PLANNED)
+### ~~BUG-1186~~: Tauri Today Group Not Counting Tasks or Moving Children (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-03)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
 
-**Problem**: In Tauri desktop app, the "Today" smart group has two issues:
+**Problem**: In Tauri desktop app, the "Today" smart group had two issues:
 1. **Badge not counting tasks** - The task count badge stopped showing the correct number
 2. **Children don't move with group** - When dragging the Today group, child tasks don't follow
 
-**Context**: This is Tauri-specific - may be related to recent sync changes or group handling differences between web and desktop.
-
-**Investigation Steps**:
-- [ ] Check if Today group exists and has correct `filter_type`
-- [ ] Verify task-to-group relationship (parentId matching)
-- [ ] Compare behavior between web and Tauri builds
-- [ ] Check console for errors when dragging group
-
-**Files to Investigate**:
-- `src/stores/canvas/canvasGroups.ts` - Group logic
-- `src/composables/canvas/useCanvasSync.ts` - Sync handling
-- `src/components/canvas/GroupNode.vue` - Badge display
+**Resolution**: Fixed indirectly by BUG-1191 (spatial validation for parent-child) and BUG-1310 (dynamicNodeExtent including groups). User confirmed both issues resolved 2026-02-14.
 
 ---
 
@@ -3832,42 +3821,38 @@ Awaiting user testing to confirm all 4 symptoms resolved.
 
 ---
 
-### BUG-1307: Week View Events Render as Thin Slivers on Thu-Sun Columns (📋 PLANNED)
+### BUG-1307: Week View Events Render as Thin Slivers on Thu-Sun Columns (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-13)
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
 
 **Problem**: In the calendar week view, events on Monday and Tuesday render correctly with proper width, title, time, and duration. However, events on Thursday through Sunday appear as nearly invisible thin vertical lines/slivers instead of proper event blocks.
 
-**Symptoms**:
-- MON/TUE events: full-width blocks with visible content
-- THU/FRI/SAT/SUN events: compressed to ~1-2px wide slivers
-- Event data is present (slivers are visible), just the width/positioning is wrong
+**Root Cause**: CSS `.week-event { left: var(--space-1); right: var(--space-1); }` overrode the JS-computed percentage-based `left`/`width` from `getWeekEventStyle()`. The fixed CSS values clamped all events to the same position regardless of day column.
 
-**Suspected Area**: `getWeekEventStyle()` in `useCalendarWeekView.ts` — percentage-based left/width calculation may conflict with CSS `left: var(--space-1); right: var(--space-1)` on `.week-event` in `CalendarWeekView.vue`
+**Fix Applied**:
+- [x] Removed CSS `left`/`right` overrides from `.week-event` in `CalendarWeekView.vue`
+- [x] Added 2px inset padding via `calc()` in `getWeekEventStyle()` for column gap
 
-**Files**:
-- `src/components/calendar/CalendarWeekView.vue` — Template + CSS
-- `src/composables/calendar/useCalendarWeekView.ts` — `getWeekEventStyle()` positioning logic
+**Files Changed**:
+- `src/components/calendar/CalendarWeekView.vue` — Removed conflicting CSS left/right
+- `src/composables/calendar/useCalendarWeekView.ts` — `calc()` padding in left/width
 
 ---
 
-### BUG-1308: Month View Shows Only 2 Columns Instead of 7 (📋 PLANNED)
+### BUG-1308: Month View Shows Only 2 Columns Instead of 7 (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-13)
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
 
-**Problem**: The calendar month view grid is broken — only 2 columns are visible per row instead of the expected 7-day layout. Day-of-week headers (MON, TUE, WED, THU, FRI, SAT, SUN) are completely missing.
+**Problem**: The calendar month view grid was missing day-of-week header row (MON-SUN).
 
-**Symptoms**:
-- Grid renders as 2-column layout (dates visible: 26/27, 2/3, 9/10, 16/17, 23/24)
-- No day-of-week header row (unlike week/day views which show headers)
-- Events display correctly within the wrongly-sized cells
-- Navigation (arrows, "Today") works
+**Root Cause**: Template had no weekday header component. CSS grid was correct (`repeat(7, 1fr)`) and 42 cells were generated correctly, but without header labels the layout appeared broken.
 
-**Suspected Area**: `CalendarMonthView.vue` template — CSS `grid-template-columns: repeat(7, 1fr)` may not be applying, or the component may not have enough cells to fill 7 columns. Also missing day-of-week header row in template.
+**Fix Applied**:
+- [x] Added `month-weekday-header` row with Mon-Sun labels above the grid
+- [x] Added CSS for header grid matching 7-column layout
 
-**Files**:
-- `src/components/calendar/CalendarMonthView.vue` — Template + CSS
-- `src/composables/calendar/useCalendarMonthView.ts` — `monthDays` computed (should return 42 items for 6×7 grid)
+**Files Changed**:
+- `src/components/calendar/CalendarMonthView.vue` — Added weekday header row + CSS
 
 ---
 

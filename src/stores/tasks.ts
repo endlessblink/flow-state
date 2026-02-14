@@ -43,6 +43,14 @@ export const getTaskInstances = (task: Task) => {
     }]
   }
 
+  // TASK-1322: Removed dueDate fallback (was BUG-1321 "Priority 2.5")
+  // Tasks with only dueDate (no explicit scheduledDate/scheduledTime) should NOT
+  // appear on the calendar. They polluted day/week/month views with fake 9:00 AM events.
+  // Tasks only appear on calendar if:
+  //   - They have explicit instances[] (dragged from inbox or scheduled via modal)
+  //   - They have scheduledDate + scheduledTime (legacy fields)
+  //   - They have recurringInstances
+
   // Priority 3: Recurring instances
   if (task.recurringInstances && task.recurringInstances.length > 0) {
     return task.recurringInstances

@@ -31,7 +31,7 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
 
     // TASK-1321: Adjust to start on the configured week start day
     const dayOfWeek = firstDay.getDay()
-    const weekStartsOn = settings.weekStartsOn ?? 1
+    const weekStartsOn = settings.weekStartsOn ?? 0
     const daysToSubtract = (dayOfWeek - weekStartsOn + 7) % 7
     startDate.setDate(startDate.getDate() - daysToSubtract)
 
@@ -101,18 +101,31 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
     const data = event.dataTransfer?.getData('application/json')
     if (!data) return
 
-    const { taskId, instanceId: _instanceId } = JSON.parse(data)
-
-    // Simple update: modify task's scheduledDate directly
-    // Keep existing time if task has one, otherwise set to 9 AM
+    const { taskId, instanceId } = JSON.parse(data)
     const existingTask = taskStore.getTask(taskId)
-    const scheduledTime = existingTask?.scheduledTime || '09:00'
+    if (!existingTask) return
 
-    await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
-      scheduledDate: targetDate,
-      scheduledTime: scheduledTime,
-      isInInbox: false // Task is now scheduled, no longer in inbox
-    })
+    // TASK-1322: Properly handle both instances[] and legacy fields
+    if (existingTask.instances && existingTask.instances.length > 0 && instanceId) {
+      // Update the specific instance's scheduledDate (move, not duplicate)
+      const updatedInstances = existingTask.instances.map((inst: any) =>
+        inst.id === instanceId
+          ? { ...inst, scheduledDate: targetDate }
+          : inst
+      )
+      await taskStore.updateTask(taskId, {
+        instances: updatedInstances,
+        isInInbox: false
+      })
+    } else {
+      // Legacy fields — update scheduledDate directly
+      const scheduledTime = existingTask.scheduledTime || '09:00'
+      await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
+        scheduledDate: targetDate,
+        scheduledTime: scheduledTime,
+        isInInbox: false
+      })
+    }
   }
 
   const handleMonthDragEnd = (_event: DragEvent) => {

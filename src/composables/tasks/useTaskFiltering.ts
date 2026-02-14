@@ -247,7 +247,9 @@ export const useTaskFiltering = (
         }
 
         if (activeSmartView.value === 'today') {
-            const todayStr = new Date().toISOString().split('T')[0]
+            // BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
+            const _now = new Date()
+            const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
             const today = new Date()
             today.setHours(0, 0, 0, 0)
 

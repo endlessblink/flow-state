@@ -113,7 +113,10 @@ Rules:
 - Keep daily load to 5-8 tasks maximum.
 - Prefer weekdays (Mon-Fri) for work tasks; use Sat/Sun only for overflow.
 - Each task ID must appear in exactly ONE day or in unscheduled — no duplicates.
-- If there are more tasks than a week can hold, put extras in unscheduled.`
+- If there are more tasks than a week can hold, put extras in unscheduled.
+- IMPORTANT: Consider task COMPLEXITY when distributing. Tasks with many subtasks are complex multi-step projects — spread them across different days. Do NOT stack all complex tasks on the same day.
+- Simple tasks (0-1 subtasks, short duration) can be grouped. Complex tasks (2+ subtasks, long duration) need breathing room.
+- Distribute tasks EVENLY across the working week unless the user explicitly prefers front-loading or back-loading.`
 
   if (interview) {
     const extras: string[] = []
@@ -184,6 +187,8 @@ function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date): 
     estimatedDuration: t.estimatedDuration,
     status: t.status,
     overdue: t.dueDate ? t.dueDate < today : false,
+    subtasks: t.subtaskCount || 0,
+    completedSubtasks: t.completedSubtaskCount || 0,
   }))
 
   return `Today: ${today}

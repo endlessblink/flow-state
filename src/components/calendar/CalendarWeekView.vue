@@ -100,6 +100,21 @@ const externalEventsByCell = computed(() => {
   return map
 })
 
+// TASK-1322: Rich tooltip with task details on hover
+const getEventTooltip = (event: WeekEvent): string => {
+  const lines: string[] = [event.title]
+  const project = getProjectName(event)
+  if (project && project !== 'No Project') lines.push(`📁 ${project}`)
+  const priority = getPriorityLabel(event)
+  if (priority && priority !== 'None') lines.push(`⚡ ${priority}`)
+  const status = getStatusIcon(getTaskStatus(event))
+  if (status) lines.push(`${status} ${getTaskStatus(event)}`)
+  const time = formatEventTime(event)
+  if (time) lines.push(`🕐 ${time} · ${event.duration}min`)
+  else if (event.duration) lines.push(`⏱ ${event.duration}min`)
+  return lines.join('\n')
+}
+
 // Position event within its cell (like day view's getSlotTaskStyle)
 const HALF_HOUR_HEIGHT = 30
 const getWeekEventCellStyle = (event: WeekEvent) => {
@@ -214,6 +229,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   'dragging': isDragging && draggedEventId === event.id,
                   'status-done': getTaskStatus(event) === 'done'
                 }"
+                :title="getEventTooltip(event)"
                 draggable="true"
                 @dragstart="$emit('eventDragStart', $event, event)"
                 @dragend="$emit('eventDragEnd', $event, event)"
@@ -249,7 +265,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
                 <!-- Event Content -->
                 <div class="event-content" dir="auto">
-                  <div class="event-title" :title="event.title">
+                  <div class="event-title">
                     {{ event.title }}
                   </div>
                   <div v-if="formatEventTime(event)" class="event-meta">

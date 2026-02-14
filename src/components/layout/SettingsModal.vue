@@ -40,18 +40,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X, Timer, Palette, Layout, User, Database, Bot, Info, Link, CalendarDays } from 'lucide-vue-next'
+import { X, Timer, Palette, Layout, User, Database, Bot } from 'lucide-vue-next'
 
 // Tab components
-import TimerSettingsTab from '../settings/tabs/TimerSettingsTab.vue'
 import AppearanceSettingsTab from '../settings/tabs/AppearanceSettingsTab.vue'
+import TimerSettingsTab from '../settings/tabs/TimerSettingsTab.vue'
 import WorkflowSettingsTab from '../settings/tabs/WorkflowSettingsTab.vue'
-import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
-import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
-import IntegrationsSettingsTab from '../settings/tabs/IntegrationsSettingsTab.vue'
 import AISettingsTab from '../settings/tabs/AISettingsTab.vue'
-import WeeklyPlanSettingsTab from '../settings/tabs/WeeklyPlanSettingsTab.vue'
-import AboutSettingsTab from '../settings/tabs/AboutSettingsTab.vue'
+import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
+import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
 
 defineProps<{
   isOpen: boolean
@@ -61,18 +58,15 @@ defineEmits<{
   close: []
 }>()
 
-const activeTab = ref('timer')
+const activeTab = ref('general')
 
 const tabs = [
+  { id: 'general', label: 'General', icon: Palette, component: AppearanceSettingsTab },
   { id: 'timer', label: 'Timer', icon: Timer, component: TimerSettingsTab },
-  { id: 'appearance', label: 'Appearance', icon: Palette, component: AppearanceSettingsTab },
   { id: 'workflow', label: 'Workflow', icon: Layout, component: WorkflowSettingsTab },
-  { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab },
-  { id: 'storage', label: 'Storage', icon: Database, component: StorageSettingsTab },
-  { id: 'integrations', label: 'Integrations', icon: Link, component: IntegrationsSettingsTab },
-  { id: 'ai', label: 'AI Pricing & Options', icon: Bot, component: AISettingsTab },
-  { id: 'weekly-plan', label: 'Weekly Plan', icon: CalendarDays, component: WeeklyPlanSettingsTab },
-  { id: 'about', label: 'About', icon: Info, component: AboutSettingsTab }
+  { id: 'ai', label: 'AI & Weekly Plan', icon: Bot, component: AISettingsTab },
+  { id: 'data', label: 'Data & Backup', icon: Database, component: StorageSettingsTab },
+  { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab }
 ]
 
 const currentTab = computed(() => {

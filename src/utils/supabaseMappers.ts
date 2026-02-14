@@ -277,6 +277,7 @@ export interface SupabaseWorkProfile {
     interview_completed: boolean
     created_at?: string
     updated_at?: string
+    memory_graph: unknown[]
 }
 
 export interface WorkProfile {
@@ -302,6 +303,7 @@ export interface WorkProfile {
     interviewCompleted: boolean
     createdAt?: string
     updatedAt?: string
+    memoryGraph: MemoryObservation[]
 }
 
 // -- Mappers --
@@ -742,6 +744,17 @@ export function fromSupabaseQuickSortSession(record: SupabaseQuickSortSession): 
     }
 }
 
+// -- Memory Observation Types (FEATURE-1317 Phase 2) --
+
+export interface MemoryObservation {
+    entity: string      // e.g. "project:dashboard", "day:monday", "user", "tasktype:bugfix"
+    relation: string    // e.g. "takes_longer", "overplanned", "avg_duration", "insight"
+    value: string       // e.g. "2x estimated", "3 of 4 weeks", "45min"
+    confidence: number  // 0.0 - 1.0
+    source: string      // "pomodoro_data" | "weekly_history" | "ai_observation"
+    createdAt: string   // ISO date
+}
+
 // -- Pinned Task Mappers (FEATURE-1248) --
 
 export function toSupabasePinnedTask(pin: PinnedTask, userId: string): SupabasePinnedTask {
@@ -788,6 +801,7 @@ export function toSupabaseWorkProfile(profile: Partial<WorkProfile>, userId: str
         ...(profile.avgPlanAccuracy !== undefined && { avg_plan_accuracy: profile.avgPlanAccuracy }),
         ...(profile.weeklyHistory !== undefined && { weekly_history: profile.weeklyHistory }),
         ...(profile.interviewCompleted !== undefined && { interview_completed: profile.interviewCompleted }),
+        ...(profile.memoryGraph !== undefined && { memory_graph: profile.memoryGraph }),
         updated_at: new Date().toISOString()
     }
 }
@@ -809,6 +823,7 @@ export function fromSupabaseWorkProfile(record: SupabaseWorkProfile): WorkProfil
         weeklyHistory: (record.weekly_history || []) as WorkProfile['weeklyHistory'],
         profileVersion: record.profile_version || 1,
         interviewCompleted: record.interview_completed || false,
+        memoryGraph: (record.memory_graph || []) as MemoryObservation[],
         createdAt: record.created_at,
         updatedAt: record.updated_at
     }

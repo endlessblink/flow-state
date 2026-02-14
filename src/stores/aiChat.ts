@@ -638,7 +638,6 @@ export const useAIChatStore = defineStore('aiChat', () => {
       }
       if (options?.metadata) {
         lastMsg.metadata = { ...lastMsg.metadata, ...options.metadata }
-        console.log('[USAGE-STORE] Metadata saved:', lastMsg.metadata)
       }
     }
     isGenerating.value = false

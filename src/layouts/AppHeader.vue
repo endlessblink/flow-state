@@ -58,7 +58,7 @@
           title="Keyboard Shortcuts (?)"
           @click="uiStore.toggleShortcutsPanel()"
         >
-          <HelpCircle :size="18" />
+          <Keyboard :size="18" />
         </button>
 
         <div class="control-divider" />
@@ -201,7 +201,7 @@ import { useTimerStore } from '@/stores/timer'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useSettingsStore } from '@/stores/settings'
 import { useUIStore } from '@/stores/ui'
-import { Timer, Play, Pause, Coffee, Square, User, Sparkles, HelpCircle } from 'lucide-vue-next'
+import { Timer, Play, Pause, Coffee, Square, User, Sparkles, Keyboard } from 'lucide-vue-next'
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'

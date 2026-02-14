@@ -7,12 +7,13 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { RefreshCw, Trash2 } from 'lucide-vue-next'
 
 const settingsStore = useSettingsStore()
-const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
+const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData, addMemoryObservation } = useWorkProfile()
 
 const isSaving = ref(false)
 const isRecalculating = ref(false)
 const isResetting = ref(false)
 const saveMessage = ref('')
+const isClearingMemories = ref(false)
 
 // Local editable form state
 const form = ref({
@@ -92,6 +93,17 @@ async function onReset() {
     await resetLearnedData()
   } finally {
     isResetting.value = false
+  }
+}
+
+async function onClearMemories() {
+  if (!confirm('Clear all memory observations? The AI will need to re-learn patterns.')) return
+  isClearingMemories.value = true
+  try {
+    // Save empty memoryGraph
+    await savePreferences({ memoryGraph: [] } as any)
+  } finally {
+    isClearingMemories.value = false
   }
 }
 </script>
@@ -212,6 +224,41 @@ async function onReset() {
         <button class="action-btn danger" :disabled="isResetting" @click="onReset">
           <Trash2 :size="14" />
           {{ isResetting ? 'Resetting...' : 'Reset Profile' }}
+        </button>
+      </div>
+    </SettingsSection>
+
+    <SettingsSection title="Memory Observations">
+      <p class="obs-hint">
+        {{ profile?.memoryGraph?.length || 0 }} observations from your work patterns
+      </p>
+
+      <div v-if="profile?.memoryGraph?.length" class="obs-list">
+        <div
+          v-for="(obs, idx) in profile.memoryGraph"
+          :key="idx"
+          class="obs-card"
+        >
+          <div class="obs-header">
+            <span class="obs-entity">{{ obs.entity }}</span>
+            <span class="obs-relation">{{ obs.relation }}</span>
+          </div>
+          <div class="obs-value">{{ obs.value }}</div>
+          <div class="obs-meta">
+            <div class="confidence-bar">
+              <div class="confidence-fill" :style="{ width: (obs.confidence * 100) + '%' }" />
+            </div>
+            <span class="obs-confidence">{{ (obs.confidence * 100).toFixed(0) }}%</span>
+            <span class="obs-source">{{ obs.source }}</span>
+          </div>
+        </div>
+      </div>
+      <p v-else class="obs-empty">No observations yet. They'll appear as FlowState learns your patterns.</p>
+
+      <div class="action-row" v-if="profile?.memoryGraph?.length">
+        <button class="action-btn danger" :disabled="isClearingMemories" @click="onClearMemories">
+          <Trash2 :size="14" />
+          {{ isClearingMemories ? 'Clearing...' : 'Clear Memories' }}
         </button>
       </div>
     </SettingsSection>
@@ -451,5 +498,92 @@ async function onReset() {
   color: var(--text-muted);
   margin: 0;
   line-height: var(--leading-relaxed);
+}
+
+.obs-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.obs-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.obs-card {
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.obs-header {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.obs-entity {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--brand-primary);
+  background: rgba(78, 205, 196, 0.08);
+  padding: var(--space-0_5) var(--space-1_5);
+  border-radius: var(--radius-xs);
+}
+
+.obs-relation {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.obs-value {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1_5);
+}
+
+.obs-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.confidence-bar {
+  flex: 1;
+  max-width: 80px;
+  height: 4px;
+  background: var(--glass-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: var(--brand-primary);
+  border-radius: 2px;
+  transition: width var(--duration-normal);
+}
+
+.obs-confidence {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  min-width: 32px;
+}
+
+.obs-source {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.obs-empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
 }
 </style>

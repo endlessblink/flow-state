@@ -127,11 +127,10 @@ function findTaskSource(taskId: string, excludeDay: keyof WeeklyPlan): keyof Wee
 <style scoped>
 .weekly-plan-grid {
   display: flex;
-  flex: 1;
-  gap: var(--space-4);
+  align-items: flex-start;
+  gap: var(--space-2);
   overflow-x: auto;
-  padding: var(--space-6);
-  min-height: calc(100vh - 400px);
+  padding: var(--space-2) 0;
   scroll-behavior: smooth;
 }
 </style>

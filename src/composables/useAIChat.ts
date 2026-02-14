@@ -141,7 +141,6 @@ async function buildUsageMetadata(fullContent: string): Promise<{ provider?: str
     const provider = router.getLastUsedProvider()
     const model = selectedModel.value || undefined
     const estimatedTokens = Math.ceil(fullContent.length / 4)
-    console.log('[USAGE-META]', { provider, model, tokens: estimatedTokens, contentLen: fullContent.length })
     if (!provider) return undefined
     return { provider, model, tokens: estimatedTokens }
   } catch (e) {

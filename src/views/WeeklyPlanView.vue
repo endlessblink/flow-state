@@ -127,14 +127,33 @@
     <div v-else-if="state.status === 'review' && state.plan" class="wp-review">
       <div class="wp-review-header">
         <div class="wp-title-row">
-          <CalendarDays :size="28" class="wp-title-icon" />
-          <h2 class="wp-title">Your Week at a Glance</h2>
+          <CalendarDays :size="18" class="wp-title-icon" />
+          <h2 class="wp-title">Your Week</h2>
+          <span class="wp-stats-inline">{{ scheduledCount }} tasks · {{ daysUsed }} days</span>
         </div>
-        <div v-if="state.reasoning" class="wp-reasoning">
-          <CalendarDays :size="16" />
-          <span>{{ state.reasoning }}</span>
+        <div class="wp-action-bar">
+          <button class="wp-btn wp-btn-sm wp-btn-primary" @click="onApply">
+            <Check :size="14" />
+            Apply
+          </button>
+          <button class="wp-btn wp-btn-sm wp-btn-ghost" @click="onRegenerate">
+            <RefreshCw :size="14" />
+            Regenerate
+          </button>
+          <button class="wp-btn wp-btn-sm wp-btn-ghost" @click="onCancel">
+            <X :size="14" />
+            Cancel
+          </button>
         </div>
       </div>
+
+      <details v-if="state.reasoning" class="wp-reasoning-details">
+        <summary class="wp-reasoning-summary">
+          <CalendarDays :size="12" />
+          AI reasoning
+        </summary>
+        <p class="wp-reasoning-text">{{ state.reasoning }}</p>
+      </details>
 
       <WeeklyPlanGrid
         :plan="state.plan"
@@ -146,25 +165,6 @@
         @change-priority="onChangePriority"
         @snooze-task="onSnoozeTask"
       />
-
-      <div class="wp-stats-bar">
-        {{ scheduledCount }} tasks scheduled across {{ daysUsed }} days
-      </div>
-
-      <div class="wp-action-bar">
-        <button class="wp-btn wp-btn-primary" @click="onApply">
-          <Check :size="18" />
-          Apply Plan
-        </button>
-        <button class="wp-btn wp-btn-ghost" @click="onRegenerate">
-          <RefreshCw :size="16" />
-          Regenerate
-        </button>
-        <button class="wp-btn wp-btn-ghost" @click="onCancel">
-          <X :size="16" />
-          Cancel
-        </button>
-      </div>
     </div>
 
     <!-- Applied State -->
@@ -409,7 +409,7 @@ function handleKeydown(event: KeyboardEvent) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--space-6) var(--space-8);
+  padding: var(--space-3) var(--space-4);
   overflow-y: auto;
 }
 
@@ -659,13 +659,14 @@ function handleKeydown(event: KeyboardEvent) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
   min-height: 0;
 }
 
 .wp-review-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
   flex-shrink: 0;
 }
@@ -673,7 +674,7 @@ function handleKeydown(event: KeyboardEvent) {
 .wp-title-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .wp-title-icon {
@@ -682,55 +683,72 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 .wp-title {
-  font-size: var(--text-2xl);
+  font-size: var(--text-lg);
   font-weight: var(--font-bold);
   color: var(--text-primary);
   margin: 0;
 }
 
-.wp-reasoning {
+.wp-stats-inline {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Collapsible reasoning */
+.wp-reasoning-details {
+  flex-shrink: 0;
+}
+
+.wp-reasoning-summary {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  align-items: center;
+  gap: var(--space-1_5);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: var(--space-1) 0;
+}
+
+.wp-reasoning-summary::-webkit-details-marker {
+  display: none;
+}
+
+.wp-reasoning-summary::before {
+  content: '▸';
+  font-size: 10px;
+  transition: transform var(--duration-fast);
+}
+
+.wp-reasoning-details[open] .wp-reasoning-summary::before {
+  transform: rotate(90deg);
+}
+
+.wp-reasoning-text {
+  margin: var(--space-1) 0 0 0;
+  padding: var(--space-2) var(--space-3);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
-  border-left: 3px solid var(--brand-primary);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  border-left: 2px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
   line-height: var(--leading-relaxed);
 }
 
-.wp-reasoning svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--text-muted);
-}
-
-.wp-stats-bar {
-  flex-shrink: 0;
-  text-align: center;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  padding: var(--space-2) 0;
-}
-
-/* Action bar */
+/* Action bar — inline in header */
 .wp-action-bar {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-5) 0;
-  position: sticky;
-  bottom: 0;
-  background: var(--glass-bg-soft);
-  border-top: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  backdrop-filter: blur(var(--blur-md));
-  -webkit-backdrop-filter: blur(var(--blur-md));
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.wp-btn-sm {
+  padding: var(--space-1_5) var(--space-3);
+  font-size: var(--text-xs);
 }
 
 /* Buttons */

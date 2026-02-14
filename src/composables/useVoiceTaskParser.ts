@@ -7,7 +7,8 @@
  * Supports Hebrew and English with keyword-based extraction.
  */
 
-import type { SupportedLanguage } from './useSpeechRecognition'
+// TASK-1322: SupportedLanguage defined locally (browser speech recognition removed)
+export type SupportedLanguage = 'he-IL' | 'en-US' | 'auto'
 
 export interface ParsedVoiceTask {
   /** Cleaned title after extracting keywords */
@@ -22,13 +23,6 @@ export interface ParsedVoiceTask {
   dueDateLabel: string | null
   /** Detected language */
   detectedLanguage: SupportedLanguage
-}
-
-interface KeywordMatch {
-  keyword: string
-  value: string
-  index: number
-  length: number
 }
 
 // Priority keywords by language

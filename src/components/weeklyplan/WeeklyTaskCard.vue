@@ -8,13 +8,44 @@
     }"
     @click="toggleExpand"
   >
+    <!-- Hover quick actions — tiny top-right corner -->
+    <div class="card-actions" @click.stop>
+      <button
+        class="action-dot"
+        aria-label="Remove from plan"
+        title="Remove"
+        type="button"
+        @click.stop="$emit('remove', task.id)"
+      >
+        <X :size="10" />
+      </button>
+      <button
+        class="action-dot"
+        aria-label="Cycle priority"
+        title="Priority"
+        type="button"
+        @click.stop="$emit('change-priority', task.id)"
+      >
+        <Flag :size="10" />
+      </button>
+      <button
+        class="action-dot"
+        aria-label="Snooze to next week"
+        title="Snooze"
+        type="button"
+        @click.stop="$emit('snooze', task.id)"
+      >
+        <Clock :size="10" />
+      </button>
+    </div>
+
     <div class="card-top-row">
       <div
         class="priority-dot"
         :style="{ backgroundColor: priorityColor }"
       />
       <div class="card-content">
-        <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'">{{ task.title }}</span>
+        <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="task.title">{{ task.title }}</span>
         <div class="card-meta">
           <span v-if="projectName" class="project-badge">
             {{ projectName }}
@@ -26,49 +57,6 @@
             Overdue
           </span>
         </div>
-      </div>
-
-      <!-- Hover quick actions — inline, not overlapping text -->
-      <div class="card-actions" @click.stop>
-        <NTooltip trigger="hover" :delay="300">
-          <template #trigger>
-            <button
-              class="action-btn"
-              aria-label="Remove from plan"
-              type="button"
-              @click.stop="$emit('remove', task.id)"
-            >
-              <X :size="13" />
-            </button>
-          </template>
-          Remove from day
-        </NTooltip>
-        <NTooltip trigger="hover" :delay="300">
-          <template #trigger>
-            <button
-              class="action-btn"
-              aria-label="Cycle priority"
-              type="button"
-              @click.stop="$emit('change-priority', task.id)"
-            >
-              <Flag :size="13" />
-            </button>
-          </template>
-          Cycle priority
-        </NTooltip>
-        <NTooltip trigger="hover" :delay="300">
-          <template #trigger>
-            <button
-              class="action-btn"
-              aria-label="Snooze to next week"
-              type="button"
-              @click.stop="$emit('snooze', task.id)"
-            >
-              <Clock :size="13" />
-            </button>
-          </template>
-          Snooze (next week)
-        </NTooltip>
       </div>
     </div>
 
@@ -96,7 +84,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { NTooltip } from 'naive-ui'
 import { X, Flag, Clock } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import type { TaskSummary } from '@/composables/useWeeklyPlanAI'
@@ -175,11 +162,11 @@ const statusLabel = computed(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: grab;
   transition: border-color var(--duration-fast) var(--spring-smooth);
   user-select: none;
@@ -216,15 +203,15 @@ const statusLabel = computed(() => {
 .card-top-row {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-1_5);
 }
 
 .priority-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 .card-content {
@@ -236,13 +223,11 @@ const statusLabel = computed(() => {
 }
 
 .task-title {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
   color: var(--text-primary);
   line-height: var(--leading-tight);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -256,9 +241,9 @@ const statusLabel = computed(() => {
 
 .project-badge,
 .duration-badge {
-  font-size: var(--text-xs);
+  font-size: 10px;
   color: var(--text-tertiary);
-  line-height: var(--leading-none);
+  line-height: 1;
 }
 
 .duration-badge {
@@ -266,10 +251,10 @@ const statusLabel = computed(() => {
 }
 
 .overdue-badge {
-  font-size: var(--text-xs);
+  font-size: 10px;
   color: var(--color-danger);
   font-weight: var(--font-semibold);
-  line-height: var(--leading-none);
+  line-height: 1;
 }
 
 /* Expanded details */
@@ -330,38 +315,39 @@ const statusLabel = computed(() => {
   max-height: 120px;
 }
 
-/* Hover quick actions — inline in flex row, not absolute overlay */
+/* Hover quick actions — tiny top-right corner dots */
 .card-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   display: flex;
-  flex-shrink: 0;
-  gap: 2px;
+  gap: 1px;
   opacity: 0;
   transition: opacity var(--duration-fast);
-  margin-top: 2px;
+  z-index: 2;
 }
 
 .weekly-task-card:hover .card-actions {
   opacity: 1;
 }
 
-.action-btn {
+.action-dot {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   padding: 0;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--glass-bg-soft);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--duration-fast);
 }
 
-.action-btn:hover {
+.action-dot:hover {
   background: var(--glass-bg-medium);
   color: var(--text-primary);
-  border-color: var(--glass-border-hover);
 }
 </style>

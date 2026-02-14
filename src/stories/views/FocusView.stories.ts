@@ -38,6 +38,7 @@ Distraction-free environment for deep work on a single task.
 - Minimal controls: Start/Pause/Resume, Complete, Skip
 - Keyboard shortcuts: Space (timer toggle), C (complete), Esc (skip/back)
 - Dark ambient background with radial gradient
+- Glass-morphism button design (outlined, colored borders)
 - Responsive layout (stacked buttons on mobile)
 
 **Route:** \`/focus/:taskId\` (requires auth)
@@ -50,137 +51,29 @@ Distraction-free environment for deep work on a single task.
 export default meta
 type Story = StoryObj
 
-// Shared CSS that mirrors the actual FocusView.vue scoped styles using design tokens
-const focusStyles = `
-  <style>
-    .focus-view {
-      min-height: 100vh;
-      background: radial-gradient(circle at center, rgba(var(--color-slate-900), 1) 0%, rgba(var(--color-slate-950), 1) 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: var(--space-8);
-      text-align: center;
-    }
-    .focus-timer {
-      font-size: 5rem;
-      font-weight: 700;
-      color: var(--color-accent);
-      margin-bottom: var(--space-8);
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.02em;
-    }
-    .focus-timer--break {
-      color: var(--color-success);
-    }
-    .focus-title {
-      font-size: var(--text-4xl);
-      font-weight: var(--font-bold);
-      color: var(--text-primary);
-      margin-bottom: var(--space-4);
-      max-width: 800px;
-      line-height: 1.3;
-    }
-    .focus-description {
-      font-size: var(--text-lg);
-      color: var(--text-secondary);
-      margin-bottom: var(--space-8);
-      max-width: 600px;
-      line-height: 1.6;
-    }
-    .focus-subtasks {
-      margin-bottom: var(--space-8);
-      text-align: left;
-    }
-    .focus-subtask {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      margin-bottom: var(--space-3);
-      font-size: var(--text-base);
-      color: var(--text-primary);
-      cursor: pointer;
-      padding: var(--space-1) var(--space-2);
-      border-radius: var(--radius-sm);
-      transition: background var(--duration-fast);
-    }
-    .focus-subtask:hover {
-      background: var(--glass-bg-subtle);
-    }
-    .focus-subtask-check {
-      width: 20px;
-      height: 20px;
-      border-radius: var(--radius-sm);
-      border: 2px solid var(--glass-border-hover);
-      flex-shrink: 0;
-      transition: all var(--duration-fast);
-    }
-    .focus-subtask-check--done {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
-    }
-    .focus-subtask-text--done {
-      text-decoration: line-through;
-      color: var(--text-muted);
-    }
-    .focus-controls {
-      display: flex;
-      gap: var(--space-3);
-    }
-    .focus-btn {
-      padding: var(--space-3) var(--space-6);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      font-size: var(--text-base);
-      font-weight: var(--font-semibold);
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .focus-btn--start {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
-      color: var(--color-slate-950);
-    }
-    .focus-btn--start:hover {
-      filter: brightness(1.1);
-    }
-    .focus-btn--pause {
-      background: var(--glass-bg-medium);
-      color: var(--text-primary);
-    }
-    .focus-btn--pause:hover {
-      background: var(--glass-bg-base);
-    }
-    .focus-btn--complete {
-      background: var(--color-success);
-      border-color: var(--color-success);
-      color: white;
-    }
-    .focus-btn--complete:hover {
-      filter: brightness(1.1);
-    }
-    .focus-btn--skip {
-      background: var(--glass-bg-medium);
-      border-color: var(--glass-border);
-      color: var(--text-secondary);
-    }
-    .focus-btn--skip:hover {
-      background: var(--glass-bg-base);
-      color: var(--text-primary);
-    }
-    .focus-empty {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--space-4);
-    }
-    .focus-empty-text {
-      font-size: var(--text-xl);
-      color: var(--text-secondary);
-    }
-  </style>
-`
+// Inline styles matching FocusView.vue design tokens (glass-morphism button pattern)
+const S = {
+  view: 'display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background:radial-gradient(circle at center, rgba(var(--color-slate-900),1) 0%, rgba(var(--color-slate-950),1) 100%); padding:var(--space-8); text-align:center;',
+  timer: 'font-size:5rem; font-weight:700; color:var(--color-accent); margin-bottom:var(--space-8); font-variant-numeric:tabular-nums; letter-spacing:0.02em;',
+  timerBreak: 'font-size:5rem; font-weight:700; color:var(--color-success); margin-bottom:var(--space-8); font-variant-numeric:tabular-nums; letter-spacing:0.02em;',
+  title: 'font-size:var(--text-4xl); font-weight:var(--font-bold); color:var(--text-primary); margin-bottom:var(--space-4); max-width:800px; line-height:1.3;',
+  desc: 'font-size:var(--text-lg); color:var(--text-secondary); margin-bottom:var(--space-8); max-width:600px; line-height:1.6;',
+  subtasks: 'margin-bottom:var(--space-8); text-align:left;',
+  subtask: 'display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-3); font-size:var(--text-base); color:var(--text-primary); cursor:pointer; padding:var(--space-1) var(--space-2); border-radius:var(--radius-sm);',
+  checkUndone: 'width:20px; height:20px; border-radius:var(--radius-sm); border:2px solid var(--glass-border-hover); flex-shrink:0;',
+  checkDone: 'width:20px; height:20px; border-radius:var(--radius-sm); border:2px solid var(--color-accent); background:var(--color-accent); flex-shrink:0;',
+  textDone: 'text-decoration:line-through; color:var(--text-muted);',
+  controls: 'display:flex; gap:var(--space-3);',
+  // Glass-morphism button base
+  btn: 'display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2_5) var(--space-5); background:var(--glass-bg-soft); border:1px solid var(--glass-border-hover); border-radius:var(--radius-lg); font-size:var(--text-base); font-weight:var(--font-medium); cursor:pointer; backdrop-filter:blur(8px); color:var(--text-primary);',
+  btnStart: 'display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2_5) var(--space-5); background:var(--glass-bg-soft); border:1px solid var(--color-accent); border-radius:var(--radius-lg); font-size:var(--text-base); font-weight:var(--font-medium); cursor:pointer; backdrop-filter:blur(8px); color:var(--color-accent);',
+  btnPause: 'display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2_5) var(--space-5); background:var(--glass-bg-soft); border:1px solid var(--glass-border-hover); border-radius:var(--radius-lg); font-size:var(--text-base); font-weight:var(--font-medium); cursor:pointer; backdrop-filter:blur(8px); color:var(--text-secondary);',
+  btnComplete: 'display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2_5) var(--space-5); background:var(--glass-bg-soft); border:1px solid var(--brand-primary); border-radius:var(--radius-lg); font-size:var(--text-base); font-weight:var(--font-medium); cursor:pointer; backdrop-filter:blur(8px); color:var(--brand-primary);',
+  btnSkip: 'display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-2_5) var(--space-5); background:var(--glass-bg-soft); border:1px solid var(--glass-border-hover); border-radius:var(--radius-lg); font-size:var(--text-base); font-weight:var(--font-medium); cursor:pointer; backdrop-filter:blur(8px); color:var(--text-secondary);',
+  kbd: 'padding:var(--space-0_5) var(--space-1_5); background:var(--glass-bg-medium); border:1px solid var(--glass-border); border-radius:var(--radius-sm); font-size:var(--text-xs); font-family:var(--font-mono); color:var(--text-muted); line-height:1;',
+  emptyWrap: 'display:flex; flex-direction:column; align-items:center; gap:var(--space-4);',
+  emptyText: 'font-size:var(--text-xl); color:var(--text-secondary);'
+}
 
 /**
  * Default - Timer Ready
@@ -197,29 +90,28 @@ export const Default: Story = {
   },
   render: () => ({
     template: `
-      ${focusStyles}
-      <div class="focus-view">
-        <div class="focus-timer">25:00</div>
-        <h1 class="focus-title">Review Q4 Marketing Proposal</h1>
-        <p class="focus-description">Analyze the proposed budget allocation and timeline for approval.</p>
-        <div class="focus-subtasks">
-          <div class="focus-subtask">
-            <div class="focus-subtask-check focus-subtask-check--done"></div>
-            <span class="focus-subtask-text--done">Read proposal document</span>
+      <div style="${S.view}">
+        <div style="${S.timer}">25:00</div>
+        <h1 style="${S.title}">Review Q4 Marketing Proposal</h1>
+        <p style="${S.desc}">Analyze the proposed budget allocation and timeline for approval.</p>
+        <div style="${S.subtasks}">
+          <div style="${S.subtask}">
+            <div style="${S.checkDone}"></div>
+            <span style="${S.textDone}">Read proposal document</span>
           </div>
-          <div class="focus-subtask">
-            <div class="focus-subtask-check"></div>
+          <div style="${S.subtask}">
+            <div style="${S.checkUndone}"></div>
             <span>Check budget numbers</span>
           </div>
-          <div class="focus-subtask">
-            <div class="focus-subtask-check"></div>
+          <div style="${S.subtask}">
+            <div style="${S.checkUndone}"></div>
             <span>Discuss with team</span>
           </div>
         </div>
-        <div class="focus-controls">
-          <button class="focus-btn focus-btn--start">Start (Space)</button>
-          <button class="focus-btn focus-btn--complete">Complete (C)</button>
-          <button class="focus-btn focus-btn--skip">Skip (Esc)</button>
+        <div style="${S.controls}">
+          <button style="${S.btnStart}">Start <kbd style="${S.kbd}">Space</kbd></button>
+          <button style="${S.btnComplete}">Complete <kbd style="${S.kbd}">C</kbd></button>
+          <button style="${S.btnSkip}">Skip <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `
@@ -241,33 +133,32 @@ export const TimerRunning: Story = {
   },
   render: () => ({
     template: `
-      ${focusStyles}
-      <div class="focus-view">
-        <div class="focus-timer">18:42</div>
-        <h1 class="focus-title">Implement user authentication</h1>
-        <p class="focus-description">Set up JWT-based auth flow with refresh tokens and secure session management.</p>
-        <div class="focus-subtasks">
-          <div class="focus-subtask">
-            <div class="focus-subtask-check focus-subtask-check--done"></div>
-            <span class="focus-subtask-text--done">Create auth service</span>
+      <div style="${S.view}">
+        <div style="${S.timer}">18:42</div>
+        <h1 style="${S.title}">Implement user authentication</h1>
+        <p style="${S.desc}">Set up JWT-based auth flow with refresh tokens and secure session management.</p>
+        <div style="${S.subtasks}">
+          <div style="${S.subtask}">
+            <div style="${S.checkDone}"></div>
+            <span style="${S.textDone}">Create auth service</span>
           </div>
-          <div class="focus-subtask">
-            <div class="focus-subtask-check focus-subtask-check--done"></div>
-            <span class="focus-subtask-text--done">Add login endpoint</span>
+          <div style="${S.subtask}">
+            <div style="${S.checkDone}"></div>
+            <span style="${S.textDone}">Add login endpoint</span>
           </div>
-          <div class="focus-subtask">
-            <div class="focus-subtask-check"></div>
+          <div style="${S.subtask}">
+            <div style="${S.checkUndone}"></div>
             <span>Add refresh token logic</span>
           </div>
-          <div class="focus-subtask">
-            <div class="focus-subtask-check"></div>
+          <div style="${S.subtask}">
+            <div style="${S.checkUndone}"></div>
             <span>Write integration tests</span>
           </div>
         </div>
-        <div class="focus-controls">
-          <button class="focus-btn focus-btn--pause">Pause (Space)</button>
-          <button class="focus-btn focus-btn--complete">Complete (C)</button>
-          <button class="focus-btn focus-btn--skip">Skip (Esc)</button>
+        <div style="${S.controls}">
+          <button style="${S.btnPause}">Pause <kbd style="${S.kbd}">Space</kbd></button>
+          <button style="${S.btnComplete}">Complete <kbd style="${S.kbd}">C</kbd></button>
+          <button style="${S.btnSkip}">Skip <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `
@@ -289,13 +180,12 @@ export const BreakTime: Story = {
   },
   render: () => ({
     template: `
-      ${focusStyles}
-      <div class="focus-view">
-        <div class="focus-timer focus-timer--break">04:23</div>
-        <h1 class="focus-title">Break Time</h1>
-        <p class="focus-description">Take a moment to rest. Next session starts automatically.</p>
-        <div class="focus-controls">
-          <button class="focus-btn focus-btn--skip">Skip Break (Esc)</button>
+      <div style="${S.view}">
+        <div style="${S.timerBreak}">04:23</div>
+        <h1 style="${S.title}">Break Time</h1>
+        <p style="${S.desc}">Take a moment to rest. Next session starts automatically.</p>
+        <div style="${S.controls}">
+          <button style="${S.btnSkip}">Skip Break <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `
@@ -317,14 +207,13 @@ export const MinimalTask: Story = {
   },
   render: () => ({
     template: `
-      ${focusStyles}
-      <div class="focus-view">
-        <div class="focus-timer">25:00</div>
-        <h1 class="focus-title">Deploy v1.3.0 to production</h1>
-        <div class="focus-controls">
-          <button class="focus-btn focus-btn--start">Start (Space)</button>
-          <button class="focus-btn focus-btn--complete">Complete (C)</button>
-          <button class="focus-btn focus-btn--skip">Skip (Esc)</button>
+      <div style="${S.view}">
+        <div style="${S.timer}">25:00</div>
+        <h1 style="${S.title}">Deploy v1.3.0 to production</h1>
+        <div style="${S.controls}">
+          <button style="${S.btnStart}">Start <kbd style="${S.kbd}">Space</kbd></button>
+          <button style="${S.btnComplete}">Complete <kbd style="${S.kbd}">C</kbd></button>
+          <button style="${S.btnSkip}">Skip <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `
@@ -346,11 +235,10 @@ export const TaskNotFound: Story = {
   },
   render: () => ({
     template: `
-      ${focusStyles}
-      <div class="focus-view">
-        <div class="focus-empty">
-          <p class="focus-empty-text">Task not found</p>
-          <button class="focus-btn focus-btn--skip">Go Back (Esc)</button>
+      <div style="${S.view}">
+        <div style="${S.emptyWrap}">
+          <p style="${S.emptyText}">Task not found</p>
+          <button style="${S.btnSkip}">Go Back <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `

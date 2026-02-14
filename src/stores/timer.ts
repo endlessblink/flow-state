@@ -95,7 +95,9 @@ export const useTimerStore = defineStore('timer', () => {
           // BUG-1315: Followers must NOT call completeSession independently.
           // Pause local countdown and wait for leader's Realtime event.
           pauseTimerInterval()
-          console.log('🍅 [TIMER] Follower reached 0 - pausing, waiting for leader completion via Realtime')
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Follower reached 0 - pausing, waiting for leader completion via Realtime')
+          }
         }
       }
     }
@@ -105,7 +107,9 @@ export const useTimerStore = defineStore('timer', () => {
     if (!currentSession.value || !isDeviceLeader.value) { pauseHeartbeat(); return }
     // BUG-352: Skip heartbeat save when offline to avoid "Failed to fetch" errors on mobile
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      console.log('🍅 [TIMER] Heartbeat: offline, skipping save')
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] Heartbeat: offline, skipping save')
+      }
       return
     }
     await saveTimerSessionWithLeadership()
@@ -125,7 +129,9 @@ export const useTimerStore = defineStore('timer', () => {
       if (!session) {
         // No active session - clear local state if we had one
         if (currentSession.value) {
-          console.log('🍅 [TIMER] Follower poll: No active session found, clearing local state')
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] Follower poll: No active session found, clearing local state')
+          }
           pauseTimerInterval()
           currentSession.value = null
         }
@@ -138,7 +144,9 @@ export const useTimerStore = defineStore('timer', () => {
       const leaderIsStale = timeSinceLeaderSeen > DEVICE_LEADER_TIMEOUT_MS
 
       if (leaderIsStale && session.isActive) {
-        console.log('🍅 [TIMER] Follower poll: Leader heartbeat stale by', Math.floor(timeSinceLeaderSeen / 1000), 'seconds - claiming leadership')
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Follower poll: Leader heartbeat stale by', Math.floor(timeSinceLeaderSeen / 1000), 'seconds - claiming leadership')
+        }
 
         // Claim leadership
         isDeviceLeader.value = true
@@ -173,12 +181,14 @@ export const useTimerStore = defineStore('timer', () => {
         currentSession.value.isPaused !== session.isPaused
 
       if (isNewOrUpdated) {
-        console.log('🍅 [TIMER] Follower poll: Session updated', {
-          sessionId: session.id,
-          isActive: session.isActive,
-          isPaused: session.isPaused,
-          remainingTime: session.remainingTime
-        })
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Follower poll: Session updated', {
+            sessionId: session.id,
+            isActive: session.isActive,
+            isPaused: session.isPaused,
+            remainingTime: session.remainingTime
+          })
+        }
 
         // Apply drift correction
         let adjustedTime = session.remainingTime
@@ -288,14 +298,16 @@ export const useTimerStore = defineStore('timer', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawPayload = payload as any
 
-    console.log('🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload:', {
-      hasPayload: !!payload,
-      eventType: rawPayload?.eventType,
-      table: rawPayload?.table,
-      hasNew: !!rawPayload?.new,
-      hasOld: !!rawPayload?.old,
-      hasRecord: !!rawPayload?.record
-    })
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload:', {
+        hasPayload: !!payload,
+        eventType: rawPayload?.eventType,
+        table: rawPayload?.table,
+        hasNew: !!rawPayload?.new,
+        hasOld: !!rawPayload?.old,
+        hasRecord: !!rawPayload?.record
+      })
+    }
 
     // Supabase realtime wraps data in { new: {...}, old: {...}, eventType: '...' }
     // Extract the actual record from the wrapper
@@ -322,22 +334,26 @@ export const useTimerStore = defineStore('timer', () => {
     // Note: Check for falsy is_active (false, 0, null, undefined) to handle various Supabase formats
     const isSessionStopped = newDoc.is_active === false || newDoc.is_active === 0 || newDoc.is_active === 'false'
 
-    console.log('🍅 [TIMER] handleRemoteTimerUpdate received:', {
-      sessionId: newDoc.id,
-      is_active: newDoc.is_active,
-      is_active_type: typeof newDoc.is_active,
-      isSessionStopped,
-      device_leader_id: newDoc.device_leader_id,
-      ourDeviceId: deviceId,
-      weAreLeader: isDeviceLeader.value
-    })
+    if (import.meta.env.DEV) {
+      console.log('🍅 [TIMER] handleRemoteTimerUpdate received:', {
+        sessionId: newDoc.id,
+        is_active: newDoc.is_active,
+        is_active_type: typeof newDoc.is_active,
+        isSessionStopped,
+        device_leader_id: newDoc.device_leader_id,
+        ourDeviceId: deviceId,
+        weAreLeader: isDeviceLeader.value
+      })
+    }
 
     if (isSessionStopped) {
-      console.log('🍅 [TIMER] Remote stop received - clearing session', {
-        sessionId: newDoc.id,
-        stoppedBy: newDoc.device_leader_id,
-        completedAt: newDoc.completed_at
-      })
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] Remote stop received - clearing session', {
+          sessionId: newDoc.id,
+          stoppedBy: newDoc.device_leader_id,
+          completedAt: newDoc.completed_at
+        })
+      }
       pauseTimerInterval()
       pauseHeartbeat()
       isDeviceLeader.value = false
@@ -357,7 +373,9 @@ export const useTimerStore = defineStore('timer', () => {
 
     // BUG-1318: Prevent stale heartbeat events from resurrecting completed sessions
     if (completedSessionIds.has(newDoc.id)) {
-      console.log('🍅 [TIMER] Ignoring stale Realtime event for already-completed session:', newDoc.id)
+      if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] Ignoring stale Realtime event for already-completed session:', newDoc.id)
+      }
       return
     }
 

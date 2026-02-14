@@ -91,13 +91,14 @@ export function useTaskNodeActions(
         // Get fresh task from store (source of truth) instead of stale node data
         const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
 
-        // BUG-1206 DEBUG: Log description when opening edit
-        console.log('🐛 [BUG-1206] TRIGGER EDIT - description from store:', {
-            taskId: freshTask.id?.slice(0, 8),
-            descLength: freshTask.description?.length,
-            descPreview: freshTask.description?.slice(0, 50),
-            usedFallback: !taskStore.tasks.find(t => t.id === task.id)
-        })
+        if (import.meta.env.DEV) {
+            console.log('🐛 [BUG-1206] TRIGGER EDIT - description from store:', {
+                taskId: freshTask.id?.slice(0, 8),
+                descLength: freshTask.description?.length,
+                descPreview: freshTask.description?.slice(0, 50),
+                usedFallback: !taskStore.tasks.find(t => t.id === task.id)
+            })
+        }
 
         if (props.editCallback) {
             // Use callback prop (works in Vue Flow custom nodes)
@@ -221,7 +222,9 @@ export function useTaskNodeActions(
             y: group.position.y + HEADER_HEIGHT
         }
 
-        console.log(`📍 [TASK-289] Moving task "${task.title}" to group "${group.name}" at (${newPosition.x}, ${newPosition.y})`)
+        if (import.meta.env.DEV) {
+            console.log(`📍 [TASK-289] Moving task "${task.title}" to group "${group.name}" at (${newPosition.x}, ${newPosition.y})`)
+        }
 
         // Update task with geometry change (user-initiated = allowed per SOP-002)
         // Fire without await - UI updates immediately via Pinia reactivity
@@ -280,7 +283,9 @@ export function useTaskNodeActions(
         }
 
         if (newDueDate) {
-            console.log(`📅 [TASK-282] Rescheduling task "${props.task.title}" to ${newDueDate}`)
+            if (import.meta.env.DEV) {
+                console.log(`📅 [TASK-282] Rescheduling task "${props.task.title}" to ${newDueDate}`)
+            }
 
             // TASK-289: Find target group BEFORE updating (while task still has old parentId)
             const targetGroup = findSmartGroupByDateType(dateType)

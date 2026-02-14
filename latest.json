@@ -1,11 +1,11 @@
 {
-  "version": "1.2.62",
-  "notes": "v1.2.62: weekly plan overhaul, external calendar sync, keyboard shortcuts panel, AI usage tracking, timer hardening",
-  "pub_date": "2026-02-14T16:44:57.258Z",
+  "version": "1.2.63",
+  "notes": "Enhanced capacity metrics to pull from task completions, gamification store, and estimation data - no longer requires pomodoro timer usage. Added streak and on-time rate to AI Insights panel.",
+  "pub_date": "2026-02-14T19:37:11.629Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRThUaWp4d0Npdzg2Q3hmM01jMkpGei9wdkZzenlFcytndncyVDRma1FWUEVjdjlBV0NzaFN5ZWQ2TmlSa3dHdW5xZklDRnp4MUhraVIzTXBFRzlzSWdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDg3NDk3CWZpbGU6Rmxvd1N0YXRlXzEuMi42Ml9hbWQ2NC5BcHBJbWFnZQpLaTJEK1BCMkFoK1pkdUVZcGV6dnJuTU51b21WMVp2cWkvazR4dVVDQkRCQUN0MGI0SWUrUlFSYTk4ME05MTg0MzJlR0xweklPc0ptWTcxOTZlUUZCUT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.62_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTdlb2NLaXNRYzdjU211dWQ2RS8vOTNYQzZsZ0c2cElMTWpmbkptUkYvbFVYcmkzT09wSWczcE5yTXROdTk0T2wvanJxU1BmRmhUYnh0MUZsVTYrSFFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDk3ODMxCWZpbGU6Rmxvd1N0YXRlXzEuMi42M19hbWQ2NC5BcHBJbWFnZQp0OU94ck9zYTRIdVJHNXRLcDlYaTlpUFBnbStxcWNFNlcvNlMrR1duQnNmRGZRYUt3eElERFJRMWhqNzk1RWFadVNYbDUyRXVKUjV3Sk5ha0lqL1lDUT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.63_amd64.AppImage"
     }
   }
 }

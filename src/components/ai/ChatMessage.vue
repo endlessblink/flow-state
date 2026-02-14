@@ -18,7 +18,7 @@
  */
 
 import { computed, ref } from 'vue'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target, Play, CheckCircle2 } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Trophy, Flame, Shield, Swords, TrendingUp, Target, Play, CheckCircle2, CalendarDays } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type { ChatMessage, ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
@@ -186,6 +186,15 @@ function isSuggestNextTaskResult(result: { tool: string; data?: any }): boolean 
 
 function isWeeklySummaryResult(result: { tool: string; data?: any }): boolean {
   return result.tool === 'get_weekly_summary' && result.data && typeof result.data.completedThisWeek === 'number'
+}
+
+function isWeeklyPlanResult(result: { tool: string; data?: any }): boolean {
+  return result.tool === 'generate_weekly_plan' && result.data && result.data.plan
+}
+
+const PLAN_DAY_LABELS: Record<string, string> = {
+  monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday',
+  thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday',
 }
 
 function formatMinutes(minutes: number): string {
@@ -821,6 +830,98 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
               <span v-if="result.data.challenges.corruptionLevel > 0" class="gam-footer-badge gam-badge-corruption">
                 Corruption: {{ result.data.challenges.corruptionLevel }}%
               </span>
+            </div>
+          </div>
+
+          <!-- Weekly Plan Card -->
+          <div v-else-if="isWeeklyPlanResult(result)" class="tool-result-card weekly-plan-card">
+            <div class="tool-result-header tool-read">
+              <CalendarDays :size="14" class="tool-result-icon" />
+              <span class="tool-result-title">{{ result.message }}</span>
+            </div>
+            <div class="summary-stats-grid">
+              <div class="summary-stat">
+                <span class="summary-stat-value summary-stat-success">{{ result.data.totalScheduled }}</span>
+                <span class="summary-stat-label">Scheduled</span>
+              </div>
+              <div class="summary-stat">
+                <span class="summary-stat-value">{{ result.data.daysUsed }}</span>
+                <span class="summary-stat-label">Days Used</span>
+              </div>
+              <div class="summary-stat">
+                <span class="summary-stat-value" :class="{ 'summary-stat-danger': result.data.unscheduled?.length > 0 }">{{ result.data.unscheduled?.length || 0 }}</span>
+                <span class="summary-stat-label">Unscheduled</span>
+              </div>
+            </div>
+            <template v-for="(dayKey) in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']" :key="dayKey">
+              <div v-if="result.data.plan[dayKey]?.length > 0" class="task-list">
+                <div class="summary-section-label">
+                  {{ PLAN_DAY_LABELS[dayKey] }}
+                  <span class="section-count">({{ result.data.plan[dayKey].length }})</span>
+                </div>
+                <button
+                  v-for="task in result.data.plan[dayKey]"
+                  :key="task.id"
+                  class="task-list-item"
+                  :class="{ 'task-completed': completedTaskIds.has(task.id) }"
+                  @click="openQuickEdit(task, $event)"
+                >
+                  <span
+                    class="task-priority-dot"
+                    :style="{ background: priorityColor(task.priority) }"
+                  />
+                  <span class="task-title" dir="auto">{{ task.title }}</span>
+                  <div class="task-inline-actions" @click.stop>
+                    <button
+                      v-if="!completedTaskIds.has(task.id)"
+                      class="inline-action-btn inline-done-btn"
+                      :class="{ loading: actionLoading[task.id] === 'done' }"
+                      title="Mark done"
+                      @click="markTaskDone(task.id, $event)"
+                    >
+                      <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                      <CheckCircle2 v-else :size="12" />
+                    </button>
+                    <button
+                      v-if="!timerStartedTaskIds.has(task.id)"
+                      class="inline-action-btn inline-timer-btn"
+                      :class="{ loading: actionLoading[task.id] === 'timer' }"
+                      title="Start timer"
+                      @click="startTaskTimer(task.id, $event)"
+                    >
+                      <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                      <Play v-else :size="12" />
+                    </button>
+                    <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge">
+                      <CheckCircle2 :size="12" /> Done
+                    </span>
+                    <span v-if="timerStartedTaskIds.has(task.id)" class="inline-action-timer-badge">
+                      <Play :size="12" /> Timer started
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </template>
+            <div v-if="result.data.unscheduled?.length > 0" class="task-list">
+              <div class="summary-section-label">
+                Unscheduled
+                <span class="section-count">({{ result.data.unscheduled.length }})</span>
+              </div>
+              <button
+                v-for="task in result.data.unscheduled"
+                :key="task.id"
+                class="task-list-item task-unscheduled"
+                @click="openQuickEdit(task, $event)"
+              >
+                <span
+                  class="task-priority-dot"
+                  :style="{ background: priorityColor(task.priority) }"
+                />
+                <span class="task-title" dir="auto">{{ task.title }}</span>
+              </button>
+            </div>
+            <div v-if="result.data.reasoning" class="plan-reasoning">
+              {{ result.data.reasoning }}
             </div>
           </div>
 
@@ -2118,5 +2219,26 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 .task-list-item.task-completed .task-title {
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+/* ============================================================================
+   Weekly Plan Card
+   ============================================================================ */
+
+.weekly-plan-card .task-list-item {
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto;
+}
+
+.task-unscheduled {
+  opacity: 0.6;
+}
+
+.plan-reasoning {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-style: italic;
+  border-top: 1px solid var(--glass-border-faint);
 }
 </style>

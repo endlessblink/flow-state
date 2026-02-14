@@ -221,7 +221,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                 </div>
               </div>
 
-              <!-- TASK-1322: Week events as horizontal compact pills (like month view) -->
+              <!-- TASK-1322: Week events as tall time-spanning blocks (Google Calendar style) -->
               <div
                 v-for="event in getEventsForCell(dayIndex, hour)"
                 :key="event.id"
@@ -231,49 +231,34 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   'dragging': isDragging && draggedEventId === event.id,
                   'status-done': getTaskStatus(event) === 'done'
                 }"
-                :style="{ backgroundColor: event.color }"
+                :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.color }"
                 :title="getEventTooltip(event)"
                 draggable="true"
                 @dragstart="$emit('eventDragStart', $event, event)"
                 @dragend="$emit('eventDragEnd', $event, event)"
-                @click="$emit('eventClick', $event, event)"
-                @dblclick="$emit('eventDblClick', event)"
-                @contextmenu.prevent="$emit('eventContextMenu', $event, event)"
+                @click.stop="$emit('eventClick', $event, event)"
+                @dblclick.stop="$emit('eventDblClick', event)"
+                @contextmenu.prevent.stop="$emit('eventContextMenu', $event, event)"
               >
-                <!-- Project Stripe -->
-                <div
-                  v-if="getProjectVisual(event).type === 'emoji'"
-                  class="project-indicator project-emoji-indicator"
-                  :title="`Project: ${getProjectName(event)}`"
-                >
-                  <ProjectEmojiIcon
-                    :emoji="getProjectVisual(event).content"
-                    size="xs"
-                    class="project-emoji"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="project-indicator project-color-indicator"
-                  :style="{ backgroundColor: getProjectColor(event) }"
-                  :title="`Project: ${getProjectName(event)}`"
-                />
-
                 <!-- Priority Stripe -->
                 <div
                   class="priority-stripe"
                   :class="`priority-${getPriorityClass(event)}`"
-                  :title="`Priority: ${getPriorityLabel(event)}`"
                 />
-                <span v-if="formatEventTime(event)" class="event-time">{{ formatEventTime(event) }}</span>
-                <span
-                  class="event-title"
-                  dir="auto"
-                  :title="event.title"
-                  @click.stop="$emit('cycleStatus', $event, event)"
-                >
-                  {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
-                </span>
+
+                <!-- Event Content -->
+                <div class="event-content">
+                  <span v-if="formatEventTime(event)" class="event-time">{{ formatEventTime(event) }}</span>
+                  <span class="event-title" dir="auto">
+                    {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
+                  </span>
+                </div>
+
+                <!-- Resize handles -->
+                <div
+                  class="resize-handle resize-handle-bottom"
+                  @mousedown.stop.prevent="$emit('startResize', $event, event, 'bottom')"
+                />
               </div>
 
               <!-- TASK-1317: External calendar events in this cell -->
@@ -387,17 +372,13 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   border-left: 1px solid var(--glass-border-light);
 }
 
+/* TASK-1322: Cells use overflow visible so tall blocks can extend beyond */
 .week-time-cell {
   height: 60px;
   border-bottom: 1px solid var(--glass-border-light);
   position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   transition: background var(--duration-fast);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 1px;
 }
 
 .week-time-cell:hover {
@@ -414,21 +395,20 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   box-shadow: inset 0 -2px 0 var(--color-danger);
 }
 
-/* TASK-1322: Week events as compact horizontal pills (like month view) */
+/* TASK-1322: Week events as tall time-spanning blocks (Google Calendar style) */
 .week-event {
-  padding: var(--space-0_5) var(--space-1);
-  padding-left: var(--space-2_5);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: white;
   cursor: grab;
-  position: relative;
-  line-height: 1.3;
-  flex-shrink: 0;
+  overflow: hidden;
+  border-left: 3px solid rgba(0, 0, 0, 0.15);
+  transition: filter var(--duration-fast), opacity var(--duration-fast);
 }
 
 .week-event:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.1);
+  z-index: 20 !important;
 }
 
 .week-event.dragging {
@@ -436,51 +416,61 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   cursor: grabbing;
 }
 
+.event-content {
+  padding: var(--space-0_5) var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  height: 100%;
+  overflow: hidden;
+}
+
 .event-time {
   font-weight: var(--font-bold);
-  opacity: 0.8;
+  opacity: 0.85;
   font-size: 0.6rem;
-  display: block;
-  margin-bottom: 1px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .event-title {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
-}
-
-.project-indicator {
-  width: 4px;
-  height: calc(100% - 4px);
-  border-radius: var(--radius-xs);
-  position: absolute;
-  left: var(--space-0_5);
-  top: var(--space-0_5);
-}
-
-.project-emoji-indicator {
-  width: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.project-color-indicator {
-  /* uses backgroundColor from :style binding */
+  line-height: 1.3;
 }
 
 .priority-stripe {
-  width: 2px;
-  height: calc(100% - 6px);
-  border-radius: 1px;
+  width: 3px;
+  height: 100%;
   position: absolute;
   left: 0;
-  top: 3px;
+  top: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
 
+/* Resize handle */
+.resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.resize-handle-bottom {
+  bottom: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.week-event:hover .resize-handle {
+  opacity: 1;
+}
 
 /* Ghost preview — IDENTICAL to day view */
 .ghost-preview-inline {
@@ -533,7 +523,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   50% { opacity: 0.85; }
 }
 
-/* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
+/* BUG-1304: Visual indicator for done tasks */
 .week-event.status-done {
   filter: grayscale(0.6) brightness(0.85);
   opacity: 0.55;

@@ -105,12 +105,15 @@
     font-weight: 500;
     margin: 0 0 var(--space-1) 0;
     line-height: 1.5;
-    word-wrap: break-word;
+    word-break: break-word;
     overflow-wrap: break-word;
     flex: 1;
     min-width: 0;
-    /* Allow full text - no truncation */
     letter-spacing: 0.01em;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .task-title.completed-title {

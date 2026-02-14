@@ -21,7 +21,7 @@
 
     <!-- Task Content -->
     <div class="task-content--calendar-inbox">
-      <div class="task-title" dir="auto">
+      <div class="task-title" dir="auto" :title="task.title">
         {{ task.title }}
       </div>
 
@@ -213,6 +213,12 @@ const formatDueDateLabel = (dueDate: string) => {
   font-weight: var(--font-medium);
   color: var(--text-primary);
   margin-bottom: var(--space-1);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .task-metadata {

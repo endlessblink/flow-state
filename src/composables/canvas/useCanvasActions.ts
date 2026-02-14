@@ -161,13 +161,17 @@ export function useCanvasActions(
      */
     const createGroupFromSelection = async () => {
         const selectedNodes = getSelectedNodes.value
-        console.log('📦 [TASK-1128] createGroupFromSelection called', { selectedCount: selectedNodes.length })
+        if (import.meta.env.DEV) {
+            console.log('📦 [TASK-1128] createGroupFromSelection called', { selectedCount: selectedNodes.length })
+        }
 
         // Filter to only task nodes (exclude group nodes)
         const taskNodes = selectedNodes.filter(node => CanvasIds.isTaskNode(node.id))
 
         if (taskNodes.length < 2) {
-            console.warn('📦 [TASK-1128] Need at least 2 tasks selected to create a group')
+            if (import.meta.env.DEV) {
+                console.warn('📦 [TASK-1128] Need at least 2 tasks selected to create a group')
+            }
             return
         }
 
@@ -203,7 +207,9 @@ export function useCanvasActions(
             height: (maxY - minY) + (PADDING * 2)
         }
 
-        console.log('📦 [TASK-1128] Creating group at:', groupPosition, 'for', taskNodes.length, 'tasks')
+        if (import.meta.env.DEV) {
+            console.log('📦 [TASK-1128] Creating group at:', groupPosition, 'for', taskNodes.length, 'tasks')
+        }
 
         // Create the group data
         const groupData: Omit<CanvasGroup, 'id'> = {
@@ -221,7 +227,9 @@ export function useCanvasActions(
             const newGroup = await canvasStore.createGroup(groupData)
 
             if (newGroup) {
-                console.log('📦 [TASK-1128] Group created:', newGroup.id, '- updating task parentIds')
+                if (import.meta.env.DEV) {
+                    console.log('📦 [TASK-1128] Group created:', newGroup.id, '- updating task parentIds')
+                }
 
                 // Update all selected tasks to have this group as their parent
                 for (const node of taskNodes) {
@@ -239,7 +247,9 @@ export function useCanvasActions(
                 // Sync the canvas
                 deps.batchedSyncNodes('high')
 
-                console.log('📦 [TASK-1128] Successfully created group with', taskNodes.length, 'tasks')
+                if (import.meta.env.DEV) {
+                    console.log('📦 [TASK-1128] Successfully created group with', taskNodes.length, 'tasks')
+                }
             }
         } catch (error) {
             console.error('📦 [TASK-1128] Failed to create group from selection:', error)

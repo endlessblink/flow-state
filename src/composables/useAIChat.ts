@@ -24,7 +24,6 @@ import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import {
   parseToolCalls,
   executeTool,
-  buildToolsPrompt,
   buildOpenAITools,
   buildNativeToolsBehaviorPrompt,
   MAX_TOOLS_PER_RESPONSE,
@@ -221,14 +220,13 @@ export function useAIChat() {
 
   /**
    * Build messages for the AI including context.
-   * @param useNativeTools - When true, uses shorter behavior prompt (tool defs sent via API)
    */
-  function buildMessagesForAI(userMessage: string, useNativeTools = false): RouterChatMessage[] {
+  function buildMessagesForAI(userMessage: string): RouterChatMessage[] {
     const ctx = buildContext()
     const aiMessages: RouterChatMessage[] = []
 
     // System prompt with context
-    const systemPrompt = buildSystemPrompt(ctx, useNativeTools)
+    const systemPrompt = buildSystemPrompt(ctx)
     aiMessages.push({ role: 'system', content: systemPrompt })
 
     // Add recent message history (last 10 messages)
@@ -251,9 +249,8 @@ export function useAIChat() {
   /**
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
-   * @param useNativeTools - When true, uses shorter behavior prompt (tool defs sent via API)
    */
-  function buildSystemPrompt(ctx: ChatContext, useNativeTools = false): string {
+  function buildSystemPrompt(ctx: ChatContext): string {
     // Prepend personality prompt if active
     const personalityPrompt = getPersonalitySystemPrompt()
 
@@ -269,7 +266,7 @@ export function useAIChat() {
       '6. Never show JSON to the user or explain tool syntax. Just do the action silently.',
       '7. When using read tools, keep your text response SHORT (1 sentence summary) — the tool results will show the detailed data with clickable links.',
       '',
-      useNativeTools ? buildNativeToolsBehaviorPrompt() : buildToolsPrompt(),
+      buildNativeToolsBehaviorPrompt(),
       ''
     ]
 
@@ -344,6 +341,12 @@ export function useAIChat() {
     parts.push('- Managing timers and Pomodoro sessions')
     parts.push('- Answering questions about task management')
     parts.push('- Providing productivity tips')
+    parts.push('')
+    parts.push('## Planning Behavior')
+    parts.push('When the user asks to plan their week, schedule tasks, or organize upcoming work:')
+    parts.push('- Use the generate_weekly_plan tool to create an AI-powered weekly plan')
+    parts.push('- Present the plan day-by-day with task names and priorities')
+    parts.push('- Be encouraging and practical in your summary')
 
     return parts.join('\n')
   }
@@ -354,9 +357,7 @@ export function useAIChat() {
 
   /**
    * Send a message and get a streaming response.
-   * Checks client-side intent detection first — if a tool match is found,
-   * executes it directly (no AI model call needed). This makes read-tools
-   * work reliably with Ollama and other small local models.
+   * All providers use native tool calling — the AI model decides which tools to invoke.
    */
   async function sendMessage(
     content: string,
@@ -365,24 +366,13 @@ export function useAIChat() {
     if (!content.trim()) return
     if (store.isGenerating) return
 
-    // Check provider type for routing decisions
-    const isLocalProvider = selectedProvider.value === 'ollama' ||
-      (selectedProvider.value === 'auto' && activeProviderRef.value === 'ollama')
-
-    // Delegate to ReAct loop if requested and using a cloud provider
-    if (options.useReAct && !isLocalProvider) {
+    // Enable ReAct for explicit request or planning tasks (works with ALL providers)
+    if (options.useReAct || inferTaskType(content) === 'planning') {
       return sendMessageWithReAct(content, options)
     }
 
-    // Client-side intent detection: runs for ALL providers.
-    // Fast, deterministic, and avoids model latency for common queries.
-    // Falls through to model for complex/ambiguous messages.
-    const useNativeTools = !isLocalProvider
-    const detectedTool = detectToolIntent(content)
-    if (detectedTool && !options.systemPrompt) {
-      await executeDirectTool(content, detectedTool)
-      return
-    }
+    // Native tools enabled for ALL providers (Ollama supports tool calling since v0.5.0)
+    const useNativeTools = true
 
     // Clear input
     store.inputText = ''
@@ -398,7 +388,7 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const aiMessages = buildMessagesForAI(content, useNativeTools)
+      const aiMessages = buildMessagesForAI(content)
 
       // Determine task type from content
       const taskType = options.taskType ?? inferTaskType(content)
@@ -607,7 +597,7 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const conversationMessages: RouterChatMessage[] = buildMessagesForAI(content, true) // useNativeTools=true
+      const conversationMessages: RouterChatMessage[] = buildMessagesForAI(content)
       const taskType = options.taskType ?? inferTaskType(content)
 
       let stepCount = 0
@@ -884,213 +874,6 @@ export function useAIChat() {
     return 'chat'
   }
 
-  // ============================================================================
-  // Client-Side Intent Detection (for Ollama / small models)
-  // ============================================================================
-
-  /**
-   * Intent detection patterns — maps user messages to direct tool calls.
-   * Supports English and Hebrew. Returns null if no clear tool intent found.
-   */
-  function detectToolIntent(message: string): ToolCall | null {
-    const m = message.toLowerCase()
-
-    // Overdue tasks
-    if (/overdue|באיחור|past\s*due|מאחר/.test(m)) {
-      return { tool: 'get_overdue_tasks', parameters: {} }
-    }
-
-    // Timer status
-    if (/timer\s*status|time\s*left|how\s*(much\s*)?long|כמה\s*זמן|how much time/.test(m)) {
-      return { tool: 'get_timer_status', parameters: {} }
-    }
-
-    // Daily summary / plan day / what's for today (EN + HE)
-    if (/daily\s*summary|plan\s*(my\s*)?day|תכנן.*יום|סיכום\s*יומי|what('s| is) (on )?my day|משימות.*היום|מה\s*(יש\s*לי\s*)?היום|מה\s*על\s*הפרק|רלוונטי.*היום|לעבודה\s*היום/.test(m)) {
-      return { tool: 'get_daily_summary', parameters: {} }
-    }
-
-    // List/show tasks (EN + HE) — broad catch: any mention of "tasks" in context of listing/showing
-    if (/^(list|show|display|give|get|fetch)\s*(me\s*)?(all\s*)?(my\s*)?(tasks?|to.?dos?)/i.test(m) ||
-        /המשימות|משימות\s+ש|תן\s.*משימ|צריך\s+ל(ארגן|עשות|סיים|תכנן)|איזה\s*משימות|מה\s*המשימות|הראה?\s*(לי\s*)?משימות|משימות\s*(שלי|רלוונטיות|פתוחות|קיימות)/.test(m)) {
-      return { tool: 'list_tasks', parameters: { status: 'all', limit: 50 } }
-    }
-
-    // List projects
-    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(projects?|פרויקטים)/i.test(m)) {
-      return { tool: 'list_projects', parameters: {} }
-    }
-
-    // List groups
-    if (/^(list|show|display|הצג|הראה)\s*(all\s*)?(my\s*)?(groups?|קבוצות)/i.test(m)) {
-      return { tool: 'list_groups', parameters: {} }
-    }
-
-    // What am I working on? (timer context)
-    if (/what\s*(am\s*i|i'?m)\s*(working\s*on|doing)|על\s*מה\s*אני\s*עובד/.test(m)) {
-      return { tool: 'get_timer_status', parameters: {} }
-    }
-
-    // Productivity stats
-    if (/productivity\s*stats|my\s*stats|how\s*(am\s*i|i'?m)\s*doing|סטטיסטיק|ביצועים/.test(m)) {
-      return { tool: 'get_productivity_stats', parameters: {} }
-    }
-
-    // Suggest next task (EN + HE)
-    if (/what\s*(should\s*i|to)\s*(do|work\s*on)\s*next|suggest.*task|next\s*task|מה\s*לעשות|המשימה\s*הבאה|על\s*מה\s*לעבוד|מה\s*הלאה/.test(m)) {
-      return { tool: 'suggest_next_task', parameters: {} }
-    }
-
-    // Weekly summary (EN + HE) — any mention of "week" in task/planning context
-    if (/weekly\s*summary|week\s*review|this\s*week|next\s*week|for\s*the\s*week|סיכום\s*שבועי|השבוע|לשבוע/.test(m)) {
-      return { tool: 'get_weekly_summary', parameters: {} }
-    }
-
-    // Gamification status
-    if (/gamification|xp\s*status|my\s*level|my\s*xp|streak\s*status|corruption|גיימיפיקציה|רמה\s*שלי/.test(m)) {
-      return { tool: 'get_gamification_status', parameters: {} }
-    }
-
-    // Active challenges
-    if (/challenges?|daily\s*missions?|boss\s*fight|active\s*challenges|אתגרים|משימות\s*יומיות|בוס/.test(m)) {
-      return { tool: 'get_active_challenges', parameters: {} }
-    }
-
-    // Achievements near completion
-    if (/achievements?\s*(near|close|almost)|almost\s*unlock|close\s*to\s*achiev|הישגים\s*קרובים/.test(m)) {
-      return { tool: 'get_achievements_near_completion', parameters: {} }
-    }
-
-    return null
-  }
-
-  /**
-   * Execute a quick action by calling the tool directly.
-   * After the tool returns data, streams a brief AI explanation of WHY the
-   * results are relevant (matching the user's language). The rich task cards
-   * render from metadata while the explanation streams above them.
-   */
-  async function executeDirectTool(
-    displayMessage: string,
-    toolCall: ToolCall
-  ): Promise<void> {
-    if (store.isGenerating) return
-
-    store.inputText = ''
-    store.clearError()
-
-    // Add user message
-    store.addUserMessage(displayMessage)
-
-    // Start an assistant message
-    store.startStreamingMessage()
-
-    try {
-      console.log('[AIChat] Direct tool execution:', toolCall.tool, toolCall.parameters)
-      const result = await executeTool(toolCall)
-      console.log('[AIChat] Direct tool result:', result)
-
-      const lastMsg = store.messages[store.messages.length - 1]
-      if (lastMsg && lastMsg.isStreaming) {
-        // Attach tool results for rich rendering immediately
-        if (result.success) {
-          const toolDef = AI_TOOLS.find(t => t.name === toolCall.tool)
-          lastMsg.metadata = {
-            ...lastMsg.metadata,
-            toolResults: [{
-              success: result.success,
-              message: result.message,
-              data: result.data,
-              tool: toolCall.tool,
-              type: toolDef?.category || 'read',
-            }],
-          } as any
-        }
-
-        // Stream a contextual explanation from the AI model
-        const explanation = await streamToolExplanation(displayMessage, toolCall, result)
-        lastMsg.content = explanation
-        store.streamingContent = explanation
-      }
-
-      // Push undo entry if available
-      if (result.success && result.undoAction) {
-        store.pushUndoEntry({
-          toolName: toolCall.tool,
-          timestamp: Date.now(),
-          params: toolCall.parameters,
-          undoAction: result.undoAction,
-          description: result.message,
-        })
-      }
-
-      store.completeStreamingMessage()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Tool execution failed'
-      store.failStreamingMessage(errorMessage)
-      console.error('[AIChat] Direct tool error:', err)
-    }
-  }
-
-  /**
-   * Stream a brief contextual explanation of tool results via the AI model.
-   * Updates store.streamingContent in real-time so the user sees it appearing.
-   * Falls back to the dry result summary if the model call fails.
-   */
-  async function streamToolExplanation(
-    userMessage: string,
-    toolCall: ToolCall,
-    result: ToolResult
-  ): Promise<string> {
-    // For errors, just return the error message directly
-    if (!result.success) {
-      return `Error: ${result.message}`
-    }
-
-    try {
-      const router = await getRouter()
-
-      // Build a concise data preview (avoid sending megabytes to the model)
-      const dataPreview = result.data
-        ? JSON.stringify(result.data).slice(0, 800)
-        : 'No data'
-
-      const explanationMessages: RouterChatMessage[] = [
-        {
-          role: 'system',
-          content: [
-            'You are a concise task assistant. A tool was just executed based on the user\'s request.',
-            'Write 1-3 short sentences explaining what was found and why these results are relevant to what the user asked.',
-            'RULES:',
-            '- Match the user\'s language exactly (if they wrote in Hebrew, respond in Hebrew).',
-            '- Do NOT list individual tasks or items — they are displayed separately as interactive cards below your message.',
-            '- Focus on the "why": what pattern connects these results, what stands out, or what the user should pay attention to.',
-            '- Be warm, helpful, and specific. Reference counts or notable details from the data.',
-          ].join(' ')
-        },
-        {
-          role: 'user',
-          content: `User asked: "${userMessage}"\nTool: ${toolCall.tool}\nResult: ${result.message}\nData: ${dataPreview}`
-        }
-      ]
-
-      let explanation = ''
-      for await (const chunk of router.chatStream(explanationMessages, {
-        taskType: 'chat' as TaskType,
-        forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
-        model: selectedModel.value || undefined,
-      })) {
-        explanation += chunk.content
-        store.streamingContent = explanation
-      }
-
-      return explanation || result.message
-    } catch (e) {
-      console.warn('[AIChat] Tool explanation stream failed, using fallback:', e)
-      return result.message
-    }
-  }
-
   /**
    * Parse action buttons from AI response.
    * Actions are wired to real tool calls (create_subtasks, create_group).
@@ -1250,10 +1033,7 @@ export function useAIChat() {
    * Quick action: Plan my week.
    */
   async function planWeek(): Promise<void> {
-    await sendMessage(
-      'Help me plan my week. Look at my tasks and deadlines and suggest a schedule.',
-      { taskType: 'planning' }
-    )
+    await executeAgentChain('plan_my_week')
   }
 
   // ============================================================================
@@ -1547,9 +1327,6 @@ export function useAIChat() {
     organizeCanvas,
     breakdownSelectedTask,
     planWeek,
-
-    // Direct tool execution (for Ollama / small models)
-    executeDirectTool,
 
     // Context
     setCurrentView: store.setCurrentView,

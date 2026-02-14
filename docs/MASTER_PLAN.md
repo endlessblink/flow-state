@@ -8,6 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1310: Canvas invisible barrier blocks drag operations (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Items on the canvas cannot be dragged past an invisible boundary. An unseen element or clipping region blocks pointer events, preventing free movement across the canvas area.
+
+**Investigation**: In progress
+
+---
+
 ### ~~BUG-1105~~: JWT Signature Mismatch - All Supabase Requests Return 401 (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-01-29)
@@ -2420,6 +2430,26 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
+### BUG-1311: Storybook Story Import Failures (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Problem**: Three Storybook story files fail to import when running `npm run storybook`, causing all their stories to be unavailable in the component documentation.
+
+**Failing Files**:
+1. `src/stories/primitives/ReloadPrompt.stories.ts` - Failed to import (dynamic import error)
+2. `src/stories/calendar/CalendarDayView.stories.ts` - SyntaxError: Unexpected token ';' (all 6 stories fail)
+3. `src/stories/calendar/CalendarWeekView.stories.ts` - SyntaxError: Unexpected token ';' (all 4 stories fail)
+
+**Impact**: These stories are not accessible in Storybook for visual testing or documentation reference. This is a documentation/testing issue, not a runtime production bug.
+
+**Next Steps**:
+- [ ] Investigate syntax errors in calendar story files
+- [ ] Fix import errors in ReloadPrompt stories
+- [ ] Verify all stories load successfully in Storybook
+
+---
+
 ### ~~TASK-1104~~: Enhanced Task Filtering and Grouping Options (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-01-29)
@@ -2866,7 +2896,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1302** | **P1** | **👀 Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
 | **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
-| **BUG-1305** | **P2** | **📋 TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
+| **BUG-1305** | **P2** | **👀 TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
+| **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
+| ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |

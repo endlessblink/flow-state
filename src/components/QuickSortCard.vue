@@ -73,6 +73,28 @@
           >
             Clear
           </button>
+          <NPopover
+            trigger="click"
+            placement="top"
+            raw
+            :show="showDatePicker"
+            @update:show="showDatePicker = $event"
+          >
+            <template #trigger>
+              <button class="quick-date-btn pick-btn" title="Pick date" @click.stop>
+                <CalendarDays :size="14" />
+              </button>
+            </template>
+            <div @click.stop>
+              <NDatePicker
+                panel
+                type="date"
+                :value="currentDueDateTimestamp"
+                :actions="null"
+                @update:value="handleDatePickerSelect"
+              />
+            </div>
+          </NPopover>
         </div>
       </div>
 
@@ -88,7 +110,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { type Task } from '@/stores/tasks'
-import { ArrowRight, ArrowLeft } from 'lucide-vue-next'
+import { ArrowRight, ArrowLeft, CalendarDays } from 'lucide-vue-next'
+import { NPopover, NDatePicker } from 'naive-ui'
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue'
 
 interface Props {
@@ -99,6 +122,9 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
 }>()
+
+// Date picker state
+const showDatePicker = ref(false)
 
 // Swipe handling
 const isSwiping = ref(false)
@@ -158,6 +184,13 @@ const hasNoDate = computed(() => {
   return !props.task.dueDate || props.task.dueDate === ''
 })
 
+// Date picker value (timestamp in milliseconds for Naive UI)
+const currentDueDateTimestamp = computed(() => {
+  if (!props.task.dueDate) return null
+  const d = new Date(props.task.dueDate)
+  return isNaN(d.getTime()) ? null : d.getTime()
+})
+
 // Task editing functions
 function updatePriority(priority: 'low' | 'medium' | 'high') {
   emit('updateTask', { priority })
@@ -188,6 +221,18 @@ function setNextWeek() {
 
 function clearDate() {
   emit('updateTask', { dueDate: '' })
+}
+
+// Handle date selection from date picker
+function handleDatePickerSelect(timestamp: number | null) {
+  if (timestamp) {
+    const date = new Date(timestamp)
+    date.setHours(0, 0, 0, 0)
+    emit('updateTask', { dueDate: date.toISOString() })
+  } else {
+    emit('updateTask', { dueDate: '' })
+  }
+  showDatePicker.value = false
 }
 
 // Mouse/Touch handling
@@ -379,6 +424,14 @@ function handleSwipeEnd() {
   border-color: var(--danger);
   color: var(--danger);
   font-weight: var(--font-semibold);
+}
+
+.pick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) !important;
+  min-width: 40px;
 }
 
 .swipe-indicator {

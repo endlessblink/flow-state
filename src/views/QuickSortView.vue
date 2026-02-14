@@ -69,7 +69,7 @@
               <!-- Task Card (centered, simplified) -->
               <Transition name="card-slide" mode="out-in">
                 <QuickSortCard
-                  :key="currentTask.id"
+                  :key="currentTaskId ?? undefined"
                   :task="currentTask"
                   @update-task="handleTaskUpdate"
                 />
@@ -92,6 +92,17 @@
                 <CheckCircle :size="18" />
                 Done
                 <kbd>D</kbd>
+              </button>
+
+              <button
+                class="action-btn save"
+                aria-label="Save and advance to next task"
+                @click="handleSave"
+              >
+                <Save :size="18" />
+                Save
+                <span v-if="isTaskDirty" class="dirty-dot" />
+                <kbd>S</kbd>
               </button>
 
               <button
@@ -126,7 +137,7 @@
 
               <!-- Helper Hint -->
               <div class="helper-hint">
-                1-9 to select project • Esc to exit
+                1-9 assign project • S save • D done • Space skip • Esc exit
               </div>
             </div>
 
@@ -266,7 +277,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit, Calendar, Briefcase } from 'lucide-vue-next'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit, Calendar, Briefcase, Save } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
@@ -320,15 +331,18 @@ function handleSwitchToSort() {
 
 const {
   currentTask,
+  currentTaskId,
   uncategorizedTasks,
   progress,
   isComplete,
+  isTaskDirty,
   motivationalMessage,
   canUndo,
   currentStreak,
   startSession,
   endSession,
   categorizeTask,
+  saveTask,
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
@@ -355,6 +369,11 @@ watch(isComplete, (completed) => {
 
 function handleCategorize(projectId: string) {
   if (!currentTask.value) return
+  categorizeTask(currentTask.value.id, projectId)
+}
+
+function handleSave() {
+  if (!currentTask.value) return
 
   // Show celebration animation
   showCelebration.value = true
@@ -362,8 +381,7 @@ function handleCategorize(projectId: string) {
     showCelebration.value = false
   }, 800)
 
-  // Categorize task (this will auto-advance)
-  categorizeTask(currentTask.value.id, projectId)
+  saveTask()
 }
 
 async function handleTaskUpdate(updates: Partial<Task>) {
@@ -457,6 +475,18 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   if (activeTab.value === 'sort' && (event.key === 'd' || event.key === 'D')) {
     event.preventDefault()
     handleMarkDone()
+  }
+
+  // S key to save task (only in sort tab)
+  if (activeTab.value === 'sort' && (event.key === 's' || event.key === 'S') && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault()
+    handleSave()
+  }
+
+  // Space key to skip task (only in sort tab)
+  if (activeTab.value === 'sort' && event.key === ' ') {
+    event.preventDefault()
+    handleSkip()
   }
 
   // E key to edit task (only in sort tab)
@@ -866,6 +896,7 @@ const currentTaskProject = computed(() => {
   gap: var(--space-4);
   width: 100%;
   overflow-y: auto; /* Scroll only the content area, not header/tabs */
+  padding: var(--space-2); /* Breathing room for card hover transform + shadow */
 }
 
 .empty-state,
@@ -952,7 +983,7 @@ const currentTaskProject = computed(() => {
   display: flex;
   gap: var(--space-3);
   justify-content: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .action-btn {
@@ -996,6 +1027,30 @@ const currentTaskProject = computed(() => {
 .action-btn.done:hover {
   background: rgba(16, 185, 129, 0.1);
   border-color: var(--success);
+}
+
+.action-btn.save {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  position: relative;
+}
+
+.action-btn.save:hover {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
+}
+
+.dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  animation: dirty-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dirty-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
 }
 
 .action-btn.skip {
@@ -1157,38 +1212,108 @@ const currentTaskProject = computed(() => {
   .fade-enter-active,
   .fade-leave-active,
   .celebration-content,
-  .celebration-icon {
+  .celebration-icon,
+  .dirty-dot {
     animation: none !important;
     transition: none !important;
   }
 }
 
-/* Responsive adjustments */
+/* Responsive: Tablet — compact horizontal context bar above card */
 @media (max-width: 768px) {
-  /* Stack layout vertically on tablets and below */
   .sort-layout {
     flex-direction: column;
     align-items: center;
   }
 
-  .context-panel {
-    width: 100%;
-    max-width: 600px;
-    order: -1; /* Move panel above card */
-  }
-
   .sort-main-column {
     width: 100%;
   }
+
+  /* Transform context panel into compact horizontal bar */
+  .context-panel {
+    width: 100%;
+    max-width: 600px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+    order: -1;
+  }
+
+  .context-section {
+    flex-direction: row;
+    gap: var(--space-2);
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .context-section:first-child {
+    justify-content: flex-start;
+  }
+
+  .context-section:last-child {
+    justify-content: flex-end;
+  }
+
+  .context-icon-wrapper,
+  .priority-dot {
+    width: var(--space-5);
+    height: var(--space-5);
+  }
+
+  .context-icon-wrapper svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .priority-dot::after {
+    width: var(--space-2);
+    height: var(--space-2);
+  }
+
+  .context-info {
+    flex-direction: row;
+    gap: var(--space-1);
+    align-items: center;
+  }
+
+  .context-label {
+    display: none;
+  }
+
+  .context-value {
+    font-size: var(--text-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .context-today-ref {
+    display: none;
+  }
+
+  .project-emoji {
+    font-size: var(--text-sm);
+  }
+
+  .project-name {
+    gap: var(--space-1);
+  }
 }
 
+/* Responsive: Mobile — tighter spacing, smaller elements */
 @media (max-width: 640px) {
   .quick-sort-view {
-    padding: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-2);
   }
 
   .view-title {
-    font-size: var(--space-7);
+    font-size: var(--text-xl);
   }
 
   .session-stats {
@@ -1198,38 +1323,18 @@ const currentTaskProject = computed(() => {
   .tab-navigation {
     width: 100%;
     justify-content: center;
+    padding: var(--space-2);
   }
 
   .tab-btn {
     flex: 1;
     justify-content: center;
+    padding: var(--space-2) var(--space-3);
   }
 
-  /* Transform context panel into compact horizontal info bar on mobile */
   .context-panel {
-    width: 100%;
     max-width: none;
-    flex-direction: row;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-4);
-    gap: var(--space-3);
-    order: -1;
-  }
-
-  .context-section {
-    flex-direction: row;
-    gap: var(--space-1_5);
-    flex: 1;
-    min-width: 0;
-    justify-content: center;
-  }
-
-  .context-section:first-child {
-    justify-content: flex-start;
-  }
-
-  .context-section:last-child {
-    justify-content: flex-end;
+    padding: var(--space-2_5) var(--space-3);
   }
 
   .context-icon-wrapper,
@@ -1248,33 +1353,55 @@ const currentTaskProject = computed(() => {
     height: var(--space-1_5);
   }
 
-  .context-info {
-    flex-direction: row;
-    gap: var(--space-1);
-    align-items: center;
-  }
-
-  .context-label {
-    display: none;
-  }
-
   .context-value {
     font-size: var(--text-xs);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
-  .context-today-ref {
+  .sort-main-column {
+    gap: var(--space-3);
+  }
+
+  .action-row {
+    gap: var(--space-2);
+  }
+
+  .action-btn {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+    gap: var(--space-1_5);
+  }
+
+  .action-btn kbd {
     display: none;
   }
 
-  .project-emoji {
-    font-size: var(--text-sm);
+  .helper-hint {
+    display: none;
+  }
+}
+
+/* Responsive: Very narrow — extra compact */
+@media (max-width: 400px) {
+  .quick-sort-view {
+    padding: var(--space-2) var(--space-3);
   }
 
-  .project-name {
-    gap: var(--space-1);
+  .quick-sort-header {
+    gap: var(--space-2);
+  }
+
+  .view-title {
+    font-size: var(--text-lg);
+  }
+
+  .close-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .context-panel {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
   }
 }
 </style>

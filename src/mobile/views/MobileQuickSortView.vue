@@ -160,19 +160,19 @@
       <div v-else-if="!isComplete" class="sort-phase">
         <!-- Process Flow Indicator - Shows clear hierarchy -->
         <div class="process-flow-indicator">
-          <div class="flow-step">
-            <span class="flow-icon">👆</span>
-            <span class="flow-label">Swipe</span>
-          </div>
-          <div class="flow-arrow">→</div>
           <div class="flow-step active">
-            <span class="flow-icon">🏷️</span>
-            <span class="flow-label">Assign</span>
+            <span class="flow-icon">👀</span>
+            <span class="flow-label">Review</span>
           </div>
           <div class="flow-arrow">→</div>
           <div class="flow-step">
-            <span class="flow-icon">✅</span>
-            <span class="flow-label">Sorted!</span>
+            <span class="flow-icon">✏️</span>
+            <span class="flow-label">Edit</span>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span class="flow-icon">💾</span>
+            <span class="flow-label">Save</span>
           </div>
         </div>
 
@@ -180,10 +180,10 @@
         <div v-if="!hasSwipedOnce" class="swipe-hints">
           <div class="hint hint-left">
             <ChevronLeft :size="24" />
-            <span>Done</span>
+            <span>Skip</span>
           </div>
           <div class="hint hint-right">
-            <span>Assign</span>
+            <span>Exit</span>
             <ChevronRight :size="24" />
           </div>
         </div>
@@ -219,8 +219,8 @@
               :style="{ opacity: leftOverlayOpacity }"
             >
               <div class="swipe-content">
-                <CheckCircle :size="32" />
-                <span>Done!</span>
+                <SkipForward :size="32" />
+                <span>Skip</span>
               </div>
             </div>
             <div
@@ -228,8 +228,8 @@
               :style="{ opacity: rightOverlayOpacity }"
             >
               <div class="swipe-content">
-                <FolderOpen :size="32" />
-                <span>Assign</span>
+                <X :size="32" />
+                <span>Exit</span>
               </div>
             </div>
 
@@ -346,19 +346,20 @@
             </div>
           </div>
 
-          <!-- Action Buttons - Three options: Done, Skip, Delete -->
+          <!-- Action Buttons - Four options: Done, Save, Assign, Delete -->
           <div class="action-row">
             <button class="action-btn done" @click="handleMarkDone">
               <CheckCircle :size="20" />
               <span>Done</span>
             </button>
+            <button class="action-btn save" @click="handleSave">
+              <Save :size="20" />
+              <span>Save</span>
+              <span v-if="isTaskDirty" class="dirty-dot" />
+            </button>
             <button class="action-btn assign" @click="showProjectSheet = true">
               <FolderOpen :size="20" />
               <span>Assign</span>
-            </button>
-            <button class="action-btn skip" @click="handleSkip">
-              <SkipForward :size="20" />
-              <span>Skip</span>
             </button>
             <button class="action-btn delete" @click="showDeleteConfirm = true">
               <Trash2 :size="20" />
@@ -585,7 +586,7 @@ import { useLocalStorage } from '@vueuse/core'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, CalendarDays, Flag,
   ChevronLeft, ChevronRight, SkipForward, PartyPopper,
-  ArrowLeft, Trash2, Edit3, FolderOpen, Search
+  ArrowLeft, Trash2, Edit3, FolderOpen, Search, Save
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useSwipeGestures } from '@/composables/useSwipeGestures'
@@ -601,15 +602,19 @@ const projectStore = useProjectStore()
 // Quick Sort composable
 const {
   currentTask,
+  currentTaskId,
   uncategorizedTasks,
   progress,
   isComplete,
+  isTaskDirty,
   startSession,
   endSession,
   categorizeTask,
+  saveTask,
   markTaskDone,
   markDoneAndDeleteTask,
-  skipTask
+  skipTask,
+  undoLastCategorization
 } = useQuickSort()
 
 // UI State
@@ -702,14 +707,13 @@ const {
   haptics: true,
   onSwipeRight: () => {
     hasSwipedOnce.value = true
-    // IMPROVED UX: Swipe right = directly show project picker for instant categorization
-    showProjectSheet.value = true
-    triggerHaptic('medium')
+    // Swipe right = Exit Quick Sort
+    handleExit()
   },
   onSwipeLeft: () => {
     hasSwipedOnce.value = true
-    // IMPROVED UX: Swipe left = instant mark done (no confirmation for speed)
-    handleMarkDone()
+    // Swipe left = Skip to next task
+    handleSkip()
   },
   onSwipeEnd: () => {
     // Reset card position handled by transition
@@ -842,37 +846,35 @@ function handleAssignProject(projectId: string) {
   showProjectSheet.value = false
   projectSearch.value = '' // Reset search
 
-  // Show celebration
-  showCelebration.value = true
-  setTimeout(() => {
-    showCelebration.value = false
-  }, 600)
-
-  triggerHaptic('heavy')
+  // NO celebration, NO auto-advance - task stays for further edits
+  triggerHaptic('medium')
 }
 
 // Sort task without assigning to a project (keep in inbox)
 function handleSortWithoutProject() {
   if (!currentTask.value) return
-
-  // Mark as sorted by setting a flag or moving to next without project assignment
-  // We use null/undefined projectId to indicate "sorted but no project"
   categorizeTask(currentTask.value.id, '')
   showProjectSheet.value = false
   projectSearch.value = '' // Reset search
-
-  // Show celebration
-  showCelebration.value = true
-  setTimeout(() => {
-    showCelebration.value = false
-  }, 600)
-
+  // NO celebration, NO auto-advance - task stays for further edits
   triggerHaptic('medium')
 }
 
 function handleSkip() {
   skipTask()
   triggerHaptic('light')
+}
+
+function handleSave() {
+  if (!currentTask.value) return
+  saveTask()
+
+  showCelebration.value = true
+  setTimeout(() => {
+    showCelebration.value = false
+  }, 600)
+
+  triggerHaptic('heavy')
 }
 
 function handleMarkDone() {
@@ -1666,16 +1668,16 @@ onMounted(() => {
   z-index: var(--z-sticky); /* Above blurred content */
 }
 
-/* Left swipe = Done (green) */
+/* Left swipe = Skip (muted) */
 .swipe-indicator.left {
-  border: 3px solid var(--color-success);
-  background: var(--success-bg-light);
+  border: 3px solid var(--glass-border-hover);
+  background: var(--glass-bg-medium);
 }
 
-/* Right swipe = Assign project (brand teal) */
+/* Right swipe = Exit (muted) */
 .swipe-indicator.right {
-  border: 3px solid var(--brand-primary);
-  background: var(--state-hover-bg);
+  border: 3px solid var(--glass-border-hover);
+  background: var(--glass-bg-medium);
 }
 
 .swipe-content {
@@ -1686,14 +1688,14 @@ onMounted(() => {
   color: inherit;
 }
 
-/* Left swipe content = Done (green) */
+/* Left swipe content = Skip (muted) */
 .swipe-indicator.left .swipe-content {
-  color: var(--color-success);
+  color: var(--text-secondary);
 }
 
-/* Right swipe content = Assign (brand teal) */
+/* Right swipe content = Exit (muted) */
 .swipe-indicator.right .swipe-content {
-  color: var(--brand-primary);
+  color: var(--text-secondary);
 }
 
 .swipe-content span {
@@ -1747,6 +1749,8 @@ onMounted(() => {
   margin: 0 0 var(--space-3);
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere; /* Break long URLs/strings that have no spaces */
+  word-break: break-word;
   /* RTL support */
   text-align: start;
   unicode-bidi: plaintext;
@@ -1759,6 +1763,8 @@ onMounted(() => {
   color: var(--text-secondary);
   margin: 0;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .task-meta {
@@ -1890,7 +1896,7 @@ onMounted(() => {
   transform: scale(0.95);
 }
 
-/* Action Row - 4 buttons: Done, Assign, Skip, Delete */
+/* Action Row - 4 buttons: Done, Save, Assign, Delete */
 .action-row {
   display: flex;
   gap: var(--space-2);
@@ -1935,12 +1941,28 @@ onMounted(() => {
   background: var(--state-hover-bg);
 }
 
-.action-btn.skip {
-  color: var(--text-muted);
+.action-btn.save {
+  color: var(--brand-primary);
+  border-color: var(--state-hover-border);
+  position: relative;
 }
 
-.action-btn.skip:active {
-  background: var(--glass-bg-weak);
+.action-btn.save:active {
+  background: var(--state-hover-bg);
+}
+
+.dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  animation: dirty-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes dirty-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
 }
 
 .action-btn.delete {
@@ -2563,7 +2585,8 @@ onMounted(() => {
   .progress-fill,
   .progress-glow,
   .celebration-icon,
-  .mini-celebration {
+  .mini-celebration,
+  .dirty-dot {
     animation: none !important;
     transition: none !important;
   }

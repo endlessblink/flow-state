@@ -2963,6 +2963,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
 | **FEATURE-1317** | **P3** | **📋 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | **TASK-1316** | **P2** | **📋 AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
+| **TASK-1319** | **P0** | **🔄 Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** |
+| ~~**TASK-1320**~~ | **P1** | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |

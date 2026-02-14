@@ -8,6 +8,7 @@ defineProps<{
   workingHours: number[]
   weekEvents: WeekEvent[]
   currentTaskId?: string | null
+  isDragging?: boolean
 }>()
 defineEmits<{
   (e: 'weekDragOver', event: DragEvent): void
@@ -92,8 +93,8 @@ const {
           </div>
         </div>
 
-        <!-- Events Layer -->
-        <div class="week-events-layer">
+        <!-- Events Layer — pointer-events disabled on events during drag so drops reach grid cells -->
+        <div class="week-events-layer" :class="{ 'is-dragging': isDragging }">
           <div
             v-for="event in weekEvents"
             :key="event.id"
@@ -399,18 +400,33 @@ const {
   top: var(--space-1);
 }
 
+/* During drag, make all events transparent to pointer events
+   so dragover/drop reach the .week-time-cell drop targets underneath */
+.week-events-layer.is-dragging .week-event {
+  pointer-events: none;
+}
+
 .resize-handle {
   position: absolute;
   left: 0;
   right: 0;
-  height: 6px;
+  height: 8px;
   background: transparent;
   cursor: ns-resize;
   z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: all var(--duration-fast);
 }
 
 .resize-handle.resize-top { top: 0; }
 .resize-handle.resize-bottom { bottom: 0; }
+
+.week-event:hover .resize-handle {
+  opacity: 1;
+  pointer-events: auto;
+  background: var(--color-indigo-alpha-40, rgba(99, 102, 241, 0.4));
+}
 
 /* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
 .week-event.status-done {

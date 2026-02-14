@@ -211,8 +211,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 const message = err?.message || String(err)
                 const status = err?.status || err?.code
 
-                // Exponential backoff delay: 1s, 2s, 4s...
-                const delay = Math.pow(2, i) * 1000
+                // BUG-352: Faster backoff for mobile: 500ms, 1s, 2s (was 1s, 2s, 4s)
+                const delay = Math.pow(2, i) * 500
 
                 // 1. Clock Skew (JWT issued at future)
                 if (message.includes('JWT issued at future')) {
@@ -228,8 +228,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                     continue
                 }
 
-                // 3. Network / Connection Errors
-                if (message.includes('Failed to fetch') || message.includes('Network Error') || message.includes('Service Unavailable')) {
+                // 3. Network / Connection / Timeout Errors
+                // BUG-352: Also catch AbortError (from fetch timeout) and timeout strings
+                if (message.includes('Failed to fetch') || message.includes('Network Error') || message.includes('Service Unavailable') || message.includes('AbortError') || message.includes('timeout') || message.includes('Timeout') || message.includes('aborted')) {
                     console.warn(`🌐 [NETWORK-RETRY] ${context} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
                     await new Promise(resolve => setTimeout(resolve, delay))
                     continue

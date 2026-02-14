@@ -39,6 +39,7 @@ const props = defineProps<{
   task: QuickEditTask | null
   x: number
   y: number
+  position?: 'auto' | 'top' | 'bottom' | 'left' | 'right'
 }>()
 
 const emit = defineEmits<{
@@ -66,9 +67,8 @@ try {
 // ============================================================================
 
 const PRIORITY_OPTIONS = [
-  { value: 'urgent', label: 'U', color: '#ef4444' },
-  { value: 'high', label: 'H', color: '#f97316' },
-  { value: 'medium', label: 'M', color: '#eab308' },
+  { value: 'high', label: 'H', color: '#ef4444' },
+  { value: 'medium', label: 'M', color: '#f97316' },
   { value: 'low', label: 'L', color: '#22c55e' },
   { value: null, label: '—', color: 'rgba(255,255,255,0.3)' },
 ] as const
@@ -207,7 +207,7 @@ function close() {
     :x="x"
     :y="y"
     variant="menu"
-    position="auto"
+    :position="position ?? 'auto'"
     @close="close"
   >
     <div v-if="task" class="quick-edit-popover">
@@ -310,7 +310,7 @@ function close() {
 
 <style scoped>
 .quick-edit-popover {
-  width: 280px;
+  width: 340px;
   position: relative;
 }
 
@@ -353,7 +353,7 @@ function close() {
   line-height: 1.4;
   padding: var(--space-2, 8px) var(--space-1, 4px);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
@@ -607,4 +607,5 @@ function close() {
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
 </style>

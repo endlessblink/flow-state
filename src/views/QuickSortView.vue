@@ -427,13 +427,13 @@ function formatTime(milliseconds: number): string {
 
 <style scoped>
 .quick-sort-view {
-  height: 100%;
+  flex: 1;
   min-height: 0; /* Allow flexbox shrinking */
   padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  overflow-y: auto; /* Enable scrolling if content exceeds */
+  overflow: hidden; /* Don't scroll the whole view — only content scrolls */
   position: relative; /* Establish positioning context for celebration overlay */
 }
 
@@ -442,6 +442,7 @@ function formatTime(milliseconds: number): string {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-4);
+  flex-shrink: 0; /* Never collapse header */
 }
 
 .header-content--quicksort {
@@ -501,6 +502,7 @@ function formatTime(milliseconds: number): string {
   border-radius: var(--radius-xl);
   width: fit-content;
   margin: 0 auto;
+  flex-shrink: 0; /* Never collapse tabs */
 }
 
 .tab-btn {
@@ -601,11 +603,13 @@ function formatTime(milliseconds: number): string {
 
 .quick-sort-content {
   flex: 1;
+  min-height: 0; /* Allow flexbox shrinking for scroll */
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-4);
   width: 100%;
+  overflow-y: auto; /* Scroll only the content area, not header/tabs */
 }
 
 .empty-state,

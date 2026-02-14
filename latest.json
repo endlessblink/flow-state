@@ -1,11 +1,11 @@
 {
-  "version": "1.2.55",
-  "notes": "FlowState v1.2.55",
-  "pub_date": "2026-02-14T06:04:26.068Z",
+  "version": "1.2.57",
+  "notes": "Fix mobile + button clipping, gate debug toggle to dev user only",
+  "pub_date": "2026-02-14T06:52:46.741Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRThka3U4empKQlBGNWlrTVI5S0dQa3c3LzZIMVh3K1dWaU1CNHAwT2lob0FGejJSeFhIakQ2RGhrSVNjTlZGTUwweVFSYllkakRjOStPVnAyVXZKOUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDQ4OTQxCWZpbGU6Rmxvd1N0YXRlXzEuMi41NV9hbWQ2NC5BcHBJbWFnZQo5YU5HbVg2Y1Z5cFJUNSt5bXpSSFNBQWZoM2RlLzRDeDRGclpRU0w3VmFUTVJ2SE9NVElwWWlNZmxKN3V5cUNnVElER3I1TG5jZWtRdGFDRnR6cHFEZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.55_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTdBNUIzVjNDVmdyd2tlZm1lOUMyZUJYU1UzcEJGN1NpZ1dhV1ByNDhCUXpicmU4ZkNmbnZ3aG5Sa3BJd2t3QThRa0xseXdKWUVINTl0eUxvVG5GZUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDUxOTY2CWZpbGU6Rmxvd1N0YXRlXzEuMi41N19hbWQ2NC5BcHBJbWFnZQpZaVBSNGt6KzBrNU1UQlM4SlVpSjBJeEZhTDhiczJPMzlRaGJNa0RLbk50OEFYUkFsclA0ckdvTlcxdzBPZkpXa3NVR1pqUXNUdXVwZ0ptNzhVUkZEZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.57_amd64.AppImage"
     }
   }
 }

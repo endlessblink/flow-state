@@ -44,7 +44,7 @@ export function useCalendarCore() {
 
   const getWeekStart = (date: Date): Date => {
     const settings = useSettingsStore()
-    const weekStartsOn = settings.weekStartsOn ?? 1
+    const weekStartsOn = settings.weekStartsOn ?? 0
     const d = new Date(date)
     const day = d.getDay() // 0=Sun...6=Sat
 
@@ -67,19 +67,19 @@ export function useCalendarCore() {
   const getWeekDayHeaders = (): string[] => {
     const settings = useSettingsStore()
     const all = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const startDay = settings.weekStartsOn ?? 1
+    const startDay = settings.weekStartsOn ?? 0
     return [...all.slice(startDay), ...all.slice(0, startDay)]
   }
 
   /**
    * TASK-1321: Returns day keys in order based on weekStartsOn setting.
-   * Monday start: ['monday','tuesday',...,'sunday']
    * Sunday start: ['sunday','monday',...,'saturday']
+   * Monday start: ['monday','tuesday',...,'sunday']
    */
   const getOrderedDayKeys = (): string[] => {
     const settings = useSettingsStore()
     const all = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    const startDay = settings.weekStartsOn ?? 1
+    const startDay = settings.weekStartsOn ?? 0
     return [...all.slice(startDay), ...all.slice(0, startDay)]
   }
 

@@ -148,7 +148,9 @@ const statusEmoji = (status: string) => {
 const getDueBadgeClass = (dueDate: string) => {
   // BUG-1191: Reactive dependency - ensures re-evaluation at midnight
   const _todayTrigger = reactiveToday.value
-  const today = new Date().toISOString().split('T')[0]
+  // BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
+  const _now = new Date()
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
   if (dueDate < today) return 'due-badge-overdue'
   if (dueDate === today) return 'due-badge-today'
   return 'due-badge-future'
@@ -157,7 +159,9 @@ const getDueBadgeClass = (dueDate: string) => {
 const formatDueDateLabel = (dueDate: string) => {
   if (!dueDate) return ''
   const dateStr = dueDate.split('T')[0]
-  const today = new Date().toISOString().split('T')[0]
+  // BUG-1321: Use local date (not UTC) to avoid timezone-related overdue false positives
+  const _n = new Date()
+  const today = `${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}`
   
   const dateObj = new Date(dueDate)
   const formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dateObj)

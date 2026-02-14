@@ -220,7 +220,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, reactive } from 'vue'
 import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff } from 'lucide-vue-next'
-import { useSpeechRecognition } from '@/composables/useSpeechRecognition'
+import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
 
 const emit = defineEmits<{
@@ -232,21 +232,20 @@ const quickCapture = useQuickCapture()
 // Template refs
 const titleInputRef = ref<HTMLInputElement>()
 
-// Voice input (TASK-1024)
+// TASK-1322: Whisper-only voice input (browser speech recognition removed)
 const {
-  isListening,
-  isSupported: isVoiceSupported,
-  displayTranscript,
+  isRecording: isListening,
+  isProcessing: isProcessingVoice,
+  isSupported: isWhisperSupported,
+  hasApiKey: hasWhisperApiKey,
+  transcript: whisperTranscript,
   error: voiceError,
   start: startVoice,
   stop: stopVoice,
   cancel: cancelVoice
-} = useSpeechRecognition({
-  language: 'auto',
-  interimResults: true,
-  silenceTimeout: 2500,
+} = useWhisperSpeech({
   onResult: (result) => {
-    if (result.isFinal && result.transcript.trim()) {
+    if (result.transcript.trim()) {
       newTask.title = result.transcript.trim()
     }
   },
@@ -254,6 +253,9 @@ const {
     console.warn('[Voice QuickCapture] Error:', err)
   }
 })
+
+const isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
+const displayTranscript = computed(() => whisperTranscript.value)
 
 // Toggle voice recording
 const toggleVoiceInput = async () => {

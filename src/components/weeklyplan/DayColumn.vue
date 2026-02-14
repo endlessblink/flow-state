@@ -7,35 +7,29 @@
     }"
   >
     <div class="column-header">
-      <div class="header-left">
+      <div class="header-top">
         <span class="day-name">{{ dayName }}</span>
         <span class="day-date">{{ shortDate }}</span>
+        <span class="header-stats">{{ tasks.length }}t</span>
+        <button
+          v-if="dayKey !== 'unscheduled'"
+          class="resuggest-btn"
+          title="Re-suggest tasks for this day"
+          @click="$emit('resuggest', dayKey)"
+        >
+          <RefreshCw :size="11" />
+        </button>
       </div>
-      <button
-        v-if="dayKey !== 'unscheduled'"
-        class="resuggest-btn"
-        title="Re-suggest tasks for this day"
-        @click="$emit('resuggest', dayKey)"
-      >
-        <RefreshCw :size="12" />
-      </button>
-    </div>
-
-    <!-- Capacity bar -->
-    <div v-if="dayKey !== 'unscheduled'" class="capacity-section">
-      <div class="capacity-bar-track">
-        <div
-          class="capacity-bar-fill"
-          :class="capacityClass"
-          :style="{ width: `${Math.min(capacityPercent, 100)}%` }"
-        />
+      <div v-if="dayKey !== 'unscheduled'" class="capacity-row">
+        <div class="capacity-bar-track">
+          <div
+            class="capacity-bar-fill"
+            :class="capacityClass"
+            :style="{ width: `${Math.min(capacityPercent, 100)}%` }"
+          />
+        </div>
+        <span class="capacity-label">{{ formattedUsed }}/{{ formattedCapacity }}</span>
       </div>
-      <span class="capacity-label">{{ formattedUsed }} / {{ formattedCapacity }}</span>
-    </div>
-
-    <div class="column-stats">
-      <span class="stat-item">{{ tasks.length }} tasks</span>
-      <span v-if="totalMinutes > 0" class="stat-item">{{ totalMinutes }}m</span>
     </div>
 
     <div class="column-tasks">
@@ -177,8 +171,8 @@ function isTaskOverdue(taskId: string): boolean {
 .day-column {
   display: flex;
   flex-direction: column;
-  min-width: 220px;
-  flex: 1;
+  min-width: 260px;
+  flex: 1 0 260px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -196,19 +190,19 @@ function isTaskOverdue(taskId: string): boolean {
 
 .column-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
   background: var(--glass-bg-soft);
   border-bottom: 1px solid var(--glass-border);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
-.header-left {
+.header-top {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: var(--space-1_5);
 }
 
 .day-name {
@@ -222,20 +216,27 @@ function isTaskOverdue(taskId: string): boolean {
   color: var(--text-muted);
 }
 
+.header-stats {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
 .resuggest-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  border: 1px solid var(--glass-border);
+  border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--duration-fast);
   opacity: 0;
+  flex-shrink: 0;
 }
 
 .day-column:hover .resuggest-btn {
@@ -245,21 +246,18 @@ function isTaskOverdue(taskId: string): boolean {
 .resuggest-btn:hover {
   background: var(--glass-bg-medium);
   color: var(--brand-primary);
-  border-color: var(--brand-primary);
 }
 
-/* Capacity bar */
-.capacity-section {
+/* Capacity bar — inline in header */
+.capacity-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1_5) var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-1_5);
 }
 
 .capacity-bar-track {
   flex: 1;
-  height: 4px;
+  height: 3px;
   background: var(--glass-bg-medium);
   border-radius: 2px;
   overflow: hidden;
@@ -290,29 +288,12 @@ function isTaskOverdue(taskId: string): boolean {
 }
 
 .capacity-label {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
   white-space: nowrap;
-  min-width: 70px;
-  text-align: right;
-}
-
-.column-stats {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1_5) var(--space-3);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.stat-item {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
 }
 
 .column-tasks {
-  flex: 1;
-  overflow-y: auto;
   padding: var(--space-2);
 }
 

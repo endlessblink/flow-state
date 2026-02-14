@@ -1754,23 +1754,6 @@ const isOverdue = (dueDate: string | Date): boolean => {
   background: var(--surface-secondary);
 }
 
-/* Voice mode toggle button */
-.voice-mode-btn {
-  padding: var(--space-1_5) var(--space-3);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--brand-primary);
-  background: var(--brand-bg-subtle);
-  color: var(--brand-primary);
-  font-size: var(--text-xs);
-  cursor: pointer;
-  transition: all var(--duration-fast) ease;
-}
-
-.voice-mode-btn:active {
-  transform: scale(0.97);
-  background: var(--brand-border-subtle);
-}
-
 /* Voice mode badge (inside recording feedback) */
 .voice-mode-badge {
   padding: var(--space-1) var(--space-2);

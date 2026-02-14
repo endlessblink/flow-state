@@ -347,9 +347,13 @@ export function useAIUsageTracking() {
       models: Map<string, { tokens: number; requests: number; cost: number }>
     }>()
 
+    let totalMessages = 0
+    let messagesWithMeta = 0
     for (const conversation of aiChatStore.conversations) {
       for (const message of conversation.messages) {
+        totalMessages++
         if (!message.metadata?.provider || !message.metadata.tokens) continue
+        messagesWithMeta++
 
         // Filter by time period
         if (periodStart) {

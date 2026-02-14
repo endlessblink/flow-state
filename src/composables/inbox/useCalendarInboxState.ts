@@ -64,8 +64,11 @@ export function useCalendarInboxState() {
         return options
     })
 
-    // Helper: Get today's date string
-    const getTodayStr = () => new Date().toISOString().split('T')[0]
+    // Helper: Get today's date string (BUG-1321: local time, not UTC)
+    const getTodayStr = () => {
+        const d = new Date()
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
 
     // Helper: Check if task is scheduled
     const isScheduledOnCalendar = (task: Task): boolean => {

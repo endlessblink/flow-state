@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import type { WorkProfile } from '@/utils/supabaseMappers'
+import type { WorkProfile, MemoryObservation } from '@/utils/supabaseMappers'
 
 const cachedProfile = ref<WorkProfile | null>(null)
 const isLoading = ref(false)
@@ -117,6 +117,9 @@ export function useWorkProfile() {
       cachedProfile.value.peakProductivityDays = peakDays
     }
 
+    // FEATURE-1317 Phase 2: Generate structured observations from stats
+    await generateObservationsFromStats()
+
     return { avgMinutesPerDay, avgTasksPerDay, peakDays }
   }
 
@@ -157,6 +160,142 @@ export function useWorkProfile() {
     }
   }
 
+  async function addMemoryObservation(obs: Omit<MemoryObservation, 'createdAt'>): Promise<void> {
+    const current = cachedProfile.value?.memoryGraph || []
+
+    // Dedup: if same entity+relation exists, update it
+    const existingIdx = current.findIndex(o => o.entity === obs.entity && o.relation === obs.relation)
+    const newObs: MemoryObservation = { ...obs, createdAt: new Date().toISOString() }
+
+    let updated: MemoryObservation[]
+    if (existingIdx !== -1) {
+      updated = [...current]
+      updated[existingIdx] = newObs
+    } else {
+      updated = [...current, newObs]
+    }
+
+    // Cap at 30 observations (FIFO)
+    if (updated.length > 30) {
+      updated = updated.slice(updated.length - 30)
+    }
+
+    await db.saveWorkProfile({ memoryGraph: updated })
+    if (cachedProfile.value) {
+      cachedProfile.value.memoryGraph = updated
+    }
+  }
+
+  async function generateObservationsFromStats(): Promise<void> {
+    const p = cachedProfile.value
+    if (!p) return
+
+    const observations: Omit<MemoryObservation, 'createdAt'>[] = []
+
+    // Peak productivity days
+    if (p.peakProductivityDays?.length) {
+      for (const day of p.peakProductivityDays) {
+        observations.push({
+          entity: `day:${day}`,
+          relation: 'peak_productivity',
+          value: 'consistently highest output',
+          confidence: 0.85,
+          source: 'pomodoro_data'
+        })
+      }
+    }
+
+    // Capacity gap: completes fewer tasks than planned
+    if (p.avgTasksCompletedPerDay && p.maxTasksPerDay && p.avgTasksCompletedPerDay < p.maxTasksPerDay * 0.7) {
+      observations.push({
+        entity: 'user',
+        relation: 'capacity_gap',
+        value: `completes ${p.avgTasksCompletedPerDay.toFixed(1)} but plans for ${p.maxTasksPerDay}`,
+        confidence: 0.7,
+        source: 'pomodoro_data'
+      })
+    }
+
+    // Plan accuracy observations
+    if (p.avgPlanAccuracy !== null && p.avgPlanAccuracy !== undefined) {
+      if (p.avgPlanAccuracy < 60) {
+        observations.push({
+          entity: 'user',
+          relation: 'overplans',
+          value: `only ${p.avgPlanAccuracy.toFixed(0)}% of planned tasks completed`,
+          confidence: 0.75,
+          source: 'weekly_history'
+        })
+      } else if (p.avgPlanAccuracy > 90) {
+        observations.push({
+          entity: 'user',
+          relation: 'reliable_planner',
+          value: `${p.avgPlanAccuracy.toFixed(0)}% accuracy`,
+          confidence: 0.8,
+          source: 'weekly_history'
+        })
+      }
+    }
+
+    for (const obs of observations) {
+      await addMemoryObservation(obs)
+    }
+  }
+
+  async function generateObservationsFromWeeklyOutcome(
+    plannedTaskIds: string[],
+    completedTaskIds: string[],
+    taskStore: { tasks: Array<{ id: string; projectId?: string; status: string }> }
+  ): Promise<void> {
+    if (plannedTaskIds.length === 0) return
+
+    const completedSet = new Set(completedTaskIds)
+    const observations: Omit<MemoryObservation, 'createdAt'>[] = []
+
+    // Group missed tasks by project
+    const projectMissCount = new Map<string, { missed: number; total: number }>()
+    for (const taskId of plannedTaskIds) {
+      const task = taskStore.tasks.find(t => t.id === taskId)
+      const projectId = task?.projectId || 'uncategorized'
+      if (!projectMissCount.has(projectId)) {
+        projectMissCount.set(projectId, { missed: 0, total: 0 })
+      }
+      const counts = projectMissCount.get(projectId)!
+      counts.total++
+      if (!completedSet.has(taskId)) {
+        counts.missed++
+      }
+    }
+
+    for (const [projectId, counts] of projectMissCount) {
+      if (counts.total >= 2 && counts.missed / counts.total > 0.5) {
+        observations.push({
+          entity: `project:${projectId}`,
+          relation: 'frequently_missed',
+          value: `${counts.missed} of ${counts.total} tasks missed`,
+          confidence: Math.min(0.9, 0.5 + (counts.total * 0.05)),
+          source: 'weekly_history'
+        })
+      }
+    }
+
+    // Check day distribution of completed tasks
+    const dayCompletions = new Map<string, number>()
+    const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    for (const taskId of completedTaskIds) {
+      const task = taskStore.tasks.find(t => t.id === taskId)
+      if (task) {
+        // Use current day as approximation (tasks may have been completed on different days)
+        const today = daysOfWeek[new Date().getDay()]
+        dayCompletions.set(today, (dayCompletions.get(today) || 0) + 1)
+      }
+    }
+
+    for (const obs of observations) {
+      await addMemoryObservation(obs)
+    }
+  }
+
   function getProfileContext(): string | null {
     const p = cachedProfile.value
     if (!p) return null
@@ -185,6 +324,20 @@ export function useWorkProfile() {
       insights.push('- User prefers ramping up: lighter Mon-Tue, heavier Thu-Fri.')
     }
 
+    // FEATURE-1317 Phase 2: Include memory observations
+    const memoryObs = (p.memoryGraph || [])
+      .filter(o => o.confidence >= 0.5)
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 10)
+
+    if (memoryObs.length > 0) {
+      insights.push('')  // blank line separator
+      insights.push('Observations from past weeks:')
+      for (const obs of memoryObs) {
+        insights.push(`- ${obs.entity} ${obs.relation}: ${obs.value} (confidence: ${obs.confidence.toFixed(2)})`)
+      }
+    }
+
     return insights.length > 0 ? `Learned work patterns:\n${insights.join('\n')}` : null
   }
 
@@ -194,7 +347,8 @@ export function useWorkProfile() {
       avgTasksCompletedPerDay: null,
       peakProductivityDays: null,
       avgPlanAccuracy: null,
-      weeklyHistory: []
+      weeklyHistory: [],
+      memoryGraph: []
     })
     if (cachedProfile.value) {
       cachedProfile.value.avgWorkMinutesPerDay = null
@@ -202,6 +356,7 @@ export function useWorkProfile() {
       cachedProfile.value.peakProductivityDays = null
       cachedProfile.value.avgPlanAccuracy = null
       cachedProfile.value.weeklyHistory = []
+      cachedProfile.value.memoryGraph = []
     }
   }
 
@@ -213,6 +368,9 @@ export function useWorkProfile() {
     savePreferences,
     computeCapacityMetrics,
     recordWeeklyOutcome,
+    addMemoryObservation,
+    generateObservationsFromStats,
+    generateObservationsFromWeeklyOutcome,
     getProfileContext,
     resetLearnedData
   }

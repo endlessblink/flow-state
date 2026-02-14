@@ -87,6 +87,21 @@ const {
 const { getWeekDayHeaders } = useCalendarCore()
 const weekDayHeaders = computed(() => getWeekDayHeaders())
 
+// TASK-1322: Rich tooltip with task details on hover
+const getEventTooltip = (event: CalendarEvent): string => {
+  const lines: string[] = [event.title]
+  const project = getProjectName(event)
+  if (project && project !== 'No Project') lines.push(`📁 ${project}`)
+  const priority = getPriorityLabel(event)
+  if (priority && priority !== 'None') lines.push(`⚡ ${priority}`)
+  const status = getStatusLabel(getTaskStatus(event))
+  if (status) lines.push(`${getStatusIcon(getTaskStatus(event))} ${status}`)
+  const time = formatEventTime(event)
+  if (time) lines.push(`🕐 ${time} · ${event.duration}min`)
+  else if (event.duration) lines.push(`⏱ ${event.duration}min`)
+  return lines.join('\n')
+}
+
 </script>
 
 <template>
@@ -126,7 +141,7 @@ const weekDayHeaders = computed(() => getWeekDayHeaders())
             class="month-event"
             :class="{ 'timer-active-event': currentTaskId === event.taskId, 'status-done': getTaskStatus(event) === 'done', 'dragging': draggedEventId === event.taskId }"
             :style="{ backgroundColor: event.color }"
-            :title="event.title"
+            :title="getEventTooltip(event)"
             draggable="true"
             @dragstart="handleEventDragStart($event, event)"
             @dragend="handleEventDragEnd($event)"
@@ -283,20 +298,16 @@ const weekDayHeaders = computed(() => getWeekDayHeaders())
   overflow-y: auto;
 }
 
+/* TASK-1322: Vertical compact layout — shows more content per event */
 .month-event {
   padding: var(--space-0_5) var(--space-1);
+  padding-left: var(--space-2_5);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
   cursor: grab;
   position: relative;
-  padding-left: var(--space-2_5);
+  line-height: 1.3;
 }
 
 .month-event.timer-active-event {
@@ -305,7 +316,10 @@ const weekDayHeaders = computed(() => getWeekDayHeaders())
 
 .event-time {
   font-weight: var(--font-bold);
-  opacity: 0.9;
+  opacity: 0.8;
+  font-size: 0.6rem;
+  display: block;
+  margin-bottom: 1px;
 }
 
 .project-indicator {
@@ -334,8 +348,11 @@ const weekDayHeaders = computed(() => getWeekDayHeaders())
 }
 
 .event-title-short {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 /* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */

@@ -1,11 +1,11 @@
 {
-  "version": "1.2.61",
-  "notes": "BUG-1315: Fix timer auto-starting work after break when both Tauri and browser are open",
-  "pub_date": "2026-02-14T08:33:22.152Z",
+  "version": "1.2.62",
+  "notes": "v1.2.62: weekly plan overhaul, external calendar sync, keyboard shortcuts panel, AI usage tracking, timer hardening",
+  "pub_date": "2026-02-14T16:44:57.258Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTllZi9RNEdabGFoWjRVZXNiY1c0V1dHUkhMVzJaaHdpd3pSVHRuVWpBSkdzVUxDSXNYN01PSTU0Qmt4azk5TG9CQTN0SHNGVnNlWnFkTlFnZTlIZUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDU4MDAyCWZpbGU6Rmxvd1N0YXRlXzEuMi42MV9hbWQ2NC5BcHBJbWFnZQoySVlnR1BiRmEzUWJNRTR6UjFVdEpJbUtwK0dBNkVjQ1FCbHNWYzRuRHROTVYvSkRRZXpXaFl0aDI2QjRtd0J3bWR1NzlzWlovODFWQk9RMTRrbTJCdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.61_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRThUaWp4d0Npdzg2Q3hmM01jMkpGei9wdkZzenlFcytndncyVDRma1FWUEVjdjlBV0NzaFN5ZWQ2TmlSa3dHdW5xZklDRnp4MUhraVIzTXBFRzlzSWdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDg3NDk3CWZpbGU6Rmxvd1N0YXRlXzEuMi42Ml9hbWQ2NC5BcHBJbWFnZQpLaTJEK1BCMkFoK1pkdUVZcGV6dnJuTU51b21WMVp2cWkvazR4dVVDQkRCQUN0MGI0SWUrUlFSYTk4ME05MTg0MzJlR0xweklPc0ptWTcxOTZlUUZCUT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.62_amd64.AppImage"
     }
   }
 }

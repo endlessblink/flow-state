@@ -65,7 +65,7 @@ export function useWeeklyPlan() {
   })
 
   const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay } = useWeeklyPlanAI()
-  const { loadProfile, recordWeeklyOutcome, profile: workProfile } = useWorkProfile()
+  const { loadProfile, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, profile: workProfile } = useWorkProfile()
 
   // --------------------------------------------------------------------------
   // Eligible tasks
@@ -351,8 +351,12 @@ export function useWeeklyPlan() {
           const completedIds = taskStore.tasks
             .filter(t => t.status === 'done' && allPlannedIds.includes(t.id))
             .map(t => t.id)
-          // Fire-and-forget: record outcome
+          // Fire-and-forget: record outcome + generate observations
           recordWeeklyOutcome(allPlannedIds, completedIds)
+            .then(() => {
+              // FEATURE-1317 Phase 2: Generate structured observations from this week's data
+              return generateObservationsFromWeeklyOutcome(allPlannedIds, completedIds, taskStore)
+            })
             .catch(err => console.warn('[WeeklyPlan] Failed to record weekly outcome:', err))
         }
       }

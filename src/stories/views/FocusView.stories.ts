@@ -10,8 +10,8 @@ import type { Meta, StoryObj } from '@storybook/vue3'
  * - Large timer display (accent color, green for breaks)
  * - Task title + description
  * - Interactive subtask checklist
- * - Start/Pause/Resume/Complete/Skip controls
- * - Keyboard shortcuts: Space (timer), C (complete), Esc (back)
+ * - Start/Pause/Resume/Complete/Stop controls
+ * - Keyboard shortcuts: Space (timer), C (complete), Esc (stop/back)
  * - Auto-start timer on mount
  * - Responsive layout
  *
@@ -35,8 +35,8 @@ Distraction-free environment for deep work on a single task.
 - Large task title display with description
 - Integrated Pomodoro timer (accent color, green during breaks)
 - Interactive subtask checklist (click to toggle)
-- Minimal controls: Start/Pause/Resume, Complete, Skip
-- Keyboard shortcuts: Space (timer toggle), C (complete), Esc (skip/back)
+- Minimal controls: Start/Pause/Resume, Complete, Stop
+- Keyboard shortcuts: Space (timer toggle), C (complete), Esc (stop/back)
 - Dark ambient background with radial gradient
 - Glass-morphism button design (outlined, colored borders)
 - Responsive layout (stacked buttons on mobile)
@@ -111,7 +111,7 @@ export const Default: Story = {
         <div style="${S.controls}">
           <button style="${S.btnStart}">Start <kbd style="${S.kbd}">Space</kbd></button>
           <button style="${S.btnComplete}">Complete <kbd style="${S.kbd}">C</kbd></button>
-          <button style="${S.btnSkip}">Skip <kbd style="${S.kbd}">Esc</kbd></button>
+          <button style="${S.btnSkip}">Stop <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `
@@ -158,7 +158,7 @@ export const TimerRunning: Story = {
         <div style="${S.controls}">
           <button style="${S.btnPause}">Pause <kbd style="${S.kbd}">Space</kbd></button>
           <button style="${S.btnComplete}">Complete <kbd style="${S.kbd}">C</kbd></button>
-          <button style="${S.btnSkip}">Skip <kbd style="${S.kbd}">Esc</kbd></button>
+          <button style="${S.btnSkip}">Stop <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `
@@ -213,7 +213,7 @@ export const MinimalTask: Story = {
         <div style="${S.controls}">
           <button style="${S.btnStart}">Start <kbd style="${S.kbd}">Space</kbd></button>
           <button style="${S.btnComplete}">Complete <kbd style="${S.kbd}">C</kbd></button>
-          <button style="${S.btnSkip}">Skip <kbd style="${S.kbd}">Esc</kbd></button>
+          <button style="${S.btnSkip}">Stop <kbd style="${S.kbd}">Esc</kbd></button>
         </div>
       </div>
     `

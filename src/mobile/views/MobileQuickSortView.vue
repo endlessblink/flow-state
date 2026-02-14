@@ -52,6 +52,37 @@
       </button>
     </div>
 
+    <!-- Task Context Bar (visible only in sort phase, reactive to task changes) -->
+    <div v-if="activePhase === 'sort' && !isComplete && currentTask" class="task-context-bar">
+      <!-- Due Date -->
+      <div class="context-item">
+        <CalendarDays :size="14" />
+        <span v-if="taskDueDate" :class="{ 'overdue-text': isTaskOverdue }">{{ taskDueDate }}</span>
+        <span v-else class="context-empty">No date</span>
+      </div>
+
+      <!-- Priority -->
+      <div class="context-divider" />
+      <div class="context-item">
+        <span
+          class="priority-indicator"
+          :class="`priority-${currentTask.priority || 'none'}`"
+        />
+        <span class="capitalize">{{ currentTask.priority || 'None' }}</span>
+      </div>
+
+      <!-- Project -->
+      <div class="context-divider" />
+      <div class="context-item">
+        <FolderOpen :size="14" />
+        <span v-if="currentTaskProject" class="project-text">
+          <span v-if="currentTaskProject.emoji" class="project-emoji">{{ currentTaskProject.emoji }}</span>
+          {{ currentTaskProject.name }}
+        </span>
+        <span v-else class="context-empty">No project</span>
+      </div>
+    </div>
+
     <!-- Main Content -->
     <main class="qs-main">
       <!-- CAPTURE PHASE -->
@@ -552,7 +583,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import {
-  Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, Flag,
+  Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, CalendarDays, Flag,
   ChevronLeft, ChevronRight, SkipForward, PartyPopper,
   ArrowLeft, Trash2, Edit3, FolderOpen, Search
 } from 'lucide-vue-next'
@@ -970,6 +1001,39 @@ function formatDuration(ms: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
+// Task context computed properties (reactive to task changes)
+const taskDueDate = computed(() => {
+  if (!currentTask.value?.dueDate) return null
+  const d = new Date(currentTask.value.dueDate)
+  if (isNaN(d.getTime())) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const taskDate = new Date(d)
+  taskDate.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === -1) return 'Yesterday'
+  if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`
+  if (diffDays < -1) return `${Math.abs(diffDays)} days ago`
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+})
+
+const isTaskOverdue = computed(() => {
+  if (!currentTask.value?.dueDate) return false
+  const d = new Date(currentTask.value.dueDate)
+  if (isNaN(d.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime() < today.getTime()
+})
+
+const currentTaskProject = computed(() => {
+  if (!currentTask.value?.projectId) return null
+  return projectStore.projects.find(p => p.id === currentTask.value!.projectId)
+})
+
 // Watch for completion
 watch(isComplete, (completed) => {
   if (completed) {
@@ -1177,6 +1241,100 @@ onMounted(() => {
   background: var(--overlay-component-bg-lighter);
   color: var(--brand-primary);
   border: 1px solid var(--brand-primary);
+}
+
+/* ================================
+   TASK CONTEXT BAR (REACTIVE)
+   ================================ */
+
+.task-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1_5);
+  padding: var(--space-2_5) var(--space-4);
+  margin: 0 var(--space-5);
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  z-index: var(--z-sticky);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.context-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+.context-item:first-child {
+  justify-content: flex-start;
+}
+
+.context-item:last-child {
+  justify-content: flex-end;
+}
+
+.context-divider {
+  width: 1px;
+  height: var(--space-3);
+  background: var(--border-subtle);
+  opacity: 0.5;
+}
+
+.context-empty {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.overdue-text {
+  color: var(--color-priority-high);
+  font-weight: var(--font-semibold);
+}
+
+.priority-indicator {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.priority-indicator.priority-high {
+  background: var(--color-priority-high);
+}
+
+.priority-indicator.priority-medium {
+  background: var(--color-priority-medium);
+}
+
+.priority-indicator.priority-low {
+  background: var(--color-priority-low);
+}
+
+.priority-indicator.priority-none {
+  background: var(--text-muted);
+  opacity: 0.3;
+}
+
+.project-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-emoji {
+  font-size: var(--text-sm);
+  line-height: 1;
 }
 
 /* ================================

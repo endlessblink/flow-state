@@ -62,23 +62,25 @@
             class="sort-progress-bar"
           />
 
-          <!-- Single-Column Layout -->
-          <div v-if="currentTask && !isComplete" class="sort-single-column">
-            <!-- Task Card (centered, simplified) -->
-            <Transition name="card-slide" mode="out-in">
-              <QuickSortCard
-                :key="currentTask.id"
-                :task="currentTask"
-                @update-task="handleTaskUpdate"
-              />
-            </Transition>
+          <!-- Two-Column Layout (card + context panel on desktop) -->
+          <div v-if="currentTask && !isComplete" class="sort-layout">
+            <!-- Main Column: Card + Controls -->
+            <div class="sort-main-column">
+              <!-- Task Card (centered, simplified) -->
+              <Transition name="card-slide" mode="out-in">
+                <QuickSortCard
+                  :key="currentTask.id"
+                  :task="currentTask"
+                  @update-task="handleTaskUpdate"
+                />
+              </Transition>
 
-            <!-- Project Selector (full width) -->
-            <CategorySelector
-              @select="handleCategorize"
-              @skip="handleSkip"
-              @create-new="showProjectModal = true"
-            />
+              <!-- Project Selector (full width) -->
+              <CategorySelector
+                @select="handleCategorize"
+                @skip="handleSkip"
+                @create-new="showProjectModal = true"
+              />
 
             <!-- Consolidated Action Row -->
             <div class="action-row">
@@ -122,10 +124,66 @@
               </button>
             </div>
 
-            <!-- Helper Hint -->
-            <div class="helper-hint">
-              1-9 to select project • Esc to exit
+              <!-- Helper Hint -->
+              <div class="helper-hint">
+                1-9 to select project • Esc to exit
+              </div>
             </div>
+
+            <!-- Context Info Panel (desktop only) -->
+            <aside class="context-panel" role="complementary" aria-label="Task context information">
+              <!-- Task Due Date (reactive) -->
+              <div class="context-section">
+                <div class="context-icon-wrapper">
+                  <Calendar :size="18" />
+                </div>
+                <div class="context-info">
+                  <span class="context-label">Due Date</span>
+                  <span v-if="taskDueDate" class="context-value" :class="{ 'due-overdue': isTaskOverdue }">
+                    {{ taskDueDate }}
+                  </span>
+                  <span v-else class="context-value context-empty">No date set</span>
+                </div>
+              </div>
+
+              <!-- Today Reference -->
+              <div class="context-today-ref">
+                {{ todayReference }}
+              </div>
+
+              <!-- Task Priority -->
+              <div class="context-section">
+                <div
+                  class="priority-dot"
+                  :class="`priority-${currentTask.priority || 'none'}`"
+                  :aria-label="`Priority: ${currentTask.priority || 'none'}`"
+                />
+                <div class="context-info">
+                  <span class="context-label">Priority</span>
+                  <span
+                    class="context-value capitalize"
+                    :class="`priority-text-${currentTask.priority || 'none'}`"
+                  >
+                    {{ currentTask.priority || 'None' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Task Project -->
+              <div class="context-section">
+                <div class="context-icon-wrapper">
+                  <Briefcase :size="18" />
+                </div>
+                <div class="context-info">
+                  <span class="context-label">Project</span>
+                  <span v-if="currentTaskProject" class="context-value project-name">
+                    <span v-if="currentTaskProject.emoji" class="project-emoji">{{ currentTaskProject.emoji }}</span>
+                    {{ currentTaskProject.name }}
+                  </span>
+                  <span v-else class="context-value context-empty">No project</span>
+                </div>
+              </div>
+            </aside>
           </div>
 
           <!-- Empty State (centered, full width) -->
@@ -208,10 +266,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit } from 'lucide-vue-next'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit, Calendar, Briefcase } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import QuickSortCard from '@/components/QuickSortCard.vue'
 import QuickCaptureTab from '@/components/quicksort/QuickCaptureTab.vue'
 import CategorySelector from '@/components/layout/CategorySelector.vue'
@@ -224,6 +283,7 @@ import type { Task } from '@/types/tasks'
 const router = useRouter()
 const route = useRoute()
 const taskStore = useTaskStore()
+const projectStore = useProjectStore()
 const quickCapture = useQuickCapture()
 
 // Tab state
@@ -423,6 +483,48 @@ function formatTime(milliseconds: number): string {
 
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
+
+// Context panel computed properties
+const todayReference = computed(() => {
+  const now = new Date()
+  return now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+})
+
+const taskDueDate = computed(() => {
+  if (!currentTask.value?.dueDate) return null
+  const d = new Date(currentTask.value.dueDate)
+  if (isNaN(d.getTime())) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const taskDate = new Date(d)
+  taskDate.setHours(0, 0, 0, 0)
+
+  const diffDays = Math.round((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === -1) return 'Yesterday'
+  if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`
+  if (diffDays < -1) return `${Math.abs(diffDays)} days ago`
+
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+})
+
+const isTaskOverdue = computed(() => {
+  if (!currentTask.value?.dueDate) return false
+  const d = new Date(currentTask.value.dueDate)
+  if (isNaN(d.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime() < today.getTime()
+})
+
+const currentTaskProject = computed(() => {
+  if (!currentTask.value?.projectId) return null
+  return projectStore.projects.find(p => p.id === currentTask.value!.projectId)
+})
 </script>
 
 <style scoped>
@@ -574,15 +676,169 @@ function formatTime(milliseconds: number): string {
   max-width: 100%;
 }
 
-/* Single-Column Layout */
-.sort-single-column {
+/* Two-Column Layout (Desktop: card + context panel side by side) */
+.sort-layout {
+  display: flex;
+  gap: var(--space-6);
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Main column (card + controls) */
+.sort-main-column {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
   gap: var(--space-5);
-  width: 100%;
+  flex: 1;
+  max-width: 600px;
+}
+
+/* Context Panel (desktop only) */
+.context-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 220px;
+  flex-shrink: 0;
+  padding: var(--space-5);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.context-section {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.context-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.priority-dot {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.priority-dot::after {
+  content: '';
+  width: var(--space-3);
+  height: var(--space-3);
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.priority-dot.priority-high {
+  color: var(--color-priority-high);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.priority-dot.priority-medium {
+  color: var(--color-priority-medium);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.priority-dot.priority-low {
+  color: var(--color-priority-low);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.priority-dot.priority-none {
+  color: var(--text-muted);
+  background: var(--glass-bg-subtle);
+}
+
+.context-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.context-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.context-value {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  word-break: break-word;
+}
+
+.context-value.capitalize {
+  text-transform: capitalize;
+}
+
+.context-value.due-overdue {
+  color: var(--color-priority-high);
+}
+
+.context-today-ref {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  padding: 0 var(--space-1);
+  margin-top: calc(-1 * var(--space-2));
+  opacity: 0.7;
+}
+
+.context-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.priority-text-high {
+  color: var(--color-priority-high);
+}
+
+.priority-text-medium {
+  color: var(--color-priority-medium);
+}
+
+.priority-text-low {
+  color: var(--color-priority-low);
+}
+
+.priority-text-none {
+  color: var(--text-muted);
+}
+
+.project-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+}
+
+.project-emoji {
+  font-size: var(--text-lg);
+  line-height: 1;
 }
 
 /* Tab Fade Transition */
@@ -908,6 +1164,24 @@ function formatTime(milliseconds: number): string {
 }
 
 /* Responsive adjustments */
+@media (max-width: 768px) {
+  /* Stack layout vertically on tablets and below */
+  .sort-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .context-panel {
+    width: 100%;
+    max-width: 600px;
+    order: -1; /* Move panel above card */
+  }
+
+  .sort-main-column {
+    width: 100%;
+  }
+}
+
 @media (max-width: 640px) {
   .quick-sort-view {
     padding: var(--space-5);
@@ -929,6 +1203,78 @@ function formatTime(milliseconds: number): string {
   .tab-btn {
     flex: 1;
     justify-content: center;
+  }
+
+  /* Transform context panel into compact horizontal info bar on mobile */
+  .context-panel {
+    width: 100%;
+    max-width: none;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+    order: -1;
+  }
+
+  .context-section {
+    flex-direction: row;
+    gap: var(--space-1_5);
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .context-section:first-child {
+    justify-content: flex-start;
+  }
+
+  .context-section:last-child {
+    justify-content: flex-end;
+  }
+
+  .context-icon-wrapper,
+  .priority-dot {
+    width: var(--space-4);
+    height: var(--space-4);
+  }
+
+  .context-icon-wrapper svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .priority-dot::after {
+    width: var(--space-1_5);
+    height: var(--space-1_5);
+  }
+
+  .context-info {
+    flex-direction: row;
+    gap: var(--space-1);
+    align-items: center;
+  }
+
+  .context-label {
+    display: none;
+  }
+
+  .context-value {
+    font-size: var(--text-xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .context-today-ref {
+    display: none;
+  }
+
+  .project-emoji {
+    font-size: var(--text-sm);
+  }
+
+  .project-name {
+    gap: var(--space-1);
   }
 }
 </style>

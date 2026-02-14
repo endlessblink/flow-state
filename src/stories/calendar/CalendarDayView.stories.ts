@@ -177,7 +177,7 @@ const CalendarDayViewMock = defineComponent({
               v-if="ev.duration <= 30"
               style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); height: 100%;"
             >
-              <div :style="{ flex: 1; minWidth: 0; fontWeight: '600'; whiteSpace: 'nowrap'; overflow: 'hidden'; textOverflow: 'ellipsis'; textDecoration: ev.done ? 'line-through' : 'none' }">
+              <div :style="{ flex: 1, minWidth: 0, fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: ev.done ? 'line-through' : 'none' }">
                 {{ ev.title }}
               </div>
               <div style="flex-shrink: 0; font-size: var(--text-xs); color: var(--text-secondary); white-space: nowrap;">
@@ -188,7 +188,7 @@ const CalendarDayViewMock = defineComponent({
             </div>
             <div v-else style="display: flex; flex-direction: column; gap: var(--space-0_5); height: 100%; overflow: hidden;">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);">
-                <div :style="{ flex: 1; fontWeight: '600'; whiteSpace: 'nowrap'; overflow: 'hidden'; textOverflow: 'ellipsis'; textDecoration: ev.done ? 'line-through' : 'none' }">
+                <div :style="{ flex: 1, fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: ev.done ? 'line-through' : 'none' }">
                   {{ ev.title }}
                 </div>
               </div>

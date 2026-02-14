@@ -165,7 +165,7 @@ const CalendarWeekViewMock = defineComponent({
               }"
             >
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div :style="{ fontWeight: '600'; overflow: 'hidden'; textOverflow: 'ellipsis'; whiteSpace: 'nowrap'; textDecoration: ev.done ? 'line-through' : 'none'; color: 'var(--text-primary)' }">
+                <div :style="{ fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: ev.done ? 'line-through' : 'none', color: 'var(--text-primary)' }">
                   {{ ev.title }}
                 </div>
               </div>

@@ -32,12 +32,6 @@
     <!-- AI CHAT PANEL (TASK-1120) -->
     <AIChatPanel />
 
-    <!-- GAMIFICATION TOASTS (FEATURE-1118) -->
-    <GamificationToasts />
-
-    <!-- CORRUPTION OVERLAY (FEATURE-1132) -->
-    <CorruptionOverlay />
-
     <!-- WELCOME MODAL (first launch) -->
     <WelcomeModal
       :is-open="showWelcomeModal"
@@ -56,7 +50,6 @@ import { PanelLeft } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import AppHeader from '@/layouts/AppHeader.vue'
 import { AIChatPanel } from '@/components/ai'
-import { GamificationToasts, CorruptionOverlay } from '@/components/gamification'
 import WelcomeModal from '@/components/ui/WelcomeModal.vue'
 
 const uiStore = useUIStore()

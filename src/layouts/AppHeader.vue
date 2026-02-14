@@ -1,6 +1,6 @@
 <template>
   <header class="app-header">
-    <div class="header-section" :class="{ 'header-section--panel-open': showGamificationPanel }">
+    <div class="header-section">
       <!-- USER PROFILE (Left side) - Firebase Auth disabled -->
       <div class="user-profile-container">
         <!-- UserProfile v-if="authStore.isAuthenticated" /-->
@@ -47,47 +47,6 @@
 
       <!-- INTEGRATED CONTROL PANEL: Gamification + Sync + AI + Clock + Timer -->
       <div class="control-panel">
-        <!-- FEATURE-1118: Gamification HUD -->
-        <template v-if="settingsStore.gamificationEnabled || !authStore.isAuthenticated">
-          <div class="gamification-widgets">
-            <GamificationHUD
-              :panel-open="showGamificationPanel"
-              @toggle-panel="showGamificationPanel = !showGamificationPanel"
-            />
-
-            <!-- Click outside to close (rendered before dropdown so it sits behind) -->
-            <div
-              v-if="showGamificationPanel"
-              class="gamification-backdrop"
-              @click="showGamificationPanel = false"
-            />
-
-            <!-- Gamification Panel Dropdown (after backdrop so it paints on top) -->
-            <div
-              v-if="showGamificationPanel"
-              class="gamification-dropdown"
-              @click.stop
-            >
-              <GamificationPanel
-                @open-achievements="showAchievementsModal = true; showGamificationPanel = false"
-                @open-shop="showShopModal = true; showGamificationPanel = false"
-                @close="showGamificationPanel = false"
-              />
-            </div>
-          </div>
-          <div class="control-divider" />
-
-          <!-- Modals -->
-          <AchievementsModal
-            :open="showAchievementsModal"
-            @close="showAchievementsModal = false"
-          />
-          <ShopModal
-            :open="showShopModal"
-            @close="showShopModal = false"
-          />
-        </template>
-
         <!-- TASK-1177: Sync Status Indicator -->
         <SyncStatusIndicator />
 
@@ -212,15 +171,6 @@
           Quick Sort
           <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
         </router-link>
-        <router-link
-          v-if="showAtIntensity('moderate')"
-          to="/cyberflow"
-          class="view-tab"
-          :class="{ 'cyberflow-tab--glow': isIntense }"
-          active-class="active"
-        >
-          Cyberflow
-        </router-link>
       </div>
     </div>
   </header>
@@ -237,9 +187,7 @@ import { Timer, Play, Pause, Coffee, Square, User, Sparkles } from 'lucide-vue-n
 import TimeDisplay from '@/components/common/TimeDisplay.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
-import { GamificationHUD, GamificationPanel, AchievementsModal, ShopModal } from '@/components/gamification'
 import { useAuthStore } from '@/stores/auth'
-import { useCyberflowTheme } from '@/composables/useCyberflowTheme'
 import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
 
 const router = useRouter()
@@ -248,12 +196,6 @@ const timerStore = useTimerStore()
 const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
-const { showAtIntensity, isIntense } = useCyberflowTheme()
-
-// FEATURE-1118: Gamification panel/modal states
-const showGamificationPanel = ref(false)
-const showAchievementsModal = ref(false)
-const showShopModal = ref(false)
 
 // Route name to display title mapping
 const routeNameToTitle = {
@@ -269,7 +211,6 @@ const routeNameToTitle = {
   'keyboard-test': 'Keyboard Test',
   'yjs-test': 'YJS Test',
   'design-system': 'Design System',
-  'cyberflow': 'Cyberflow'
 }
 
 // Define proper types for page title info

@@ -2867,6 +2867,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
 | **BUG-1305** | **P2** | **📋 TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
+| ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
 | ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
@@ -3792,6 +3793,45 @@ Awaiting user testing to confirm all 4 symptoms resolved.
 - `src/utils/notificationDelivery.ts` — Browser Notification API wrapper
 - `src/composables/app/useAppInitialization.ts` — Where composable is mounted
 - `src/stores/tasks/taskOperations.ts` — Sync queue payload for instance persistence
+
+---
+
+### BUG-1307: Week View Events Render as Thin Slivers on Thu-Sun Columns (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-13)
+
+**Problem**: In the calendar week view, events on Monday and Tuesday render correctly with proper width, title, time, and duration. However, events on Thursday through Sunday appear as nearly invisible thin vertical lines/slivers instead of proper event blocks.
+
+**Symptoms**:
+- MON/TUE events: full-width blocks with visible content
+- THU/FRI/SAT/SUN events: compressed to ~1-2px wide slivers
+- Event data is present (slivers are visible), just the width/positioning is wrong
+
+**Suspected Area**: `getWeekEventStyle()` in `useCalendarWeekView.ts` — percentage-based left/width calculation may conflict with CSS `left: var(--space-1); right: var(--space-1)` on `.week-event` in `CalendarWeekView.vue`
+
+**Files**:
+- `src/components/calendar/CalendarWeekView.vue` — Template + CSS
+- `src/composables/calendar/useCalendarWeekView.ts` — `getWeekEventStyle()` positioning logic
+
+---
+
+### BUG-1308: Month View Shows Only 2 Columns Instead of 7 (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-13)
+
+**Problem**: The calendar month view grid is broken — only 2 columns are visible per row instead of the expected 7-day layout. Day-of-week headers (MON, TUE, WED, THU, FRI, SAT, SUN) are completely missing.
+
+**Symptoms**:
+- Grid renders as 2-column layout (dates visible: 26/27, 2/3, 9/10, 16/17, 23/24)
+- No day-of-week header row (unlike week/day views which show headers)
+- Events display correctly within the wrongly-sized cells
+- Navigation (arrows, "Today") works
+
+**Suspected Area**: `CalendarMonthView.vue` template — CSS `grid-template-columns: repeat(7, 1fr)` may not be applying, or the component may not have enough cells to fill 7 columns. Also missing day-of-week header row in template.
+
+**Files**:
+- `src/components/calendar/CalendarMonthView.vue` — Template + CSS
+- `src/composables/calendar/useCalendarMonthView.ts` — `monthDays` computed (should return 42 items for 6×7 grid)
 
 ---
 

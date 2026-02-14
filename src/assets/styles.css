@@ -4,9 +4,6 @@
 /* Import theme variables for dark/light mode toggle support */
 @import './theme-variables.css';
 
-/* Cyberflow RPG design tokens - cyberpunk visual language (FEATURE-1218) */
-@import './cyberflow-tokens.css';
-
 /* Then Tailwind CSS - provides utility classes */
 @tailwind base;
 @tailwind components;

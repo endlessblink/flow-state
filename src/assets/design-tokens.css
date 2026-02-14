@@ -1554,5 +1554,3 @@ WHEN TO USE WHAT:
 
 /* Cache bust: 1761553951 */
 
-/* Import corruption visual system tokens (FEATURE-1132) */
-@import './corruption-tokens.css';

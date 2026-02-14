@@ -117,12 +117,6 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      path: '/cyberflow',
-      name: 'cyberflow',
-      component: () => import('@/views/CyberflowView.vue'),
-      meta: { requiresAuth: false }
-    },
-    {
       path: '/performance',
       name: 'performance',
       component: () => import('@/views/PerformanceView.vue'),

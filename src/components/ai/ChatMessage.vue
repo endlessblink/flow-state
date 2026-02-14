@@ -245,6 +245,7 @@ function visibleTasks(tasks: any[], sectionKey: string): any[] {
 
 const quickEditTask = ref<{ id: string; title: string; priority?: string | null; status?: string; dueDate?: string | null; estimatedDuration?: number | null } | null>(null)
 const quickEditPos = ref({ x: 0, y: 0 })
+const quickEditPosition = ref<'left' | 'auto'>('left')
 
 function openQuickEdit(task: any, event: MouseEvent) {
   event.stopPropagation()
@@ -256,13 +257,17 @@ function openQuickEdit(task: any, event: MouseEvent) {
     dueDate: task.dueDate || null,
     estimatedDuration: task.estimatedDuration || null,
   }
-  // Position to the left of the AI chat panel so the popover doesn't overlap
   const panel = document.querySelector('.ai-chat-panel')
-  if (panel) {
+  const isFullscreen = panel?.classList.contains('panel-fullscreen')
+  if (isFullscreen || !panel) {
+    // Fullscreen or no panel: position at click point with auto layout
+    quickEditPos.value = { x: event.clientX, y: event.clientY }
+    quickEditPosition.value = 'auto'
+  } else {
+    // Compact/expanded: position to the left of the panel
     const panelRect = panel.getBoundingClientRect()
     quickEditPos.value = { x: panelRect.left, y: event.clientY }
-  } else {
-    quickEditPos.value = { x: event.clientX, y: event.clientY }
+    quickEditPosition.value = 'left'
   }
 }
 
@@ -958,7 +963,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
       :task="quickEditTask"
       :x="quickEditPos.x"
       :y="quickEditPos.y"
-      position="left"
+      :position="quickEditPosition"
       @close="closeQuickEdit"
       @open-full-editor="openFullEditor"
     />

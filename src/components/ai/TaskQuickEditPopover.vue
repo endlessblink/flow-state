@@ -10,7 +10,7 @@
  */
 
 import { ref, computed, watch } from 'vue'
-import { Check, Play, ExternalLink, AlertCircle } from 'lucide-vue-next'
+import { Check, Play, ExternalLink, AlertCircle, X } from 'lucide-vue-next'
 import BasePopover from '@/components/base/BasePopover.vue'
 import { executeTool } from '@/services/ai/tools'
 import { useTimerStore } from '@/stores/timer'
@@ -211,6 +211,11 @@ function close() {
     @close="close"
   >
     <div v-if="task" class="quick-edit-popover">
+      <!-- Close Button -->
+      <button class="close-btn" title="Close" @click="close">
+        <X :size="14" />
+      </button>
+
       <!-- Context Tips -->
       <div v-if="contextTips.length > 0" class="tips-banner">
         <div v-for="(tip, idx) in contextTips" :key="idx" class="tip-item">
@@ -312,6 +317,30 @@ function close() {
 .quick-edit-popover {
   width: 340px;
   position: relative;
+}
+
+/* ── Close Button ── */
+.close-btn {
+  position: absolute;
+  top: var(--space-1, 4px);
+  inset-inline-end: var(--space-1, 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  z-index: 1;
+}
+
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
 }
 
 /* ── Tips Banner ── */

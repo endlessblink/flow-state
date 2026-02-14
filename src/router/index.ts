@@ -90,6 +90,12 @@ const router = createRouter({
       meta: { requiresAuth: false } // Temporarily disabled for development
     },
     {
+      path: '/weekly-plan',
+      name: 'weekly-plan',
+      component: () => import('@/views/WeeklyPlanView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/mobile-quick-sort',
       name: 'mobile-quick-sort',
       component: () => import('@/mobile/views/MobileQuickSortView.vue'),

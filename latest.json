@@ -1,10 +1,10 @@
 {
   "version": "1.2.61",
-  "notes": "Remove week view action buttons, fix invalid date, Hebrew RTL support, grid lines",
-  "pub_date": "2026-02-14T07:48:00.581Z",
+  "notes": "BUG-1315: Fix timer auto-starting work after break when both Tauri and browser are open",
+  "pub_date": "2026-02-14T08:33:22.152Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTJxcGhIenhkQmk4bXM2czBhWlFIeEl2SlkwQm90RWxISGdja1NOMHNVYUV1ZWRuUE9SWGlvY2xsVHhsRkVQQVhKRmFEMFhHc0hYRmZvMUhXL2lmMWdnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDU1MjgwCWZpbGU6Rmxvd1N0YXRlXzEuMi42MV9hbWQ2NC5BcHBJbWFnZQowS3dMS2RidDRYNXd6TU11TXNVaGo5QTl0eDM1VTUzTTMrU0xhcFo2RmRZbUFVNVZrc25PTG1JUG5YMVdidTFnRmJFN1FoZVNLOUpnTHc5dmcrOVNCUT09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTllZi9RNEdabGFoWjRVZXNiY1c0V1dHUkhMVzJaaHdpd3pSVHRuVWpBSkdzVUxDSXNYN01PSTU0Qmt4azk5TG9CQTN0SHNGVnNlWnFkTlFnZTlIZUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDU4MDAyCWZpbGU6Rmxvd1N0YXRlXzEuMi42MV9hbWQ2NC5BcHBJbWFnZQoySVlnR1BiRmEzUWJNRTR6UjFVdEpJbUtwK0dBNkVjQ1FCbHNWYzRuRHROTVYvSkRRZXpXaFl0aDI2QjRtd0J3bWR1NzlzWlovODFWQk9RMTRrbTJCdz09Cg==",
       "url": "https://in-theflow.com/updates/FlowState_1.2.61_amd64.AppImage"
     }
   }

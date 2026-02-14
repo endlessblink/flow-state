@@ -355,7 +355,6 @@ onMounted(() => {
 .mobile-content {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
   padding-bottom: var(--space-20);
   position: relative;
   -webkit-overflow-scrolling: touch;

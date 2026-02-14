@@ -535,7 +535,7 @@ const currentTaskProject = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  overflow: hidden; /* Don't scroll the whole view — only content scrolls */
+  overflow: visible; /* Inner .quick-sort-content handles scrolling via overflow-y: auto */
   position: relative; /* Establish positioning context for celebration overlay */
 }
 

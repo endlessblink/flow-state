@@ -501,19 +501,19 @@ const {
 
 .resize-handle.resize-top {
   top: 0;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .resize-handle.resize-bottom {
   bottom: 0;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .slot-task.is-primary:hover .resize-handle,
 .slot-task.is-primary.is-hovered .resize-handle {
   opacity: 1 !important;
   pointer-events: auto !important;
-  background: var(--color-indigo-alpha-40) !important;
+  background: rgba(99, 102, 241, 0.4) !important;
   transition: none !important;
 }
 

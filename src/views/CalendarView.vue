@@ -94,15 +94,21 @@
       />
 
       <!-- Week View -->
+      <!-- Week View — uses same handlers as day view -->
       <CalendarWeekView
         v-else-if="viewMode === 'week'"
         :week-days="weekDays"
         :working-hours="workingHours"
         :week-events="weekEvents"
         :current-task-id="timerStore.currentTaskId"
+        :drag-ghost="dragGhost"
         :is-dragging="isDragging"
-        @week-drag-over="handleWeekDragOver"
-        @week-drop="handleWeekDrop"
+        :dragged-event-id="draggedEventId"
+        :resize-preview="resizePreview"
+        @dragover="onDragOver"
+        @dragenter="onDragEnter"
+        @dragleave="onDragLeave"
+        @drop="onDropSlot"
         @event-drag-start="handleEventDragStart"
         @event-drag-end="handleEventDragEnd"
         @event-click="handleEventClick"
@@ -111,7 +117,7 @@
         @cycle-status="cycleTaskStatus"
         @remove-from-calendar="handleRemoveFromCalendar"
         @start-timer="startTimerOnCalendarEvent"
-        @start-resize="startWeekResize"
+        @start-resize="startResize"
       />
 
       <!-- Month View -->

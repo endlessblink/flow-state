@@ -203,7 +203,9 @@
       </template>
     </div>
 
-    <!-- Quick Add Bar (trigger only) -->
+    <!-- Quick Add Bar (trigger only) — Teleported to <body> to escape scroll container's
+         overflow clipping, which breaks position:fixed on mobile WebKit/Blink (BUG-1312) -->
+    <Teleport to="body">
     <div class="quick-add-bar">
       <div class="quick-add-row">
         <input
@@ -268,6 +270,7 @@
 
       <!-- Voice Task Confirmation removed - using TaskCreateBottomSheet instead (TASK-1077) -->
     </div>
+    </Teleport>
 
     <!-- Task Edit Bottom Sheet -->
     <TaskEditBottomSheet
@@ -1425,22 +1428,20 @@ const isOverdue = (dueDate: string | Date): boolean => {
   margin-top: var(--space-3);
 }
 
-/* Expanded Quick Add Bar */
+/* Quick Add Bar — Teleported to <body> so position:fixed is relative to viewport (BUG-1312) */
 .quick-add-bar {
   position: fixed;
   bottom: 64px; /* Above nav */
   left: 0;
   right: 0;
-  max-width: 100vw;
   padding: var(--space-3) var(--space-4);
   padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
   background: var(--surface-primary);
   border-top: 1px solid var(--border-subtle);
   z-index: 50;
   box-shadow: var(--shadow-md);
   transition: all var(--duration-slow) var(--spring-smooth);
-  box-sizing: border-box;
-  overflow: hidden;
 }
 
 .quick-add-bar.expanded {
@@ -1459,6 +1460,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .quick-add-input {
   flex: 1;
+  min-width: 0; /* Allow flex shrinking past intrinsic input width (BUG-1312) */
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-2xl);
   border: 1px solid var(--border-subtle);

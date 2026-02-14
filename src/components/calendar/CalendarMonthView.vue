@@ -35,6 +35,13 @@ const {
 
 <template>
   <div class="month-view">
+    <!-- Day-of-week header row -->
+    <div class="month-weekday-header">
+      <div v-for="day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']" :key="day" class="weekday-label">
+        {{ day }}
+      </div>
+    </div>
+
     <!-- Month Grid -->
     <div class="month-grid">
       <div
@@ -117,6 +124,23 @@ const {
   overflow: hidden;
   position: relative;
   z-index: 1;
+}
+
+.month-weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-faint);
+  flex-shrink: 0;
+}
+
+.weekday-label {
+  background: var(--glass-panel-bg);
+  padding: var(--space-2);
+  text-align: center;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
 }
 
 .month-grid {

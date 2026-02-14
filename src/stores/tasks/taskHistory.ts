@@ -100,7 +100,7 @@ export function useTaskHistory(
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before create instance')
-                store.createTaskInstance(taskId, instanceData)
+                await store.createTaskInstance(taskId, instanceData)
                 await nextTick()
                 undoSystem.saveState('After create instance')
             },
@@ -110,7 +110,7 @@ export function useTaskHistory(
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before update instance')
-                store.updateTaskInstance(taskId, instanceId, updates)
+                await store.updateTaskInstance(taskId, instanceId, updates)
                 await nextTick()
                 undoSystem.saveState('After update instance')
             },
@@ -120,7 +120,7 @@ export function useTaskHistory(
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before delete instance')
-                store.deleteTaskInstance(taskId, instanceId)
+                await store.deleteTaskInstance(taskId, instanceId)
                 await nextTick()
                 undoSystem.saveState('After delete instance')
             },
@@ -130,7 +130,7 @@ export function useTaskHistory(
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before create subtask')
-                store.createSubtask(taskId, subtask)
+                await store.createSubtask(taskId, subtask)
                 await nextTick()
                 undoSystem.saveState('After create subtask')
             },
@@ -139,7 +139,7 @@ export function useTaskHistory(
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before update subtask')
-                store.updateSubtask(taskId, subtaskId, updates)
+                await store.updateSubtask(taskId, subtaskId, updates)
                 await nextTick()
                 undoSystem.saveState('After update subtask')
             },
@@ -148,7 +148,7 @@ export function useTaskHistory(
                 const store = useTaskStore()
                 const undoSystem = getUndoSystem()
                 undoSystem.saveState('Before delete subtask')
-                store.deleteSubtask(taskId, subtaskId)
+                await store.deleteSubtask(taskId, subtaskId)
                 await nextTick()
                 undoSystem.saveState('After delete subtask')
             },

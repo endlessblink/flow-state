@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
-import { createPinia, setActivePinia } from 'pinia'
 import { List, Table2 } from 'lucide-vue-next'
 
 /**
@@ -51,9 +50,48 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-function setupMockStores() {
-  const pinia = createPinia()
-  setActivePinia(pinia)
+// All styles as single-line strings — multiline breaks Storybook rendering
+const S = {
+  root: 'display:flex; flex-direction:column; min-height:100vh; background:var(--app-background-gradient); padding:var(--space-6);',
+  rootTable: 'min-height:100vh; background:var(--app-background-gradient); padding:var(--space-6);',
+  controlBar: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4); padding:var(--space-3); background:var(--glass-bg-medium); border:1px solid var(--glass-border); border-radius:var(--radius-lg);',
+  viewBtnGroup: 'display:flex; gap:var(--space-2);',
+  viewBtnActive: 'padding:var(--space-2) var(--space-3); background:var(--glass-bg-light); border:1px solid var(--glass-border); border-radius:var(--radius-md); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:var(--space-2);',
+  viewBtn: 'padding:var(--space-2) var(--space-3); background:transparent; border:1px solid var(--glass-border); border-radius:var(--radius-md); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:var(--space-2);',
+  sortGroup: 'display:flex; gap:var(--space-2); align-items:center;',
+  sortLabel: 'font-size:var(--text-sm); color:var(--text-muted);',
+  sortSelect: 'padding:var(--space-1_5) var(--space-2); background:var(--glass-bg-medium); border:1px solid var(--glass-border); border-radius:var(--radius-md); color:var(--text-primary); font-size:var(--text-sm);',
+  listScroll: 'flex:1; overflow-y:auto;',
+  taskRow: 'padding:var(--space-3) var(--space-4); background:var(--glass-bg-soft); border:1px solid var(--glass-border); border-radius:var(--radius-lg); margin-bottom:var(--space-2); cursor:pointer; transition:all var(--duration-fast);',
+  taskRowInner: 'display:flex; align-items:center; gap:var(--space-3);',
+  taskTitle: 'flex:1; font-size:var(--text-base); color:var(--text-primary);',
+  priorityHigh: 'padding:var(--space-0_5) var(--space-2); background:var(--danger-bg-subtle); color:var(--color-danger); border-radius:var(--radius-sm); font-size:var(--text-xs); text-transform:uppercase;',
+  priorityMedium: 'padding:var(--space-0_5) var(--space-2); background:var(--color-warning-alpha-10); color:var(--color-warning); border-radius:var(--radius-sm); font-size:var(--text-xs); text-transform:uppercase;',
+  priorityLow: 'padding:var(--space-0_5) var(--space-2); background:var(--blue-bg-light); color:var(--status-planned-text); border-radius:var(--radius-sm); font-size:var(--text-xs); text-transform:uppercase;',
+  tableWrap: 'background:var(--glass-bg-soft); border:1px solid var(--glass-border); border-radius:var(--radius-lg); overflow:hidden;',
+  table: 'width:100%; border-collapse:collapse;',
+  thead: 'background:var(--glass-bg-medium); border-bottom:1px solid var(--glass-border);',
+  th: 'padding:var(--space-3); text-align:left; font-size:var(--text-sm); color:var(--text-secondary); font-weight:var(--font-semibold);',
+  tr: 'border-bottom:1px solid var(--glass-border-faint); transition:background var(--duration-fast);',
+  td: 'padding:var(--space-3); font-size:var(--text-sm); color:var(--text-primary);',
+  tdMuted: 'padding:var(--space-3); font-size:var(--text-sm); color:var(--text-muted);',
+  statusPlanned: 'padding:var(--space-0_5) var(--space-2); background:var(--glass-bg-medium); color:var(--text-secondary); border-radius:var(--radius-sm); font-size:var(--text-xs);',
+  statusProgress: 'padding:var(--space-0_5) var(--space-2); background:var(--color-warning-alpha-10); color:var(--color-warning); border-radius:var(--radius-sm); font-size:var(--text-xs);',
+  statusDone: 'padding:var(--space-0_5) var(--space-2); background:var(--success-bg-light); color:var(--color-success); border-radius:var(--radius-sm); font-size:var(--text-xs);',
+}
+
+// Priority style map for dynamic lookup
+const priorityStyleMap: Record<string, string> = {
+  high: S.priorityHigh,
+  medium: S.priorityMedium,
+  low: S.priorityLow,
+}
+
+// Status style map for dynamic lookup
+const statusStyleMap: Record<string, string> = {
+  planned: S.statusPlanned,
+  in_progress: S.statusProgress,
+  done: S.statusDone,
 }
 
 /**
@@ -72,84 +110,23 @@ export const ListMode: Story = {
   render: () => ({
     components: { List, Table2 },
     setup() {
-      setupMockStores()
-      const viewType = ref('list')
       const mockTasks = [
         { id: '1', title: 'Review Q4 marketing proposal', status: 'in_progress', priority: 'high' },
         { id: '2', title: 'Update team documentation', status: 'planned', priority: 'medium' },
         { id: '3', title: 'Schedule client call', status: 'done', priority: 'low' }
       ]
-      return { viewType, mockTasks }
+      return { S, mockTasks, priorityStyleMap }
     },
     template: `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        background: var(--app-background-gradient);
-        padding: var(--space-6);
-      ">
-        <!-- View Controls -->
-        <div style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: var(--space-4);
-          padding: var(--space-3);
-          background: var(--glass-bg-medium);
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-lg);
-        ">
-          <div style="display: flex; gap: var(--space-2);">
-            <!-- View Type Switcher -->
-            <button
-              :class="{ active: viewType === 'list' }"
-              @click="viewType = 'list'"
-              style="
-                padding: var(--space-2) var(--space-3);
-                background: var(--glass-bg-light);
-                border: 1px solid var(--glass-border);
-                border-radius: var(--radius-md);
-                color: var(--text-secondary);
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: var(--space-2);
-              "
-            >
-              <List :size="16" />
-              <span>List</span>
-            </button>
-            <button
-              :class="{ active: viewType === 'table' }"
-              @click="viewType = 'table'"
-              style="
-                padding: var(--space-2) var(--space-3);
-                background: transparent;
-                border: 1px solid var(--glass-border);
-                border-radius: var(--radius-md);
-                color: var(--text-secondary);
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: var(--space-2);
-              "
-            >
-              <Table2 :size="16" />
-              <span>Table</span>
-            </button>
+      <div :style="S.root">
+        <div :style="S.controlBar">
+          <div :style="S.viewBtnGroup">
+            <button :style="S.viewBtnActive"><List :size="16" /><span>List</span></button>
+            <button :style="S.viewBtn"><Table2 :size="16" /><span>Table</span></button>
           </div>
-
-          <div style="display: flex; gap: var(--space-2); align-items: center;">
-            <span style="font-size: var(--text-sm); color: var(--text-muted);">Sort by:</span>
-            <select style="
-              padding: var(--space-1_5) var(--space-2);
-              background: var(--glass-bg-medium);
-              border: 1px solid var(--glass-border);
-              border-radius: var(--radius-md);
-              color: var(--text-primary);
-              font-size: var(--text-sm);
-            ">
+          <div :style="S.sortGroup">
+            <span :style="S.sortLabel">Sort by:</span>
+            <select :style="S.sortSelect">
               <option>Due Date</option>
               <option>Priority</option>
               <option>Title</option>
@@ -157,40 +134,12 @@ export const ListMode: Story = {
             </select>
           </div>
         </div>
-
-        <!-- Task List -->
-        <div style="
-          flex: 1;
-          overflow-y: auto;
-        ">
-          <div
-            v-for="task in mockTasks"
-            :key="task.id"
-            style="
-              padding: var(--space-3) var(--space-4);
-              background: var(--glass-bg-soft);
-              border: 1px solid var(--glass-border);
-              border-radius: var(--radius-lg);
-              margin-bottom: var(--space-2);
-              cursor: pointer;
-              transition: all var(--duration-fast);
-            "
-          >
-            <div style="display: flex; align-items: center; gap: var(--space-3);">
+        <div :style="S.listScroll">
+          <div v-for="task in mockTasks" :key="task.id" :style="S.taskRow">
+            <div :style="S.taskRowInner">
               <input type="checkbox" :checked="task.status === 'done'" />
-              <span style="
-                flex: 1;
-                font-size: var(--text-base);
-                color: var(--text-primary);
-              ">{{ task.title }}</span>
-              <span style="
-                padding: var(--space-0_5) var(--space-2);
-                background: var(--color-priority-{{ task.priority }}-bg-subtle);
-                color: var(--color-priority-{{ task.priority }});
-                border-radius: var(--radius-sm);
-                font-size: var(--text-xs);
-                text-transform: uppercase;
-              ">{{ task.priority }}</span>
+              <span :style="S.taskTitle">{{ task.title }}</span>
+              <span :style="priorityStyleMap[task.priority]">{{ task.priority }}</span>
             </div>
           </div>
         </div>
@@ -219,68 +168,26 @@ export const TableMode: Story = {
         { id: '2', title: 'Update team documentation', status: 'planned', priority: 'medium', dueDate: '2026-02-20' },
         { id: '3', title: 'Schedule client call', status: 'done', priority: 'low', dueDate: '2026-02-10' }
       ]
-      return { mockTasks }
+      return { S, mockTasks, priorityStyleMap, statusStyleMap }
     },
     template: `
-      <div style="
-        min-height: 100vh;
-        background: var(--app-background-gradient);
-        padding: var(--space-6);
-      ">
-        <div style="
-          background: var(--glass-bg-soft);
-          border: 1px solid var(--glass-border);
-          border-radius: var(--radius-lg);
-          overflow: hidden;
-        ">
-          <table style="
-            width: 100%;
-            border-collapse: collapse;
-          ">
-            <thead>
-              <tr style="
-                background: var(--glass-bg-medium);
-                border-bottom: 1px solid var(--glass-border);
-              ">
-                <th style="padding: var(--space-3); text-align: left; font-size: var(--text-sm); color: var(--text-secondary); font-weight: var(--font-semibold);">Task</th>
-                <th style="padding: var(--space-3); text-align: left; font-size: var(--text-sm); color: var(--text-secondary); font-weight: var(--font-semibold);">Status</th>
-                <th style="padding: var(--space-3); text-align: left; font-size: var(--text-sm); color: var(--text-secondary); font-weight: var(--font-semibold);">Priority</th>
-                <th style="padding: var(--space-3); text-align: left; font-size: var(--text-sm); color: var(--text-secondary); font-weight: var(--font-semibold);">Due Date</th>
+      <div :style="S.rootTable">
+        <div :style="S.tableWrap">
+          <table :style="S.table">
+            <thead :style="S.thead">
+              <tr>
+                <th :style="S.th">Task</th>
+                <th :style="S.th">Status</th>
+                <th :style="S.th">Priority</th>
+                <th :style="S.th">Due Date</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="task in mockTasks"
-                :key="task.id"
-                style="
-                  border-bottom: 1px solid var(--glass-border-faint);
-                  transition: background var(--duration-fast);
-                "
-              >
-                <td style="padding: var(--space-3); font-size: var(--text-sm); color: var(--text-primary);">
-                  {{ task.title }}
-                </td>
-                <td style="padding: var(--space-3);">
-                  <span style="
-                    padding: var(--space-0_5) var(--space-2);
-                    background: var(--status-{{ task.status }}-bg-subtle);
-                    color: var(--status-{{ task.status }}-text);
-                    border-radius: var(--radius-sm);
-                    font-size: var(--text-xs);
-                  ">{{ task.status }}</span>
-                </td>
-                <td style="padding: var(--space-3);">
-                  <span style="
-                    padding: var(--space-0_5) var(--space-2);
-                    background: var(--color-priority-{{ task.priority }}-bg-subtle);
-                    color: var(--color-priority-{{ task.priority }});
-                    border-radius: var(--radius-sm);
-                    font-size: var(--text-xs);
-                  ">{{ task.priority }}</span>
-                </td>
-                <td style="padding: var(--space-3); font-size: var(--text-sm); color: var(--text-muted);">
-                  {{ task.dueDate }}
-                </td>
+              <tr v-for="task in mockTasks" :key="task.id" :style="S.tr">
+                <td :style="S.td">{{ task.title }}</td>
+                <td :style="S.td"><span :style="statusStyleMap[task.status]">{{ task.status }}</span></td>
+                <td :style="S.td"><span :style="priorityStyleMap[task.priority]">{{ task.priority }}</span></td>
+                <td :style="S.tdMuted">{{ task.dueDate }}</td>
               </tr>
             </tbody>
           </table>

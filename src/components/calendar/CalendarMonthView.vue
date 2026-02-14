@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { ref, inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent } from '@/types/tasks'
 import type { MonthDay } from '@/composables/calendar/useCalendarMonthView'
@@ -8,7 +8,7 @@ defineProps<{
   monthDays: MonthDay[]
   currentTaskId?: string | null
 }>()
-defineEmits<{
+const emit = defineEmits<{
   (e: 'monthDrop', event: DragEvent, dateString: string): void
   (e: 'monthDayClick', dateString: string): void
   (e: 'eventDragStart', event: DragEvent, calEvent: CalendarEvent): void
@@ -17,6 +17,42 @@ defineEmits<{
   (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
 }>()
+
+// Local drag state for visual feedback
+const activeDragDay = ref<string | null>(null)
+const draggedEventId = ref<string | null>(null)
+
+const handleCellDragEnter = (dateString: string) => {
+  activeDragDay.value = dateString
+}
+
+const handleCellDragLeave = (event: DragEvent, dateString: string) => {
+  // Only clear if actually leaving the cell (not entering a child element)
+  const related = event.relatedTarget as HTMLElement | null
+  const cell = event.currentTarget as HTMLElement
+  if (!related || !cell.contains(related)) {
+    if (activeDragDay.value === dateString) {
+      activeDragDay.value = null
+    }
+  }
+}
+
+const handleCellDrop = (event: DragEvent, dateString: string) => {
+  activeDragDay.value = null
+  emit('monthDrop', event, dateString)
+}
+
+const handleEventDragStart = (event: DragEvent, calEvent: CalendarEvent) => {
+  draggedEventId.value = calEvent.taskId
+  emit('eventDragStart', event, calEvent)
+}
+
+const handleEventDragEnd = (event: DragEvent) => {
+  draggedEventId.value = null
+  activeDragDay.value = null
+  emit('eventDragEnd', event)
+}
+
 // Inject helpers from parent CalendarView
 const helpers = inject('calendar-helpers') as any
 const {
@@ -50,11 +86,13 @@ const {
         class="month-day-cell"
         :class="{
           'other-month': !day.isCurrentMonth,
-          'today': day.isToday
+          'today': day.isToday,
+          'drag-over': activeDragDay === day.dateString
         }"
-        @drop="$emit('monthDrop', $event, day.dateString)"
+        @drop.prevent="handleCellDrop($event, day.dateString)"
         @dragover.prevent
-        @dragenter.prevent
+        @dragenter.prevent="handleCellDragEnter(day.dateString)"
+        @dragleave="handleCellDragLeave($event, day.dateString)"
         @click="$emit('monthDayClick', day.dateString)"
       >
         <div class="day-number">
@@ -66,12 +104,12 @@ const {
             v-for="event in day.events"
             :key="event.id"
             class="month-event"
-            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'status-done': getTaskStatus(event) === 'done' }"
+            :class="{ 'timer-active-event': currentTaskId === event.taskId, 'status-done': getTaskStatus(event) === 'done', 'dragging': draggedEventId === event.taskId }"
             :style="{ backgroundColor: event.color }"
             :title="event.title"
             draggable="true"
-            @dragstart="$emit('eventDragStart', $event, event)"
-            @dragend="$emit('eventDragEnd', $event)"
+            @dragstart="handleEventDragStart($event, event)"
+            @dragend="handleEventDragEnd($event)"
             @dblclick.stop="$emit('eventDblClick', event)"
             @contextmenu.prevent.stop="$emit('eventContextMenu', $event, event)"
             @click.stop
@@ -170,6 +208,11 @@ const {
   background: var(--glass-bg-subtle);
 }
 
+.month-day-cell.drag-over {
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.35);
+}
+
 .month-day-cell.other-month {
   background: var(--glass-bg-tint);
   opacity: 0.6;
@@ -266,5 +309,9 @@ const {
 .month-event.status-done {
   filter: grayscale(0.6) brightness(0.85);
   opacity: 0.55;
+}
+
+.month-event.dragging {
+  opacity: 0.35;
 }
 </style>

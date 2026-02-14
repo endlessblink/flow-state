@@ -54,6 +54,39 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
+// All styles as single-line strings — multiline breaks Storybook rendering
+const S = {
+  root: 'display:flex; flex-direction:column; min-height:100vh; background:var(--app-background-gradient); padding:var(--space-4);',
+  headerRow: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-4);',
+  titleGroup: 'display:flex; align-items:center; gap:var(--space-3);',
+  title: 'font-size:var(--text-2xl); font-weight:var(--font-bold); color:var(--text-primary); margin:0;',
+  taskCount: 'font-size:var(--text-sm); color:var(--text-muted);',
+  viewBtnGroup: 'display:flex; gap:var(--space-2);',
+  viewBtnActive: 'padding:var(--space-2) var(--space-3); background:var(--glass-bg-medium); border:1px solid var(--glass-border); border-radius:var(--radius-md); color:var(--text-primary); cursor:pointer; display:flex; align-items:center; gap:var(--space-2);',
+  viewBtn: 'padding:var(--space-2) var(--space-3); background:transparent; border:1px solid var(--glass-border); border-radius:var(--radius-md); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:var(--space-2);',
+  boardScroll: 'flex:1; overflow-x:auto; overflow-y:auto;',
+  swimlane: 'margin-bottom:var(--space-6);',
+  projectHeader: 'display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-3); padding:var(--space-2) var(--space-3); background:var(--glass-bg-soft); border-radius:var(--radius-md);',
+  projectDot: 'width:8px; height:8px; background:var(--color-indigo); border-radius:var(--radius-full);',
+  projectName: 'font-size:var(--text-base); font-weight:var(--font-semibold); color:var(--text-primary);',
+  projectCount: 'font-size:var(--text-xs); color:var(--text-muted);',
+  columnsGrid: 'display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-4);',
+  column: 'background:var(--glass-bg-soft); border:1px solid var(--glass-border); border-radius:var(--radius-lg); padding:var(--space-3); min-height:200px;',
+  colHeaderRow: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3);',
+  colTitle: 'font-size:var(--text-sm); font-weight:var(--font-semibold); color:var(--text-secondary); text-transform:uppercase; margin:0;',
+  colCount: 'font-size:var(--text-xs); color:var(--text-muted);',
+  card: 'padding:var(--space-3); background:var(--glass-bg-medium); border:1px solid var(--glass-border); border-radius:var(--radius-md); margin-bottom:var(--space-2); cursor:pointer; transition:all var(--duration-fast);',
+  cardHigh: 'padding:var(--space-3); background:var(--glass-bg-medium); border:1px solid var(--color-priority-high-border-medium); border-radius:var(--radius-md); margin-bottom:var(--space-2); cursor:pointer; transition:all var(--duration-fast);',
+  cardMedium: 'padding:var(--space-3); background:var(--glass-bg-medium); border:1px solid var(--color-priority-medium-border-medium); border-radius:var(--radius-md); cursor:pointer;',
+  cardLow: 'padding:var(--space-3); background:var(--glass-bg-medium); border:1px solid var(--color-priority-low-border-medium); border-radius:var(--radius-md); cursor:pointer;',
+  cardTitle: 'font-size:var(--text-sm); color:var(--text-primary); margin-bottom:var(--space-1);',
+  tagRow: 'display:flex; gap:var(--space-2); flex-wrap:wrap;',
+  high: 'padding:var(--space-0_5) var(--space-1_5); background:var(--danger-bg-subtle); color:var(--color-danger); border-radius:var(--radius-sm); font-size:var(--text-xs);',
+  medium: 'padding:var(--space-0_5) var(--space-1_5); background:var(--color-warning-alpha-10); color:var(--color-warning); border-radius:var(--radius-sm); font-size:var(--text-xs);',
+  low: 'padding:var(--space-0_5) var(--space-1_5); background:var(--blue-bg-light); color:var(--status-planned-text); border-radius:var(--radius-sm); font-size:var(--text-xs);',
+  dueDate: 'font-size:var(--text-xs); color:var(--text-muted);',
+}
+
 /**
  * Priority View - Default
  *
@@ -70,284 +103,60 @@ export const PriorityView: Story = {
   render: () => ({
     components: { Flag, Calendar, ListTodo },
     setup() {
-      const viewType = ref('priority')
-      return { viewType, Flag, Calendar, ListTodo }
+      return { S }
     },
     template: `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        background: var(--app-background-gradient);
-        padding: var(--space-4);
-      ">
-        <!-- Header -->
-        <div style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: var(--space-4);
-        ">
-          <div style="display: flex; align-items: center; gap: var(--space-3);">
-            <h2 style="
-              font-size: var(--text-2xl);
-              font-weight: var(--font-bold);
-              color: var(--text-primary);
-              margin: 0;
-            ">Board</h2>
-            <span style="
-              font-size: var(--text-sm);
-              color: var(--text-muted);
-            ">12 tasks</span>
+      <div :style="S.root">
+        <div :style="S.headerRow">
+          <div :style="S.titleGroup">
+            <h2 :style="S.title">Board</h2>
+            <span :style="S.taskCount">12 tasks</span>
           </div>
-
-          <div style="display: flex; gap: var(--space-2);">
-            <!-- View Type Switcher -->
-            <button style="
-              padding: var(--space-2) var(--space-3);
-              background: var(--glass-bg-medium);
-              border: 1px solid var(--glass-border);
-              border-radius: var(--radius-md);
-              color: var(--text-primary);
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: var(--space-2);
-            ">
-              <Flag :size="16" />
-              <span>Priority</span>
-            </button>
-            <button style="
-              padding: var(--space-2) var(--space-3);
-              background: transparent;
-              border: 1px solid var(--glass-border);
-              border-radius: var(--radius-md);
-              color: var(--text-secondary);
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: var(--space-2);
-            ">
-              <Calendar :size="16" />
-              <span>Due Date</span>
-            </button>
-            <button style="
-              padding: var(--space-2) var(--space-3);
-              background: transparent;
-              border: 1px solid var(--glass-border);
-              border-radius: var(--radius-md);
-              color: var(--text-secondary);
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: var(--space-2);
-            ">
-              <ListTodo :size="16" />
-              <span>Status</span>
-            </button>
+          <div :style="S.viewBtnGroup">
+            <button :style="S.viewBtnActive"><Flag :size="16" /><span>Priority</span></button>
+            <button :style="S.viewBtn"><Calendar :size="16" /><span>Due Date</span></button>
+            <button :style="S.viewBtn"><ListTodo :size="16" /><span>Status</span></button>
           </div>
         </div>
-
-        <!-- Kanban Board -->
-        <div style="
-          flex: 1;
-          overflow-x: auto;
-          overflow-y: auto;
-        ">
-          <!-- Project Swimlane -->
-          <div style="
-            margin-bottom: var(--space-6);
-          ">
-            <!-- Project Header -->
-            <div style="
-              display: flex;
-              align-items: center;
-              gap: var(--space-2);
-              margin-bottom: var(--space-3);
-              padding: var(--space-2) var(--space-3);
-              background: var(--glass-bg-soft);
-              border-radius: var(--radius-md);
-            ">
-              <span style="
-                width: 8px;
-                height: 8px;
-                background: #3b82f6;
-                border-radius: var(--radius-full);
-              "></span>
-              <span style="
-                font-size: var(--text-base);
-                font-weight: var(--font-semibold);
-                color: var(--text-primary);
-              ">Work</span>
-              <span style="
-                font-size: var(--text-xs);
-                color: var(--text-muted);
-              ">(5 tasks)</span>
+        <div :style="S.boardScroll">
+          <div :style="S.swimlane">
+            <div :style="S.projectHeader">
+              <span :style="S.projectDot"></span>
+              <span :style="S.projectName">Work</span>
+              <span :style="S.projectCount">(5 tasks)</span>
             </div>
-
-            <!-- Columns -->
-            <div style="
-              display: grid;
-              grid-template-columns: repeat(3, 1fr);
-              gap: var(--space-4);
-            ">
-              <!-- High Priority Column -->
-              <div style="
-                background: var(--glass-bg-soft);
-                border: 1px solid var(--glass-border);
-                border-radius: var(--radius-lg);
-                padding: var(--space-3);
-                min-height: 200px;
-              ">
-                <div style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: var(--space-3);
-                ">
-                  <h3 style="
-                    font-size: var(--text-sm);
-                    font-weight: var(--font-semibold);
-                    color: var(--text-secondary);
-                    text-transform: uppercase;
-                    margin: 0;
-                  ">High Priority</h3>
-                  <span style="
-                    font-size: var(--text-xs);
-                    color: var(--text-muted);
-                  ">2</span>
+            <div :style="S.columnsGrid">
+              <div :style="S.column">
+                <div :style="S.colHeaderRow">
+                  <h3 :style="S.colTitle">High Priority</h3>
+                  <span :style="S.colCount">2</span>
                 </div>
-
-                <!-- Task Card -->
-                <div style="
-                  padding: var(--space-3);
-                  background: var(--glass-bg-medium);
-                  border: 1px solid var(--color-priority-high-border-medium);
-                  border-radius: var(--radius-md);
-                  margin-bottom: var(--space-2);
-                  cursor: pointer;
-                  transition: all var(--duration-fast);
-                ">
-                  <div style="
-                    font-size: var(--text-sm);
-                    color: var(--text-primary);
-                    margin-bottom: var(--space-1);
-                  ">Review Q4 marketing proposal</div>
-                  <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
-                    <span style="
-                      padding: var(--space-0_5) var(--space-1_5);
-                      background: var(--danger-bg-subtle);
-                      color: var(--color-danger);
-                      border-radius: var(--radius-sm);
-                      font-size: var(--text-xs);
-                    ">HIGH</span>
-                    <span style="
-                      font-size: var(--text-xs);
-                      color: var(--text-muted);
-                    ">Due: Feb 15</span>
+                <div :style="S.cardHigh">
+                  <div :style="S.cardTitle">Review Q4 marketing proposal</div>
+                  <div :style="S.tagRow">
+                    <span :style="S.high">HIGH</span>
+                    <span :style="S.dueDate">Due: Feb 15</span>
                   </div>
                 </div>
               </div>
-
-              <!-- Medium Priority Column -->
-              <div style="
-                background: var(--glass-bg-soft);
-                border: 1px solid var(--glass-border);
-                border-radius: var(--radius-lg);
-                padding: var(--space-3);
-                min-height: 200px;
-              ">
-                <div style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: var(--space-3);
-                ">
-                  <h3 style="
-                    font-size: var(--text-sm);
-                    font-weight: var(--font-semibold);
-                    color: var(--text-secondary);
-                    text-transform: uppercase;
-                    margin: 0;
-                  ">Medium Priority</h3>
-                  <span style="
-                    font-size: var(--text-xs);
-                    color: var(--text-muted);
-                  ">2</span>
+              <div :style="S.column">
+                <div :style="S.colHeaderRow">
+                  <h3 :style="S.colTitle">Medium Priority</h3>
+                  <span :style="S.colCount">2</span>
                 </div>
-
-                <div style="
-                  padding: var(--space-3);
-                  background: var(--glass-bg-medium);
-                  border: 1px solid var(--color-priority-medium-border-medium);
-                  border-radius: var(--radius-md);
-                  cursor: pointer;
-                ">
-                  <div style="
-                    font-size: var(--text-sm);
-                    color: var(--text-primary);
-                    margin-bottom: var(--space-1);
-                  ">Update team documentation</div>
-                  <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
-                    <span style="
-                      padding: var(--space-0_5) var(--space-1_5);
-                      background: var(--color-warning-alpha-10);
-                      color: var(--color-warning);
-                      border-radius: var(--radius-sm);
-                      font-size: var(--text-xs);
-                    ">MEDIUM</span>
-                  </div>
+                <div :style="S.cardMedium">
+                  <div :style="S.cardTitle">Update team documentation</div>
+                  <div :style="S.tagRow"><span :style="S.medium">MEDIUM</span></div>
                 </div>
               </div>
-
-              <!-- Low Priority Column -->
-              <div style="
-                background: var(--glass-bg-soft);
-                border: 1px solid var(--glass-border);
-                border-radius: var(--radius-lg);
-                padding: var(--space-3);
-                min-height: 200px;
-              ">
-                <div style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: var(--space-3);
-                ">
-                  <h3 style="
-                    font-size: var(--text-sm);
-                    font-weight: var(--font-semibold);
-                    color: var(--text-secondary);
-                    text-transform: uppercase;
-                    margin: 0;
-                  ">Low Priority</h3>
-                  <span style="
-                    font-size: var(--text-xs);
-                    color: var(--text-muted);
-                  ">1</span>
+              <div :style="S.column">
+                <div :style="S.colHeaderRow">
+                  <h3 :style="S.colTitle">Low Priority</h3>
+                  <span :style="S.colCount">1</span>
                 </div>
-
-                <div style="
-                  padding: var(--space-3);
-                  background: var(--glass-bg-medium);
-                  border: 1px solid var(--color-priority-low-border-medium);
-                  border-radius: var(--radius-md);
-                  cursor: pointer;
-                ">
-                  <div style="
-                    font-size: var(--text-sm);
-                    color: var(--text-primary);
-                    margin-bottom: var(--space-1);
-                  ">Schedule client call</div>
-                  <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
-                    <span style="
-                      padding: var(--space-0_5) var(--space-1_5);
-                      background: var(--blue-bg-light);
-                      color: var(--status-planned-text);
-                      border-radius: var(--radius-sm);
-                      font-size: var(--text-xs);
-                    ">LOW</span>
-                  </div>
+                <div :style="S.cardLow">
+                  <div :style="S.cardTitle">Schedule client call</div>
+                  <div :style="S.tagRow"><span :style="S.low">LOW</span></div>
                 </div>
               </div>
             </div>

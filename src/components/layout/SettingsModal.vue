@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X, Timer, Palette, Layout, User, Database, Info } from 'lucide-vue-next'
+import { X, Timer, Palette, Layout, User, Database, Bot, Info } from 'lucide-vue-next'
 
 // Tab components
 import TimerSettingsTab from '../settings/tabs/TimerSettingsTab.vue'
@@ -48,6 +48,7 @@ import AppearanceSettingsTab from '../settings/tabs/AppearanceSettingsTab.vue'
 import WorkflowSettingsTab from '../settings/tabs/WorkflowSettingsTab.vue'
 import AccountSettingsTab from '../settings/tabs/AccountSettingsTab.vue'
 import StorageSettingsTab from '../settings/tabs/StorageSettingsTab.vue'
+import AISettingsTab from '../settings/tabs/AISettingsTab.vue'
 import AboutSettingsTab from '../settings/tabs/AboutSettingsTab.vue'
 
 defineProps<{
@@ -66,6 +67,7 @@ const tabs = [
   { id: 'workflow', label: 'Workflow', icon: Layout, component: WorkflowSettingsTab },
   { id: 'account', label: 'Account', icon: User, component: AccountSettingsTab },
   { id: 'storage', label: 'Storage', icon: Database, component: StorageSettingsTab },
+  { id: 'ai', label: 'AI Pricing', icon: Bot, component: AISettingsTab },
   { id: 'about', label: 'About', icon: Info, component: AboutSettingsTab }
 ]
 

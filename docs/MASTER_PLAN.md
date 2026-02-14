@@ -2467,8 +2467,6 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 **Priority**: P3 | **Status**: 📋 PLANNED
 
-**Blocked By**: FEATURE-1314 (V1 must be tested and confirmed first)
-
 **Problem/Opportunity**: The AI Weekly Plan (FEATURE-1314) starts from scratch every time — it doesn't know the user's work capacity, preferred task distribution, energy patterns, or past scheduling accuracy. A persistent "work profile" would make each week's plan progressively smarter.
 
 **Concept**:

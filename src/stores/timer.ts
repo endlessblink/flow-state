@@ -87,7 +87,16 @@ export const useTimerStore = defineStore('timer', () => {
         console.log('🍅 [TIMER] Tick:', session.remainingTime, 'seconds remaining')
       }
       if (session.remainingTime % 5 === 0 && isDeviceLeader.value) broadcastSession()
-      if (session.remainingTime <= 0) completeSession()
+      if (session.remainingTime <= 0) {
+        if (isDeviceLeader.value) {
+          completeSession()
+        } else {
+          // BUG-1315: Followers must NOT call completeSession independently.
+          // Pause local countdown and wait for leader's Realtime event.
+          pauseTimerInterval()
+          console.log('🍅 [TIMER] Follower reached 0 - pausing, waiting for leader completion via Realtime')
+        }
+      }
     }
   }, 1000, { immediate: false })
 
@@ -620,8 +629,8 @@ export const useTimerStore = defineStore('timer', () => {
     // Browser Notification API doesn't support action buttons - only SW notifications do
     await showTimerNotification(session.id, wasBreak, lastTaskId, wasKdeWidgetActive)
 
-    // TASK-1009: Removed auto-start behavior
-    // User must explicitly choose via notification action buttons
+    // TASK-1009 + BUG-1315: Only the leader completes sessions.
+    // Followers wait for Realtime. Auto-start removed per TASK-1009.
     // Old settings (autoStartBreaks, autoStartPomodoros) are now ignored for notifications
     isDeviceLeader.value = false
   }

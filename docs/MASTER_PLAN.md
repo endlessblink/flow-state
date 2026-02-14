@@ -230,13 +230,19 @@
 
 ---
 
-### BUG-1315: Timer auto-starts work after break without user action (🔄 IN PROGRESS)
+### ~~BUG-1315~~: Timer auto-starts work after break without user action (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-14)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-14)
 
-**Problem**: When a break timer completes, the timer automatically transitions to a work session without waiting for the user to explicitly start it. Expected behavior: timer should stop after break and wait for user to manually start the next work session.
+**Problem**: When both Tauri (leader) and browser (follower) are open, the follower's timer also calls `completeSession()` when it reaches 0, showing a duplicate SW notification with "Start Work" action. Clicking that starts a new work session that the Tauri app picks up via Realtime.
 
-**Files**: `src/stores/timer.ts`
+**Root Cause**: In `src/stores/timer.ts`, the tick callback called `completeSession()` regardless of whether the device was the leader or follower. When the follower reached 0, it showed its own notification and could start a new session.
+
+**Fix**: Added `isDeviceLeader.value` guard around `completeSession()` at line 90. Followers now pause the interval and wait for the leader's Realtime event instead of completing independently.
+
+**Files**: `src/stores/timer.ts` (lines 90-99, 632-634)
+
+**Deployed**: v1.2.61 via Tauri auto-updater
 
 ---
 
@@ -2433,29 +2439,58 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### FEATURE-1314: AI Weekly Quick Sort — Sort Week's Tasks with AI + Push to Canvas Date Groups (📋 PLANNED)
+### FEATURE-1314: AI Weekly Quick Sort — Sort Week's Tasks with AI + Push to Canvas Date Groups (🔄 IN PROGRESS)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS — V1 implemented, awaiting user testing
 
 **Problem/Opportunity**: Starting a new week requires manually reviewing and organizing all tasks for the upcoming week. There's no AI-assisted workflow to quickly sort/prioritize the week's tasks and distribute them to the appropriate day-groups on the canvas.
 
+**Architecture Decisions** (resolved):
+- ✅ Separate workflow (not extending Quick Sort) — fundamentally different UX (AI batch vs manual A/B)
+- ✅ Uses AIRouter with Groq cloud (`taskType: 'planning'`, temperature 0.3), fallback to round-robin
+- ✅ Auto-creates canvas day-groups if they don't exist, reuses existing ones via `detectPowerKeyword()`
+- ✅ Criteria: priority, due date, overdue status, in-progress status, estimated duration
+
+**V1 Implementation** (Feb 14, 2026):
+- [x] `useWeeklyPlanAI.ts` — AI prompt builder, JSON parser, retry + fallback
+- [x] `useWeeklyPlan.ts` — Task selection, state management, canvas apply logic
+- [x] `WeeklyTaskCard.vue`, `DayColumn.vue`, `WeeklyPlanGrid.vue` — Drag-drop UI
+- [x] `WeeklyPlanView.vue` — Full view with loading/review/applied/error states
+- [x] Route `/weekly-plan` + header tab
+- [ ] User testing and confirmation
+
+**Follow-up**: FEATURE-1317 (AI Work Profile / Persistent Memory)
+
+---
+
+### FEATURE-1317: AI Work Profile / Persistent Memory — Learn User Work Patterns for Smarter Weekly Plans (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Blocked By**: FEATURE-1314 (V1 must be tested and confirmed first)
+
+**Problem/Opportunity**: The AI Weekly Plan (FEATURE-1314) starts from scratch every time — it doesn't know the user's work capacity, preferred task distribution, energy patterns, or past scheduling accuracy. A persistent "work profile" would make each week's plan progressively smarter.
+
 **Concept**:
-1. **AI-powered weekly sort** — A new Quick Sort mode for "Start My Week" that uses AI to analyze upcoming tasks (due dates, priorities, estimated effort, dependencies) and suggest an optimal daily distribution
-2. **Canvas date-group push** — After sorting, tasks can be pushed to their corresponding date-based groups on the canvas (e.g., "Monday", "Tuesday" groups)
-3. **User review + override** — AI suggests, user confirms or adjusts before committing
+1. **Work capacity tracking** — Learn how many tasks/hours the user actually completes per day and per week
+2. **Energy pattern modeling** — Track which days the user schedules heavy vs light work (e.g., deep work Mon-Wed, admin Thu-Fri)
+3. **Scheduling accuracy feedback** — After a planned week, compare plan vs actual (which tasks were completed, moved, or skipped)
+4. **Persistent profile storage** — Store learned preferences in Supabase `user_settings` or a new `ai_work_profile` table
+5. **Context injection** — Feed the work profile into the weekly plan AI prompt for personalized suggestions
 
 **Key Questions**:
-- [ ] Should this extend the existing Quick Sort system or be a separate workflow?
-- [ ] What AI model/provider for sorting (Groq/Ollama, same as AI Chat)?
-- [ ] Should it create canvas date groups if they don't exist?
-- [ ] What sorting criteria: priority, estimated duration, project balance, energy level?
+- [ ] Storage: extend `user_settings` JSON blob or new dedicated table?
+- [ ] How to collect feedback: automatic (compare plan vs actual) or explicit (user rates the plan)?
+- [ ] Privacy: should profile data stay local-only or sync to Supabase?
+- [ ] How many weeks of history to retain for pattern detection?
 
 **Subtasks**:
-- [ ] Design the "Start My Week" AI sort UX flow
-- [ ] Implement AI sorting logic (task analysis + daily distribution)
-- [ ] Build canvas date-group push mechanism
-- [ ] Add review/confirmation step before pushing
-- [ ] Integration with existing Quick Sort infrastructure
+- [ ] Design work profile data schema (capacity, patterns, preferences)
+- [ ] Implement post-week feedback collection (plan vs actual comparison)
+- [ ] Build profile persistence layer (Supabase or local storage)
+- [ ] Inject profile context into `useWeeklyPlanAI.ts` system prompt
+- [ ] Add Settings UI for viewing/resetting work profile
+- [ ] Week-over-week accuracy metrics (optional dashboard)
 
 ---
 
@@ -2930,7 +2965,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
-| **FEATURE-1314** | **P2** | **📋 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
+| **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
+| **FEATURE-1317** | **P3** | **📋 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
+| **TASK-1316** | **P2** | **📋 AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
 | ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
 | ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |

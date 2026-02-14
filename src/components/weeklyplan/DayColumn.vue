@@ -109,8 +109,7 @@ function isTaskOverdue(taskId: string): boolean {
 .day-column {
   display: flex;
   flex-direction: column;
-  min-width: 180px;
-  max-width: 250px;
+  min-width: 220px;
   flex: 1;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
@@ -120,15 +119,18 @@ function isTaskOverdue(taskId: string): boolean {
 
 .day-column.is-today {
   border-left: 3px solid var(--brand-primary);
+  background: rgba(78, 205, 196, 0.03);
 }
 
 .column-header {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--glass-bg-soft);
   border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .day-name {

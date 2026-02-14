@@ -297,6 +297,7 @@ function handleSwipeEnd() {
   transition: transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal);
   cursor: grab;
   user-select: none;
+  overflow: hidden; /* Prevent any content from escaping card bounds */
 }
 
 .quick-sort-card:hover {
@@ -321,6 +322,8 @@ function handleSwipeEnd() {
   color: var(--text-primary);
   margin: 0;
   line-height: var(--leading-tight);
+  overflow-wrap: anywhere; /* Break long URLs/strings that have no spaces */
+  word-break: break-word;
 }
 
 /* RTL support for Hebrew/Arabic text */
@@ -333,6 +336,8 @@ function handleSwipeEnd() {
   color: var(--text-secondary);
   line-height: var(--leading-relaxed);
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   max-height: 80px;
   overflow-y: auto;
 }
@@ -340,9 +345,10 @@ function handleSwipeEnd() {
 /* Combined Priority + Date Controls Row */
 .quick-controls-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-subtle);
 }
@@ -353,7 +359,7 @@ function handleSwipeEnd() {
 }
 
 .priority-btn {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1_5) var(--space-2_5);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -378,12 +384,13 @@ function handleSwipeEnd() {
 
 .date-shortcuts {
   display: flex;
-  gap: var(--space-2_5);
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .quick-date-btn {
-  padding: var(--space-2) var(--space-3);
-  min-height: 40px;
+  padding: var(--space-1_5) var(--space-2_5);
+  min-height: 36px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
@@ -450,6 +457,39 @@ function handleSwipeEnd() {
 .swipe-indicator.left {
   left: var(--space-5);
   color: var(--info);
+}
+
+/* Responsive: stack controls vertically on narrow screens */
+@media (max-width: 520px) {
+  .quick-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2_5);
+  }
+
+  .priority-buttons {
+    justify-content: stretch;
+  }
+
+  .priority-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .date-shortcuts {
+    justify-content: flex-start;
+  }
+
+  .quick-date-btn {
+    padding: var(--space-1_5) var(--space-2);
+    font-size: var(--text-xs);
+    min-height: 32px;
+  }
+
+  .pick-btn {
+    min-width: 32px;
+    padding: var(--space-1_5) !important;
+  }
 }
 
 /* Reduce motion for accessibility */

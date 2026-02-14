@@ -3,6 +3,7 @@ import { ref, computed, inject } from 'vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { WeekEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
 
 const props = defineProps<{
   weekDays: any[]
@@ -19,6 +20,7 @@ const props = defineProps<{
     previewDuration: number
     direction: 'top' | 'bottom'
   } | null
+  externalEvents?: ExternalCalendarEvent[]
 }>()
 
 // Same emit signatures as CalendarDayView — uses TimeSlot for drop targets
@@ -80,6 +82,23 @@ const eventsByCell = computed(() => {
 const getEventsForCell = (dayIndex: number, hour: number): WeekEvent[] => {
   return eventsByCell.value.get(`${dayIndex}-${hour}`) || []
 }
+
+// TASK-1317: External events grouped by cell
+const externalEventsByCell = computed(() => {
+  const map = new Map<string, ExternalCalendarEvent[]>()
+  if (!props.externalEvents?.length) return map
+  for (const event of props.externalEvents) {
+    const d = event.startTime
+    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const dayIndex = props.weekDays.findIndex((day: any) => day.dateString === dateString)
+    if (dayIndex === -1) continue
+    const hour = d.getHours()
+    const key = `${dayIndex}-${hour}`
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(event)
+  }
+  return map
+})
 
 // Position event within its cell (like day view's getSlotTaskStyle)
 const HALF_HOUR_HEIGHT = 30
@@ -264,10 +283,29 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
                 </div>
               </div>
+
+              <!-- TASK-1317: External calendar events in this cell -->
+              <div
+                v-for="ext in (externalEventsByCell.get(`${dayIndex}-${hour}`) || [])"
+                :key="`ext-${ext.id}`"
+                class="week-event week-event--external"
+                :style="{
+                  position: 'absolute',
+                  top: `${(ext.startTime.getMinutes() >= 30 ? 30 : 0)}px`,
+                  height: `${Math.max(20, Math.ceil((ext.endTime.getTime() - ext.startTime.getTime()) / 60000 / 30) * 30)}px`,
+                  right: '2px',
+                  width: '35%',
+                  borderColor: ext.color,
+                  backgroundColor: ext.color + '20'
+                }"
+                :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
+              >
+                <span class="external-event-title" dir="auto">{{ ext.title }}</span>
+              </div>
             </div>
-          </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -584,5 +622,23 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .week-event.status-done {
   filter: grayscale(0.6) brightness(0.85);
   opacity: 0.55;
+}
+
+/* TASK-1317: External calendar events */
+.week-event--external {
+  background: transparent !important;
+  border: 1px solid !important;
+  border-left: 3px solid !important;
+  cursor: default !important;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.week-event--external .external-event-title {
+  font-size: 10px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

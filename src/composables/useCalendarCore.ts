@@ -30,6 +30,7 @@ export function useCalendarCore() {
   }
 
   const formatEventTime = (event: CalendarEvent): string => {
+    if (!event.startTime || isNaN(event.startTime.getTime())) return ''
     return event.startTime.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',

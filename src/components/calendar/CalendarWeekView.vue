@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { inject } from 'vue'
-import { Play } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { WeekEvent } from '@/types/tasks'
 
@@ -143,40 +142,17 @@ const {
               :title="`Priority: ${getPriorityLabel(event)}`"
             />
 
-            <!-- Event Content -->
+            <!-- Event Content (actions via right-click context menu) -->
             <div
               class="event-content"
+              dir="auto"
               @dblclick="$emit('eventDblClick', event)"
               @contextmenu.prevent="$emit('eventContextMenu', $event, event)"
             >
-              <div class="event-header">
-                <div class="event-title" :title="event.title">
-                  {{ event.title }}
-                </div>
-                <div class="event-actions">
-                  <button
-                    class="play-timer-btn"
-                    title="Start timer"
-                    @click.stop="$emit('startTimer', event)"
-                  >
-                    <Play :size="11" />
-                  </button>
-                  <div
-                    class="status-indicator"
-                    :class="`status-${getTaskStatus(event)}`"
-                    @click.stop="$emit('cycleStatus', $event, event)"
-                  >
-                    {{ getStatusIcon(getTaskStatus(event)) }}
-                  </div>
-                  <button
-                    class="remove-from-calendar-btn"
-                    @click.stop="$emit('removeFromCalendar', event)"
-                  >
-                    ✕
-                  </button>
-                </div>
+              <div class="event-title" :title="event.title">
+                {{ event.title }}
               </div>
-              <div class="event-meta">
+              <div v-if="formatEventTime(event)" class="event-meta">
                 <span class="event-time">{{ formatEventTime(event) }}</span>
                 <span class="event-duration">{{ event.duration }}min</span>
               </div>
@@ -344,12 +320,6 @@ const {
   overflow: hidden;
 }
 
-.event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
 .event-title {
   font-weight: var(--font-semibold);
   overflow: hidden;
@@ -358,17 +328,6 @@ const {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   word-break: break-word;
-}
-
-.event-actions {
-  display: flex;
-  gap: var(--space-0_5);
-  opacity: 0;
-  transition: opacity var(--duration-fast);
-}
-
-.week-event:hover .event-actions {
-  opacity: 1;
 }
 
 .event-meta {
@@ -452,40 +411,6 @@ const {
 
 .resize-handle.resize-top { top: 0; }
 .resize-handle.resize-bottom { bottom: 0; }
-
-.status-indicator {
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-}
-
-.play-timer-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-xs);
-  transition: color var(--duration-fast);
-}
-
-.play-timer-btn:hover {
-  color: var(--color-success);
-}
-
-.remove-from-calendar-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-}
 
 /* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
 .week-event.status-done {

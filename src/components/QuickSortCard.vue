@@ -22,22 +22,28 @@
       <div class="quick-controls-row">
         <div class="priority-buttons">
           <button
-            class="priority-btn"
+            type="button"
+            class="priority-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: task.priority === 'low' }"
+            aria-label="Set priority to low"
             @click="updatePriority('low')"
           >
             Low
           </button>
           <button
-            class="priority-btn"
+            type="button"
+            class="priority-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: task.priority === 'medium' }"
+            aria-label="Set priority to medium"
             @click="updatePriority('medium')"
           >
             Med
           </button>
           <button
-            class="priority-btn"
+            type="button"
+            class="priority-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: task.priority === 'high' }"
+            aria-label="Set priority to high"
             @click="updatePriority('high')"
           >
             High
@@ -46,29 +52,41 @@
 
         <div class="date-shortcuts">
           <button
-            class="quick-date-btn"
+            type="button"
+            class="quick-date-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: isToday }"
+            aria-label="Set due date to today"
+            title="Today"
             @click.stop="setToday"
           >
             ☀️ Today
           </button>
           <button
-            class="quick-date-btn"
+            type="button"
+            class="quick-date-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: isTomorrow }"
+            aria-label="Set due date to tomorrow"
+            title="Tomorrow"
             @click.stop="setTomorrow"
           >
             🌅 +1
           </button>
           <button
-            class="quick-date-btn"
+            type="button"
+            class="quick-date-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: isNextWeek }"
+            aria-label="Set due date to next week"
+            title="Next Week"
             @click.stop="setNextWeek"
           >
             📆 +7
           </button>
           <button
-            class="quick-date-btn clear-btn"
+            type="button"
+            class="quick-date-btn clear-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             :class="{ active: hasNoDate }"
+            aria-label="Clear due date"
+            title="Clear due date"
             @click.stop="clearDate"
           >
             Clear
@@ -81,7 +99,13 @@
             @update:show="showDatePicker = $event"
           >
             <template #trigger>
-              <button class="quick-date-btn pick-btn" title="Pick date" @click.stop>
+              <button
+                type="button"
+                class="quick-date-btn pick-btn focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
+                aria-label="Pick specific date"
+                title="Pick date"
+                @click.stop
+              >
                 <CalendarDays :size="14" />
               </button>
             </template>

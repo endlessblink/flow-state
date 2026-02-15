@@ -255,8 +255,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         if (error instanceof Error) {
             message = error.message
         } else if (typeof error === 'object' && error !== null) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const e = error as any
+            const e = error as { message?: string; details?: string; hint?: string; status?: number; code?: string }
             message = e.message || String(error)
             details = e.details || e.hint || ''
         } else {

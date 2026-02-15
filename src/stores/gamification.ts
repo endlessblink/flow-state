@@ -31,11 +31,9 @@ import type {
   GamificationToast,
   GamificationSettings,
   DbUserGamification,
-  DbXpLog,
   DbAchievement,
   DbUserAchievement,
   DbShopItem,
-  DbUserPurchase,
   DbUserStats,
 } from '@/types/gamification'
 import {

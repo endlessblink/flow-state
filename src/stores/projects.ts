@@ -52,8 +52,7 @@ export const useProjectStore = defineStore('projects', () => {
 
     // Actions
     const saveProjectsToStorage = async (projectsToSave: Project[], context: string = 'unknown'): Promise<void> => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
+        if (typeof window !== 'undefined' && (window as unknown as { __STORYBOOK__?: boolean }).__STORYBOOK__) return
 
         // TASK-142 FIX: ALWAYS try Supabase - if reads work, writes should too
         // The auth check was causing data loss: loads came from Supabase but saves were blocked
@@ -135,11 +134,14 @@ export const useProjectStore = defineStore('projects', () => {
                 const projectToDelete = _rawProjects.value[projectIndex]
                 const parentId = projectToDelete.parentId
 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { useTaskStore } = await import('./tasks')
-                const taskStore = useTaskStore() as any
+                // Define minimal interface to avoid circular dependency issues
+                type TaskStoreLoophole = {
+                    _rawTasks: { id: string; projectId: string }[];
+                    updateTask: (id: string, updates: { projectId: null; isUncategorized: boolean }) => Promise<void>;
+                }
+                const taskStore = useTaskStore() as unknown as TaskStoreLoophole
                 // SAFETY: Use _rawTasks to include soft-deleted tasks in project reassignment
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 for (const task of taskStore._rawTasks) {
                     if (task.projectId === projectId) {
                         await taskStore.updateTask(task.id, { // BUG-1051: AWAIT to ensure persistence
@@ -178,7 +180,11 @@ export const useProjectStore = defineStore('projects', () => {
         manualOperationInProgress.value = true
         try {
             const { useTaskStore } = await import('./tasks')
-            const taskStore = useTaskStore() as any
+            type TaskStoreLoophole = {
+                _rawTasks: { id: string; projectId: string }[];
+                updateTask: (id: string, updates: { projectId: null; isUncategorized: boolean }) => Promise<void>;
+            }
+            const taskStore = useTaskStore() as unknown as TaskStoreLoophole
             const projectIdSet = new Set(projectIds)
 
             // Build parent mapping for re-parenting children
@@ -346,12 +352,14 @@ export const useProjectStore = defineStore('projects', () => {
     // Flag to prevent auto-save after sync updates (breaks circular loop)
     let syncUpdateInProgress = false
 
-    const updateProjectFromSync = (projectId: string, data: any) => {
+    const updateProjectFromSync = (projectId: string, payload: unknown) => {
         // SAFETY: Validate incoming data to prevent corrupted projects
-        if (!data || typeof data !== 'object') {
-            console.warn(`[PROJECT-SYNC] Ignoring invalid data for project ${projectId}:`, data)
+        if (!payload || typeof payload !== 'object') {
+            console.warn(`[PROJECT-SYNC] Ignoring invalid data for project ${projectId}:`, payload)
             return
         }
+
+        const data = payload as Record<string, unknown>
 
         // CRITICAL: Ensure name is present and valid
         if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
@@ -367,13 +375,13 @@ export const useProjectStore = defineStore('projects', () => {
             const normalized = {
                 id: projectId,
                 name: data.name,
-                color: data.color || '#4ECDC4',
-                colorType: data.colorType || 'hex',
-                emoji: data.emoji,
-                viewType: data.viewType || 'status',
-                parentId: data.parentId || null,
-                createdAt: new Date(data.createdAt || Date.now()),
-                updatedAt: new Date(data.updatedAt || Date.now())
+                color: (typeof data.color === 'string' ? data.color : '#4ECDC4'),
+                colorType: (data.colorType === 'emoji' ? 'emoji' : 'hex') as 'hex' | 'emoji',
+                emoji: (typeof data.emoji === 'string' ? data.emoji : undefined),
+                viewType: (['list', 'board', 'calendar', 'timeline'].includes(data.viewType as string) ? data.viewType : 'status') as Project['viewType'],
+                parentId: (typeof data.parentId === 'string' ? data.parentId : null),
+                createdAt: new Date((typeof data.createdAt === 'string' || typeof data.createdAt === 'number') ? data.createdAt : Date.now()),
+                updatedAt: new Date((typeof data.updatedAt === 'string' || typeof data.updatedAt === 'number') ? data.updatedAt : Date.now())
             }
 
             if (index !== -1) {

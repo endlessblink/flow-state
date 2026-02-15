@@ -1,11 +1,11 @@
 {
-  "version": "1.2.64",
-  "notes": "v1.2.64: AI agent chains, canvas cleanup, weekly plan scheduling, timer improvements",
-  "pub_date": "2026-02-14T21:13:17.933Z",
+  "version": "1.2.65",
+  "notes": "v1.2.65: broad UI polish, accessibility fixes, AI chat refactor, notifications settings",
+  "pub_date": "2026-02-15T06:49:43.995Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXo1RmNNSENnV3dYWTdZRGt0UjdjZW5SeGFYQ1NuQzFYcTd6ajQ0SmpzaVg3ekhEK0g0RVozVjBzRHM4MWdRYWYyd2JrOWdEbDlGREtLSTEwelBWNEFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMTAzNTk3CWZpbGU6Rmxvd1N0YXRlXzEuMi42NF9hbWQ2NC5BcHBJbWFnZQoyaFN3N1dhUWdaR09XOTR4ME1HZllaVGZxU0VnLzZJOXFzTW5PbnNDU1hCLzdkd1Nqd0tscTY0QkFZQkR2ZXdaMzl6RG5YN0RSNVVtWlM2SzlWYUNEZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.64_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRThMV1RRR0kzTHpWQ3dacmpobEJXbnVFS0FhaEpFS1Y4cmEwZHpjbnpSUW1yNmY5aHhwblN0aFF5bDJjZWRPbXdiNFhBd0dZSFlQaXVhWXV5NWtMdkF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMTM4MTgzCWZpbGU6Rmxvd1N0YXRlXzEuMi42NV9hbWQ2NC5BcHBJbWFnZQpzZmxTNk9YcmZKMTFjSTc3UG82MVZTVVVLaWd4V2k5amVqak1rL1IwWE9ib2lLNEFnRXVRamJlYTI2cjcxVlJPNjdSTjRIQjBPV1R6K0VyN2FCOHZEdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.65_amd64.AppImage"
     }
   }
 }

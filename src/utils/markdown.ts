@@ -77,13 +77,14 @@ marked.use({
     },
     list({ items, ordered, start }) {
       const tag = ordered ? 'ol' : 'ul'
-      const isTask = items.some(item => (item as any).task)
+      const isTask = items.some(item => (item as { task?: boolean }).task)
       // For Tiptap: use data-type="taskList" instead of class
       const dataAttr = isTask ? ' data-type="taskList"' : ''
       const startAttr = ordered && start !== 1 ? ` start="${start}"` : ''
 
       let body = ''
       for (const item of items) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         body += (this as any).listitem(item)
       }
 

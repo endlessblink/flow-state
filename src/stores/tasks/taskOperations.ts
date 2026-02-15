@@ -36,7 +36,7 @@ const isValidUUID = (str: string | null | undefined): boolean => {
 // =============================================================================
 export type GeometryWriteSource = 'DRAG' | 'RECONCILE' | 'USER' | 'SYNC' | 'SMART-GROUP'
 
-import { useSmartViews } from '@/composables/useSmartViews'
+import { useSmartViews, type SmartView } from '@/composables/useSmartViews'
 import { useProjectStore } from '../projects'
 import { useAuthStore } from '../auth'
 
@@ -44,11 +44,9 @@ export function useTaskOperations(
     // SAFETY: Named _rawTasks to indicate this is the raw array for mutations
     _rawTasks: Ref<Task[]>,
     selectedTaskIds: Ref<string[]>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    activeSmartView: Ref<any>,
+    activeSmartView: Ref<SmartView>,
     activeStatusFilter: Ref<string | null>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    activeDurationFilter: Ref<any>,
+    activeDurationFilter: Ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>,
     hideDoneTasks: Ref<boolean>,
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
@@ -911,9 +909,8 @@ export function useTaskOperations(
                 scheduledDate: targetDateStr,
                 scheduledTime: '09:00',
                 duration: task.estimatedDuration || 60,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 isLater: dateColumn === 'later'
-            } as any]
+            }]
 
             // If dueDate was causing overdue status, update it to the target date
             if (hasOverdueDueDate) {
@@ -936,8 +933,7 @@ export function useTaskOperations(
         persistFilters()
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const setSmartView = (view: any) => {
+    const setSmartView = (view: SmartView) => {
         activeSmartView.value = view
         persistFilters()
     }
@@ -973,15 +969,13 @@ export function useTaskOperations(
         setActiveStatusFilter(activeStatusFilter.value === status ? null : status)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const setActiveDurationFilter = (duration: any) => {
+    const setActiveDurationFilter = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null) => {
         activeDurationFilter.value = duration
         if (duration) activeStatusFilter.value = null
         persistFilters()
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const toggleDurationFilter = (duration: any) => {
+    const toggleDurationFilter = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null) => {
         setActiveDurationFilter(activeDurationFilter.value === duration ? null : duration)
     }
 

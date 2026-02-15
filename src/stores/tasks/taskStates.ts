@@ -2,7 +2,7 @@ import { ref, toRef, computed, watch } from 'vue'
 import { useProjectStore } from '../projects'
 import { useUIStore } from '../ui' // Import UI Store
 import { useTaskMigrations } from '@/composables/tasks/useTaskMigrations'
-import { useTaskFiltering } from '@/composables/tasks/useTaskFiltering'
+import { useTaskFiltering, type SmartView } from '@/composables/tasks/useTaskFiltering'
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import type { Task } from '@/types/tasks'
 
@@ -44,7 +44,7 @@ export function useTaskStates() {
     }
 
     // State for filtering
-    const activeSmartView = ref<'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
+    const activeSmartView = ref<SmartView>(null)
     const activeStatusFilter = ref<string | null>(null)
     const activeDurationFilter = ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>(null)
 
@@ -85,7 +85,7 @@ export function useTaskStates() {
         _rawTasks,
         toRef(projectStore, 'projects'),
         toRef(projectStore, 'activeProjectId'),
-        activeSmartView as any,
+        activeSmartView,
         activeStatusFilter,
         activeDurationFilter,
         hideDoneTasks,

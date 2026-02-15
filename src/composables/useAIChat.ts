@@ -1312,8 +1312,14 @@ export function useAIChat() {
     // Pre-initialize the router
     try {
       const routerInstance = await getRouter()
-      const provider = await routerInstance!.getActiveProvider()
-      activeProviderRef.value = provider
+      // Only auto-detect active provider when in auto mode.
+      // If user explicitly selected a provider, respect their choice.
+      if (selectedProvider.value === 'auto') {
+        const provider = await routerInstance!.getActiveProvider()
+        activeProviderRef.value = provider
+      } else {
+        activeProviderRef.value = selectedProvider.value
+      }
       // Fetch available Ollama models
       availableOllamaModels.value = await fetchOllamaModels()
     } catch (err) {
@@ -1388,6 +1394,10 @@ export function useAIChat() {
     agentChains: agentChains.chains,
     chainExecution: agentChains.currentExecution,
     abortChain: agentChains.abortChain,
+
+    // Chat Direction
+    chatDirection: store.chatDirection,
+    setChatDirection: store.setChatDirection,
 
     // Lifecycle
     initialize,

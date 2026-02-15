@@ -8,6 +8,7 @@
         class="quick-add-input"
         :class="[{ 'voice-active': isListening || isProcessingVoice }]"
         @keydown.enter="handleAddTask"
+        @paste="handlePaste"
       >
 
       <!-- Mic button (TASK-1024) -->
@@ -45,6 +46,15 @@
     <!-- Voice error message -->
     <div v-if="voiceError && !isListening && !isProcessingVoice" class="voice-error">
       {{ voiceError }}
+    </div>
+
+    <!-- TASK-1325: URL scraping feedback -->
+    <div v-if="isScraping" class="url-scraping-feedback">
+      <Globe :size="16" class="scraping-icon" />
+      <span class="scraping-status">Fetching page info...</span>
+      <button class="scraping-cancel" @click="cancelScraping">
+        <X :size="14" />
+      </button>
     </div>
 
     <!-- Voice Task Confirmation (TASK-1028) with Re-record support (TASK-1110) -->
@@ -98,8 +108,9 @@ Call client"
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { NButton } from 'naive-ui'
-import { Mic, MicOff, X, Loader2 } from 'lucide-vue-next'
+import { Mic, MicOff, X, Loader2, Globe } from 'lucide-vue-next'
 import { useBrainDump } from '@/composables/useBrainDump'
+import { useUrlScraping } from '@/composables/useUrlScraping'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useVoiceTaskParser, type ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
 import VoiceTaskConfirmation from '@/mobile/components/VoiceTaskConfirmation.vue'
@@ -109,7 +120,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'addTask', title: string, options?: { priority?: string; dueDate?: Date }): void
+  (e: 'addTask', title: string, options?: { priority?: string; dueDate?: Date; description?: string }): void
 }>()
 
 const newTaskTitle = ref('')
@@ -205,8 +216,24 @@ const {
   brainDumpText,
   textDirection,
   parsedTaskCount,
-  processBrainDump
+  processBrainDump,
+  isProcessingUrls
 } = useBrainDump()
+
+// TASK-1325: URL scraping on paste
+const { isScraping, scrapeIfUrl, cancel: cancelScraping } = useUrlScraping()
+let pendingScrapeDescription = ''
+
+const handlePaste = async (e: ClipboardEvent) => {
+  const text = e.clipboardData?.getData('text') || ''
+  if (!text.trim()) return
+
+  const result = await scrapeIfUrl(text)
+  if (result) {
+    newTaskTitle.value = result.title
+    pendingScrapeDescription = result.description
+  }
+}
 
 const quickAddDirection = computed(() => {
   if (!newTaskTitle.value.trim()) return 'ltr'
@@ -217,8 +244,11 @@ const quickAddDirection = computed(() => {
 
 const handleAddTask = () => {
   if (!newTaskTitle.value.trim()) return
-  emit('addTask', newTaskTitle.value)
+  cancelScraping() // Cancel any in-progress scrape
+  const description = pendingScrapeDescription || undefined
+  emit('addTask', newTaskTitle.value, { ...(description && { description }) })
   newTaskTitle.value = ''
+  pendingScrapeDescription = ''
 }
 </script>
 
@@ -390,6 +420,49 @@ const handleAddTask = () => {
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);
+}
+
+/* TASK-1325: URL Scraping Feedback */
+.url-scraping-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+}
+
+.scraping-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  animation: spin 1.5s linear infinite;
+}
+
+.scraping-status {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--brand-primary);
+}
+
+.scraping-cancel {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.scraping-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 .brain-dump-section {

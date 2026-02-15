@@ -31,6 +31,7 @@ import { executeTool } from '@/services/ai/tools'
 
 const props = defineProps<{
   message: ChatMessage
+  direction?: 'auto' | 'ltr' | 'rtl'
 }>()
 
 const emit = defineEmits<{
@@ -389,7 +390,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
       <div
         v-else-if="renderedContent"
         class="message-text markdown-body"
-        dir="auto"
+        :dir="direction || 'auto'"
         v-html="renderedContent"
       />
 
@@ -448,7 +449,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   class="task-priority-dot"
                   :style="{ background: '#ef4444' }"
                 />
-                <span class="task-title" dir="auto">{{ task.title || '(untitled)' }}</span>
+                <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
                 <div class="task-meta-row">
                   <span v-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
                 </div>
@@ -508,7 +509,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   class="task-priority-dot"
                   :style="{ background: priorityColor(task.priority) }"
                 />
-                <span class="task-title" dir="auto">{{ task.title || '(untitled)' }}</span>
+                <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
                 <div class="task-meta-row">
                   <span
                     v-if="task.status"
@@ -615,10 +616,10 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 class="challenge-item"
               >
                 <div class="challenge-header">
-                  <span class="challenge-title" dir="auto">{{ ch.title }}</span>
+                  <span class="challenge-title" :dir="direction || 'auto'">{{ ch.title }}</span>
                   <span class="challenge-difficulty" :class="'diff-' + ch.difficulty">{{ ch.difficulty }}</span>
                 </div>
-                <div v-if="ch.narrativeFlavor" class="challenge-flavor" dir="auto">
+                <div v-if="ch.narrativeFlavor" class="challenge-flavor" :dir="direction || 'auto'">
                   {{ ch.narrativeFlavor }}
                 </div>
                 <div class="challenge-progress-row">
@@ -644,10 +645,10 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
               </div>
               <div class="challenge-item challenge-boss">
                 <div class="challenge-header">
-                  <span class="challenge-title boss-title" dir="auto">{{ result.data.boss.title }}</span>
+                  <span class="challenge-title boss-title" :dir="direction || 'auto'">{{ result.data.boss.title }}</span>
                   <span class="challenge-difficulty diff-boss">BOSS</span>
                 </div>
-                <div v-if="result.data.boss.narrativeFlavor" class="challenge-flavor" dir="auto">
+                <div v-if="result.data.boss.narrativeFlavor" class="challenge-flavor" :dir="direction || 'auto'">
                   {{ result.data.boss.narrativeFlavor }}
                 </div>
                 <div class="challenge-progress-row">
@@ -757,7 +758,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 @click="openQuickEdit(task, $event)"
               >
                 <span class="suggest-rank">{{ Number(taskIdx) + 1 }}</span>
-                <span class="task-title" dir="auto">{{ task.title }}</span>
+                <span class="task-title" :dir="direction || 'auto'">{{ task.title }}</span>
                 <div class="task-meta-row">
                   <span
                     class="task-priority-dot"
@@ -878,7 +879,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                     class="task-priority-dot"
                     :style="{ background: priorityColor(task.priority) }"
                   />
-                  <span class="task-title" dir="auto">{{ task.title }}</span>
+                  <span class="task-title" :dir="direction || 'auto'">{{ task.title }}</span>
                   <div class="task-inline-actions" @click.stop>
                     <button
                       v-if="!completedTaskIds.has(task.id)"
@@ -925,7 +926,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   class="task-priority-dot"
                   :style="{ background: priorityColor(task.priority) }"
                 />
-                <span class="task-title" dir="auto">{{ task.title }}</span>
+                <span class="task-title" :dir="direction || 'auto'">{{ task.title }}</span>
               </button>
             </div>
             <div v-if="result.data.reasoning" class="plan-reasoning">
@@ -952,7 +953,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   class="task-priority-dot"
                   :style="{ background: priorityColor(task.priority) }"
                 />
-                <span class="task-title" dir="auto">{{ task.title || '(untitled)' }}</span>
+                <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
                 <div class="task-meta-row">
                   <span v-if="task.daysOverdue" class="task-overdue-badge">{{ task.daysOverdue }}d overdue</span>
                   <span

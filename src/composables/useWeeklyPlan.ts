@@ -6,6 +6,7 @@ import { detectPowerKeyword, DAY_OF_WEEK_KEYWORDS } from '@/composables/usePower
 import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers, type BehavioralContext } from './useWeeklyPlanAI'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useProjectStore } from '@/stores/projects'
+import type { MemoryObservation } from '@/utils/supabaseMappers'
 
 // ============================================================================
 // Helpers
@@ -49,13 +50,86 @@ function formatDateISO(d: Date): string {
 }
 
 // ============================================================================
-// Singleton state — persists across navigations, expires after 1 day
+// Singleton state — persists across navigations AND page refreshes via localStorage
 // ============================================================================
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const STORAGE_KEY = 'flowstate-weekly-plan'
 
 let _state: Ref<WeeklyPlanState> | null = null
 let _stateCreatedAt = 0
+
+interface StoredPlanState {
+  status: WeeklyPlanStatus
+  plan: WeeklyPlan | null
+  reasoning: string | null
+  taskReasons: Record<string, string>
+  weekTheme: string | null
+  error: string | null
+  weekStart: string  // ISO string
+  weekEnd: string    // ISO string
+  interviewAnswers: InterviewAnswers | null
+  savedAt: number
+}
+
+function savePlanToStorage(state: WeeklyPlanState) {
+  try {
+    // Only persist review/applied states — not transient states
+    if (state.status !== 'review' && state.status !== 'applied') return
+    const stored: StoredPlanState = {
+      status: state.status,
+      plan: state.plan,
+      reasoning: state.reasoning,
+      taskReasons: state.taskReasons,
+      weekTheme: state.weekTheme,
+      error: null,
+      weekStart: state.weekStart.toISOString(),
+      weekEnd: state.weekEnd.toISOString(),
+      interviewAnswers: state.interviewAnswers,
+      savedAt: Date.now(),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+  } catch {
+    // localStorage might be full or unavailable — ignore
+  }
+}
+
+function loadPlanFromStorage(weekStartsOn: 0 | 1 = 0): WeeklyPlanState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+
+    const stored: StoredPlanState = JSON.parse(raw)
+
+    // Expire after 1 day
+    if (Date.now() - stored.savedAt > ONE_DAY_MS) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+
+    // Only restore review/applied states
+    if (stored.status !== 'review' && stored.status !== 'applied') return null
+
+    return {
+      status: stored.status,
+      plan: stored.plan,
+      reasoning: stored.reasoning,
+      taskReasons: stored.taskReasons || {},
+      weekTheme: stored.weekTheme || null,
+      error: null,
+      weekStart: new Date(stored.weekStart),
+      weekEnd: new Date(stored.weekEnd),
+      interviewAnswers: stored.interviewAnswers,
+    }
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
+function clearPlanStorage() {
+  try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+}
 
 function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
   const now = Date.now()
@@ -66,6 +140,14 @@ function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
   }
 
   if (!_state) {
+    // Try restoring from localStorage first
+    const restored = loadPlanFromStorage(weekStartsOn)
+    if (restored) {
+      _state = ref<WeeklyPlanState>(restored)
+      _stateCreatedAt = now
+      return _state
+    }
+
     _state = ref<WeeklyPlanState>({
       status: 'idle',
       plan: null,
@@ -93,7 +175,7 @@ export function useWeeklyPlan() {
   const state = getOrCreateState(settings.weekStartsOn)
 
   const { generatePlan: aiGeneratePlan, regenerateDay: aiRegenerateDay } = useWeeklyPlanAI()
-  const { loadProfile, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, profile: workProfile } = useWorkProfile()
+  const { loadProfile, reloadProfile, computeCapacityMetrics, recordWeeklyOutcome, generateObservationsFromWeeklyOutcome, profile: workProfile } = useWorkProfile()
 
   // --------------------------------------------------------------------------
   // Eligible tasks
@@ -224,12 +306,34 @@ export function useWeeklyPlan() {
 
     // Frequently missed projects from memory observations
     const frequentlyMissedProjects: string[] = []
-    if (profile?.memoryGraph) {
+    const workInsights: string[] = []
+    if (profile && profile.memoryGraph) {
+      // Map observation relations to actionable planning advice
+      const insightMap: Record<string, (obs: MemoryObservation) => string | null> = {
+        'overdue_pattern': (obs) => `${obs.value} — prioritize clearing overdue items early in the week`,
+        'backlog_heavy': (obs) => `${obs.value} — avoid adding new tasks, focus on clearing existing work`,
+        'high_wip': (obs) => `${obs.value} — limit new starts, prioritize finishing in-progress tasks`,
+        'underestimates': (obs) => `User ${obs.value} — schedule fewer tasks per day to be realistic`,
+        'overestimates': (obs) => `User ${obs.value} — can schedule more tasks per day`,
+        'avg_completion_speed': (obs) => `Task completion speed: ${obs.value}`,
+        'capacity_gap': (obs) => `Capacity gap: ${obs.value} — schedule conservatively`,
+        'stale': (obs) => `${obs.entity.replace('project:', '')} is stale (${obs.value}) — consider scheduling 1 task from it`,
+        'most_active': (obs) => `${obs.entity.replace('project:', '')} is the most active project (${obs.value})`,
+        'completion_rate': (obs) => `High-priority ${obs.value}`,
+      }
+
       for (const obs of profile.memoryGraph) {
         if (obs.relation === 'frequently_missed' && obs.entity.startsWith('project:')) {
           const projId = obs.entity.replace('project:', '')
           const name = projectStore.getProjectDisplayName(projId)
           if (name) frequentlyMissedProjects.push(name)
+        }
+
+        // Generate planning-relevant insights from observations
+        const mapper = insightMap[obs.relation]
+        if (mapper && obs.confidence >= 0.6) {
+          const insight = mapper(obs)
+          if (insight) workInsights.push(insight)
         }
       }
     }
@@ -242,6 +346,7 @@ export function useWeeklyPlan() {
       peakProductivityDays: profile?.peakProductivityDays ?? [],
       completionRate: profile?.avgPlanAccuracy ?? null,
       frequentlyMissedProjects,
+      workInsights,
     }
   }
 
@@ -264,9 +369,19 @@ export function useWeeklyPlan() {
         return
       }
 
-      // FEATURE-1317: Load work profile for AI context (if learning enabled)
+      // FEATURE-1317: Load work profile + auto-refresh insights for AI context
       const settingsStore = useSettingsStore()
-      const profile = settingsStore.aiLearningEnabled ? await loadProfile() : null
+      let profile = null
+      if (settingsStore.aiLearningEnabled) {
+        profile = await loadProfile()
+        // Auto-refresh observations so AI always gets current task context
+        try {
+          await computeCapacityMetrics()
+          profile = await reloadProfile()
+        } catch (e) {
+          console.debug('[WeeklyPlan] Insight refresh skipped:', e)
+        }
+      }
 
       // Compute behavioral context from actual app usage data
       const behavioral = computeBehavioralContext(profile)
@@ -283,6 +398,7 @@ export function useWeeklyPlan() {
       state.value.taskReasons = result.taskReasons
       state.value.weekTheme = result.weekTheme
       state.value.status = 'review'
+      savePlanToStorage(state.value)
     } catch (err) {
       state.value.status = 'error'
       state.value.error = err instanceof Error ? err.message : 'Failed to generate plan'
@@ -301,6 +417,7 @@ export function useWeeklyPlan() {
       fromArr.splice(idx, 1)
     }
     state.value.plan[toDay].push(taskId)
+    savePlanToStorage(state.value)
   }
 
   // --------------------------------------------------------------------------
@@ -337,6 +454,7 @@ export function useWeeklyPlan() {
     }
     // Move to unscheduled
     state.value.plan.unscheduled.push(taskId)
+    savePlanToStorage(state.value)
   }
 
   function snoozeTask(taskId: string) {
@@ -353,6 +471,7 @@ export function useWeeklyPlan() {
     }
     // Task is simply removed from the plan — it stays in the task store
     // and will appear next week as an eligible task
+    savePlanToStorage(state.value)
   }
 
   function changePriority(taskId: string) {
@@ -384,6 +503,7 @@ export function useWeeklyPlan() {
       if (result.reasoning) {
         state.value.reasoning = result.reasoning
       }
+      savePlanToStorage(state.value)
     } catch (err) {
       console.warn('[WeeklyPlan] Day re-suggest failed', err)
     }
@@ -486,6 +606,7 @@ export function useWeeklyPlan() {
       }
 
       state.value.status = 'applied'
+      savePlanToStorage(state.value)
     } catch (err) {
       state.value.status = 'error'
       state.value.error = err instanceof Error ? err.message : 'Failed to apply plan'
@@ -528,6 +649,7 @@ export function useWeeklyPlan() {
       interviewAnswers: null,
     }
     _stateCreatedAt = Date.now()
+    clearPlanStorage()
   }
 
   return {

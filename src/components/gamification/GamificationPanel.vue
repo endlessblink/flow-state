@@ -78,7 +78,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
     <!-- XP Progress -->
     <div class="panel-section">
-      <XpBar :animated="true" />
+      <XpBar animated />
     </div>
 
     <!-- Streak -->
@@ -88,7 +88,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
     <!-- Daily Challenges (FEATURE-1132) -->
     <div class="panel-section">
-      <DailyChallengesPanel :compact="true" @pick-challenge="emit('close')" />
+      <DailyChallengesPanel compact @pick-challenge="emit('close')" />
     </div>
 
     <!-- Recent Achievements -->

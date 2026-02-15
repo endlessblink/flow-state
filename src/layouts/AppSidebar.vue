@@ -284,7 +284,7 @@
           <div v-show="sidebar.isDurationSectionExpanded.value" class="duration-grid">
             <!-- Quick (<15m) -->
             <SidebarSmartItem
-              :active="taskStore.activeSmartView === 'quick'"
+              :active="taskStore.activeDurationFilter === 'quick'"
               :count="sidebar.quickCount.value"
               drop-type="duration"
               :drop-value="15"
@@ -300,7 +300,7 @@
 
             <!-- Short (15-30m) -->
             <SidebarSmartItem
-              :active="taskStore.activeSmartView === 'short'"
+              :active="taskStore.activeDurationFilter === 'short'"
               :count="sidebar.shortCount.value"
               drop-type="duration"
               :drop-value="30"
@@ -316,7 +316,7 @@
 
             <!-- Medium (30-60m) -->
             <SidebarSmartItem
-              :active="taskStore.activeSmartView === 'medium'"
+              :active="taskStore.activeDurationFilter === 'medium'"
               :count="sidebar.mediumCount.value"
               drop-type="duration"
               :drop-value="60"
@@ -332,7 +332,7 @@
 
             <!-- Long (>60m) -->
             <SidebarSmartItem
-              :active="taskStore.activeSmartView === 'long'"
+              :active="taskStore.activeDurationFilter === 'long'"
               :count="sidebar.longCount.value"
               drop-type="duration"
               :drop-value="120"
@@ -348,7 +348,7 @@
 
             <!-- Unestimated -->
             <SidebarSmartItem
-              :active="taskStore.activeSmartView === 'unestimated'"
+              :active="taskStore.activeDurationFilter === 'unestimated'"
               :count="sidebar.unestimatedCount.value"
               drop-type="duration"
               :drop-value="-1"
@@ -848,9 +848,17 @@ const uncategorizedCount = computed(() => taskStore.getUncategorizedTaskCount())
 // Methods
 const selectSmartView = (view: string) => {
   taskStore.setActiveProject(null)
-  // BUG-1219 fix: Use setSmartView() to trigger persistFilters()
-  // Previously set .activeSmartView directly, bypassing persistence
-  taskStore.setSmartView(view)
+  
+  // Check if view is a duration filter
+  if (['quick', 'short', 'medium', 'long', 'unestimated'].includes(view)) {
+    taskStore.setActiveDurationFilter(view as any)
+    taskStore.setSmartView(null)
+  } else {
+    // It's a smart view
+    taskStore.setSmartView(view as any)
+    taskStore.setActiveDurationFilter(null)
+  }
+  
   // TASK-1330: Verify navigation to tasks view when selecting a smart view
   router.push('/tasks')
 }

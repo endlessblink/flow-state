@@ -117,6 +117,26 @@ export function useAppInitialization() {
             console.warn('⚠️ Challenge system initialization failed:', error)
         }
 
+        // FEATURE-1317: Auto-refresh work profile insights (non-blocking)
+        if (authStore.isAuthenticated) {
+            try {
+                const { useWorkProfile } = await import('@/composables/useWorkProfile')
+                const { useSettingsStore: getSettings } = await import('@/stores/settings')
+                const settings = getSettings()
+                if (settings.aiLearningEnabled) {
+                    const wp = useWorkProfile()
+                    // Fire-and-forget: load profile then recalculate in background
+                    wp.loadProfile().then(() => {
+                        wp.computeCapacityMetrics().then(() => {
+                            console.log('📊 [FEATURE-1317] Work profile insights auto-refreshed')
+                        }).catch(e => console.debug('[FEATURE-1317] Auto-recalculate skipped:', e))
+                    }).catch(() => {})
+                }
+            } catch (error) {
+                console.debug('[FEATURE-1317] Work profile auto-refresh failed:', error)
+            }
+        }
+
         // Initialize notification system
         try {
             await notificationStore.initializeNotifications()

@@ -1,5 +1,5 @@
 import { type Ref, type ComputedRef } from 'vue'
-import { useTaskStore, type Task, type Subtask } from '@/stores/tasks'
+import { useTaskStore, type Task, type Subtask, type TaskInstance, type TaskRecurrence } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { generateRecurringInstances } from '@/utils/recurrenceUtils'
@@ -8,10 +8,9 @@ import { useToast } from '@/composables/useToast'
 
 
 // Helper for cleaning task instances (from existing code)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getTaskInstances = (task: Task): any[] => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (task as any).instances || []
+// Helper for cleaning task instances (from existing code)
+const getTaskInstances = (task: Task): TaskInstance[] => {
+    return task.instances || []
 }
 
 export interface TaskEditActionsOptions {
@@ -206,8 +205,7 @@ export function useTaskEditActions(
             }
 
             // Preserve existing instances
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (editedTask.value.instances && (editedTask.value.instances as unknown as any[]).length > 0) {
+            if (editedTask.value.instances && editedTask.value.instances.length > 0) {
                 updates.instances = editedTask.value.instances
             }
 
@@ -223,15 +221,16 @@ export function useTaskEditActions(
                     editedTask.value.id,
                     editedTask.value.recurrence.rule,
                     editedTask.value.recurrence.endCondition,
-                    (editedTask.value.recurrence.exceptions || []) as any,
+                    editedTask.value.recurrence.exceptions || [],
                     new Date(startDate),
                     editedTask.value.scheduledTime,
                     editedTask.value.estimatedDuration
                 )
                 updates.recurringInstances = instances
                 if (updates.recurrence) {
-                    (updates.recurrence as any).generatedInstances = instances
-                        ; (updates.recurrence as any).lastGenerated = new Date().toISOString()
+                    const recurrence = updates.recurrence as TaskRecurrence
+                    recurrence.generatedInstances = instances
+                    recurrence.lastGenerated = new Date().toISOString()
                 }
             }
 
@@ -271,14 +270,13 @@ export function useTaskEditActions(
             // These run after modal closes - user doesn't wait for them
 
             // Fire-and-forget: Save undo state in background
-            getUndoSystem().saveState('After edit modal save').catch(() => {})
+            getUndoSystem().saveState('After edit modal save').catch(() => { })
 
             // Handle instances
             if (editedTask.value.scheduledDate && editedTask.value.scheduledTime) {
                 const existingInstances = props.task ? getTaskInstances(props.task) : []
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const sameDayInstance = existingInstances.find((inst: any) =>
-                    inst.scheduledDate === editedTask.value.scheduledDate
+                const sameDayInstance = existingInstances.find((inst) =>
+                    inst.scheduledDate && inst.scheduledDate === editedTask.value.scheduledDate
                 )
 
                 if (sameDayInstance) {
@@ -296,9 +294,10 @@ export function useTaskEditActions(
             } else if (scheduleExplicitlyRemoved) {
                 const existingInstances = props.task ? getTaskInstances(props.task) : []
                 if (existingInstances.length > 0) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    existingInstances.forEach((instance: any) => {
-                        taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
+                    existingInstances.forEach((instance) => {
+                        if (instance.id) {
+                            taskStore.deleteTaskInstanceWithUndo(editedTask.value.id, instance.id)
+                        }
                     })
 
                     // Check if should return to inbox

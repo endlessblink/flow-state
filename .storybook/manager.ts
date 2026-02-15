@@ -76,8 +76,8 @@ addons.setConfig({
     showRoots: false, // Makes top-level categories collapsible folders (not all-caps roots)
     collapsedRoots: [], // All categories expanded by default
     renderLabel: (item: any) => {
-      // Only add QA checkbox to component-level items
-      if (item.type === 'component') {
+      // Add QA checkbox to component-level AND group/folder items
+      if (item.type === 'component' || item.type === 'group') {
         return React.createElement(QALabel, { item, key: item.id })
       }
       return item.name

@@ -351,8 +351,16 @@ export function useSidebarManagement() {
     uiStore.persistState()
   }
 
-  const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated') => {
-    taskStore.setSmartView(view as any)
+  const selectSmartView = (view: 'today' | 'week' | 'uncategorized' | 'all_active' | 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | 'unscheduled' | 'in_progress') => {
+    // Check if view is a duration filter
+    if (view === 'quick' || view === 'short' || view === 'medium' || view === 'long' || view === 'unestimated') {
+      taskStore.setActiveDurationFilter(view)
+      taskStore.setSmartView(null)
+    } else {
+      // It's a smart view
+      taskStore.setSmartView(view as any) // Cast still needed because view union is wide, but logic is safe
+      taskStore.setActiveDurationFilter(null)
+    }
   }
 
   // Start Quick Sort from uncategorized view

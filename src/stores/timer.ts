@@ -29,6 +29,20 @@ export interface PomodoroSession {
   deviceLeaderLastSeen?: number | null
 }
 
+interface TimerSessionRow {
+  id: string
+  task_id: string
+  start_time: string
+  duration: number
+  remaining_time: number
+  is_active: boolean | string | number // Handle Supabase quirks
+  is_paused: boolean
+  is_break: boolean
+  completed_at?: string | null
+  device_leader_id: string
+  device_leader_last_seen: string
+}
+
 export const useTimerStore = defineStore('timer', () => {
   // Initialize database composable
   const {
@@ -295,8 +309,7 @@ export const useTimerStore = defineStore('timer', () => {
   }
 
   const handleRemoteTimerUpdate = (payload: unknown) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawPayload = payload as any
+    const rawPayload = payload as Record<string, unknown>
 
     if (import.meta.env.DEV) {
       console.log('🍅 [TIMER] handleRemoteTimerUpdate ENTRY - raw payload:', {
@@ -311,7 +324,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // Supabase realtime wraps data in { new: {...}, old: {...}, eventType: '...' }
     // Extract the actual record from the wrapper
-    const newDoc = rawPayload?.new || rawPayload?.record || rawPayload
+    const newDoc = (rawPayload?.new || rawPayload?.record || rawPayload) as TimerSessionRow
 
     if (!newDoc || !newDoc.id) {
       // Handle DELETE events or empty payloads
@@ -848,8 +861,7 @@ export const useTimerStore = defineStore('timer', () => {
   const playStartSound = () => {
     if (!settings.playNotificationSounds) return
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       const audioContext = new AudioContextClass()
 
       // BUG-1112: Create a quick rising tone to indicate timer start
@@ -883,8 +895,7 @@ export const useTimerStore = defineStore('timer', () => {
   const playEndSound = () => {
     if (!settings.playNotificationSounds) return
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       const audioContext = new AudioContextClass()
 
       // BUG-1112: Create a more noticeable completion sound

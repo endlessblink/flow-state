@@ -2571,7 +2571,9 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 - [x] Route `/weekly-plan` + header tab
 - [ ] User testing and confirmation
 
-**Follow-up**: FEATURE-1317 (AI Work Profile / Persistent Memory)
+**Follow-up Tasks**:
+- **TASK-1326**: Weekly Plan AI Enhancements — task batching by project, weekly focus theme, skip feedback loop, workload warnings, energy-aware scheduling, plan adherence scoring (🔄 IN PROGRESS)
+- **FEATURE-1317**: AI Work Profile / Persistent Memory
 
 ---
 
@@ -3085,6 +3087,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
 | **FEATURE-1314** | **P2** | **🔄 AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
+| **TASK-1326** | **P2** | **🔄 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |

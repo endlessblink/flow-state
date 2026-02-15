@@ -126,8 +126,8 @@ describe('TaskStore', () => {
       expect(instance?.duration).toBe(45)
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
-      // BUG-1321: createTask auto-creates 1 instance from default dueDate + we added 1 more
-      expect(updatedTask?.instances?.length).toBe(2)
+      // BUG-1325: createTask no longer auto-creates instances from dueDate
+      expect(updatedTask?.instances?.length).toBe(1)
     })
 
     it('updates a task instance', async () => {
@@ -160,16 +160,16 @@ describe('TaskStore', () => {
       })
 
       const taskAfterCreate = store.tasks.find(t => t.id === task.id)
-      // BUG-1321: createTask auto-creates 1 instance from default dueDate + we added 1 more
-      expect(taskAfterCreate?.instances?.length).toBe(2)
+      // BUG-1325: createTask no longer auto-creates instances from dueDate
+      expect(taskAfterCreate?.instances?.length).toBe(1)
 
       if (instance) {
         await store.deleteTaskInstance(task.id, instance.id!)
       }
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
-      // After deleting the user-created instance, the auto-instance from dueDate remains
-      expect(updatedTask?.instances?.length).toBe(1)
+      // After deleting the only instance, none remain
+      expect(updatedTask?.instances?.length).toBe(0)
     })
 
     it('supports multiple instances of same task', async () => {
@@ -190,8 +190,8 @@ describe('TaskStore', () => {
       })
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
-      // BUG-1321: createTask auto-creates 1 instance from default dueDate + we added 3 more
-      expect(updatedTask?.instances?.length).toBe(4)
+      // BUG-1325: createTask no longer auto-creates instances, only the 3 explicit ones exist
+      expect(updatedTask?.instances?.length).toBe(3)
     })
   })
 
@@ -324,7 +324,9 @@ describe('TaskStore', () => {
 
     it('filters tasks by "today" smart view', () => {
       const store = useTaskStore()
-      const today = new Date().toISOString().split('T')[0]
+      // BUG-1325: Use local date (not UTC) to match smart view filter behavior
+      const _now = new Date()
+      const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 
       store.createTask({
         title: 'Today Task',
@@ -536,7 +538,9 @@ describe('TaskStore', () => {
     it('moves task to today', async () => {
       const store = useTaskStore()
       const task = await store.createTask({ title: 'Task' })
-      const today = new Date().toISOString().split('T')[0]
+      // BUG-1325: Use local date (not UTC) to match moveTaskToDate behavior
+      const _now = new Date()
+      const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 
       store.moveTaskToDate(task.id, 'today')
 

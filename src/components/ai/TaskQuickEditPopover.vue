@@ -10,7 +10,7 @@
  */
 
 import { ref, computed, watch } from 'vue'
-import { Check, Play, ExternalLink, AlertCircle, X } from 'lucide-vue-next'
+import { Check, Play, ExternalLink, X } from 'lucide-vue-next'
 import BasePopover from '@/components/base/BasePopover.vue'
 import { executeTool } from '@/services/ai/tools'
 import { useTimerStore } from '@/stores/timer'
@@ -44,7 +44,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  'open-full-editor': []
+  'openFullEditor': []
 }>()
 
 // ============================================================================
@@ -193,7 +193,7 @@ async function startTimer() {
 }
 
 function openFullEditor() {
-  emit('open-full-editor')
+  emit('openFullEditor')
 }
 
 function close() {
@@ -272,7 +272,7 @@ function close() {
           class="date-input"
           :value="localDueDate"
           @change="setDueDate"
-        />
+        >
       </div>
 
       <div class="popover-divider" />

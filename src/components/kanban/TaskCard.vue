@@ -44,7 +44,7 @@
           :class="[titleAlignmentClasses, { 'completed-title': task.status === 'done' }]"
           :dir="isRtl ? 'rtl' : 'ltr'"
         >
-          {{ task.title }}
+          {{ truncateUrlsInText(task.title) }}
         </h3>
 
         <!-- Metadata Badges -->
@@ -87,6 +87,7 @@ import type { Task } from '@/stores/tasks'
 import { useTaskCardState } from '@/composables/tasks/card/useTaskCardState'
 import { useTaskCardActions } from '@/composables/tasks/card/useTaskCardActions'
 import { useTimerStore } from '@/stores/timer'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 // Sub-components
 import TaskCardStatus from './card/TaskCardStatus.vue'

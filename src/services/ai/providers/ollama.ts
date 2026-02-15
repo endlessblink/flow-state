@@ -78,17 +78,27 @@ interface OllamaChatRequest {
     num_predict?: number
     stop?: string[]
   }
+  /** OpenAI-compatible tools for native function calling (Ollama v0.5.0+) */
+  tools?: Array<{ type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }>
 }
 
 /**
  * Ollama /api/chat response (non-streaming).
  */
+interface OllamaToolCall {
+  function: {
+    name: string
+    arguments: Record<string, unknown>
+  }
+}
+
 interface OllamaChatResponse {
   model: string
   created_at: string
   message: {
     role: string
     content: string
+    tool_calls?: OllamaToolCall[]
   }
   done: boolean
   total_duration?: number
@@ -108,6 +118,7 @@ interface OllamaStreamChunk {
   message: {
     role: string
     content: string
+    tool_calls?: OllamaToolCall[]
   }
   done: boolean
   total_duration?: number
@@ -230,6 +241,9 @@ export class OllamaProvider implements AIProvider {
         num_predict: options.maxTokens,
         stop: options.stopSequences,
       },
+      ...(options.tools && options.tools.length > 0 && {
+        tools: options.tools.map(t => ({ type: t.type, function: t.function })),
+      }),
     }
 
     try {
@@ -285,6 +299,9 @@ export class OllamaProvider implements AIProvider {
         num_predict: options.maxTokens,
         stop: options.stopSequences,
       },
+      ...(options.tools && options.tools.length > 0 && {
+        tools: options.tools.map(t => ({ type: t.type, function: t.function })),
+      }),
     }
 
     try {
@@ -330,9 +347,21 @@ export class OllamaProvider implements AIProvider {
 
             try {
               const chunk: OllamaStreamChunk = JSON.parse(line)
+
+              // Parse tool calls from Ollama response (v0.5.0+)
+              const toolCalls = chunk.message.tool_calls?.map((tc, i) => ({
+                id: `ollama-tc-${i}`,
+                type: 'function' as const,
+                function: {
+                  name: tc.function.name,
+                  arguments: JSON.stringify(tc.function.arguments),
+                },
+              }))
+
               yield {
                 content: chunk.message.content,
                 done: chunk.done,
+                ...(toolCalls && toolCalls.length > 0 && { toolCalls }),
               }
 
               if (chunk.done) {
@@ -348,9 +377,18 @@ export class OllamaProvider implements AIProvider {
         if (buffer.trim()) {
           try {
             const chunk: OllamaStreamChunk = JSON.parse(buffer)
+            const toolCalls = chunk.message.tool_calls?.map((tc, i) => ({
+              id: `ollama-tc-${i}`,
+              type: 'function' as const,
+              function: {
+                name: tc.function.name,
+                arguments: JSON.stringify(tc.function.arguments),
+              },
+            }))
             yield {
               content: chunk.message.content,
               done: chunk.done,
+              ...(toolCalls && toolCalls.length > 0 && { toolCalls }),
             }
           } catch {
             // Ignore incomplete final chunk

@@ -164,12 +164,16 @@
             <span class="flow-icon">👀</span>
             <span class="flow-label">Review</span>
           </div>
-          <div class="flow-arrow">→</div>
+          <div class="flow-arrow">
+            →
+          </div>
           <div class="flow-step">
             <span class="flow-icon">✏️</span>
             <span class="flow-label">Edit</span>
           </div>
-          <div class="flow-arrow">→</div>
+          <div class="flow-arrow">
+            →
+          </div>
           <div class="flow-step">
             <span class="flow-icon">💾</span>
             <span class="flow-label">Save</span>

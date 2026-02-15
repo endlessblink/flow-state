@@ -65,7 +65,9 @@ const IconComponent = computed(() => {
           :size="14"
         />
       </div>
-      <p class="aria-text">{{ message }}</p>
+      <p class="aria-text">
+        {{ message }}
+      </p>
     </div>
   </div>
 </template>

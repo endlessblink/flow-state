@@ -250,7 +250,9 @@ async function onClearMemories() {
             </div>
           </div>
         </div>
-        <p v-else class="no-period-data">No usage in {{ currentUsage.periodLabel.toLowerCase() }}.</p>
+        <p v-else class="no-period-data">
+          No usage in {{ currentUsage.periodLabel.toLowerCase() }}.
+        </p>
 
         <!-- Clear button -->
         <button class="clear-btn" @click="handleClearUsageData">
@@ -287,10 +289,18 @@ async function onClearMemories() {
           <table class="pricing-table">
             <thead>
               <tr>
-                <th class="th-model">Model</th>
-                <th class="th-rate">Input</th>
-                <th class="th-rate">Output</th>
-                <th class="th-ctx">Context</th>
+                <th class="th-model">
+                  Model
+                </th>
+                <th class="th-rate">
+                  Input
+                </th>
+                <th class="th-rate">
+                  Output
+                </th>
+                <th class="th-ctx">
+                  Context
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -303,9 +313,15 @@ async function onClearMemories() {
                   {{ model.displayName }}
                   <Tag v-if="model.isDefault" :size="10" class="default-tag" />
                 </td>
-                <td class="td-rate">{{ formatRate(model.inputPer1M) }}</td>
-                <td class="td-rate">{{ formatRate(model.outputPer1M) }}</td>
-                <td class="td-ctx">{{ formatContext(model.contextWindow) }}</td>
+                <td class="td-rate">
+                  {{ formatRate(model.inputPer1M) }}
+                </td>
+                <td class="td-rate">
+                  {{ formatRate(model.outputPer1M) }}
+                </td>
+                <td class="td-ctx">
+                  {{ formatContext(model.contextWindow) }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -320,7 +336,9 @@ async function onClearMemories() {
         :value="settingsStore.aiLearningEnabled"
         @update="(v: boolean) => settingsStore.updateSetting('aiLearningEnabled', v)"
       />
-      <p class="learning-hint">When enabled, FlowState tracks your work patterns to make weekly plans smarter over time.</p>
+      <p class="learning-hint">
+        When enabled, FlowState tracks your work patterns to make weekly plans smarter over time.
+      </p>
     </SettingsSection>
 
     <SettingsSection title="Planning Preferences">
@@ -333,7 +351,9 @@ async function onClearMemories() {
             class="day-chip"
             :class="{ active: form.workDays.includes(d.key) }"
             @click="toggleDay(form.workDays, d.key)"
-          >{{ d.label }}</button>
+          >
+            {{ d.label }}
+          </button>
         </div>
       </div>
 
@@ -346,7 +366,9 @@ async function onClearMemories() {
             class="day-chip off"
             :class="{ active: form.daysOff.includes(d.key) }"
             @click="toggleDay(form.daysOff, d.key)"
-          >{{ d.label }}</button>
+          >
+            {{ d.label }}
+          </button>
         </div>
       </div>
 
@@ -359,7 +381,9 @@ async function onClearMemories() {
             class="day-chip meeting"
             :class="{ active: form.heavyMeetingDays.includes(d.key) }"
             @click="toggleDay(form.heavyMeetingDays, d.key)"
-          >{{ d.label }}</button>
+          >
+            {{ d.label }}
+          </button>
         </div>
       </div>
 
@@ -372,7 +396,9 @@ async function onClearMemories() {
             class="number-chip"
             :class="{ active: form.maxTasksPerDay === n }"
             @click="form.maxTasksPerDay = n"
-          >{{ n }}</button>
+          >
+            {{ n }}
+          </button>
         </div>
       </div>
 
@@ -403,20 +429,36 @@ async function onClearMemories() {
     <SettingsSection title="Learned Patterns">
       <div class="metrics-grid">
         <div class="metric-card">
-          <div class="metric-value">{{ profile?.avgWorkMinutesPerDay ? Math.round(profile.avgWorkMinutesPerDay) + ' min' : '—' }}</div>
-          <div class="metric-label">Avg work/day</div>
+          <div class="metric-value">
+            {{ profile?.avgWorkMinutesPerDay ? Math.round(profile.avgWorkMinutesPerDay) + ' min' : '—' }}
+          </div>
+          <div class="metric-label">
+            Avg work/day
+          </div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">{{ profile?.avgTasksCompletedPerDay ? profile.avgTasksCompletedPerDay.toFixed(1) : '—' }}</div>
-          <div class="metric-label">Avg tasks/day</div>
+          <div class="metric-value">
+            {{ profile?.avgTasksCompletedPerDay ? profile.avgTasksCompletedPerDay.toFixed(1) : '—' }}
+          </div>
+          <div class="metric-label">
+            Avg tasks/day
+          </div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">{{ profile?.avgPlanAccuracy ? profile.avgPlanAccuracy.toFixed(0) + '%' : '—' }}</div>
-          <div class="metric-label">Plan accuracy</div>
+          <div class="metric-value">
+            {{ profile?.avgPlanAccuracy ? profile.avgPlanAccuracy.toFixed(0) + '%' : '—' }}
+          </div>
+          <div class="metric-label">
+            Plan accuracy
+          </div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">{{ profile?.peakProductivityDays?.length ? profile.peakProductivityDays.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ') : '—' }}</div>
-          <div class="metric-label">Peak days</div>
+          <div class="metric-value">
+            {{ profile?.peakProductivityDays?.length ? profile.peakProductivityDays.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ') : '—' }}
+          </div>
+          <div class="metric-label">
+            Peak days
+          </div>
         </div>
       </div>
 
@@ -447,7 +489,9 @@ async function onClearMemories() {
             <span class="obs-entity">{{ obs.entity }}</span>
             <span class="obs-relation">{{ obs.relation }}</span>
           </div>
-          <div class="obs-value">{{ obs.value }}</div>
+          <div class="obs-value">
+            {{ obs.value }}
+          </div>
           <div class="obs-meta">
             <div class="confidence-bar">
               <div class="confidence-fill" :style="{ width: (obs.confidence * 100) + '%' }" />
@@ -457,9 +501,11 @@ async function onClearMemories() {
           </div>
         </div>
       </div>
-      <p v-else class="obs-empty">No observations yet. They'll appear as FlowState learns your patterns.</p>
+      <p v-else class="obs-empty">
+        No observations yet. They'll appear as FlowState learns your patterns.
+      </p>
 
-      <div class="wp-action-row" v-if="profile?.memoryGraph?.length">
+      <div v-if="profile?.memoryGraph?.length" class="wp-action-row">
         <button class="wp-action-btn danger" :disabled="isClearingMemories" @click="onClearMemories">
           <Trash2 :size="14" />
           {{ isClearingMemories ? 'Clearing...' : 'Clear Memories' }}

@@ -34,7 +34,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'select-task': [taskId: string]
+  'selectTask': [taskId: string]
 }>()
 
 // ============================================================================
@@ -129,8 +129,6 @@ const toolResults = computed(() => {
 /**
  * Check if a tool result contains a task list that should be rendered as clickable items.
  */
-const TASK_LIST_TOOLS = ['get_overdue_tasks', 'list_tasks', 'search_tasks', 'get_daily_summary']
-
 function isTaskListResult(result: { tool: string; data?: any }): boolean {
   if (!result.data) return false
   // Direct array of tasks
@@ -161,8 +159,6 @@ function isDailySummaryResult(result: { tool: string; data?: any }): boolean {
 /**
  * Gamification & productivity tool result detection helpers
  */
-const GAMIFICATION_TOOLS = ['get_gamification_status', 'get_active_challenges', 'get_achievements_near_completion']
-const PRODUCTIVITY_TOOLS = ['get_productivity_stats', 'suggest_next_task', 'get_weekly_summary']
 
 function isGamificationStatusResult(result: { tool: string; data?: any }): boolean {
   return result.tool === 'get_gamification_status' && result.data && typeof result.data.level === 'number'
@@ -286,7 +282,7 @@ function closeQuickEdit() {
 
 function openFullEditor() {
   if (quickEditTask.value) {
-    emit('select-task', quickEditTask.value.id)
+    emit('selectTask', quickEditTask.value.id)
   }
   closeQuickEdit()
 }
@@ -575,7 +571,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <div class="gam-xp-bar-wrapper">
                   <div class="gam-xp-bar" :style="{ width: result.data.levelProgress + '%' }" />
                 </div>
-                <div class="gam-xp-text">{{ result.data.totalXp }} XP &middot; {{ result.data.xpToNextLevel }} to next</div>
+                <div class="gam-xp-text">
+                  {{ result.data.totalXp }} XP &middot; {{ result.data.xpToNextLevel }} to next
+                </div>
               </div>
             </div>
             <div class="gam-stats-row">
@@ -608,7 +606,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
             </div>
             <!-- Daily Challenges -->
             <div v-if="result.data.dailies.length > 0" class="challenge-section">
-              <div class="summary-section-label">Daily Missions</div>
+              <div class="summary-section-label">
+                Daily Missions
+              </div>
               <div
                 v-for="ch in result.data.dailies"
                 :key="ch.id"
@@ -618,7 +618,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                   <span class="challenge-title" dir="auto">{{ ch.title }}</span>
                   <span class="challenge-difficulty" :class="'diff-' + ch.difficulty">{{ ch.difficulty }}</span>
                 </div>
-                <div v-if="ch.narrativeFlavor" class="challenge-flavor" dir="auto">{{ ch.narrativeFlavor }}</div>
+                <div v-if="ch.narrativeFlavor" class="challenge-flavor" dir="auto">
+                  {{ ch.narrativeFlavor }}
+                </div>
                 <div class="challenge-progress-row">
                   <div class="challenge-progress-bar-wrapper">
                     <div
@@ -637,13 +639,17 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
             </div>
             <!-- Boss Fight -->
             <div v-if="result.data.boss" class="challenge-section">
-              <div class="summary-section-label">Boss Fight</div>
+              <div class="summary-section-label">
+                Boss Fight
+              </div>
               <div class="challenge-item challenge-boss">
                 <div class="challenge-header">
                   <span class="challenge-title boss-title" dir="auto">{{ result.data.boss.title }}</span>
                   <span class="challenge-difficulty diff-boss">BOSS</span>
                 </div>
-                <div v-if="result.data.boss.narrativeFlavor" class="challenge-flavor" dir="auto">{{ result.data.boss.narrativeFlavor }}</div>
+                <div v-if="result.data.boss.narrativeFlavor" class="challenge-flavor" dir="auto">
+                  {{ result.data.boss.narrativeFlavor }}
+                </div>
                 <div class="challenge-progress-row">
                   <div class="challenge-progress-bar-wrapper boss-bar-wrapper">
                     <div
@@ -683,7 +689,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="achievement-name">{{ ach.name }}</span>
                 <span class="achievement-percent">{{ ach.progressPercent }}%</span>
               </div>
-              <div class="achievement-desc">{{ ach.description }}</div>
+              <div class="achievement-desc">
+                {{ ach.description }}
+              </div>
               <div class="achievement-progress-row">
                 <div class="achievement-bar-wrapper">
                   <div
@@ -742,13 +750,13 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
             </div>
             <div class="task-list">
               <button
-                v-for="(task, idx) in result.data"
+                v-for="(task, taskIdx) in result.data"
                 :key="task.id"
                 class="task-list-item suggest-item"
                 :class="{ 'task-completed': completedTaskIds.has(task.id) }"
                 @click="openQuickEdit(task, $event)"
               >
-                <span class="suggest-rank">{{ Number(idx) + 1 }}</span>
+                <span class="suggest-rank">{{ Number(taskIdx) + 1 }}</span>
                 <span class="task-title" dir="auto">{{ task.title }}</span>
                 <div class="task-meta-row">
                   <span

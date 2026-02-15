@@ -89,10 +89,14 @@ function handleClose() {
             </div>
 
             <!-- Title -->
-            <h2 class="complete-title">Mission Complete!</h2>
+            <h2 class="complete-title">
+              Mission Complete!
+            </h2>
 
             <!-- Challenge name -->
-            <p class="challenge-name">{{ challenge.title }}</p>
+            <p class="challenge-name">
+              {{ challenge.title }}
+            </p>
 
             <!-- Rewards -->
             <div class="rewards">

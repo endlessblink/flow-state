@@ -614,7 +614,7 @@ onUnmounted(() => {
                       :class="{ active: selectedProvider === 'groq' }"
                       @click="selectProviderOption('groq')"
                     >
-                      <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')"></span>
+                      <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')" />
                       Groq
                     </button>
                     <button
@@ -622,7 +622,7 @@ onUnmounted(() => {
                       :class="{ active: currentProvider === 'openrouter' }"
                       @click="selectProviderOption('openrouter')"
                     >
-                      <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')"></span>
+                      <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')" />
                       OpenRouter
                     </button>
                     <button
@@ -630,7 +630,7 @@ onUnmounted(() => {
                       :class="{ active: selectedProvider === 'ollama' }"
                       @click="setProvider('ollama')"
                     >
-                      <span v-if="healthDotClass('ollama')" :class="healthDotClass('ollama')"></span>
+                      <span v-if="healthDotClass('ollama')" :class="healthDotClass('ollama')" />
                       Local
                     </button>
                   </div>
@@ -712,7 +712,7 @@ onUnmounted(() => {
                       <!-- Groq Status -->
                       <div class="provider-status-row">
                         <div class="provider-status-label">
-                          <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')"></span>
+                          <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')" />
                           <span>Groq</span>
                         </div>
                         <button
@@ -729,7 +729,7 @@ onUnmounted(() => {
                       <!-- OpenRouter Status -->
                       <div class="provider-status-row">
                         <div class="provider-status-label">
-                          <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')"></span>
+                          <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')" />
                           <span>OpenRouter</span>
                         </div>
                         <button
@@ -785,12 +785,15 @@ onUnmounted(() => {
                   <span>New Chat</span>
                 </button>
                 <div class="chat-history-list">
-                  <button
+                  <div
                     v-for="conv in sortedConversations"
                     :key="conv.id"
                     class="chat-history-item"
                     :class="{ active: conv.id === activeConversationId }"
+                    role="button"
+                    tabindex="0"
                     @click="handleSwitchChat(conv.id)"
+                    @keydown.enter="handleSwitchChat(conv.id)"
                   >
                     <span class="chat-history-title">{{ conv.title }}</span>
                     <span class="chat-history-date">{{ formatRelativeDate(conv.updatedAt) }}</span>
@@ -801,7 +804,7 @@ onUnmounted(() => {
                     >
                       <X :size="12" />
                     </button>
-                  </button>
+                  </div>
                 </div>
               </div>
             </Transition>
@@ -854,8 +857,12 @@ onUnmounted(() => {
             <p>{{ friendlyError.message }}</p>
           </div>
           <div class="error-actions">
-            <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">Retry</button>
-            <button class="error-dismiss" @click="clearError">Dismiss</button>
+            <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">
+              Retry
+            </button>
+            <button class="error-dismiss" @click="clearError">
+              Dismiss
+            </button>
           </div>
         </div>
 
@@ -863,7 +870,9 @@ onUnmounted(() => {
         <div v-if="visibleMessages.length === 0" class="empty-state">
           <Sparkles class="empty-icon" :size="32" />
           <p>Ask me anything about your tasks!</p>
-          <p class="empty-hint">Try: "Plan my day" or "Break down this task"</p>
+          <p class="empty-hint">
+            Try: "Plan my day" or "Break down this task"
+          </p>
           <p v-if="selectedProvider === 'ollama' || (selectedProvider === 'auto' && activeProvider === 'ollama')" class="provider-note">
             Using local AI — quick actions call tools directly
           </p>
@@ -877,8 +886,12 @@ onUnmounted(() => {
           <span>Confirm: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
         </div>
         <div class="confirmation-actions">
-          <button class="confirm-btn confirm-danger" @click="confirmPendingAction()">Confirm</button>
-          <button class="confirm-btn confirm-cancel" @click="cancelPendingAction()">Cancel</button>
+          <button class="confirm-btn confirm-danger" @click="confirmPendingAction()">
+            Confirm
+          </button>
+          <button class="confirm-btn confirm-cancel" @click="cancelPendingAction()">
+            Cancel
+          </button>
         </div>
       </div>
 

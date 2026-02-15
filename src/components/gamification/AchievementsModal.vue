@@ -123,8 +123,8 @@ const categoryStats = computed(() => {
               :key="achievement.id"
               :achievement="achievement"
               size="md"
-              :show-progress="true"
-              :show-description="true"
+              show-progress
+              show-description
             />
 
             <div

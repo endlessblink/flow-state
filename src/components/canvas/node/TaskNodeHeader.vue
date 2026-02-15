@@ -2,7 +2,7 @@
   <div class="task-node-header">
     <!-- Title -->
     <div class="task-title" :class="alignmentClasses" :title="title">
-      {{ title || 'Untitled Task' }}
+      {{ displayTitle }}
     </div>
 
     <!-- Timer Active Badge -->
@@ -13,13 +13,17 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Timer } from 'lucide-vue-next'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 
-defineProps<{
+const props = defineProps<{
   title: string
   isTimerActive: boolean
   alignmentClasses: object | string
 }>()
+
+const displayTitle = computed(() => truncateUrlsInText(props.title) || 'Untitled Task')
 </script>
 
 <style scoped>

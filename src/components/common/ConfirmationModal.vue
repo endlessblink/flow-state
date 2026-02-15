@@ -5,7 +5,7 @@
     :description="message"
     size="sm"
     variant="danger"
-    :show-footer="true"
+    show-footer
     close-on-overlay-click
     close-on-escape
     submit-on-enter

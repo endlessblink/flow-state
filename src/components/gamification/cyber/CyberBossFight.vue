@@ -267,7 +267,9 @@ watch(damageDealt, (newVal, oldVal) => {
           <Target :size="16" />
           <span>OBJECTIVE:</span>
         </div>
-        <div class="cbf-objective-text">{{ objectiveText }}</div>
+        <div class="cbf-objective-text">
+          {{ objectiveText }}
+        </div>
         <!-- Progress bar -->
         <div class="cbf-objective-progress">
           <div
@@ -275,7 +277,9 @@ watch(damageDealt, (newVal, oldVal) => {
             :style="{ width: `${(damageDealt / totalHp) * 100}%` }"
           />
         </div>
-        <div class="cbf-objective-count">{{ damageDealt }}/{{ totalHp }} tasks</div>
+        <div class="cbf-objective-count">
+          {{ damageDealt }}/{{ totalHp }} tasks
+        </div>
       </div>
 
       <!-- Victory State Overlay -->
@@ -283,7 +287,9 @@ watch(damageDealt, (newVal, oldVal) => {
         v-if="isDefeated"
         class="cbf-victory-overlay"
       >
-        <div class="cbf-victory-text">TERMINATED</div>
+        <div class="cbf-victory-text">
+          TERMINATED
+        </div>
       </div>
 
       <!-- Failed State Overlay -->
@@ -291,7 +297,9 @@ watch(damageDealt, (newVal, oldVal) => {
         v-if="isFailed"
         class="cbf-failure-overlay"
       >
-        <div class="cbf-failure-text">MISSION FAILED</div>
+        <div class="cbf-failure-text">
+          MISSION FAILED
+        </div>
       </div>
     </template>
 
@@ -302,8 +310,12 @@ watch(damageDealt, (newVal, oldVal) => {
           :size="64"
           class="cbf-icon cbf-icon--dimmed"
         />
-        <div class="cbf-no-boss-text">NO ACTIVE THREAT</div>
-        <div class="cbf-no-boss-sub">&gt; SYSTEMS NOMINAL_</div>
+        <div class="cbf-no-boss-text">
+          NO ACTIVE THREAT
+        </div>
+        <div class="cbf-no-boss-sub">
+          &gt; SYSTEMS NOMINAL_
+        </div>
       </div>
     </template>
   </div>

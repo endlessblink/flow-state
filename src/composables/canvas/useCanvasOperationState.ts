@@ -54,7 +54,7 @@ export function useCanvasOperationState() {
 
         // BUG-1209: Set window flag so realtime handlers block during settling
         if (typeof window !== 'undefined') {
-            ;(window as any).__FlowStateIsSettling = true
+            (window as any).__FlowStateIsSettling = true
         }
 
         // TASK-1289: Use DRAG_SETTLE_TIMEOUT_MS (3000ms) instead of 800ms to match
@@ -65,7 +65,7 @@ export function useCanvasOperationState() {
                 state.value = { type: 'idle' }
                 // BUG-1209: Clear settling flag when returning to idle
                 if (typeof window !== 'undefined') {
-                    ;(window as any).__FlowStateIsSettling = false
+                    (window as any).__FlowStateIsSettling = false
                 }
                 // Process any queued updates after settling completes
                 const updates = [...pendingUpdates.value]
@@ -88,7 +88,7 @@ export function useCanvasOperationState() {
 
         // BUG-1209: Set window flag so realtime handlers block during settling
         if (typeof window !== 'undefined') {
-            ;(window as any).__FlowStateIsSettling = true
+            (window as any).__FlowStateIsSettling = true
         }
 
         const settleTimeout = window.setTimeout(() => {
@@ -96,7 +96,7 @@ export function useCanvasOperationState() {
                 state.value = { type: 'idle' }
                 // BUG-1209: Clear settling flag when returning to idle
                 if (typeof window !== 'undefined') {
-                    ;(window as any).__FlowStateIsSettling = false
+                    (window as any).__FlowStateIsSettling = false
                 }
                 // Process any queued updates after settling completes
                 const updates = [...pendingUpdates.value]
@@ -127,7 +127,7 @@ export function useCanvasOperationState() {
         }
         // BUG-1209: Clear settling flag on any reset
         if (typeof window !== 'undefined') {
-            ;(window as any).__FlowStateIsSettling = false
+            (window as any).__FlowStateIsSettling = false
         }
         state.value = { type: 'idle' }
     }

@@ -158,10 +158,18 @@
       <!-- Empty state -->
       <div v-if="filteredTodayTasks.length === 0" class="empty-state">
         <CheckCircle :size="48" />
-        <h3 v-if="hasActiveFilters">No matching tasks</h3>
-        <h3 v-else>All clear for today!</h3>
-        <p v-if="hasActiveFilters">Try adjusting your filters.</p>
-        <p v-else>No tasks scheduled. Add one from Inbox.</p>
+        <h3 v-if="hasActiveFilters">
+          No matching tasks
+        </h3>
+        <h3 v-else>
+          All clear for today!
+        </h3>
+        <p v-if="hasActiveFilters">
+          Try adjusting your filters.
+        </p>
+        <p v-else>
+          No tasks scheduled. Add one from Inbox.
+        </p>
       </div>
     </div>
 

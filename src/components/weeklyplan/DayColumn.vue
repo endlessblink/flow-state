@@ -48,9 +48,9 @@
             :task="resolveTask(taskId)"
             :is-overdue="isTaskOverdue(taskId)"
             :ai-reason="props.taskReasons[taskId] || ''"
-            @remove="(id) => $emit('remove-task', id)"
-            @change-priority="(id) => $emit('change-priority', id)"
-            @snooze="(id) => $emit('snooze-task', id)"
+            @remove="(id) => $emit('removeTask', id)"
+            @change-priority="(id) => $emit('changePriority', id)"
+            @snooze="(id) => $emit('snoozeTask', id)"
           />
         </template>
         <template #footer>
@@ -90,9 +90,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:modelValue': [value: string[]]
   'resuggest': [dayKey: string]
-  'remove-task': [taskId: string]
-  'change-priority': [taskId: string]
-  'snooze-task': [taskId: string]
+  'removeTask': [taskId: string]
+  'changePriority': [taskId: string]
+  'snoozeTask': [taskId: string]
 }>()
 
 const localTaskIds = ref<string[]>([...props.modelValue])
@@ -174,8 +174,8 @@ function isTaskOverdue(taskId: string): boolean {
 .day-column {
   display: flex;
   flex-direction: column;
-  min-width: 260px;
-  flex: 1 0 260px;
+  min-width: 320px;
+  flex: 1 0 320px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);

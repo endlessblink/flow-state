@@ -3,8 +3,12 @@
     <!-- Idle: Choose Quick or Thorough -->
     <div v-if="state.status === 'idle'" class="wp-centered">
       <CalendarDays :size="48" class="wp-hero-icon" />
-      <h2 class="wp-title">Plan Your Week</h2>
-      <p class="wp-subtitle">{{ eligibleTaskCount }} tasks ready to schedule</p>
+      <h2 class="wp-title">
+        Plan Your Week
+      </h2>
+      <p class="wp-subtitle">
+        {{ eligibleTaskCount }} tasks ready to schedule
+      </p>
       <div class="wp-mode-selector">
         <button class="wp-btn wp-btn-primary" @click="onQuickPlan">
           <Zap :size="16" />
@@ -15,14 +19,18 @@
           Thorough Plan
         </button>
       </div>
-      <p class="wp-hint">Quick skips the interview. Thorough asks a few questions first.</p>
+      <p class="wp-hint">
+        Quick skips the interview. Thorough asks a few questions first.
+      </p>
     </div>
 
     <!-- Interview State -->
     <div v-else-if="state.status === 'interview'" class="wp-centered wp-interview">
       <div class="interview-header">
         <MessageCircle :size="28" class="wp-title-icon" />
-        <h2 class="wp-title">A few quick questions</h2>
+        <h2 class="wp-title">
+          A few quick questions
+        </h2>
       </div>
 
       <div class="interview-cards">
@@ -34,7 +42,7 @@
             type="text"
             class="interview-input"
             placeholder="e.g. Ship the new dashboard, fix auth bugs..."
-          />
+          >
         </div>
 
         <!-- Q2: Days off -->
@@ -117,7 +125,9 @@
     <!-- Loading State -->
     <div v-else-if="state.status === 'loading'" class="wp-centered">
       <Loader2 :size="48" class="wp-spinner" />
-      <p class="wp-loading-text">AI is analyzing your tasks...</p>
+      <p class="wp-loading-text">
+        AI is analyzing your tasks...
+      </p>
       <div class="wp-skeleton-columns">
         <div v-for="i in 7" :key="i" class="wp-skeleton-col" />
       </div>
@@ -128,7 +138,9 @@
       <div class="wp-review-header">
         <div class="wp-title-row">
           <CalendarDays :size="18" class="wp-title-icon" />
-          <h2 class="wp-title">Your Week</h2>
+          <h2 class="wp-title">
+            Your Week
+          </h2>
           <span class="wp-stats-inline">{{ scheduledCount }} tasks · {{ daysUsed }} days</span>
         </div>
         <div class="wp-action-bar">
@@ -147,12 +159,19 @@
         </div>
       </div>
 
+      <div v-if="state.weekTheme" class="wp-week-theme">
+        <Sparkles :size="14" class="wp-theme-icon" />
+        <span class="wp-theme-text">{{ state.weekTheme }}</span>
+      </div>
+
       <details v-if="state.reasoning" class="wp-reasoning-details">
         <summary class="wp-reasoning-summary">
           <CalendarDays :size="12" />
           AI reasoning
         </summary>
-        <p class="wp-reasoning-text">{{ state.reasoning }}</p>
+        <p class="wp-reasoning-text">
+          {{ state.reasoning }}
+        </p>
       </details>
 
       <WeeklyPlanGrid
@@ -173,7 +192,9 @@
       <div class="wp-success-icon">
         <Check :size="32" />
       </div>
-      <h2 class="wp-title">Week planned!</h2>
+      <h2 class="wp-title">
+        Week planned!
+      </h2>
       <p class="wp-applied-stats">
         {{ scheduledCount }} tasks scheduled across {{ daysUsed }} days
       </p>
@@ -188,7 +209,9 @@
       <div class="wp-error-icon">
         <X :size="32" />
       </div>
-      <p class="wp-error-text">{{ state.error }}</p>
+      <p class="wp-error-text">
+        {{ state.error }}
+      </p>
       <div class="wp-error-actions">
         <button class="wp-btn wp-btn-primary" @click="generatePlan()">
           <RefreshCw :size="16" />
@@ -203,7 +226,9 @@
     <!-- Applying (brief transitional) -->
     <div v-else class="wp-centered">
       <Loader2 :size="48" class="wp-spinner" />
-      <p class="wp-loading-text">Applying plan...</p>
+      <p class="wp-loading-text">
+        Applying plan...
+      </p>
     </div>
   </div>
 </template>
@@ -694,6 +719,31 @@ function handleKeydown(event: KeyboardEvent) {
   font-size: var(--text-xs);
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* Week theme badge */
+.wp-week-theme {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(78, 205, 196, 0.06);
+  border: 1px solid rgba(78, 205, 196, 0.15);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.wp-theme-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.wp-theme-text {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
 }
 
 /* Collapsible reasoning */

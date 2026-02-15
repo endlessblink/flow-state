@@ -30,7 +30,9 @@ const handleClick = () => {
     data-augmented-ui="tl-clip br-clip border"
     @click="handleClick"
   >
-    <h3 class="cyber-summary-card__title">{{ title }}</h3>
+    <h3 class="cyber-summary-card__title">
+      {{ title }}
+    </h3>
     <div class="cyber-summary-card__content">
       <slot />
     </div>

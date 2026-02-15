@@ -50,7 +50,6 @@
         <span class="project-name">Create New...</span>
       </button>
     </div>
-
   </div>
 </template>
 

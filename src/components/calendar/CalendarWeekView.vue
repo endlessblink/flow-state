@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, inject } from 'vue'
-import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { WeekEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
   weekDays: any[]
@@ -39,6 +39,7 @@ defineEmits<{
   (e: 'removeFromCalendar', weekEvent: WeekEvent): void
   (e: 'startTimer', weekEvent: WeekEvent): void
   (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
+  (e: 'cellDblClick', dateString: string, hour: number): void
 }>()
 
 // Inject helpers from parent CalendarView
@@ -47,11 +48,7 @@ const {
   formatHour,
   formatEventTime,
   isCurrentWeekTimeCell,
-  getProjectVisual,
-  getProjectName,
-  getProjectColor,
   getPriorityClass,
-  getPriorityLabel,
   getTaskStatus,
   getStatusIcon,
   getStatusLabel
@@ -119,6 +116,34 @@ const externalEventsByCell = computed(() => {
   return map
 })
 
+// Absolute positioning for time-spanning blocks (like Google Calendar)
+// Overlapping events split into side-by-side columns using event.column / event.totalColumns
+const HALF_HOUR_HEIGHT = 30
+const getWeekEventCellStyle = (event: WeekEvent) => {
+  const topOffset = (event.startSlot % 2) * HALF_HOUR_HEIGHT
+  const height = event.slotSpan * HALF_HOUR_HEIGHT
+  if (event.totalColumns > 1) {
+    const widthPercent = 100 / event.totalColumns
+    const leftPercent = widthPercent * event.column
+    return {
+      position: 'absolute' as const,
+      top: `${topOffset}px`,
+      height: `${height}px`,
+      width: `calc(${widthPercent}% - 4px)`,
+      left: `calc(${leftPercent}% + 2px)`,
+      zIndex: 10 + event.column
+    }
+  }
+  return {
+    position: 'absolute' as const,
+    top: `${topOffset}px`,
+    height: `${height}px`,
+    left: '2px',
+    right: '2px',
+    zIndex: 10
+  }
+}
+
 </script>
 
 <template>
@@ -173,6 +198,7 @@ const externalEventsByCell = computed(() => {
               @dragenter.prevent="activeDragCell = { dayIndex, hour }; $emit('dragenter', $event, createSlot(day.dateString, hour))"
               @dragleave="$emit('dragleave')"
               @drop.prevent="activeDragCell = null; $emit('drop', $event, createSlot(day.dateString, hour))"
+              @dblclick.self="$emit('cellDblClick', day.dateString, hour)"
             >
               <!-- Ghost Preview (during inbox drag) — same as day view -->
               <div
@@ -193,7 +219,7 @@ const externalEventsByCell = computed(() => {
                 </div>
               </div>
 
-              <!-- Week events as horizontal stacked pills (matching month view) -->
+              <!-- Week events as absolute-positioned time-spanning blocks -->
               <div
                 v-for="event in getEventsForCell(dayIndex, hour)"
                 :key="event.id"
@@ -203,7 +229,7 @@ const externalEventsByCell = computed(() => {
                   'dragging': isDragging && draggedEventId === event.id,
                   'status-done': getTaskStatus(event) === 'done'
                 }"
-                :style="{ backgroundColor: event.color }"
+                :style="{ ...getWeekEventCellStyle(event), backgroundColor: event.color }"
                 :title="getEventTooltip(event)"
                 draggable="true"
                 @dragstart="$emit('eventDragStart', $event, event)"
@@ -212,41 +238,26 @@ const externalEventsByCell = computed(() => {
                 @dblclick.stop="$emit('eventDblClick', event)"
                 @contextmenu.prevent.stop="$emit('eventContextMenu', $event, event)"
               >
-                <!-- Project Indicator -->
-                <div
-                  v-if="getProjectVisual(event).type === 'emoji'"
-                  class="project-indicator project-emoji-indicator"
-                  :title="`Project: ${getProjectName(event)}`"
-                >
-                  <ProjectEmojiIcon
-                    :emoji="getProjectVisual(event).content"
-                    size="xs"
-                    :title="`Project: ${getProjectName(event)}`"
-                    class="project-emoji"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="project-indicator project-color-indicator"
-                  :style="{ backgroundColor: getProjectColor(event) }"
-                  :title="`Project: ${getProjectName(event)}`"
-                />
-
                 <!-- Priority Stripe -->
                 <div
                   class="priority-stripe"
                   :class="`priority-${getPriorityClass(event)}`"
-                  :title="`Priority: ${getPriorityLabel(event)}`"
                 />
-                <span v-if="formatEventTime(event)" class="event-time">{{ formatEventTime(event) }}</span>
-                <span
-                  class="event-title-short"
-                  dir="auto"
-                  :title="event.title"
-                  @click.stop="$emit('cycleStatus', $event, event)"
-                >
-                  {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
-                </span>
+
+                <!-- Event Content — optimized for narrow columns -->
+                <div class="event-content">
+                  <span class="event-time">{{ formatEventTime(event) }}</span>
+                  <span class="event-title" dir="auto">
+                    {{ getStatusIcon(getTaskStatus(event)) }} {{ truncateUrlsInText(event.title) }}
+                  </span>
+                </div>
+
+                <!-- Resize handle (bottom edge) — drag to change duration -->
+                <div
+                  class="resize-handle resize-handle-bottom"
+                  title="Drag to change duration"
+                  @mousedown.stop.prevent="$emit('startResize', $event, event, 'bottom')"
+                />
               </div>
 
               <!-- TASK-1317: External calendar events in this cell -->
@@ -254,16 +265,23 @@ const externalEventsByCell = computed(() => {
                 v-for="ext in (externalEventsByCell.get(`${dayIndex}-${hour}`) || [])"
                 :key="`ext-${ext.id}`"
                 class="week-event week-event--external"
-                :style="{ borderColor: ext.color, backgroundColor: ext.color + '20' }"
+                :style="{
+                  position: 'absolute',
+                  top: `${(ext.startTime.getMinutes() >= 30 ? 30 : 0)}px`,
+                  height: `${Math.max(20, Math.ceil((ext.endTime.getTime() - ext.startTime.getTime()) / 60000 / 30) * 30)}px`,
+                  right: '2px',
+                  width: '35%',
+                  borderColor: ext.color,
+                  backgroundColor: ext.color + '20'
+                }"
                 :title="`${ext.title}${ext.location ? '\n📍 ' + ext.location : ''}`"
               >
-                <div class="external-dot" :style="{ backgroundColor: ext.color }" />
                 <span class="external-event-title" dir="auto">{{ ext.title }}</span>
               </div>
             </div>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   </div>
 </template>
@@ -353,15 +371,12 @@ const externalEventsByCell = computed(() => {
   border-left: 1px solid var(--glass-border-light);
 }
 
+/* Cell — overflow visible so blocks can extend beyond cell boundaries */
 .week-time-cell {
   height: 60px;
   border-bottom: 1px solid var(--glass-border-light);
   position: relative;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 1px;
+  overflow: visible;
   transition: background var(--duration-fast);
 }
 
@@ -379,16 +394,12 @@ const externalEventsByCell = computed(() => {
   box-shadow: inset 0 -2px 0 var(--color-danger);
 }
 
+/* Week event — absolute-positioned time-spanning block (like Google Calendar) */
 .week-event {
-  padding: var(--space-0_5) var(--space-1);
-  padding-left: var(--space-2_5);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: white;
   cursor: grab;
-  position: relative;
-  line-height: 1.3;
-  flex-shrink: 0;
   overflow: hidden;
   transition: filter var(--duration-fast), opacity var(--duration-fast);
 }
@@ -403,46 +414,66 @@ const externalEventsByCell = computed(() => {
   cursor: grabbing;
 }
 
-
-.event-time {
-  font-weight: var(--font-bold);
-  opacity: 0.8;
-  font-size: 0.6rem;
-  display: block;
-  margin-bottom: 1px;
+/* Event content — column layout, time at top, title below */
+.event-content {
+  padding: 2px 4px 2px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
-.event-title-short {
+/* Time — bold, always visible at top of block */
+.event-time {
+  font-weight: var(--font-bold);
+  opacity: 0.9;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+/* Title — aggressive truncation for narrow 1/7th columns */
+.event-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+  line-height: 1.2;
+  font-size: 0.65rem;
 }
 
+/* Priority stripe — thin left edge */
 .priority-stripe {
-  width: 2px;
-  height: calc(100% - 6px);
-  border-radius: 1px;
+  width: 3px;
+  height: 100%;
   position: absolute;
   left: 0;
-  top: 3px;
+  top: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
 
-.project-indicator {
-  width: 4px;
-  height: calc(100% - 4px);
-  border-radius: var(--radius-xs);
+/* Resize handle — appears on hover at bottom edge of event block */
+.resize-handle {
   position: absolute;
-  left: var(--space-0_5);
-  top: var(--space-0_5);
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
 }
 
-.project-emoji-indicator {
-  width: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.resize-handle-bottom {
+  bottom: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.week-event:hover .resize-handle {
+  opacity: 1;
 }
 
 /* Ghost preview — IDENTICAL to day view */
@@ -515,18 +546,12 @@ const externalEventsByCell = computed(() => {
   filter: brightness(1.1);
 }
 
-.external-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 .week-event--external .external-event-title {
   font-size: 10px;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 2px 4px;
 }
 </style>

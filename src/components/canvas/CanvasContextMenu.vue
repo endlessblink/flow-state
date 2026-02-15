@@ -7,243 +7,243 @@
       class="context-menu"
       :style="menuPosition"
     >
-    <!-- Group-specific options (when contextSection is provided) -->
-    <template v-if="contextSection">
-      <div class="menu-section-header">
-        <Group :size="14" :stroke-width="1.5" />
-        <span>{{ contextSection.name || 'Group' }}</span>
-      </div>
-
-      <!-- TASK-068: Add Task to Group -->
-      <button
-        class="menu-item"
-        @click="handleCreateTaskInGroup"
-      >
-        <PlusCircle :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Add Task to Group</span>
-      </button>
-
-      <button
-        class="menu-item"
-        @click="$emit('editGroup', contextSection)"
-      >
-        <Edit2 :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Edit Group</span>
-      </button>
-
-      <!-- TASK-068: Group Settings (moved from header) -->
-      <button
-        class="menu-item"
-        @click="handleOpenSettings"
-      >
-        <Settings :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Group Settings</span>
-      </button>
-
-      <div class="menu-divider" />
-
-      <!-- TASK-068: Power Mode Toggle (moved from header) -->
-      <button
-        v-if="contextSection.powerKeyword"
-        class="menu-item"
-        :class="{ 'active': contextSection.isPowerMode }"
-        @click="handleTogglePowerMode"
-      >
-        <Zap :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">{{ contextSection.isPowerMode ? 'Disable Power Mode' : 'Enable Power Mode' }}</span>
-      </button>
-
-      <!-- TASK-068: Collect Tasks (moved from header, only in power mode) -->
-      <button
-        v-if="contextSection.isPowerMode"
-        class="menu-item"
-        @click="handleCollectTasks"
-      >
-        <Magnet :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Collect Matching Tasks</span>
-      </button>
-
-      <!-- TASK-1222: Collect Overdue Tasks (always visible for groups) -->
-      <button
-        class="menu-item"
-        @click="handleCollectOverdueTasks"
-      >
-        <AlertCircle :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Collect Overdue Tasks</span>
-      </button>
-
-      <div class="menu-divider" />
-
-      <button
-        class="menu-item danger"
-        @click="handleDeleteGroup"
-      >
-        <Trash2 :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Delete Group</span>
-      </button>
-
-      <div class="menu-divider" />
-    </template>
-
-    <!-- Create Task Here -->
-    <button
-      class="menu-item"
-      @click="$emit('createTaskHere')"
-    >
-      <PlusCircle :size="16" :stroke-width="1.5" class="menu-icon" />
-      <span class="menu-text">Create Task Here</span>
-    </button>
-
-    <!-- Create Group (unified modal) - BUG-1127: Allow nested groups -->
-    <button
-      class="menu-item"
-      @click="handleCreateGroup"
-    >
-      <Group :size="16" :stroke-width="1.5" class="menu-icon" />
-      <span class="menu-text">Create Group</span>
-    </button>
-
-    <!-- Task-specific options (when tasks are selected) -->
-    <template v-if="hasSelectedTasks && selectedCount >= 1 && !contextSection">
-      <div class="menu-divider" />
-
-      <!-- TASK-1128: Create Group From Selection (2+ tasks) -->
-      <button
-        v-if="selectedCount >= 2"
-        class="menu-item"
-        @click="handleCreateGroupFromSelection"
-      >
-        <Group :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Add to New Group</span>
-      </button>
-
-      <!-- Move to Inbox -->
-      <button
-        class="menu-item"
-        @click="handleMoveToInbox"
-      >
-        <Inbox :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Move to Inbox</span>
-        <span class="menu-shortcut">Del</span>
-      </button>
-
-      <!-- Done for Now (reschedule to tomorrow) -->
-      <button
-        class="menu-item"
-        @click="handleDoneForNow"
-      >
-        <Clock :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Done for now</span>
-      </button>
-
-      <!-- Delete Task(s) -->
-      <button
-        class="menu-item danger"
-        @click="handleDeleteTasks"
-      >
-        <Trash2 :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Delete {{ selectedCount > 1 ? `${selectedCount} Tasks` : 'Task' }}</span>
-        <span class="menu-shortcut">Shift+Del</span>
-      </button>
-    </template>
-
-    <!-- Layout Submenu (2+ items - tasks and/or groups) - TASK-1081 -->
-    <template v-if="selectedCount >= 2">
-      <div class="menu-divider" />
-      <div
-        ref="submenuItemRef"
-        class="menu-item submenu-item"
-        @mouseenter="handleLayoutSubmenuEnter"
-        @mouseleave="handleLayoutSubmenuLeave"
-      >
-        <LayoutGrid :size="16" :stroke-width="1.5" class="menu-icon" />
-        <span class="menu-text">Layout</span>
-        <ChevronRight :size="16" :stroke-width="1.5" class="submenu-arrow" />
-      </div>
-    </template>
-
-    <!-- Teleported Layout Submenu (escapes overflow clipping) -->
-    <Teleport to="body">
-      <div
-        v-if="showLayoutSubmenu && selectedCount >= 2"
-        ref="submenuRef"
-        class="submenu submenu-teleported layout-grid-mode"
-        :style="submenuStyle"
-        @mouseenter="handleLayoutSubmenuEnter"
-        @mouseleave="handleLayoutSubmenuLeave"
-      >
-        <!-- Section: Align -->
-        <div class="layout-section">
-          <div class="layout-section-label">
-            Align
-          </div>
-          <div class="layout-icon-row">
-            <button class="menu-item menu-item-icon" title="Align Left" @click="handleAlignLeft">
-              <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" />
-            </button>
-            <button class="menu-item menu-item-icon" title="Center Horizontally" @click="handleAlignCenterHorizontal">
-              <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" />
-            </button>
-            <button class="menu-item menu-item-icon" title="Align Right" @click="handleAlignRight">
-              <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" />
-            </button>
-          </div>
-          <div class="layout-icon-row">
-            <button class="menu-item menu-item-icon" title="Align Top" @click="handleAlignTop">
-              <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" />
-            </button>
-            <button class="menu-item menu-item-icon" title="Center Vertically" @click="handleAlignCenterVertical">
-              <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" />
-            </button>
-            <button class="menu-item menu-item-icon" title="Align Bottom" @click="handleAlignBottom">
-              <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" />
-            </button>
-          </div>
+      <!-- Group-specific options (when contextSection is provided) -->
+      <template v-if="contextSection">
+        <div class="menu-section-header">
+          <Group :size="14" :stroke-width="1.5" />
+          <span>{{ contextSection.name || 'Group' }}</span>
         </div>
 
-        <!-- Section: Distribute (3+ items) - TASK-1081 -->
-        <template v-if="selectedCount >= 3">
+        <!-- TASK-068: Add Task to Group -->
+        <button
+          class="menu-item"
+          @click="handleCreateTaskInGroup"
+        >
+          <PlusCircle :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Add Task to Group</span>
+        </button>
+
+        <button
+          class="menu-item"
+          @click="$emit('editGroup', contextSection)"
+        >
+          <Edit2 :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Edit Group</span>
+        </button>
+
+        <!-- TASK-068: Group Settings (moved from header) -->
+        <button
+          class="menu-item"
+          @click="handleOpenSettings"
+        >
+          <Settings :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Group Settings</span>
+        </button>
+
+        <div class="menu-divider" />
+
+        <!-- TASK-068: Power Mode Toggle (moved from header) -->
+        <button
+          v-if="contextSection.powerKeyword"
+          class="menu-item"
+          :class="{ 'active': contextSection.isPowerMode }"
+          @click="handleTogglePowerMode"
+        >
+          <Zap :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">{{ contextSection.isPowerMode ? 'Disable Power Mode' : 'Enable Power Mode' }}</span>
+        </button>
+
+        <!-- TASK-068: Collect Tasks (moved from header, only in power mode) -->
+        <button
+          v-if="contextSection.isPowerMode"
+          class="menu-item"
+          @click="handleCollectTasks"
+        >
+          <Magnet :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Collect Matching Tasks</span>
+        </button>
+
+        <!-- TASK-1222: Collect Overdue Tasks (always visible for groups) -->
+        <button
+          class="menu-item"
+          @click="handleCollectOverdueTasks"
+        >
+          <AlertCircle :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Collect Overdue Tasks</span>
+        </button>
+
+        <div class="menu-divider" />
+
+        <button
+          class="menu-item danger"
+          @click="handleDeleteGroup"
+        >
+          <Trash2 :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Delete Group</span>
+        </button>
+
+        <div class="menu-divider" />
+      </template>
+
+      <!-- Create Task Here -->
+      <button
+        class="menu-item"
+        @click="$emit('createTaskHere')"
+      >
+        <PlusCircle :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Create Task Here</span>
+      </button>
+
+      <!-- Create Group (unified modal) - BUG-1127: Allow nested groups -->
+      <button
+        class="menu-item"
+        @click="handleCreateGroup"
+      >
+        <Group :size="16" :stroke-width="1.5" class="menu-icon" />
+        <span class="menu-text">Create Group</span>
+      </button>
+
+      <!-- Task-specific options (when tasks are selected) -->
+      <template v-if="hasSelectedTasks && selectedCount >= 1 && !contextSection">
+        <div class="menu-divider" />
+
+        <!-- TASK-1128: Create Group From Selection (2+ tasks) -->
+        <button
+          v-if="selectedCount >= 2"
+          class="menu-item"
+          @click="handleCreateGroupFromSelection"
+        >
+          <Group :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Add to New Group</span>
+        </button>
+
+        <!-- Move to Inbox -->
+        <button
+          class="menu-item"
+          @click="handleMoveToInbox"
+        >
+          <Inbox :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Move to Inbox</span>
+          <span class="menu-shortcut">Del</span>
+        </button>
+
+        <!-- Done for Now (reschedule to tomorrow) -->
+        <button
+          class="menu-item"
+          @click="handleDoneForNow"
+        >
+          <Clock :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Done for now</span>
+        </button>
+
+        <!-- Delete Task(s) -->
+        <button
+          class="menu-item danger"
+          @click="handleDeleteTasks"
+        >
+          <Trash2 :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Delete {{ selectedCount > 1 ? `${selectedCount} Tasks` : 'Task' }}</span>
+          <span class="menu-shortcut">Shift+Del</span>
+        </button>
+      </template>
+
+      <!-- Layout Submenu (2+ items - tasks and/or groups) - TASK-1081 -->
+      <template v-if="selectedCount >= 2">
+        <div class="menu-divider" />
+        <div
+          ref="submenuItemRef"
+          class="menu-item submenu-item"
+          @mouseenter="handleLayoutSubmenuEnter"
+          @mouseleave="handleLayoutSubmenuLeave"
+        >
+          <LayoutGrid :size="16" :stroke-width="1.5" class="menu-icon" />
+          <span class="menu-text">Layout</span>
+          <ChevronRight :size="16" :stroke-width="1.5" class="submenu-arrow" />
+        </div>
+      </template>
+
+      <!-- Teleported Layout Submenu (escapes overflow clipping) -->
+      <Teleport to="body">
+        <div
+          v-if="showLayoutSubmenu && selectedCount >= 2"
+          ref="submenuRef"
+          class="submenu submenu-teleported layout-grid-mode"
+          :style="submenuStyle"
+          @mouseenter="handleLayoutSubmenuEnter"
+          @mouseleave="handleLayoutSubmenuLeave"
+        >
+          <!-- Section: Align -->
+          <div class="layout-section">
+            <div class="layout-section-label">
+              Align
+            </div>
+            <div class="layout-icon-row">
+              <button class="menu-item menu-item-icon" title="Align Left" @click="handleAlignLeft">
+                <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" />
+              </button>
+              <button class="menu-item menu-item-icon" title="Center Horizontally" @click="handleAlignCenterHorizontal">
+                <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" />
+              </button>
+              <button class="menu-item menu-item-icon" title="Align Right" @click="handleAlignRight">
+                <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" />
+              </button>
+            </div>
+            <div class="layout-icon-row">
+              <button class="menu-item menu-item-icon" title="Align Top" @click="handleAlignTop">
+                <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" />
+              </button>
+              <button class="menu-item menu-item-icon" title="Center Vertically" @click="handleAlignCenterVertical">
+                <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" />
+              </button>
+              <button class="menu-item menu-item-icon" title="Align Bottom" @click="handleAlignBottom">
+                <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Section: Distribute (3+ items) - TASK-1081 -->
+          <template v-if="selectedCount >= 3">
+            <div class="menu-divider" />
+            <div class="layout-section">
+              <div class="layout-section-label">
+                Distribute
+              </div>
+              <div class="layout-icon-row">
+                <button class="menu-item menu-item-icon-wide" title="Distribute Horizontally" @click="handleDistributeHorizontal">
+                  <ArrowLeftRight :size="16" :stroke-width="1.5" />
+                  <span>Horiz</span>
+                </button>
+                <button class="menu-item menu-item-icon-wide" title="Distribute Vertically" @click="handleDistributeVertical">
+                  <ArrowUpDown :size="16" :stroke-width="1.5" />
+                  <span>Vert</span>
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Section: Arrange -->
           <div class="menu-divider" />
           <div class="layout-section">
             <div class="layout-section-label">
-              Distribute
+              Arrange
             </div>
             <div class="layout-icon-row">
-              <button class="menu-item menu-item-icon-wide" title="Distribute Horizontally" @click="handleDistributeHorizontal">
-                <ArrowLeftRight :size="16" :stroke-width="1.5" />
-                <span>Horiz</span>
+              <button class="menu-item menu-item-icon-wide" title="Arrange in Row" @click="handleArrangeInRow">
+                <Rows :size="16" :stroke-width="1.5" />
+                <span>Row</span>
               </button>
-              <button class="menu-item menu-item-icon-wide" title="Distribute Vertically" @click="handleDistributeVertical">
-                <ArrowUpDown :size="16" :stroke-width="1.5" />
-                <span>Vert</span>
+              <button class="menu-item menu-item-icon-wide" title="Arrange in Column" @click="handleArrangeInColumn">
+                <LayoutList :size="16" :stroke-width="1.5" />
+                <span>Column</span>
+              </button>
+              <button class="menu-item menu-item-icon-wide" title="Arrange in Grid" @click="handleArrangeInGrid">
+                <Grid3x3 :size="16" :stroke-width="1.5" />
+                <span>Grid</span>
               </button>
             </div>
           </div>
-        </template>
-
-        <!-- Section: Arrange -->
-        <div class="menu-divider" />
-        <div class="layout-section">
-          <div class="layout-section-label">
-            Arrange
-          </div>
-          <div class="layout-icon-row">
-            <button class="menu-item menu-item-icon-wide" title="Arrange in Row" @click="handleArrangeInRow">
-              <Rows :size="16" :stroke-width="1.5" />
-              <span>Row</span>
-            </button>
-            <button class="menu-item menu-item-icon-wide" title="Arrange in Column" @click="handleArrangeInColumn">
-              <LayoutList :size="16" :stroke-width="1.5" />
-              <span>Column</span>
-            </button>
-            <button class="menu-item menu-item-icon-wide" title="Arrange in Grid" @click="handleArrangeInGrid">
-              <Grid3x3 :size="16" :stroke-width="1.5" />
-              <span>Grid</span>
-            </button>
-          </div>
         </div>
-      </div>
-    </Teleport>
+      </Teleport>
     </div>
   </Teleport>
 </template>

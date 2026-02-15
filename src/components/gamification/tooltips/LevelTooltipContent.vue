@@ -48,7 +48,9 @@ const narrative = computed(() =>
     </div>
 
     <div v-if="recentLogs.length > 0" class="tooltip-recent">
-      <div class="recent-header">Recent:</div>
+      <div class="recent-header">
+        Recent:
+      </div>
       <div
         v-for="log in recentLogs"
         :key="log.id || log.createdAt?.toString()"

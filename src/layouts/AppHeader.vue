@@ -67,7 +67,7 @@
         <button
           class="ai-toggle-btn"
           :class="{ 'ai-active': aiChatStore.isPanelOpen }"
-          :title="`AI Assistant (Ctrl+/)`"
+          title="AI Assistant (Ctrl+/)"
           @click="aiChatStore.togglePanel"
         >
           <Sparkles :size="18" />

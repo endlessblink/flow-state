@@ -44,7 +44,12 @@
     </span>
 
     <!-- Subtasks -->
-    <span v-if="subtaskCount && subtaskCount > 0" class="subtask-badge" :class="{ 'subtask-complete': completedSubtaskCount === subtaskCount }" :title="`Subtasks: ${completedSubtaskCount}/${subtaskCount}`">
+    <span
+      v-if="subtaskCount && subtaskCount > 0"
+      class="subtask-badge"
+      :class="{ 'subtask-complete': completedSubtaskCount === subtaskCount }"
+      :title="`Subtasks: ${completedSubtaskCount}/${subtaskCount}`"
+    >
       <ListChecks :size="12" />
       {{ completedSubtaskCount }}/{{ subtaskCount }}
     </span>
@@ -81,16 +86,17 @@ const props = defineProps<{
   completedSubtaskCount?: number
 }>()
 
+defineEmits<{
+  reschedule: [dateType: string]
+  clearDoneForNow: []
+}>()
+
 // BUG-1187: Show "Done for now" badge when doneForNowUntil has a value
 // Badge only clears when user explicitly clicks it (clearDoneForNow event)
 const isDoneForNow = computed(() => {
   return !!props.doneForNowUntil
 })
 
-defineEmits<{
-  reschedule: [dateType: string]
-  clearDoneForNow: []
-}>()
 </script>
 
 <style scoped>

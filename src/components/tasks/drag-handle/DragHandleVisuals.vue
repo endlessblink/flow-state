@@ -5,17 +5,17 @@
     role="button"
     tabindex="0"
     :aria-disabled="disabled"
-    @mousedown="$emit('mouse-down', $event)"
-    @touchstart="$emit('touch-start', $event)"
-    @mouseenter="$emit('hover-start')"
-    @mouseleave="$emit('hover-end')"
+    @mousedown="$emit('mouseDown', $event)"
+    @touchstart="$emit('touchStart', $event)"
+    @mouseenter="$emit('hoverStart')"
+    @mouseleave="$emit('hoverEnd')"
     @keydown.enter="$emit('keydown', $event)"
     @keydown.space.prevent="$emit('keydown', $event)"
     @keydown.esc="$emit('keydown', $event)"
-    @keydown.up.prevent="$emit('arrow-key', 'up')"
-    @keydown.down.prevent="$emit('arrow-key', 'down')"
-    @keydown.left.prevent="$emit('arrow-key', 'left')"
-    @keydown.right.prevent="$emit('arrow-key', 'right')"
+    @keydown.up.prevent="$emit('arrowKey', 'up')"
+    @keydown.down.prevent="$emit('arrowKey', 'down')"
+    @keydown.left.prevent="$emit('arrowKey', 'left')"
+    @keydown.right.prevent="$emit('arrowKey', 'right')"
     @focus="$emit('focus')"
     @blur="$emit('blur')"
   >
@@ -73,12 +73,12 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'mouse-down', event: MouseEvent): void
-  (e: 'touch-start', event: TouchEvent): void
-  (e: 'hover-start'): void
-  (e: 'hover-end'): void
+  (e: 'mouseDown', event: MouseEvent): void
+  (e: 'touchStart', event: TouchEvent): void
+  (e: 'hoverStart'): void
+  (e: 'hoverEnd'): void
   (e: 'keydown', event: KeyboardEvent): void
-  (e: 'arrow-key', direction: 'up' | 'down' | 'left' | 'right'): void
+  (e: 'arrowKey', direction: 'up' | 'down' | 'left' | 'right'): void
   (e: 'focus'): void
   (e: 'blur'): void
 }>()

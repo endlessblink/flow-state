@@ -22,7 +22,7 @@
     <!-- Task Content -->
     <div class="task-content--calendar-inbox">
       <div class="task-title" dir="auto" :title="task.title">
-        {{ task.title }}
+        {{ truncateUrlsInText(task.title) }}
       </div>
 
       <!-- Metadata Badges -->
@@ -62,7 +62,12 @@
         </span>
 
         <!-- Subtask Badge -->
-        <span v-if="totalSubtasks > 0" class="metadata-badge subtask-badge" :class="{ 'subtask-complete': completedSubtasks === totalSubtasks }" :title="`Subtasks: ${completedSubtasks}/${totalSubtasks}`">
+        <span
+          v-if="totalSubtasks > 0"
+          class="metadata-badge subtask-badge"
+          :class="{ 'subtask-complete': completedSubtasks === totalSubtasks }"
+          :title="`Subtasks: ${completedSubtasks}/${totalSubtasks}`"
+        >
           <ListChecks :size="12" />
           {{ completedSubtasks }}/{{ totalSubtasks }}
         </span>
@@ -102,6 +107,7 @@ import { NTag } from 'naive-ui'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useTaskStore } from '@/stores/tasks'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
   task: Task

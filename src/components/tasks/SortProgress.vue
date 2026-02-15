@@ -28,7 +28,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -43,7 +42,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  streak: 0
+  streak: 0,
+  message: undefined
 })
 
 const percentage = computed(() => {

@@ -11,7 +11,9 @@
             <AlertTriangle :size="20" />
           </div>
           <div class="header-content">
-            <h3 class="header-title">Sync Errors</h3>
+            <h3 class="header-title">
+              Sync Errors
+            </h3>
             <p class="header-subtitle">
               {{ errors.length }} error{{ errors.length !== 1 ? 's' : '' }}
               <template v-if="permanentCount > 0">
@@ -28,7 +30,9 @@
         <div class="popover-body">
           <!-- Last Error Summary -->
           <div v-if="lastError" class="error-summary">
-            <div class="error-message">{{ lastError }}</div>
+            <div class="error-message">
+              {{ lastError }}
+            </div>
           </div>
 
           <!-- Error List -->

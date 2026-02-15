@@ -470,7 +470,7 @@ onUnmounted(() => {
                 @keydown="handleRenameKeydown"
                 @blur="confirmRename"
                 @click.stop
-              />
+              >
             </template>
             <template v-else>
               <span class="conv-title" dir="auto">{{ conv.title }}</span>
@@ -494,7 +494,9 @@ onUnmounted(() => {
 
       <!-- Agent Chains Section -->
       <div class="chains-section">
-        <div class="chains-label">Agent Chains</div>
+        <div class="chains-label">
+          Agent Chains
+        </div>
         <button
           v-for="chain in agentChains.chains"
           :key="chain.id"
@@ -580,13 +582,15 @@ onUnmounted(() => {
                 class="provider-option"
                 :class="{ active: selectedProvider === 'auto' }"
                 @click="selectProviderOption('auto')"
-              >Auto</button>
+              >
+                Auto
+              </button>
               <button
                 class="provider-option"
                 :class="{ active: selectedProvider === 'groq' }"
                 @click="selectProviderOption('groq')"
               >
-                <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')"></span>
+                <span v-if="healthDotClass('groq')" :class="healthDotClass('groq')" />
                 Groq
               </button>
               <button
@@ -594,7 +598,7 @@ onUnmounted(() => {
                 :class="{ active: currentProvider === 'openrouter' }"
                 @click="selectProviderOption('openrouter')"
               >
-                <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')"></span>
+                <span v-if="healthDotClass('openrouter')" :class="healthDotClass('openrouter')" />
                 OpenRouter
               </button>
               <button
@@ -602,7 +606,7 @@ onUnmounted(() => {
                 :class="{ active: selectedProvider === 'ollama' }"
                 @click="setProvider('ollama')"
               >
-                <span v-if="healthDotClass('ollama')" :class="healthDotClass('ollama')"></span>
+                <span v-if="healthDotClass('ollama')" :class="healthDotClass('ollama')" />
                 Local
               </button>
             </div>
@@ -677,16 +681,24 @@ onUnmounted(() => {
             <p>{{ friendlyError.message }}</p>
           </div>
           <div class="error-actions">
-            <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">Retry</button>
-            <button class="error-dismiss" @click="clearError">Dismiss</button>
+            <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">
+              Retry
+            </button>
+            <button class="error-dismiss" @click="clearError">
+              Dismiss
+            </button>
           </div>
         </div>
 
         <!-- Empty State -->
         <div v-if="visibleMessages.length === 0" class="empty-state">
           <Sparkles class="empty-icon" :size="40" />
-          <p class="empty-title">Ask me anything about your tasks!</p>
-          <p class="empty-hint">Try: "Plan my day" or "Break down this task"</p>
+          <p class="empty-title">
+            Ask me anything about your tasks!
+          </p>
+          <p class="empty-hint">
+            Try: "Plan my day" or "Break down this task"
+          </p>
         </div>
       </div>
 
@@ -697,8 +709,12 @@ onUnmounted(() => {
           <span>Confirm: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
         </div>
         <div class="confirmation-actions">
-          <button class="confirm-btn confirm-danger" @click="confirmPendingAction()">Confirm</button>
-          <button class="confirm-btn confirm-cancel" @click="cancelPendingAction()">Cancel</button>
+          <button class="confirm-btn confirm-danger" @click="confirmPendingAction()">
+            Confirm
+          </button>
+          <button class="confirm-btn confirm-cancel" @click="cancelPendingAction()">
+            Cancel
+          </button>
         </div>
       </div>
 

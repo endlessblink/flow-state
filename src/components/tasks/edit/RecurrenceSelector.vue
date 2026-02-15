@@ -220,7 +220,9 @@ const props = withDefaults(defineProps<{
     endCondition: { type: EndCondition.NEVER },
     exceptions: [],
     generatedInstances: []
-  })
+  }),
+  startDate: undefined,
+  taskId: undefined
 })
 
 const emit = defineEmits<{
@@ -297,13 +299,13 @@ const updatePattern = (pattern: string | number) => {
 
 const updateInterval = (e: Event) => {
   const interval = parseInt((e.target as HTMLInputElement).value) || 1
-  const newRule = { ...safeModelValue.value.rule, interval } as any
+  const newRule = { ...safeModelValue.value.rule, interval } as RecurrenceRule
   emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
 }
 
 const updateDayOfMonth = (e: Event) => {
   const dayOfMonth = parseInt((e.target as HTMLInputElement).value) || 1
-  const newRule = { ...safeModelValue.value.rule, dayOfMonth } as any
+  const newRule = { ...safeModelValue.value.rule, dayOfMonth } as RecurrenceRule
   emit('update:modelValue', { ...safeModelValue.value, rule: newRule })
 }
 
@@ -334,7 +336,7 @@ const updateCustomRule = (e: Event) => {
 
 const setCustomRule = (customRule: string) => {
   const newRule = { pattern: RecurrencePattern.CUSTOM, customRule }
-  validationErrors.value = validateRecurrenceRule(newRule as any).errors
+  validationErrors.value = validateRecurrenceRule(newRule as RecurrenceRule).errors
   emit('update:modelValue', { ...safeModelValue.value, rule: newRule as RecurrenceRule })
 }
 
@@ -391,7 +393,7 @@ const previewDates = computed(() => {
 // Watch for manual rule changes to refresh validation
 watch(() => safeModelValue.value.rule, (newRule) => {
   if (newRule.pattern === RecurrencePattern.CUSTOM) {
-     validationErrors.value = validateRecurrenceRule(newRule as any).errors
+     validationErrors.value = validateRecurrenceRule(newRule as RecurrenceRule).errors
   } else {
      validationErrors.value = []
   }

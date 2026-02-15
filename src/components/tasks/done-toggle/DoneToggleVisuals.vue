@@ -141,8 +141,8 @@ const props = defineProps<{
   // UI Props
   size: 'sm' | 'md' | 'lg'
   variant: 'default' | 'subtle' | 'prominent' | 'minimal' | 'simple'
-  title: string
-  ariaLabel: string
+  title?: string
+  ariaLabel?: string
   showHints: boolean
   showProgress: boolean
   progressPercentage: number

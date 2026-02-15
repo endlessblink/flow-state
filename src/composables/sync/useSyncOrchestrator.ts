@@ -37,7 +37,7 @@ async function getWriteQueueModule() {
 }
 
 // Re-export types and stub functions for when IndexedDB is unavailable
-import {
+import type {
   enqueueOperation as _enqueueOperation,
   getPendingOperations as _getPendingOperations,
   markSyncing as _markSyncing,

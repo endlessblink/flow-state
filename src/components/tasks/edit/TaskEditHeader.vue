@@ -3,7 +3,7 @@
     <label class="form-label">Title</label>
     <input
       ref="titleInput"
-      v-model="modelValue.title"
+      v-model="title"
       type="text"
       class="form-input text-lg font-semibold"
       :class="titleAlignmentClasses"
@@ -16,7 +16,7 @@
   <div class="form-group">
     <label class="form-label">Description</label>
     <MarkdownEditor
-      v-model="modelValue.description"
+      v-model="description"
       placeholder="Describe what needs to be done..."
       :min-height="120"
     />
@@ -33,9 +33,19 @@ const props = defineProps<{
   modelValue: Task
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:modelValue', value: Task): void
 }>()
+
+const title = computed({
+  get: () => props.modelValue.title,
+  set: (val) => emit('update:modelValue', { ...props.modelValue, title: val })
+})
+
+const description = computed({
+  get: () => props.modelValue.description,
+  set: (val) => emit('update:modelValue', { ...props.modelValue, description: val })
+})
 
 const titleInput = ref<HTMLInputElement | null>(null)
 

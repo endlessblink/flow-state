@@ -6,6 +6,7 @@ import { useTaskStore } from '@/stores/tasks'
 import type { CalendarEvent } from '@/types/tasks'
 import type { MonthDay } from '@/composables/calendar/useCalendarMonthView'
 import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCalendar'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
   monthDays: MonthDay[]
@@ -20,7 +21,22 @@ const emit = defineEmits<{
   (e: 'eventDblClick', calEvent: CalendarEvent): void
   (e: 'eventContextMenu', event: MouseEvent, calEvent: CalendarEvent): void
   (e: 'cycleStatus', event: MouseEvent, calEvent: CalendarEvent): void
+  (e: 'cellDblClick', dateString: string): void
 }>()
+
+// Debounce single-click vs double-click on day cells
+// Single click → navigate to day view, Double click → open create modal
+let clickTimer: ReturnType<typeof setTimeout> | null = null
+const handleDayCellClick = (dateString: string) => {
+  if (clickTimer) clearTimeout(clickTimer)
+  clickTimer = setTimeout(() => {
+    emit('monthDayClick', dateString)
+  }, 250)
+}
+const handleDayCellDblClick = (dateString: string) => {
+  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null }
+  emit('cellDblClick', dateString)
+}
 
 // Local drag state for visual feedback
 const activeDragDay = ref<string | null>(null)
@@ -131,7 +147,8 @@ const getEventTooltip = (event: any) => {
         @dragover.prevent
         @dragenter.prevent="handleCellDragEnter(day.dateString)"
         @dragleave="handleCellDragLeave($event, day.dateString)"
-        @click="$emit('monthDayClick', day.dateString)"
+        @click="handleDayCellClick(day.dateString)"
+        @dblclick.stop="handleDayCellDblClick(day.dateString)"
       >
         <div class="day-number">
           {{ day.dayNumber }}
@@ -185,7 +202,7 @@ const getEventTooltip = (event: any) => {
               :title="event.title"
               @click.stop="$emit('cycleStatus', $event, event)"
             >
-              {{ getStatusIcon(getTaskStatus(event)) }} {{ event.title }}
+              {{ getStatusIcon(getTaskStatus(event)) }} {{ truncateUrlsInText(event.title) }}
             </span>
           </div>
 

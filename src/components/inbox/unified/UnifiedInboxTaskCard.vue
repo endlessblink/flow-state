@@ -29,7 +29,7 @@
     <!-- Task Content -->
     <div class="task-content--inbox">
       <div class="task-title" dir="auto" :title="task.title">
-        {{ task.title }}
+        {{ truncateUrlsInText(task.title) }}
       </div>
 
       <!-- ADHD-friendly: Minimal metadata - show only essentials -->
@@ -96,8 +96,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Timer, Calendar, Clock, Play, Edit2, CheckCircle2, Layout } from 'lucide-vue-next'
-// ADHD-friendly: Removed NTag - redundant with priority stripe
 import type { Task } from '@/types/tasks'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'

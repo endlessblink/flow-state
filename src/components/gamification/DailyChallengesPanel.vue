@@ -172,7 +172,9 @@ function handleChallengeClick(challenge: Challenge) {
     <div v-else-if="allDailiesComplete" class="all-complete">
       <CheckCircle2 class="complete-icon" :size="32" />
       <p>Excellent work, netrunner.</p>
-      <p class="subtext">Return tomorrow for new missions.</p>
+      <p class="subtext">
+        Return tomorrow for new missions.
+      </p>
     </div>
 
     <!-- Generate Button -->

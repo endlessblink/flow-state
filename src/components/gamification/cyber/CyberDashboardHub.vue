@@ -4,7 +4,7 @@
       <!-- Card 1: CHARACTER -->
       <CyberSummaryCard
         title="CHARACTER"
-        :accent-color="'var(--cf-cyan)'"
+        accent-color="var(--cf-cyan)"
         clickable
         @click="emit('openCharacter')"
       >
@@ -13,7 +13,7 @@
             :src="avatarUrl"
             alt="Character Avatar"
             class="cdh-character-avatar"
-          />
+          >
           <div class="cdh-character-info">
             <div class="cdh-character-level">
               LEVEL {{ currentLevel }}
@@ -41,7 +41,7 @@
       <!-- Card 2: MISSIONS -->
       <CyberSummaryCard
         title="DAILY BRIEFING"
-        :accent-color="'var(--cf-cyan)'"
+        accent-color="var(--cf-cyan)"
         clickable
         @click="emit('navigate', 'missions')"
       >
@@ -64,7 +64,7 @@
       <!-- Card 3: BOSS THREAT -->
       <CyberSummaryCard
         title="BOSS THREAT"
-        :accent-color="'var(--cf-magenta)'"
+        accent-color="var(--cf-magenta)"
         clickable
         @click="emit('navigate', 'boss')"
       >
@@ -104,7 +104,7 @@
       <!-- Card 4: UPGRADES -->
       <CyberSummaryCard
         title="UPGRADES"
-        :accent-color="'var(--cf-gold)'"
+        accent-color="var(--cf-gold)"
         clickable
         @click="emit('navigate', 'upgrades')"
       >

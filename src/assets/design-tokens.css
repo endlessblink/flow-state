@@ -139,6 +139,8 @@
   --brand-primary: hsl(var(--teal-500));
   --brand-hover: hsl(var(--teal-400));
   --brand-active: hsl(174, 62%, 53%);
+  --brand-primary-subtle: rgba(78, 205, 196, 0.1);
+  --brand-primary-dim: rgba(78, 205, 196, 0.3);
 
   /* Legacy color alias for compatibility */
   --color-primary: var(--brand-primary);

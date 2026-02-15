@@ -235,8 +235,12 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
               taskStore.createTask({
                 title: originalTask.title,
                 description: originalTask.description,
-                scheduledDate: newDate,
-                scheduledTime: newTime,
+                instances: [{
+                  id: `instance-dup-${Date.now()}`,
+                  scheduledDate: newDate,
+                  scheduledTime: newTime,
+                  duration: calendarEvent.duration || 60
+                }],
                 estimatedDuration: calendarEvent.duration,
                 projectId: originalTask.projectId,
                 priority: originalTask.priority,
@@ -245,11 +249,19 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
               })
             }
           } else {
-            // Simple update: modify task's scheduledDate and scheduledTime directly
-            await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
-              scheduledDate: newDate,
-              scheduledTime: newTime
-            })
+            // BUG-1325: Update instances[] instead of legacy scheduledDate/scheduledTime
+            const task = taskStore.getTask(calendarEvent.taskId)
+            if (task) {
+              const instanceId = calendarEvent.instanceId || `instance-${calendarEvent.taskId}-${Date.now()}`
+              await taskStore.updateTask(calendarEvent.taskId, {
+                instances: [{
+                  id: instanceId,
+                  scheduledDate: newDate,
+                  scheduledTime: newTime,
+                  duration: calendarEvent.duration || task.estimatedDuration || 60
+                }]
+              })
+            }
           }
         }
       })
@@ -387,11 +399,19 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const { taskId } = JSON.parse(data)
     const timeStr = `${hour.toString().padStart(2, '0')}:00`
 
-    // Simple update: modify task's scheduledDate and scheduledTime directly
-    await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
+    // BUG-1325: Use instances[] instead of legacy scheduledDate/scheduledTime fields.
+    // This is an explicit user scheduling action (drop onto calendar time slot).
+    const task = taskStore.getTask(taskId)
+    if (!task) return
+    const newInstance = {
+      id: `instance-${taskId}-${Date.now()}`,
       scheduledDate: dateString,
       scheduledTime: timeStr,
-      isInInbox: false // Task is now scheduled, no longer in inbox
+      duration: task.estimatedDuration || 60
+    }
+    await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
+      instances: [newInstance],
+      isInInbox: false
     })
   }
 

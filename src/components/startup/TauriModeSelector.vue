@@ -7,6 +7,7 @@
  */
 
 import { ref, onMounted } from 'vue'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 const emit = defineEmits<{
   select: [mode: 'cloud' | 'local']
@@ -36,7 +37,7 @@ function confirm() {
       <!-- Logo -->
       <div class="logo-container">
         <div class="logo">
-          <span class="logo-icon">🍅</span>
+          <AppLogo size="xl" />
         </div>
         <h1 class="app-name">
           FlowState

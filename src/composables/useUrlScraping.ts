@@ -53,10 +53,18 @@ export function useUrlScraping() {
    */
   const scrapeIfUrl = async (text: string): Promise<UrlScrapingResult | null> => {
     const trimmed = text.trim()
-    if (!isUrl(trimmed)) return null
+    if (!isUrl(trimmed)) {
+      console.log('[useUrlScraping] Not a URL:', trimmed.slice(0, 50))
+      return null
+    }
 
     // Offline fallback: return null (caller will use truncated URL)
-    if (!isOnline.value) return null
+    if (!isOnline.value) {
+      console.log('[useUrlScraping] Offline, skipping scrape')
+      return null
+    }
+
+    console.log('[useUrlScraping] Starting scrape for:', trimmed)
 
     // Cancel previous scrape
     cancel()
@@ -73,9 +81,12 @@ export function useUrlScraping() {
       if (data.error === 'cancelled') return null
 
       if (data.error || !data.title) {
+        console.warn('[useUrlScraping] Scrape failed or no title:', data.error)
         error.value = data.error
         return null
       }
+
+      console.log('[useUrlScraping] Scrape succeeded:', data.title)
 
       // Build description: AI summary or meta description + source URL
       const summaryPart = data.aiSummary || data.description || ''

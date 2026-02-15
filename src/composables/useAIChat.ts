@@ -185,7 +185,8 @@ export function useAIChat() {
     pendingSuggestionCount,
     error,
     visibleMessages,
-    canSend
+    canSend,
+    chatDirection
   } = storeToRefs(store)
 
   // Pending confirmation flow: stores a tool call awaiting user approval
@@ -1396,7 +1397,7 @@ export function useAIChat() {
     abortChain: agentChains.abortChain,
 
     // Chat Direction
-    chatDirection: store.chatDirection,
+    chatDirection,
     setChatDirection: store.setChatDirection,
 
     // Lifecycle

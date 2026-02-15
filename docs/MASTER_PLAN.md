@@ -52,6 +52,20 @@
 
 ---
 
+### BUG-1328: Canvas sync 406 error — "Could not fetch latest version for retry" (🔄 IN PROGRESS)
+
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Canvas view shows red toast "Sync Failed: Could not fetch latest version for retry" with 406 (Not Acceptable) HTTP error on the `tasks` endpoint. `[NODE-SYNC] Failed` appears in console.
+
+**Root Cause**: `useNodeSync.ts:207-208` — when optimistic lock update returns 0 rows (entity not in DB), code assumes version mismatch and retries with `.single()`. PostgREST returns 406 (PGRST116) when `.single()` finds 0 rows. Code throws instead of handling gracefully. Other parts of codebase (sync orchestrator, gamification store) already handle PGRST116 — this is the one spot that doesn't.
+
+**Fix**: Handle PGRST116 and missing entity gracefully in retry path — return false instead of throwing, suppress error toast for non-recoverable "entity not found" scenarios.
+
+**File**: `src/composables/canvas/useNodeSync.ts:197-209`
+
+---
+
 ### BUG-1320: Production console log spam — WakeLock, LWW echo, legacy IDs, Realtime drops (👀 REVIEW)
 
 **Priority**: P2-MEDIUM | **Status**: 👀 REVIEW (2026-02-14)
@@ -440,6 +454,22 @@ Any other path that causes a task to show up in the calendar is a bug. Many task
 4. **Zoom "double take"**: `onMoveEnd` on every scroll-wheel tick writing to reactive Pinia store — debounced 150ms
 5. **Pan sluggishness**: `only-render-visible-elements` mount/unmount during pan — removed
 6. **Typing lag**: `will-change: transform` on viewport, `text-rendering: optimizeLegibility`, `contain: layout paint` — reverted/simplified
+
+---
+
+### BUG-1328: Canvas Cursor Drift Regression on Tauri (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-15)
+
+**Problem**: Cursor drift during canvas drag is back on Tauri desktop app (regression of BUG-1216).
+
+**Root Causes**:
+1. **Hover transform on root `.task-node`**: `.task-node:hover` applies `transform: translate3d(0, -2px, 0)` which conflicts with Vue Flow's `transform: translate(x, y)` positioning. Brief window at drag start before `is-dragging` class is set allows this transform to fire.
+2. **Multi-select hover transform**: `.multi-select-mode:hover` applies `transform: translateY(-2px) scale(1.02)` — both translate AND scale on root node during multi-select mode.
+
+**Fix**: Remove all CSS `transform` properties from `.task-node:hover` and `.multi-select-mode:hover`. Hover effects achieved via `box-shadow` only (no positional transforms).
+
+**Files**: `src/components/canvas/TaskNode.vue`
 
 ---
 
@@ -2350,9 +2380,9 @@ npm run tasks:bugs     # Filter by BUG type
 
 ---
 
-### TASK-1248: Design Token Audit & Cleanup (📋 PLANNED)
+### TASK-1248: Design Token Audit & Cleanup (🔄 IN PROGRESS)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED (2026-02-08)
+**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-15)
 
 **Problem**: ~3,000 hardcoded CSS values across ~130 `.vue` and `.css` files bypass the design token system (`src/assets/design-tokens.css`). This undermines theme consistency, makes future theming/light-mode impossible, and creates maintenance debt.
 
@@ -3090,6 +3120,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1326** | **P2** | **🔄 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
+| **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |
 | **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |
 | ~~**TASK-1323**~~ | **P1** | ✅ **Console Log Cleanup — reduce verbose/debug logging noise across app** (✅ DONE 2026-02-14) |
 | **TASK-1322** | **P1** | **🔄 Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** |

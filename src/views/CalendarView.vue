@@ -396,9 +396,20 @@ const _handleVueDraggableAdd = async (evt: SortableEvent) => {
   if (slot) {
     const targetDate = new Date(currentDate.value)
     targetDate.setHours(slot.hour, slot.minute, 0, 0)
+    const dateStr = targetDate.toISOString().split('T')[0]
+    const timeStr = `${slot.hour.toString().padStart(2, '0')}:${slot.minute.toString().padStart(2, '0')}`
 
-    // BUG-1051: AWAIT to ensure persistence
-    await taskStore.updateTaskWithUndo(taskId, { scheduledDate: targetDate.toISOString() })
+    const task = taskStore.getTask(taskId)
+    // BUG-1325: Create explicit instance instead of setting legacy scheduledDate
+    await taskStore.updateTaskWithUndo(taskId, {
+      instances: [{
+        id: `instance-${taskId}-${Date.now()}`,
+        scheduledDate: dateStr,
+        scheduledTime: timeStr,
+        duration: task?.estimatedDuration || 60
+      }],
+      isInInbox: false
+    })
   }
 
   // Clear the drop list since we don't actually display items in it

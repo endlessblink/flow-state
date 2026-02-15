@@ -483,7 +483,7 @@ function triggerHaptic(duration: number = 10) {
 
 .field-input:focus {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px var(--state-active-bg);
+  box-shadow: 0 0 0 var(--space-0_5) var(--state-active-bg);
 }
 
 .field-input::placeholder {
@@ -505,7 +505,7 @@ function triggerHaptic(duration: number = 10) {
 
 .field-textarea:focus {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px var(--state-active-bg);
+  box-shadow: 0 0 0 var(--space-0_5) var(--state-active-bg);
 }
 
 .field-textarea::placeholder {

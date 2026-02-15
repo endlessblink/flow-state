@@ -1,11 +1,11 @@
 {
-  "version": "1.2.65",
-  "notes": "v1.2.65: broad UI polish, accessibility fixes, AI chat refactor, notifications settings",
-  "pub_date": "2026-02-15T06:49:43.995Z",
+  "version": "1.2.66",
+  "notes": "v1.2.66: AI insights expansion, URL scraping, weekly plan intelligence, lint fixes",
+  "pub_date": "2026-02-15T07:12:36.503Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRThMV1RRR0kzTHpWQ3dacmpobEJXbnVFS0FhaEpFS1Y4cmEwZHpjbnpSUW1yNmY5aHhwblN0aFF5bDJjZWRPbXdiNFhBd0dZSFlQaXVhWXV5NWtMdkF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMTM4MTgzCWZpbGU6Rmxvd1N0YXRlXzEuMi42NV9hbWQ2NC5BcHBJbWFnZQpzZmxTNk9YcmZKMTFjSTc3UG82MVZTVVVLaWd4V2k5amVqak1rL1IwWE9ib2lLNEFnRXVRamJlYTI2cjcxVlJPNjdSTjRIQjBPV1R6K0VyN2FCOHZEdz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.65_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTBSTmxsZGFzV2FQak5UZ0VTTlBvbEI3OUpaelpvb29YWEh0ME9uOWRqdzR6OEhFdzVIc3FlK0hjV0FhRXpEVC9sckZNZTdKaUFWd3V1MkRtRjR1ekFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMTM5NTU2CWZpbGU6Rmxvd1N0YXRlXzEuMi42Nl9hbWQ2NC5BcHBJbWFnZQpCWC9wNUMvWmlwRGhJTk5aZmlZeUpxdzM4UzhpNExvTHdReS9rQTFHS3Ezd0tYRGhrM1dGSGxpZjBhMVhiN2Z1U0xad2NjTzRsT2pTNEdGOXM5eUpEZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.66_amd64.AppImage"
     }
   }
 }

@@ -44,3 +44,11 @@
     /* Also disable any animations */
     animation: none !important;
 }
+
+/* 4. BUG-1328: Kill ALL transforms on dragging node's direct child (the task-node/section-node root).
+ * Any CSS transform on the inner element conflicts with Vue Flow's transform: translate(x,y)
+ * on the wrapper, causing cursor drift. This is the nuclear safety net. */
+.vue-flow__node.dragging > *,
+.vue-flow__node.is-dragging > * {
+    transform: none !important;
+}

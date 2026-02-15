@@ -151,43 +151,30 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           // If a task has > 100 instances for a single day, something is wrong.
           const MAX_INSTANCES_PER_TASK = 50
 
-          // Check if task has instances scheduled for today
+          // BUG-1325: Only show tasks with explicit instances[] scheduled for today.
+          // Legacy scheduledDate/scheduledTime fields are NO LONGER used for calendar visibility.
           let instanceCount = 0
           const hasInstanceForToday = task.instances && task.instances.some(instance => {
             if (instanceCount++ > MAX_INSTANCES_PER_TASK) return false
             return instance && instance.scheduledDate === dateStr
           })
 
-          // Check for legacy schedule
-          const hasLegacyScheduleToday = task.scheduledDate === dateStr && task.scheduledTime
-
-          // Create calendar events only for tasks with explicit scheduling
-          if (hasInstanceForToday || hasLegacyScheduleToday) {
+          // Create calendar events only for tasks with explicit instances
+          if (hasInstanceForToday) {
             let startTime: Date
             let duration: number
             let instanceId: string | undefined
 
-            if (hasInstanceForToday) {
-              // Use instance-specific schedule
-              const todayInstance = task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
-              if (!todayInstance || !todayInstance.scheduledTime) return
+            // Use instance-specific schedule
+            const todayInstance = task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
+            if (!todayInstance || !todayInstance.scheduledTime) return
 
-              const [hour, minute] = todayInstance.scheduledTime.split(':').map(Number)
-              if (isNaN(hour) || isNaN(minute)) return
+            const [hour, minute] = todayInstance.scheduledTime.split(':').map(Number)
+            if (isNaN(hour) || isNaN(minute)) return
 
-              startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
-              duration = todayInstance.duration || task.estimatedDuration || 30
-              instanceId = todayInstance.id
-            } else if (task.scheduledTime) {
-              // Legacy schedule - use scheduledTime
-              const [hour, minute] = task.scheduledTime.split(':').map(Number)
-              if (isNaN(hour) || isNaN(minute)) return
-
-              startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
-              duration = task.estimatedDuration || 30
-            } else {
-              return
-            }
+            startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
+            duration = todayInstance.duration || task.estimatedDuration || 30
+            instanceId = todayInstance.id
 
             // Validate startTime
             if (isNaN(startTime.getTime())) return
@@ -200,11 +187,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             const startSlot = (startTime.getHours() * 2) + (startTime.getMinutes() >= 30 ? 1 : 0)
             const slotSpan = Math.max(1, Math.ceil(visualDuration / 30))
 
-            // TASK-1285: Get instance status for completion tracking
-            const todayInstance = hasInstanceForToday
-              ? task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
-              : undefined
-
+            // TASK-1285: Instance status for completion tracking (reuses todayInstance from above)
             const event = {
               id: instanceId || task.id,
               taskId: task.id,
@@ -523,8 +506,12 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
               taskStore.createTask({
                 title: originalTask.title,
                 description: originalTask.description,
-                scheduledDate: newDate,
-                scheduledTime: newTime,
+                instances: [{
+                  id: `instance-dup-${Date.now()}`,
+                  scheduledDate: newDate,
+                  scheduledTime: newTime,
+                  duration: calendarEvent.duration || 60
+                }],
                 estimatedDuration: calendarEvent.duration,
                 projectId: originalTask.projectId,
                 priority: originalTask.priority,
@@ -533,11 +520,19 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
               })
             }
           } else {
-            // Simple update: modify task's scheduledDate and scheduledTime directly
-            await taskStore.updateTask(calendarEvent.taskId, { // BUG-1051: AWAIT to ensure persistence
-              scheduledDate: newDate,
-              scheduledTime: newTime
-            })
+            // BUG-1325: Update instances[] instead of legacy scheduledDate/scheduledTime
+            const task = taskStore.getTask(calendarEvent.taskId)
+            if (task) {
+              const instanceId = calendarEvent.instanceId || `instance-${calendarEvent.taskId}-${Date.now()}`
+              await taskStore.updateTask(calendarEvent.taskId, {
+                instances: [{
+                  id: instanceId,
+                  scheduledDate: newDate,
+                  scheduledTime: newTime,
+                  duration: calendarEvent.duration || task.estimatedDuration || 60
+                }]
+              })
+            }
           }
         }
       })

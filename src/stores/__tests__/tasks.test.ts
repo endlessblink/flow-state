@@ -442,7 +442,9 @@ describe('TaskStore', () => {
       expect(instances[0].scheduledDate).toBe('2025-10-15')
     })
 
-    it('creates synthetic instance from legacy fields', () => {
+    it('BUG-1325: legacy scheduledDate/scheduledTime no longer creates synthetic instances', () => {
+      // Calendar visibility is now exclusively driven by instances[] array.
+      // Legacy scheduledDate/scheduledTime fields are ignored by getTaskInstances().
       const task: Task = {
         id: '1',
         title: 'Legacy Task',
@@ -462,10 +464,7 @@ describe('TaskStore', () => {
       }
 
       const instances = getTaskInstances(task)
-      expect(instances.length).toBe(1)
-      expect(instances[0].id).toContain('legacy')
-      expect(instances[0].scheduledDate).toBe('2025-10-15')
-      expect(instances[0].scheduledTime).toBe('14:00')
+      expect(instances.length).toBe(0)
     })
 
     it('returns empty array for unscheduled tasks', () => {

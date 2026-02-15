@@ -56,6 +56,10 @@ export interface AppSettings {
     // FEATURE-1317: AI Work Profile learning
     aiLearningEnabled: boolean
 
+    // TASK-1327: Weekly Plan model override
+    weeklyPlanProvider: 'auto' | 'ollama' | 'groq' | 'openrouter'
+    weeklyPlanModel: string
+
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
 
@@ -111,6 +115,10 @@ export const useSettingsStore = defineStore('settings', {
 
         // FEATURE-1317: AI Work Profile learning (default: on)
         aiLearningEnabled: true,
+
+        // TASK-1327: Weekly Plan model override (defaults to chat model)
+        weeklyPlanProvider: 'auto' as 'auto' | 'ollama' | 'groq' | 'openrouter',
+        weeklyPlanModel: '',
 
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },
@@ -228,6 +236,13 @@ export const useSettingsStore = defineStore('settings', {
                     // TASK-1321: Backfill weekStartsOn
                     if (this.$state.weekStartsOn === undefined) {
                         this.$state.weekStartsOn = 0
+                    }
+                    // TASK-1327: Backfill weekly plan model settings
+                    if (this.$state.weeklyPlanProvider === undefined) {
+                        this.$state.weeklyPlanProvider = 'auto'
+                    }
+                    if (this.$state.weeklyPlanModel === undefined) {
+                        this.$state.weeklyPlanModel = ''
                     }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)

@@ -108,37 +108,8 @@ export function useTimeBlockNotifications() {
         }
       }
 
-      // Path 2: Legacy task-level scheduling (task.scheduledDate + task.scheduledTime)
-      if (task.scheduledDate === today && task.scheduledTime) {
-        // Skip if we already found an instance for today (avoid duplicates)
-        const alreadyHasInstance = blocks.some(b => b.taskId === task.id)
-        if (alreadyHasInstance) continue
-
-        const [hours, minutes] = task.scheduledTime.split(':').map(Number)
-        if (isNaN(hours) || isNaN(minutes)) continue
-
-        const duration = task.estimatedDuration || 30
-        const start = new Date()
-        start.setHours(hours, minutes, 0, 0)
-        const end = new Date(start.getTime() + duration * 60_000)
-
-        // Create a synthetic instance for the legacy task
-        const syntheticInstance: TaskInstance = {
-          scheduledDate: today,
-          scheduledTime: task.scheduledTime,
-          duration
-        }
-
-        blocks.push({
-          taskId: task.id,
-          taskTitle: task.title,
-          instanceIndex: -1, // -1 signals legacy/synthetic
-          startTime: start,
-          endTime: end,
-          durationMinutes: duration,
-          instance: syntheticInstance
-        })
-      }
+      // BUG-1325: Removed Path 2 (legacy scheduledDate/scheduledTime).
+      // Only explicit instances[] drive calendar visibility and notifications.
     }
 
     return blocks

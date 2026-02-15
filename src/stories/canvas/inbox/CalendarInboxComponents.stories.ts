@@ -62,8 +62,9 @@ const CalendarInboxHeaderMock = defineComponent({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
           <span>Today</span>
           <span v-if="todayCount > 0" :style="{
-            background: todayFilterActive ? 'var(--brand-primary)' : 'var(--brand-primary)',
-            color: 'white',
+            background: 'var(--brand-primary-subtle)',
+            border: '1px solid var(--brand-primary-dim)',
+            color: 'var(--brand-primary)',
             fontSize: 'var(--text-xs)',
             padding: '0 var(--space-1)',
             borderRadius: 'var(--radius-full)',

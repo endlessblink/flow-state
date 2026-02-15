@@ -38,6 +38,7 @@ import { createAIRouter } from '@/services/ai/router'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName } from '@/config/aiModels'
 
 // ============================================================================
 // Router
@@ -186,15 +187,6 @@ async function handleUndo() {
 // Provider Display
 // ============================================================================
 
-const modelDisplayNames: Record<string, string> = {
-  'llama-3.3-70b-versatile': 'Llama 3.3 70B',
-  'llama-3.1-8b-instant': 'Llama 3.1 8B',
-  'mixtral-8x7b-32768': 'Mixtral 8x7B',
-  'anthropic/claude-3.5-sonnet': 'Claude 3.5',
-  'google/gemini-pro': 'Gemini Pro',
-  'meta-llama/llama-3.1-70b': 'Llama 3.1 70B',
-}
-
 const providerLabel = computed(() => {
   const p = activeProvider.value
   if (p === 'ollama') return 'Local'
@@ -206,9 +198,11 @@ const providerLabel = computed(() => {
 const displayModelName = computed(() => {
   const model = selectedModel.value
   if (!model) return null
-  if (modelDisplayNames[model]) return modelDisplayNames[model]
-  if (model.includes(':')) return model
-  return model
+  const displayName = getDisplayName(model)
+  // If display name equals model ID, it wasn't found in registry
+  // Keep existing behavior for Ollama models (e.g., "llama3.2:latest")
+  if (displayName === model && model.includes(':')) return model
+  return displayName !== model ? displayName : model
 })
 
 const headerBadgeText = computed(() => {
@@ -223,17 +217,8 @@ const headerBadgeText = computed(() => {
 // Provider Settings (simplified for full-screen header)
 // ============================================================================
 
-const groqModels = [
-  { label: 'Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
-  { label: 'Llama 3.1 8B', value: 'llama-3.1-8b-instant' },
-  { label: 'Mixtral 8x7B', value: 'mixtral-8x7b-32768' },
-]
-
-const openrouterModels = [
-  { label: 'Claude 3.5 Sonnet', value: 'anthropic/claude-3.5-sonnet' },
-  { label: 'Gemini Pro', value: 'google/gemini-pro' },
-  { label: 'Llama 3.1 70B', value: 'meta-llama/llama-3.1-70b' },
-]
+const groqModels = asValueLabel(GROQ_MODELS)
+const openrouterModels = asValueLabel(OPENROUTER_MODELS)
 
 const currentProvider = computed(() => String(selectedProvider.value))
 
@@ -662,15 +647,26 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
+
+          <!-- Chat Text Direction -->
+          <div class="settings-group">
+            <label class="settings-label">Text Direction</label>
+            <div class="personality-toggle">
+              <button class="personality-option" :class="{ active: chatDirection === 'auto' }" @click="setChatDirection('auto')">Auto</button>
+              <button class="personality-option" :class="{ active: chatDirection === 'ltr' }" @click="setChatDirection('ltr')">LTR</button>
+              <button class="personality-option" :class="{ active: chatDirection === 'rtl' }" @click="setChatDirection('rtl')">RTL</button>
+            </div>
+          </div>
         </div>
       </Transition>
 
       <!-- Messages Area -->
-      <div ref="messagesContainer" class="chat-messages">
+      <div ref="messagesContainer" class="chat-messages" :dir="chatDirection !== 'auto' ? chatDirection : undefined">
         <ChatMessage
           v-for="message in visibleMessages"
           :key="message.id"
           :message="message"
+          :direction="chatDirection"
           @select-task="handleSelectTask"
         />
 
@@ -725,7 +721,7 @@ onUnmounted(() => {
             ref="inputRef"
             v-model="inputText"
             class="chat-input"
-            dir="auto"
+            :dir="chatDirection"
             placeholder="Ask AI..."
             rows="1"
             :disabled="isGenerating"

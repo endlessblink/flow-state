@@ -395,7 +395,7 @@ function onSnoozeTask(taskId: string) {
 }
 
 function onResuggest(dayKey: string) {
-  regenerateDay(dayKey as any)
+  regenerateDay(dayKey as keyof WeeklyPlan)
 }
 
 function onApply() {

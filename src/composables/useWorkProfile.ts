@@ -94,14 +94,14 @@ export function useWorkProfile() {
       if (!pomodoroMap.has(date)) {
         pomodoroMap.set(date, { minutes: 0, tasks: new Set() })
       }
-      const dayData = pomodoroMap.get(date)!
+      const dayData = pomodoroMap.get(date)
       dayData.minutes += Math.round(entry.duration / 60)
       if (entry.taskId) dayData.tasks.add(entry.taskId)
 
       if (!pomoDayOfWeek.has(dayOfWeek)) {
         pomoDayOfWeek.set(dayOfWeek, [])
       }
-      pomoDayOfWeek.get(dayOfWeek)!.push(Math.round(entry.duration / 60))
+      pomoDayOfWeek.get(dayOfWeek)?.push(Math.round(entry.duration / 60))
     }
 
     // --- Source 2: Completed tasks (from task store) ---
@@ -117,7 +117,7 @@ export function useWorkProfile() {
     const taskDayOfWeek = new Map<string, number[]>()
 
     for (const task of completedTasks) {
-      const completedDate = task.completedAt instanceof Date ? task.completedAt : new Date(task.completedAt!)
+      const completedDate = task.completedAt instanceof Date ? task.completedAt : new Date(task.completedAt as string)
       const dateStr = completedDate.toISOString().split('T')[0]
       const dayOfWeek = completedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
 
@@ -126,7 +126,7 @@ export function useWorkProfile() {
       if (!taskDayOfWeek.has(dayOfWeek)) {
         taskDayOfWeek.set(dayOfWeek, [])
       }
-      taskDayOfWeek.get(dayOfWeek)!.push(1)
+      taskDayOfWeek.get(dayOfWeek)?.push(1)
     }
 
     const hasPomodoroData = pomodoroMap.size > 0
@@ -401,9 +401,11 @@ export function useWorkProfile() {
         const proj = projectStore.projects.find(p => p.id === t.projectId)
         projectTaskCounts.set(t.projectId, { total: 0, done: 0, name: proj?.name || t.projectId })
       }
-      const counts = projectTaskCounts.get(t.projectId)!
-      counts.total++
-      if (t.status === 'done') counts.done++
+      const counts = projectTaskCounts.get(t.projectId)
+      if (counts) {
+        counts.total++
+        if (t.status === 'done') counts.done++
+      }
     }
     // Most active project
     const sortedProjects = Array.from(projectTaskCounts.entries())
@@ -458,7 +460,7 @@ export function useWorkProfile() {
     if (estimatedTasks.length >= 3) {
       // Per-task ratios (median is more robust than sum ratio for outliers)
       const perTaskRatios = estimatedTasks
-        .map(t => t.completedPomodoros / t.estimatedPomodoros!)
+        .map(t => t.completedPomodoros / (t.estimatedPomodoros || 1))
         .sort((a, b) => a - b)
       const medianRatio = perTaskRatios[Math.floor(perTaskRatios.length / 2)]
 

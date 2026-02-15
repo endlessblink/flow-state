@@ -363,8 +363,9 @@ export const useNotificationStore = defineStore('notifications', () => {
     for (const instance of instances) {
       if ((instance as { isSkipped?: boolean }).isSkipped) continue
 
+      if (!instance.id) continue
       await scheduleTaskNotifications(
-        instance.id!,
+        instance.id,
         task.title,
         instance.scheduledDate,
         instance.scheduledTime,

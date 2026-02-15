@@ -786,7 +786,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .time-section.overdue {
-  border-left: 3px solid var(--danger-text);
+  border-left: var(--space-0_5) solid var(--danger-text);
 }
 
 .section-header {
@@ -837,7 +837,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 .checkbox-circle {
   width: 22px;
   height: 22px;
-  border: 2px solid var(--border-subtle);
+  border: var(--space-0_5) solid var(--border-subtle);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -971,6 +971,6 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 
 [dir="rtl"] .time-section.overdue {
   border-left: none;
-  border-right: 3px solid var(--danger-text);
+  border-right: var(--space-0_5) solid var(--danger-text);
 }
 </style>

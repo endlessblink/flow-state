@@ -312,6 +312,26 @@ select option {
   -webkit-backdrop-filter: blur(var(--blur-regular)) !important;
 }
 
+/* Naive UI Dropdown/Popover - Glass morphism fallback (Storybook + contexts without .tauri-app/.pwa-app) */
+.n-dropdown-menu {
+  background: rgba(35, 32, 50, 0.65) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.n-dropdown-option-body {
+  color: var(--text-primary) !important;
+  font-size: var(--text-xs) !important;
+}
+
+.n-dropdown-option-body:hover,
+.n-dropdown-option-body--pending {
+  background: var(--surface-hover) !important;
+}
+
 /* Additional Tauri fallbacks for glass morphism classes */
 .tauri-app .glass-effect,
 .tauri-app .glass-surface,

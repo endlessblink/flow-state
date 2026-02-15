@@ -589,3 +589,42 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     background: var(--glass-bg-heavy, rgba(255, 255, 255, 0.08)) !important;
 }
 
+/* =============================================================================
+   DATE PICKER - Action & Shortcut Buttons (Glass Morphism)
+   No solid fills — glass bg + colored border + colored text + blur
+   Override Naive UI's internal CSS vars: --n-color, --n-text-color, --n-border
+   ============================================================================= */
+
+/* ALL buttons inside date panel — reset to glass baseline */
+.n-date-panel .n-button {
+    --n-color: transparent !important;
+    --n-color-hover: rgba(255, 255, 255, 0.06) !important;
+    --n-color-pressed: rgba(78, 205, 196, 0.1) !important;
+    --n-color-focus: rgba(78, 205, 196, 0.08) !important;
+    --n-text-color: var(--text-secondary, rgba(255, 255, 255, 0.7)) !important;
+    --n-text-color-hover: var(--text-primary, rgba(255, 255, 255, 0.95)) !important;
+    --n-text-color-pressed: #4ECDC4 !important;
+    --n-text-color-focus: var(--text-primary, rgba(255, 255, 255, 0.95)) !important;
+    --n-border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    --n-border-hover: 1px solid rgba(255, 255, 255, 0.15) !important;
+    --n-border-pressed: 1px solid #4ECDC4 !important;
+    --n-border-focus: 1px solid rgba(78, 205, 196, 0.4) !important;
+    --n-ripple-color: rgba(78, 205, 196, 0.2) !important;
+}
+
+/* "Now" / confirm button — teal glass accent */
+.n-date-panel .n-button--primary-type {
+    --n-color: transparent !important;
+    --n-color-hover: rgba(78, 205, 196, 0.1) !important;
+    --n-color-pressed: rgba(78, 205, 196, 0.15) !important;
+    --n-color-focus: rgba(78, 205, 196, 0.08) !important;
+    --n-text-color: #4ECDC4 !important;
+    --n-text-color-hover: #4ECDC4 !important;
+    --n-text-color-pressed: #4ECDC4 !important;
+    --n-text-color-focus: #4ECDC4 !important;
+    --n-border: 1px solid #4ECDC4 !important;
+    --n-border-hover: 1px solid #4ECDC4 !important;
+    --n-border-pressed: 1px solid #4ECDC4 !important;
+    --n-border-focus: 1px solid #4ECDC4 !important;
+}
+

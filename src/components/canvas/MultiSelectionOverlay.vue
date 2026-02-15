@@ -380,9 +380,9 @@ onUnmounted(() => {
 }
 
 .mode-btn.active {
-  background: var(--brand-primary);
+  background: var(--brand-primary-subtle);
   border-color: var(--brand-primary);
-  color: white;
+  color: var(--brand-primary);
 }
 
 .selection-info {
@@ -407,18 +407,19 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  background: var(--brand-primary);
-  border: none;
-  color: white;
+  background: transparent;
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   cursor: pointer;
   transition: all var(--duration-fast);
+  backdrop-filter: blur(8px);
 }
 
 .bulk-menu-btn:hover {
-  background: var(--brand-primary-hover);
+  background: var(--brand-primary-subtle);
 }
 
 .bulk-menu {

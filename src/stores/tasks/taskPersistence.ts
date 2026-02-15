@@ -247,7 +247,7 @@ export function useTaskPersistence(
             // This prevents data loss from race conditions during auth propagation
             // TASK-1177: Extended from 10 seconds to 60 seconds for better protection
             if (loadedTasks.length === 0 && _rawTasks.value.length > 0) {
-                const sessionStart = typeof window !== 'undefined' ? (window as any).FlowStateSessionStart || 0 : 0
+                const sessionStart = typeof window !== 'undefined' ? (window as unknown as { FlowStateSessionStart?: number }).FlowStateSessionStart || 0 : 0
                 const timeSinceSessionStart = Date.now() - sessionStart
 
                 // In the first 60 seconds, don't overwrite existing tasks with empty

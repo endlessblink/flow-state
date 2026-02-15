@@ -118,11 +118,16 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
         isInInbox: false
       })
     } else {
-      // Legacy fields — update scheduledDate directly
+      // BUG-1325: Create an explicit instance instead of using legacy scheduledDate fields.
+      // This is an explicit user action (month view drag), so it SHOULD create calendar visibility.
       const scheduledTime = existingTask.scheduledTime || '09:00'
       await taskStore.updateTask(taskId, { // BUG-1051: AWAIT to ensure persistence
-        scheduledDate: targetDate,
-        scheduledTime: scheduledTime,
+        instances: [{
+          id: `instance-${taskId}-${Date.now()}`,
+          scheduledDate: targetDate,
+          scheduledTime: scheduledTime,
+          duration: existingTask.estimatedDuration || 60
+        }],
         isInInbox: false
       })
     }

@@ -37,6 +37,7 @@ import {
   OllamaProvider,
 } from './providers/ollama'
 import { recordAIUsage } from './usageTracker'
+import { getDefaultModelForProvider as getDefaultModel } from '@/config/aiModels'
 // BUG-1131: Proxy providers for secure API key handling (keys stay server-side)
 import { createGroqProxyProvider } from './providers/groqProxy'
 import { createOpenRouterProxyProvider } from './providers/openrouterProxy'
@@ -558,16 +559,12 @@ export class AIRouter {
    * Get default model for a provider type.
    */
   private getDefaultModelForProvider(providerType: RouterProviderType): string {
-    switch (providerType) {
-      case 'ollama':
-        return 'llama3.2'
-      case 'groq':
-        return 'llama-3.3-70b-versatile'
-      case 'openrouter':
-        return 'anthropic/claude-3.5-sonnet'
-      default:
-        return 'llama3.2'
+    // Use centralized registry for defaults
+    if (providerType === 'ollama' || providerType === 'groq' || providerType === 'openrouter') {
+      return getDefaultModel(providerType)
     }
+    // Fallback for unknown provider types
+    return 'llama3.2'
   }
 
   /**

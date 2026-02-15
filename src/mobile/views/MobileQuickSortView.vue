@@ -1170,14 +1170,14 @@ onMounted(() => {
 
 .progress-track {
   position: relative;
-  height: 3px;
+  height: var(--space-0_5);
   background: var(--glass-bg-weak);
   z-index: var(--z-sticky);
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--brand-primary), hsl(174, 80%, 60%));
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-active));
   transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -1618,14 +1618,14 @@ onMounted(() => {
   justify-content: center;
   perspective: 1000px;
   min-height: var(--kanban-column-min-height);
-  max-height: 320px;
+  max-height: 320px; /* Component-specific card layout dimension */
 }
 
 .stack-card {
   position: absolute;
   width: 92%;
-  max-width: 360px;
-  height: 240px;
+  max-width: 360px; /* Component-specific card width */
+  height: 240px; /* Component-specific card height */
   background: var(--glass-bg-subtle);
   border: 1px solid var(--glass-border-light);
   border-radius: var(--radius-2xl);
@@ -1635,9 +1635,9 @@ onMounted(() => {
 .task-card {
   position: relative;
   width: 92%;
-  max-width: 360px;
-  min-height: 180px;
-  max-height: 260px;
+  max-width: 360px; /* Component-specific card width */
+  min-height: 180px; /* Component-specific card height */
+  max-height: 260px; /* Component-specific card height */
   background: linear-gradient(
     145deg,
     var(--canvas-task-bg),
@@ -1674,13 +1674,13 @@ onMounted(() => {
 
 /* Left swipe = Skip (muted) */
 .swipe-indicator.left {
-  border: 3px solid var(--glass-border-hover);
+  border: var(--space-0_5) solid var(--glass-border-hover);
   background: var(--glass-bg-medium);
 }
 
 /* Right swipe = Exit (muted) */
 .swipe-indicator.right {
-  border: 3px solid var(--glass-border-hover);
+  border: var(--space-0_5) solid var(--glass-border-hover);
   background: var(--glass-bg-medium);
 }
 
@@ -1731,15 +1731,15 @@ onMounted(() => {
 }
 
 .priority-strip.priority-high {
-  background: linear-gradient(90deg, var(--color-priority-high), hsl(0, 90%, 65%));
+  background: linear-gradient(90deg, var(--color-priority-high), var(--priority-high-text));
 }
 
 .priority-strip.priority-medium {
-  background: linear-gradient(90deg, var(--color-priority-medium), hsl(38, 95%, 55%));
+  background: linear-gradient(90deg, var(--color-priority-medium), var(--priority-medium-text));
 }
 
 .priority-strip.priority-low {
-  background: linear-gradient(90deg, var(--color-priority-low), hsl(217, 95%, 65%));
+  background: linear-gradient(90deg, var(--color-priority-low), var(--priority-low-text));
 }
 
 .priority-strip.priority-none {
@@ -1747,7 +1747,7 @@ onMounted(() => {
 }
 
 .task-title {
-  font-size: 1.375rem; /* no-token */
+  font-size: var(--text-xl); /* 20px */
   font-weight: var(--font-bold);
   line-height: var(--leading-tight);
   margin: 0 0 var(--space-3);
@@ -1859,7 +1859,7 @@ onMounted(() => {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding-bottom: 2px; /* Prevent cut-off on scroll */
+  padding-bottom: var(--space-px); /* Prevent cut-off on scroll */
   padding-inline-end: var(--space-4);
   scroll-snap-type: x proximity;
 }
@@ -1885,6 +1885,12 @@ onMounted(() => {
   cursor: pointer;
   transition: all var(--duration-fast) ease;
   white-space: nowrap;
+}
+
+.pill.active {
+  background: transparent;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .priority-pills .pill {
@@ -1963,8 +1969,8 @@ onMounted(() => {
 }
 
 .dirty-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: var(--radius-full);
   background: var(--brand-primary);
   animation: dirty-pulse 2s ease-in-out infinite;
@@ -2005,7 +2011,7 @@ onMounted(() => {
 
 .celebration-container {
   text-align: center;
-  max-width: 320px;
+  max-width: 320px; /* Component-specific container width */
 }
 
 .confetti-burst {
@@ -2018,8 +2024,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 120px;
-  height: 120px;
+  width: var(--space-32);
+  height: var(--space-32);
   background: linear-gradient(135deg, var(--state-active-bg), var(--state-hover-bg));
   border: var(--task-card-selection-border) solid var(--state-hover-border);
   border-radius: var(--radius-full);
@@ -2038,7 +2044,7 @@ onMounted(() => {
   font-size: var(--text-3xl);
   font-weight: var(--font-bold);
   margin: 0 0 var(--space-2);
-  background: linear-gradient(135deg, var(--brand-primary), hsl(174, 80%, 70%));
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-hover));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -2064,7 +2070,7 @@ onMounted(() => {
 }
 
 .stat-number {
-  font-size: 1.75rem; /* no-token */
+  font-size: var(--text-2xl); /* 24px */
   font-weight: var(--font-bold);
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
@@ -2230,7 +2236,7 @@ onMounted(() => {
 }
 
 .chip-name {
-  max-width: 120px;
+  max-width: 120px; /* Component-specific chip width */
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -2290,10 +2296,10 @@ onMounted(() => {
 
 .hierarchy-connector {
   width: var(--space-3);
-  height: 1px;
+  height: var(--space-px);
   background: var(--border-subtle);
   margin-left: auto;
-  border-radius: 1px;
+  border-radius: var(--radius-none);
 }
 
 .project-option:active {
@@ -2351,7 +2357,7 @@ onMounted(() => {
 .project-divider::after {
   content: '';
   flex: 1;
-  height: 1px;
+  height: var(--space-px);
   background: var(--border-subtle);
 }
 
@@ -2430,7 +2436,7 @@ onMounted(() => {
   border-radius: var(--radius-2xl);
   padding: var(--space-8);
   text-align: center;
-  max-width: 320px;
+  max-width: 320px; /* Component-specific modal width */
   margin: var(--space-4);
 }
 
@@ -2510,11 +2516,7 @@ onMounted(() => {
 .quick-edit-sheet {
   width: 100%;
   max-height: 60vh;
-  background: linear-gradient(
-    180deg,
-    hsl(240, 20%, 12%) 0%,
-    hsl(240, 18%, 10%) 100%
-  );
+  background: var(--surface-secondary);
   border-top-left-radius: var(--radius-2xl);
   border-top-right-radius: var(--radius-2xl);
   padding: var(--space-4) var(--space-5);

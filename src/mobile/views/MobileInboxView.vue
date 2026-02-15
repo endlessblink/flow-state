@@ -701,19 +701,19 @@ const groupedTasks = computed((): TaskGroup[] => {
         } else if (isTaskOverdue(task.dueDate)) {
           key = 'overdue'
           title = 'Overdue'
-          color = '#ef4444'
+          color = 'var(--color-priority-high)'
         } else if (isDueToday(task.dueDate)) {
           key = 'today'
           title = 'Today'
-          color = '#22c55e'
+          color = 'var(--color-success)'
         } else if (isDueThisWeek(task.dueDate)) {
           key = 'this-week'
           title = 'This Week'
-          color = '#3b82f6'
+          color = 'var(--color-info)'
         } else {
           key = 'later'
           title = 'Later'
-          color = '#6b7280'
+          color = 'var(--color-neutral)'
         }
         break
       }
@@ -733,11 +733,11 @@ const groupedTasks = computed((): TaskGroup[] => {
       }
       case 'priority': {
         const priorityColors: Record<string, string> = {
-          critical: '#dc2626',
-          high: '#f97316',
-          medium: '#eab308',
-          low: '#22c55e',
-          none: '#6b7280'
+          critical: 'var(--color-danger)',
+          high: 'var(--color-priority-high)',
+          medium: 'var(--color-priority-medium)',
+          low: 'var(--color-success)',
+          none: 'var(--color-neutral)'
         }
         const priorityLabels: Record<string, string> = {
           critical: 'Critical (P0)',
@@ -1293,8 +1293,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .checkbox-circle {
-  width: 22px;
-  height: 22px;
+  width: var(--space-5);
+  height: var(--space-5);
   border: var(--space-0_5) solid var(--border-subtle);
   border-radius: var(--radius-full);
   display: flex;
@@ -1401,8 +1401,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .timer-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--space-9);
+  height: var(--space-9);
   border-radius: var(--radius-full);
   border: none;
   background: var(--primary-brand-bg-subtle);
@@ -1421,7 +1421,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .empty-state {
   text-align: center;
   color: var(--text-muted);
-  padding: 60px var(--space-5);
+  padding: var(--space-16) var(--space-5);
 }
 
 .empty-state p {
@@ -1431,7 +1431,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 /* Quick Add Bar — Teleported to <body> so position:fixed is relative to viewport (BUG-1312) */
 .quick-add-bar {
   position: fixed;
-  bottom: 64px; /* Above nav */
+  bottom: var(--space-16); /* Above nav */
   left: 0;
   right: 0;
   padding: var(--space-3) var(--space-4);
@@ -1476,8 +1476,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .add-btn {
-  width: 48px;
-  height: 48px;
+  width: var(--space-12);
+  height: var(--space-12);
   border-radius: var(--radius-full);
   border: none;
   background: var(--primary-brand);
@@ -1603,8 +1603,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* Mic Button (TASK-1025) */
 .mic-btn {
-  width: 48px;
-  height: 48px;
+  width: var(--space-12);
+  height: var(--space-12);
   border-radius: var(--radius-full);
   border: none;
   background: var(--surface-tertiary);
@@ -1639,7 +1639,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 /* Voice input active state on input */
 .quick-add-input.voice-active {
   border-color: var(--danger-text);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  box-shadow: var(--purple-glow-medium);
 }
 
 /* Voice feedback panel */
@@ -1657,12 +1657,12 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .voice-waveform {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
   height: var(--space-6);
 }
 
 .wave-bar {
-  width: 3px;
+  width: var(--space-1);
   height: var(--space-2);
   background: var(--danger-text);
   border-radius: var(--radius-xs);
@@ -1690,8 +1690,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .voice-cancel {
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   border-radius: var(--radius-full);
   border: none;
   background: var(--surface-tertiary);
@@ -1711,8 +1711,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 /* Voice language toggle button (inside feedback) */
 .voice-lang-toggle {
-  min-width: 36px;
-  height: 28px;
+  min-width: var(--space-9);
+  height: var(--space-7);
   padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-hover);
@@ -1801,16 +1801,16 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .voice-pending-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  top: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
+  min-width: var(--space-4);
+  height: var(--space-4);
+  padding: 0 var(--space-1);
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
   color: white;
   background: var(--primary-brand);
-  border-radius: 9px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1848,7 +1848,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 /* Debug Banner */
 .debug-banner {
   background: var(--overlay-component-bg-lighter);
-  color: #0f0;
+  color: var(--color-success);
   font-family: monospace;
   font-size: var(--text-xs);
   padding: var(--space-2) var(--space-3);
@@ -1858,15 +1858,15 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .debug-banner .error {
-  color: #f66;
+  color: var(--color-danger);
 }
 
 .debug-toggle {
   position: fixed;
-  top: 60px;
+  top: var(--space-16);
   right: var(--space-2);
-  width: 28px;
-  height: 28px;
+  width: var(--space-7);
+  height: var(--space-7);
   border-radius: var(--radius-full);
   background: var(--overlay-component-bg-lighter);
   border: none;
@@ -1923,6 +1923,6 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 [dir="rtl"] .debug-toggle {
   right: auto;
-  left: 8px;
+  left: var(--space-2);
 }
 </style>

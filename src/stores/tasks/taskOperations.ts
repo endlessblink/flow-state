@@ -103,24 +103,9 @@ export function useTaskOperations(
                     updatedAt: now
                 })
             }
-            // BUG-1321: If dueDate is set but no instance exists for that date, create one
-            // This ensures tasks created via Weekly Plan or Canvas appear on Calendar
-            // Compute effective dueDate using same default as the Task constructor below
-            const _d = new Date()
-            const effectiveDueDate = taskData.dueDate || `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`
-            if (effectiveDueDate && instances.length === 0) {
-                instances.push({
-                    id: `auto-${taskId}-${Date.now()}`,
-                    taskId: taskId,
-                    scheduledDate: effectiveDueDate,
-                    scheduledTime: taskData.scheduledTime || '09:00',
-                    duration: taskData.estimatedDuration || 30,
-                    status: 'scheduled',
-                    isRecurring: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                } as TaskInstance)
-            }
+            // BUG-1325: Removed auto-instance creation from dueDate.
+            // Tasks should only appear on calendar when user explicitly drags them or sets start/end time.
+            // A dueDate is a deadline, not a calendar time block.
 
             // Keep 'uncategorized' as frontend placeholder, sanitize to null when sending to DB
             let projectId = taskData.projectId || UNCATEGORIZED_PROJECT_ID
@@ -141,8 +126,9 @@ export function useTaskOperations(
                 progress: 0,
                 completedPomodoros: 0,
                 subtasks: [],
-                // BUG-1321: Use local date (not UTC) for default dueDate
-                dueDate: taskData.dueDate || effectiveDueDate,
+                // BUG-1325: dueDate only set if explicitly provided or inferred from scheduledDate
+                // (scheduledDate implies a deadline on that date, but does NOT create calendar instances)
+                dueDate: taskData.dueDate || taskData.scheduledDate || '',
                 projectId,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -258,23 +244,12 @@ export function useTaskOperations(
         ].filter(Boolean).length
         if (dateFieldsInUpdate > 1) return synced // Caller knows what they're doing
 
-        // CASE 1: dueDate changed → ensure calendar instance exists
+        // CASE 1: dueDate changed → sync scheduledDate for legacy compat, but do NOT auto-create calendar instances
+        // BUG-1325: A dueDate is a deadline, not a calendar time block. Only explicit user actions
+        // (drag to calendar, set time in modal, "Start Now") should create calendar instances.
         if (updates.dueDate !== undefined && updates.instances === undefined) {
             const newDueDate = updates.dueDate
             if (newDueDate && newDueDate !== 'null') {
-                // Only create instance if task has NO instance for this date yet
-                const existing = (task.instances || []).find(i => i.scheduledDate === newDueDate)
-                if (!existing) {
-                    synced.instances = [
-                        ...(task.instances || []),
-                        {
-                            id: `auto-${task.id}-${Date.now()}`,
-                            scheduledDate: newDueDate,
-                            scheduledTime: '09:00',
-                            duration: task.estimatedDuration || 30
-                        } as TaskInstance
-                    ]
-                }
                 synced.scheduledDate = newDueDate
                 synced.scheduledTime = synced.scheduledTime || task.scheduledTime || '09:00'
                 synced.isInInbox = false

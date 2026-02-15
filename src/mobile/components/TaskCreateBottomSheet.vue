@@ -56,6 +56,7 @@
               class="task-text-block"
               placeholder="What needs to be done?&#10;&#10;Add notes here..."
               @input="autoResize"
+              @paste="handlePaste"
             />
 
             <!-- Compact options -->
@@ -131,6 +132,15 @@
               </div>
             </div>
 
+            <!-- TASK-1325: URL scraping feedback -->
+            <div v-if="isScraping" class="url-scraping-feedback">
+              <Globe :size="16" class="scraping-icon" />
+              <span class="scraping-status">Fetching page info...</span>
+              <button class="scraping-cancel" @click="cancelScraping">
+                <X :size="14" />
+              </button>
+            </div>
+
             <!-- Voice Feedback (Recording or Processing) -->
             <div v-if="isListening || isProcessing" class="voice-feedback" :class="{ processing: isProcessing }">
               <div class="voice-indicator">
@@ -166,9 +176,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import {
-  Flag, Calendar, CalendarPlus, CalendarDays, X, Square, Mic
+  Flag, Calendar, CalendarPlus, CalendarDays, X, Square, Mic, Globe
 } from 'lucide-vue-next'
 import { useVoiceNLPParser } from '@/composables/useVoiceNLPParser'
+import { useUrlScraping } from '@/composables/useUrlScraping'
 
 interface Props {
   isOpen: boolean
@@ -263,6 +274,20 @@ const hasCustomDate = computed(() => {
 // NLP Parser for voice transcripts
 const { parseTranscription } = useVoiceNLPParser()
 
+// TASK-1325: URL scraping on paste
+const { isScraping, scrapeIfUrl, cancel: cancelScraping } = useUrlScraping()
+
+const handlePaste = async (e: ClipboardEvent) => {
+  const text = e.clipboardData?.getData('text') || ''
+  if (!text.trim()) return
+
+  const result = await scrapeIfUrl(text)
+  if (result) {
+    taskTitle.value = result.title
+    taskDescription.value = result.description
+  }
+}
+
 // Watch for voice transcript and parse it with NLP
 watch(() => props.voiceTranscript, (transcript) => {
   if (transcript && transcript.trim()) {
@@ -354,6 +379,7 @@ function handleCancel() {
 function handleCreate() {
   if (!taskTitle.value.trim()) return
 
+  cancelScraping() // Cancel any in-progress scrape
   triggerHaptic(30)
 
   const data: TaskCreationData = {
@@ -625,6 +651,48 @@ function autoResize(event: Event) {
   color: var(--text-primary);
   font-size: var(--text-sm);
   color-scheme: dark;
+}
+
+/* TASK-1325: URL Scraping Feedback */
+.url-scraping-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+}
+
+.scraping-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  animation: spin 1.5s linear infinite;
+}
+
+.scraping-status {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--brand-primary);
+}
+
+.scraping-cancel {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.scraping-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 /* Voice Feedback */

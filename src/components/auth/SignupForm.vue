@@ -2,7 +2,7 @@
   <div class="signup-form">
     <div class="form-header">
       <div class="auth-brand-icon">
-        🍅
+        <AppLogo size="xl" />
       </div>
       <h2 class="form-title">
         <span class="gradient-text">{{ t('auth.signup.title') }}</span>
@@ -159,6 +159,7 @@ import { useAuthStore, type User } from '@/stores/auth'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { EyeIcon, EyeOffIcon, AlertCircle } from 'lucide-vue-next'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 interface Emits {
   success: [user: User]

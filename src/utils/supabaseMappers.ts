@@ -429,7 +429,7 @@ export function toSupabaseProject(project: Project, userId: string): SupabasePro
         order: (project as Project & { order?: number }).order || 0,
         is_deleted: (project as Project & { isDeleted?: boolean }).isDeleted || false,
         deleted_at: (project as Project & { deletedAt?: string | Date }).deletedAt
-            ? new Date((project as Project & { deletedAt?: string | Date }).deletedAt!).toISOString()
+            ? new Date((project as Project & { deletedAt?: string | Date }).deletedAt as string | Date).toISOString()
             : null,
         created_at: project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
         updated_at: new Date().toISOString()

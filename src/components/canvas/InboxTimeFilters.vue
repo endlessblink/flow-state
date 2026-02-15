@@ -125,8 +125,6 @@ const filterTasks = (filterKey: string) => {
         if (task.instances && task.instances.length > 0) {
           if (task.instances.some(inst => inst.scheduledDate === today)) return true
         }
-        // Fallback to legacy scheduledDate
-        if (task.scheduledDate === today) return true
 
         // Tasks created today
         if (taskCreatedDate.getTime() === getToday().getTime()) return true
@@ -141,58 +139,43 @@ const filterTasks = (filterKey: string) => {
       }
 
       case 'today': {
-        // Tasks scheduled for today
+        // BUG-1325: Only use instances[] for schedule filtering (legacy scheduledDate removed)
         const todayStr = getToday().toISOString().split('T')[0]
-
-        // Check instances first
         if (task.instances && task.instances.length > 0) {
           return task.instances.some(inst => inst.scheduledDate === todayStr)
         }
-        // Fallback to legacy scheduledDate
-        return task.scheduledDate === todayStr
+        return false
       }
 
       case 'tomorrow': {
-        // Tasks scheduled for tomorrow
         const tomorrowStr = getTomorrow().toISOString().split('T')[0]
-
-        // Check instances first
         if (task.instances && task.instances.length > 0) {
           return task.instances.some(inst => inst.scheduledDate === tomorrowStr)
         }
-        // Fallback to legacy scheduledDate
-        return task.scheduledDate === tomorrowStr
+        return false
       }
 
       case 'next3days': {
-        const todayStr = getToday().toISOString().split('T')[0]
         const boundary = new Date(getToday())
         boundary.setDate(boundary.getDate() + 3)
         const boundaryStr = boundary.toISOString().split('T')[0]
-        // Check instances first (authoritative)
         if (task.instances && task.instances.length > 0) {
           return task.instances.some(inst =>
             inst.scheduledDate && inst.scheduledDate < boundaryStr
           )
         }
-        // Fallback to legacy scheduledDate
-        if (!task.scheduledDate) return false
-        return task.scheduledDate < boundaryStr
+        return false
       }
 
       case 'thisWeek': {
         // TASK-1089: Tasks scheduled within calendar week (until Sunday 00:00, exclusive)
         const weekEndStr = getWeekEnd().toISOString().split('T')[0]
-
-        // Check instances first - include overdue and tasks before Sunday
         if (task.instances && task.instances.length > 0) {
           return task.instances.some(inst =>
             inst.scheduledDate && inst.scheduledDate < weekEndStr
           )
         }
-        // Fallback to legacy scheduledDate
-        if (!task.scheduledDate) return false
-        return task.scheduledDate < weekEndStr
+        return false
       }
 
       case 'noDate':

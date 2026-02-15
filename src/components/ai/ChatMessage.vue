@@ -24,6 +24,7 @@ import type { ChatMessage, ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
 import { executeTool } from '@/services/ai/tools'
+import { sanitizeMarkdownHtml } from '@/utils/security'
 
 // ============================================================================
 // Props
@@ -108,7 +109,8 @@ const renderedContent = computed(() => {
 
   if (!content) return ''
 
-  return md.render(content)
+  // FIX: Sanitize the rendered HTML to prevent XSS (even though we strip tags above)
+  return sanitizeMarkdownHtml(md.render(content))
 })
 
 /**
@@ -387,12 +389,13 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
       </div>
 
       <!-- Rendered Message Text -->
-      <div
-        v-else-if="renderedContent"
-        class="message-text markdown-body"
-        :dir="direction || 'auto'"
-        v-html="renderedContent"
-      />
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div
+          v-else-if="renderedContent"
+          class="message-text markdown-body"
+          :dir="direction || 'auto'"
+          v-html="renderedContent"
+        />
 
       <!-- Streaming cursor (when there IS content) -->
       <span v-if="isStreaming && !isThinking && renderedContent" class="cursor-blink">|</span>

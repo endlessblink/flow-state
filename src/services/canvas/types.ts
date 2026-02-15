@@ -37,5 +37,5 @@ export type PositionEventType =
 export interface PositionEvent {
     type: PositionEventType
     nodeId: string
-    payload?: any
+    payload?: unknown
 }

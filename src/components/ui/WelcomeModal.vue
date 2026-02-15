@@ -11,7 +11,7 @@
           <!-- Header -->
           <div class="modal-header">
             <div class="header-content--welcome">
-              <span class="logo">🍅</span>
+              <AppLogo size="xl" />
               <div>
                 <h2 class="modal-title">
                   Welcome to FlowState
@@ -78,6 +78,7 @@ import {
   Shield,
   Settings
 } from 'lucide-vue-next'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 interface Props {
   isOpen: boolean

@@ -32,24 +32,11 @@ export const getTaskInstances = (task: Task) => {
     return task.instances
   }
 
-  // Priority 2: Legacy fields - create synthetic instance
-  if (task.scheduledDate) {
-    return [{
-      id: `legacy-${task.id}`,
-      taskId: task.id,
-      scheduledDate: task.scheduledDate,
-      scheduledTime: task.scheduledTime,
-      duration: task.estimatedDuration
-    }]
-  }
-
-  // TASK-1322: Removed dueDate fallback (was BUG-1321 "Priority 2.5")
-  // Tasks with only dueDate (no explicit scheduledDate/scheduledTime) should NOT
-  // appear on the calendar. They polluted day/week/month views with fake 9:00 AM events.
-  // Tasks only appear on calendar if:
-  //   - They have explicit instances[] (dragged from inbox or scheduled via modal)
-  //   - They have scheduledDate + scheduledTime (legacy fields)
-  //   - They have recurringInstances
+  // BUG-1325: Removed Priority 2 (legacy scheduledDate/scheduledTime synthetic instances).
+  // Calendar visibility is now EXCLUSIVELY driven by instances[] and recurringInstances.
+  // The legacy scheduledDate/scheduledTime fields were being auto-populated from dueDate
+  // by syncDateFields(), causing every task with a deadline to appear at 9:00 AM.
+  // All legitimate scheduling paths now create explicit instances[] entries.
 
   // Priority 3: Recurring instances
   if (task.recurringInstances && task.recurringInstances.length > 0) {

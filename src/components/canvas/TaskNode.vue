@@ -290,8 +290,9 @@ onUnmounted(() => {
 
 .task-node:hover {
   border: none;
-  transform: translate3d(0, calc(-1 * var(--space-0_5)), 0);
-  /* Enhanced shadow on hover - v0.9.0 style */
+  /* BUG-1328: NO transform here — translate/scale on root node conflicts with Vue Flow's
+   * transform: translate(x,y) positioning, causing cursor drift on drag in Tauri.
+   * Hover lift effect achieved via enhanced box-shadow only. */
   box-shadow:
     0 var(--space-4) var(--space-8) rgba(0, 0, 0, 0.4),
     0 var(--space-2) var(--space-4) rgba(0, 0, 0, 0.12);
@@ -485,7 +486,12 @@ onUnmounted(() => {
 }
 
 .multi-select-mode:hover {
-  transform: translateY(calc(-1 * var(--space-0_5))) scale(1.02);
+  /* BUG-1328: NO transform — scale/translate on root node causes cursor drift.
+   * Visual feedback via box-shadow + border-color instead. */
+  box-shadow:
+    0 0 0 var(--space-0_5) var(--brand-primary),
+    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
+    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12);
 }
 
 /* TASK-1074: Brief flash animation when date is updated */

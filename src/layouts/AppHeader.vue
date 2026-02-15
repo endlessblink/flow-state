@@ -89,7 +89,7 @@
         <div class="timer-container">
           <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
             <div class="timer-icon">
-              <span v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" class="timer-emoticon active">🍅</span>
+              <AppLogo v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" size="sm" class="timer-emoticon active" />
               <span v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" class="timer-emoticon active">🧎</span>
               <Timer
                 v-else
@@ -204,6 +204,7 @@ import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import SyncStatusIndicator from '@/components/sync/SyncStatusIndicator.vue'
 import { useAuthStore } from '@/stores/auth'
 import QuickTaskDropdown from '@/components/timer/QuickTaskDropdown.vue'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 const router = useRouter()
 const taskStore = useTaskStore()

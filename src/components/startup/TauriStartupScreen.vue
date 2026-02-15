@@ -9,6 +9,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useTauriStartup, isTauri } from '@/composables/useTauriStartup'
 import TauriModeSelector from './TauriModeSelector.vue'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 const emit = defineEmits<{
   ready: []
@@ -89,7 +90,7 @@ function openSupabaseInstall() {
         <!-- Logo -->
         <div class="logo-container">
           <div class="logo">
-            <span class="logo-icon">🍅</span>
+            <AppLogo size="xl" />
           </div>
           <h1 class="app-name">
             FlowState

@@ -128,7 +128,7 @@ export function validateInvariantA(
 
         // Case 2: Store says has parent
         if (hasStoreParent) {
-            const expectedVueFlowParent = CanvasIds.groupNodeId(storeGroup.parentGroupId!)
+            const expectedVueFlowParent = CanvasIds.groupNodeId(storeGroup.parentGroupId as string)
 
             if (!hasVueFlowParent) {
                 violations.push({
@@ -163,7 +163,7 @@ export function validateInvariantA(
             // onNodeDragStop handles re-parenting via spatial detection.
 
             // Check parent exists
-            if (!groupById.has(storeGroup.parentGroupId!)) {
+            if (!groupById.has(storeGroup.parentGroupId as string)) {
                 violations.push({
                     invariant: 'A',
                     severity: InvariantSeverity.ERROR,
@@ -222,7 +222,7 @@ export function validateInvariantB(
         // Compute expected Vue Flow position using same logic as groupPositionToVueFlow
         let expectedVueFlowPos: { x: number; y: number }
         if (hasParent) {
-            const parentAbsolute = getGroupAbsolutePosition(storeGroup.parentGroupId!, storeGroups)
+            const parentAbsolute = getGroupAbsolutePosition(storeGroup.parentGroupId as string, storeGroups)
             expectedVueFlowPos = toRelativePosition(storeAbsolute, parentAbsolute)
         } else {
             expectedVueFlowPos = storeAbsolute
@@ -265,7 +265,7 @@ export function validateInvariantB(
         // Compute expected Vue Flow position using same logic as taskPositionToVueFlow
         let expectedVueFlowPos: { x: number; y: number }
         if (hasParent) {
-            const parentAbsolute = getGroupAbsolutePosition(task.parentId!, storeGroups)
+            const parentAbsolute = getGroupAbsolutePosition(task.parentId as string, storeGroups)
             expectedVueFlowPos = toRelativePosition(storeAbsolute, parentAbsolute)
         } else {
             expectedVueFlowPos = storeAbsolute
@@ -314,7 +314,7 @@ export function validateInvariantC(storeGroups: CanvasGroup[]): InvariantViolati
                 break
             }
             visited.add(current.id)
-            current = storeGroups.find(g => g.id === current!.parentGroupId)
+            current = storeGroups.find(g => g.id === current?.parentGroupId)
         }
 
         if (hasCycle) {

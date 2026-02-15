@@ -8,6 +8,7 @@ import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
+import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, type AIProviderKey } from '@/config/aiModels'
 
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
 const aiChatStore = useAIChatStore()
@@ -24,31 +25,8 @@ const {
   refreshOllamaModels,
 } = useAIChat()
 
-type ProviderOption = 'auto' | 'ollama' | 'groq' | 'openrouter'
-
-const providerOptions: { key: ProviderOption; label: string; desc: string }[] = [
-  { key: 'auto', label: 'Auto', desc: 'Prefers local, falls back to cloud' },
-  { key: 'ollama', label: 'Local (Ollama)', desc: 'Free, private, runs on your machine' },
-  { key: 'groq', label: 'Groq', desc: 'Fast cloud inference' },
-  { key: 'openrouter', label: 'OpenRouter', desc: 'Premium models (Claude, GPT-4, Kimi)' },
-]
-
-const groqModels = [
-  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
-  { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
-  { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
-  { id: 'gemma2-9b-it', label: 'Gemma 2 9B' },
-]
-
-const openrouterModels = [
-  { id: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-  { id: 'anthropic/claude-opus-4-6', label: 'Claude Opus 4.6' },
-  { id: 'openai/gpt-4o', label: 'GPT-4o' },
-  { id: 'moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
-  { id: 'mistralai/mistral-large', label: 'Mistral Large' },
-  { id: 'google/gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-]
+const groqModels = asIdLabel(GROQ_MODELS)
+const openrouterModels = asIdLabel(OPENROUTER_MODELS)
 
 const currentModelOptions = computed(() => {
   switch (selectedProvider.value) {
@@ -63,13 +41,46 @@ const currentModelOptions = computed(() => {
   }
 })
 
-function onProviderChange(provider: ProviderOption) {
+function onProviderChange(provider: AIProviderKey) {
   setProvider(provider)
 }
 
 function onModelChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
   setModel(value || null)
+}
+
+// ── Weekly Plan Provider/Model (TASK-1327) ──
+const wpProviderOptions = PROVIDER_OPTIONS.map(opt => {
+  // Override 'auto' description for weekly plan context
+  if (opt.key === 'auto') {
+    return { ...opt, desc: 'Uses your default chat model' }
+  }
+  return opt
+})
+
+const wpModelOptions = computed(() => {
+  switch (settingsStore.weeklyPlanProvider) {
+    case 'ollama':
+      return availableOllamaModels.value.map(m => ({ id: m, label: m }))
+    case 'groq':
+      return groqModels
+    case 'openrouter':
+      return openrouterModels
+    default:
+      return []
+  }
+})
+
+function onWpProviderChange(provider: AIProviderKey) {
+  settingsStore.updateSetting('weeklyPlanProvider', provider)
+  // Reset model when provider changes
+  settingsStore.updateSetting('weeklyPlanModel', '')
+}
+
+function onWpModelChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  settingsStore.updateSetting('weeklyPlanModel', value || '')
 }
 
 /** Currently selected time period */
@@ -246,7 +257,7 @@ async function onClearMemories() {
       <!-- Provider selector -->
       <div class="provider-chips">
         <button
-          v-for="opt in providerOptions"
+          v-for="opt in PROVIDER_OPTIONS"
           :key="opt.key"
           class="provider-chip"
           :class="{ active: selectedProvider === opt.key }"
@@ -278,6 +289,56 @@ async function onClearMemories() {
         </div>
         <button
           v-if="selectedProvider === 'ollama'"
+          class="refresh-models-btn"
+          @click="refreshOllamaModels()"
+          title="Refresh local models"
+        >
+          <RefreshCw :size="14" />
+        </button>
+      </div>
+    </SettingsSection>
+
+    <!-- TASK-1327: Weekly Plan Model Override -->
+    <SettingsSection title="Weekly Plan Model">
+      <p class="section-desc">
+        Override the model used for weekly plan generation. Defaults to your chat model.
+      </p>
+
+      <!-- Provider selector -->
+      <div class="provider-chips">
+        <button
+          v-for="opt in wpProviderOptions"
+          :key="opt.key"
+          class="provider-chip"
+          :class="{ active: settingsStore.weeklyPlanProvider === opt.key }"
+          @click="onWpProviderChange(opt.key)"
+        >
+          <span class="provider-chip-label">{{ opt.label }}</span>
+          <span class="provider-chip-desc">{{ opt.desc }}</span>
+        </button>
+      </div>
+
+      <!-- Model selector (when not auto) -->
+      <div v-if="settingsStore.weeklyPlanProvider !== 'auto'" class="model-selector">
+        <label class="model-selector-label">Model</label>
+        <div class="model-select-wrapper">
+          <select
+            class="model-select"
+            :value="settingsStore.weeklyPlanModel || ''"
+            @change="onWpModelChange"
+          >
+            <option value="">Default</option>
+            <option
+              v-for="m in wpModelOptions"
+              :key="m.id"
+              :value="m.id"
+            >
+              {{ m.label }}
+            </option>
+          </select>
+        </div>
+        <button
+          v-if="settingsStore.weeklyPlanProvider === 'ollama'"
           class="refresh-models-btn"
           @click="refreshOllamaModels()"
           title="Refresh local models"

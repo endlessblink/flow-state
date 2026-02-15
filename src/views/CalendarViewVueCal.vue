@@ -66,7 +66,7 @@ const vueCalEvents = computed<VueCalEvent[]>(() => {
   taskStore.filteredTasks
     .filter(task => task.scheduledDate && task.scheduledTime && !task.recurrence?.isEnabled)
     .forEach(task => {
-      const [_hour, _minute] = task.scheduledTime!.split(':').map(Number)
+      const [_hour, _minute] = (task.scheduledTime || '').split(':').map(Number)
       const start = new Date(`${task.scheduledDate}T${task.scheduledTime}`)
       const duration = task.estimatedDuration || 30
       const end = new Date(start.getTime() + duration * 60000)
@@ -90,13 +90,13 @@ const vueCalEvents = computed<VueCalEvent[]>(() => {
       task.recurrence?.generatedInstances
         ?.filter(instance => !instance.isSkipped && instance.scheduledDate && instance.scheduledTime && instance.id)
         ?.forEach(instance => {
-          const [_hour2, _minute2] = instance.scheduledTime!.split(':').map(Number)
+          const [_hour2, _minute2] = (instance.scheduledTime || '').split(':').map(Number)
           const start = new Date(`${instance.scheduledDate}T${instance.scheduledTime}`)
           const duration = instance.duration || task.estimatedDuration || 30
           const end = new Date(start.getTime() + duration * 60000)
 
           events.push({
-            id: instance.id!,
+            id: instance.id || '',
             start,
             end,
             title: `${task.title} 🔁`, // Add recurrence indicator
@@ -140,7 +140,7 @@ const handleEventDragDrop = async (event: VueCalEvent, _originalEvent: unknown) 
         if (recurrenceUtils && recurrenceUtils.addException && parentTask.recurrence) {
           parentTask.recurrence.exceptions = recurrenceUtils.addException(
             (parentTask.recurrence.exceptions || []) as RecurrenceException[],
-            event.scheduledDate!,
+            event.scheduledDate || '',
             'modify',
             {
               scheduledDate: dateStr,

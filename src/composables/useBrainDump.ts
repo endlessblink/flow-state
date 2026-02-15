@@ -1,9 +1,14 @@
 import { ref, computed } from 'vue'
+import { useOnline } from '@vueuse/core'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { isUrl } from '@/utils/urlDetection'
+import { scrapeUrl } from '@/services/ai/urlScraper'
 
 export function useBrainDump() {
     const brainDumpMode = ref(false)
     const brainDumpText = ref('')
+    const isProcessingUrls = ref(false)
+    const isOnline = useOnline()
 
     // Parse brain dump text to count tasks
     const parsedTaskCount = computed(() => {
@@ -14,15 +19,57 @@ export function useBrainDump() {
     })
 
     // Process the brain dump text and create tasks
-    const processBrainDump = () => {
+    // TASK-1325: URL lines are scraped in parallel for title/description enrichment
+    const processBrainDump = async () => {
         if (!brainDumpText.value.trim()) return
 
         const lines = brainDumpText.value.split('\n').filter(line => line.trim())
         const { createTaskWithUndo } = useUnifiedUndoRedo()
 
-        lines.forEach(line => {
-            // Parse task line for priority, duration, etc.
+        // Separate URL lines from regular lines for parallel scraping
+        const urlLineIndices: number[] = []
+        if (isOnline.value) {
+            lines.forEach((line, i) => {
+                if (isUrl(line.trim())) urlLineIndices.push(i)
+            })
+        }
+
+        // Scrape URL lines in parallel (with 5s timeout per URL)
+        const scrapeResults = new Map<number, { title: string; description: string }>()
+        if (urlLineIndices.length > 0) {
+            isProcessingUrls.value = true
+            const scrapePromises = urlLineIndices.map(async (lineIndex) => {
+                const url = lines[lineIndex].trim()
+                const data = await scrapeUrl(url, { skipAi: urlLineIndices.length > 3 })
+                if (data.title && !data.error) {
+                    const summaryPart = data.aiSummary || data.description || ''
+                    const description = summaryPart
+                        ? `${summaryPart}\n\nSource: ${url}`
+                        : `Source: ${url}`
+                    scrapeResults.set(lineIndex, { title: data.title, description })
+                }
+            })
+            await Promise.allSettled(scrapePromises)
+            isProcessingUrls.value = false
+        }
+
+        // Create tasks from all lines
+        lines.forEach((line, lineIndex) => {
             const cleanedLine = line.trim()
+
+            // Check if this line was a scraped URL
+            const scrapeResult = scrapeResults.get(lineIndex)
+            if (scrapeResult) {
+                createTaskWithUndo({
+                    title: scrapeResult.title,
+                    description: scrapeResult.description,
+                    status: 'planned',
+                    isInInbox: true
+                })
+                return
+            }
+
+            // Regular line: parse for priority, duration, etc.
             let title = cleanedLine
             let priority: 'high' | 'medium' | 'low' | null = null
             let estimatedDuration: number | undefined
@@ -79,6 +126,7 @@ export function useBrainDump() {
         brainDumpText,
         textDirection,
         parsedTaskCount,
-        processBrainDump
+        processBrainDump,
+        isProcessingUrls
     }
 }

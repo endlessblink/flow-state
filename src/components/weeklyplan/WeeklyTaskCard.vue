@@ -42,13 +42,12 @@
     <div class="card-content">
       <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="cardTooltip">{{ truncateUrlsInText(task.title) }}</span>
 
-      <!-- AI reason bullets OR deterministic reason fallback -->
-      <ul v-if="aiReasonBullets.length > 0" class="ai-reason-list" :dir="isRtl ? 'rtl' : 'ltr'">
-        <li v-for="(bullet, idx) in aiReasonBullets" :key="idx">
+      <!-- Deterministic reason bullets (always available from pipeline) -->
+      <ul v-if="reasonBullets.length > 0" class="ai-reason-list" :dir="isRtl ? 'rtl' : 'ltr'">
+        <li v-for="(bullet, idx) in reasonBullets" :key="idx">
           {{ bullet }}
         </li>
       </ul>
-      <span v-else class="task-reason">{{ taskReason }}</span>
 
       <div class="card-meta">
         <span class="priority-indicator" :style="{ backgroundColor: priorityColor }" />
@@ -163,8 +162,8 @@ const statusLabel = computed(() => {
   }
 })
 
-// AI-generated reasoning as bullet points
-const aiReasonBullets = computed(() => {
+// Reason bullets — always from deterministic pipeline (or empty)
+const reasonBullets = computed(() => {
   if (!props.aiReason) return []
   return props.aiReason
     .split('\n')
@@ -172,42 +171,10 @@ const aiReasonBullets = computed(() => {
     .filter(line => line.length > 0)
 })
 
-// Deterministic fallback when AI didn't provide reasoning
-const taskReason = computed(() => {
-  if (props.aiReason) return props.aiReason
-
-  // Deterministic fallback
-  const reasons: string[] = []
-  const today = new Date()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-  if (props.task.dueDate && props.task.dueDate < todayStr) {
-    reasons.push('Overdue')
-  } else if (props.task.dueDate && props.task.dueDate <= todayStr) {
-    reasons.push('Due today')
-  } else if (props.task.dueDate) {
-    reasons.push(`Due ${props.task.dueDate}`)
-  }
-
-  if (props.task.status === 'in_progress') {
-    reasons.push('In progress')
-  }
-
-  if (props.task.priority === 'high') {
-    reasons.push('High priority')
-  }
-
-  if (reasons.length === 0) {
-    if (props.task.priority === 'medium') return 'Medium priority'
-    return 'Available this week'
-  }
-
-  return reasons.join(' · ')
-})
-
 // Full tooltip: title + reason
 const cardTooltip = computed(() => {
-  return `${props.task.title}\n─\n${taskReason.value}`
+  const reasons = reasonBullets.value.join('\n')
+  return reasons ? `${props.task.title}\n─\n${reasons}` : props.task.title
 })
 </script>
 

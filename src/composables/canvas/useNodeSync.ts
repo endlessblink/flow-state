@@ -205,7 +205,11 @@ export function useNodeSync(
                     .single()
 
                 if (fetchError || !latest) {
-                    throw new Error('Could not fetch latest version for retry')
+                    // BUG-1328: Handle PGRST116 (entity not found) gracefully
+                    // This happens when a canvas node exists locally but not in DB
+                    // (deleted by another device, not yet synced, or RLS-filtered)
+                    console.warn(`⚠️ [NODE-SYNC] Cannot retry ${tableName} ${nodeId.slice(0, 8)} — entity not found or inaccessible`)
+                    return false
                 }
 
                 const newVersion = latest.position_version

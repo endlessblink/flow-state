@@ -21,6 +21,7 @@
           :style="titleAlignmentStyles"
           @keydown.enter="handleCreate"
           @keydown.esc="$emit('close')"
+          @paste="handlePaste"
         >
         <button
           ref="aiAssistBtnRef"
@@ -30,6 +31,15 @@
           @click="openAIAssist"
         >
           <Sparkles :size="14" />
+        </button>
+      </div>
+
+      <!-- TASK-1325: URL scraping feedback -->
+      <div v-if="isScraping" class="url-scraping-feedback">
+        <Globe :size="16" class="scraping-icon" />
+        <span class="scraping-status">Fetching page info...</span>
+        <button class="scraping-cancel" type="button" @click="cancelScraping">
+          <X :size="14" />
         </button>
       </div>
 
@@ -189,12 +199,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Calendar, Flag, Clock, Inbox, Sparkles } from 'lucide-vue-next'
+import { Calendar, Flag, Clock, Inbox, Sparkles, Globe, X } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
+import { useUrlScraping } from '@/composables/useUrlScraping'
 
 interface Props {
   isOpen: boolean
@@ -236,6 +247,20 @@ const titleAlignmentClasses = computed(() => getAlignmentClasses(taskTitle.value
 const titleAlignmentStyles = computed(() => applyInputAlignment(taskTitle.value))
 const descAlignmentClasses = computed(() => getAlignmentClasses(taskDescription.value))
 const descAlignmentStyles = computed(() => applyInputAlignment(taskDescription.value))
+
+// TASK-1325: URL scraping on paste
+const { isScraping, scrapeIfUrl, cancel: cancelScraping } = useUrlScraping()
+
+const handlePaste = async (e: ClipboardEvent) => {
+  const text = e.clipboardData?.getData('text') || ''
+  if (!text.trim()) return
+
+  const result = await scrapeIfUrl(text)
+  if (result) {
+    taskTitle.value = result.title
+    taskDescription.value = result.description
+  }
+}
 
 const projects = computed(() => taskStore.projects)
 
@@ -362,6 +387,7 @@ function handleAIAcceptTitle(title: string) {
 const handleCreate = async () => {
   if (!taskTitle.value.trim()) return
 
+  cancelScraping() // Cancel any in-progress scrape
   // Use local date or fall back to prop date
   const schedDate = localDate.value || props.startTime.toISOString().split('T')[0]
   const schedTime = hasTime.value && localStartTime.value ? localStartTime.value : undefined
@@ -524,6 +550,54 @@ watch(() => props.isOpen, (isOpen) => {
 .title-input::placeholder {
   color: var(--text-muted);
   opacity: 0.6;
+}
+
+/* TASK-1325: URL Scraping Feedback */
+.url-scraping-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+  margin-bottom: var(--space-2);
+}
+
+.scraping-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  animation: scrapeSpin 1.5s linear infinite;
+}
+
+@keyframes scrapeSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.scraping-status {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--brand-primary);
+}
+
+.scraping-cancel {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.scraping-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 .description-input {

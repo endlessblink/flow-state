@@ -143,7 +143,7 @@ const handleClearCache = async () => {
   align-items: center;
   padding-bottom: env(safe-area-inset-bottom);
   z-index: var(--z-dropdown);
-  box-shadow: 0 -4px var(--space-5) rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-dark-sm);
 }
 
 .nav-item {
@@ -168,7 +168,7 @@ const handleClearCache = async () => {
 .nav-item :deep(svg) {
   width: var(--space-6);
   height: var(--space-6);
-  stroke-width: 2px;
+  stroke-width: var(--space-0_5);
 }
 
 /* Menu Overlay */
@@ -188,7 +188,7 @@ const handleClearCache = async () => {
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
   padding: var(--space-5);
-  box-shadow: 0 -4px var(--space-5) rgba(0,0,0,0.2);
+  box-shadow: var(--shadow-dark-md);
   animation: slideUp var(--duration-slow) cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
 }

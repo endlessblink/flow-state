@@ -126,10 +126,11 @@ const createTask = async () => {
     newTask.dueDate = dueDate.value
   }
 
-  // If "Today" smart view is active, schedule for today
+  // BUG-1325: If "Today" smart view is active, set dueDate (deadline), NOT scheduledDate.
+  // scheduledDate would cause the task to auto-appear on the calendar.
   if (taskStore.activeSmartView === 'today' && !dueDate.value) {
     const todayStr = new Date().toISOString().split('T')[0]
-    newTask.scheduledDate = todayStr
+    newTask.dueDate = todayStr
   }
 
   await taskStore.createTask(newTask)
@@ -152,9 +153,10 @@ const createAndContinue = async () => {
     newTask.dueDate = dueDate.value
   }
 
+  // BUG-1325: Set dueDate (deadline), NOT scheduledDate, for "Today" smart view.
   if (taskStore.activeSmartView === 'today' && !dueDate.value) {
     const todayStr = new Date().toISOString().split('T')[0]
-    newTask.scheduledDate = todayStr
+    newTask.dueDate = todayStr
   }
 
   await taskStore.createTask(newTask)

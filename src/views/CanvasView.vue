@@ -305,7 +305,7 @@ const contextMenuStore = useCanvasContextMenuStore()
 const nodeTypes = {
   taskNode: markRaw(TaskNode),
   sectionNode: markRaw(GroupNodeSimple)
-} as any
+}
 
 // Initialize Orchestrator
 const orchestrator = useCanvasOrchestrator()
@@ -374,8 +374,9 @@ useEventListener(window, 'collect-overdue-tasks', (e: Event) => {
 // TASK-288 DEBUG: Wrapper to trace createTaskInGroup call
 const handleCreateTaskInGroupDebug = (section: CanvasGroup) => {
   // Get context menu position from store directly
-  const menuX = contextMenuStore.canvasContextMenuX
-  const menuY = contextMenuStore.canvasContextMenuY
+  // Get context menu position from store directly
+  // const menuX = contextMenuStore.canvasContextMenuX
+  // const menuY = contextMenuStore.canvasContextMenuY
 
   createTaskInGroup(section)
 }

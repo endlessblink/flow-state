@@ -11,7 +11,7 @@
       <!-- App Header -->
       <div class="sidebar-header">
         <div class="app-brand">
-          <span class="brand-icon">🍅</span>
+          <AppLogo size="md" />
           <span class="brand-text">FlowState</span>
         </div>
         <BaseButton variant="secondary" size="md" @click="sidebar.openCreateProject">
@@ -494,6 +494,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
 import SidebarSmartItem from '@/components/layout/SidebarSmartItem.vue'
 import ProjectTreeItem from '@/components/projects/ProjectTreeItem.vue'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 const router = useRouter()
 const uiStore = useUIStore()

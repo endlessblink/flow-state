@@ -26,6 +26,7 @@
           maxlength="200"
           @keydown.enter="handleCreateTask"
           @keydown.esc="$emit('cancel')"
+          @paste="handlePaste"
         >
 
         <!-- Mic button for voice input -->
@@ -57,6 +58,15 @@
           {{ isProcessingVoice ? 'Processing audio...' : (displayTranscript || 'Speak now...') }}
         </span>
         <button class="voice-cancel" type="button" @click="cancelVoice">
+          <X :size="14" />
+        </button>
+      </div>
+
+      <!-- TASK-1325: URL scraping feedback -->
+      <div v-if="isScraping" class="url-scraping-feedback">
+        <Globe :size="16" class="scraping-icon" />
+        <span class="scraping-status">Fetching page info...</span>
+        <button class="scraping-cancel" type="button" @click="cancelScraping">
           <X :size="14" />
         </button>
       </div>
@@ -171,12 +181,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { Calendar, Flag, Inbox, CheckCircle, Mic, MicOff, X, Loader2 } from 'lucide-vue-next'
+import { Calendar, Flag, Inbox, CheckCircle, Mic, MicOff, X, Loader2, Globe } from 'lucide-vue-next'
 import BaseModal from '@/components/base/BaseModal.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
+import { useUrlScraping } from '@/composables/useUrlScraping'
 import { statusOptions } from '@/components/tasks/context-menu/constants'
 
 interface Props {
@@ -256,6 +267,20 @@ const toggleVoiceInput = async () => {
 // Cancel voice recording
 const cancelVoice = () => {
   cancelWhisper()
+}
+
+// TASK-1325: URL scraping on paste
+const { isScraping, scrapeIfUrl, cancel: cancelScraping } = useUrlScraping()
+
+const handlePaste = async (e: ClipboardEvent) => {
+  const text = e.clipboardData?.getData('text') || ''
+  if (!text.trim()) return
+
+  const result = await scrapeIfUrl(text)
+  if (result) {
+    taskTitle.value = result.title
+    taskDescription.value = result.description
+  }
 }
 
 // Options for CustomSelect dropdowns
@@ -346,6 +371,7 @@ const handleCreateTask = () => {
   const trimmedTitle = taskTitle.value.trim()
   if (!trimmedTitle) return
 
+  cancelScraping() // Cancel any in-progress scrape
   emit('create', {
     title: trimmedTitle,
     description: taskDescription.value.trim(),
@@ -554,6 +580,48 @@ watch(() => _props.isOpen, (isOpen) => {
 .voice-cancel:hover {
   background: var(--glass-bg);
   color: var(--danger-text);
+}
+
+/* TASK-1325: URL Scraping Feedback */
+.url-scraping-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+}
+
+.scraping-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  animation: spin 1.5s linear infinite;
+}
+
+.scraping-status {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--brand-primary);
+}
+
+.scraping-cancel {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.scraping-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 /* Description Input - Glass Container */

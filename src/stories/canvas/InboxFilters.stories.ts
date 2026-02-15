@@ -38,11 +38,11 @@ const InboxFiltersMock = defineComponent({
             :style="{
               padding: '2px var(--space-2)',
               fontSize: 'var(--text-xs)',
-              border: 'none',
+              border: sortBy === opt.key ? '1px solid var(--brand-primary)' : '1px solid transparent',
               borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
-              background: sortBy === opt.key ? 'var(--brand-primary)' : 'transparent',
-              color: sortBy === opt.key ? 'white' : 'var(--text-secondary)',
+              background: sortBy === opt.key ? 'var(--brand-primary-subtle)' : 'transparent',
+              color: sortBy === opt.key ? 'var(--brand-primary)' : 'var(--text-secondary)',
               fontWeight: sortBy === opt.key ? 'var(--font-medium)' : 'normal',
               transition: 'all 0.15s ease',
             }"

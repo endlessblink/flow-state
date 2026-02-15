@@ -15,6 +15,7 @@
     @click="$emit('click', $event)"
   >
     <!-- Colorful SVG (Premium Gradients) -->
+    <!-- eslint-disable-next-line vue/no-v-html -->
     <div
       v-if="hasColorfulSvg"
       class="project-emoji-icon__colorful"

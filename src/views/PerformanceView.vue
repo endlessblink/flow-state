@@ -135,7 +135,9 @@ import { performanceBenchmark } from '@/utils/performanceBenchmark'
 
 import { Zap, Save } from 'lucide-vue-next' // Import icons
 
-const results = ref<any>({})
+import type { BenchmarkResult, BenchmarkSuite } from '@/utils/performanceBenchmark'
+
+const results = ref<Partial<BenchmarkSuite>>({})
 const isRunning = ref(false) // Renamed from isBenchmarkRunning
 const currentProgress = ref(0)
 const hasResults = computed(() => Object.keys(results.value).length > 0)
@@ -163,8 +165,8 @@ const runFullSuite = async () => { // Renamed from runBenchmark
 
 onMounted(async () => {
   const latest = await performanceBenchmark.getLatestReport()
-  if (latest && (latest as any).results) {
-    results.value = (latest as any).results
+  if (latest && (latest as { results?: Partial<BenchmarkSuite> }).results) {
+    results.value = (latest as { results: Partial<BenchmarkSuite> }).results
   }
 })
 
@@ -189,8 +191,8 @@ const performanceGrade = computed(() => {
   const canvasTime = results.value.canvasPerformance?.averageTime || 0
   const renderTime = results.value.renderPerformance?.averageTime || 0
   const otherAvg = Object.values(results.value)
-    .filter((r: any) => r.name !== 'Canvas Performance' && r.name !== 'Render Performance')
-    .reduce((sum: number, r: any) => sum + r.averageTime, 0) / (Object.keys(results.value).length - 2 || 1)
+    .filter((r) => r && r.name !== 'Canvas Performance' && r.name !== 'Render Performance')
+    .reduce((sum: number, r) => sum + (r?.averageTime || 0), 0) / (Object.keys(results.value).length - 2 || 1)
 
   const weightedAvg = (canvasTime * 0.4) + (renderTime * 0.4) + (otherAvg * 0.2)
   
@@ -217,7 +219,7 @@ const statusMessage = computed(() => {
   return 'Performance Needs Attention'
 })
 
-const getStatusClass = (result: any) => {
+const getStatusClass = (result: BenchmarkResult) => {
   // Relaxed thresholds for batch operations (Canvas)
   if (result.name === 'Canvas Performance') {
     if (result.averageTime < 100) return 'status-fast'
@@ -230,7 +232,7 @@ const getStatusClass = (result: any) => {
   return 'status-badge slow'
 }
 
-const getStatusLabel = (result: any) => {
+const getStatusLabel = (result: BenchmarkResult) => {
   if (result.name === 'Canvas Performance') {
     if (result.averageTime < 100) return 'FAST'
     if (result.averageTime < 250) return 'OK'
@@ -261,7 +263,7 @@ const saveAsBaseline = () => {
     results: results.value,
     environment: {
       userAgent: navigator.userAgent,
-      memoryLimit: (performance as any).memory?.jsHeapSizeLimit || 'unknown'
+      memoryLimit: (performance as unknown as { memory?: { jsHeapSizeLimit: number } }).memory?.jsHeapSizeLimit || 'unknown'
     }
   }, null, 2)
   

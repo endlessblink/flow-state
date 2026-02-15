@@ -339,6 +339,15 @@ const handleTimeFilterSelect = (key: string) => {
   flex-shrink: 0;
 }
 
+/* Glass morphism override for NBadge — no solid fills */
+.inbox-header :deep(.n-badge-sup) {
+  background: var(--brand-primary-subtle) !important;
+  border: 1px solid var(--brand-primary-dim) !important;
+  color: var(--brand-primary) !important;
+  backdrop-filter: blur(8px);
+  font-weight: var(--font-medium);
+}
+
 .inbox-header.is-collapsed {
   padding: var(--space-1);
   justify-content: center;
@@ -593,8 +602,9 @@ const handleTimeFilterSelect = (key: string) => {
 }
 
 .done-toggle-btn.active .done-count {
-  background: #22c55e;
-  color: white;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #22c55e;
 }
 
 /* TASK-1075: Search Styles */

@@ -223,6 +223,15 @@ const clearSearch = () => {
   min-width: 0;
 }
 
+/* Glass morphism override for NBadge — no solid fills */
+.inbox-header :deep(.n-badge-sup) {
+  background: var(--brand-primary-subtle) !important;
+  border: 1px solid var(--brand-primary-dim) !important;
+  color: var(--brand-primary) !important;
+  backdrop-filter: blur(8px);
+  font-weight: var(--font-medium);
+}
+
 .collapse-btn {
   background: transparent;
   border: 1px solid var(--border-medium);
@@ -285,8 +294,9 @@ const clearSearch = () => {
 }
 
 .today-quick-filter .count-badge {
-  background: var(--brand-primary);
-  color: white;
+  background: var(--brand-primary-subtle);
+  border: 1px solid var(--brand-primary-dim);
+  color: var(--brand-primary);
   font-size: var(--text-xs);
   padding: 0 var(--space-1);
   border-radius: var(--radius-full);

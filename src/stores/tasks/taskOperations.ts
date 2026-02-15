@@ -242,14 +242,14 @@ export function useTaskOperations(
         ].filter(Boolean).length
         if (dateFieldsInUpdate > 1) return synced // Caller knows what they're doing
 
-        // CASE 1: dueDate changed → sync scheduledDate for legacy compat, but do NOT auto-create calendar instances
-        // BUG-1325: A dueDate is a deadline, not a calendar time block. Only explicit user actions
-        // (drag to calendar, set time in modal, "Start Now") should create calendar instances.
+        // CASE 1: dueDate changed — dueDate is a DEADLINE, not a calendar slot.
+        // BUG-1325: Do NOT auto-populate scheduledDate/scheduledTime from dueDate.
+        // That was causing every task with a dueDate to appear on the calendar at 9:00 AM.
+        // Calendar visibility requires explicit user action: drag to calendar, set time in modal, "Start Now".
         if (updates.dueDate !== undefined && updates.instances === undefined) {
+            // Only mark as not-in-inbox if the task has a due date
             const newDueDate = updates.dueDate
             if (newDueDate && newDueDate !== 'null') {
-                synced.scheduledDate = newDueDate
-                synced.scheduledTime = synced.scheduledTime || task.scheduledTime || '09:00'
                 synced.isInInbox = false
             }
             // dueDate cleared — DON'T clear instances (user may have scheduled independently)
@@ -269,23 +269,12 @@ export function useTaskOperations(
             // DON'T clear dueDate when instances are cleared (keep deadline even if unscheduled)
         }
 
-        // CASE 3: scheduledDate changed (legacy/calendar drag) → sync dueDate + create instance
+        // CASE 3: scheduledDate changed (legacy field) → sync dueDate only
+        // BUG-1325: Do NOT auto-create instances from scheduledDate changes.
+        // Instance creation is the caller's responsibility (via createTaskInstance or passing instances[]).
         if (updates.scheduledDate !== undefined && updates.dueDate === undefined && updates.instances === undefined) {
             if (updates.scheduledDate) {
                 synced.dueDate = updates.scheduledDate
-                // Also create an instance for the new date if none exists
-                const existing = (task.instances || []).find(i => i.scheduledDate === updates.scheduledDate)
-                if (!existing) {
-                    synced.instances = [
-                        ...(task.instances || []),
-                        {
-                            id: `auto-${task.id}-${Date.now()}`,
-                            scheduledDate: updates.scheduledDate,
-                            scheduledTime: (updates as Record<string, unknown>).scheduledTime as string || task.scheduledTime || '09:00',
-                            duration: task.estimatedDuration || 30
-                        } as TaskInstance
-                    ]
-                }
             }
         }
 

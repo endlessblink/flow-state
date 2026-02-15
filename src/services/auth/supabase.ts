@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
@@ -153,7 +153,7 @@ try {
 // This runs after createClient() but before any component mounts.
 // setSession() goes through Supabase's lock system, so it queues behind _initialize().
 if (_pendingOAuthTokens && supabaseClient) {
-    supabaseClient.auth.setSession(_pendingOAuthTokens).then(({ data, error }: any) => {
+    supabaseClient.auth.setSession(_pendingOAuthTokens).then(({ data, error }) => {
         if (error) {
             console.error('[Supabase] Failed to set session from OAuth tokens:', error.message)
         } else {
@@ -163,7 +163,7 @@ if (_pendingOAuthTokens && supabaseClient) {
     })
 }
 
-export const supabase = supabaseClient as any
+export const supabase = supabaseClient as SupabaseClient | null
 
 // Re-export types for convenience
 export type { User, Session, AuthError } from '@supabase/supabase-js'

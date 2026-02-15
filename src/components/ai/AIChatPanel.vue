@@ -28,6 +28,7 @@ import { createAIRouter } from '@/services/ai/router'
 import { useAIProactiveNudges } from '@/composables/useAIProactiveNudges'
 import ChatMessage from './ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName } from '@/config/aiModels'
 
 // ============================================================================
 // Composables & Stores
@@ -359,17 +360,8 @@ function handleOllamaModelChange(value: string | number) {
 // Cloud Model Options (for Groq / OpenRouter)
 // ============================================================================
 
-const groqModels = [
-  { label: 'Llama 3.3 70B', value: 'llama-3.3-70b-versatile' },
-  { label: 'Llama 3.1 8B', value: 'llama-3.1-8b-instant' },
-  { label: 'Mixtral 8x7B', value: 'mixtral-8x7b-32768' },
-]
-
-const openrouterModels = [
-  { label: 'Claude 3.5 Sonnet', value: 'anthropic/claude-3.5-sonnet' },
-  { label: 'Gemini Pro', value: 'google/gemini-pro' },
-  { label: 'Llama 3.1 70B', value: 'meta-llama/llama-3.1-70b' },
-]
+const groqModels = asValueLabel(GROQ_MODELS)
+const openrouterModels = asValueLabel(OPENROUTER_MODELS)
 
 // Cast to string for comparisons since 'openrouter' is not in the TS union
 // but works at runtime (setProvider casts it)
@@ -393,23 +385,14 @@ function handleCloudModelChange(value: string | number) {
 // Header Badge — Provider + Model Display
 // ============================================================================
 
-const modelDisplayNames: Record<string, string> = {
-  'llama-3.3-70b-versatile': 'Llama 3.3 70B',
-  'llama-3.1-8b-instant': 'Llama 3.1 8B',
-  'mixtral-8x7b-32768': 'Mixtral 8x7B',
-  'anthropic/claude-3.5-sonnet': 'Claude 3.5',
-  'google/gemini-pro': 'Gemini Pro',
-  'meta-llama/llama-3.1-70b': 'Llama 3.1 70B',
-}
-
 const displayModelName = computed(() => {
   const model = selectedModel.value
   if (!model) return null
-  // Check explicit mapping first
-  if (modelDisplayNames[model]) return modelDisplayNames[model]
-  // Ollama models (contain ':') are already readable
-  if (model.includes(':')) return model
-  return model
+  const displayName = getDisplayName(model)
+  // If display name equals model ID, it wasn't found in registry
+  // Keep existing behavior for Ollama models (e.g., "llama3.2:latest")
+  if (displayName === model && model.includes(':')) return model
+  return displayName !== model ? displayName : model
 })
 
 const providerLabel = computed(() => {

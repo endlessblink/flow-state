@@ -351,7 +351,7 @@ onMounted(() => {
 
 .mobile-header h1 {
   font-size: var(--text-lg);
-  font-weight: 800;
+  font-weight: var(--font-bold);
   margin: 0;
   background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
   -webkit-background-clip: text;
@@ -384,7 +384,7 @@ onMounted(() => {
   padding: var(--space-2_5) 0;
   color: var(--text-tertiary);
   font-size: var(--text-meta);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   opacity: 0;
   transition: opacity var(--duration-fast) ease;
   z-index: 5;
@@ -415,7 +415,7 @@ onMounted(() => {
   border-bottom-left-radius: var(--radius-xl);
   border-bottom-right-radius: var(--radius-xl);
   padding: var(--space-2) var(--space-4) var(--space-5);
-  box-shadow: 0 var(--space-2) var(--space-8) rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-xl);
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -505,14 +505,14 @@ onMounted(() => {
   margin: var(--space-1_5) 0 0;
   font-size: var(--text-xs);
   color: var(--color-priority-high);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 .task-added-label {
   margin: var(--space-1_5) 0 0;
   font-size: var(--text-xs);
   color: var(--color-work);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 /* Search */
@@ -627,7 +627,7 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all var(--duration-fast);
   position: relative;
@@ -649,7 +649,7 @@ onMounted(() => {
   background: var(--brand-primary);
   color: white;
   font-size: var(--text-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -689,7 +689,7 @@ onMounted(() => {
 
 @keyframes pulse-recording {
   0%, 100% { box-shadow: 0 0 0 0 var(--danger-shadow-strong); }
-  50% { box-shadow: 0 0 0 var(--space-2) rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 0 var(--space-2) transparent; }
 }
 
 /* ─── RTL Layout Adjustments ─── */

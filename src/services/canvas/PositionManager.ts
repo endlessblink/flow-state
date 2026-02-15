@@ -1,6 +1,6 @@
 import { reactive, readonly } from 'vue'
 import { lockManager } from './LockManager'
-import type { NodePosition, Position2D, LockSource } from './types'
+import type { NodePosition, Position2D, LockSource, PositionEvent } from './types'
 import { toRelativePosition, toAbsolutePosition } from '@/utils/canvas/coordinates'
 
 /**
@@ -19,7 +19,7 @@ class PositionManager {
     private positions: Map<string, NodePosition> = reactive(new Map())
 
     // Event subscribers
-    private subscribers: Set<(event: any) => void> = new Set()
+    private subscribers: Set<(event: PositionEvent) => void> = new Set()
 
     /**
      * Update a node's position.
@@ -202,12 +202,12 @@ class PositionManager {
 
     // -- Event System --
 
-    subscribe(callback: (event: any) => void) {
+    subscribe(callback: (event: PositionEvent) => void) {
         this.subscribers.add(callback)
         return () => this.subscribers.delete(callback)
     }
 
-    private notify(event: any) {
+    private notify(event: PositionEvent) {
         this.subscribers.forEach(cb => {
             try {
                 cb(event)

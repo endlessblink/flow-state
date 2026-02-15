@@ -167,6 +167,7 @@ export class PerformanceBenchmark {
 
         // 2. Measure Canvas Sync
         const syncStart = performance.now()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof (canvasStore as any).syncTasksToCanvas === 'function') {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])

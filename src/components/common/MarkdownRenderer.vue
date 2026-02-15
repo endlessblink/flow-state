@@ -1,6 +1,7 @@
 <template>
-  <div 
-    class="markdown-content" 
+  <!-- eslint-disable-next-line vue/no-v-html -->
+  <div
+    class="markdown-content"
     :class="{ 'rtl-aware': rtlAware }"
     :dir="calculatedDir"
     @click="handleClick"

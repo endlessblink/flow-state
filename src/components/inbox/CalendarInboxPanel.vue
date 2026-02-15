@@ -30,6 +30,7 @@
       <CalendarInboxInput
         v-model="newTaskTitle"
         @add-task="addTask"
+        @add-task-with-description="addTaskWithDescription"
       />
     </div>
 
@@ -100,6 +101,20 @@ const addTask = () => {
 
   createTaskWithUndo({
     title: newTaskTitle.value.trim(),
+    status: 'planned',
+    isInInbox: true
+  })
+
+  newTaskTitle.value = ''
+}
+
+// TASK-1325: Add task with description (from URL scraping)
+const addTaskWithDescription = (title: string, description: string) => {
+  if (!title.trim()) return
+
+  createTaskWithUndo({
+    title: title.trim(),
+    description: description.trim(),
     status: 'planned',
     isInInbox: true
   })

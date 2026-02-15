@@ -96,10 +96,11 @@ Call client"
       <NButton
         type="primary"
         block
-        :disabled="parsedTaskCount === 0"
+        :disabled="parsedTaskCount === 0 || isProcessingUrls"
+        :loading="isProcessingUrls"
         @click="processBrainDump"
       >
-        Add {{ parsedTaskCount }} Tasks
+        {{ isProcessingUrls ? 'Processing URLs...' : `Add ${parsedTaskCount} Tasks` }}
       </NButton>
     </div>
   </div>

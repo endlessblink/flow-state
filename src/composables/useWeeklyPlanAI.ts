@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import { createAIRouter } from '@/services/ai/router'
+import type { AIRouter } from '@/services/ai/router'
 import type { ChatMessage } from '@/services/ai/types'
 import type { WorkProfile } from '@/utils/supabaseMappers'
 import { useSettingsStore } from '@/stores/settings'
@@ -57,14 +58,23 @@ export interface InterviewAnswers {
 }
 
 export interface BehavioralContext {
-  recentlyCompletedTitles: string[]        // Titles of tasks completed in last 2 weeks
-  activeProjectNames: string[]             // Projects with recent activity
-  avgTasksCompletedPerDay: number | null   // From work profile
-  avgWorkMinutesPerDay: number | null      // From work profile
-  peakProductivityDays: string[]           // Days when user is most productive
-  completionRate: number | null            // % of planned tasks actually completed
-  frequentlyMissedProjects: string[]       // Projects where tasks often get skipped
-  workInsights: string[]                   // Observations from memoryGraph (task analysis, patterns)
+  recentlyCompletedTitles: string[]
+  activeProjectNames: string[]
+  avgTasksCompletedPerDay: number | null
+  avgWorkMinutesPerDay: number | null
+  peakProductivityDays: string[]
+  completionRate: number | null
+  frequentlyMissedProjects: string[]
+  workInsights: string[]
+}
+
+// TASK-1327: Enriched task with deterministic facts (Step 0 output)
+interface EnrichedTask extends TaskSummary {
+  language: 'he' | 'en'
+  overdueDays: number
+  urgencyCategory: 'OVERDUE' | 'IN_PROGRESS' | 'DUE_THIS_WEEK' | 'normal'
+  complexityScore: number  // 0-10
+  deterministicReasons: string[]  // 2-3 factual bullets in task's language
 }
 
 // ============================================================================
@@ -83,10 +93,8 @@ function getWeekBounds(weekStartsOn: 0 | 1 = 0): { weekStart: Date; weekEnd: Dat
 
   let diff: number
   if (weekStartsOn === 1) {
-    // Monday start: go back to this week's Monday
     diff = day === 0 ? -6 : 1 - day
   } else {
-    // Sunday start: go back to this week's Sunday
     diff = -day
   }
 
@@ -107,197 +115,432 @@ function formatDate(d: Date): string {
 }
 
 // ============================================================================
-// Prompt builders (distribution — the ONLY LLM job)
-// Research consensus: deterministic rules for filtering, LLM for distribution.
+// STEP 0: Deterministic Enrichment (no LLM, instant)
+// TASK-1327: Compute per-task facts and generate deterministic reason bullets
 // ============================================================================
 
-function buildSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null): string {
-  let base = `You are a productivity assistant that distributes tasks across a user's work week.
+const HEBREW_RANGE = /[\u0590-\u05FF]/
 
-ALL tasks given to you have already been pre-filtered for relevance. Your ONLY job is to distribute them across Monday through Sunday.
+function detectTaskLanguage(title: string): 'he' | 'en' {
+  return HEBREW_RANGE.test(title) ? 'he' : 'en'
+}
 
-LANGUAGE RULE (CRITICAL — NEVER IGNORE):
-You MUST write taskReasons and weekTheme in the SAME language as the task titles. If a task title is in Hebrew, its taskReasons MUST be written in Hebrew. If a task title is in English, its taskReasons MUST be in English. NEVER write English reasons for Hebrew tasks. This is non-negotiable.
+function computeOverdueDays(dueDate: string, today: string): number {
+  if (!dueDate || dueDate >= today) return 0
+  const due = new Date(dueDate + 'T00:00:00')
+  const now = new Date(today + 'T00:00:00')
+  return Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function computeComplexityScore(task: TaskSummary): number {
+  let score = 0
+  if (task.subtaskCount && task.subtaskCount > 0) {
+    score += Math.min(task.subtaskCount, 5) // up to 5 points for subtasks
+  }
+  if (task.estimatedDuration) {
+    if (task.estimatedDuration >= 120) score += 3
+    else if (task.estimatedDuration >= 60) score += 2
+    else if (task.estimatedDuration >= 30) score += 1
+  }
+  if (task.description && task.description.length > 100) score += 1
+  return Math.min(score, 10)
+}
+
+function formatDuration(mins: number): string {
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return m > 0 ? `${h}h ${m}m` : `${h}h`
+  }
+  return `${mins}m`
+}
+
+function formatHebrewDate(dateStr: string): string {
+  const months = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${d.getDate()} ב${months[d.getMonth()]}`
+}
+
+function formatEnglishDate(dateStr: string): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${months[d.getMonth()]} ${d.getDate()}`
+}
+
+function generateDeterministicReasons(task: EnrichedTask): string[] {
+  const bullets: string[] = []
+  const isHe = task.language === 'he'
+
+  // 1. Urgency / overdue
+  if (task.overdueDays > 0) {
+    bullets.push(isHe
+      ? `באיחור של ${task.overdueDays} ימים`
+      : `${task.overdueDays} days overdue`)
+  }
+
+  // 2. Status
+  if (task.status === 'in_progress') {
+    bullets.push(isHe ? 'כבר בתהליך עבודה' : 'Already in progress')
+  }
+
+  // 3. Subtask progress
+  if (task.subtaskCount && task.subtaskCount > 0) {
+    const completed = task.completedSubtaskCount || 0
+    bullets.push(isHe
+      ? `${completed}/${task.subtaskCount} תתי-משימות הושלמו`
+      : `${completed}/${task.subtaskCount} subtasks completed`)
+  }
+
+  // 4. Priority
+  if (task.priority === 'high') {
+    bullets.push(isHe ? 'עדיפות גבוהה' : 'High priority')
+  }
+
+  // 5. Due date (if not overdue — overdue already shown)
+  if (task.dueDate && task.overdueDays === 0) {
+    bullets.push(isHe
+      ? `תאריך יעד: ${formatHebrewDate(task.dueDate)}`
+      : `Due: ${formatEnglishDate(task.dueDate)}`)
+  }
+
+  // 6. Duration estimate
+  if (task.estimatedDuration) {
+    bullets.push(isHe
+      ? `משך: ${formatDuration(task.estimatedDuration)}`
+      : `Estimated: ${formatDuration(task.estimatedDuration)}`)
+  }
+
+  // 7. Project name
+  if (task.projectName) {
+    bullets.push(isHe
+      ? `פרויקט: ${task.projectName}`
+      : `Project: ${task.projectName}`)
+  }
+
+  // Cap at 3 bullets — take the most important ones (order above is by importance)
+  return bullets.slice(0, 3)
+}
+
+function enrichTasksForPlanning(tasks: TaskSummary[], weekEnd: Date): EnrichedTask[] {
+  const today = formatDate(new Date())
+  const weekEndStr = formatDate(weekEnd)
+
+  return tasks.map(t => {
+    const overdueDays = computeOverdueDays(t.dueDate, today)
+    let urgencyCategory: EnrichedTask['urgencyCategory'] = 'normal'
+    if (overdueDays > 0) urgencyCategory = 'OVERDUE'
+    else if (t.status === 'in_progress') urgencyCategory = 'IN_PROGRESS'
+    else if (t.dueDate && t.dueDate <= weekEndStr) urgencyCategory = 'DUE_THIS_WEEK'
+
+    const language = detectTaskLanguage(t.title)
+    const complexityScore = computeComplexityScore(t)
+
+    const enriched: EnrichedTask = {
+      ...t,
+      language,
+      overdueDays,
+      urgencyCategory,
+      complexityScore,
+      deterministicReasons: [],
+    }
+    enriched.deterministicReasons = generateDeterministicReasons(enriched)
+    return enriched
+  })
+}
+
+// ============================================================================
+// STEP 2: Deterministic Reason Assembly (no LLM, instant)
+// Merges Step 0 facts + day-specific scheduling context
+// ============================================================================
+
+function assembleTaskReasons(
+  enrichedTasks: EnrichedTask[],
+  plan: WeeklyPlan,
+): Record<string, string> {
+  const taskMap = new Map(enrichedTasks.map(t => [t.id, t]))
+  const reasons: Record<string, string> = {}
+
+  // Build project-per-day map for batching notes
+  const projectDayCount: Record<string, Record<string, number>> = {}
+  for (const dayKey of DAY_KEYS) {
+    for (const taskId of plan[dayKey]) {
+      const task = taskMap.get(taskId)
+      if (task?.projectName) {
+        if (!projectDayCount[dayKey]) projectDayCount[dayKey] = {}
+        projectDayCount[dayKey][task.projectName] = (projectDayCount[dayKey][task.projectName] || 0) + 1
+      }
+    }
+  }
+
+  for (const dayKey of [...DAY_KEYS, 'unscheduled'] as const) {
+    for (const taskId of plan[dayKey]) {
+      const task = taskMap.get(taskId)
+      if (!task) continue
+
+      const bullets = [...task.deterministicReasons]
+
+      // Add batching note if 2+ tasks from same project on same day
+      if (dayKey !== 'unscheduled' && task.projectName) {
+        const count = projectDayCount[dayKey]?.[task.projectName] || 0
+        if (count >= 2) {
+          const isHe = task.language === 'he'
+          const otherCount = count - 1
+          bullets.push(isHe
+            ? `מקובץ עם ${otherCount} משימות מ-${task.projectName}`
+            : `Grouped with ${otherCount} ${task.projectName} tasks`)
+        }
+      }
+
+      reasons[taskId] = bullets.slice(0, 3).join('\n')
+    }
+  }
+
+  return reasons
+}
+
+// ============================================================================
+// STEP 1: LLM Distribution Prompt (distribution ONLY — no reasoning)
+// TASK-1327: Stripped down to ~300 tokens system + compact task data
+// ============================================================================
+
+function buildDistributionSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile | null): string {
+  let base = `You distribute tasks across a work week. Return ONLY valid JSON.
+
+JSON keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning.
+Each day key = array of task ID strings. "reasoning" = brief distribution logic string.
 
 Rules:
-- Return ONLY valid JSON (no markdown, no explanation outside the JSON).
-- The JSON must have these keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, weekTheme.
-- Each day key is an array of task ID strings.
-- "unscheduled" contains task IDs that don't fit the available capacity.
-- "reasoning" is a brief string explaining your distribution logic.
-- "weekTheme" is a short motivating theme for the week (5-10 words) based on what dominates the task list. Examples: "Infrastructure & Stability Sprint", "Client Delivery Push", "שבוע של סגירת פיצ'רים". Match the user's dominant language.
-- "taskReasons" is an object mapping each task ID to 2-3 bullet points (separated by "\n") explaining WHY this task matters and why it's placed on that day. Each task MUST have UNIQUE reasons derived from its SPECIFIC title, project, description, and due date. NEVER repeat the same reasons across tasks.
-  Rules for taskReasons:
-  1. Reference the task's ACTUAL content — mention its title, project, or description specifics.
-  2. Explain the scheduling decision — why THIS day, not just "it's important".
-  3. Connect to workflow — what does completing this unblock? What momentum does it build?
-  4. Match language — write in the same language as the task title (Hebrew tasks get Hebrew reasons, English tasks get English reasons).
-  BAD: "Overdue task" or "High priority" or generic phrases that could apply to any task.
-  GOOD: "Blocking the auth refactor\nClear before Wednesday's API work\n3 subtasks left — close it out"
-  GOOD: "Wraps up the payment integration — 2 subtasks remain\nFrees the team for Thursday's release\nIn-progress since last week, momentum is hot"
-
-SCHEDULING PRIORITY:
-1. Overdue tasks (due date in the past) — MUST go on Monday or Tuesday.
-2. In-progress tasks — already started, schedule early in the week.
-3. Tasks due this week — place on or before their due date.
-4. High-priority tasks — schedule on weekdays.
-5. Lower priority / no-date tasks — fill remaining capacity, or put in unscheduled if the week is full.
-
-DISTRIBUTION:
-- Keep daily load to 3-6 tasks maximum per day.
-- Prefer weekdays (Mon-Fri) for work tasks; use Sat/Sun only for overflow or light tasks.
-- Each task ID must appear in exactly ONE day or in unscheduled — no duplicates.
-- Consider task COMPLEXITY: tasks with many subtasks need their own day. Don't stack complex tasks.
-- Distribute EVENLY across the working week unless the user prefers otherwise.
-- It's OK to put tasks in unscheduled if the week is already full.
-
-PROJECT BATCHING (important for reducing context switches):
-- Group tasks from the SAME project on the same day when possible.
-- If a project has 3+ tasks, spread across 2 days max — not 1 per day scattered.
-- Avoid mixing more than 2-3 different projects on the same day.
-- If tasks are related (same project or similar descriptions), place them consecutively on the same day.`
+- OVERDUE tasks → Monday or Tuesday.
+- IN_PROGRESS tasks → early in week.
+- DUE_THIS_WEEK → on or before due date.
+- 3-6 tasks max per day. Weekdays preferred.
+- Group same-project tasks on same day.
+- Each task ID in exactly ONE day or unscheduled.
+- OK to put tasks in unscheduled if week is full.`
 
   if (interview) {
     const extras: string[] = []
     if (interview.topPriority) {
-      extras.push(`- The user's TOP PRIORITY this week: "${interview.topPriority}". Schedule related tasks earliest.`)
+      extras.push(`- TOP PRIORITY: "${interview.topPriority}". Schedule related tasks earliest.`)
     }
     if (interview.daysOff && interview.daysOff.length > 0) {
-      extras.push(`- Days OFF (schedule ZERO tasks): ${interview.daysOff.join(', ')}.`)
+      extras.push(`- Days OFF (zero tasks): ${interview.daysOff.join(', ')}.`)
     }
     if (interview.heavyMeetingDays && interview.heavyMeetingDays.length > 0) {
-      extras.push(`- Heavy MEETING days (schedule fewer/lighter tasks): ${interview.heavyMeetingDays.join(', ')}.`)
+      extras.push(`- Heavy meeting days (fewer tasks): ${interview.heavyMeetingDays.join(', ')}.`)
     }
     if (interview.maxTasksPerDay) {
-      extras.push(`- Maximum tasks per day: ${interview.maxTasksPerDay}.`)
+      extras.push(`- Max tasks/day: ${interview.maxTasksPerDay}.`)
     }
     if (interview.preferredWorkStyle === 'frontload') {
-      extras.push('- User prefers front-loading: schedule more tasks Mon-Tue, lighter Thu-Fri.')
+      extras.push('- Front-load: more Mon-Tue, lighter Thu-Fri.')
     } else if (interview.preferredWorkStyle === 'backload') {
-      extras.push('- User prefers ramping up: lighter Mon-Tue, heavier Thu-Fri.')
+      extras.push('- Back-load: lighter Mon-Tue, heavier Thu-Fri.')
     }
     if (extras.length > 0) {
-      base += `\n\nUser preferences for this week:\n${extras.join('\n')}`
+      base += `\n\nPreferences:\n${extras.join('\n')}`
     }
   }
 
   if (profile) {
     const insights: string[] = []
-
     if (profile.avgTasksCompletedPerDay) {
-      insights.push(`- Historical capacity: user completes ~${profile.avgTasksCompletedPerDay} tasks/day on average`)
-    }
-    if (profile.avgWorkMinutesPerDay) {
-      insights.push(`- Average focused work time: ~${Math.round(profile.avgWorkMinutesPerDay)} minutes/day`)
+      insights.push(`- Capacity: ~${profile.avgTasksCompletedPerDay} tasks/day`)
     }
     if (profile.peakProductivityDays?.length) {
-      insights.push(`- Most productive days: ${profile.peakProductivityDays.join(', ')}. Schedule demanding tasks here.`)
+      insights.push(`- Peak days: ${profile.peakProductivityDays.join(', ')}`)
     }
-    if (profile.avgPlanAccuracy) {
-      if (profile.avgPlanAccuracy < 60) {
-        insights.push(`- Past plans were only ${profile.avgPlanAccuracy}% accurate. Schedule FEWER tasks than requested.`)
-      } else if (profile.avgPlanAccuracy > 90) {
-        insights.push(`- Past plans were ${profile.avgPlanAccuracy}% accurate. User executes well — schedule confidently.`)
-      }
+    if (profile.avgPlanAccuracy && profile.avgPlanAccuracy < 60) {
+      insights.push(`- Past plans ${profile.avgPlanAccuracy}% accurate — schedule fewer tasks.`)
     }
-    if (profile.preferredWorkStyle === 'frontload') {
-      insights.push('- User prefers front-loading: schedule more tasks Mon-Tue, lighter Thu-Fri.')
-    } else if (profile.preferredWorkStyle === 'backload') {
-      insights.push('- User prefers ramping up: lighter Mon-Tue, heavier Thu-Fri.')
-    }
-
     if (insights.length > 0) {
-      base += `\n\nLearned work patterns:\n${insights.join('\n')}`
+      base += `\n\nPatterns:\n${insights.join('\n')}`
     }
   }
 
   return base
 }
 
-function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date, behavioral?: BehavioralContext): string {
+function buildDistributionUserPrompt(enriched: EnrichedTask[], weekStart: Date, weekEnd: Date, behavioral?: BehavioralContext): string {
   const today = formatDate(new Date())
   const weekEndStr = formatDate(weekEnd)
-  const overdueTasks = tasks.filter(t => t.dueDate && t.dueDate < today)
-  const dueThisWeek = tasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= weekEndStr)
-  const inProgress = tasks.filter(t => t.status === 'in_progress')
 
-  const taskList = tasks.map(t => {
-    // Compute urgency category for the AI
-    let urgency = 'normal'
-    if (t.dueDate && t.dueDate < today) urgency = 'OVERDUE'
-    else if (t.status === 'in_progress') urgency = 'IN_PROGRESS'
-    else if (t.dueDate && t.dueDate <= weekEndStr) urgency = 'DUE_THIS_WEEK'
+  // Compact task list — only fields the LLM needs for distribution
+  const taskList = enriched.map(t => ({
+    id: t.id,
+    title: t.title,
+    project: t.projectName || null,
+    priority: t.priority,
+    dueDate: t.dueDate || null,
+    urgency: t.urgencyCategory,
+    complexity: t.complexityScore,
+  }))
 
-    // Truncate description to save tokens but give AI meaningful context
-    const desc = t.description ? t.description.slice(0, 150).trim() : null
-
-    return {
-      id: t.id,
-      title: t.title,
-      project: t.projectName || null,
-      description: desc,
-      priority: t.priority,
-      dueDate: t.dueDate || null,
-      estimatedDuration: t.estimatedDuration,
-      status: t.status,
-      urgency,
-      subtasks: t.subtaskCount || 0,
-      completedSubtasks: t.completedSubtaskCount || 0,
-    }
-  })
-
-  // Build behavioral section
   let behavioralSection = ''
   if (behavioral) {
     const lines: string[] = []
-    if (behavioral.recentlyCompletedTitles.length > 0) {
-      lines.push(`Recently completed (user momentum): ${behavioral.recentlyCompletedTitles.slice(0, 8).join(', ')}`)
-    }
     if (behavioral.activeProjectNames.length > 0) {
       lines.push(`Active projects: ${behavioral.activeProjectNames.join(', ')}`)
     }
     if (behavioral.peakProductivityDays.length > 0) {
-      lines.push(`Most productive days: ${behavioral.peakProductivityDays.join(', ')} — schedule demanding tasks here`)
+      lines.push(`Peak days: ${behavioral.peakProductivityDays.join(', ')}`)
     }
     if (behavioral.avgTasksCompletedPerDay) {
-      lines.push(`User capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
-    }
-    if (behavioral.frequentlyMissedProjects.length > 0) {
-      lines.push(`Often skipped projects: ${behavioral.frequentlyMissedProjects.join(', ')} — put these in unscheduled unless high priority`)
-    }
-    if (behavioral.workInsights?.length > 0) {
-      lines.push('')
-      lines.push('Learned work patterns (use these to make better scheduling decisions):')
-      for (const insight of behavioral.workInsights) {
-        lines.push(`  - ${insight}`)
-      }
+      lines.push(`Capacity: ~${behavioral.avgTasksCompletedPerDay} tasks/day`)
     }
     if (lines.length > 0) {
-      behavioralSection = `\nUser behavior data:\n${lines.join('\n')}\n`
+      behavioralSection = `\n${lines.join('\n')}\n`
     }
   }
 
-  // Detect dominant language from task titles
-  const hebrewPattern = /[\u0590-\u05FF]/
-  const hebrewCount = tasks.filter(t => hebrewPattern.test(t.title)).length
-  const dominantLang = hebrewCount > tasks.length / 2 ? 'Hebrew' : 'English'
-  const langInstruction = dominantLang === 'Hebrew'
-    ? `\nIMPORTANT: Most tasks are in Hebrew. You MUST write taskReasons in Hebrew for Hebrew tasks and weekTheme in Hebrew. Do NOT write in English.`
-    : ''
-
   return `Today: ${today}
 Week: ${formatDate(weekStart)} to ${weekEndStr}
-Tasks: ${tasks.length} (${overdueTasks.length} overdue, ${dueThisWeek.length} due this week, ${inProgress.length} in-progress)
 ${behavioralSection}
-All tasks below are pre-filtered for this week's relevance. Distribute them across Mon-Sun.
-Urgency guide: OVERDUE → must be Mon/Tue. IN_PROGRESS → early in week. DUE_THIS_WEEK → on/before due date.
-
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Return ONLY the JSON object with monday...sunday, unscheduled, reasoning, weekTheme, and taskReasons keys.
-For taskReasons: 2-3 bullet lines per task separated by \\n. Each task's reasons must be UNIQUE and reference that task's specific title, project, or description.${langInstruction}`
+Return ONLY JSON with monday..sunday, unscheduled, reasoning.`
 }
+
+// ============================================================================
+// STEP 3: LLM Week Theme (optional, tiny call — ~170 tokens)
+// ============================================================================
+
+async function generateWeekTheme(
+  router: AIRouter,
+  tasks: EnrichedTask[],
+  routerOptions: Record<string, unknown>,
+): Promise<string | null> {
+  try {
+    // Detect dominant language
+    const heCount = tasks.filter(t => t.language === 'he').length
+    const langHint = heCount > tasks.length / 2 ? 'Hebrew' : 'English'
+
+    const titles = tasks.slice(0, 15).map(t => t.title).join(', ')
+    const projects = [...new Set(tasks.map(t => t.projectName).filter(Boolean))].join(', ')
+
+    const messages: ChatMessage[] = [
+      { role: 'system', content: `Return a 5-10 word motivating week theme in ${langHint}. Just the theme text, nothing else.` },
+      { role: 'user', content: `Tasks: ${titles}\nProjects: ${projects}` },
+    ]
+
+    const response = await router.chat(messages, {
+      ...routerOptions,
+      temperature: 0.7,
+      timeout: 10000,
+      maxTokens: 50,
+    })
+
+    const theme = response.content.trim().replace(/^["']|["']$/g, '')
+    return theme.length > 0 && theme.length < 100 ? theme : null
+  } catch {
+    return null // Silent fail — theme is optional
+  }
+}
+
+// ============================================================================
+// Response parsing (distribution only — no taskReasons/weekTheme expected)
+// ============================================================================
+
+function parseDistributionResponse(
+  response: string,
+  validTaskIds: Set<string>
+): { plan: WeeklyPlan; reasoning: string | null } {
+  // Strip markdown code fences if present
+  let json = response.trim()
+  const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    json = codeBlockMatch[1].trim()
+  }
+
+  let parsed: Record<string, unknown>
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    throw new Error('AI response is not valid JSON')
+  }
+
+  // Validate day keys exist
+  for (const key of DAY_KEYS) {
+    if (!Array.isArray(parsed[key])) {
+      parsed[key] = []
+    }
+  }
+  if (!Array.isArray(parsed.unscheduled)) {
+    parsed.unscheduled = []
+  }
+
+  const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
+
+  // Filter invalid IDs and deduplicate across days
+  const seen = new Set<string>()
+  const plan: WeeklyPlan = {
+    monday: [], tuesday: [], wednesday: [], thursday: [],
+    friday: [], saturday: [], sunday: [], unscheduled: [],
+  }
+
+  for (const key of [...DAY_KEYS, 'unscheduled'] as const) {
+    const ids = parsed[key] as unknown[]
+    for (const id of ids) {
+      if (typeof id === 'string' && validTaskIds.has(id) && !seen.has(id)) {
+        seen.add(id)
+        plan[key].push(id)
+      }
+    }
+  }
+
+  // Check result isn't completely empty
+  const totalAssigned = Object.values(plan).reduce((sum, arr) => sum + arr.length, 0)
+  if (totalAssigned === 0) {
+    throw new Error('Parsed plan contains no valid task assignments')
+  }
+
+  return { plan, reasoning }
+}
+
+// ============================================================================
+// Fallback plan
+// ============================================================================
+
+function generateFallbackPlan(tasks: TaskSummary[], _weekStart: Date): WeeklyPlan {
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
+
+  const sorted = [...tasks].sort((a, b) => {
+    const pa = a.priority ? priorityOrder[a.priority] ?? 3 : 3
+    const pb = b.priority ? priorityOrder[b.priority] ?? 3 : 3
+    if (pa !== pb) return pa - pb
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
+    if (a.dueDate) return -1
+    if (b.dueDate) return 1
+    return 0
+  })
+
+  const plan: WeeklyPlan = {
+    monday: [], tuesday: [], wednesday: [], thursday: [],
+    friday: [], saturday: [], sunday: [], unscheduled: [],
+  }
+
+  const MAX_PER_DAY = 8
+  let dayIndex = 0
+
+  for (const task of sorted) {
+    if (dayIndex < WEEKDAY_KEYS.length) {
+      const dayKey = WEEKDAY_KEYS[dayIndex]
+      plan[dayKey].push(task.id)
+      if (plan[dayKey].length >= MAX_PER_DAY) {
+        dayIndex++
+      }
+    } else {
+      plan.unscheduled.push(task.id)
+    }
+  }
+
+  return plan
+}
+
+// ============================================================================
+// Day re-suggest prompt (kept mostly as-is, still useful)
+// ============================================================================
 
 function buildDayResuggestPrompt(
   dayKey: DayKey,
@@ -333,127 +576,26 @@ Return ONLY a JSON object with two keys:
 }
 
 // ============================================================================
-// Response parsing
+// Router options helper — reads weekly plan provider/model from settings
 // ============================================================================
 
-function parseWeeklyPlanResponse(
-  response: string,
-  validTaskIds: Set<string>
-): { plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string>; weekTheme: string | null } {
-  // Strip markdown code fences if present
-  let json = response.trim()
-  const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (codeBlockMatch) {
-    json = codeBlockMatch[1].trim()
+function getRouterOptions(): Record<string, unknown> {
+  const settings = useSettingsStore()
+  const opts: Record<string, unknown> = {
+    taskType: 'planning',
+    temperature: 0.3,
+    timeout: 30000,
   }
 
-  let parsed: Record<string, unknown>
-  try {
-    parsed = JSON.parse(json)
-  } catch {
-    throw new Error('AI response is not valid JSON')
+  // TASK-1327: Use weekly plan specific provider/model if configured
+  if (settings.weeklyPlanProvider && settings.weeklyPlanProvider !== 'auto') {
+    opts.forceProvider = settings.weeklyPlanProvider
+  }
+  if (settings.weeklyPlanModel) {
+    opts.model = settings.weeklyPlanModel
   }
 
-  // Validate day keys exist
-  for (const key of DAY_KEYS) {
-    if (!Array.isArray(parsed[key])) {
-      parsed[key] = []
-    }
-  }
-  if (!Array.isArray(parsed.unscheduled)) {
-    parsed.unscheduled = []
-  }
-
-  const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
-  const weekTheme = typeof parsed.weekTheme === 'string' ? parsed.weekTheme : null
-
-  // Extract per-task AI reasons
-  const taskReasons: Record<string, string> = {}
-  if (parsed.taskReasons && typeof parsed.taskReasons === 'object') {
-    for (const [id, reason] of Object.entries(parsed.taskReasons as Record<string, unknown>)) {
-      if (typeof reason === 'string' && validTaskIds.has(id)) {
-        taskReasons[id] = reason
-      }
-    }
-  }
-
-  // Filter invalid IDs and deduplicate across days
-  const seen = new Set<string>()
-  const plan: WeeklyPlan = {
-    monday: [],
-    tuesday: [],
-    wednesday: [],
-    thursday: [],
-    friday: [],
-    saturday: [],
-    sunday: [],
-    unscheduled: [],
-  }
-
-  for (const key of [...DAY_KEYS, 'unscheduled'] as const) {
-    const ids = parsed[key] as unknown[]
-    for (const id of ids) {
-      if (typeof id === 'string' && validTaskIds.has(id) && !seen.has(id)) {
-        seen.add(id)
-        plan[key].push(id)
-      }
-    }
-  }
-
-  // Check result isn't completely empty
-  const totalAssigned = Object.values(plan).reduce((sum, arr) => sum + arr.length, 0)
-  if (totalAssigned === 0) {
-    throw new Error('Parsed plan contains no valid task assignments')
-  }
-
-  return { plan, reasoning, taskReasons, weekTheme }
-}
-
-// ============================================================================
-// Fallback plan
-// ============================================================================
-
-function generateFallbackPlan(tasks: TaskSummary[], _weekStart: Date): WeeklyPlan {
-  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
-
-  const sorted = [...tasks].sort((a, b) => {
-    const pa = a.priority ? priorityOrder[a.priority] ?? 3 : 3
-    const pb = b.priority ? priorityOrder[b.priority] ?? 3 : 3
-    if (pa !== pb) return pa - pb
-    // Then by due date (earlier first, nulls last)
-    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-    if (a.dueDate) return -1
-    if (b.dueDate) return 1
-    return 0
-  })
-
-  const plan: WeeklyPlan = {
-    monday: [],
-    tuesday: [],
-    wednesday: [],
-    thursday: [],
-    friday: [],
-    saturday: [],
-    sunday: [],
-    unscheduled: [],
-  }
-
-  const MAX_PER_DAY = 8
-  let dayIndex = 0
-
-  for (const task of sorted) {
-    if (dayIndex < WEEKDAY_KEYS.length) {
-      const dayKey = WEEKDAY_KEYS[dayIndex]
-      plan[dayKey].push(task.id)
-      if (plan[dayKey].length >= MAX_PER_DAY) {
-        dayIndex++
-      }
-    } else {
-      plan.unscheduled.push(task.id)
-    }
-  }
-
-  return plan
+  return opts
 }
 
 // ============================================================================
@@ -463,6 +605,14 @@ function generateFallbackPlan(tasks: TaskSummary[], _weekStart: Date): WeeklyPla
 export function useWeeklyPlanAI() {
   const isGenerating = ref(false) as Ref<boolean>
 
+  /**
+   * TASK-1327: 2-Call Hybrid Pipeline
+   *
+   * Step 0: Deterministic enrichment (no LLM, instant)
+   * Step 1: LLM distribution only (~2400 tokens)
+   * Step 2: Deterministic reason assembly (no LLM, instant)
+   * Step 3: LLM week theme (optional, ~170 tokens)
+   */
   async function generatePlan(
     tasks: TaskSummary[],
     interview?: InterviewAnswers,
@@ -486,52 +636,58 @@ export function useWeeklyPlanAI() {
     isGenerating.value = true
 
     try {
+      // ── Step 0: Deterministic Enrichment (instant) ──
+      const enriched = enrichTasksForPlanning(tasks, weekEnd)
+      console.log(`[WeeklyPlanAI] Step 0: Enriched ${enriched.length} tasks (${enriched.filter(t => t.language === 'he').length} Hebrew, ${enriched.filter(t => t.urgencyCategory === 'OVERDUE').length} overdue)`)
+
       const router = createAIRouter()
       await router.initialize()
-
-      // Architecture: Deterministic filtering (done by caller) → LLM distribution.
-      // Research consensus: LLMs are unreliable at scoring/filtering tasks.
-      // The caller (useWeeklyPlan) already hard-filtered to only relevant tasks.
-      // The LLM's only job is to distribute them across Mon-Sun.
-      console.log(`[WeeklyPlanAI] Distributing ${tasks.length} pre-filtered tasks across week ${formatDate(weekStart)}-${formatDate(weekEnd)}`)
+      const routerOpts = getRouterOptions()
 
       const validTaskIds = new Set(tasks.map(t => t.id))
+
+      // ── Step 1: LLM Distribution Only ──
+      let plan: WeeklyPlan
+      let reasoning: string | null = null
+
       const messages: ChatMessage[] = [
-        { role: 'system', content: buildSystemPrompt(interview, profile) },
-        { role: 'user', content: buildUserPrompt(tasks, weekStart, weekEnd, behavioral) },
+        { role: 'system', content: buildDistributionSystemPrompt(interview, profile) },
+        { role: 'user', content: buildDistributionUserPrompt(enriched, weekStart, weekEnd, behavioral) },
       ]
 
-      // First attempt (30s timeout to prevent hanging during tool execution)
+      console.log(`[WeeklyPlanAI] Step 1: Requesting distribution from LLM`)
+
       try {
-        const response = await router.chat(messages, {
-          taskType: 'planning',
-          temperature: 0.3,
-          timeout: 30000,
-        })
-        return parseWeeklyPlanResponse(response.content, validTaskIds)
+        const response = await router.chat(messages, routerOpts)
+        const result = parseDistributionResponse(response.content, validTaskIds)
+        plan = result.plan
+        reasoning = result.reasoning
       } catch (firstError) {
-        console.warn('[WeeklyPlanAI] Distribution attempt failed, retrying...', firstError)
+        console.warn('[WeeklyPlanAI] Step 1 failed, retrying at temp 0.1...', firstError)
+
+        // Retry once at lower temperature
+        try {
+          const retryOpts = { ...routerOpts, temperature: 0.1 }
+          const response = await router.chat(messages, retryOpts)
+          const result = parseDistributionResponse(response.content, validTaskIds)
+          plan = result.plan
+          reasoning = result.reasoning
+        } catch (retryError) {
+          console.warn('[WeeklyPlanAI] Step 1 retry failed, using fallback', retryError)
+          plan = generateFallbackPlan(tasks, weekStart)
+          reasoning = 'AI was unavailable. Tasks distributed by priority using a round-robin schedule.'
+        }
       }
 
-      // Retry once
-      try {
-        const response = await router.chat(messages, {
-          taskType: 'planning',
-          temperature: 0.3,
-          timeout: 30000,
-        })
-        return parseWeeklyPlanResponse(response.content, validTaskIds)
-      } catch (retryError) {
-        console.warn('[WeeklyPlanAI] Retry failed, using fallback plan', retryError)
-      }
+      // ── Step 2: Deterministic Reason Assembly (instant) ──
+      const taskReasons = assembleTaskReasons(enriched, plan)
+      console.log(`[WeeklyPlanAI] Step 2: Assembled reasons for ${Object.keys(taskReasons).length} tasks`)
 
-      // Fallback: deterministic round-robin
-      return {
-        plan: generateFallbackPlan(tasks, weekStart),
-        reasoning: 'AI was unavailable. Tasks distributed by priority using a round-robin schedule.',
-        taskReasons: {},
-        weekTheme: null,
-      }
+      // ── Step 3: LLM Week Theme (optional, silent fail) ──
+      const weekTheme = await generateWeekTheme(router, enriched, routerOpts)
+      console.log(`[WeeklyPlanAI] Step 3: Week theme: ${weekTheme || '(none)'}`)
+
+      return { plan, reasoning, taskReasons, weekTheme }
     } finally {
       isGenerating.value = false
     }
@@ -550,15 +706,16 @@ export function useWeeklyPlanAI() {
     try {
       const router = createAIRouter()
       await router.initialize()
+      const routerOpts = getRouterOptions()
 
       const messages: ChatMessage[] = [
-        { role: 'system', content: buildSystemPrompt(undefined, profile) },
+        { role: 'system', content: buildDistributionSystemPrompt(undefined, profile) },
         { role: 'user', content: buildDayResuggestPrompt(dayKey, currentPlan, allTasks) },
       ]
 
       try {
         const response = await router.chat(messages, {
-          taskType: 'planning',
+          ...routerOpts,
           temperature: 0.5,
         })
 
@@ -577,7 +734,6 @@ export function useWeeklyPlanAI() {
       } catch (err) {
         console.warn('[WeeklyPlanAI] Day re-suggest failed, shuffling by priority', err)
 
-        // Fallback: shuffle current day + unscheduled by priority
         const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
         const taskMap = new Map(allTasks.map(t => [t.id, t]))
         const available = [...currentPlan[dayKey], ...currentPlan.unscheduled]

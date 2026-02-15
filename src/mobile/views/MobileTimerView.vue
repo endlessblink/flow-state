@@ -74,7 +74,7 @@ const toggleTimer = async () => {
   justify-content: center;
   height: 100vh;
   padding: var(--space-5);
-  padding-bottom: 100px; /* Space for nav */
+  padding-bottom: var(--space-24); /* Space for nav */
   background: var(--app-background-gradient);
 }
 

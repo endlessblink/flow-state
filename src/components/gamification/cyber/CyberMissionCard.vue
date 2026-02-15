@@ -157,7 +157,9 @@ function handleClick() {
 
     <!-- Center: Objective + Progress -->
     <div class="mission-card__content">
-      <h3 class="mission-card__objective">{{ objectiveText }}</h3>
+      <h3 class="mission-card__objective">
+        {{ objectiveText }}
+      </h3>
 
       <!-- Progress bar -->
       <div class="mission-card__progress-row">

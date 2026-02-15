@@ -82,8 +82,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'edit'): void
   (e: 'delete'): void
-  (e: 'swipe-start'): void
-  (e: 'swipe-end'): void
+  (e: 'swipeStart'): void
+  (e: 'swipeEnd'): void
 }>()
 
 // Refs
@@ -206,7 +206,7 @@ const handleTouchStart = (e: TouchEvent) => {
   }
   isConfirmingDelete.value = false
 
-  emit('swipe-start')
+  emit('swipeStart')
 }
 
 const handleTouchMove = (e: TouchEvent) => {
@@ -281,13 +281,13 @@ const handleTouchEnd = () => {
   }
 
   isSwiping.value = false
-  emit('swipe-end')
+  emit('swipeEnd')
 }
 
 const handleTouchCancel = () => {
   isSwiping.value = false
   resetSwipe()
-  emit('swipe-end')
+  emit('swipeEnd')
 }
 
 const handleDeleteClick = () => {

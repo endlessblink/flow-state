@@ -7,7 +7,9 @@
       </div>
 
       <!-- Task Title -->
-      <h1 class="focus-title">{{ currentTask.title }}</h1>
+      <h1 class="focus-title">
+        {{ currentTask.title }}
+      </h1>
 
       <!-- Task Description -->
       <p v-if="currentTask.description" class="focus-description">
@@ -75,7 +77,9 @@
     <!-- No task found -->
     <template v-else>
       <div class="focus-empty">
-        <p class="focus-empty-text">Task not found</p>
+        <p class="focus-empty-text">
+          Task not found
+        </p>
         <button class="focus-btn focus-btn--skip" @click="handleStop">
           Go Back <kbd>Esc</kbd>
         </button>

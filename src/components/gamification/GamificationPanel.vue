@@ -13,14 +13,13 @@ import AchievementBadge from './AchievementBadge.vue'
 import DailyChallengesPanel from './DailyChallengesPanel.vue'
 import { Trophy, ShoppingBag, ChevronRight, Sparkles, HelpCircle, ChevronDown } from 'lucide-vue-next'
 
-const showHelp = ref(false)
-const router = useRouter()
-
 const emit = defineEmits<{
   openAchievements: []
   openShop: []
   close: []
 }>()
+const showHelp = ref(false)
+const router = useRouter()
 
 function goToCyberflow() {
   router.push('/cyberflow')
@@ -34,7 +33,7 @@ const availableXp = computed(() => gamificationStore.availableXp)
 
 // Get 4 most recent earned achievements
 const recentAchievements = computed(() => {
-  return gamificationStore.earnedAchievements
+  return [...gamificationStore.earnedAchievements]
     .sort((a, b) => {
       const aDate = a.earnedAt?.getTime() || 0
       const bDate = b.earnedAt?.getTime() || 0

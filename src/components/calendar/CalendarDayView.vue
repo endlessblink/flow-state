@@ -26,22 +26,6 @@ const props = defineProps<{
   externalEvents?: ExternalCalendarEvent[]
 }>()
 
-// Compute positioned external events for time grid
-const positionedExternalEvents = computed(() => {
-  if (!props.externalEvents?.length) return []
-  return props.externalEvents
-    .filter(e => !e.isAllDay)
-    .map(e => {
-      const startMinutes = e.startTime.getHours() * 60 + e.startTime.getMinutes()
-      const durationMinutes = Math.max(15, (e.endTime.getTime() - e.startTime.getTime()) / 60000)
-      return {
-        ...e,
-        top: startMinutes,
-        height: durationMinutes,
-        formattedTime: `${e.startTime.getHours().toString().padStart(2, '0')}:${e.startTime.getMinutes().toString().padStart(2, '0')}`
-      }
-    })
-})
 defineEmits<{
   (e: 'dragover', event: DragEvent, slot: TimeSlot): void
   (e: 'dragenter', event: DragEvent, slot: TimeSlot): void
@@ -60,6 +44,22 @@ defineEmits<{
   (e: 'startTimer', calEvent: CalendarEvent): void
   (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
 }>()
+// Compute positioned external events for time grid
+const positionedExternalEvents = computed(() => {
+  if (!props.externalEvents?.length) return []
+  return props.externalEvents
+    .filter(e => !e.isAllDay)
+    .map(e => {
+      const startMinutes = e.startTime.getHours() * 60 + e.startTime.getMinutes()
+      const durationMinutes = Math.max(15, (e.endTime.getTime() - e.startTime.getTime()) / 60000)
+      return {
+        ...e,
+        top: startMinutes,
+        height: durationMinutes,
+        formattedTime: `${e.startTime.getHours().toString().padStart(2, '0')}:${e.startTime.getMinutes().toString().padStart(2, '0')}`
+      }
+    })
+})
 // Inject helpers from parent CalendarView
 const helpers = inject('calendar-helpers') as any
 const {
@@ -145,8 +145,8 @@ const {
         <TransitionGroup name="task-appear">
           <div
             v-for="calEvent in getTasksForSlot(slot)"
-            :key="`${calEvent.id}-${slot.slotIndex}`"
             v-show="isTaskPrimarySlot(slot, calEvent)"
+            :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
             :class="{
               'timer-active-event': currentTaskId === calEvent.taskId,

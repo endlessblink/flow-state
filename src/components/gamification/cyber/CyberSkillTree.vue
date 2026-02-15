@@ -243,7 +243,9 @@ function handleNodeKeydown(
     <header class="st-header">
       <div class="st-header-left">
         <Zap :size="18" class="st-header-icon" />
-        <h1 class="st-title">UPGRADES</h1>
+        <h1 class="st-title">
+          UPGRADES
+        </h1>
       </div>
       <div class="st-xp-badge" aria-label="Available XP">
         <span class="st-xp-value">{{ availableXp.toLocaleString() }}</span>
@@ -255,11 +257,9 @@ function handleNodeKeydown(
     <!-- MAIN CONTENT: Silhouette + Tree                                  -->
     <!-- ================================================================ -->
     <div class="st-body">
-
       <!-- LEFT: Character Silhouette Panel -->
       <aside class="st-character" aria-label="Character equipment slots">
         <div class="st-silhouette">
-
           <!-- Geometric character outline -->
           <div class="st-sil-figure" aria-hidden="true">
             <div class="st-sil-head" />

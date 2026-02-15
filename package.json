@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.2.64",
+  "version": "1.2.65",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://in-theflow.com",
   "repository": {
@@ -44,7 +44,7 @@
     "test:storybook": "vitest run --config vitest.storybook.config.ts",
     "test:all": "npm run test:unit && npm run test:storybook",
     "test:safety": "vitest run tests/safety/",
-    "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
+    "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",
     "watch:ts": "nodemon --watch src --ext ts,vue --exec \"npx tsc --noEmit --skipLibCheck\"",
     "lint": "eslint src || true",
     "lint:fix": "eslint src --fix",

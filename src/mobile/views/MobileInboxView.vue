@@ -206,70 +206,70 @@
     <!-- Quick Add Bar (trigger only) — Teleported to <body> to escape scroll container's
          overflow clipping, which breaks position:fixed on mobile WebKit/Blink (BUG-1312) -->
     <Teleport to="body">
-    <div class="quick-add-bar">
-      <div class="quick-add-row">
-        <input
-          type="text"
-          placeholder="Add a task..."
-          class="quick-add-input"
-          readonly
-          @click="openTaskCreateSheet"
-        >
+      <div class="quick-add-bar">
+        <div class="quick-add-row">
+          <input
+            type="text"
+            placeholder="Add a task..."
+            class="quick-add-input"
+            readonly
+            @click="openTaskCreateSheet"
+          >
 
-        <!-- Mic button with offline queue badge (TASK-1131) -->
-        <button
-          v-if="isVoiceSupported"
-          class="mic-btn"
-          :class="[{ recording: isListening, offline: !isVoiceOnline }]"
-          @click="toggleVoiceInput"
-        >
-          <Mic v-if="!isListening" :size="20" />
-          <MicOff v-else :size="20" />
-          <span v-if="hasVoicePending" class="voice-pending-badge">{{ voicePendingCount }}</span>
-        </button>
+          <!-- Mic button with offline queue badge (TASK-1131) -->
+          <button
+            v-if="isVoiceSupported"
+            class="mic-btn"
+            :class="[{ recording: isListening, offline: !isVoiceOnline }]"
+            @click="toggleVoiceInput"
+          >
+            <Mic v-if="!isListening" :size="20" />
+            <MicOff v-else :size="20" />
+            <span v-if="hasVoicePending" class="voice-pending-badge">{{ voicePendingCount }}</span>
+          </button>
 
-        <button
-          class="add-btn"
-          @click="openTaskCreateSheet"
-        >
-          <Plus :size="20" />
-        </button>
-      </div>
-
-      <!-- Voice feedback (when recording) - Whisper only (TASK-1119) -->
-      <div v-if="isListening || isProcessingVoice || isVoiceQueued" class="voice-feedback">
-        <span class="voice-mode-badge whisper">🤖 AI</span>
-        <div class="voice-waveform" :class="{ paused: isVoiceQueued }">
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-          <span class="wave-bar" />
-          <span class="wave-bar" />
+          <button
+            class="add-btn"
+            @click="openTaskCreateSheet"
+          >
+            <Plus :size="20" />
+          </button>
         </div>
-        <span class="voice-status">
-          <template v-if="isVoiceQueued">📥 Saved offline - will transcribe when online</template>
-          <template v-else-if="isProcessingVoice">Processing...</template>
-          <template v-else>{{ recordingDuration }}s - Speak freely...</template>
-        </span>
-        <button v-if="!isVoiceQueued" class="voice-cancel" @click="cancelVoice">
-          <X :size="16" />
-        </button>
-      </div>
 
-      <!-- Voice mode indicator when not recording -->
-      <div v-if="isVoiceSupported && !isListening && !isProcessingVoice && !isVoiceQueued" class="voice-lang-hint">
-        <span v-if="!isVoiceOnline" class="voice-offline-badge">📴 Offline</span>
-        <span class="voice-mode-badge whisper">🤖 AI (auto-detect)</span>
-        <span v-if="hasVoicePending" class="voice-queue-status">{{ voicePendingCount }} queued</span>
-      </div>
+        <!-- Voice feedback (when recording) - Whisper only (TASK-1119) -->
+        <div v-if="isListening || isProcessingVoice || isVoiceQueued" class="voice-feedback">
+          <span class="voice-mode-badge whisper">🤖 AI</span>
+          <div class="voice-waveform" :class="{ paused: isVoiceQueued }">
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+            <span class="wave-bar" />
+          </div>
+          <span class="voice-status">
+            <template v-if="isVoiceQueued">📥 Saved offline - will transcribe when online</template>
+            <template v-else-if="isProcessingVoice">Processing...</template>
+            <template v-else>{{ recordingDuration }}s - Speak freely...</template>
+          </span>
+          <button v-if="!isVoiceQueued" class="voice-cancel" @click="cancelVoice">
+            <X :size="16" />
+          </button>
+        </div>
 
-      <!-- Voice error message -->
-      <div v-if="voiceError && !isListening" class="voice-error">
-        {{ voiceError }}
-      </div>
+        <!-- Voice mode indicator when not recording -->
+        <div v-if="isVoiceSupported && !isListening && !isProcessingVoice && !isVoiceQueued" class="voice-lang-hint">
+          <span v-if="!isVoiceOnline" class="voice-offline-badge">📴 Offline</span>
+          <span class="voice-mode-badge whisper">🤖 AI (auto-detect)</span>
+          <span v-if="hasVoicePending" class="voice-queue-status">{{ voicePendingCount }} queued</span>
+        </div>
+
+        <!-- Voice error message -->
+        <div v-if="voiceError && !isListening" class="voice-error">
+          {{ voiceError }}
+        </div>
 
       <!-- Voice Task Confirmation removed - using TaskCreateBottomSheet instead (TASK-1077) -->
-    </div>
+      </div>
     </Teleport>
 
     <!-- Task Edit Bottom Sheet -->

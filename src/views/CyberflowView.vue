@@ -34,7 +34,6 @@
 
       <!-- ACHIEVEMENTS Tab -->
       <CyberAchievements v-else-if="activeSection === 'achievements'" :show-all="true" />
-
     </div>
 
     <!-- Character Drawer (overlay, not a tab) -->

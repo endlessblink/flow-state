@@ -25,7 +25,7 @@
             <button
               v-if="isListening"
               class="header-btn stop-btn"
-              @click="emit('stop-recording')"
+              @click="emit('stopRecording')"
             >
               Stop
             </button>
@@ -67,27 +67,37 @@
                   class="chip"
                   :class="{ active: isDueToday }"
                   @click="setDueDate('today')"
-                >Today</button>
+                >
+                  Today
+                </button>
                 <button
                   class="chip"
                   :class="{ active: isDueTomorrow }"
                   @click="setDueDate('tomorrow')"
-                >Tomorrow</button>
+                >
+                  Tomorrow
+                </button>
                 <button
                   class="chip"
                   :class="{ active: isDueNextWeek }"
                   @click="setDueDate('nextWeek')"
-                >+1wk</button>
+                >
+                  +1wk
+                </button>
                 <button
                   class="chip"
                   :class="{ active: hasCustomDate }"
                   @click="showDatePicker = true"
-                >{{ hasCustomDate ? formatDate(taskDueDate!) : 'Pick' }}</button>
+                >
+                  {{ hasCustomDate ? formatDate(taskDueDate!) : 'Pick' }}
+                </button>
                 <button
                   v-if="taskDueDate"
                   class="chip clear"
                   @click="clearDueDate"
-                ><X :size="12" /></button>
+                >
+                  <X :size="12" />
+                </button>
               </div>
               <input
                 v-show="showDatePicker"
@@ -108,12 +118,16 @@
                   class="chip"
                   :class="[`priority-${option.value}`, { active: taskPriority === option.value }]"
                   @click="taskPriority = option.value"
-                >{{ option.label }}</button>
+                >
+                  {{ option.label }}
+                </button>
                 <button
                   class="chip"
                   :class="{ active: taskPriority === null }"
                   @click="taskPriority = null"
-                >None</button>
+                >
+                  None
+                </button>
               </div>
             </div>
 
@@ -127,7 +141,7 @@
               <p v-if="voiceTranscript" class="voice-transcript">
                 {{ voiceTranscript }}
               </p>
-              <button v-if="isListening" class="stop-recording-btn" @click="emit('stop-recording')">
+              <button v-if="isListening" class="stop-recording-btn" @click="emit('stopRecording')">
                 <Square :size="16" />
                 <span>Stop Recording</span>
               </button>
@@ -137,7 +151,7 @@
             <button
               v-if="canReRecord && !isListening && !isProcessing"
               class="rerecord-btn"
-              @click="emit('start-recording')"
+              @click="emit('startRecording')"
             >
               <Mic :size="16" />
               <span>{{ taskTitle.trim() ? 'Re-record' : 'Record' }}</span>
@@ -172,10 +186,10 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  close: []
-  created: [data: TaskCreationData]
-  'stop-recording': []
-  'start-recording': []  // TASK-1110: Request re-recording
+  (e: 'close'): void
+  (e: 'created', data: TaskCreationData): void
+  (e: 'stopRecording'): void
+  (e: 'startRecording'): void  // TASK-1110: Request re-recording
 }>()
 
 interface TaskCreationData {

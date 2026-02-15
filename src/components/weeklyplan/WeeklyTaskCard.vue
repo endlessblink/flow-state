@@ -24,7 +24,7 @@
         aria-label="Cycle priority"
         title="Priority"
         type="button"
-        @click.stop="$emit('change-priority', task.id)"
+        @click.stop="$emit('changePriority', task.id)"
       >
         <Flag :size="12" />
       </button>
@@ -40,11 +40,13 @@
     </div>
 
     <div class="card-content">
-      <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="cardTooltip">{{ task.title }}</span>
+      <span class="task-title" :dir="isRtl ? 'rtl' : 'ltr'" :title="cardTooltip">{{ truncateUrlsInText(task.title) }}</span>
 
       <!-- AI reason bullets OR deterministic reason fallback -->
       <ul v-if="aiReasonBullets.length > 0" class="ai-reason-list" :dir="isRtl ? 'rtl' : 'ltr'">
-        <li v-for="(bullet, idx) in aiReasonBullets" :key="idx">{{ bullet }}</li>
+        <li v-for="(bullet, idx) in aiReasonBullets" :key="idx">
+          {{ bullet }}
+        </li>
       </ul>
       <span v-else class="task-reason">{{ taskReason }}</span>
 
@@ -89,6 +91,7 @@ import { computed, ref } from 'vue'
 import { X, Flag, Clock } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import type { TaskSummary } from '@/composables/useWeeklyPlanAI'
+import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 interface Props {
   task: TaskSummary
@@ -103,7 +106,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 defineEmits<{
   remove: [taskId: string]
-  'change-priority': [taskId: string]
+  'changePriority': [taskId: string]
   snooze: [taskId: string]
 }>()
 
@@ -268,29 +271,29 @@ const cardTooltip = computed(() => {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.45;
   word-break: break-word;
   overflow-wrap: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 /* AI reason bullet list */
 .ai-reason-list {
-  margin: var(--space-1) 0 0 0;
+  margin: var(--space-1_5) 0 0 0;
   padding: 0;
   list-style: none;
 }
 
 .ai-reason-list li {
   position: relative;
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.5;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
   padding-left: var(--space-3);
-  margin-bottom: var(--space-0_5);
+  margin-bottom: var(--space-1);
 }
 
 .ai-reason-list li:last-child {

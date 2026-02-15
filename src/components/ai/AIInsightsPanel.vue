@@ -6,7 +6,9 @@
         <div class="section-header">
           <div class="section-title-row">
             <Brain :size="18" class="section-icon" />
-            <h3 class="section-title">Memory Observations</h3>
+            <h3 class="section-title">
+              Memory Observations
+            </h3>
           </div>
           <span v-if="observations.length > 0" class="section-count">
             {{ observations.length }} observation{{ observations.length !== 1 ? 's' : '' }} from your work patterns
@@ -31,8 +33,12 @@
 
         <div v-else class="empty-state">
           <Brain :size="32" class="empty-icon" />
-          <p class="empty-text">No observations yet</p>
-          <p class="empty-hint">Use the Weekly Plan and Pomodoro timer to let FlowState learn your patterns.</p>
+          <p class="empty-text">
+            No observations yet
+          </p>
+          <p class="empty-hint">
+            Use the Weekly Plan and Pomodoro timer to let FlowState learn your patterns.
+          </p>
         </div>
 
         <button
@@ -50,7 +56,9 @@
         <div class="section-header">
           <div class="section-title-row">
             <TrendingUp :size="18" class="section-icon" />
-            <h3 class="section-title">Learned Metrics</h3>
+            <h3 class="section-title">
+              Learned Metrics
+            </h3>
           </div>
         </div>
 
@@ -93,7 +101,9 @@
             Reset Profile
           </button>
         </div>
-        <p v-if="statusMessage" :class="['status-message', statusType]">{{ statusMessage }}</p>
+        <p v-if="statusMessage" class="status-message" :class="[statusType]">
+          {{ statusMessage }}
+        </p>
       </section>
 
       <!-- Section C: Weekly History -->
@@ -101,7 +111,9 @@
         <div class="section-header">
           <div class="section-title-row">
             <BarChart3 :size="18" class="section-icon" />
-            <h3 class="section-title">Weekly History</h3>
+            <h3 class="section-title">
+              Weekly History
+            </h3>
           </div>
           <span class="section-count">Last {{ weeklyHistory.length }} week{{ weeklyHistory.length !== 1 ? 's' : '' }}</span>
         </div>

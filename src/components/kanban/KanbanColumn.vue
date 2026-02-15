@@ -25,14 +25,14 @@
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"
-        :force-fallback="true"
+        force-fallback
         fallback-class="sortable-fallback"
         :fallback-tolerance="3"
         :scroll-sensitivity="100"
         :scroll-speed="20"
         bubble-scroll
         :delay="100"
-        :delay-on-touch-only="true"
+        delay-on-touch-only
         :touch-start-threshold="5"
         :disabled="false"
         easing="cubic-bezier(0.25, 0.46, 0.45, 0.94)"

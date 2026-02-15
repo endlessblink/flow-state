@@ -12,7 +12,7 @@
       :size="size"
       :variant="variant"
       :title="title"
-      :ariaLabel="ariaLabel"
+      :aria-label="ariaLabel"
       :show-hints="showHints"
       :show-progress="showProgress"
       

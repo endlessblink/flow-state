@@ -67,12 +67,16 @@ onUnmounted(() => {
     <Transition name="fade">
       <div v-if="showError" class="route-error-overlay">
         <div class="route-error-card">
-          <div class="error-icon">⚠️</div>
+          <div class="error-icon">
+            ⚠️
+          </div>
           <h2>Connection Lost</h2>
           <p class="error-message">
             Unable to load the page. This usually happens when the development server restarts or loses connection.
           </p>
-          <p class="error-details">{{ errorMessage }}</p>
+          <p class="error-details">
+            {{ errorMessage }}
+          </p>
 
           <div class="error-actions">
             <button

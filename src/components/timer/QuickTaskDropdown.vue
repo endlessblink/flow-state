@@ -1,5 +1,5 @@
 <template>
-  <div class="quick-task-wrapper" ref="wrapperRef">
+  <div ref="wrapperRef" class="quick-task-wrapper">
     <button
       class="quick-task-trigger"
       title="Quick Tasks"
@@ -12,11 +12,11 @@
       <Transition name="dropdown">
         <div
           v-if="isOpen"
+          ref="dropdownRef"
           class="quick-task-dropdown"
           :style="dropdownPosition"
-          ref="dropdownRef"
-          @keydown="handleKeydown"
           tabindex="-1"
+          @keydown="handleKeydown"
         >
           <!-- Quick Add Input -->
           <div class="quick-add-row">
@@ -28,7 +28,7 @@
               dir="auto"
               @keydown.enter.stop="addQuickPin"
               @keydown.esc.stop="isOpen = false"
-            />
+            >
             <button
               v-if="newTaskTitle.trim()"
               class="quick-add-btn"

@@ -71,6 +71,7 @@ function getOrCreateState(weekStartsOn: 0 | 1 = 0): Ref<WeeklyPlanState> {
       plan: null,
       reasoning: null,
       taskReasons: {},
+      weekTheme: null,
       error: null,
       weekStart: getWeekStart(weekStartsOn),
       weekEnd: getWeekEnd(weekStartsOn),
@@ -280,6 +281,7 @@ export function useWeeklyPlan() {
       state.value.plan = result.plan
       state.value.reasoning = result.reasoning
       state.value.taskReasons = result.taskReasons
+      state.value.weekTheme = result.weekTheme
       state.value.status = 'review'
     } catch (err) {
       state.value.status = 'error'
@@ -519,6 +521,7 @@ export function useWeeklyPlan() {
       plan: null,
       reasoning: null,
       taskReasons: {},
+      weekTheme: null,
       error: null,
       weekStart: getWeekStart(settings.weekStartsOn),
       weekEnd: getWeekEnd(settings.weekStartsOn),

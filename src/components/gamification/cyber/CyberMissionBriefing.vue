@@ -120,8 +120,12 @@ async function handleGenerate() {
       <div class="mission-briefing__empty-icon">
         <Crosshair :size="48" />
       </div>
-      <p class="mission-briefing__empty-text">No active missions</p>
-      <p class="mission-briefing__empty-hint">Click below to generate new missions</p>
+      <p class="mission-briefing__empty-text">
+        No active missions
+      </p>
+      <p class="mission-briefing__empty-hint">
+        Click below to generate new missions
+      </p>
     </div>
 
     <!-- Action button at bottom -->

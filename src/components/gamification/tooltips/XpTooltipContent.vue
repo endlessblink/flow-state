@@ -28,7 +28,9 @@ const narrative = computed(() =>
 
 <template>
   <div class="xp-tooltip">
-    <div class="tooltip-title">XP PROGRESS</div>
+    <div class="tooltip-title">
+      XP PROGRESS
+    </div>
 
     <div class="xp-stats">
       <div class="stat-row">

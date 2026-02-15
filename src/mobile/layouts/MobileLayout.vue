@@ -31,7 +31,7 @@
                 placeholder="Add a task..."
                 enterkeyhint="done"
                 @keydown.enter="handleAddTask"
-              />
+              >
               <button
                 class="voice-btn"
                 :class="{ recording: isRecording }"
@@ -47,8 +47,12 @@
                 <Send :size="18" />
               </button>
             </div>
-            <p v-if="isRecording" class="recording-label">Listening...</p>
-            <p v-if="taskAdded" class="task-added-label">Task added!</p>
+            <p v-if="isRecording" class="recording-label">
+              Listening...
+            </p>
+            <p v-if="taskAdded" class="task-added-label">
+              Task added!
+            </p>
           </div>
 
           <!-- Search -->
@@ -61,7 +65,7 @@
                 class="search-input"
                 placeholder="Search tasks..."
                 @input="handleSearch"
-              />
+              >
               <button v-if="searchQuery" class="clear-search" @click="clearSearch">
                 <X :size="16" />
               </button>
@@ -80,7 +84,9 @@
                 <span v-if="task.projectId" class="result-project">{{ getProjectName(task.projectId) }}</span>
               </div>
             </div>
-            <p v-if="searchQuery && searchResults.length === 0" class="no-results">No tasks found</p>
+            <p v-if="searchQuery && searchResults.length === 0" class="no-results">
+              No tasks found
+            </p>
           </div>
 
           <!-- Quick Actions Grid -->

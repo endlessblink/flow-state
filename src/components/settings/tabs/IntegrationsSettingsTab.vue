@@ -98,7 +98,9 @@ const formatLastSynced = (isoString?: string) => {
 
       <!-- How to get iCal URL -->
       <details class="help-details">
-        <summary class="help-summary">How to get your Google Calendar iCal URL</summary>
+        <summary class="help-summary">
+          How to get your Google Calendar iCal URL
+        </summary>
         <ol class="help-steps">
           <li>Open <strong>Google Calendar</strong> in your browser</li>
           <li>Click the <strong>gear icon</strong> → <strong>Settings</strong></li>
@@ -166,7 +168,7 @@ const formatLastSynced = (isoString?: string) => {
             type="text"
             class="field-input"
             placeholder="e.g. Work Calendar"
-          />
+          >
         </div>
 
         <div class="form-field">
@@ -176,7 +178,7 @@ const formatLastSynced = (isoString?: string) => {
             type="url"
             class="field-input"
             placeholder="https://calendar.google.com/calendar/ical/..."
-          />
+          >
         </div>
 
         <div class="form-field">
@@ -196,7 +198,7 @@ const formatLastSynced = (isoString?: string) => {
               type="color"
               class="color-input"
               title="Custom color"
-            />
+            >
           </div>
         </div>
 

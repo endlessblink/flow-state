@@ -59,6 +59,8 @@ const handleClick = (event: MouseEvent) => {
   font-size: var(--text-sm);
   color: var(--text-primary);
   overflow-wrap: break-word;
+  word-break: break-word;
+  overflow: hidden;
 }
 
 .markdown-content.rtl-aware {
@@ -194,6 +196,12 @@ const handleClick = (event: MouseEvent) => {
 :deep(a) {
   color: var(--brand-primary);
   text-decoration: none;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 :deep(a:hover) {

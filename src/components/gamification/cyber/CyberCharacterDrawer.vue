@@ -54,7 +54,9 @@ function handleBackdropClick(e: MouseEvent) {
       >
         <!-- Header -->
         <div class="drawer-header">
-          <h2 class="drawer-title">OPERATIVE PROFILE</h2>
+          <h2 class="drawer-title">
+            OPERATIVE PROFILE
+          </h2>
           <button
             class="drawer-close"
             aria-label="Close"

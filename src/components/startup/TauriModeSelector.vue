@@ -60,7 +60,9 @@ function confirm() {
           @click="selectMode('cloud')"
         >
           <div class="mode-card-header">
-            <div class="mode-icon">☁️</div>
+            <div class="mode-icon">
+              ☁️
+            </div>
             <div class="mode-info">
               <h3 class="mode-name">
                 Cloud Mode
@@ -86,9 +88,13 @@ function confirm() {
           @click="selectMode('local')"
         >
           <div class="mode-card-header">
-            <div class="mode-icon">🖥️</div>
+            <div class="mode-icon">
+              🖥️
+            </div>
             <div class="mode-info">
-              <h3 class="mode-name">Local Mode</h3>
+              <h3 class="mode-name">
+                Local Mode
+              </h3>
               <p class="mode-subtitle">
                 Run your own database
               </p>

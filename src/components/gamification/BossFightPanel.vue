@@ -162,8 +162,12 @@ async function generateBoss() {
     <div v-if="activeBoss" class="boss-content">
       <!-- Boss Info -->
       <div class="boss-info" :class="{ 'boss-info--defeated': isDefeated }">
-        <h4 class="boss-name">{{ activeBoss.title }}</h4>
-        <p v-if="!compact" class="boss-description">{{ activeBoss.description }}</p>
+        <h4 class="boss-name">
+          {{ activeBoss.title }}
+        </h4>
+        <p v-if="!compact" class="boss-description">
+          {{ activeBoss.description }}
+        </p>
       </div>
 
       <!-- HP Bar -->

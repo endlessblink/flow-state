@@ -12,9 +12,9 @@
       :task-reasons="props.taskReasons"
       @update:model-value="(ids) => onColumnUpdate(col.key, ids)"
       @resuggest="(dayKey) => $emit('resuggest', dayKey)"
-      @remove-task="(id) => $emit('remove-task', id)"
-      @change-priority="(id) => $emit('change-priority', id)"
-      @snooze-task="(id) => $emit('snooze-task', id)"
+      @remove-task="(id) => $emit('removeTask', id)"
+      @change-priority="(id) => $emit('changePriority', id)"
+      @snooze-task="(id) => $emit('snoozeTask', id)"
     />
   </div>
 </template>
@@ -37,11 +37,11 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  'move-task': [taskId: string, fromDay: keyof WeeklyPlan, toDay: keyof WeeklyPlan]
+  'moveTask': [taskId: string, fromDay: keyof WeeklyPlan, toDay: keyof WeeklyPlan]
   'resuggest': [dayKey: string]
-  'remove-task': [taskId: string]
-  'change-priority': [taskId: string]
-  'snooze-task': [taskId: string]
+  'removeTask': [taskId: string]
+  'changePriority': [taskId: string]
+  'snoozeTask': [taskId: string]
 }>()
 
 const settings = useSettingsStore()
@@ -107,7 +107,7 @@ function onColumnUpdate(dayKey: keyof WeeklyPlan, newIds: string[]) {
       // Determine which column it came from
       const fromDay = findTaskSource(id, dayKey)
       if (fromDay) {
-        emit('move-task', id, fromDay, dayKey)
+        emit('moveTask', id, fromDay, dayKey)
       }
     }
   }

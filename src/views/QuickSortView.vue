@@ -82,58 +82,58 @@
                 @create-new="showProjectModal = true"
               />
 
-            <!-- Consolidated Action Row -->
-            <div class="action-row">
-              <button
-                class="action-btn done"
-                aria-label="Mark task as done"
-                @click="handleMarkDone"
-              >
-                <CheckCircle :size="18" />
-                Done
-                <kbd>D</kbd>
-              </button>
+              <!-- Consolidated Action Row -->
+              <div class="action-row">
+                <button
+                  class="action-btn done"
+                  aria-label="Mark task as done"
+                  @click="handleMarkDone"
+                >
+                  <CheckCircle :size="18" />
+                  Done
+                  <kbd>D</kbd>
+                </button>
 
-              <button
-                class="action-btn save"
-                aria-label="Save and advance to next task"
-                @click="handleSave"
-              >
-                <Save :size="18" />
-                Save
-                <span v-if="isTaskDirty" class="dirty-dot" />
-                <kbd>S</kbd>
-              </button>
+                <button
+                  class="action-btn save"
+                  aria-label="Save and advance to next task"
+                  @click="handleSave"
+                >
+                  <Save :size="18" />
+                  Save
+                  <span v-if="isTaskDirty" class="dirty-dot" />
+                  <kbd>S</kbd>
+                </button>
 
-              <button
-                class="action-btn skip"
-                aria-label="Skip this task"
-                @click="handleSkip"
-              >
-                <SkipForward :size="18" />
-                Skip
-                <kbd>Space</kbd>
-              </button>
+                <button
+                  class="action-btn skip"
+                  aria-label="Skip this task"
+                  @click="handleSkip"
+                >
+                  <SkipForward :size="18" />
+                  Skip
+                  <kbd>Space</kbd>
+                </button>
 
-              <button
-                class="action-btn edit"
-                aria-label="Edit task"
-                @click="handleEditTask"
-              >
-                <Edit :size="18" />
-                Edit
-                <kbd>E</kbd>
-              </button>
+                <button
+                  class="action-btn edit"
+                  aria-label="Edit task"
+                  @click="handleEditTask"
+                >
+                  <Edit :size="18" />
+                  Edit
+                  <kbd>E</kbd>
+                </button>
 
-              <button
-                v-if="canUndo"
-                class="action-btn undo"
-                aria-label="Undo last action"
-                @click="handleUndo"
-              >
-                <Undo2 :size="18" />
-              </button>
-            </div>
+                <button
+                  v-if="canUndo"
+                  class="action-btn undo"
+                  aria-label="Undo last action"
+                  @click="handleUndo"
+                >
+                  <Undo2 :size="18" />
+                </button>
+              </div>
 
               <!-- Helper Hint -->
               <div class="helper-hint">

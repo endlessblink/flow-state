@@ -40,7 +40,7 @@
             placeholder="Search shortcuts..."
             aria-label="Filter keyboard shortcuts"
             @keydown.escape.stop="handleSearchEscape"
-          />
+          >
           <button
             v-if="searchQuery"
             class="search-clear"
@@ -61,7 +61,9 @@
             >
               <div class="category-header">
                 <component :is="category.icon" :size="18" class="category-icon" />
-                <h3 class="category-title">{{ category.title }}</h3>
+                <h3 class="category-title">
+                  {{ category.title }}
+                </h3>
                 <span v-if="searchQuery" class="category-count">{{ category.shortcuts.length }}</span>
               </div>
               <div class="shortcut-list">
@@ -85,14 +87,20 @@
           <!-- No Results -->
           <div v-else class="no-results">
             <SearchX :size="40" class="no-results-icon" />
-            <p class="no-results-text">No shortcuts match "{{ searchQuery }}"</p>
-            <button class="no-results-clear" @click="searchQuery = ''">Clear search</button>
+            <p class="no-results-text">
+              No shortcuts match "{{ searchQuery }}"
+            </p>
+            <button class="no-results-clear" @click="searchQuery = ''">
+              Clear search
+            </button>
           </div>
         </div>
 
         <!-- Footer -->
         <div class="shortcuts-footer">
-          <p class="footer-text">Press <kbd>?</kbd> anywhere to toggle this panel</p>
+          <p class="footer-text">
+            Press <kbd>?</kbd> anywhere to toggle this panel
+          </p>
         </div>
       </div>
     </div>

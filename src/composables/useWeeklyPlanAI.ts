@@ -27,6 +27,7 @@ export interface WeeklyPlanState {
   plan: WeeklyPlan | null
   reasoning: string | null
   taskReasons: Record<string, string>
+  weekTheme: string | null
   error: string | null
   weekStart: Date
   weekEnd: Date
@@ -63,6 +64,7 @@ export interface BehavioralContext {
   peakProductivityDays: string[]           // Days when user is most productive
   completionRate: number | null            // % of planned tasks actually completed
   frequentlyMissedProjects: string[]       // Projects where tasks often get skipped
+  workInsights: string[]                   // Observations from memoryGraph (task analysis, patterns)
 }
 
 // ============================================================================
@@ -116,14 +118,20 @@ ALL tasks given to you have already been pre-filtered for relevance. Your ONLY j
 
 Rules:
 - Return ONLY valid JSON (no markdown, no explanation outside the JSON).
-- The JSON must have these keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning.
+- The JSON must have these keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, weekTheme.
 - Each day key is an array of task ID strings.
 - "unscheduled" contains task IDs that don't fit the available capacity.
 - "reasoning" is a brief string explaining your distribution logic.
-- "taskReasons" is an object mapping each task ID to 2-3 bullet points (separated by "\n") explaining WHY this task matters and why it's placed on that day. Go DEEPER than surface facts — connect to goals, project momentum, or workflow patterns. IMPORTANT: If the task title is in Hebrew, write the reason bullets in Hebrew too. Always match the language of the task title.
-  BAD: "Overdue task" or "High priority"
+- "weekTheme" is a short motivating theme for the week (5-10 words) based on what dominates the task list. Examples: "Infrastructure & Stability Sprint", "Client Delivery Push", "שבוע של סגירת פיצ'רים". Match the user's dominant language.
+- "taskReasons" is an object mapping each task ID to 2-3 bullet points (separated by "\n") explaining WHY this task matters and why it's placed on that day. Each task MUST have UNIQUE reasons derived from its SPECIFIC title, project, description, and due date. NEVER repeat the same reasons across tasks.
+  Rules for taskReasons:
+  1. Reference the task's ACTUAL content — mention its title, project, or description specifics.
+  2. Explain the scheduling decision — why THIS day, not just "it's important".
+  3. Connect to workflow — what does completing this unblock? What momentum does it build?
+  4. Match language — write in the same language as the task title (Hebrew tasks get Hebrew reasons, English tasks get English reasons).
+  BAD: "Overdue task" or "High priority" or generic phrases that could apply to any task.
   GOOD: "Blocking the auth refactor\nClear before Wednesday's API work\n3 subtasks left — close it out"
-  GOOD (Hebrew task): "חוסם את הפיצ'ר הבא\nצריך לסיים לפני אמצע השבוע\nכבר התחלת לעבוד על זה"
+  GOOD: "Wraps up the payment integration — 2 subtasks remain\nFrees the team for Thursday's release\nIn-progress since last week, momentum is hot"
 
 SCHEDULING PRIORITY:
 1. Overdue tasks (due date in the past) — MUST go on Monday or Tuesday.
@@ -138,7 +146,13 @@ DISTRIBUTION:
 - Each task ID must appear in exactly ONE day or in unscheduled — no duplicates.
 - Consider task COMPLEXITY: tasks with many subtasks need their own day. Don't stack complex tasks.
 - Distribute EVENLY across the working week unless the user prefers otherwise.
-- It's OK to put tasks in unscheduled if the week is already full.`
+- It's OK to put tasks in unscheduled if the week is already full.
+
+PROJECT BATCHING (important for reducing context switches):
+- Group tasks from the SAME project on the same day when possible.
+- If a project has 3+ tasks, spread across 2 days max — not 1 per day scattered.
+- Avoid mixing more than 2-3 different projects on the same day.
+- If tasks are related (same project or similar descriptions), place them consecutively on the same day.`
 
   if (interview) {
     const extras: string[] = []
@@ -248,6 +262,13 @@ function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date, b
     if (behavioral.frequentlyMissedProjects.length > 0) {
       lines.push(`Often skipped projects: ${behavioral.frequentlyMissedProjects.join(', ')} — put these in unscheduled unless high priority`)
     }
+    if (behavioral.workInsights?.length > 0) {
+      lines.push('')
+      lines.push('Learned work patterns (use these to make better scheduling decisions):')
+      for (const insight of behavioral.workInsights) {
+        lines.push(`  - ${insight}`)
+      }
+    }
     if (lines.length > 0) {
       behavioralSection = `\nUser behavior data:\n${lines.join('\n')}\n`
     }
@@ -263,8 +284,8 @@ Urgency guide: OVERDUE → must be Mon/Tue. IN_PROGRESS → early in week. DUE_T
 Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
-Return ONLY the JSON object with monday...sunday, unscheduled, reasoning, and taskReasons keys.
-For taskReasons: 2-3 bullet lines per task separated by \\n. Explain WHY — connect to goals, momentum, dependencies. Match the task's language (Hebrew tasks get Hebrew reasons). Don't just restate priority or due date.`
+Return ONLY the JSON object with monday...sunday, unscheduled, reasoning, weekTheme, and taskReasons keys.
+For taskReasons: 2-3 bullet lines per task separated by \\n. CRITICAL: Each task's reasons must be UNIQUE and reference that task's specific title, project, or description. Never use the same generic phrases across multiple tasks. Match the task's language.`
 }
 
 function buildDayResuggestPrompt(
@@ -307,7 +328,7 @@ Return ONLY a JSON object with two keys:
 function parseWeeklyPlanResponse(
   response: string,
   validTaskIds: Set<string>
-): { plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string> } {
+): { plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string>; weekTheme: string | null } {
   // Strip markdown code fences if present
   let json = response.trim()
   const codeBlockMatch = json.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -333,6 +354,7 @@ function parseWeeklyPlanResponse(
   }
 
   const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : null
+  const weekTheme = typeof parsed.weekTheme === 'string' ? parsed.weekTheme : null
 
   // Extract per-task AI reasons
   const taskReasons: Record<string, string> = {}
@@ -373,7 +395,7 @@ function parseWeeklyPlanResponse(
     throw new Error('Parsed plan contains no valid task assignments')
   }
 
-  return { plan, reasoning, taskReasons }
+  return { plan, reasoning, taskReasons, weekTheme }
 }
 
 // ============================================================================
@@ -435,7 +457,7 @@ export function useWeeklyPlanAI() {
     interview?: InterviewAnswers,
     profile?: WorkProfile | null,
     behavioral?: BehavioralContext
-  ): Promise<{ plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string> }> {
+  ): Promise<{ plan: WeeklyPlan; reasoning: string | null; taskReasons: Record<string, string>; weekTheme: string | null }> {
     if (tasks.length === 0) {
       return {
         plan: {
@@ -444,6 +466,7 @@ export function useWeeklyPlanAI() {
         },
         reasoning: 'No tasks to schedule.',
         taskReasons: {},
+        weekTheme: null,
       }
     }
 
@@ -496,6 +519,7 @@ export function useWeeklyPlanAI() {
         plan: generateFallbackPlan(tasks, weekStart),
         reasoning: 'AI was unavailable. Tasks distributed by priority using a round-robin schedule.',
         taskReasons: {},
+        weekTheme: null,
       }
     } finally {
       isGenerating.value = false

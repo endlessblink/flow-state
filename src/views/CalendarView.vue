@@ -123,6 +123,7 @@
         @remove-from-calendar="handleRemoveFromCalendar"
         @start-timer="startTimerOnCalendarEvent"
         @start-resize="startResize"
+        @cell-dbl-click="handleWeekCellDblClick"
       />
 
       <!-- Month View -->
@@ -138,6 +139,7 @@
         @event-dbl-click="handleEventDblClick"
         @event-context-menu="handleEventContextMenu"
         @cycle-status="cycleTaskStatus"
+        @cell-dbl-click="handleMonthCellDblClick"
       />
     </div>
   </div>
@@ -255,6 +257,33 @@ const dragCreate = useCalendarDragCreate()
 
 const handleTaskCreated = () => {
   dragCreate.showQuickCreateModal.value = false
+}
+
+// Double-click empty cell in week view → open quick create modal
+const handleWeekCellDblClick = (dateString: string, hour: number) => {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const startTime = new Date(year, month - 1, day, hour, 0, 0, 0)
+  const endTime = new Date(startTime.getTime() + 30 * 60000)
+  dragCreate.quickCreateData.startTime = startTime
+  dragCreate.quickCreateData.endTime = endTime
+  dragCreate.quickCreateData.duration = 30
+  dragCreate.showQuickCreateModal.value = true
+}
+
+// Double-click empty area in month day cell → open quick create modal
+const handleMonthCellDblClick = (dateString: string) => {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const now = new Date()
+  // Default to current hour or 9 AM
+  const defaultHour = (now.getFullYear() === year && now.getMonth() + 1 === month && now.getDate() === day)
+    ? now.getHours()
+    : 9
+  const startTime = new Date(year, month - 1, day, defaultHour, 0, 0, 0)
+  const endTime = new Date(startTime.getTime() + 30 * 60000)
+  dragCreate.quickCreateData.startTime = startTime
+  dragCreate.quickCreateData.endTime = endTime
+  dragCreate.quickCreateData.duration = 30
+  dragCreate.showQuickCreateModal.value = true
 }
 const eventHelpers = useCalendarCore()
 const calendarScroll = useCalendarScroll()

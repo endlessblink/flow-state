@@ -51,7 +51,9 @@ function updateDeliveryChannel(channel: keyof TimeBlockNotificationSettings['del
         <div class="sub-settings-group">
           <div class="setting-header">
             <label class="setting-label">Milestones</label>
-            <p class="setting-description">Choose which progress points trigger alerts.</p>
+            <p class="setting-description">
+              Choose which progress points trigger alerts.
+            </p>
           </div>
 
           <SettingsToggle
@@ -66,7 +68,9 @@ function updateDeliveryChannel(channel: keyof TimeBlockNotificationSettings['del
         <div class="sub-settings-group">
           <div class="setting-header">
             <label class="setting-label">Delivery Channels</label>
-            <p class="setting-description">How you receive time block alerts.</p>
+            <p class="setting-description">
+              How you receive time block alerts.
+            </p>
           </div>
 
           <SettingsToggle

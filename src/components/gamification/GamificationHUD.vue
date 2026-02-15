@@ -112,7 +112,9 @@ function goToSignIn() {
           <span class="hud-stat-label">LV</span>
           <span class="hud-stat-value">{{ level }}</span>
         </div>
-        <template #tooltip><LevelTooltipContent /></template>
+        <template #tooltip>
+          <LevelTooltipContent />
+        </template>
       </GamificationTooltipWrapper>
 
       <div class="hud-divider" />
@@ -127,7 +129,9 @@ function goToSignIn() {
           </div>
           <span class="hud-stat-value hud-xp-text">{{ isIntense ? xpText : progressPercent + '%' }}</span>
         </div>
-        <template #tooltip><XpTooltipContent /></template>
+        <template #tooltip>
+          <XpTooltipContent />
+        </template>
       </GamificationTooltipWrapper>
 
       <div class="hud-divider" />
@@ -138,7 +142,9 @@ function goToSignIn() {
           <Flame :size="14" class="hud-flame" :class="{ 'hud-flame--active': isActiveToday }" />
           <span class="hud-stat-value">{{ streak }}d</span>
         </div>
-        <template #tooltip><StreakTooltipContent /></template>
+        <template #tooltip>
+          <StreakTooltipContent />
+        </template>
       </GamificationTooltipWrapper>
 
       <!-- Mission indicator / Challenge pips -->
@@ -150,7 +156,9 @@ function goToSignIn() {
         <div v-else class="hud-section hud-challenges">
           <ChallengePips />
         </div>
-        <template #tooltip><ChallengeTooltipContent /></template>
+        <template #tooltip>
+          <ChallengeTooltipContent />
+        </template>
       </GamificationTooltipWrapper>
 
       <!-- Expand chevron -->

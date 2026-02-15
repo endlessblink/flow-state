@@ -39,7 +39,7 @@
         <TimerReset :size="14" />
         <span class="field-label">Duration</span>
         <input
-          v-model.number="modelValue.estimatedDuration"
+          v-model.number="estimatedDuration"
           type="number"
           class="inline-input duration-input"
           placeholder="60"
@@ -92,7 +92,7 @@
         <SectionSelector
           :model-value="currentSectionId"
           compact
-          @update:model-value="$emit('section-change', $event)"
+          @update:model-value="$emit('sectionChange', $event)"
         />
       </div>
     </div>
@@ -117,7 +117,18 @@ const props = defineProps<{
   statusOptions: { label: string; value: string }[]
 }>()
 
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: Task): void
+  (e: 'sectionChange', id: string | null): void
+  (e: 'scheduleChange'): void
+}>()
+
 const showDueDatePicker = ref(false)
+
+const estimatedDuration = computed({
+  get: () => props.modelValue.estimatedDuration,
+  set: (val) => emit('update:modelValue', { ...props.modelValue, estimatedDuration: val })
+})
 
 // Format date for display (human-readable)
 const formattedDueDate = computed(() => {
@@ -134,12 +145,6 @@ const dueDateTimestamp = computed(() => {
   const d = new Date(props.modelValue.dueDate)
   return isNaN(d.getTime()) ? null : d.getTime()
 })
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: Task): void
-  (e: 'section-change', id: string | null): void
-  (e: 'schedule-change'): void
-}>()
 
 // --- Update Helpers ---
 

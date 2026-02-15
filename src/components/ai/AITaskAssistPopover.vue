@@ -315,49 +315,69 @@ watch(() => props.isVisible, (visible) => {
       <div v-if="isLoading" class="ai-assist-loading">
         <Loader2 :size="16" class="spin" />
         <span>{{ loadingText }}</span>
-        <button class="abort-btn" @click="handleAbort">Cancel</button>
+        <button class="abort-btn" @click="handleAbort">
+          Cancel
+        </button>
       </div>
 
       <!-- Error state -->
       <div v-if="error && !isLoading" class="ai-assist-error">
         <AlertCircle :size="14" />
         <span>{{ error }}</span>
-        <button class="retry-btn" @click="clearResult">Try again</button>
+        <button class="retry-btn" @click="clearResult">
+          Try again
+        </button>
       </div>
 
       <!-- Result area -->
       <div v-if="result && !isLoading" class="ai-assist-result">
         <!-- SUBTASKS result -->
         <div v-if="result.type === 'subtasks'" class="result-subtasks">
-          <div class="result-label">Suggested subtasks</div>
+          <div class="result-label">
+            Suggested subtasks
+          </div>
           <div v-for="(sub, i) in result.subtasks" :key="i" class="subtask-item">
             <span class="subtask-text" dir="auto">{{ sub }}</span>
           </div>
           <div class="result-actions">
-            <button class="accept-btn" @click="acceptSubtasks">Add all</button>
-            <button class="dismiss-btn" @click="clearResult">Dismiss</button>
+            <button class="accept-btn" @click="acceptSubtasks">
+              Add all
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
           </div>
         </div>
 
         <!-- PRIORITY result -->
         <div v-if="result.type === 'priority'" class="result-priority">
-          <div class="result-label">Suggestion</div>
+          <div class="result-label">
+            Suggestion
+          </div>
           <div class="priority-suggestion">
             <span class="priority-badge" :class="result.priority?.priority">
               {{ result.priority?.priority }}
             </span>
             <span class="duration-badge">{{ result.priority?.duration }}min</span>
           </div>
-          <p class="reasoning-text" dir="auto">{{ result.priority?.reasoning }}</p>
+          <p class="reasoning-text" dir="auto">
+            {{ result.priority?.reasoning }}
+          </p>
           <div class="result-actions">
-            <button class="accept-btn" @click="acceptPriority">Apply</button>
-            <button class="dismiss-btn" @click="clearResult">Dismiss</button>
+            <button class="accept-btn" @click="acceptPriority">
+              Apply
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
           </div>
         </div>
 
         <!-- BREAKDOWN result -->
         <div v-if="result.type === 'breakdown'" class="result-breakdown">
-          <div class="result-label">Break into tasks</div>
+          <div class="result-label">
+            Break into tasks
+          </div>
           <div v-for="(t, i) in result.breakdown" :key="i" class="breakdown-item">
             <span class="breakdown-title" dir="auto">{{ t.title }}</span>
             <span v-if="t.priority" class="priority-badge small" :class="t.priority">
@@ -365,37 +385,65 @@ watch(() => props.isVisible, (visible) => {
             </span>
           </div>
           <div class="result-actions">
-            <button class="accept-btn" @click="acceptBreakdown">Create all</button>
-            <button class="dismiss-btn" @click="clearResult">Dismiss</button>
+            <button class="accept-btn" @click="acceptBreakdown">
+              Create all
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
           </div>
         </div>
 
         <!-- DATE result -->
         <div v-if="result.type === 'date'" class="result-date">
-          <div class="result-label">Suggested date</div>
-          <div class="date-suggestion">{{ formatDate(result.date?.date) }}</div>
-          <p class="reasoning-text" dir="auto">{{ result.date?.reasoning }}</p>
+          <div class="result-label">
+            Suggested date
+          </div>
+          <div class="date-suggestion">
+            {{ formatDate(result.date?.date) }}
+          </div>
+          <p class="reasoning-text" dir="auto">
+            {{ result.date?.reasoning }}
+          </p>
           <div class="result-actions">
-            <button class="accept-btn" @click="acceptDate">Apply</button>
-            <button class="dismiss-btn" @click="clearResult">Dismiss</button>
+            <button class="accept-btn" @click="acceptDate">
+              Apply
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
           </div>
         </div>
 
         <!-- TITLE result -->
         <div v-if="result.type === 'title'" class="result-title">
-          <div class="result-label">Improved title</div>
-          <div class="title-before" dir="auto">{{ task?.title }}</div>
-          <div class="title-arrow">-&gt;</div>
-          <div class="title-after" dir="auto">{{ result.title }}</div>
+          <div class="result-label">
+            Improved title
+          </div>
+          <div class="title-before" dir="auto">
+            {{ task?.title }}
+          </div>
+          <div class="title-arrow">
+            -&gt;
+          </div>
+          <div class="title-after" dir="auto">
+            {{ result.title }}
+          </div>
           <div class="result-actions">
-            <button class="accept-btn" @click="acceptTitle">Accept</button>
-            <button class="dismiss-btn" @click="clearResult">Dismiss</button>
+            <button class="accept-btn" @click="acceptTitle">
+              Accept
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
           </div>
         </div>
 
         <!-- RELATED result -->
         <div v-if="result.type === 'related'" class="result-related">
-          <div class="result-label">Related tasks</div>
+          <div class="result-label">
+            Related tasks
+          </div>
           <div v-if="result.related?.length === 0" class="no-results">
             No related tasks found
           </div>
@@ -406,19 +454,27 @@ watch(() => props.isVisible, (visible) => {
             </span>
           </div>
           <div class="result-actions">
-            <button class="dismiss-btn" @click="clearResult">Close</button>
+            <button class="dismiss-btn" @click="clearResult">
+              Close
+            </button>
           </div>
         </div>
 
         <!-- SUMMARY result -->
         <div v-if="result.type === 'summary'" class="result-summary">
-          <div class="result-label">Summary</div>
-          <p class="summary-text" dir="auto">{{ result.summary?.summary }}</p>
+          <div class="result-label">
+            Summary
+          </div>
+          <p class="summary-text" dir="auto">
+            {{ result.summary?.summary }}
+          </p>
           <div v-if="result.summary?.suggestedGroup" class="suggested-group">
             Suggested group: <strong>{{ result.summary.suggestedGroup }}</strong>
           </div>
           <div class="result-actions">
-            <button class="dismiss-btn" @click="clearResult">Close</button>
+            <button class="dismiss-btn" @click="clearResult">
+              Close
+            </button>
           </div>
         </div>
       </div>

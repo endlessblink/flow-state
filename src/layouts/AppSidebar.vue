@@ -106,10 +106,18 @@
               <!-- Date dropdown -->
               <Transition name="fade">
                 <div v-if="showDatePicker" class="metadata-dropdown date-dropdown">
-                  <button class="dropdown-option" @click="selectDate('today')">Today</button>
-                  <button class="dropdown-option" @click="selectDate('tomorrow')">Tomorrow</button>
-                  <button class="dropdown-option" @click="selectDate('weekend')">This Weekend</button>
-                  <button class="dropdown-option" @click="selectDate(null)">No Date</button>
+                  <button class="dropdown-option" @click="selectDate('today')">
+                    Today
+                  </button>
+                  <button class="dropdown-option" @click="selectDate('tomorrow')">
+                    Tomorrow
+                  </button>
+                  <button class="dropdown-option" @click="selectDate('weekend')">
+                    This Weekend
+                  </button>
+                  <button class="dropdown-option" @click="selectDate(null)">
+                    No Date
+                  </button>
                 </div>
               </Transition>
             </div>

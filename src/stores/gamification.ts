@@ -896,7 +896,7 @@ export const useGamificationStore = defineStore('gamification', () => {
       return
     }
 
-    ;(stats.value[statKey] as number) = newValue
+    (stats.value[statKey] as number) = newValue
 
     // Check achievements after stat update
     await checkAchievements()

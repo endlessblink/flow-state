@@ -204,7 +204,9 @@ onMounted(async () => {
                 Cloud Mode
                 <span v-if="currentTauriMode === 'cloud'" class="mode-badge">Active</span>
               </h4>
-              <p class="mode-option-desc">Connect to in-theflow.com (VPS)</p>
+              <p class="mode-option-desc">
+                Connect to in-theflow.com (VPS)
+              </p>
               <ul class="mode-option-features">
                 <li>✓ Sync across devices</li>
                 <li>✓ No local setup required</li>
@@ -226,7 +228,9 @@ onMounted(async () => {
                 Local Mode
                 <span v-if="currentTauriMode === 'local'" class="mode-badge">Active</span>
               </h4>
-              <p class="mode-option-desc">Run your own database (Docker)</p>
+              <p class="mode-option-desc">
+                Run your own database (Docker)
+              </p>
               <ul class="mode-option-features">
                 <li>✓ Full data control</li>
                 <li>✓ Works offline</li>
@@ -434,11 +438,11 @@ onMounted(async () => {
           Fix corrupted data that may cause sync errors. Run this if you see sync errors about invalid UUIDs.
         </p>
         <div class="cleanup-actions">
-          <button class="cleanup-btn" @click="handleCleanupTasks" :disabled="isCleaningUp">
+          <button class="cleanup-btn" :disabled="isCleaningUp" @click="handleCleanupTasks">
             <RefreshCw :size="16" :class="{ spinning: isCleaningUp }" />
             {{ isCleaningUp ? 'Cleaning...' : 'Fix Corrupted Tasks' }}
           </button>
-          <button class="cleanup-btn secondary" @click="handleClearSyncQueue" :disabled="isClearingSyncQueue">
+          <button class="cleanup-btn secondary" :disabled="isClearingSyncQueue" @click="handleClearSyncQueue">
             <RotateCcw :size="16" />
             {{ isClearingSyncQueue ? 'Clearing...' : 'Clear Sync Queue' }}
           </button>

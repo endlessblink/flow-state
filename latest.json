@@ -1,11 +1,11 @@
 {
-  "version": "1.2.63",
-  "notes": "Enhanced capacity metrics to pull from task completions, gamification store, and estimation data - no longer requires pomodoro timer usage. Added streak and on-time rate to AI Insights panel.",
-  "pub_date": "2026-02-14T19:37:11.629Z",
+  "version": "1.2.64",
+  "notes": "v1.2.64: AI agent chains, canvas cleanup, weekly plan scheduling, timer improvements",
+  "pub_date": "2026-02-14T21:13:17.933Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTdlb2NLaXNRYzdjU211dWQ2RS8vOTNYQzZsZ0c2cElMTWpmbkptUkYvbFVYcmkzT09wSWczcE5yTXROdTk0T2wvanJxU1BmRmhUYnh0MUZsVTYrSFFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMDk3ODMxCWZpbGU6Rmxvd1N0YXRlXzEuMi42M19hbWQ2NC5BcHBJbWFnZQp0OU94ck9zYTRIdVJHNXRLcDlYaTlpUFBnbStxcWNFNlcvNlMrR1duQnNmRGZRYUt3eElERFJRMWhqNzk1RWFadVNYbDUyRXVKUjV3Sk5ha0lqL1lDUT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.63_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXo1RmNNSENnV3dYWTdZRGt0UjdjZW5SeGFYQ1NuQzFYcTd6ajQ0SmpzaVg3ekhEK0g0RVozVjBzRHM4MWdRYWYyd2JrOWdEbDlGREtLSTEwelBWNEFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMTAzNTk3CWZpbGU6Rmxvd1N0YXRlXzEuMi42NF9hbWQ2NC5BcHBJbWFnZQoyaFN3N1dhUWdaR09XOTR4ME1HZllaVGZxU0VnLzZJOXFzTW5PbnNDU1hCLzdkd1Nqd0tscTY0QkFZQkR2ZXdaMzl6RG5YN0RSNVVtWlM2SzlWYUNEZz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.64_amd64.AppImage"
     }
   }
 }

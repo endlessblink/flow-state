@@ -83,10 +83,10 @@ const flameIntensity = computed(() => {
       <div class="cyber-profile__avatar-frame">
         <img
           :src="avatarUrl"
-          :alt="`Player avatar`"
+          alt="Player avatar"
           class="cyber-profile__avatar"
           loading="lazy"
-        />
+        >
       </div>
 
       <div class="cyber-profile__class-badge cf-badge" data-augmented-ui="tl-clip br-clip border">

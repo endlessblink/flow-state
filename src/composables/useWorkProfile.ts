@@ -393,12 +393,13 @@ export function useWorkProfile() {
     }
 
     // --- 4. Project activity (top active + stale projects) ---
+    const SKIP_PROJECT_IDS = new Set(['uncategorized', '1', ''])
     const projectTaskCounts = new Map<string, { total: number; done: number; name: string }>()
     for (const t of allTasks) {
-      if (!t.projectId) continue
+      if (!t.projectId || SKIP_PROJECT_IDS.has(t.projectId)) continue
       if (!projectTaskCounts.has(t.projectId)) {
         const proj = projectStore.projects.find(p => p.id === t.projectId)
-        projectTaskCounts.set(t.projectId, { total: 0, done: 0, name: proj?.name || 'Unknown' })
+        projectTaskCounts.set(t.projectId, { total: 0, done: 0, name: proj?.name || t.projectId })
       }
       const counts = projectTaskCounts.get(t.projectId)!
       counts.total++
@@ -455,26 +456,25 @@ export function useWorkProfile() {
     // --- 6. Estimation accuracy (estimatedPomodoros vs completedPomodoros) ---
     const estimatedTasks = recentDone.filter(t => t.estimatedPomodoros && t.estimatedPomodoros > 0 && t.completedPomodoros > 0)
     if (estimatedTasks.length >= 3) {
-      let totalEstimated = 0
-      let totalActual = 0
-      for (const t of estimatedTasks) {
-        totalEstimated += t.estimatedPomodoros!
-        totalActual += t.completedPomodoros
-      }
-      const ratio = totalActual / totalEstimated
-      if (ratio > 1.3) {
+      // Per-task ratios (median is more robust than sum ratio for outliers)
+      const perTaskRatios = estimatedTasks
+        .map(t => t.completedPomodoros / t.estimatedPomodoros!)
+        .sort((a, b) => a - b)
+      const medianRatio = perTaskRatios[Math.floor(perTaskRatios.length / 2)]
+
+      if (medianRatio > 1.3) {
         observations.push({
           entity: 'user',
           relation: 'underestimates',
-          value: `tasks take ${ratio.toFixed(1)}x more pomodoros than estimated (${totalActual} actual vs ${totalEstimated} estimated)`,
+          value: `median task takes ${medianRatio.toFixed(1)}x more pomodoros than estimated (${estimatedTasks.length} tasks measured)`,
           confidence: Math.min(0.9, 0.5 + estimatedTasks.length * 0.05),
           source: 'task_analysis'
         })
-      } else if (ratio < 0.7) {
+      } else if (medianRatio < 0.7) {
         observations.push({
           entity: 'user',
           relation: 'overestimates',
-          value: `tasks take ${ratio.toFixed(1)}x fewer pomodoros than estimated`,
+          value: `median task takes ${medianRatio.toFixed(1)}x fewer pomodoros than estimated (${estimatedTasks.length} tasks measured)`,
           confidence: Math.min(0.9, 0.5 + estimatedTasks.length * 0.05),
           source: 'task_analysis'
         })

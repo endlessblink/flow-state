@@ -1542,7 +1542,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         let currentChannel: any = null
         let retryCount = 0
         let isExplicitlyClosed = false
-        let heartbeatInterval: any = null
+        const heartbeatInterval: any = null
         let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
 
         // cleanup previous channels if any

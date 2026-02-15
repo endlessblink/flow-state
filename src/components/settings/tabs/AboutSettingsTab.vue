@@ -43,9 +43,15 @@ const openGithub = () => {
         <div class="app-icon">
           <Info :size="32" class="icon" />
         </div>
-        <h2 class="app-name">FlowState</h2>
-        <p class="app-version">Version {{ currentVersion }}</p>
-        <p class="app-tagline">Productivity meets flow</p>
+        <h2 class="app-name">
+          FlowState
+        </h2>
+        <p class="app-version">
+          Version {{ currentVersion }}
+        </p>
+        <p class="app-tagline">
+          Productivity meets flow
+        </p>
       </div>
     </SettingsSection>
 
@@ -73,7 +79,9 @@ const openGithub = () => {
         <!-- Update Available State -->
         <div v-else-if="updater.status.value === 'available'" class="update-available">
           <div class="update-info-box">
-            <h4 class="update-info-title">Update Available: v{{ updater.updateInfo.value?.version }}</h4>
+            <h4 class="update-info-title">
+              Update Available: v{{ updater.updateInfo.value?.version }}
+            </h4>
             <p v-if="updater.updateInfo.value?.body" class="update-info-body">
               {{ updater.updateInfo.value.body }}
             </p>

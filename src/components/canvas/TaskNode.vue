@@ -81,7 +81,7 @@
       id="target"
       type="target"
       :position="Position.Top"
-      :connectable="true"
+      connectable
       class="handle-target"
     />
     <Handle
@@ -89,7 +89,7 @@
       id="source"
       type="source"
       :position="Position.Bottom"
-      :connectable="true"
+      connectable
       class="handle-source"
     />
   </div>
@@ -116,7 +116,9 @@ const props = withDefaults(defineProps<Props>(), {
   showStatus: true,
   showDuration: true,
   showSchedule: true,
-  isConnecting: false
+  isConnecting: false,
+  selectCallback: undefined,
+  editCallback: undefined
 })
 
 const emit = defineEmits<{
@@ -245,12 +247,12 @@ onUnmounted(() => {
   display: block;
 }
 
-/* Content wrapper - allow shadows/borders to extend beyond */
+/* Content wrapper */
 .task-node-content {
   position: relative;
   padding: var(--space-6);
   border-radius: var(--radius-xl);
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Priority glow overlay - no background, just for colored border effects */

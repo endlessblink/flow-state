@@ -104,7 +104,9 @@ const isGamificationEnabled = computed(() => settingsStore.gamificationEnabled)
                 class="intensity-default-badge"
               >default</span>
             </div>
-            <p class="intensity-card-desc">{{ option.description }}</p>
+            <p class="intensity-card-desc">
+              {{ option.description }}
+            </p>
           </button>
         </div>
       </div>

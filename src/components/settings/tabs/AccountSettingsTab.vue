@@ -10,9 +10,10 @@ import { isTauri } from '@/composables/useTauriStartup'
 import { useSettingsStore, type ExternalCalendarConfig } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
 
+const emit = defineEmits<{ closeModal: [] }>()
+
 declare const __APP_VERSION__: string
 
-const emit = defineEmits<{ closeModal: [] }>()
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
 
@@ -302,9 +303,15 @@ const handleChangePassword = async () => {
         <div class="app-icon">
           <Info :size="32" class="icon" />
         </div>
-        <h2 class="app-name">FlowState</h2>
-        <p class="app-version">Version {{ currentVersion }}</p>
-        <p class="app-tagline">Productivity meets flow</p>
+        <h2 class="app-name">
+          FlowState
+        </h2>
+        <p class="app-version">
+          Version {{ currentVersion }}
+        </p>
+        <p class="app-tagline">
+          Productivity meets flow
+        </p>
       </div>
     </SettingsSection>
 
@@ -328,7 +335,9 @@ const handleChangePassword = async () => {
 
         <div v-else-if="updater.status.value === 'available'" class="update-available">
           <div class="update-info-box">
-            <h4 class="update-info-title">Update Available: v{{ updater.updateInfo.value?.version }}</h4>
+            <h4 class="update-info-title">
+              Update Available: v{{ updater.updateInfo.value?.version }}
+            </h4>
             <p v-if="updater.updateInfo.value?.body" class="update-info-body">
               {{ updater.updateInfo.value.body }}
             </p>
@@ -406,7 +415,9 @@ const handleChangePassword = async () => {
       </p>
 
       <details class="help-details">
-        <summary class="help-summary">How to get your Google Calendar iCal URL</summary>
+        <summary class="help-summary">
+          How to get your Google Calendar iCal URL
+        </summary>
         <ol class="help-steps">
           <li>Open <strong>Google Calendar</strong> in your browser</li>
           <li>Click the <strong>gear icon</strong> → <strong>Settings</strong></li>
@@ -472,7 +483,7 @@ const handleChangePassword = async () => {
             type="text"
             class="cal-field-input"
             placeholder="e.g. Work Calendar"
-          />
+          >
         </div>
 
         <div class="cal-form-field">
@@ -482,7 +493,7 @@ const handleChangePassword = async () => {
             type="url"
             class="cal-field-input"
             placeholder="https://calendar.google.com/calendar/ical/..."
-          />
+          >
         </div>
 
         <div class="cal-form-field">
@@ -502,7 +513,7 @@ const handleChangePassword = async () => {
               type="color"
               class="color-input"
               title="Custom color"
-            />
+            >
           </div>
         </div>
 

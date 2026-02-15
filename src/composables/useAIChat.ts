@@ -366,12 +366,17 @@ export function useAIChat() {
     if (!content.trim()) return
     if (store.isGenerating) return
 
-    // Enable ReAct for explicit request or planning tasks (works with ALL providers)
-    if (options.useReAct || inferTaskType(content) === 'planning') {
-      return sendMessageWithReAct(content, options)
-    }
+    // Always use ReAct — the model decides if/when to call tools via native function calling.
+    // No hardcoded keyword routing. If the model doesn't call tools, the loop exits on iteration 1.
+    return sendMessageWithReAct(content, options)
+  }
 
-    // Native tools enabled for ALL providers (Ollama supports tool calling since v0.5.0)
+  // Dead code below kept for reference — sendMessage always routes to ReAct now.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function _sendMessageLegacy(
+    content: string,
+    options: SendMessageOptions = {}
+  ): Promise<void> {
     const useNativeTools = true
 
     // Clear input
@@ -853,24 +858,10 @@ export function useAIChat() {
   }
 
   /**
-   * Infer task type from message content.
+   * Infer task type is no longer used for routing — the model decides via native tool calling.
+   * Kept only for provider selection hints (local vs cloud preference).
    */
-  function inferTaskType(content: string): TaskType {
-    const lower = content.toLowerCase()
-
-    if (lower.includes('break down') || lower.includes('breakdown') || lower.includes('subtask')) {
-      return 'task_breakdown'
-    }
-    if (lower.includes('organize') || lower.includes('group') || lower.includes('canvas')) {
-      return 'canvas_analysis'
-    }
-    if (lower.includes('plan') || lower.includes('schedule') || lower.includes('week')) {
-      return 'planning'
-    }
-    if (lower.includes('suggest') || lower.includes('recommend')) {
-      return 'suggestion'
-    }
-
+  function inferTaskType(_content: string): TaskType {
     return 'chat'
   }
 
@@ -966,7 +957,7 @@ export function useAIChat() {
       const match = numberedMatch || bulletMatch
       if (match) {
         // Clean up: remove trailing punctuation, markdown bold, etc.
-        let title = match[1].replace(/\*\*/g, '').trim()
+        const title = match[1].replace(/\*\*/g, '').trim()
         // Skip lines that look like descriptions rather than titles (too long)
         if (title.length > 0 && title.length <= 120) {
           titles.push(title)
@@ -1034,6 +1025,61 @@ export function useAIChat() {
    */
   async function planWeek(): Promise<void> {
     await executeAgentChain('plan_my_week')
+  }
+
+  /**
+   * Execute a tool directly (bypassing AI).
+   * Used for quick actions that map 1:1 to a tool.
+   */
+  async function executeDirectTool(label: string, toolCall: ToolCall): Promise<void> {
+    if (!toolCall) return
+
+    // Add user message to show action
+    store.addUserMessage(label)
+
+    // Start assistant response
+    store.startStreamingMessage()
+    store.appendStreamingContent(`Executing ${label}...`)
+
+    try {
+      console.log('[AIChat] Executing direct tool:', toolCall.tool, toolCall.parameters)
+      const result = await executeTool(toolCall)
+      console.log('[AIChat] Direct tool result:', result)
+
+      if (result.success && result.undoAction) {
+        store.pushUndoEntry({
+          toolName: toolCall.tool,
+          timestamp: Date.now(),
+          params: toolCall.parameters,
+          undoAction: result.undoAction,
+          description: result.message,
+        })
+      }
+
+      // Update message with result
+      const resultMsg = result.success ? result.message : `Error: ${result.message}`
+      store.appendStreamingContent(`\n\n${resultMsg}`)
+
+      // Add tool result metadata
+      const lastMsg = store.messages[store.messages.length - 1]
+      if (lastMsg && lastMsg.isStreaming) {
+        lastMsg.metadata = {
+          ...lastMsg.metadata,
+          toolResults: [{
+            success: result.success,
+            message: result.message,
+            data: result.data,
+            tool: toolCall.tool,
+            type: AI_TOOLS.find(t => t.name === toolCall.tool)?.category || 'read',
+          }],
+        } as any
+      }
+
+      store.completeStreamingMessage()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Action failed'
+      store.failStreamingMessage(errorMessage)
+    }
   }
 
   // ============================================================================
@@ -1345,6 +1391,7 @@ export function useAIChat() {
 
     // Lifecycle
     initialize,
-    handleKeyboardShortcut
+    handleKeyboardShortcut,
+    executeDirectTool
   }
 }

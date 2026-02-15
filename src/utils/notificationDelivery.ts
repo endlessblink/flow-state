@@ -18,7 +18,7 @@ interface DeliveryOptions {
 
 /** Detect if running inside Tauri */
 function isTauri(): boolean {
-  return !!(window as any).__TAURI_INTERNALS__
+  return !!(window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__
 }
 
 /**

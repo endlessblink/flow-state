@@ -14,6 +14,7 @@
             :placeholder="isListening ? 'Listening...' : 'What needs to be done?'"
             maxlength="200"
             @keydown="handleTitleKeydown"
+            @paste="handlePaste"
           >
           <!-- Mic button (TASK-1024) - ALWAYS SHOW FOR DEBUG -->
           <button
@@ -43,6 +44,14 @@
         <!-- Voice error message -->
         <div v-if="voiceError && !isListening" class="voice-error">
           {{ voiceError }}
+        </div>
+        <!-- TASK-1325: URL scraping feedback -->
+        <div v-if="isScraping" class="url-scraping-feedback">
+          <Globe :size="16" class="scraping-icon" />
+          <span class="scraping-status">Fetching page info...</span>
+          <button class="scraping-cancel" @click="cancelScraping">
+            <X :size="14" />
+          </button>
         </div>
       </div>
 
@@ -219,8 +228,9 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, reactive } from 'vue'
-import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff } from 'lucide-vue-next'
+import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff, Globe, Loader2 } from 'lucide-vue-next'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
+import { useUrlScraping } from '@/composables/useUrlScraping'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
 
 const emit = defineEmits<{
@@ -264,6 +274,20 @@ const toggleVoiceInput = async () => {
   } else {
     newTask.title = ''
     await startVoice()
+  }
+}
+
+// TASK-1325: URL scraping on paste
+const { isScraping, scrapeIfUrl, cancel: cancelScraping } = useUrlScraping()
+
+const handlePaste = async (e: ClipboardEvent) => {
+  const text = e.clipboardData?.getData('text') || ''
+  if (!text.trim()) return
+
+  const result = await scrapeIfUrl(text)
+  if (result) {
+    newTask.title = result.title
+    newTask.description = result.description
   }
 }
 
@@ -597,6 +621,54 @@ defineExpose({
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);
+}
+
+/* TASK-1325: URL Scraping Feedback */
+.url-scraping-feedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  background: var(--glass-bg-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+}
+
+.scraping-icon {
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.scraping-status {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--brand-primary);
+}
+
+.scraping-cancel {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.scraping-cancel:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 .description-input {

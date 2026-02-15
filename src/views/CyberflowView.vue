@@ -33,7 +33,7 @@
       <CyberSkillTree v-else-if="activeSection === 'upgrades'" />
 
       <!-- ACHIEVEMENTS Tab -->
-      <CyberAchievements v-else-if="activeSection === 'achievements'" :show-all="true" />
+      <CyberAchievements v-else-if="activeSection === 'achievements'" show-all />
     </div>
 
     <!-- Character Drawer (overlay, not a tab) -->

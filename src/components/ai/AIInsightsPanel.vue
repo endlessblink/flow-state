@@ -9,13 +9,32 @@
             <h3 class="section-title">
               Memory Observations
             </h3>
+            <div v-if="observations.length > 0" class="view-toggle">
+              <button
+                class="toggle-btn"
+                :class="{ active: viewMode === 'list' }"
+                title="List view"
+                @click="viewMode = 'list'"
+              >
+                <List :size="14" />
+              </button>
+              <button
+                class="toggle-btn"
+                :class="{ active: viewMode === 'graph' }"
+                title="Graph view"
+                @click="viewMode = 'graph'"
+              >
+                <Network :size="14" />
+              </button>
+            </div>
           </div>
           <span v-if="observations.length > 0" class="section-count">
             {{ observations.length }} observation{{ observations.length !== 1 ? 's' : '' }} from your work patterns
           </span>
         </div>
 
-        <div v-if="observations.length > 0" class="obs-list">
+        <!-- List View -->
+        <div v-if="observations.length > 0 && viewMode === 'list'" class="obs-list">
           <div v-for="(obs, i) in observations" :key="i" class="obs-card">
             <div class="obs-main">
               <span class="obs-entity">{{ formatEntity(obs.entity) }}</span>
@@ -27,6 +46,87 @@
                 <div class="confidence-fill" :style="{ width: (obs.confidence * 100) + '%' }" />
               </div>
               <span class="obs-source">{{ obs.source.replace(/_/g, ' ') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Graph View -->
+        <div v-else-if="observations.length > 0 && viewMode === 'graph'" class="graph-container">
+          <svg
+            ref="graphSvg"
+            class="graph-svg"
+            viewBox="0 0 700 400"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <!-- Edges -->
+            <g class="graph-edges">
+              <path
+                v-for="(edge, i) in graphEdges"
+                :key="'e' + i"
+                :d="getEdgePath(edge)"
+                class="graph-edge"
+                :style="{ opacity: 0.15 + edge.confidence * 0.35 }"
+              />
+              <text
+                v-for="(edge, i) in graphEdges"
+                :key="'el' + i"
+                :x="getEdgeMidpoint(edge).x"
+                :y="getEdgeMidpoint(edge).y"
+                class="edge-label"
+              >
+                {{ edge.label }}
+              </text>
+            </g>
+
+            <!-- Nodes -->
+            <g
+              v-for="node in graphNodes"
+              :key="node.id"
+              class="graph-node"
+              :class="{ hovered: hoveredNode === node.id }"
+              @mouseenter="(e: MouseEvent) => handleNodeHover(node.id, e)"
+              @mouseleave="handleNodeLeave"
+            >
+              <!-- Glow circle -->
+              <circle
+                :cx="node.x"
+                :cy="node.y"
+                :r="node.radius + 4"
+                :fill="node.color"
+                :opacity="hoveredNode === node.id ? 0.2 : 0.08"
+              />
+              <!-- Main circle -->
+              <circle
+                :cx="node.x"
+                :cy="node.y"
+                :r="node.radius"
+                :fill="node.type === 'center' ? node.color : 'transparent'"
+                :stroke="node.color"
+                :stroke-width="node.type === 'center' ? 0 : 2"
+                class="node-circle"
+              />
+              <!-- Label -->
+              <text
+                :x="node.x"
+                :y="node.y + (node.type === 'center' ? 1 : node.radius + 14)"
+                class="node-label"
+                :class="{ 'center-label': node.type === 'center' }"
+              >
+                {{ node.label }}
+              </text>
+            </g>
+          </svg>
+
+          <!-- Tooltip -->
+          <div
+            v-if="tooltipObs"
+            class="graph-tooltip"
+            :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
+          >
+            <div class="tooltip-relation">{{ formatRelation(tooltipObs.relation) }}</div>
+            <div class="tooltip-value">{{ tooltipObs.value }}</div>
+            <div class="tooltip-meta">
+              {{ Math.round(tooltipObs.confidence * 100) }}% confidence · {{ tooltipObs.source.replace(/_/g, ' ') }}
             </div>
           </div>
         </div>
@@ -165,14 +265,14 @@
  * - Weekly planning history
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
 import type { MemoryObservation } from '@/utils/supabaseMappers'
 import {
   Brain, TrendingUp, BarChart3, Trash2, RefreshCw,
-  RotateCcw, Loader2, AlertTriangle,
+  RotateCcw, Loader2, AlertTriangle, Network, List,
 } from 'lucide-vue-next'
 
 const { profile, loadProfile, reloadProfile, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
@@ -294,8 +394,250 @@ async function handleClearMemories() {
   }
 }
 
+// --- Graph View ---
+const viewMode = ref<'list' | 'graph'>('list')
+const graphSvg = ref<SVGSVGElement | null>(null)
+const hoveredNode = ref<string | null>(null)
+const tooltipObs = ref<MemoryObservation | null>(null)
+const tooltipPos = ref({ x: 0, y: 0 })
+
+interface GraphNode {
+  id: string
+  label: string
+  x: number
+  y: number
+  vx: number
+  vy: number
+  radius: number
+  color: string
+  type: 'center' | 'entity'
+  pinned?: boolean
+}
+
+interface GraphEdge {
+  source: string
+  target: string
+  label: string
+  obs: MemoryObservation
+  confidence: number
+}
+
+const graphNodes = ref<GraphNode[]>([])
+const graphEdges = ref<GraphEdge[]>([])
+let animFrame: number | null = null
+
+const RELATION_COLORS: Record<string, string> = {
+  'peak_productivity': '#4ECDC4',
+  'completion_rate': '#4ECDC4',
+  'avg_completion_speed': '#4ECDC4',
+  'reliable_planner': '#4ECDC4',
+  'most_active': '#3db8af',
+  'overdue_pattern': '#ff9f43',
+  'backlog_heavy': '#ff9f43',
+  'high_wip': '#ff9f43',
+  'underestimates': '#ff9f43',
+  'capacity_gap': '#ff9f43',
+  'stale': '#ff5555',
+  'frequently_missed': '#ff5555',
+  'overestimates': '#ff9f43',
+  'overplans': '#ff9f43',
+}
+
+function getNodeColor(obs: MemoryObservation): string {
+  return RELATION_COLORS[obs.relation] || '#4ECDC4'
+}
+
+function buildGraph() {
+  if (observations.value.length === 0) return
+
+  const W = 700
+  const H = 400
+  const cx = W / 2
+  const cy = H / 2
+
+  const nodeMap = new Map<string, GraphNode>()
+  const edges: GraphEdge[] = []
+
+  // Center node: "You"
+  nodeMap.set('user', {
+    id: 'user',
+    label: 'You',
+    x: cx,
+    y: cy,
+    vx: 0,
+    vy: 0,
+    radius: 28,
+    color: '#4ECDC4',
+    type: 'center',
+    pinned: true,
+  })
+
+  // Build entity nodes from observations
+  for (const obs of observations.value) {
+    const entityId = obs.entity
+    if (!nodeMap.has(entityId)) {
+      const angle = Math.random() * Math.PI * 2
+      const dist = 120 + Math.random() * 80
+      nodeMap.set(entityId, {
+        id: entityId,
+        label: formatEntity(entityId),
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        vx: 0,
+        vy: 0,
+        radius: 12 + obs.confidence * 14,
+        color: getNodeColor(obs),
+        type: 'entity',
+      })
+    }
+
+    // Edge from entity's source to entity
+    const sourceId = entityId === 'user' ? 'user' : 'user'
+    if (entityId !== 'user') {
+      edges.push({
+        source: sourceId,
+        target: entityId,
+        label: formatRelation(obs.relation),
+        obs,
+        confidence: obs.confidence,
+      })
+    }
+  }
+
+  graphNodes.value = Array.from(nodeMap.values())
+  graphEdges.value = edges
+}
+
+function runForceSimulation() {
+  const nodes = graphNodes.value
+  if (nodes.length === 0) return
+
+  const W = 700
+  const H = 400
+  const centerX = W / 2
+  const centerY = H / 2
+
+  // Force simulation tick
+  for (let iter = 0; iter < 3; iter++) {
+    // Repulsion between all nodes
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i]
+        const b = nodes[j]
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1
+        const minDist = a.radius + b.radius + 40
+        if (dist < minDist) {
+          const force = (minDist - dist) / dist * 0.15
+          dx *= force
+          dy *= force
+          if (!a.pinned) { a.vx -= dx; a.vy -= dy }
+          if (!b.pinned) { b.vx += dx; b.vy += dy }
+        }
+      }
+    }
+
+    // Attraction along edges
+    for (const edge of graphEdges.value) {
+      const source = nodes.find(n => n.id === edge.source)
+      const target = nodes.find(n => n.id === edge.target)
+      if (!source || !target) continue
+      const dx = target.x - source.x
+      const dy = target.y - source.y
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1
+      const ideal = 140 + (1 - edge.confidence) * 60
+      const force = (dist - ideal) / dist * 0.04
+      if (!source.pinned) { source.vx += dx * force; source.vy += dy * force }
+      if (!target.pinned) { target.vx -= dx * force; target.vy -= dy * force }
+    }
+
+    // Centering gravity
+    for (const node of nodes) {
+      if (node.pinned) continue
+      node.vx += (centerX - node.x) * 0.005
+      node.vy += (centerY - node.y) * 0.005
+    }
+
+    // Apply velocity with damping
+    for (const node of nodes) {
+      if (node.pinned) continue
+      node.vx *= 0.85
+      node.vy *= 0.85
+      node.x += node.vx
+      node.y += node.vy
+      // Clamp to bounds
+      node.x = Math.max(node.radius + 4, Math.min(W - node.radius - 4, node.x))
+      node.y = Math.max(node.radius + 4, Math.min(H - node.radius - 4, node.y))
+    }
+  }
+
+  animFrame = requestAnimationFrame(runForceSimulation)
+}
+
+function startSimulation() {
+  buildGraph()
+  if (animFrame) cancelAnimationFrame(animFrame)
+  animFrame = requestAnimationFrame(runForceSimulation)
+}
+
+function stopSimulation() {
+  if (animFrame) {
+    cancelAnimationFrame(animFrame)
+    animFrame = null
+  }
+}
+
+function handleNodeHover(nodeId: string, event: MouseEvent) {
+  hoveredNode.value = nodeId
+  // Find observation for this node
+  const obs = observations.value.find(o => o.entity === nodeId)
+  tooltipObs.value = obs || null
+  const svgRect = graphSvg.value?.getBoundingClientRect()
+  if (svgRect) {
+    tooltipPos.value = { x: event.clientX - svgRect.left, y: event.clientY - svgRect.top - 10 }
+  }
+}
+
+function handleNodeLeave() {
+  hoveredNode.value = null
+  tooltipObs.value = null
+}
+
+function getEdgePath(edge: GraphEdge): string {
+  const source = graphNodes.value.find(n => n.id === edge.source)
+  const target = graphNodes.value.find(n => n.id === edge.target)
+  if (!source || !target) return ''
+  return `M ${source.x} ${source.y} L ${target.x} ${target.y}`
+}
+
+function getEdgeMidpoint(edge: GraphEdge): { x: number; y: number } {
+  const source = graphNodes.value.find(n => n.id === edge.source)
+  const target = graphNodes.value.find(n => n.id === edge.target)
+  if (!source || !target) return { x: 0, y: 0 }
+  return { x: (source.x + target.x) / 2, y: (source.y + target.y) / 2 - 8 }
+}
+
+watch(viewMode, (mode) => {
+  if (mode === 'graph') {
+    nextTick(() => startSimulation())
+  } else {
+    stopSimulation()
+  }
+})
+
+watch(observations, () => {
+  if (viewMode.value === 'graph') {
+    nextTick(() => startSimulation())
+  }
+})
+
 onMounted(async () => {
   await loadProfile()
+})
+
+onUnmounted(() => {
+  stopSimulation()
 })
 </script>
 
@@ -693,6 +1035,129 @@ onMounted(async () => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* View toggle */
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  margin-inline-start: auto;
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.toggle-btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+}
+
+.toggle-btn.active {
+  color: var(--brand-primary);
+  background: var(--glass-bg-soft);
+}
+
+/* Graph visualization */
+.graph-container {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.graph-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.graph-edge {
+  stroke: var(--brand-primary);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.edge-label {
+  font-size: 9px;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.graph-node {
+  cursor: pointer;
+}
+
+.graph-node .node-circle {
+  transition: stroke-width 0.15s ease;
+}
+
+.graph-node.hovered .node-circle {
+  stroke-width: 3;
+}
+
+.node-label {
+  font-size: 11px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+.node-label.center-label {
+  fill: var(--surface-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.graph-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--overlay-component-bg);
+  border: 1px solid var(--glass-border-hover);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  pointer-events: none;
+  z-index: 10;
+  max-width: 280px;
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+}
+
+.tooltip-relation {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--brand-primary);
+  text-transform: capitalize;
+}
+
+.tooltip-value {
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.tooltip-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 /* Responsive */

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Bot, DollarSign, MessageSquare, Zap, Trash2, Tag, RefreshCw } from 'lucide-vue-next'
 import { useAIUsageTracking, type UsagePeriod, type UsageSummary } from '@/composables/useAIUsageTracking'
+import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSettingsStore } from '@/stores/settings'
@@ -12,6 +13,64 @@ const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clear
 const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
 const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
+
+// ── Default Provider/Model ──
+const {
+  selectedProvider,
+  selectedModel,
+  availableOllamaModels,
+  setProvider,
+  setModel,
+  refreshOllamaModels,
+} = useAIChat()
+
+type ProviderOption = 'auto' | 'ollama' | 'groq' | 'openrouter'
+
+const providerOptions: { key: ProviderOption; label: string; desc: string }[] = [
+  { key: 'auto', label: 'Auto', desc: 'Prefers local, falls back to cloud' },
+  { key: 'ollama', label: 'Local (Ollama)', desc: 'Free, private, runs on your machine' },
+  { key: 'groq', label: 'Groq', desc: 'Fast cloud inference' },
+  { key: 'openrouter', label: 'OpenRouter', desc: 'Premium models (Claude, GPT-4, Kimi)' },
+]
+
+const groqModels = [
+  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
+  { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
+  { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+  { id: 'gemma2-9b-it', label: 'Gemma 2 9B' },
+]
+
+const openrouterModels = [
+  { id: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+  { id: 'anthropic/claude-opus-4-6', label: 'Claude Opus 4.6' },
+  { id: 'openai/gpt-4o', label: 'GPT-4o' },
+  { id: 'moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2' },
+  { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
+  { id: 'mistralai/mistral-large', label: 'Mistral Large' },
+  { id: 'google/gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+]
+
+const currentModelOptions = computed(() => {
+  switch (selectedProvider.value) {
+    case 'ollama':
+      return availableOllamaModels.value.map(m => ({ id: m, label: m }))
+    case 'groq':
+      return groqModels
+    case 'openrouter':
+      return openrouterModels
+    default:
+      return []
+  }
+})
+
+function onProviderChange(provider: ProviderOption) {
+  setProvider(provider)
+}
+
+function onModelChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  setModel(value || null)
+}
 
 /** Currently selected time period */
 const selectedPeriod = ref<UsagePeriod>('all')
@@ -178,6 +237,56 @@ async function onClearMemories() {
 
 <template>
   <div class="ai-settings-tab">
+    <!-- Default Provider & Model -->
+    <SettingsSection title="Default Provider & Model">
+      <p class="section-desc">
+        Choose which AI provider and model to use by default. This applies to all new chat sessions.
+      </p>
+
+      <!-- Provider selector -->
+      <div class="provider-chips">
+        <button
+          v-for="opt in providerOptions"
+          :key="opt.key"
+          class="provider-chip"
+          :class="{ active: selectedProvider === opt.key }"
+          @click="onProviderChange(opt.key)"
+        >
+          <span class="provider-chip-label">{{ opt.label }}</span>
+          <span class="provider-chip-desc">{{ opt.desc }}</span>
+        </button>
+      </div>
+
+      <!-- Model selector (when not auto) -->
+      <div v-if="selectedProvider !== 'auto'" class="model-selector">
+        <label class="model-selector-label">Model</label>
+        <div class="model-select-wrapper">
+          <select
+            class="model-select"
+            :value="selectedModel || ''"
+            @change="onModelChange"
+          >
+            <option value="">Default</option>
+            <option
+              v-for="m in currentModelOptions"
+              :key="m.id"
+              :value="m.id"
+            >
+              {{ m.label }}
+            </option>
+          </select>
+        </div>
+        <button
+          v-if="selectedProvider === 'ollama'"
+          class="refresh-models-btn"
+          @click="refreshOllamaModels()"
+          title="Refresh local models"
+        >
+          <RefreshCw :size="14" />
+        </button>
+      </div>
+    </SettingsSection>
+
     <!-- Your Usage (top) -->
     <SettingsSection title="Your Usage">
       <!-- Period selector -->
@@ -526,6 +635,106 @@ async function onClearMemories() {
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin: 0 0 var(--space-3) 0;
+}
+
+/* ── Provider & Model Selector ── */
+.provider-chips {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.provider-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-0_5);
+  padding: var(--space-2_5) var(--space-3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(8px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  text-align: left;
+}
+
+.provider-chip:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.provider-chip.active {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.provider-chip-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.provider-chip-desc {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+}
+
+.model-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.model-selector-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.model-select-wrapper {
+  flex: 1;
+}
+
+.model-select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  appearance: auto;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+
+.refresh-models-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.refresh-models-btn:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 /* ── Pricing Reference ── */

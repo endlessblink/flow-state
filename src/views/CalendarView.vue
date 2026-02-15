@@ -306,7 +306,7 @@ const currentTime = ref(new Date())
 // Destructure commonly used items from composables
 const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
-const { workingHours, weekDays, weekEvents, handleWeekDragOver, handleWeekDrop, startWeekResize, getWeekEventStyle, isCurrentWeekTimeCell } = weekView
+const { workingHours, weekDays, weekEvents, getWeekEventStyle, isCurrentWeekTimeCell } = weekView
 
 const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
 

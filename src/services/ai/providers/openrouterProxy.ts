@@ -31,7 +31,7 @@ import { proxyAIChat, proxyAIChatStream, isProxyAvailable } from '../proxy/aiCha
 // OpenRouter Proxy Provider Implementation
 // ============================================================================
 
-const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet'
+const DEFAULT_MODEL = 'moonshotai/kimi-k2-instruct-0905'
 const DEFAULT_TIMEOUT = 60000
 
 /**
@@ -158,6 +158,14 @@ export class OpenRouterProxyProvider implements AIProvider {
         name: 'Gemini 2.0 Flash',
         description: 'Google flagship model',
         contextLength: 1000000,
+        supportsStreaming: true,
+        capabilities: ['chat', 'completion'],
+      },
+      {
+        id: 'moonshotai/kimi-k2-instruct-0905',
+        name: 'Kimi K2',
+        description: 'Moonshot AI MoE model - strong tool calling and coding',
+        contextLength: 131072,
         supportsStreaming: true,
         capabilities: ['chat', 'completion'],
       },

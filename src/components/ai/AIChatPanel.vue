@@ -60,6 +60,8 @@ const {
   executeDirectTool,
   aiPersonality,
   setPersonality,
+  chatDirection,
+  setChatDirection,
 } = useAIChat()
 
 // Router for full-screen navigation
@@ -101,8 +103,8 @@ function cyclePanelMode() {
 
 const panelStyle = computed(() => {
   if (panelMode.value === 'fullscreen') return {}
-  if (panelMode.value === 'expanded') return { width: '600px' }
-  return { width: '380px' }
+  if (panelMode.value === 'expanded') return { width: '800px' }
+  return { width: '600px' }
 })
 
 // Resize tooltip
@@ -692,6 +694,34 @@ onUnmounted(() => {
                   </div>
                 </div>
 
+                <!-- Chat Text Direction -->
+                <div class="settings-section">
+                  <label class="settings-label">Text Direction</label>
+                  <div class="personality-toggle">
+                    <button
+                      class="personality-option"
+                      :class="{ active: chatDirection === 'auto' }"
+                      @click="setChatDirection('auto')"
+                    >
+                      Auto
+                    </button>
+                    <button
+                      class="personality-option"
+                      :class="{ active: chatDirection === 'ltr' }"
+                      @click="setChatDirection('ltr')"
+                    >
+                      LTR
+                    </button>
+                    <button
+                      class="personality-option"
+                      :class="{ active: chatDirection === 'rtl' }"
+                      @click="setChatDirection('rtl')"
+                    >
+                      RTL
+                    </button>
+                  </div>
+                </div>
+
                 <!-- Provider Status Section (TASK-1250: Keys are server-side) -->
                 <div class="settings-section api-keys-section">
                   <button class="api-keys-toggle" @click="showApiKeys = !showApiKeys">
@@ -842,11 +872,13 @@ onUnmounted(() => {
       <div
         ref="messagesContainer"
         class="ai-chat-messages"
+        :dir="chatDirection !== 'auto' ? chatDirection : undefined"
       >
         <ChatMessage
           v-for="message in visibleMessages"
           :key="message.id"
           :message="message"
+          :direction="chatDirection"
           @select-task="handleSelectTask"
         />
 
@@ -901,7 +933,7 @@ onUnmounted(() => {
           ref="inputRef"
           v-model="inputText"
           class="ai-chat-input"
-          dir="auto"
+          :dir="chatDirection"
           placeholder="Ask AI..."
           rows="1"
           :disabled="isGenerating"
@@ -942,7 +974,7 @@ onUnmounted(() => {
   position: fixed;
   top: 0;
   inset-inline-end: 0;
-  width: 380px;
+  width: 600px;
   max-width: 100vw;
   height: 100vh;
   background: rgba(20, 18, 35, 0.45);

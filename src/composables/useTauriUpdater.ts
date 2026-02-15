@@ -112,8 +112,7 @@ export function useTauriUpdater() {
       // Download with progress tracking
       let downloaded = 0
       let totalSize = 0
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await update.downloadAndInstall((event: any) => {
+      await update.downloadAndInstall((event: { event: string; data?: { contentLength?: number; chunkLength?: number } }) => {
         switch (event.event) {
           case 'Started':
             totalSize = event.data?.contentLength || 0

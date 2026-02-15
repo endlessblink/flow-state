@@ -164,8 +164,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /** Undo buffer for reversible tool actions (session only, not persisted) */
   const undoBuffer = ref<UndoEntry[]>([])
 
-  /** Persisted AI settings (provider/model) */
-  const persistedSettings = ref<{ provider: string; model: string } | null>(null)
+  /** Persisted AI settings (provider/model/chatDirection) */
+  const persistedSettings = ref<{ provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null>(null)
+
+  /** Chat text direction override (auto = browser default) */
+  const chatDirection = ref<'auto' | 'ltr' | 'rtl'>('auto')
 
   // ============================================================================
   // Persistence Helpers
@@ -287,7 +290,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /**
    * Save AI settings to localStorage.
    */
-  function saveSettings(settings: { provider: string; model: string }) {
+  function saveSettings(settings: { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }) {
     try {
       persistedSettings.value = settings
       localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings))
@@ -299,11 +302,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
   /**
    * Load AI settings from localStorage.
    */
-  function loadPersistedSettings(): { provider: string; model: string } | null {
+  function loadPersistedSettings(): { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null {
     try {
       const raw = localStorage.getItem(AI_SETTINGS_KEY)
       if (!raw) return null
-      return JSON.parse(raw) as { provider: string; model: string }
+      return JSON.parse(raw) as { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }
     } catch {
       return null
     }
@@ -737,6 +740,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
     // Load persisted settings
     persistedSettings.value = loadPersistedSettings()
 
+    // Restore chat direction from persisted settings (backward-compatible: defaults to 'auto')
+    if (persistedSettings.value?.chatDirection) {
+      chatDirection.value = persistedSettings.value.chatDirection
+    }
+
     // Try to load conversations from new format
     const persisted = loadPersistedConversations()
 
@@ -877,14 +885,26 @@ export const useAIChatStore = defineStore('aiChat', () => {
    * Update and persist AI provider/model settings.
    */
   function updatePersistedSettings(settings: { provider: string; model: string }) {
-    saveSettings(settings)
+    saveSettings({ ...settings, chatDirection: chatDirection.value })
   }
 
   /**
    * Get the persisted AI settings.
    */
-  function getPersistedSettings(): { provider: string; model: string } | null {
+  function getPersistedSettings(): { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null {
     return persistedSettings.value
+  }
+
+  /**
+   * Set and persist chat text direction.
+   */
+  function setChatDirection(dir: 'auto' | 'ltr' | 'rtl') {
+    chatDirection.value = dir
+    if (persistedSettings.value) {
+      saveSettings({ ...persistedSettings.value, chatDirection: dir })
+    } else {
+      saveSettings({ provider: 'auto', model: '', chatDirection: dir })
+    }
   }
 
   // ============================================================================
@@ -949,5 +969,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
     // Settings Persistence
     updatePersistedSettings,
     getPersistedSettings,
+
+    // Chat Direction
+    chatDirection,
+    setChatDirection,
   }
 })

@@ -158,6 +158,7 @@ export class PerformanceBenchmark {
         }))
 
           // Measure batch addition
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ; (taskStore as any)._rawTasks.push(...testTasks)
 
         // Wait for next tick to ensure computed properties update
@@ -167,7 +168,8 @@ export class PerformanceBenchmark {
         // 2. Measure Canvas Sync
         const syncStart = performance.now()
         if (typeof (canvasStore as any).syncTasksToCanvas === 'function') {
-           (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (canvasStore as any).syncTasksToCanvas(taskStore.tasks || [])
         }
         const syncEnd = performance.now()
 
@@ -180,7 +182,9 @@ export class PerformanceBenchmark {
         times.push(Math.max(duration, 0.001))
 
           // Cleanup
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ; (taskStore as any)._rawTasks = (taskStore as any)._rawTasks.filter((t: any) => !t.id.startsWith('bench-task-'))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ; (canvasStore as any).nodes = (canvasStore as any).nodes.filter((n: any) => !n.id.startsWith('bench-task-'))
         await nextTick()
 

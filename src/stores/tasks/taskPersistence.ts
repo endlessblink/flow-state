@@ -5,7 +5,8 @@ import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
 // TASK-1215: Tauri dual-write for filter persistence
-import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/usePersistentRef'
+import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
+import type { SmartView } from '@/composables/tasks/useTaskFiltering'
 
 export function useTaskPersistence(
     // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
@@ -14,8 +15,7 @@ export function useTaskPersistence(
     hideCanvasDoneTasks: Ref<boolean>,
     hideCalendarDoneTasks: Ref<boolean>,
     hideCanvasOverdueTasks: Ref<boolean>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    activeSmartView: Ref<any>,
+    activeSmartView: Ref<SmartView>,
     activeStatusFilter: Ref<string | null>,
     // TASK-1215: Added duration filter persistence
     activeDurationFilter: Ref<'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null>,
@@ -34,8 +34,7 @@ export function useTaskPersistence(
 
     interface PersistedFilterState {
         activeProjectId: string | null
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        activeSmartView: any
+        activeSmartView: SmartView
         activeStatusFilter: string | null
         // TASK-1215: Added missing duration filter persistence
         activeDurationFilter?: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
@@ -156,8 +155,7 @@ export function useTaskPersistence(
     }
 
     const saveTasksToStorage = async (tasksToSave: Task[], context: string = 'unknown'): Promise<void> => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof window !== 'undefined' && (window as any).__STORYBOOK__) return
+        if (typeof window !== 'undefined' && (window as unknown as { __STORYBOOK__?: boolean }).__STORYBOOK__) return
 
         // BUG-339 FIX: Only save to guest localStorage when NOT authenticated
         // Previously this saved unconditionally, leaking Supabase tasks to guest storage
@@ -311,17 +309,17 @@ export function useTaskPersistence(
                         // BUG-1206 DEBUG: Log when remote description overwrites local
                         if (localTask.description !== remoteTask.description) {
                             if (import.meta.env.DEV) {
-                            console.warn('🐛 [BUG-1206] SMART-MERGE OVERWRITE - description changed!', {
-                                taskId: localTask.id?.slice(0, 8),
-                                localDescLength: localTask.description?.length,
-                                localDescPreview: localTask.description?.slice(0, 50),
-                                remoteDescLength: remoteTask.description?.length,
-                                remoteDescPreview: remoteTask.description?.slice(0, 50),
-                                localTime: new Date(localTime).toISOString(),
-                                remoteTime: new Date(remoteTime).toISOString(),
-                                isVeryRecent
-                            })
-                        }
+                                console.warn('🐛 [BUG-1206] SMART-MERGE OVERWRITE - description changed!', {
+                                    taskId: localTask.id?.slice(0, 8),
+                                    localDescLength: localTask.description?.length,
+                                    localDescPreview: localTask.description?.slice(0, 50),
+                                    remoteDescLength: remoteTask.description?.length,
+                                    remoteDescPreview: remoteTask.description?.slice(0, 50),
+                                    localTime: new Date(localTime).toISOString(),
+                                    remoteTime: new Date(remoteTime).toISOString(),
+                                    isVeryRecent
+                                })
+                            }
                         }
                         mergedTasks.push(remoteTask)
                     }
@@ -467,8 +465,7 @@ export function useTaskPersistence(
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let persistTimeout: any = null
+    let persistTimeout: ReturnType<typeof setTimeout> | null = null
     const persistFilters = async () => {
         if (isLoadingFilters.value) return
         if (persistTimeout) clearTimeout(persistTimeout)

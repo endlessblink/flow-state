@@ -312,7 +312,7 @@ function isValidStatus(status: unknown): status is Task['status'] {
 
 function isValidPriority(priority: unknown): priority is Task['priority'] {
   const validPriorities = ['low', 'medium', 'high', null]
-  return validPriorities.includes(priority as any)
+  return validPriorities.includes(priority as Task['priority'])
 }
 
 function parseDate(value: unknown): Date | null {

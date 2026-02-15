@@ -24,20 +24,6 @@ const emit = defineEmits<{
   (e: 'cellDblClick', dateString: string): void
 }>()
 
-// Debounce single-click vs double-click on day cells
-// Single click → navigate to day view, Double click → open create modal
-let clickTimer: ReturnType<typeof setTimeout> | null = null
-const handleDayCellClick = (dateString: string) => {
-  if (clickTimer) clearTimeout(clickTimer)
-  clickTimer = setTimeout(() => {
-    emit('monthDayClick', dateString)
-  }, 250)
-}
-const handleDayCellDblClick = (dateString: string) => {
-  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null }
-  emit('cellDblClick', dateString)
-}
-
 // Local drag state for visual feedback
 const activeDragDay = ref<string | null>(null)
 const draggedEventId = ref<string | null>(null)
@@ -147,8 +133,7 @@ const getEventTooltip = (event: any) => {
         @dragover.prevent
         @dragenter.prevent="handleCellDragEnter(day.dateString)"
         @dragleave="handleCellDragLeave($event, day.dateString)"
-        @click="handleDayCellClick(day.dateString)"
-        @dblclick.stop="handleDayCellDblClick(day.dateString)"
+        @dblclick.stop="$emit('cellDblClick', day.dateString)"
       >
         <div class="day-number">
           {{ day.dayNumber }}

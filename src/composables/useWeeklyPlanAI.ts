@@ -116,6 +116,9 @@ function buildSystemPrompt(interview?: InterviewAnswers, profile?: WorkProfile |
 
 ALL tasks given to you have already been pre-filtered for relevance. Your ONLY job is to distribute them across Monday through Sunday.
 
+LANGUAGE RULE (CRITICAL — NEVER IGNORE):
+You MUST write taskReasons and weekTheme in the SAME language as the task titles. If a task title is in Hebrew, its taskReasons MUST be written in Hebrew. If a task title is in English, its taskReasons MUST be in English. NEVER write English reasons for Hebrew tasks. This is non-negotiable.
+
 Rules:
 - Return ONLY valid JSON (no markdown, no explanation outside the JSON).
 - The JSON must have these keys: monday, tuesday, wednesday, thursday, friday, saturday, sunday, unscheduled, reasoning, weekTheme.
@@ -274,6 +277,14 @@ function buildUserPrompt(tasks: TaskSummary[], weekStart: Date, weekEnd: Date, b
     }
   }
 
+  // Detect dominant language from task titles
+  const hebrewPattern = /[\u0590-\u05FF]/
+  const hebrewCount = tasks.filter(t => hebrewPattern.test(t.title)).length
+  const dominantLang = hebrewCount > tasks.length / 2 ? 'Hebrew' : 'English'
+  const langInstruction = dominantLang === 'Hebrew'
+    ? `\nIMPORTANT: Most tasks are in Hebrew. You MUST write taskReasons in Hebrew for Hebrew tasks and weekTheme in Hebrew. Do NOT write in English.`
+    : ''
+
   return `Today: ${today}
 Week: ${formatDate(weekStart)} to ${weekEndStr}
 Tasks: ${tasks.length} (${overdueTasks.length} overdue, ${dueThisWeek.length} due this week, ${inProgress.length} in-progress)
@@ -285,7 +296,7 @@ Tasks:
 ${JSON.stringify(taskList, null, 2)}
 
 Return ONLY the JSON object with monday...sunday, unscheduled, reasoning, weekTheme, and taskReasons keys.
-For taskReasons: 2-3 bullet lines per task separated by \\n. CRITICAL: Each task's reasons must be UNIQUE and reference that task's specific title, project, or description. Never use the same generic phrases across multiple tasks. Match the task's language.`
+For taskReasons: 2-3 bullet lines per task separated by \\n. Each task's reasons must be UNIQUE and reference that task's specific title, project, or description.${langInstruction}`
 }
 
 function buildDayResuggestPrompt(

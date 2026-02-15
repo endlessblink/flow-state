@@ -10,7 +10,7 @@
  */
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute, Route } from 'workbox-routing'
-import { CacheFirst, NetworkOnly, NetworkFirst } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 // VitePWA injects __WB_MANIFEST at build time

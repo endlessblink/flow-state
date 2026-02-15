@@ -82,8 +82,7 @@ export function useNetworkOptimizer(config: NetworkConfig = {}) {
 
   // Reactive state
   const requestQueue = ref<Map<string, NetworkRequest>>(new Map())
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pendingRequests = ref<Map<string, Promise<any>>>(new Map())
+  const pendingRequests = ref<Map<string, Promise<NetworkResponse>>>(new Map())
   const responseCache = ref<Map<string, NetworkResponse>>(new Map())
   const isProcessingBatch = ref(false)
 

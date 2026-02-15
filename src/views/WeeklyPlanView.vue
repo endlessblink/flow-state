@@ -251,10 +251,10 @@ const {
   state, taskMap, generatePlan, moveTask, applyPlan,
   removeTaskFromPlan, snoozeTask, changePriority,
   regenerateDay, startInterview, submitInterview,
-  eligibleTaskCount,
+  eligibleTaskCount, reset,
 } = useWeeklyPlan()
 
-const { profile, hasCompletedInterview, loadProfile, savePreferences } = useWorkProfile()
+const { loadProfile, savePreferences } = useWorkProfile()
 const settingsStore = useSettingsStore()
 
 // Interview form state
@@ -407,6 +407,7 @@ function onRegenerate() {
 }
 
 function onCancel() {
+  reset()
   router.back()
 }
 

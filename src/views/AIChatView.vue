@@ -23,8 +23,6 @@ import {
   AlertTriangle,
   RotateCcw,
   Settings,
-  ChevronDown,
-  ChevronUp,
   X,
   Zap,
   MessageSquare,
@@ -85,6 +83,8 @@ const {
   executeAgentChain,
   aiPersonality,
   setPersonality,
+  chatDirection,
+  setChatDirection,
 } = useAIChat()
 
 const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')

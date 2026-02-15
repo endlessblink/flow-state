@@ -30,7 +30,7 @@ export function useUnifiedInboxActions(
 
     // --- Task Operations ---
 
-    const addTask = (title: string, options?: { priority?: string; dueDate?: Date }) => {
+    const addTask = (title: string, options?: { priority?: string; dueDate?: Date; description?: string }) => {
         if (!title.trim()) return
 
         createTaskWithUndo({
@@ -38,7 +38,8 @@ export function useUnifiedInboxActions(
             status: 'planned',
             isInInbox: true,
             ...(options?.priority && { priority: options.priority as 'low' | 'medium' | 'high' }),
-            ...(options?.dueDate && { dueDate: options.dueDate.toISOString() })
+            ...(options?.dueDate && { dueDate: options.dueDate.toISOString() }),
+            ...(options?.description && { description: options.description })
         })
     }
 

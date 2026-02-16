@@ -8,6 +8,18 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1338: Calendar delete does nothing — deleteTaskInstance ignores recurringInstances (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Right-click → Delete on calendar tasks shows confirmation dialog but clicking Delete has no effect. The task stays on the calendar.
+
+**Root Cause**: `deleteTaskInstance()` in `taskOperations.ts` only filtered `task.instances[]` but ignored `task.recurringInstances[]`. Calendar events can come from either source via `getTaskInstances()`. When the instance was from `recurringInstances`, the filter was a no-op.
+
+**Fix**: Updated `deleteTaskInstance` to check and filter both `instances[]` and `recurringInstances[]`. Also made the ModalManager confirmAction async for proper error handling and added `recurring_instances` to the sync queue payload.
+
+**Files Changed**: `src/stores/tasks/taskOperations.ts`, `src/layouts/ModalManager.vue`
+
 ### ~~BUG-1336~~: Canvas task deletion triggers project deletion dialog (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
@@ -108,6 +120,66 @@
 **Root Cause**: `.task-title` in MobileQuickSortView.vue had `overflow-wrap: anywhere` but no line/height limit. Long URLs wrapped into 10+ lines consuming the entire 260px card.
 
 **Fix**: Added `max-height: 5.2em` + `-webkit-line-clamp: 3` to `.task-title` in both MobileQuickSortView.vue and QuickSortCard.vue. Added `@media (max-height: 700px)` breakpoint for small screens (shrinks card, hides process flow indicator).
+
+---
+
+### TASK-1338: Configurable PWA push notifications (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+
+**Goal**: Implement Web Push notifications for the PWA with per-category controls and frequency limits, so the user decides exactly what triggers notifications and how often they fire.
+
+**Notification categories** (user toggles each independently):
+- Pomodoro timer events (session complete, break start/end)
+- Task reminders (due date approaching, overdue)
+- Daily digest / planning nudges
+- Achievement/gamification events (level up, streak at risk)
+
+**Frequency controls**: Per-category quiet hours, cooldown between notifications, batch vs instant delivery.
+
+**Settings UI**: New "Notifications" tab in Settings with toggle switches per category + frequency controls.
+
+**Tech**: Service Worker + Web Push API. Works on Android Chrome, desktop browsers, iOS Safari (home screen PWA only).
+
+---
+
+### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (📋 PLANNED)
+
+**Priority**: P3 | **Status**: 📋 PLANNED
+
+**Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
+
+**What "Streamlining" Means**:
+- Native `<select>` → `CustomSelect.vue`
+- Native checkboxes → project checkbox components
+- Hardcoded colors → design tokens from `design-tokens.css`
+- Solid-fill buttons → glass bg + colored border pattern (`--glass-bg-soft` + `backdrop-filter: blur(8px)`)
+- Any non-glass-morphism UI → proper glass morphism styling
+- Primary action color is TEAL (`--brand-primary` / #4ECDC4), NOT green
+
+**Progress Tracker**: `.claude/storybook-review-progress.md` (163 stories, 18 categories)
+
+**Categories** (in review order):
+- [ ] ai (4 stories)
+- [ ] auth (8 stories)
+- [ ] calendar (5 stories)
+- [ ] canvas (15 stories) — 1 done (MultiSelectionOverlay)
+- [ ] canvas/inbox (3 stories)
+- [ ] canvas/node (6 stories)
+- [ ] design-system (1 story)
+- [ ] gamification (11 stories)
+- [ ] kanban (7 stories)
+- [ ] layout (12 stories)
+- [ ] modals (12 stories)
+- [ ] primitives (21 stories)
+- [ ] pwa (1 story)
+- [ ] settings (11 stories)
+- [ ] task-management (22 stories)
+- [ ] task-management/context-menu (3 stories)
+- [ ] task-management/row (4 stories)
+- [ ] views (8 stories)
+
+**Related**: BUG-1311 (3 story files fail to import)
 
 ---
 
@@ -3190,6 +3262,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
+| **TASK-1337** | **P3** | **📋 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
 | **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |

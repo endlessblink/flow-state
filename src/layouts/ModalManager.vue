@@ -188,8 +188,8 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
 
   if (isCalendarEvent && instanceId) {
     confirmMessage.value = `Remove "${task.title}" from calendar?`
-    confirmAction.value = () => {
-      taskStore.deleteTaskInstance(taskId, instanceId)
+    confirmAction.value = async () => {
+      await taskStore.deleteTaskInstance(taskId, instanceId)
       showTaskContextMenu.value = false
     }
     confirmDetails.value = ['This will remove the scheduled instance and return the task to the sidebar.']

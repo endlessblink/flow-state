@@ -543,6 +543,10 @@ export function useTaskOperations(
                 if (updatedTask.instances !== undefined) {
                     payload.instances = JSON.parse(JSON.stringify(updatedTask.instances))
                 }
+                // BUG-1338: Include recurringInstances in sync queue payload
+                if (updatedTask.recurringInstances !== undefined) {
+                    payload.recurring_instances = JSON.parse(JSON.stringify(updatedTask.recurringInstances))
+                }
                 // BUG-1321: Include subtasks in sync queue payload
                 // Without this, offline subtask changes are silently dropped
                 if (updatedTask.subtasks !== undefined) {
@@ -763,9 +767,32 @@ export function useTaskOperations(
 
     const deleteTaskInstance = async (taskId: string, instanceId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
-        if (!task || !task.instances) return
-        const updatedInstances = task.instances.filter(inst => inst.id !== instanceId)
-        await updateTask(taskId, { instances: updatedInstances })
+        if (!task) return
+
+        const updates: Partial<Task> = {}
+
+        // BUG-1338: Check both instances[] and recurringInstances[]
+        // Calendar events can come from either source via getTaskInstances()
+        if (task.instances && task.instances.length > 0) {
+            const filtered = task.instances.filter(inst => inst.id !== instanceId)
+            if (filtered.length !== task.instances.length) {
+                updates.instances = filtered
+            }
+        }
+        if (task.recurringInstances && task.recurringInstances.length > 0) {
+            const filtered = task.recurringInstances.filter(inst => inst.id !== instanceId)
+            if (filtered.length !== task.recurringInstances.length) {
+                updates.recurringInstances = filtered
+            }
+        }
+
+        // If instanceId wasn't found in either array, still clear instances as fallback
+        if (Object.keys(updates).length === 0) {
+            console.warn(`[deleteTaskInstance] instanceId "${instanceId}" not found in task "${task.title?.slice(0, 30)}". Instances: ${task.instances?.length || 0}, RecurringInstances: ${task.recurringInstances?.length || 0}`)
+            return
+        }
+
+        await updateTask(taskId, updates)
     }
 
     /**

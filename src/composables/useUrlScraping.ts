@@ -88,11 +88,13 @@ export function useUrlScraping() {
 
       console.log('[useUrlScraping] Scrape succeeded:', data.title)
 
-      // Build description: AI summary or meta description + source URL
+      // Build description: AI summary or meta description + clickable domain link (TASK-1324)
       const summaryPart = data.aiSummary || data.description || ''
+      const domain = new URL(trimmed).hostname.replace(/^www\./, '')
+      const linkLine = `[${domain}](${trimmed})`
       const description = summaryPart
-        ? `${summaryPart}\n\nSource: ${trimmed}`
-        : `Source: ${trimmed}`
+        ? `${summaryPart}\n\n${linkLine}`
+        : linkLine
 
       return {
         title: data.title,

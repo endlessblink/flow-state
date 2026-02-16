@@ -355,16 +355,15 @@ select option {
 }
 
 /* Task node fallbacks */
-.tauri-app .vue-flow__node {
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-}
+/* BUG-1328: backdrop-filter REMOVED from .vue-flow__node — creates compositing layers on WebKitGTK
+ * that cause subpixel rounding errors in transform: translate(x,y) positioning during drag.
+ * The inner .task-node already has solid opaque background (BUG-1216), so blur on the wrapper is redundant.
+ * Previously: backdrop-filter: blur(4px) !important; */
 
 /* Vue Flow pane fallbacks */
-.tauri-app .vue-flow__pane,
-.tauri-app .vue-flow__viewport {
-  backdrop-filter: blur(2px) !important;
-}
+/* BUG-1328: backdrop-filter REMOVED from viewport/pane — unnecessary compositing layers
+ * on the element that carries the zoom/pan transform cause coordinate precision issues.
+ * Previously: backdrop-filter: blur(2px) !important; */
 
 /* =========================================================================
    TAURI NATIVE FORM ELEMENTS FIX
@@ -1060,10 +1059,9 @@ select option {
 }
 
 /* 2. Vue Flow Specific Optimizations */
-.vue-flow__renderer {
-  will-change: transform;
-  /* Hint for compositor */
-}
+/* BUG-1328: will-change: transform REMOVED from renderer — creates unnecessary
+ * compositing layer that on WebKitGTK can cause coordinate calculation imprecision.
+ * vue-flow-overrides.css sets will-change: auto on viewport and nodes explicitly. */
 
 /* When panned/zoomed, reduce painting */
 .vue-flow__pane.dragging,

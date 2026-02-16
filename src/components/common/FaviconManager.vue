@@ -14,6 +14,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useTimerStore } from '@/stores/timer'
 import { useTabVisibility } from '@/composables/useTabVisibility'
+import logoUrl from '@/assets/logo-glitch-tomato.png'
 
 interface FaviconConfig {
   size: number
@@ -36,6 +37,9 @@ const { isVisible } = useTabVisibility()
 
 // Canvas ref
 const faviconCanvas = ref<HTMLCanvasElement>()
+
+// Logo image ref
+const logoImage = ref<HTMLImageElement | null>(null)
 
 // Default configuration
 const defaultConfig: FaviconConfig = {
@@ -126,9 +130,21 @@ const generateFavicon = (percentage: number, status: 'work' | 'break' | 'inactiv
     drawProgressRing(ctx, centerX, centerY, radius, percentage, color)
   }
 
-  // Draw icon
-  const icon = status === 'work' ? '🍅' : status === 'break' ? '🧎' : '🍅'
-  drawIcon(ctx, centerX, centerY, icon)
+  // Draw logo image (or fallback to emoji)
+  if (logoImage.value) {
+    const iconSize = config.value.iconSize
+    ctx.drawImage(
+      logoImage.value,
+      centerX - iconSize / 2,
+      centerY - iconSize / 2,
+      iconSize,
+      iconSize
+    )
+  } else {
+    // Fallback: draw emoji if image not loaded
+    const icon = status === 'work' ? '🍅' : status === 'break' ? '🧎' : '🍅'
+    drawIcon(ctx, centerX, centerY, icon)
+  }
 
   // Convert to data URL
   try {
@@ -211,6 +227,14 @@ const cleanupFallbackUpdate = () => {
 
 // Initialize
 onMounted(() => {
+  // Load logo image
+  const img = new Image()
+  img.onload = () => {
+    logoImage.value = img
+    handleTimerUpdate() // Re-render with loaded image
+  }
+  img.src = logoUrl
+
   setupFallbackUpdate()
   handleTimerUpdate() // Initial update
 })

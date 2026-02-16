@@ -623,14 +623,24 @@ const handleProjectKeydown = (event: KeyboardEvent) => {
     return
   }
 
+  // BUG-1336: Only handle delete when focus is within the sidebar or when projects are
+  // explicitly multi-selected (not just activeProjectId). This prevents the project delete
+  // dialog from appearing when pressing Delete on the canvas or other views.
+  const sidebarEl = document.querySelector('.sidebar')
+  const isFocusInSidebar = sidebarEl?.contains(target)
+  const hasExplicitSelection = selectedProjectIds.value.size > 0
+
   // Escape: Clear selection
-  if (event.key === 'Escape' && selectedProjectIds.value.size > 0) {
+  if (event.key === 'Escape' && hasExplicitSelection) {
     clearProjectSelection()
     return
   }
 
-  // Delete or Backspace: Show confirmation to delete projects (selected or active)
+  // Delete or Backspace: Only when sidebar has focus OR projects are explicitly selected
   if ((event.key === 'Delete' || event.key === 'Backspace') && hasDeletableProjects.value) {
+    if (!isFocusInSidebar && !hasExplicitSelection) {
+      return
+    }
     event.preventDefault()
     event.stopPropagation()
     confirmDeleteSelectedProjects()

@@ -26,7 +26,8 @@ export const GROQ_MODELS: ModelEntry[] = [
   { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', shortLabel: 'Llama 3.3 70B' },
   { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant', shortLabel: 'Llama 3.1 8B' },
   { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B', shortLabel: 'Mixtral 8x7B' },
-  { id: 'gemma2-9b-it', label: 'Gemma 2 9B' }
+  { id: 'gemma2-9b-it', label: 'Gemma 2 9B' },
+  { id: 'moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2', shortLabel: 'Kimi K2' }
 ]
 
 /**

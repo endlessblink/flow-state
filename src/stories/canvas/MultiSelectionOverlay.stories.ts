@@ -21,9 +21,9 @@ const meta = {
 export default meta
 
 const mockNodes = [
-  { id: '1', position: { x: 50, y: 50 }, data: { label: 'Task 1' }, type: 'task' },
-  { id: '2', position: { x: 300, y: 50 }, data: { label: 'Task 2' }, type: 'task' },
-  { id: '3', position: { x: 50, y: 200 }, data: { label: 'Task 3' }, type: 'task' },
+  { id: '1', position: { x: 400, y: 250 }, data: { label: 'Task 1' }, type: 'task' },
+  { id: '2', position: { x: 650, y: 250 }, data: { label: 'Task 2' }, type: 'task' },
+  { id: '3', position: { x: 400, y: 400 }, data: { label: 'Task 3' }, type: 'task' },
 ]
 
 export const SelectionActive = {
@@ -31,7 +31,6 @@ export const SelectionActive = {
     components: { MultiSelectionOverlay },
     setup() {
       const canvasStore = useCanvasStore()
-      // Force multi-select mode on so the overlay renders
       canvasStore.multiSelectMode = true
       return { mockNodes }
     },
@@ -43,6 +42,51 @@ export const SelectionActive = {
         />
         <p style="position: absolute; bottom: var(--space-4); right: var(--space-4); color: var(--text-muted); font-size: var(--text-xs);">
           Multi-select mode active — selection controls panel visible top-left
+        </p>
+      </div>
+    `,
+  }),
+}
+
+export const BulkMenuOpen = {
+  render: () => ({
+    components: { MultiSelectionOverlay },
+    setup() {
+      const canvasStore = useCanvasStore()
+      canvasStore.multiSelectMode = true
+      return { mockNodes }
+    },
+    template: `
+      <div style="position: relative; width: 100%; height: 600px; background: var(--app-background-gradient);">
+        <MultiSelectionOverlay
+          ref="overlay"
+          :nodes="mockNodes"
+          :selectedNodeIds="['1', '2', '3']"
+        />
+        <p style="position: absolute; bottom: var(--space-4); right: var(--space-4); color: var(--text-muted); font-size: var(--text-xs);">
+          Bulk actions menu open — click Bulk Actions button to toggle
+        </p>
+      </div>
+    `,
+  }),
+}
+
+export const NoSelection = {
+  render: () => ({
+    components: { MultiSelectionOverlay },
+    setup() {
+      const canvasStore = useCanvasStore()
+      canvasStore.multiSelectMode = true
+      return { mockNodes }
+    },
+    template: `
+      <div style="position: relative; width: 100%; height: 500px; background: var(--app-background-gradient);">
+        <MultiSelectionOverlay
+          :nodes="mockNodes"
+          :selectedNodeIds="[]"
+        />
+        <p style="position: absolute; bottom: var(--space-4); right: var(--space-4); color: var(--text-muted); font-size: var(--text-xs);">
+          Selection mode active with no nodes selected — controls panel shows mode and actions only
         </p>
       </div>
     `,

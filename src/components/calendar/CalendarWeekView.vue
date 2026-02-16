@@ -258,6 +258,18 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
                   title="Drag to change duration"
                   @mousedown.stop.prevent="$emit('startResize', $event, event, 'bottom')"
                 />
+
+                <!-- Resize Preview Overlay — shows new size during drag -->
+                <div
+                  v-if="resizePreview?.isResizing && resizePreview.taskId === event.taskId"
+                  class="resize-preview-overlay"
+                  :style="{
+                    height: `${Math.ceil(resizePreview.previewDuration / 30) * 30}px`,
+                    top: '0'
+                  }"
+                >
+                  <span class="preview-duration">{{ resizePreview.previewDuration }}min</span>
+                </div>
               </div>
 
               <!-- TASK-1317: External calendar events in this cell -->
@@ -474,6 +486,32 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
 .week-event:hover .resize-handle {
   opacity: 1;
+}
+
+/* Resize preview overlay — dashed outline showing new size during drag */
+.resize-preview-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(99, 102, 241, 0.12);
+  border: 2px dashed rgba(99, 102, 241, 0.6);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
+.resize-preview-overlay .preview-duration {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(99, 102, 241, 0.9);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  line-height: 1.3;
 }
 
 /* Ghost preview — IDENTICAL to day view */

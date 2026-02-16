@@ -76,9 +76,11 @@ export function useCalendarInboxState() {
         return task.instances.some(inst => inst.scheduledDate)
     }
 
-    // Base Inbox Tasks (Respects store filters + calendar specific logic)
+    // Base Inbox Tasks — BUG-1333: Use calendarFilteredTasks (project + hide-done only)
+    // instead of filteredTasks which also applies board-level smart view/status/duration
+    // filters that incorrectly restrict the calendar inbox.
     const baseInboxTasks = computed(() => {
-        return taskStore.filteredTasks.filter(task => {
+        return taskStore.calendarFilteredTasks.filter(task => {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
             return !isScheduledOnCalendar(task)
         })

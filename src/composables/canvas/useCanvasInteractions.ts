@@ -386,12 +386,17 @@ export function useCanvasInteractions(deps?: {
      *
      * If Vue Flow fires duplicate events, the guards prevent duplicate state transitions.
      */
+    // BUG-1328: Diagnostic state for cursor drift detection
+    let dragDiagStartPos: { x: number; y: number } | null = null
+    let dragDiagFrameCount = 0
+
     const onNodeDragStart = (event: NodeDragEvent) => {
         const { nodes: involvedNodes } = event
 
 
-        // Guard: Only proceed if we can start a new drag (operation state is idle)
-        // This is the AUTHORITATIVE guard that prevents duplicate drag starts
+        // Guard: Only proceed if we can start a new drag (state is idle or drag-settling)
+        // BUG-1328: startDrag() now also accepts 'drag-settling' state to prevent
+        // the race condition where rapid consecutive drags leave isDragging=false.
         if (startDrag(involvedNodes.map(n => n.id))) {
             // Set per-node state (idempotent - safe to call even if already DRAGGING_LOCAL)
             involvedNodes.forEach(node => {
@@ -403,12 +408,30 @@ export function useCanvasInteractions(deps?: {
             })
             // Set store-level drag flag ONCE per drag session
             canvasStore.isDragging = true
+
+            // BUG-1328: Log diagnostic info at drag start for cursor drift debugging
+            if (import.meta.env.DEV && involvedNodes.length > 0) {
+                const node = involvedNodes[0]
+                dragDiagStartPos = { x: node.position.x, y: node.position.y }
+                dragDiagFrameCount = 0
+                const diag = getPlatformDiagnostics()
+                console.log('[BUG-1328:DRAG-START]', {
+                    nodeId: node.id.slice(0, 12),
+                    startPos: dragDiagStartPos,
+                    computedPos: node.computedPosition,
+                    dpr: diag.devicePixelRatio,
+                    isTauri: diag.isTauri,
+                    isLinux: diag.isLinux,
+                    screenRatio: diag.screenRatio,
+                })
+            }
         }
         // If startDrag() returned false, we are already dragging - ignore duplicate event
     }
 
     const onNodeDrag = (event: NodeDragEvent) => {
         // Vue Flow updates node.position automatically (Visuals)
+        dragDiagFrameCount++
 
         // TASK-213: Update PositionManager (Truth)
         const allGroups = canvasStore._rawGroups || canvasStore.groups || []
@@ -455,6 +478,24 @@ export function useCanvasInteractions(deps?: {
      * 5. For groups: also sync child tasks AND child groups
      */
     const onNodeDragStop = async (event: NodeDragEvent) => {
+        // BUG-1328: Log drag end diagnostic for cursor drift detection
+        if (import.meta.env.DEV && dragDiagStartPos && event.nodes.length > 0) {
+            const node = event.nodes[0]
+            const endPos = { x: node.position.x, y: node.position.y }
+            const delta = {
+                x: Math.round((endPos.x - dragDiagStartPos.x) * 100) / 100,
+                y: Math.round((endPos.y - dragDiagStartPos.y) * 100) / 100,
+            }
+            console.log('[BUG-1328:DRAG-END]', {
+                nodeId: node.id.slice(0, 12),
+                startPos: dragDiagStartPos,
+                endPos,
+                delta,
+                frames: dragDiagFrameCount,
+            })
+            dragDiagStartPos = null
+        }
+
         // BUG-1061 FIX #5: Skip if triggered by setNodes() during canvas sync
         // Vue Flow may fire nodeDragStop when setNodes() updates node positions programmatically.
         // This creates a reactive loop: drag → Smart Group update → sync → setNodes → drag fires again.

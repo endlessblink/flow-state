@@ -141,6 +141,15 @@ export function useTaskOperations(
 
             _rawTasks.value.push(newTask)
 
+            // BUG-1329: Register pending write to suppress Realtime echo.
+            // Without this, the INSERT event from our own direct save bypasses
+            // isPendingWrite() and can cause updateTaskFromSync() to re-add the task.
+            addPendingWrite(taskId)
+
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1329] Echo protection active for new task ${taskId.slice(0, 8)}`)
+            }
+
             // TASK-1177: Queue for offline-first sync
             // This ensures the task persists in IndexedDB even if network fails
             try {

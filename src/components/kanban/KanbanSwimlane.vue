@@ -8,7 +8,8 @@
     }"
   >
     <!-- Swimlane Header - TASK-157: Simplified Todoist-style -->
-    <div class="swimlane-header swimlane-header--minimal" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
+    <!-- FEATURE-1336: Hide header in category view (single swimlane, no project grouping) -->
+    <div v-if="currentViewType !== 'category'" class="swimlane-header swimlane-header--minimal" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
       <div class="header-content--swimlane">
         <button class="collapse-btn">
           <ChevronDown v-if="!isCollapsed" :size="14" />
@@ -86,6 +87,27 @@
             @context-menu="(event, task) => $emit('contextMenu', event, task)"
           />
         </template>
+
+        <!-- FEATURE-1336: Category View Columns (projects as columns) -->
+        <template v-if="currentViewType === 'category'">
+          <KanbanColumn
+            v-for="column in categoryColumns"
+            :key="column.key"
+            :title="column.label"
+            :status="column.key as any"
+            :tasks="tasksByCategory[column.key] || []"
+            column-type="category"
+            swimlane-id="category"
+            class="swimlane-column"
+            @add-task="handleAddTask"
+            @move-task="handleMoveTask"
+            @select-task="$emit('selectTask', $event)"
+            @start-timer="$emit('startTimer', $event)"
+            @edit-task="$emit('editTask', $event)"
+            @delete-task="$emit('deleteTask', $event)"
+            @context-menu="(event, task) => $emit('contextMenu', event, task)"
+          />
+        </template>
       </div>
 
       <!-- Empty State for Filter -->
@@ -109,11 +131,12 @@ import { useTaskStore } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-vue-next'
 import { useHorizontalDragScroll } from '@/composables/useHorizontalDragScroll'
 import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTaskSmartGroups'
-import { 
-  groupTasksByStatus, 
-  groupTasksByPriority, 
-  groupTasksByDate 
+import {
+  groupTasksByStatus,
+  groupTasksByPriority,
+  groupTasksByDate
 } from '@/composables/board/useBoardState'
+import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
 import './KanbanSwimlane.css'
 
@@ -123,7 +146,7 @@ interface Props {
   currentFilter?: 'today' | 'week' | null
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
-  viewType?: 'priority' | 'date' | 'status'
+  viewType?: 'priority' | 'date' | 'status' | 'category'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -139,7 +162,7 @@ const emit = defineEmits<{
   editTask: [taskId: string]
   deleteTask: [taskId: string]
   moveTask: [taskId: string, newStatus: Task['status']]
-  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' }]
+  addTask: [payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' }]
   contextMenu: [event: MouseEvent, task: Task]
   groupContextMenu: [event: MouseEvent, project: Project]
 }>()
@@ -192,6 +215,51 @@ const tasksByStatus = computed(() => groupTasksByStatus(props.tasks))
 const tasksByPriority = computed(() => groupTasksByPriority(props.tasks))
 const tasksByDate = computed(() => groupTasksByDate(props.tasks, taskStore.hideDoneTasks))
 
+// FEATURE-1336: Category view - columns are projects
+const categoryColumns = computed(() => {
+  // Build columns from all projects (root first, then nested with indent)
+  const columns: { key: string; label: string; parentId?: string }[] = []
+
+  // Get root projects sorted by name
+  const rootProjects = taskStore.projects
+    .filter((p: any) => !p.parentId)
+    .sort((a: any, b: any) => a.name.localeCompare(b.name))
+
+  for (const project of rootProjects) {
+    columns.push({ key: project.id, label: project.name })
+    // Add child projects indented
+    const children = taskStore.projects
+      .filter((p: any) => p.parentId === project.id)
+      .sort((a: any, b: any) => a.name.localeCompare(b.name))
+    for (const child of children) {
+      columns.push({ key: child.id, label: `  ${child.name}`, parentId: project.id })
+    }
+  }
+
+  // Always add Uncategorized at the end
+  columns.push({ key: UNCATEGORIZED_PROJECT_ID, label: 'Uncategorized' })
+  return columns
+})
+
+const tasksByCategory = computed(() => {
+  const result: Record<string, Task[]> = {}
+  // Initialize all category columns
+  for (const col of categoryColumns.value) {
+    result[col.key] = []
+  }
+  // Group tasks by projectId
+  props.tasks.forEach(task => {
+    const projectId = task.projectId || UNCATEGORIZED_PROJECT_ID
+    if (result[projectId]) {
+      result[projectId].push(task)
+    } else {
+      // Task belongs to project not in columns (shouldn't happen, but safety)
+      result[UNCATEGORIZED_PROJECT_ID]?.push(task)
+    }
+  })
+  return result
+})
+
 const toggleCollapse = () => { isCollapsed.value = !isCollapsed.value }
 const handleAddTask = (columnKey: string) => {
   emit('addTask', {
@@ -212,7 +280,10 @@ const handleGroupContextMenu = (event: MouseEvent) => {
 const totalTasks = computed(() => props.tasks.length)
 
 const handleMoveTask = (taskId: string, targetKey: string) => {
-  if (currentViewType.value === 'status') {
+  if (currentViewType.value === 'category') {
+    // FEATURE-1336: Category view - move task to target project
+    taskStore.moveTaskToProject(taskId, targetKey === UNCATEGORIZED_PROJECT_ID ? '' : targetKey)
+  } else if (currentViewType.value === 'status') {
     emit('moveTask', taskId, targetKey as Task['status'])
   } else if (currentViewType.value === 'date') {
     if (shouldUseSmartGroupLogic(targetKey)) {

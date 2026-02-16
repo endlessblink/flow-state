@@ -101,7 +101,10 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         }
 
         // Set correct field based on view type
-        if (viewType === 'status') {
+        if (viewType === 'category') {
+            // FEATURE-1336: Category view - columnKey is the projectId
+            taskData.projectId = columnKey === 'uncategorized' ? undefined : columnKey
+        } else if (viewType === 'status') {
             taskData.status = columnKey as Task['status']
         } else if (viewType === 'priority') {
             taskData.priority = columnKey === 'no_priority' ? undefined : columnKey as Task['priority']

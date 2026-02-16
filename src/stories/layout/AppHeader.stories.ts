@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import { ref } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { Timer, Sparkles } from 'lucide-vue-next'
+import logoUrl from '@/assets/logo-glitch-tomato.png'
 
 /**
  * AppHeader - Main Application Header
@@ -429,7 +430,7 @@ export const TimerActive: Story = {
                 border: 1.5px solid var(--timer-work-stroke);
                 box-shadow: var(--timer-work-stroke-glow);
               ">
-                <div style="font-size: var(--text-2xl);">🍅</div>
+                <img src="${logoUrl}" width="24" height="24" alt="FlowState" style="display: inline-block;" />
                 <div style="
                   display: flex;
                   flex-direction: row;

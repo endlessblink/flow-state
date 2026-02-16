@@ -1503,6 +1503,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
             subtaskCount: t.subtasks?.length ?? 0,
             completedSubtaskCount: t.subtasks?.filter(s => s.isCompleted).length ?? 0,
           }))
+          .slice(0, 30) // Cap at 30 most relevant tasks to avoid overwhelming the LLM
 
         if (eligible.length === 0) {
           return {
@@ -1564,9 +1565,22 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
           return { id, title: t?.title || id, priority: t?.priority || null }
         })
 
+        // Build a human-readable summary for the AI to present
+        const daySummaries: string[] = []
+        for (const day of dayKeys) {
+          const tasks = planWithDetails[day]
+          if (tasks.length > 0) {
+            const taskNames = tasks.map(t => t.title).join(', ')
+            daySummaries.push(`${day.charAt(0).toUpperCase() + day.slice(1)}: ${tasks.length} tasks (${taskNames})`)
+          }
+        }
+
+        const totalTasks = eligible.length
+        const skippedCount = Math.max(0, allTasks.filter(t => !t._soft_deleted && t.status !== 'done').length - 30)
+
         return {
           success: true,
-          message: `Weekly plan: ${totalScheduled} tasks across ${daysUsed} days`,
+          message: `Weekly plan created: ${totalScheduled} tasks across ${daysUsed} days.\n${daySummaries.join('\n')}${unscheduledDetails.length > 0 ? `\nUnscheduled: ${unscheduledDetails.length} tasks` : ''}${skippedCount > 0 ? `\n(${skippedCount} lower-priority tasks excluded from planning)` : ''}`,
           data: {
             plan: planWithDetails,
             unscheduled: unscheduledDetails,

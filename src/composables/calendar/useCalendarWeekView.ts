@@ -32,6 +32,14 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
   const isWeekResizing = ref(false)
   const weekResizeTaskId = ref<string | null>(null)
 
+  // Resize preview state — shows visual feedback during resize (matches day view pattern)
+  const resizePreview = ref<{
+    taskId: string
+    direction: 'top' | 'bottom'
+    previewDuration: number
+    isResizing: boolean
+  } | null>(null)
+
   const cleanupListeners = () => {
     if (currentMouseMoveHandler) {
       document.removeEventListener('mousemove', currentMouseMoveHandler)
@@ -56,6 +64,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     // Reset resize state
     isWeekResizing.value = false
     weekResizeTaskId.value = null
+    resizePreview.value = null
     // Clear any stuck selection
     window.getSelection()?.removeAllRanges()
     // Restore text selection
@@ -306,6 +315,14 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     const originalStartSlot = calendarEvent.startSlot
     const originalDuration = calendarEvent.duration
 
+    // Initialize resize preview for live visual feedback
+    resizePreview.value = {
+      taskId: calendarEvent.taskId,
+      direction,
+      previewDuration: originalDuration,
+      isResizing: true
+    }
+
     // Prevent text selection during resize
     document.body.style.userSelect = 'none'
     ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
@@ -326,6 +343,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
         const endSlot = originalStartSlot + Math.ceil(originalDuration / 30)
         finalStartSlot = Math.max(0, Math.min(33, originalStartSlot + deltaSlots))
         finalDuration = Math.max(30, (endSlot - finalStartSlot) * 30)
+      }
+
+      // Update preview for live visual feedback
+      if (resizePreview.value) {
+        resizePreview.value.previewDuration = finalDuration
       }
     }
 
@@ -441,6 +463,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     startWeekResize,
     isWeekResizing,
     weekResizeTaskId,
+    resizePreview,
     cancelWeekResize: cleanupAllListeners, // Allow external cancellation
 
     // Utilities

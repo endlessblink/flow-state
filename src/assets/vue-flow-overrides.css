@@ -52,3 +52,24 @@
 .vue-flow__node.is-dragging > * {
     transform: none !important;
 }
+
+/* 5. BUG-1328: Kill backdrop-filter on the node wrapper AND viewport during drag.
+ * On WebKitGTK (Tauri Linux), backdrop-filter creates compositing layers that introduce
+ * subpixel rounding errors in transform: translate(x,y) positioning. Each frame of drag
+ * re-rasterizes the compositing layer with slightly different subpixel alignment,
+ * causing cumulative cursor drift. */
+.vue-flow__node.dragging,
+.vue-flow__node.is-dragging {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    /* Prevent compositor from pre-rasterizing — let CPU handle pixel-perfect positioning */
+    will-change: auto !important;
+}
+
+/* Also kill filters on all descendants during drag */
+.vue-flow__node.dragging *,
+.vue-flow__node.is-dragging * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+}

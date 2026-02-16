@@ -1,5 +1,17 @@
 <template>
   <div class="task-list">
+    <!-- Column Headers (sticky at top) -->
+    <div class="column-headers">
+      <span></span>
+      <span>Task</span>
+      <span></span>
+      <span>Status</span>
+      <span>Priority</span>
+      <span>Due</span>
+      <span>Progress</span>
+      <span></span>
+    </div>
+
     <!-- TASK-1334: Grouped rendering with sticky headers -->
     <div v-for="group in groups" :key="group.key" class="task-group" :class="{ 'task-group--indented': (group.indent || 0) > 0 }">
       <!-- Sticky Group Header -->
@@ -263,5 +275,26 @@ defineExpose({
   font-size: var(--text-base);
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* Column Headers */
+.column-headers {
+  display: grid;
+  grid-template-columns: 28px 1fr 40px 120px 72px 96px 72px 112px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 </style>

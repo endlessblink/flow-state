@@ -722,12 +722,12 @@ onUnmounted(() => {
 <style scoped>
 .context-menu {
   position: absolute;
-  background: var(--overlay-component-bg);
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  background: rgba(22, 19, 38, 0.97);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--overlay-component-shadow);
+  box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   padding: var(--space-2) 0;
   min-width: 240px;
   max-width: 280px;

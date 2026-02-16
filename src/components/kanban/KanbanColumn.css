@@ -187,11 +187,6 @@
     cursor: grabbing;
 }
 
-/* TASK-1336: Hide SortableJS clone when our custom drag ghost is active */
-body.dragging-active .sortable-fallback {
-    opacity: 0 !important;
-}
-
 /* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
 /* BUG-1335: Dragged card should NOT be darker than other cards */
 .sortable-fallback {
@@ -204,4 +199,11 @@ body.dragging-active .sortable-fallback {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(78, 205, 196, 0.15) !important;
     border-radius: var(--radius-lg) !important;
     transform: rotate(1deg) scale(1.03) !important;
+}
+
+/* TASK-1336: Hide SortableJS clone when our custom drag ghost is active.
+   Must come AFTER .sortable-fallback and use higher specificity to override opacity: 1 */
+body.dragging-active .sortable-fallback.sortable-fallback {
+    opacity: 0 !important;
+    box-shadow: none !important;
 }

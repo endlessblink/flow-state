@@ -217,62 +217,100 @@ self.addEventListener('notificationclick', (event) => {
   // Close the notification
   notification.close()
 
-  // Determine what action to take
-  let messageType: string
+  // Existing timer notification logic (data has sessionId)
+  if (data?.sessionId) {
+    // Determine what action to take
+    let messageType: string
 
-  if (action === 'start-break') {
-    messageType = 'START_BREAK'
-  } else if (action === 'start-work') {
-    messageType = 'START_WORK'
-  } else if (action === 'postpone') {
-    messageType = 'POSTPONE_5MIN'
-  } else {
-    // BUG-1185: Body click should NOT auto-start a session
-    // Previously, clicking the notification body would start the opposite session type,
-    // which caused unexpected timer starts when users clicked to dismiss the notification
-    // Just focus the app window without starting a timer
-    messageType = ''
-  }
+    if (action === 'start-break') {
+      messageType = 'START_BREAK'
+    } else if (action === 'start-work') {
+      messageType = 'START_WORK'
+    } else if (action === 'postpone') {
+      messageType = 'POSTPONE_5MIN'
+    } else {
+      // BUG-1185: Body click should NOT auto-start a session
+      // Previously, clicking the notification body would start the opposite session type,
+      // which caused unexpected timer starts when users clicked to dismiss the notification
+      // Just focus the app window without starting a timer
+      messageType = ''
+    }
 
-  // BUG-1178: Send message to all open clients with improved reliability
-  // Previous code had race condition: message sent before window fully focused
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
-      console.log('[SW] Found clients:', clientList.length)
+    // BUG-1178: Send message to all open clients with improved reliability
+    // Previous code had race condition: message sent before window fully focused
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+        console.log('[SW] Found clients:', clientList.length)
 
-      // Try to focus an existing window first
-      for (const client of clientList) {
-        // WindowClient type check
-        if ('focus' in client && typeof (client as WindowClient).focus === 'function') {
-          console.log('[SW] Focusing client:', client.url)
-          await (client as WindowClient).focus()
+        // Try to focus an existing window first
+        for (const client of clientList) {
+          // WindowClient type check
+          if ('focus' in client && typeof (client as WindowClient).focus === 'function') {
+            console.log('[SW] Focusing client:', client.url)
+            await (client as WindowClient).focus()
 
-          // BUG-1178: Add small delay to ensure window is fully focused and ready to receive messages
-          await new Promise(resolve => setTimeout(resolve, 100))
+            // BUG-1178: Add small delay to ensure window is fully focused and ready to receive messages
+            await new Promise(resolve => setTimeout(resolve, 100))
 
-          if (messageType) {
-            console.log('[SW] Sending message to client:', messageType)
-            client.postMessage({
-              type: messageType,
-              taskId: data?.taskId,
-              taskName: data?.taskName,
-            })
-            console.log('[SW] Message sent successfully:', messageType)
-          } else {
-            console.log('[SW] Body click - just focusing window, no timer action')
+            if (messageType) {
+              console.log('[SW] Sending message to client:', messageType)
+              client.postMessage({
+                type: messageType,
+                taskId: data?.taskId,
+                taskName: data?.taskName,
+              })
+              console.log('[SW] Message sent successfully:', messageType)
+            } else {
+              console.log('[SW] Body click - just focusing window, no timer action')
+            }
+            return
           }
-          return
         }
-      }
 
-      // No existing window - open a new one with action in URL (fallback)
-      console.log('[SW] No existing window, opening new with action in URL')
-      if (messageType && self.clients.openWindow) {
-        const actionUrl = `/?action=${messageType}&taskId=${encodeURIComponent(data?.taskId || '')}`
-        await self.clients.openWindow(actionUrl)
-      }
-    })
-  )
+        // No existing window - open a new one with action in URL (fallback)
+        console.log('[SW] No existing window, opening new with action in URL')
+        if (messageType && self.clients.openWindow) {
+          const actionUrl = `/?action=${messageType}&taskId=${encodeURIComponent(data?.taskId || '')}`
+          await self.clients.openWindow(actionUrl)
+        }
+      })
+    )
+  }
+  // TASK-1338: Push notification click handling
+  else if (data?.type) {
+    const pushAction = action
+    const deepLinkUrl = data.url || '/'
+
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+        // Try to focus existing window
+        for (const client of clientList) {
+          if ('focus' in client) {
+            await (client as WindowClient).focus()
+            await new Promise(resolve => setTimeout(resolve, 100))
+
+            if (pushAction === 'view-task' && data.taskId) {
+              client.postMessage({ type: 'NAVIGATE_TO_TASK', taskId: data.taskId })
+            } else if (pushAction === 'open-board') {
+              client.postMessage({ type: 'NAVIGATE_TO', url: '/board' })
+            } else if (pushAction === 'snooze') {
+              client.postMessage({ type: 'SNOOZE_NOTIFICATION', taskId: data.taskId, minutes: 15 })
+            }
+            // Default body click: navigate to the deep link URL
+            else if (!pushAction) {
+              client.postMessage({ type: 'NAVIGATE_TO', url: deepLinkUrl })
+            }
+            return
+          }
+        }
+
+        // No existing window — open new one
+        if (self.clients.openWindow) {
+          await self.clients.openWindow(deepLinkUrl)
+        }
+      })
+    )
+  }
 })
 
 /**
@@ -281,6 +319,78 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('notificationclose', (event) => {
   // User dismissed the notification - could log this for analytics
   console.log('[SW] Notification dismissed:', event.notification.tag)
+})
+
+// ============================================================================
+// TASK-1338: WEB PUSH NOTIFICATION HANDLER
+// ============================================================================
+
+interface PushPayloadData {
+  type: 'task_reminder' | 'daily_digest' | 'overdue_alert' | 'achievement'
+  title: string
+  body: string
+  tag: string
+  taskId?: string
+  url?: string
+  timestamp: string
+}
+
+/**
+ * Handle incoming push notifications from the server-side push service.
+ * These arrive even when the app is closed (browser must be running).
+ */
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    console.warn('[SW] Push event with no data')
+    return
+  }
+
+  let payload: PushPayloadData
+  try {
+    payload = event.data.json() as PushPayloadData
+  } catch {
+    console.error('[SW] Failed to parse push payload')
+    return
+  }
+
+  console.log('[SW] Push received:', payload.type, payload.tag)
+
+  const options: NotificationOptions & { actions?: NotificationAction[] } = {
+    body: payload.body,
+    icon: '/icons/pwa-192x192.png',
+    badge: '/icons/pwa-64x64.png',
+    tag: payload.tag,  // Deduplication — same tag won't show twice
+    requireInteraction: payload.type !== 'achievement',  // Achievements auto-dismiss
+    silent: false,
+    data: {
+      type: payload.type,
+      taskId: payload.taskId,
+      url: payload.url || '/',
+      timestamp: payload.timestamp
+    },
+    vibrate: [200, 100, 200]
+  }
+
+  // Add contextual actions based on notification type
+  if (payload.type === 'task_reminder' && payload.taskId) {
+    options.actions = [
+      { action: 'view-task', title: '📋 View Task' },
+      { action: 'snooze', title: '⏰ Snooze 15min' }
+    ]
+  } else if (payload.type === 'overdue_alert' && payload.taskId) {
+    options.actions = [
+      { action: 'view-task', title: '📋 View Task' },
+      { action: 'dismiss', title: '✓ Dismiss' }
+    ]
+  } else if (payload.type === 'daily_digest') {
+    options.actions = [
+      { action: 'open-board', title: '📋 Open Board' }
+    ]
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, options)
+  )
 })
 
 // ============================================================================

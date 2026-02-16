@@ -7,7 +7,6 @@
     <template v-else>
       <!-- View Controls -->
       <ViewControls
-        v-model:view-type="viewType"
         v-model:density="density"
         v-model:sort-by="sortBy"
         v-model:group-by="groupBy"
@@ -21,23 +20,8 @@
 
       <!-- Content Area -->
       <div class="tasks-container">
-        <!-- Table Mode -->
-        <TaskTable
-          v-if="viewType === 'table'"
-          :tasks="sortedTasks"
-          :groups="groupedTasks"
-          :group-by="groupBy"
-          :density="density"
-          @select="handleSelectTask"
-          @start-timer="handleStartTimer"
-          @edit="handleEditTask"
-          @context-menu="handleContextMenu"
-          @update-task="handleUpdateTask"
-        />
-
         <!-- List Mode -->
         <TaskList
-          v-else
           ref="taskListRef"
           :tasks="sortedTasks"
           :groups="groupedTasks"
@@ -91,8 +75,7 @@ import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useMobileDetection } from '@/composables/useMobileDetection'
-import ViewControls, { type ViewType, type DensityType } from '@/components/layout/ViewControls.vue'
-import TaskTable from '@/components/tasks/TaskTable.vue'
+import ViewControls, { type DensityType } from '@/components/layout/ViewControls.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
 import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
@@ -114,7 +97,6 @@ const timerStore = useTimerStore()
 const { hideDoneTasks } = storeToRefs(taskStore)
 
 // View State (TASK-1215: Persist across restarts via Tauri store + localStorage)
-const viewType = usePersistentRef<ViewType>('flowstate:all-tasks-view-type', 'list')
 const density = usePersistentRef<DensityType>('flowstate:all-tasks-density', 'comfortable')
 const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
 const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
@@ -448,7 +430,6 @@ onMounted(() => {
   console.log('🚀 [AllTasksView] Component mounted', {
     totalTasks: taskStore.tasks.length,
     filteredTasks: taskStore.filteredTasks.length,
-    viewType: viewType.value,
     sortBy: sortBy.value
   })
 })

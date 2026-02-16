@@ -1,0 +1,26 @@
+[Unit]
+Description=FlowState Push Notification Service
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/flowstate-push
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=flowstate-push
+
+# Environment variables (loaded from file)
+EnvironmentFile=/opt/flowstate-push/.env
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/flowstate-push
+
+[Install]
+WantedBy=multi-user.target

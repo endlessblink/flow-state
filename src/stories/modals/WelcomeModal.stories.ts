@@ -1,257 +1,169 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
-import { ref } from 'vue'
-import WelcomeModal from '@/components/ui/WelcomeModal.vue'
+import { X, CheckCircle, LayoutGrid, Timer, Shield, Settings } from 'lucide-vue-next'
 
-/**
- * WelcomeModal - First-time user onboarding modal
- *
- * A streamlined welcome experience with glass morphism styling.
- * Shows user status, optional name setup, and key features.
- *
- * **When to use:**
- * - First-time app launch
- * - After profile creation
- * - Returning user welcome
- */
-const meta: Meta<typeof WelcomeModal> = {
+// ============================================================================
+// INLINE STYLES (Design Token-Based — faithful to WelcomeModal.vue)
+// ============================================================================
+
+const containerStyle = `position: relative; width: 100%; height: 500px; background: var(--overlay-backdrop-bg); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);`
+
+const modalStyle = `background: var(--overlay-component-bg); border: var(--overlay-component-border); border-radius: var(--radius-xl); width: 100%; max-width: 420px; box-shadow: var(--overlay-component-shadow); overflow: hidden; backdrop-filter: var(--overlay-component-backdrop); -webkit-backdrop-filter: var(--overlay-component-backdrop);`
+
+const headerStyle = `display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--glass-border);`
+
+const headerContentStyle = `display: flex; align-items: center; gap: var(--space-3);`
+
+const logoStyle = `font-size: var(--text-2xl); line-height: 1;`
+
+const titleStyle = `margin: 0; font-size: var(--text-lg); font-weight: 600; color: var(--text-primary);`
+
+const subtitleStyle = `margin: var(--space-0_5) 0 0; font-size: var(--text-meta); color: var(--text-secondary);`
+
+const closeBtnStyle = `display: flex; align-items: center; justify-content: center; width: var(--space-8); height: var(--space-8); border: none; background: transparent; color: var(--text-secondary); border-radius: var(--radius-md); cursor: pointer;`
+
+const bodyStyle = `padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-5);`
+
+const statusBannerStyle = `display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-3_5); background: transparent; border: 1px solid var(--color-work); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-work);`
+
+const featuresStyle = `display: flex; flex-direction: column; gap: var(--space-3);`
+
+const featureStyle = `display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--text-secondary);`
+
+const featureIconStyle = `color: var(--color-work); flex-shrink: 0;`
+
+const footerStyle = `padding: var(--space-5) var(--space-6); border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: var(--space-3);`
+
+const primaryBtnStyle = `width: 100%; padding: var(--space-3); background: transparent; border: 1px solid var(--color-work); border-radius: var(--radius-md); color: var(--color-work); font-size: var(--text-sm); font-weight: 600; cursor: pointer;`
+
+const secondaryActionsStyle = `display: flex; gap: var(--space-2); justify-content: center;`
+
+const secondaryBtnStyle = `display: flex; align-items: center; gap: var(--space-1_5); padding: var(--space-2) var(--space-3_5); background: transparent; border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-meta); cursor: pointer;`
+
+// ============================================================================
+// META
+// ============================================================================
+
+const meta: Meta = {
   title: '🎯 Modals/WelcomeModal',
-  component: WelcomeModal,
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: `Streamlined onboarding modal with glass morphism design.
+        component: `First-time user onboarding modal with glass morphism design.
 
 **Features:**
-- Clean, minimal layout
-- Lucide icons
-- Status banner (new user / returning user)
-- Optional display name
-- Quick feature highlights
-- Export and Settings shortcuts`
-      }
-    }
-  },
-  argTypes: {
-    isOpen: {
-      control: 'boolean',
-      description: 'Controls modal visibility',
-      table: {
-        type: { summary: 'boolean' },
-        defaultValue: { summary: 'false' }
+- Clean, minimal layout with AppLogo
+- Status banner using \`var(--color-work)\` accent (blue)
+- Three feature highlights with Lucide icons
+- "Get Started" primary action + "Settings" secondary action
+- Keyboard support: Enter/Escape to close`
       }
     }
   }
 }
 
 export default meta
-type Story = StoryObj<typeof WelcomeModal>
+type Story = StoryObj<typeof meta>
 
-/**
- * Default - Interactive playground
- *
- * Use the Controls panel to toggle visibility.
- * Click "Get Started" or X to close, then use Controls to reopen.
- */
+// ============================================================================
+// STORY 1: DEFAULT (Open)
+// ============================================================================
+
 export const Default: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story: 'Interactive demo - use Controls panel to toggle `isOpen`. Click close/Get Started to dismiss.'
-      }
-    }
-  },
+  name: 'Default (Open)',
   render: () => ({
-    components: { WelcomeModal },
-    setup() {
-      const isOpen = ref(true)
-
-      const handleClose = () => {
-        console.log('[WelcomeModal] Closed')
-        isOpen.value = false
-      }
-
-      const handleShowSettings = () => {
-        console.log('[WelcomeModal] Settings requested')
-      }
-
-      const reopenModal = () => {
-        isOpen.value = true
-      }
-
-      return { isOpen, handleClose, handleShowSettings, reopenModal }
-    },
+    components: { X, CheckCircle, LayoutGrid, Timer, Shield, Settings },
     template: `
-      <div style="
-        min-height: 100vh;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-      ">
-        <WelcomeModal
-          :is-open="isOpen"
-          @close="handleClose"
-          @show-settings="handleShowSettings"
-        />
-        <button
-          v-if="!isOpen"
-          @click="reopenModal"
-          style="
-            padding: 0.75rem 1.5rem;
-            background: transparent;
-            color: var(--color-work, #3b82f6);
-            border: 1px solid var(--color-work, #3b82f6);
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.875rem;
-          "
-        >
-          Reopen Welcome Modal
-        </button>
+      <div :style="containerStyle">
+        <div :style="modalStyle">
+          <!-- Header -->
+          <div :style="headerStyle">
+            <div :style="headerContentStyle">
+              <span :style="logoStyle">🌊</span>
+              <div>
+                <h2 :style="titleStyle">Welcome to FlowState</h2>
+                <p :style="subtitleStyle">Your productivity companion</p>
+              </div>
+            </div>
+            <button :style="closeBtnStyle">
+              <X :size="20" />
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div :style="bodyStyle">
+            <!-- Status Banner -->
+            <div :style="statusBannerStyle">
+              <CheckCircle :size="20" />
+              <span>Welcome!</span>
+            </div>
+
+            <!-- Features -->
+            <div :style="featuresStyle">
+              <div :style="featureStyle">
+                <LayoutGrid :size="18" :style="featureIconStyle" />
+                <span>Multiple views: Board, Calendar, Canvas</span>
+              </div>
+              <div :style="featureStyle">
+                <Timer :size="18" :style="featureIconStyle" />
+                <span>Built-in Pomodoro timer</span>
+              </div>
+              <div :style="featureStyle">
+                <Shield :size="18" :style="featureIconStyle" />
+                <span>100% private, works offline</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div :style="footerStyle">
+            <button :style="primaryBtnStyle">Get Started</button>
+            <div :style="secondaryActionsStyle">
+              <button :style="secondaryBtnStyle">
+                <Settings :size="16" />
+                Settings
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    `
-  })
-}
-
-/**
- * States - New vs Returning User
- *
- * Shows how the modal adapts to user context.
- * Status banner changes based on session state.
- */
-export const States: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story: `**User States:**
-
-- **New User**: Shows "Profile created" banner
-- **Returning User**: Shows "Day X" with usage count
-
-The modal adapts messaging based on \`authStore.isNewSession\`.`
-      }
-    }
-  },
-  render: () => ({
-    components: { WelcomeModal },
-    setup() {
-      const isOpen = ref(true)
+    `,
+    data() {
       return {
-        isOpen,
-        handleClose: () => { isOpen.value = false },
-        handleShowSettings: () => console.log('Settings')
+        containerStyle, modalStyle, headerStyle, headerContentStyle, logoStyle,
+        titleStyle, subtitleStyle, closeBtnStyle, bodyStyle, statusBannerStyle,
+        featuresStyle, featureStyle, featureIconStyle, footerStyle, primaryBtnStyle,
+        secondaryActionsStyle, secondaryBtnStyle
       }
-    },
-    template: `
-      <div style="
-        min-height: 100vh;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-      ">
-        <WelcomeModal
-          :is-open="isOpen"
-          @close="handleClose"
-          @show-settings="handleShowSettings"
-        />
-      </div>
-    `
+    }
   })
 }
 
-/**
- * Integration Example - Typical App Usage
- *
- * Shows how WelcomeModal integrates with app flow.
- * Modal appears on first launch, user can dismiss and continue.
- */
-export const IntegrationExample: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story: `**Typical integration:**
+// ============================================================================
+// STORY 2: CLOSED STATE (with reopen hint)
+// ============================================================================
 
-\`\`\`vue
-<script setup>
-const showWelcome = ref(true)
-
-const handleWelcomeClose = () => {
-  showWelcome.value = false
-  localStorage.setItem('welcomed', 'true')
-}
-</script>
-
-<template>
-  <WelcomeModal
-    :is-open="showWelcome"
-    @close="handleWelcomeClose"
-    @show-settings="openSettings"
-  />
-</template>
-\`\`\``
-      }
-    }
-  },
+export const Closed: Story = {
+  name: 'Closed State',
   render: () => ({
-    components: { WelcomeModal },
-    setup() {
-      const isOpen = ref(true)
-      const welcomed = ref(false)
-
-      const handleClose = () => {
-        isOpen.value = false
-        welcomed.value = true
-      }
-
-      const showAgain = () => {
-        isOpen.value = true
-      }
-
-      return { isOpen, welcomed, handleClose, showAgain }
-    },
     template: `
-      <div style="
-        min-height: 100vh;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-        color: var(--text-primary, #fff);
-      ">
-        <WelcomeModal
-          :is-open="isOpen"
-          @close="handleClose"
-        />
-
-        <div v-if="welcomed" style="text-align: center;">
-          <p style="color: var(--color-success, #22c55e); margin-bottom: 1rem;">
-            Welcome complete! User can now use the app.
+      <div :style="containerStyle">
+        <div style="text-align: center;">
+          <p style="color: var(--text-secondary); font-size: var(--text-sm); margin: 0 0 var(--space-3) 0;">
+            Modal is closed. In the real app, it appears on first launch.
           </p>
-          <button
-            @click="showAgain"
-            style="
-              padding: 0.5rem 1rem;
-              background: transparent;
-              border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
-              color: var(--text-secondary, rgba(255,255,255,0.7));
-              border-radius: 6px;
-              cursor: pointer;
-              font-size: 0.8125rem;
-            "
-          >
-            Show Welcome Again
+          <button :style="reopenBtnStyle">
+            Reopen Welcome Modal
           </button>
         </div>
       </div>
-    `
+    `,
+    data() {
+      return {
+        containerStyle: `position: relative; width: 100%; height: 200px; background: var(--overlay-backdrop-bg); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);`,
+        reopenBtnStyle: `padding: var(--space-2) var(--space-4); background: transparent; border: 1px solid var(--color-work); border-radius: var(--radius-md); color: var(--color-work); font-size: var(--text-sm); font-weight: 500; cursor: pointer;`
+      }
+    }
   })
 }

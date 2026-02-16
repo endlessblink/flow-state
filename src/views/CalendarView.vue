@@ -316,30 +316,24 @@ const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
 const handleEventDragStart = (event: DragEvent, calendarEvent: any) => {
   _rawEventDragStart(event, calendarEvent)
-  if (calendarEvent.taskId) {
-    startGlobalDrag({
-      type: 'task',
-      taskId: calendarEvent.taskId,
-      title: calendarEvent.title || '',
-      source: 'calendar'
-    })
-  }
+  // Unified ghost pill — composable now handles startGlobalDrag with event
 }
 
 const handleEventDragEnd = (event: DragEvent, calendarEvent: any) => {
   _rawEventDragEnd(event, calendarEvent)
-  endGlobalDrag()
+  // endGlobalDrag is called inside the composable's handleEventDragEnd
 }
 
 const handleMonthDragStart = (event: DragEvent, calendarEvent: any) => {
   _rawMonthDragStart(event, calendarEvent)
   if (calendarEvent.taskId) {
+    // Unified ghost pill — pass event for setDragImage
     startGlobalDrag({
       type: 'task',
       taskId: calendarEvent.taskId,
       title: calendarEvent.title || '',
       source: 'calendar'
-    })
+    }, event)
   }
 }
 

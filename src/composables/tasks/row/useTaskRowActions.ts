@@ -30,9 +30,11 @@ export function useTaskRowActions(
             source: 'kanban' // Using kanban/list as generic source
         }
 
-        startDrag(dragData)
         event.dataTransfer.setData('application/json', JSON.stringify(dragData))
         event.dataTransfer.effectAllowed = 'move'
+
+        // Unified ghost pill — startDrag creates it and calls setDragImage
+        startDrag(dragData, event)
     }
 
     const handleDragEnd = () => {

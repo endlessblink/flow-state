@@ -25,14 +25,14 @@
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"
-        force-fallback
+        :force-fallback="true"
         fallback-class="sortable-fallback"
         :fallback-tolerance="3"
         :scroll-sensitivity="100"
         :scroll-speed="20"
-        bubble-scroll
+        :bubble-scroll="true"
         :delay="100"
-        delay-on-touch-only
+        :delay-on-touch-only="true"
         :touch-start-threshold="5"
         :disabled="false"
         easing="cubic-bezier(0.25, 0.46, 0.45, 0.94)"
@@ -143,8 +143,27 @@ const onDragStart = (evt: any) => {
   }
 }
 
-const onDragEnd = () => {
+const onDragEnd = (evt: any) => {
   isDragActive.value = false
+
+  // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
+  // native drag events on external elements, so we detect the target manually)
+  const mouseEvt = evt.originalEvent as MouseEvent | undefined
+  if (mouseEvt) {
+    const elements = document.elementsFromPoint(mouseEvt.clientX, mouseEvt.clientY)
+    for (const el of elements) {
+      const navItem = (el as HTMLElement).closest('[data-drop-project-id]') as HTMLElement | null
+      if (navItem) {
+        const projectId = navItem.dataset.dropProjectId
+        const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+        if (projectId && taskId) {
+          taskStore.moveTaskToProject(taskId, projectId)
+        }
+        break
+      }
+    }
+  }
+
   endGlobalDrag()
   // Sync localTasks with store state after drag completes
   nextTick(() => {

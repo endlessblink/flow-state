@@ -36,7 +36,13 @@ export function useDragAndDrop() {
   const dragData = computed(() => dragState.value.dragData)
   const dropTarget = computed(() => dragState.value.dropTarget)
 
-  const startDrag = (data: DragData) => {
+  /**
+   * Start a drag operation with unified ghost pill.
+   * Pass the DragEvent for HTML5 native drags (Table, Calendar) so the
+   * ghost is used as setDragImage. For SortableJS drags (Kanban) omit
+   * the event — mousemove will position the ghost instead.
+   */
+  const startDrag = (data: DragData, event?: DragEvent) => {
     dragState.value = {
       isDragging: true,
       dragData: data,
@@ -46,9 +52,7 @@ export function useDragAndDrop() {
     // Add visual feedback to body
     document.body.classList.add('dragging-active')
 
-    // Create ghost pill that follows cursor during non-native drags.
-    // Starts off-screen; only moves on-screen via mousemove (which only
-    // fires for SortableJS drags, not HTML5 native drag).
+    // Create unified ghost pill used for ALL drag sources.
     ghostEl = document.createElement('div')
     const title = data.title || 'Task'
     const truncated = title.length > 30 ? title.slice(0, 30) + '...' : title
@@ -73,6 +77,20 @@ export function useDragAndDrop() {
       zIndex: '99999'
     })
     document.body.appendChild(ghostEl)
+
+    // For HTML5 native drags, use our ghost as the browser drag image.
+    // The ghost element must be in the DOM for setDragImage to work.
+    if (event?.dataTransfer) {
+      event.dataTransfer.setDragImage(ghostEl, 20, 14)
+      // Browser captures the image synchronously — remove after a tick
+      // so it doesn't linger on-screen during native drag (mousemove
+      // won't fire to reposition it).
+      setTimeout(() => {
+        if (ghostEl) {
+          ghostEl.style.display = 'none'
+        }
+      }, 0)
+    }
 
     // Track drop target via mousemove + elementsFromPoint.
     // Native HTML5 drag doesn't fire mousemove (uses drag events instead),

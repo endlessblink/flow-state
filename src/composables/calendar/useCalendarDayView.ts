@@ -1,6 +1,7 @@
 import { ref, computed, onUnmounted, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 
@@ -44,6 +45,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
 export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
+  const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
   // --- MEMORY LEAK FIX: Listener Registry ---
   let currentMouseMoveHandler: ((e: MouseEvent) => void) | null = null
@@ -582,35 +584,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       event.dataTransfer.setData('application/json', JSON.stringify(dragData))
       event.dataTransfer.effectAllowed = 'move'
 
-      // Create a custom drag image for better visual feedback
-      const dragElement = event.target as HTMLElement
-      if (dragElement) {
-        // Create a clone for the drag image
-        const dragImage = dragElement.cloneNode(true) as HTMLElement
-        dragImage.style.opacity = '0.8'
-        dragImage.style.transform = 'rotate(-2deg)'
-        dragImage.style.maxWidth = '200px'
-        dragImage.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)'
-
-        // Temporarily add to body to create image
-        document.body.appendChild(dragImage)
-
-        // Set the drag image
-        try {
-          event.dataTransfer.setDragImage(dragImage, 20, 20)
-
-
-          // Remove the temporary element after a short delay
-          setTimeout(() => {
-            if (document.body.contains(dragImage)) {
-              document.body.removeChild(dragImage)
-            }
-          }, 100)
-        } catch (error) {
-          // Fallback: use the original element
-          event.dataTransfer.setDragImage(dragElement, 20, 20)
-        }
-      }
+      // Unified ghost pill — startGlobalDrag creates it and calls setDragImage
+      startGlobalDrag(
+        { type: 'task', taskId: calendarEvent.taskId, title: calendarEvent.title, source: 'calendar' },
+        event
+      )
     } else {
     }
 
@@ -619,6 +597,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   }
 
   const handleEventDragEnd = (_event: DragEvent, _calendarEvent: CalendarEvent) => {
+    // Clean up unified drag ghost + body class
+    endGlobalDrag()
 
     // Clean up drag state to prevent stuck states
     if (isDragging.value) {

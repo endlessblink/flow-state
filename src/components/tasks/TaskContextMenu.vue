@@ -558,7 +558,7 @@ const handleAIAcceptDate = async (date: string) => {
 // Menu positioning
 const menuPosition = computed(() => {
   if (!menuRef.value) {
-    return { left: props.x + 'px', top: props.y + 'px' }
+    return { left: props.x + 'px', top: props.y + 'px', position: 'fixed' as const }
   }
 
   const menuHeight = menuRef.value.offsetHeight || 400
@@ -579,7 +579,7 @@ const menuPosition = computed(() => {
   if (left < padding) left = padding
   if (top < padding) top = padding
 
-  return { left: left + 'px', top: top + 'px', position: 'absolute' as const }
+  return { left: left + 'px', top: top + 'px', position: 'fixed' as const }
 })
 
 // Submenu styles
@@ -721,7 +721,7 @@ onUnmounted(() => {
 
 <style scoped>
 .context-menu {
-  position: absolute;
+  position: fixed;
   background: rgba(22, 19, 38, 0.97);
   backdrop-filter: blur(32px) saturate(150%);
   -webkit-backdrop-filter: blur(32px) saturate(150%);
@@ -731,8 +731,8 @@ onUnmounted(() => {
   padding: var(--space-2) 0;
   min-width: 240px;
   max-width: 280px;
-  z-index: var(--z-dropdown);
-  animation: menuSlideIn var(--duration-fast) var(--ease-out);
+  z-index: 9999;
+  animation: menuSlideIn 150ms ease-out;
 }
 
 @keyframes menuSlideIn {

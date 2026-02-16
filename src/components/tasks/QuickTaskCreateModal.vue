@@ -391,13 +391,16 @@ const handleCreateTask = () => {
 }
 
 // Reset form when modal opens
+// BUG-1335: Auto-select the active project so tasks created on canvas
+// inherit the currently selected sidebar project (especially nested 3rd-depth+).
+// Without this, tasks are created as 'uncategorized' and filtered out.
 watch(() => _props.isOpen, (isOpen) => {
   if (isOpen) {
     taskTitle.value = ''
     taskDescription.value = ''
     status.value = 'planned'
     priority.value = 'medium'
-    projectId.value = ''
+    projectId.value = taskStore.activeProjectId || ''
     localDate.value = ''
   }
 })

@@ -8,6 +8,18 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1336: Canvas task deletion triggers project deletion dialog (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: Pressing Delete on a canvas task node also opens the "Delete project?" dialog from the sidebar, because `AppSidebar.vue` registers a global `window` keydown listener that fires on Delete/Backspace whenever `activeProjectId` is set (which is almost always true).
+
+**Root Cause**: `handleProjectKeydown` in `AppSidebar.vue` lacks a focus guard — it doesn't check if focus is within the sidebar before handling Delete key events.
+
+**Fix**: Added guard so sidebar Delete handler only fires when focus is within `.sidebar` element OR when projects are explicitly multi-selected (not just passively active).
+
+---
+
 ### ~~BUG-1318~~: Timer broken — doesn't stop on break, random numbers, duplicate notifications, extend not working (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-14)
@@ -113,9 +125,9 @@
 
 ---
 
-### BUG-1335: Tasks created on canvas don't appear when 3rd-depth nested project is active (🔄 IN PROGRESS)
+### ~~BUG-1335~~: Tasks created on canvas don't appear when 3rd-depth nested project is active (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-16)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
 
 **Problem**: When a user selects a 3rd-depth nested project in the sidebar and creates a task on the canvas, the task doesn't appear. The task IS created in the database, but it's invisible because it gets the wrong `projectId`.
 

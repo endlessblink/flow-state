@@ -12,6 +12,7 @@
       }
     ]"
     :draggable="!!projectId"
+    :data-drop-project-id="projectId || undefined"
     @click="$emit('click', $event)"
     @dragstart="handleDragStart"
     @dragend="handleDragEnd"
@@ -19,6 +20,9 @@
     @dragover="handleDragOver"
     @dragleave="handleDragLeave"
     @drop="handleDrop"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
+    @mouseup="handleMouseUp"
   >
     <!-- Expand/collapse chevron for items with children -->
     <button
@@ -282,6 +286,45 @@ const handleDrop = (event: DragEvent) => {
         })
         emit('projectDrop', dragData.value)
         console.log(`Project "${dragData.value.title}" nested under project "${taskStore.getProjectById(props.projectId)?.name}"`)
+      }
+    }
+  }
+}
+
+// Mouse event bridge for non-native drag sources (vuedraggable forceFallback)
+// SortableJS forceFallback doesn't fire native drag events on external elements,
+// but mouseenter/mouseleave/mouseup still fire since the ghost has pointer-events: none
+const handleMouseEnter = () => {
+  if (!isDragging.value || !props.projectId) return
+  isDragTarget.value = true
+  setDropTarget(props.projectId)
+}
+
+const handleMouseLeave = () => {
+  if (!isDragging.value || !props.projectId) return
+  isDragTarget.value = false
+  setDropTarget(null)
+}
+
+const handleMouseUp = () => {
+  if (!isDragging.value || !props.projectId) return
+
+  isDragTarget.value = false
+  setDropTarget(null)
+
+  if (dragData.value && isDragValid.value) {
+    if (dragData.value.type === 'task' && dragData.value.taskId) {
+      taskStore.moveTaskToProject(dragData.value.taskId, props.projectId)
+      emit('taskDrop', dragData.value)
+    }
+    if (dragData.value.type === 'project' && dragData.value.projectId) {
+      if (props.projectId === '__root__') {
+        emit('projectDrop', dragData.value)
+      } else {
+        taskStore.updateProject(dragData.value.projectId, {
+          parentId: props.projectId
+        })
+        emit('projectDrop', dragData.value)
       }
     }
   }

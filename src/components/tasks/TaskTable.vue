@@ -66,6 +66,7 @@
             class="table-row"
             :class="{
               'row-selected': selectedTasks.includes(task.id),
+              'is-dragging': draggingTaskId === task.id,
               [`priority-${task.priority || 'none'}`]: true
             }"
             :data-status="task.status"
@@ -187,6 +188,7 @@
           class="table-row"
           :class="{
             'row-selected': selectedTasks.includes(task.id),
+            'is-dragging': draggingTaskId === task.id,
             [`priority-${task.priority || 'none'}`]: true
           }"
           :data-status="task.status"
@@ -350,14 +352,38 @@ const taskStore = useTaskStore()
 // Drag-to-sidebar support (matches useTaskRowActions pattern)
 const { startDrag, endDrag } = useDragAndDrop()
 
+const draggingTaskId = ref<string | null>(null)
+
 const handleTableRowDragStart = (event: DragEvent, task: Task) => {
   if (!event.dataTransfer) return
   startDrag({ type: 'task', taskId: task.id, title: task.title, source: 'kanban' })
   event.dataTransfer.setData('application/json', JSON.stringify({ type: 'task', taskId: task.id }))
   event.dataTransfer.effectAllowed = 'move'
+
+  // Create custom drag ghost for visual feedback
+  const ghost = document.createElement('div')
+  ghost.textContent = task.title
+  ghost.style.cssText = `
+    position: fixed; top: -1000px; left: -1000px;
+    padding: 8px 16px; max-width: 220px;
+    background: rgba(30, 30, 35, 0.92); color: #e0e0e0;
+    border: 1px solid rgba(78, 205, 196, 0.4);
+    border-radius: 8px; font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    backdrop-filter: blur(8px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    pointer-events: none; z-index: 99999;
+  `
+  document.body.appendChild(ghost)
+  event.dataTransfer.setDragImage(ghost, 20, 14)
+  setTimeout(() => ghost.remove(), 100)
+
+  // Track which task is being dragged for visual feedback
+  draggingTaskId.value = task.id
 }
 
 const handleTableRowDragEnd = () => {
+  draggingTaskId.value = null
   endDrag()
 }
 
@@ -636,6 +662,11 @@ onUnmounted(() => {
 
 .table-row:hover {
   background-color: var(--glass-bg-medium);
+}
+
+.table-row.is-dragging {
+  opacity: 0.4;
+  background: var(--glass-bg-soft);
 }
 
 .table-row.row-selected {

@@ -208,14 +208,14 @@ const handleDragStart = (event: DragEvent) => {
     source: 'sidebar'
   }
 
-  // Use composable for global drag state
-  startDrag(dragData)
-
   // Still set dataTransfer for HTML5 drag-and-drop compatibility
   if (event.dataTransfer) {
     event.dataTransfer.setData('application/json', JSON.stringify(dragData))
     event.dataTransfer.effectAllowed = 'move'
   }
+
+  // Unified ghost pill — startDrag creates it and calls setDragImage
+  startDrag(dragData, event)
 }
 
 // Drag end handler

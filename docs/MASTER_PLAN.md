@@ -99,17 +99,48 @@
 
 ---
 
-### BUG-1325: Tasks appear in calendar without explicit user scheduling (📋 PLANNED)
+### TASK-1336: Add project selector to task context menu (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (2026-02-14)
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-16)
+
+**Goal**: Add a "Project" submenu to the right-click task context menu so users can change a task's project from anywhere in the app (Board, Calendar, Canvas views).
+
+**Implementation**:
+- Create `ProjectSubmenu.vue` in `src/components/tasks/context-menu/`
+- Add project selector trigger between Priority and Status/Duration in TaskContextMenu.vue
+- Wire up project change via `taskStore.updateTaskWithUndo()`
+- Follow existing submenu pattern (StatusSubmenu, DurationSubmenu)
+
+---
+
+### BUG-1335: Tasks created on canvas don't appear when 3rd-depth nested project is active (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-16)
+
+**Problem**: When a user selects a 3rd-depth nested project in the sidebar and creates a task on the canvas, the task doesn't appear. The task IS created in the database, but it's invisible because it gets the wrong `projectId`.
+
+**Root Cause**: `QuickTaskCreateModal.vue` always resets `projectId = ''` when opened, ignoring `projectStore.activeProjectId`. Tasks are created as `'uncategorized'`, which doesn't match the active nested project filter → filtered out → invisible on canvas.
+
+**Fix**: Auto-populate `projectId` with `taskStore.activeProjectId` when the modal opens. Applied to both `QuickTaskCreateModal.vue` (canvas/board) and `QuickTaskCreate.vue` (calendar).
+
+---
+
+### BUG-1325: Tasks appear in calendar without explicit user scheduling (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (reopened 2026-02-16)
 
 **Problem**: Tasks that were never explicitly scheduled by the user appear in the Calendar view, polluting it. Tasks should ONLY appear in the calendar when:
 1. The user drags the task into the calendar
 2. The user explicitly sets a start and end time on the task
 
-Any other path that causes a task to show up in the calendar is a bug. Many tasks are currently visible in the calendar without meeting either condition.
+**Root Cause (original, commit 923bf18)**: `createTask()` and `syncDateFields()` auto-created calendar instances from `dueDate`.
 
-**Root Cause**: TBD — needs investigation of how tasks get calendar instances and what triggers calendar visibility.
+**Root Cause (regression)**: `migrateLegacyTasks()` re-created `migrated-` instances every app load, undoing `cleanupAutoCalendarInstances()`. Neither change was persisted to Supabase, creating an infinite cycle: cleanup removes → migration re-creates → reload → repeat.
+
+**Fix (round 2)**:
+- Removed `migrateLegacyTasks()` from `runAllTaskMigrations()` pipeline (broke the cycle)
+- Enhanced `cleanupAutoCalendarInstances()` to clear legacy `scheduledDate`/`scheduledTime` when task has no user-created instances
+- Calendar visibility exclusively driven by `instances[]` (via `getTaskInstances()`)
 
 ---
 
@@ -470,6 +501,22 @@ Any other path that causes a task to show up in the calendar is a bug. Many task
 **Fix**: Remove all CSS `transform` properties from `.task-node:hover` and `.multi-select-mode:hover`. Hover effects achieved via `box-shadow` only (no positional transforms).
 
 **Files**: `src/components/canvas/TaskNode.vue`
+
+---
+
+### ~~BUG-1329~~: Duplicate Task Creation from Realtime Echo (✅ DONE)
+
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-15)
+
+**Problem**: `createTask()` didn't call `addPendingWrite(taskId)`, so Supabase Realtime INSERT echoes bypassed echo protection and could re-add tasks via `updateTaskFromSync()`.
+
+**Fix** (4 changes across 3 files):
+1. Added `addPendingWrite(taskId)` to `createTask()` (same pattern as update/delete)
+2. Added `isLoadingFromDatabase` guard in realtime handler
+3. Made `updateTaskFromSync` dedup atomic (findIndex instead of filter+push)
+4. Added defense-in-depth duplicate sweep
+
+**Files**: `src/stores/tasks/taskOperations.ts`, `src/composables/app/useAppInitialization.ts`, `src/stores/tasks.ts`
 
 ---
 
@@ -1998,6 +2045,18 @@ Dragging a group causes unrelated groups to move. Location: `useCanvasDragDrop.t
 
 ## Active Tasks (IN PROGRESS)
 
+### TASK-1334: Make list view fully scrollable with table layout (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (Started: 2026-02-16)
+
+**Problem**: The Board's list view needs to be fully scrollable with tasks displayed in a table layout.
+
+**Scope**:
+1. Make the list view fully scrollable (no truncation or hidden overflow)
+2. Display tasks in a proper table view with columns
+
+---
+
 ### ~~TASK-1322~~: Remove Browser Transcription — Whisper Only (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-02-14)
@@ -2332,6 +2391,13 @@ npm run tasks:bugs     # Filter by BUG type
 - [ ] **TASK-1299**: Edit modal AI Assist — ✨ button in TaskEditModal footer, auto-populate form fields
 - [ ] **TASK-1300**: Quick create AI Assist — ✨ button in QuickTaskCreate next to title input
   **Progress (2026-02-12):** All 5 files implemented + integrated. Hebrew/RTL language detection added. Sticky bar translucency fixed. Awaiting user testing.
+
+#### Phase 5: AI Chat Intelligence Improvements (P1 — ONGOING)
+
+- [ ] **TASK-1329**: Fix mixed-language responses — AI replies mix Hebrew + English (e.g. "...generating weekly plan" in English mid-Hebrew conversation). Strengthen system prompt language rule, add Hebrew examples, ensure status/tool-calling text follows user language.
+- [ ] **TASK-1330**: Improve prompt quality — system prompt is generic, tools are not well-described, context is noisy. Audit and tighten all prompts for smarter responses.
+- [ ] **TASK-1331**: Weekly plan AI quality — plan responses feel shallow, don't leverage behavioral context well. Improve planning prompt chain.
+- [ ] **TASK-1332**: Add Kimi K2 to Groq model dropdown — ✅ DONE (added `moonshotai/kimi-k2-instruct-0905`)
 
 **Key Files**:
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
@@ -3122,6 +3188,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |
 | **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |
+| ~~**BUG-1333**~~ | **P0** | ✅ **Calendar inbox shows only 2 tasks — stale auto-instances + wrong filter source** |
 | ~~**TASK-1323**~~ | **P1** | ✅ **Console Log Cleanup — reduce verbose/debug logging noise across app** (✅ DONE 2026-02-14) |
 | **TASK-1322** | **P1** | **🔄 Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** |
 | ~~**TASK-1319**~~ | **P0** | ✅ **Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** (✅ DONE 2026-02-14) |

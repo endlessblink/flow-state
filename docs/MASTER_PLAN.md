@@ -8,9 +8,9 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1336: Canvas task deletion triggers project deletion dialog (🔄 IN PROGRESS)
+### ~~BUG-1336~~: Canvas task deletion triggers project deletion dialog (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
 
 **Problem**: Pressing Delete on a canvas task node also opens the "Delete project?" dialog from the sidebar, because `AppSidebar.vue` registers a global `window` keydown listener that fires on Delete/Backspace whenever `activeProjectId` is set (which is almost always true).
 

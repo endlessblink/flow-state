@@ -131,23 +131,30 @@
 
 ---
 
-### TASK-1338: Configurable PWA push notifications (📋 PLANNED)
+### ~~TASK-1338~~: Configurable PWA Push Notifications (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
 
-**Goal**: Implement Web Push notifications for the PWA with per-category controls and frequency limits, so the user decides exactly what triggers notifications and how often they fire.
+Full push notification system with per-category controls, Web Push subscription, and server-side push service.
 
-**Notification categories** (user toggles each independently):
-- Pomodoro timer events (session complete, break start/end)
-- Task reminders (due date approaching, overdue)
-- Daily digest / planning nudges
-- Achievement/gamification events (level up, streak at risk)
+**Phase 1: Settings UI**
+- Push notification preferences in settings store with backfill
+- 3-section notification settings tab: Push categories, timing controls, time block alerts
+- Per-category toggles (task reminders, daily digest, overdue, achievements) with in-app/web-push sub-channels
 
-**Frequency controls**: Per-category quiet hours, cooldown between notifications, batch vs instant delivery.
+**Phase 2: Client-Side Push**
+- `usePushSubscription` composable for subscribe/unsubscribe lifecycle
+- SW `push` event handler with contextual action buttons
+- `push_subscriptions` Supabase table with RLS
+- Tauri detection (push hidden in desktop, OS notifications used instead)
 
-**Settings UI**: New "Notifications" tab in Settings with toggle switches per category + frequency controls.
+**Phase 3: Server-Side Push Service**
+- `server/push-service/` Node.js service with cron jobs
+- Task reminders (every 5min), overdue alerts (every 30min), daily digest (hourly check)
+- Automatic cleanup of stale subscriptions (5+ failures)
+- systemd unit file for VPS deployment
 
-**Tech**: Service Worker + Web Push API. Works on Android Chrome, desktop browsers, iOS Safari (home screen PWA only).
+**Files Changed**: `src/stores/settings.ts`, `src/components/settings/tabs/NotificationSettingsTab.vue`, `src/composables/usePushSubscription.ts`, `src/sw.ts`, `supabase/migrations/20260216000000_add_push_subscriptions.sql`, `server/push-service/index.js`, `server/push-service/push-service.service`
 
 ---
 
@@ -3271,6 +3278,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
 | **TASK-1337** | **P3** | **📋 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
+| ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
 | **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |

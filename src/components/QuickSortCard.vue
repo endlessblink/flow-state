@@ -30,7 +30,7 @@
       />
 
       <!-- Combined Priority + Date Controls (single row) -->
-      <div class="quick-controls-row">
+      <div class="quick-controls-row" @mousedown.stop @touchstart.stop>
         <div class="priority-buttons">
           <button
             class="priority-btn"
@@ -92,7 +92,7 @@
             @update:show="showDatePicker = $event"
           >
             <template #trigger>
-              <button class="quick-date-btn pick-btn" title="Pick date" @click.stop>
+              <button class="quick-date-btn pick-btn" title="Pick date" @click.stop @mousedown.stop @touchstart.stop>
                 <CalendarDays :size="14" />
               </button>
             </template>
@@ -255,9 +255,20 @@ function handleDatePickerSelect(timestamp: number | null) {
 }
 
 // Mouse/Touch handling
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!target || !(target instanceof HTMLElement)) return false
+  const tag = target.tagName?.toLowerCase()
+  if (tag === 'button' || tag === 'input' || tag === 'select' || tag === 'a') return true
+  return !!target.closest('button, input, select, a, .n-date-picker, .n-popover')
+}
+
 function handleMouseDown(event: MouseEvent) {
+  // Don't start swipe from interactive elements (buttons, date picker, etc.)
+  if (isInteractiveTarget(event.target)) return
+
   isSwiping.value = true
   swipeStartX.value = event.clientX
+  swipeCurrentX.value = event.clientX
 
   const handleMouseMove = (e: MouseEvent) => {
     swipeCurrentX.value = e.clientX
@@ -274,8 +285,12 @@ function handleMouseDown(event: MouseEvent) {
 }
 
 function handleTouchStart(event: TouchEvent) {
+  // Don't start swipe from interactive elements
+  if (isInteractiveTarget(event.target)) return
+
   isSwiping.value = true
   swipeStartX.value = event.touches[0].clientX
+  swipeCurrentX.value = event.touches[0].clientX
 
   const handleTouchMove = (e: TouchEvent) => {
     swipeCurrentX.value = e.touches[0].clientX
@@ -342,7 +357,7 @@ function handleSwipeEnd() {
 
 .card-delete-btn {
   position: absolute;
-  top: 0;
+  bottom: 0;
   right: 0;
   display: flex;
   align-items: center;

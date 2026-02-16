@@ -1,5 +1,14 @@
 <template>
   <div class="task-row__title">
+    <button
+      v-if="hasSubtasks"
+      class="task-row__expand-btn"
+      :class="{ 'task-row__expand-btn--expanded': isExpanded }"
+      :title="isExpanded ? 'Collapse subtasks' : 'Expand subtasks'"
+      @click.stop="$emit('toggleExpand')"
+    >
+      <ChevronRight :size="14" />
+    </button>
     <span
       class="task-row__title-text"
       :class="[
@@ -28,6 +37,7 @@
 </template>
 
 <script setup lang="ts">
+import { ChevronRight } from 'lucide-vue-next'
 
 defineProps<{
   title: string
@@ -39,6 +49,11 @@ defineProps<{
   completedSubtaskCount: number
   totalSubtasks: number
   isAllSubtasksCompleted: boolean
+  isExpanded?: boolean
+}>()
+
+defineEmits<{
+  toggleExpand: []
 }>()
 </script>
 
@@ -88,5 +103,35 @@ defineProps<{
   color: var(--success-text);
   background-color: rgba(34, 197, 94, 0.1);
   text-decoration: none;
+}
+
+/* Expand/collapse button for subtasks */
+.task-row__expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) ease;
+  flex-shrink: 0;
+}
+
+.task-row__expand-btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+}
+
+.task-row__expand-btn svg {
+  transition: transform var(--duration-fast) ease;
+}
+
+.task-row__expand-btn--expanded svg {
+  transform: rotate(90deg);
 }
 </style>

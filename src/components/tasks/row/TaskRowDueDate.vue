@@ -11,6 +11,14 @@
       <span class="task-row__due-date-text">{{ formattedDueDate }}</span>
     </span>
 
+    <!-- Hidden date input for custom date picker -->
+    <input
+      ref="dateInputRef"
+      type="date"
+      class="task-row__date-picker-input"
+      @change="handleDatePick"
+    >
+
     <!-- Due Date Selector Dropdown (teleported to body to avoid overflow clipping) -->
     <Teleport to="body">
       <Transition name="dropdown-slide">
@@ -47,6 +55,7 @@ const isOpen = ref(false)
 const triggerWrapperRef = ref<HTMLElement>()
 const triggerRef = ref<HTMLElement>()
 const dropdownRef = ref<HTMLElement>()
+const dateInputRef = ref<HTMLInputElement>()
 
 // Fixed positioning for teleported dropdown
 const dropdownStyle = ref<Record<string, string>>({
@@ -91,6 +100,7 @@ const dateOptions = computed(() => {
     { label: 'Tomorrow', value: toDateString(tomorrow) },
     { label: 'In 3 days', value: toDateString(in3Days) },
     { label: 'In 1 week', value: toDateString(in1Week) },
+    { label: 'Pick a date...', value: '__pick__' },
     { label: 'No due date', value: null }
   ]
 })
@@ -143,8 +153,23 @@ const closeDropdown = () => {
 }
 
 const selectDate = (value: string | null) => {
+  if (value === '__pick__') {
+    // Open native date picker
+    if (dateInputRef.value) {
+      dateInputRef.value.value = props.dueDate || toDateString(new Date())
+      dateInputRef.value.showPicker()
+    }
+    closeDropdown()
+    return
+  }
   emit('update:dueDate', value)
   closeDropdown()
+}
+
+const handleDatePick = () => {
+  if (dateInputRef.value?.value) {
+    emit('update:dueDate', dateInputRef.value.value)
+  }
 }
 
 // Click outside to close (check both trigger and teleported dropdown)
@@ -319,6 +344,16 @@ onBeforeUnmount(() => {
 .due-date-dropdown__check {
   flex-shrink: 0;
   opacity: 0.8;
+}
+
+/* Hidden native date input */
+.task-row__date-picker-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 /* Dropdown transitions */

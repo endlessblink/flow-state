@@ -26,6 +26,7 @@
     @drop.prevent="$emit('drop', $event)"
     @dragleave="$emit('dragleave', $event)"
     @click="$emit('rowClick', $event)"
+    @dblclick.stop="$emit('edit')"
     @contextmenu.prevent="$emit('contextMenu', $event)"
     @focusin="$emit('focusin', $event)"
     @focusout="$emit('focusout', $event)"
@@ -35,19 +36,16 @@
     @touchstart="$emit('touchstart', $event)"
     @touchend="$emit('touchend', $event)"
   >
-    <!-- Done Toggle / Selection Checkbox column -->
+    <!-- Selection Checkbox + Done Toggle column -->
     <div class="task-row__done-toggle" @click.stop>
-      <!-- Selection mode: show checkbox -->
-      <label v-if="selectionMode" class="task-row__select-checkbox">
+      <label class="task-row__select-checkbox">
         <input
           type="checkbox"
           :checked="checked"
           @change="$emit('check')"
         >
       </label>
-      <!-- Normal mode: done toggle -->
       <DoneToggle
-        v-else
         :completed="task.status === 'done'"
         size="sm"
         variant="simple"
@@ -68,6 +66,8 @@
       :completed-subtask-count="completedSubtaskCount"
       :total-subtasks="totalSubtasks"
       :is-all-subtasks-completed="isAllSubtasksCompleted"
+      :is-expanded="isExpanded"
+      @toggle-expand="$emit('toggleExpand')"
     />
 
     <!-- Project Indicator -->
@@ -110,6 +110,12 @@
       <span v-else class="task-row__no-progress">-</span>
     </div>
 
+    <!-- Time Estimate -->
+    <TaskRowEstimate
+      :estimated-duration="task.estimatedDuration"
+      @update:estimated-duration="(val) => $emit('updateEstimate', val)"
+    />
+
     <!-- Action Buttons -->
     <TaskRowActions
       @start-timer="$emit('startTimer')"
@@ -129,6 +135,7 @@ import TaskRowTitle from './row/TaskRowTitle.vue'
 import TaskRowProject from './row/TaskRowProject.vue'
 import TaskRowPriority from './row/TaskRowPriority.vue'
 import TaskRowDueDate from './row/TaskRowDueDate.vue'
+import TaskRowEstimate from './row/TaskRowEstimate.vue'
 import TaskRowActions from './row/TaskRowActions.vue'
 
 interface Props {
@@ -147,6 +154,7 @@ interface Props {
   completedSubtaskCount: number
   totalSubtasks: number
   isAllSubtasksCompleted: boolean
+  isExpanded?: boolean
   titleAlignmentClasses: any
   projectVisual: any
   projectDisplayName: string
@@ -155,7 +163,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   selectionMode: false,
-  checked: false
+  checked: false,
+  isExpanded: false
 })
 
 defineEmits<{
@@ -182,6 +191,8 @@ defineEmits<{
   startTimer: []
   edit: []
   duplicate: []
+  toggleExpand: []
+  updateEstimate: [val: number | null]
 }>()
 
 const timerStore = useTimerStore()
@@ -190,5 +201,6 @@ const timerStore = useTimerStore()
 const isTimerActive = computed(() => {
   return timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
 })
+
 
 </script>

@@ -9,8 +9,8 @@
 .task-row {
     display: grid;
     /* done  title        proj  status   prio   due    prog   actions */
-    grid-template-columns: 28px 1fr 40px 120px 72px 96px 72px 112px;
-    grid-template-areas: "done title project status priority due progress actions";
+    grid-template-columns: 52px 1fr 40px 120px 72px 96px 72px 72px 112px;
+    grid-template-areas: "done title project status priority due progress estimate actions";
     gap: var(--space-3);
     align-items: center;
     padding: var(--space-0_5) var(--space-2);
@@ -57,6 +57,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
 }
 
 .task-row__status {

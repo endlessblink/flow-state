@@ -69,31 +69,34 @@
               <!-- Row 1: Done + Save -->
               <div class="action-row">
                 <button class="action-btn done" aria-label="Mark task as done" @click="handleMarkDone">
-                  <CheckCircle :size="16" />
+                  <CheckCircle :size="18" />
                   <span class="action-label">Done</span>
                   <kbd>D</kbd>
                 </button>
                 <button class="action-btn save" aria-label="Save and advance" @click="handleSave">
-                  <Save :size="16" />
+                  <Save :size="18" />
                   <span class="action-label">Save</span>
                   <span v-if="isTaskDirty" class="dirty-dot" />
-                  <kbd>S</kbd>
+                  <kbd>→</kbd>
                 </button>
               </div>
 
               <!-- Row 2: Skip + Edit + Delete -->
               <div class="action-row">
                 <button class="action-btn skip" aria-label="Skip this task" @click="handleSkip">
-                  <SkipForward :size="14" />
+                  <SkipForward :size="16" />
                   <span class="action-label">Skip</span>
+                  <kbd>↓</kbd>
                 </button>
                 <button class="action-btn edit" aria-label="Edit task" @click="handleEditTask">
-                  <Edit2 :size="14" />
+                  <Edit2 :size="16" />
                   <span class="action-label">Edit</span>
+                  <kbd>↑</kbd>
                 </button>
                 <button class="action-btn delete" aria-label="Delete task" @click="handleMarkDoneAndDelete">
-                  <Trash2 :size="14" />
+                  <Trash2 :size="16" />
                   <span class="action-label">Del</span>
+                  <kbd>←</kbd>
                 </button>
               </div>
 
@@ -131,7 +134,7 @@
 
               <!-- Helper Hint -->
               <div class="helper-hint">
-                1-9 assign project • S save • D done • Del delete • Space skip • Esc exit
+                1-9 assign project • →/S save • D done • ←/Del delete • ↓ skip • ↑ edit • Esc exit
               </div>
             </div>
 
@@ -242,13 +245,10 @@
       </Transition>
     </div>
 
-    <!-- Celebration Animation -->
+    <!-- Action Feedback Overlay -->
     <Transition name="fade">
-      <div v-if="showCelebration" class="celebration-overlay">
-        <div class="celebration-content">
-          <CheckCircle :size="48" class="check-icon" />
-          <span class="celebration-text">Sorted!</span>
-        </div>
+      <div v-if="actionFeedback" class="feedback-overlay" :class="actionFeedback.type">
+        <span class="feedback-text">{{ actionFeedback.text }}</span>
       </div>
     </Transition>
 
@@ -302,8 +302,16 @@ const pendingCount = computed(() => quickCapture.pendingTasks.value.length)
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
 const showCelebration = ref(false)
+const actionFeedback = ref<{ text: string; type: 'success' | 'info' | 'danger' | 'warning' } | null>(null)
 const sessionSummary = ref<SessionSummary | null>(null)
 const taskToEdit = ref<Task | null>(null)
+
+function showFeedback(text: string, type: 'success' | 'info' | 'danger' | 'warning' = 'info', duration = 600) {
+  actionFeedback.value = { text, type }
+  setTimeout(() => {
+    actionFeedback.value = null
+  }, duration)
+}
 
 // Handle tab query parameter
 watch(() => route.query.tab, (tab) => {
@@ -369,12 +377,7 @@ function handleCategorize(projectId: string) {
 function handleSave() {
   if (!currentTask.value) return
 
-  // Show celebration animation
-  showCelebration.value = true
-  setTimeout(() => {
-    showCelebration.value = false
-  }, 800)
-
+  showFeedback('Saved!', 'success')
   saveTask()
 }
 
@@ -386,6 +389,7 @@ async function handleTaskUpdate(updates: Partial<Task>) {
 }
 
 function handleSkip() {
+  showFeedback('Skipped', 'warning')
   skipTask()
 }
 
@@ -398,11 +402,7 @@ function handleUndo() {
 function handleMarkDone() {
   if (!currentTask.value) return
 
-  // Show minimal celebration animation
-  showCelebration.value = true
-  setTimeout(() => {
-    showCelebration.value = false
-  }, 500)
+  showFeedback('Done!', 'success')
 
   // Mark task as done and move to next
   markTaskDone(currentTask.value.id)
@@ -411,11 +411,7 @@ function handleMarkDone() {
 function handleMarkDoneAndDelete() {
   if (!currentTask.value) return
 
-  // Show minimal celebration animation
-  showCelebration.value = true
-  setTimeout(() => {
-    showCelebration.value = false
-  }, 500)
+  showFeedback('Deleted', 'danger')
 
   // Mark done and delete task, then move to next
   markDoneAndDeleteTask(currentTask.value.id)
@@ -493,6 +489,27 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   if (activeTab.value === 'sort' && event.key === 'Delete') {
     event.preventDefault()
     handleMarkDoneAndDelete()
+  }
+
+  // Arrow keys (only in sort tab)
+  if (activeTab.value === 'sort' && event.key === 'ArrowRight') {
+    event.preventDefault()
+    handleSave()
+  }
+
+  if (activeTab.value === 'sort' && event.key === 'ArrowLeft') {
+    event.preventDefault()
+    handleMarkDoneAndDelete()
+  }
+
+  if (activeTab.value === 'sort' && event.key === 'ArrowUp') {
+    event.preventDefault()
+    handleEditTask()
+  }
+
+  if (activeTab.value === 'sort' && event.key === 'ArrowDown') {
+    event.preventDefault()
+    handleSkip()
   }
 }
 
@@ -717,7 +734,7 @@ const currentTaskProject = computed(() => {
   flex-direction: column;
   gap: var(--space-3);
   flex-shrink: 0;
-  width: 260px;
+  width: 300px;
   position: sticky;
   top: var(--space-4);
 }
@@ -739,7 +756,10 @@ const currentTaskProject = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1_5) var(--space-2_5);
+  padding: var(--space-2_5) var(--space-3);
+  min-height: 40px;
+  width: auto;
+  height: auto;
   background: var(--glass-bg-soft);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -1150,55 +1170,49 @@ const currentTaskProject = computed(() => {
   box-shadow: var(--state-hover-shadow);
 }
 
-/* Celebration Overlay */
-.celebration-overlay {
+/* Action Feedback Overlay */
+.feedback-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 50;
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-lg);
+  animation: feedback-pop 0.4s var(--ease-out);
 }
 
-.celebration-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-12);
-  background: rgba(16, 185, 129, 0.95);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.5);
-  animation: celebrate var(--duration-slower) var(--ease-out);
+.feedback-overlay.success {
+  background: rgba(16, 185, 129, 0.9);
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.4);
 }
 
-@keyframes celebrate {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.feedback-overlay.info {
+  background: rgba(78, 205, 196, 0.9);
+  box-shadow: 0 4px 24px rgba(78, 205, 196, 0.4);
 }
 
-.check-icon {
-  color: var(--text-primary);
+.feedback-overlay.warning {
+  background: rgba(245, 158, 11, 0.9);
+  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4);
 }
 
-.celebration-text {
-  font-size: var(--text-2xl);
+.feedback-overlay.danger {
+  background: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 4px 24px rgba(239, 68, 68, 0.4);
+}
+
+.feedback-text {
+  font-size: var(--text-xl);
   font-weight: var(--font-bold);
-  color: var(--text-primary);
-  text-align: center;
+  color: white;
+}
+
+@keyframes feedback-pop {
+  0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 /* Transitions */

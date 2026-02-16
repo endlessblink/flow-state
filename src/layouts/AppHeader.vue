@@ -654,7 +654,7 @@ const startLongBreak = async () => {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   text-decoration: none;

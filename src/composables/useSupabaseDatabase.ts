@@ -1026,6 +1026,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             lastSyncError.value = null
         } catch (e: unknown) {
             handleError(e, 'permanentlyDeleteTask')
+            throw e
         } finally {
             isSyncing.value = false
         }

@@ -2,6 +2,71 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import TaskList from '@/components/tasks/TaskList.vue'
 import { useTaskStore } from '@/stores/tasks'
 
+const mockTasks = [
+  {
+    id: '1',
+    title: 'Implement user authentication',
+    priority: 'high',
+    status: 'in_progress',
+    description: 'Add JWT-based auth flow',
+    projectId: 'p1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    subtasks: [],
+  },
+  {
+    id: '2',
+    title: 'Design landing page',
+    priority: 'medium',
+    status: 'planned',
+    description: 'Create responsive landing page mockup',
+    projectId: 'p2',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    subtasks: [],
+  },
+  {
+    id: '3',
+    title: 'Write API documentation',
+    priority: 'low',
+    status: 'done',
+    description: 'Document all REST endpoints',
+    projectId: 'p1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    subtasks: [],
+  },
+  {
+    id: '4',
+    title: 'Fix navigation bug',
+    priority: 'high',
+    status: 'planned',
+    description: 'Sidebar collapses on mobile',
+    projectId: 'p2',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    subtasks: [],
+  },
+] as any[]
+
+const mockGroups = [
+  {
+    key: 'p1',
+    title: 'Work',
+    color: '#4ECDC4',
+    tasks: [mockTasks[0], mockTasks[2]],
+    parentTasks: [mockTasks[0], mockTasks[2]],
+  },
+  {
+    key: 'p2',
+    title: 'Personal',
+    emoji: '🏠',
+    color: '#FF6B6B',
+    tasks: [mockTasks[1], mockTasks[3]],
+    parentTasks: [mockTasks[1], mockTasks[3]],
+  },
+]
+
 const meta = {
   title: '📋 Board/TaskList',
   component: TaskList,
@@ -20,7 +85,6 @@ const meta = {
       components: { story },
       setup() {
         const taskStore = useTaskStore()
-        // Initialize mock data if needed
         taskStore.projects = [
           { id: 'p1', name: 'Work', color: '#4ECDC4' },
           { id: 'p2', name: 'Personal', color: '#FF6B6B', emoji: '🏠' }
@@ -41,27 +105,8 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    tasks: [
-      {
-        id: '1',
-        title: 'Task 1',
-        priority: 'high',
-        status: 'planned',
-        description: 'Test task 1',
-        projectId: 'p1',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: '2',
-        title: 'Task 2',
-        priority: 'medium',
-        status: 'in_progress',
-        description: 'Test task 2',
-        projectId: 'p2',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ] as any
-  }
+    tasks: mockTasks,
+    groups: mockGroups,
+    groupBy: 'project',
+  } as any,
 }

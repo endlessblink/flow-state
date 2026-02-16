@@ -20,7 +20,7 @@
     <Transition name="tooltip-fade">
       <div
         v-if="showTooltip && isOverflowing"
-        class="overflow-tooltip"
+        :class="['overflow-tooltip', 'tooltip-position-' + tooltipPosition]"
         role="tooltip"
         :aria-hidden="!showTooltip"
       >
@@ -116,7 +116,7 @@ watch(() => props.text, (newText) => {
   transform: rotate(45deg);
   bottom: -5px;
   left: 50%;
-  margin-left: -var(--space-1);
+  margin-left: calc(-1 * var(--space-1));
 }
 
 /* Position variants */
@@ -167,7 +167,7 @@ watch(() => props.text, (newText) => {
 /* Transitions */
 .tooltip-fade-enter-active,
 .tooltip-fade-leave-active {
-  transition: opacity var(--duration-normal) var(--var(--ease-out)), transform var(--duration-normal) ease-out;
+  transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
 }
 
 .tooltip-fade-enter-from,
@@ -206,6 +206,6 @@ watch(() => props.text, (newText) => {
 
 .dark-theme .tooltip-arrow {
   background: var(--surface-secondary);
-  border-color: var(--border-subtle);
+  border-color: var(--border-medium);
 }
 </style>

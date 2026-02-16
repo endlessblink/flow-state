@@ -660,10 +660,11 @@ watch(currentDate, (newDate, _oldDate) => {
   display: flex;
   flex: 1;
   background: var(--app-background-gradient);
-  overflow: visible;
+  overflow: clip;
   min-height: 0;
   position: relative;
   z-index: 1;
+  border-radius: var(--radius-lg) 0 0 0;
 }
 
 /* Uses .scroll-container utility for flex:1, overflow-y:auto, min-height:0 */

@@ -4,6 +4,9 @@ import { getTauriStore, isTauriEnv, scheduleTauriSave } from '@/composables/useP
 // TASK-1219: Time block notification types
 import type { TimeBlockNotificationSettings } from '@/types/timeBlockNotifications'
 import { DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS } from '@/types/timeBlockNotifications'
+// TASK-1338: Push notification preferences
+import type { PushNotificationPreferences } from '@/types/pushNotifications'
+import { DEFAULT_PUSH_NOTIFICATION_PREFERENCES } from '@/types/pushNotifications'
 
 // TASK-1317: External calendar (iCal) sync config
 export interface ExternalCalendarConfig {
@@ -62,6 +65,9 @@ export interface AppSettings {
 
     // TASK-1219: Time block progress notifications
     timeBlockNotifications: TimeBlockNotificationSettings
+
+    // TASK-1338: Push notification preferences
+    pushNotifications: PushNotificationPreferences
 
     // TASK-1317: External calendar (iCal) sync
     externalCalendars: ExternalCalendarConfig[]
@@ -122,6 +128,9 @@ export const useSettingsStore = defineStore('settings', {
 
         // TASK-1219: Time block notification defaults
         timeBlockNotifications: { ...DEFAULT_TIME_BLOCK_NOTIFICATION_SETTINGS },
+
+        // TASK-1338: Push notification defaults
+        pushNotifications: { ...DEFAULT_PUSH_NOTIFICATION_PREFERENCES },
 
         // TASK-1317: External calendar defaults
         externalCalendars: [],
@@ -243,6 +252,10 @@ export const useSettingsStore = defineStore('settings', {
                     }
                     if (this.$state.weeklyPlanModel === undefined) {
                         this.$state.weeklyPlanModel = ''
+                    }
+                    // TASK-1338: Backfill push notification preferences
+                    if (!this.$state.pushNotifications) {
+                        this.$state.pushNotifications = JSON.parse(JSON.stringify(DEFAULT_PUSH_NOTIFICATION_PREFERENCES))
                     }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)

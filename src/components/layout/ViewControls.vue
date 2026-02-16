@@ -1,26 +1,6 @@
 <template>
   <!-- TASK-157: Simplified Todoist-style Catalog header -->
   <div class="view-controls view-controls--minimal">
-    <!-- View Type Toggle -->
-    <div class="view-type-toggle view-type-toggle--minimal">
-      <button
-        class="view-type-btn"
-        :class="{ active: viewType === 'table' }"
-        @click="$emit('update:viewType', 'table')"
-      >
-        <LayoutList :size="18" :stroke-width="1.5" />
-        Table
-      </button>
-      <button
-        class="view-type-btn"
-        :class="{ active: viewType === 'list' }"
-        @click="$emit('update:viewType', 'list')"
-      >
-        <List :size="18" :stroke-width="1.5" />
-        List
-      </button>
-    </div>
-
     <!-- Filter Toggle (collapsed by default) -->
     <button
       class="filter-toggle"
@@ -47,8 +27,8 @@
   <!-- Collapsible Filter Bar -->
   <Transition name="slide-down">
     <div v-if="showFilters" class="filter-bar">
-      <!-- Density Control (Table View Only) -->
-      <div v-if="viewType === 'table'" class="density-control">
+      <!-- Density Control -->
+      <div class="density-control">
         <button
           v-for="option in densityOptions"
           :key="option.value"
@@ -61,8 +41,8 @@
         </button>
       </div>
 
-      <!-- Expand/Collapse Controls (List View Only) -->
-      <div v-if="viewType === 'list'" class="tree-controls">
+      <!-- Expand/Collapse Controls -->
+      <div class="tree-controls">
         <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
           <ChevronsDown :size="16" />
           Expand
@@ -105,18 +85,16 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { AlignJustify, List, LayoutList, ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
+import { AlignJustify, List, Rows, ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 
-export type ViewType = 'table' | 'list'
 export type DensityType = 'compact' | 'comfortable' | 'spacious'
 
 defineProps<Props>()
 
 // Use explicit function signature to avoid emit type inference issues
 const _emit = defineEmits<{
-  (e: 'update:viewType', value: ViewType): void
   (e: 'update:density', value: DensityType): void
   (e: 'update:sortBy', value: string): void
   (e: 'update:groupBy', value: string): void
@@ -130,7 +108,6 @@ const _emit = defineEmits<{
 const showFilters = ref(false)
 
 interface Props {
-  viewType: ViewType
   density: DensityType
   sortBy: string
   groupBy: string
@@ -141,7 +118,7 @@ interface Props {
 const densityOptions = [
   { value: 'compact' as DensityType, label: 'Compact', icon: AlignJustify },
   { value: 'comfortable' as DensityType, label: 'Comfortable', icon: List },
-  { value: 'spacious' as DensityType, label: 'Spacious', icon: LayoutList }
+  { value: 'spacious' as DensityType, label: 'Spacious', icon: Rows }
 ]
 
 const sortOptions = [
@@ -173,11 +150,6 @@ const filterOptions = [
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) 0;
-}
-
-.view-type-toggle {
-  display: flex;
-  gap: var(--space-1);
 }
 
 .tree-controls {
@@ -281,37 +253,6 @@ const filterOptions = [
 .view-controls--minimal {
   padding: var(--space-2) 0;
   gap: var(--space-2);
-}
-
-.view-type-toggle--minimal {
-  background: transparent;
-  border: none;
-  gap: var(--space-1);
-}
-
-.view-type-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.view-type-btn:hover {
-  background: var(--glass-bg-heavy);
-  color: var(--text-primary);
-}
-
-.view-type-btn.active {
-  background: var(--color-indigo-bg-medium);
-  color: var(--color-indigo);
 }
 
 .filter-toggle,

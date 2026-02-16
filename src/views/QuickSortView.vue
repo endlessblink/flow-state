@@ -64,46 +64,47 @@
 
           <!-- Three-Column Layout: actions | card+projects | context -->
           <div v-if="currentTask && !isComplete" class="sort-layout">
-            <!-- Left Sidebar: Action Buttons (vertical stack) -->
+            <!-- Left Sidebar: Action Buttons -->
             <div class="action-sidebar">
-              <button class="action-btn done" aria-label="Mark task as done" @click="handleMarkDone">
-                <CheckCircle :size="18" />
-                <span class="action-label">Done</span>
-                <kbd>D</kbd>
-              </button>
+              <!-- Row 1: Done + Save -->
+              <div class="action-row">
+                <button class="action-btn done" aria-label="Mark task as done" @click="handleMarkDone">
+                  <CheckCircle :size="16" />
+                  <span class="action-label">Done</span>
+                  <kbd>D</kbd>
+                </button>
+                <button class="action-btn save" aria-label="Save and advance" @click="handleSave">
+                  <Save :size="16" />
+                  <span class="action-label">Save</span>
+                  <span v-if="isTaskDirty" class="dirty-dot" />
+                  <kbd>S</kbd>
+                </button>
+              </div>
 
-              <button class="action-btn save" aria-label="Save and advance" @click="handleSave">
-                <Save :size="18" />
-                <span class="action-label">Save</span>
-                <span v-if="isTaskDirty" class="dirty-dot" />
-                <kbd>S</kbd>
-              </button>
+              <!-- Row 2: Skip + Edit + Delete -->
+              <div class="action-row">
+                <button class="action-btn skip" aria-label="Skip this task" @click="handleSkip">
+                  <SkipForward :size="14" />
+                  <span class="action-label">Skip</span>
+                </button>
+                <button class="action-btn edit" aria-label="Edit task" @click="handleEditTask">
+                  <Edit2 :size="14" />
+                  <span class="action-label">Edit</span>
+                </button>
+                <button class="action-btn delete" aria-label="Delete task" @click="handleMarkDoneAndDelete">
+                  <Trash2 :size="14" />
+                  <span class="action-label">Del</span>
+                </button>
+              </div>
 
-              <button class="action-btn skip" aria-label="Skip this task" @click="handleSkip">
-                <SkipForward :size="18" />
-                <span class="action-label">Skip</span>
-                <kbd>Space</kbd>
-              </button>
-
-              <button class="action-btn edit" aria-label="Edit task" @click="handleEditTask">
-                <Edit2 :size="18" />
-                <span class="action-label">Edit</span>
-                <kbd>E</kbd>
-              </button>
-
-              <button class="action-btn delete" aria-label="Delete task" @click="handleMarkDoneAndDelete">
-                <Trash2 :size="18" />
-                <span class="action-label">Delete</span>
-                <kbd>Del</kbd>
-              </button>
-
+              <!-- Undo (appears when available) -->
               <button
                 v-if="canUndo"
                 class="action-btn undo"
                 aria-label="Undo last action"
                 @click="handleUndo"
               >
-                <Undo2 :size="18" />
+                <Undo2 :size="14" />
                 <span class="action-label">Undo</span>
               </button>
             </div>
@@ -702,7 +703,7 @@ const currentTaskProject = computed(() => {
 /* Three-Column Layout: actions | card+projects | context */
 .sort-layout {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-5);
   justify-content: center;
   align-items: flex-start;
   width: 100%;
@@ -710,34 +711,46 @@ const currentTaskProject = computed(() => {
   margin: 0 auto;
 }
 
-/* Left Sidebar: Vertical Action Buttons */
+/* Left Sidebar: Action Buttons */
 .action-sidebar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex-shrink: 0;
-  width: 140px;
+  width: 260px;
   position: sticky;
   top: var(--space-4);
+}
+
+/* Rows of buttons */
+.action-row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.action-row .action-btn {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .action-btn {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1_5) var(--space-2_5);
   background: var(--glass-bg-soft);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal);
   white-space: nowrap;
-  width: 100%;
 }
 
 .action-btn:hover {
@@ -1236,17 +1249,18 @@ const currentTaskProject = computed(() => {
   }
 
   .action-sidebar {
-    flex-direction: row;
     width: 100%;
     max-width: 600px;
-    justify-content: center;
-    flex-wrap: wrap;
     position: static;
-    order: 2; /* Move below card on mobile */
+    order: 2; /* Move below card on tablet */
   }
 
-  .action-btn {
-    width: auto;
+  .action-row {
+    justify-content: center;
+  }
+
+  .action-row .action-btn {
+    flex: none;
   }
 
   .action-btn:hover {

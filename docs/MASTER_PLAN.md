@@ -28,6 +28,16 @@
 
 **Files Changed**: `src/stores/tasks/taskOperations.ts`, `src/layouts/ModalManager.vue`
 
+### ~~BUG-1340~~: Kanban board drag-drop completely broken — Vue 3 $attrs boolean bug (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-02-16)
+
+**Problem**: Kanban drag-drop stopped working entirely. No tasks could be dragged with a real mouse.
+
+**Root Cause**: Vue 3 passes bare boolean HTML attributes as empty strings (`""`) through `$attrs`. vuedraggable forwards these to SortableJS, which treats `""` as falsy. This made `forceFallback`, `delayOnTouchOnly`, and `bubbleScroll` all inactive, causing SortableJS to use native HTML5 drag mode with a broken delay interaction.
+
+**Fix**: Changed bare boolean attrs to explicit bindings: `:force-fallback="true"`, `:delay-on-touch-only="true"`, `:bubble-scroll="true"` in `KanbanColumn.vue`. Also fixed drag card opacity (0.9→1) and added teal brand border for visual feedback.
+
 ### ~~BUG-1336~~: Canvas task deletion triggers project deletion dialog (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
@@ -3289,6 +3299,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | **TASK-1339** | **P0** | **📋 Tasks must persist over refresh in guest mode** |
+| ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
 | **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |
 | **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |
 | ~~**BUG-1333**~~ | **P0** | ✅ **Calendar inbox shows only 2 tasks — stale auto-instances + wrong filter source** |

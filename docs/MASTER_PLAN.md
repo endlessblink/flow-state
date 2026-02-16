@@ -198,17 +198,18 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### TASK-1336: Add project selector to task context menu (🔄 IN PROGRESS)
+### ~~TASK-1336~~: Add project selector to task context menu (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-16)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
 
 **Goal**: Add a "Project" submenu to the right-click task context menu so users can change a task's project from anywhere in the app (Board, Calendar, Canvas views).
 
 **Implementation**:
-- Create `ProjectSubmenu.vue` in `src/components/tasks/context-menu/`
-- Add project selector trigger between Priority and Status/Duration in TaskContextMenu.vue
-- Wire up project change via `taskStore.updateTaskWithUndo()`
-- Follow existing submenu pattern (StatusSubmenu, DurationSubmenu)
+- Created `ProjectSubmenu.vue` in `src/components/tasks/context-menu/`
+- Added project selector trigger between Priority and Status/Duration in TaskContextMenu.vue
+- Wired up project change via `taskStore.updateTaskWithUndo()`
+- Followed existing submenu pattern (StatusSubmenu, DurationSubmenu)
+- Fixed context menu positioning: `position: absolute` → `position: fixed` (clientX/Y is viewport-relative)
 
 ---
 
@@ -224,9 +225,9 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### BUG-1325: Tasks appear in calendar without explicit user scheduling (🔄 IN PROGRESS)
+### ~~BUG-1325~~: Tasks appear in calendar without explicit user scheduling (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (reopened 2026-02-16)
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-16)
 
 **Problem**: Tasks that were never explicitly scheduled by the user appear in the Calendar view, polluting it. Tasks should ONLY appear in the calendar when:
 1. The user drags the task into the calendar

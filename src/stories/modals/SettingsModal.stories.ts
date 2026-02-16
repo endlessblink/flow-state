@@ -6,14 +6,14 @@ import { X, Timer, Palette, Layout, Bot, Database, User, Bell } from 'lucide-vue
 // ============================================================================
 
 const overlayStyle = `
-  position: fixed;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  height: 650px;
   background: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--z-modal);
-  backdrop-filter: blur(8px);
+  border-radius: var(--radius-xl);
 `
 
 const modalStyle = `

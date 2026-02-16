@@ -643,7 +643,9 @@ export function useTaskOperations(
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
+        const deletedTask = _rawTasks.value[index]
         manualOperationInProgress.value = true
+        addPendingWrite(taskId)
         try {
             // 1. Remove from local state immediately (Optimistic UI)
             _rawTasks.value.splice(index, 1)
@@ -652,9 +654,12 @@ export function useTaskOperations(
             const { trashService } = await import('@/services/trash/TrashService')
             await trashService.permanentlyDeleteTask(taskId)
 
-            // 3. Ensure no artifacts remain in individual storage if needed
+            // 3. Persist updated local state (guest/local fallback, Tauri reliability)
+            await saveTasksToStorage(_rawTasks.value, 'permanentlyDeleteTask')
         } catch (error) {
             console.error(`❌ Failed to permanently delete ${taskId}:`, error)
+            _rawTasks.value.splice(index, 0, deletedTask)
+            throw error
         } finally {
             manualOperationInProgress.value = false
         }

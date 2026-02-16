@@ -80,7 +80,7 @@ const CalendarWeekViewMock = defineComponent({
         <div
           v-for="(day, i) in weekDays"
           :key="i"
-          style="padding: var(--space-3) var(--space-2); text-align: center; border-left: 1px solid var(--border-faint);"
+          style="padding: var(--space-3) var(--space-2); text-align: center; border-left: 1px solid var(--border-subtle);"
         >
           <div style="font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">
             {{ day.name }}
@@ -111,7 +111,7 @@ const CalendarWeekViewMock = defineComponent({
           <div
             v-for="hour in hours"
             :key="hour"
-            style="height: 60px; display: flex; align-items: center; justify-content: flex-end; padding-right: var(--space-4); color: var(--text-muted); font-size: var(--text-xs); border-bottom: 1px solid var(--border-faint);"
+            style="height: 60px; display: flex; align-items: center; justify-content: flex-end; padding-right: var(--space-4); color: var(--text-muted); font-size: var(--text-xs); border-bottom: 1px solid var(--border-subtle);"
           >
             {{ formatHour(hour) }}
           </div>
@@ -124,15 +124,15 @@ const CalendarWeekViewMock = defineComponent({
             <div
               v-for="(day, di) in weekDays"
               :key="'col-' + di"
-              style="border-left: 1px solid var(--border-faint);"
+              style="border-left: 1px solid var(--border-subtle);"
             >
               <div
                 v-for="hour in hours"
                 :key="'cell-' + di + '-' + hour"
                 :style="{
                   height: '60px',
-                  borderBottom: '1px solid var(--border-faint)',
-                  background: (showCurrentTime && day.isToday && hour === new Date().getHours()) ? 'rgba(239, 68, 68, 0.05)' : 'transparent',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  background: (showCurrentTime && day.isToday && hour === new Date().getHours()) ? 'var(--danger-bg-subtle)' : 'transparent',
                   boxShadow: (showCurrentTime && day.isToday && hour === new Date().getHours()) ? 'inset 0 -2px 0 var(--color-danger)' : 'none',
                 }"
               ></div>
@@ -185,9 +185,14 @@ const CalendarWeekViewMock = defineComponent({
 const meta = {
   component: CalendarWeekViewMock,
   title: '📅 Calendar/CalendarWeekView',
-  tags: ['autodocs', 'new'],
+  tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
+    docs: {
+      description: {
+        component: `Week view calendar with 7 day columns and hourly time slots.\n\n**Features:**\n- 7-column (Sun–Sat) grid with hourly rows\n- Drag-and-drop events between days and time slots\n- Resize events from top or bottom edge\n- Current time cell highlighted with red indicator\n- Timer-active event glow\n- Done tasks shown with grayscale + strikethrough`
+      }
+    }
   },
 } satisfies Meta<typeof CalendarWeekViewMock>
 
@@ -197,7 +202,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   args: {
     events: [
-      { id: '1', title: 'Team standup', dayIndex: 1, startHour: 9, duration: 60, color: 'rgba(99, 102, 241, 0.85)' },
+      { id: '1', title: 'Team standup', dayIndex: 1, startHour: 9, duration: 60, color: 'var(--brand-primary)' },
     ],
     showCurrentTime: true,
   },
@@ -206,12 +211,12 @@ export const Default: Story = {
 export const WithEvents: Story = {
   args: {
     events: [
-      { id: '1', title: 'Team standup', dayIndex: 1, startHour: 9, duration: 30, color: 'rgba(99, 102, 241, 0.85)' },
-      { id: '2', title: 'Design review', dayIndex: 1, startHour: 11, duration: 60, color: 'rgba(236, 72, 153, 0.85)' },
-      { id: '3', title: 'Sprint planning', dayIndex: 2, startHour: 14, duration: 90, color: 'rgba(34, 197, 94, 0.85)' },
-      { id: '4', title: 'Code review', dayIndex: 3, startHour: 10, duration: 45, color: 'rgba(245, 158, 11, 0.85)' },
-      { id: '5', title: '1:1 with manager', dayIndex: 4, startHour: 15, duration: 30, color: 'rgba(168, 85, 247, 0.85)' },
-      { id: '6', title: 'Deep work block', dayIndex: 5, startHour: 9, duration: 120, color: 'rgba(14, 165, 233, 0.85)' },
+      { id: '1', title: 'Team standup', dayIndex: 1, startHour: 9, duration: 30, color: 'var(--brand-primary)' },
+      { id: '2', title: 'Design review', dayIndex: 1, startHour: 11, duration: 60, color: 'var(--color-danger)' },
+      { id: '3', title: 'Sprint planning', dayIndex: 2, startHour: 14, duration: 90, color: 'var(--color-work)' },
+      { id: '4', title: 'Code review', dayIndex: 3, startHour: 10, duration: 45, color: 'var(--color-warning)' },
+      { id: '5', title: '1:1 with manager', dayIndex: 4, startHour: 15, duration: 30, color: 'var(--color-focus)' },
+      { id: '6', title: 'Deep work block', dayIndex: 5, startHour: 9, duration: 120, color: 'var(--color-info)' },
     ],
     showCurrentTime: true,
   },
@@ -220,10 +225,10 @@ export const WithEvents: Story = {
 export const CurrentWeek: Story = {
   args: {
     events: [
-      { id: '1', title: 'Morning routine', dayIndex: new Date().getDay(), startHour: 8, duration: 60, color: 'rgba(34, 197, 94, 0.85)' },
-      { id: '2', title: 'Focus session', dayIndex: new Date().getDay(), startHour: 10, duration: 90, color: 'rgba(99, 102, 241, 0.85)' },
-      { id: '3', title: 'Lunch break', dayIndex: new Date().getDay(), startHour: 12, duration: 60, color: 'rgba(245, 158, 11, 0.85)' },
-      { id: '4', title: 'Afternoon review', dayIndex: new Date().getDay(), startHour: 15, duration: 45, color: 'rgba(236, 72, 153, 0.85)' },
+      { id: '1', title: 'Morning routine', dayIndex: new Date().getDay(), startHour: 8, duration: 60, color: 'var(--color-work)' },
+      { id: '2', title: 'Focus session', dayIndex: new Date().getDay(), startHour: 10, duration: 90, color: 'var(--brand-primary)' },
+      { id: '3', title: 'Lunch break', dayIndex: new Date().getDay(), startHour: 12, duration: 60, color: 'var(--color-warning)' },
+      { id: '4', title: 'Afternoon review', dayIndex: new Date().getDay(), startHour: 15, duration: 45, color: 'var(--color-danger)' },
     ],
     showCurrentTime: true,
   },
@@ -232,9 +237,9 @@ export const CurrentWeek: Story = {
 export const WithDoneTasks: Story = {
   args: {
     events: [
-      { id: '1', title: 'Completed standup', dayIndex: 1, startHour: 9, duration: 30, color: 'rgba(99, 102, 241, 0.85)', done: true },
-      { id: '2', title: 'Active design work', dayIndex: 2, startHour: 11, duration: 90, color: 'rgba(34, 197, 94, 0.85)', done: false },
-      { id: '3', title: 'Finished code review', dayIndex: 3, startHour: 14, duration: 45, color: 'rgba(245, 158, 11, 0.85)', done: true },
+      { id: '1', title: 'Completed standup', dayIndex: 1, startHour: 9, duration: 30, color: 'var(--brand-primary)', done: true },
+      { id: '2', title: 'Active design work', dayIndex: 2, startHour: 11, duration: 90, color: 'var(--color-work)', done: false },
+      { id: '3', title: 'Finished code review', dayIndex: 3, startHour: 14, duration: 45, color: 'var(--color-warning)', done: true },
     ],
     showCurrentTime: true,
   },

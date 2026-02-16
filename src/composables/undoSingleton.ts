@@ -611,10 +611,21 @@ const captureCurrentState = async (): Promise<UnifiedUndoState> => {
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
   const canvasStore = useCanvasStore()
+  const safeClone = <T>(value: T, fallback: T): T => {
+    try {
+      if (value == null) return fallback
+      const serialized = JSON.stringify(value)
+      if (serialized == null) return fallback
+      return JSON.parse(serialized) as T
+    } catch (error) {
+      console.warn('⚠️ [UNDO] Failed to clone snapshot state, using fallback:', error)
+      return fallback
+    }
+  }
 
   return {
-    tasks: JSON.parse(JSON.stringify(taskStore.tasks)),
-    groups: JSON.parse(JSON.stringify(canvasStore.groups))
+    tasks: safeClone(taskStore.tasks ?? [], []),
+    groups: safeClone(canvasStore.groups ?? [], [])
   }
 }
 
@@ -724,7 +735,8 @@ const deleteTaskWithUndo = async (taskId: string) => {
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  const taskToDelete = taskStore.tasks.find(t => t.id === taskId)
+  const taskSource = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : taskStore.tasks
+  const taskToDelete = taskSource.find(t => t.id === taskId)
   if (!taskToDelete) {
     console.warn('⚠️ Task not found for deletion:', taskId)
     return
@@ -764,7 +776,8 @@ const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  const taskToDelete = taskStore.tasks.find(t => t.id === taskId)
+  const taskSource = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : taskStore.tasks
+  const taskToDelete = taskSource.find(t => t.id === taskId)
   if (!taskToDelete) {
     console.warn('⚠️ Task not found for permanent deletion:', taskId)
     return
@@ -804,7 +817,8 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
-  const taskToUpdate = taskStore.tasks.find(t => t.id === taskId)
+  const taskSource = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : taskStore.tasks
+  const taskToUpdate = taskSource.find(t => t.id === taskId)
   if (!taskToUpdate) {
     console.warn('⚠️ Task not found for update:', taskId)
     return

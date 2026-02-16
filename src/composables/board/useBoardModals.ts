@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type { Task } from '@/stores/tasks'
 
-export type BoardViewType = 'status' | 'priority' | 'date'
+export type BoardViewType = 'status' | 'priority' | 'date' | 'category'
 
 export function useBoardModals() {
     // Edit modal state

@@ -90,7 +90,7 @@
           <div class="timer-display" :class="{ 'timer-active': timerStore.isTimerActive, 'timer-break': timerStore.currentSession?.isBreak }">
             <div class="timer-icon">
               <AppLogo v-if="timerStore.isTimerActive && !timerStore.currentSession?.isBreak" size="sm" class="timer-emoticon active" />
-              <span v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" class="timer-emoticon active">🧎</span>
+              <AppLogo v-else-if="timerStore.isTimerActive && timerStore.currentSession?.isBreak" size="sm" class="timer-emoticon active" />
               <Timer
                 v-else
                 :size="20"

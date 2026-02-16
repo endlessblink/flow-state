@@ -531,22 +531,22 @@ onUnmounted(() => {
 }
 
 .handle-corner.top-left {
-  top: -var(--space-1);
-  left: -var(--space-1);
+  top: calc(-1 * var(--space-1));
+  left: calc(-1 * var(--space-1));
 }
 
 .handle-corner.top-right {
-  top: -var(--space-1);
-  right: -var(--space-1);
+  top: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
 }
 
 .handle-corner.bottom-left {
-  bottom: -var(--space-1);
-  left: -var(--space-1);
+  bottom: calc(-1 * var(--space-1));
+  left: calc(-1 * var(--space-1));
 }
 
 .handle-corner.bottom-right {
-  bottom: -var(--space-1);
-  right: -var(--space-1);
+  bottom: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
 }
 </style>

@@ -19,6 +19,7 @@
     :aria-expanded="progressiveDisclosureEnabled ? isExpanded : undefined"
     :aria-disabled="disabled"
     data-draggable="true"
+    :data-task-id="task.id"
     :data-status="task.status"
     :data-priority="task.priority || 'none'"
     @click="handleCardClick"

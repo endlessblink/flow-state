@@ -39,6 +39,18 @@ export function useCanvasOperationState() {
     // --- Transitions ---
 
     const startDrag = (nodeIds: string[]) => {
+        // BUG-1328: Allow starting a new drag from 'drag-settling' state.
+        // Without this, rapid consecutive drags (within 3s settling window) leave
+        // canvasStore.isDragging=false, so realtime events bypass all guards and
+        // overwrite node positions mid-drag → cursor drift "after a while".
+        if (state.value.type === 'drag-settling') {
+            // Cancel the old settling timeout before starting new drag
+            if ('settleTimeout' in state.value) {
+                window.clearTimeout(state.value.settleTimeout as number)
+            }
+            state.value = { type: 'dragging', nodeIds }
+            return true
+        }
         if (state.value.type !== 'idle') return false
         state.value = { type: 'dragging', nodeIds }
         return true
@@ -78,6 +90,14 @@ export function useCanvasOperationState() {
     }
 
     const startResize = (groupId: string, handle: string) => {
+        // BUG-1328: Same fix as startDrag — allow from settling states
+        if (state.value.type === 'drag-settling' || state.value.type === 'resize-settling') {
+            if ('settleTimeout' in state.value) {
+                window.clearTimeout(state.value.settleTimeout as number)
+            }
+            state.value = { type: 'resizing', groupId, handle }
+            return true
+        }
         if (state.value.type !== 'idle') return false
         state.value = { type: 'resizing', groupId, handle }
         return true

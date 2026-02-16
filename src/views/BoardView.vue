@@ -57,23 +57,45 @@
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
     <div class="kanban-scroll-container scroll-container">
       <div class="kanban-board" @click="closeContextMenu">
-        <KanbanSwimlane
-          v-for="project in projectsWithTasks"
-          :key="project.id"
-          :project="project"
-          :tasks="tasksByProject[project.id] || []"
-          :current-filter="taskStore.activeSmartView || 'none'"
-          :density="currentDensity"
-          :show-done-column="!hideDoneTasks"
-          :view-type="currentViewType"
-          @select-task="handleSelectTask"
-          @start-timer="handleStartTimer"
-          @edit-task="handleEditTask"
-          @delete-task="handleDeleteTask"
-          @move-task="handleMoveTask"
-          @add-task="handleAddTask"
-          @context-menu="handleContextMenu"
-        />
+        <!-- FEATURE-1336: Category view renders ONE swimlane with project columns -->
+        <template v-if="currentViewType === 'category'">
+          <KanbanSwimlane
+            :project="{ id: '__category__', name: 'All Tasks', color: '#6B7280', colorType: 'hex', viewType: 'status', createdAt: new Date(), updatedAt: new Date() }"
+            :tasks="allFilteredTasks"
+            :current-filter="taskStore.activeSmartView || 'none'"
+            :density="currentDensity"
+            :show-done-column="!hideDoneTasks"
+            view-type="category"
+            @select-task="handleSelectTask"
+            @start-timer="handleStartTimer"
+            @edit-task="handleEditTask"
+            @delete-task="handleDeleteTask"
+            @move-task="handleMoveTask"
+            @add-task="handleAddTask"
+            @context-menu="handleContextMenu"
+          />
+        </template>
+
+        <!-- Standard views: per-project swimlanes -->
+        <template v-else>
+          <KanbanSwimlane
+            v-for="project in projectsWithTasks"
+            :key="project.id"
+            :project="project"
+            :tasks="tasksByProject[project.id] || []"
+            :current-filter="taskStore.activeSmartView || 'none'"
+            :density="currentDensity"
+            :show-done-column="!hideDoneTasks"
+            :view-type="currentViewType"
+            @select-task="handleSelectTask"
+            @start-timer="handleStartTimer"
+            @edit-task="handleEditTask"
+            @delete-task="handleDeleteTask"
+            @move-task="handleMoveTask"
+            @add-task="handleAddTask"
+            @context-menu="handleContextMenu"
+          />
+        </template>
       </div>
     </div>
 
@@ -139,7 +161,7 @@ import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, ListTodo, FolderOpen } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 
@@ -206,13 +228,19 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
 const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
 
-// View Type Switcher (priority, date, status) (TASK-1215: Tauri-aware persistence)
-const currentViewType = usePersistentRef<'priority' | 'date' | 'status'>('flowstate:board-view-type', 'priority', 'board-view-type')
+// View Type Switcher (priority, date, status, category) (TASK-1215: Tauri-aware persistence)
+const currentViewType = usePersistentRef<'priority' | 'date' | 'status' | 'category'>('flowstate:board-view-type', 'priority', 'board-view-type')
 const viewTypeOptions = [
   { value: 'priority' as const, label: 'Priority', icon: Flag },
   { value: 'date' as const, label: 'Due Date', icon: Calendar },
-  { value: 'status' as const, label: 'Status', icon: ListTodo }
+  { value: 'status' as const, label: 'Status', icon: ListTodo },
+  { value: 'category' as const, label: 'Category', icon: FolderOpen }
 ]
+
+// FEATURE-1336: All tasks combined (not split by project) for category view
+const allFilteredTasks = computed(() => {
+  return taskStore.filteredTasks.filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
+})
 
 // Load saved settings on mount
 onMounted(() => {
@@ -224,7 +252,7 @@ onMounted(() => {
 })
 
 // Task management methods (wrappers for composables to match template emitters)
-const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' }) => {
+const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' }) => {
   openQuickTaskCreate(payload.columnKey, payload.projectId, payload.viewType)
 }
 

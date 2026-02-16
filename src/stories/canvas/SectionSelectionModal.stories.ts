@@ -1,21 +1,35 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { defineComponent, ref } from 'vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 /**
  * ## SectionSelectionModal
  *
  * Modal for moving a task to a specific canvas section.
- * Uses SectionSelector dropdown internally.
+ * Uses CustomSelect dropdown for section selection (NOT native select).
  *
- * **Dependencies:** Canvas store (for section list), SectionSelector
+ * **Dependencies:** Canvas store (for section list), CustomSelect
  *
  * **Location:** `src/components/canvas/SectionSelectionModal.vue`
  */
 const SectionSelectionModalMock = defineComponent({
   name: 'SectionSelectionModalMock',
-  setup() {
-    const selected = ref('')
-    return { selected }
+  components: { CustomSelect },
+  props: {
+    initialSelection: {
+      type: String,
+      default: ''
+    }
+  },
+  setup(props) {
+    const selected = ref(props.initialSelection)
+    const sectionOptions = [
+      { label: 'To Do', value: 'todo' },
+      { label: 'In Progress', value: 'progress' },
+      { label: 'Done', value: 'done' },
+      { label: 'Backlog', value: 'backlog' },
+    ]
+    return { selected, sectionOptions }
   },
   template: `
     <div style="width: 420px; background: var(--overlay-component-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-2xl);">
@@ -33,13 +47,11 @@ const SectionSelectionModalMock = defineComponent({
 
         <div>
           <label style="display: block; font-size: var(--text-xs); font-weight: var(--font-medium); color: var(--text-secondary); margin-bottom: var(--space-2);">Canvas Section</label>
-          <select v-model="selected" style="width: 100%; padding: var(--space-2) var(--space-3); background: var(--glass-bg-soft); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: var(--text-sm);">
-            <option value="" disabled>Choose a target section...</option>
-            <option value="todo">To Do</option>
-            <option value="progress">In Progress</option>
-            <option value="done">Done</option>
-            <option value="backlog">Backlog</option>
-          </select>
+          <CustomSelect
+            v-model="selected"
+            :options="sectionOptions"
+            placeholder="Choose a target section..."
+          />
         </div>
       </div>
 
@@ -49,13 +61,14 @@ const SectionSelectionModalMock = defineComponent({
           :disabled="!selected"
           :style="{
             padding: 'var(--space-2) var(--space-4)',
-            background: selected ? 'var(--brand-primary)' : 'var(--glass-bg-medium)',
-            border: 'none',
+            background: selected ? 'var(--glass-bg-soft)' : 'var(--glass-bg-medium)',
+            border: selected ? '1px solid var(--brand-primary)' : '1px solid var(--glass-border)',
             borderRadius: 'var(--radius-md)',
-            color: selected ? 'white' : 'var(--text-muted)',
+            color: selected ? 'var(--brand-primary)' : 'var(--text-muted)',
             cursor: selected ? 'pointer' : 'not-allowed',
             fontSize: 'var(--text-sm)',
             fontWeight: 'var(--font-medium)',
+            backdropFilter: selected ? 'blur(8px)' : 'none',
           }"
         >Move Task</button>
       </div>
@@ -74,3 +87,9 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+export const WithSelection: Story = {
+  args: {
+    initialSelection: 'progress'
+  }
+}

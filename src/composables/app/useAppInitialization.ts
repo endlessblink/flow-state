@@ -321,6 +321,14 @@ export function useAppInitialization() {
                 return
             }
 
+            // BUG-1329: Skip realtime events while loadFromDatabase is running.
+            // Smart merge handles reconciliation — processing realtime events
+            // simultaneously risks duplicates from parallel add paths.
+            if (tasks.isLoadingFromDatabase) {
+                console.log(`⏳ [HANDLER] TASK ${taskId.slice(0,8)} skipped - database load in progress`)
+                return
+            }
+
             // BUG-169 FIX: Safety guards to prevent spurious task deletions
             // 1. Check for hard DELETE event (eventType === 'DELETE')
             // 2. Check for soft delete ONLY if is_deleted is EXPLICITLY true (not just truthy)

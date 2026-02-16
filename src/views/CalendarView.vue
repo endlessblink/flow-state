@@ -108,7 +108,7 @@
         :drag-ghost="dragGhost"
         :is-dragging="isDragging"
         :dragged-event-id="draggedEventId"
-        :resize-preview="resizePreview"
+        :resize-preview="weekResizePreview"
         :external-events="externalCalendar.allEvents.value"
         @dragover="onDragOver"
         @dragenter="onDragEnter"
@@ -122,7 +122,7 @@
         @cycle-status="cycleTaskStatus"
         @remove-from-calendar="handleRemoveFromCalendar"
         @start-timer="startTimerOnCalendarEvent"
-        @start-resize="startResize"
+        @start-resize="startWeekResize"
         @cell-dbl-click="handleWeekCellDblClick"
       />
 
@@ -175,6 +175,7 @@ import QuickTaskCreate from '@/components/tasks/QuickTaskCreate.vue'
 
 
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
 interface SortableEvent {
   item: HTMLElement
@@ -304,11 +305,48 @@ const currentTime = ref(new Date())
 
 
 // Destructure commonly used items from composables
-const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart, handleEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
+const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart: _rawEventDragStart, handleEventDragEnd: _rawEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
-const { workingHours, weekDays, weekEvents, getWeekEventStyle, isCurrentWeekTimeCell } = weekView
+const { workingHours, weekDays, weekEvents, getWeekEventStyle, isCurrentWeekTimeCell, startWeekResize, resizePreview: weekResizePreview } = weekView
 
-const { monthDays, handleMonthDragStart, handleMonthDrop, handleMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
+const { monthDays, handleMonthDragStart: _rawMonthDragStart, handleMonthDrop, handleMonthDragEnd: _rawMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
+
+// FEATURE-1336b: Bridge calendar drag events to global useDragAndDrop for sidebar drops
+const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+
+const handleEventDragStart = (event: DragEvent, calendarEvent: any) => {
+  _rawEventDragStart(event, calendarEvent)
+  if (calendarEvent.taskId) {
+    startGlobalDrag({
+      type: 'task',
+      taskId: calendarEvent.taskId,
+      title: calendarEvent.title || '',
+      source: 'calendar'
+    })
+  }
+}
+
+const handleEventDragEnd = (event: DragEvent, calendarEvent: any) => {
+  _rawEventDragEnd(event, calendarEvent)
+  endGlobalDrag()
+}
+
+const handleMonthDragStart = (event: DragEvent, calendarEvent: any) => {
+  _rawMonthDragStart(event, calendarEvent)
+  if (calendarEvent.taskId) {
+    startGlobalDrag({
+      type: 'task',
+      taskId: calendarEvent.taskId,
+      title: calendarEvent.title || '',
+      source: 'calendar'
+    })
+  }
+}
+
+const handleMonthDragEnd = (event: DragEvent) => {
+  _rawMonthDragEnd(event)
+  endGlobalDrag()
+}
 
 const { formatHour, formatEventTime, getPriorityClass, getPriorityLabel,
         getTaskStatus, getStatusLabel, getStatusIcon, cycleTaskStatus,

@@ -196,6 +196,65 @@ export function useAIChat() {
   const agentChains = useAgentChains()
 
   // ============================================================================
+  // Text-Based Tool Call Helpers (Fallback for models that don't use native API)
+  // ============================================================================
+
+  /**
+   * Parse tool calls from model text output.
+   * Detects patterns like: tool_name(), tool_name({...}), tool_name(param1, param2)
+   * Used as fallback when model doesn't use native function calling.
+   */
+  function parseTextToolCalls(content: string): ToolCall[] {
+    const calls: ToolCall[] = []
+    const toolNames = AI_TOOLS.map(t => t.name)
+
+    for (const name of toolNames) {
+      // Match: tool_name() or tool_name({...}) or tool_name(anything)
+      const pattern = new RegExp(`\\b${name}\\s*\\(([^)]*)\\)`, 'g')
+      let match
+      while ((match = pattern.exec(content)) !== null) {
+        let parameters: Record<string, unknown> = {}
+        const argsStr = match[1].trim()
+        if (argsStr) {
+          try {
+            parameters = JSON.parse(argsStr)
+          } catch {
+            // Not JSON args — tool will use defaults
+          }
+        }
+        // Avoid duplicates
+        if (!calls.some(c => c.tool === name)) {
+          calls.push({ tool: name, parameters })
+        }
+      }
+    }
+
+    // Also try the existing parseToolCalls for JSON-format tool calls
+    if (calls.length === 0) {
+      const jsonCalls = parseToolCalls(content)
+      calls.push(...jsonCalls)
+    }
+
+    return calls.slice(0, MAX_TOOLS_PER_RESPONSE)
+  }
+
+  /**
+   * Strip text-based tool call patterns from displayed message content.
+   * Removes patterns like: generate_weekly_plan(), list_tasks({...})
+   */
+  function stripTextToolCalls(content: string): string {
+    const toolNames = AI_TOOLS.map(t => t.name)
+    let cleaned = content
+    for (const name of toolNames) {
+      // Remove: tool_name() or tool_name({...})
+      const pattern = new RegExp(`\\b${name}\\s*\\([^)]*\\)`, 'g')
+      cleaned = cleaned.replace(pattern, '')
+    }
+    // Clean up trailing whitespace and dots
+    return cleaned.replace(/\s*\.{3,}\s*$/, '').replace(/\n{3,}/g, '\n\n').trim()
+  }
+
+  // ============================================================================
   // Context Management
   // ============================================================================
 
@@ -259,7 +318,7 @@ export function useAIChat() {
       personalityPrompt || 'You are FlowState AI, a friendly assistant for a productivity app.',
       '',
       '## CRITICAL RULES:',
-      '1. ALWAYS respond in the SAME LANGUAGE the user writes to you. If they write in Hebrew, respond in Hebrew. If English, respond in English.',
+      '1. LANGUAGE RULE (ABSOLUTE): Respond ENTIRELY in the SAME LANGUAGE the user writes. If they write Hebrew, ALL your text must be Hebrew — including status updates, acknowledgments, and summaries. NEVER mix languages. Examples: Hebrew user → "אני מכין את התוכנית השבועית שלך..." (NOT "...generating weekly plan"). English user → "Generating your weekly plan..." (NOT Hebrew text).',
       '2. Be conversational and natural. Have a normal chat.',
       '3. Use WRITE tools (create, update, delete) ONLY when the user explicitly asks to create, add, modify, or delete something.',
       '4. Use READ tools (get_overdue_tasks, list_tasks, search_tasks, get_task_details, get_daily_summary, get_timer_status, list_projects, list_groups) ALWAYS when the user asks about their tasks, schedule, what is overdue, timer status, or any data query. These tools return rich interactive results the user can click on. NEVER answer task data questions from memory — ALWAYS call the tool.',
@@ -348,6 +407,7 @@ export function useAIChat() {
     parts.push('- Use the generate_weekly_plan tool to create an AI-powered weekly plan')
     parts.push('- Present the plan day-by-day with task names and priorities')
     parts.push('- Be encouraging and practical in your summary')
+    parts.push('- IMPORTANT: Your acknowledgment text before/during tool execution must match the user\'s language (e.g., Hebrew user → "בדיוק, אני מתכנן את השבוע שלך..." NOT "generating weekly plan...")')
 
     return parts.join('\n')
   }
@@ -723,12 +783,20 @@ export function useAIChat() {
 
           // Add tool results as a user message so the AI can reason about them
           const toolResultsSummary = toolResults
-            .map(r => `[${r.success ? 'OK' : 'ERROR'}] ${r.message}${r.data ? '\nData: ' + JSON.stringify(r.data).slice(0, 500) : ''}`)
+            .map(r => {
+              const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
+              if (r.data) {
+                // For weekly plan, include the full reasoning but cap data
+                const dataStr = JSON.stringify(r.data)
+                return `${base}\nData: ${dataStr.slice(0, 2000)}`
+              }
+              return base
+            })
             .join('\n\n')
 
           conversationMessages.push({
             role: 'user',
-            content: `Tool results:\n${toolResultsSummary}\n\nContinue reasoning or provide your final answer.`,
+            content: `Tool results:\n${toolResultsSummary}\n\nPresent the results to the user in a friendly, encouraging way. Highlight key priorities, suggest what to focus on first, and mention any overdue items that need immediate attention. Respond in the user's language.`,
           })
 
           // Add step indicator to streaming content
@@ -737,8 +805,92 @@ export function useAIChat() {
           )
 
         } else {
-          // No tool calls = final answer, exit loop
-          continueLoop = false
+          // No native tool calls — try text-based fallback
+          // Models sometimes output tool names as text instead of using the API
+          const textToolCalls = parseTextToolCalls(fullContent)
+
+          if (textToolCalls.length > 0) {
+            console.log(`[AIChat] ReAct step ${stepCount} - detected ${textToolCalls.length} text-based tool call(s)`)
+
+            // Execute text-based tool calls the same way as native ones
+            const immediateTools = textToolCalls.filter(c => !toolRequiresConfirmation(c.tool))
+            const confirmationTools = textToolCalls.filter(c => toolRequiresConfirmation(c.tool))
+
+            const toolResults: ToolResult[] = []
+            for (const call of immediateTools) {
+              console.log(`[AIChat] ReAct step ${stepCount} - executing text-detected tool:`, call.tool, call.parameters)
+              const result = await executeTool(call)
+              toolResults.push(result)
+
+              if (result.success && result.undoAction) {
+                store.pushUndoEntry({
+                  toolName: call.tool,
+                  timestamp: Date.now(),
+                  params: call.parameters,
+                  undoAction: result.undoAction,
+                  description: result.message,
+                })
+              }
+            }
+
+            // Accumulate tool results in message metadata
+            const lastMsg = store.messages[store.messages.length - 1]
+            if (lastMsg) {
+              const existingResults = ((lastMsg.metadata as Record<string, unknown>)?.toolResults as unknown[]) || []
+              lastMsg.metadata = {
+                ...lastMsg.metadata,
+                toolResults: [
+                  ...existingResults,
+                  ...toolResults.map((r, i) => ({
+                    success: r.success,
+                    message: r.message,
+                    data: r.data,
+                    tool: immediateTools[i]?.tool || 'unknown',
+                    type: AI_TOOLS.find(t => t.name === immediateTools[i]?.tool)?.category || 'read',
+                  })),
+                ],
+              } as Record<string, unknown>
+            }
+
+            if (confirmationTools.length > 0) {
+              pendingConfirmation.value = confirmationTools[0]
+              const toolDef = AI_TOOLS.find(t => t.name === confirmationTools[0].tool)
+              const toolDesc = toolDef?.description || confirmationTools[0].tool
+              store.appendStreamingContent(`\n\n**Confirmation required:** ${toolDesc}`)
+              continueLoop = false
+              break
+            }
+
+            // Feed results back for next reasoning step
+            conversationMessages.push({ role: 'assistant', content: fullContent || '' })
+            const toolResultsSummary = toolResults
+              .map(r => {
+                const base = `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`
+                if (r.data) {
+                  // For weekly plan, include the full reasoning but cap data
+                  const dataStr = JSON.stringify(r.data)
+                  return `${base}\nData: ${dataStr.slice(0, 2000)}`
+                }
+                return base
+              })
+              .join('\n\n')
+            conversationMessages.push({
+              role: 'user',
+              content: `Tool results:\n${toolResultsSummary}\n\nPresent the results to the user in a friendly, encouraging way. Highlight key priorities, suggest what to focus on first, and mention any overdue items that need immediate attention. Respond in the user's language.`,
+            })
+
+            // Strip the raw tool call text from the displayed message
+            const lastMsgClean = store.messages[store.messages.length - 1]
+            if (lastMsgClean && lastMsgClean.isStreaming) {
+              lastMsgClean.content = stripTextToolCalls(lastMsgClean.content || '')
+              store.streamingContent = lastMsgClean.content
+            }
+
+            store.appendStreamingContent(`\n\n---\n*Step ${stepCount}: executed ${toolResults.length} tool(s)*\n\n`)
+          } else {
+            // Truly no tool calls = final answer, exit loop
+            continueLoop = false
+          }
         }
       }
 

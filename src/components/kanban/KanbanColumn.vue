@@ -3,9 +3,9 @@
     <div class="column-header">
       <div class="header-left">
         <span
-          v-if="priorityColor"
+          v-if="columnIndicatorColor"
           class="column-priority-dot"
-          :style="{ background: priorityColor }"
+          :style="{ background: columnIndicatorColor as string }"
         />
         <span class="column-title">{{ title }}</span>
         <span class="task-count">{{ taskCount }}</span>
@@ -73,6 +73,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { Plus } from 'lucide-vue-next'
 
 import './KanbanColumn.css'
@@ -82,7 +83,7 @@ interface Props {
   status: Task['status']
   tasks: Task[]
   wipLimit?: number
-  columnType?: 'status' | 'priority' | 'date'
+  columnType?: 'status' | 'priority' | 'date' | 'category'
   swimlaneId?: string
 }
 
@@ -114,21 +115,37 @@ watch(() => props.tasks, (newTasks) => {
   }
 })
 
-// BUG-1193: Scope drag group per swimlane to prevent cross-project drag confusion
-// Without this, all columns across all swimlanes share group="tasks" and
-// vuedraggable can move tasks between unrelated projects
+// BUG-1335: Use a shared drag group across all swimlanes so tasks can be dragged
+// between projects. When dropped in a different swimlane, the project is updated.
+// (Reverts BUG-1193 per-swimlane scoping which prevented cross-swimlane drag)
 const dragGroup = computed(() => ({
-  name: `tasks-${props.swimlaneId}`,
+  name: 'tasks',
   pull: true,
   put: true
 }))
 
-const onDragStart = () => {
+// FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
+const { startDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+
+const onDragStart = (evt: any) => {
   isDragActive.value = true
+
+  // Bridge to global drag state so sidebar can receive drops
+  const taskId = evt.item?.dataset?.taskId || evt.item?.querySelector?.('[data-task-id]')?.dataset?.taskId
+  const taskTitle = evt.item?.querySelector?.('.task-title')?.textContent?.trim() || ''
+  if (taskId) {
+    startDrag({
+      type: 'task',
+      taskId,
+      title: taskTitle,
+      source: 'kanban'
+    })
+  }
 }
 
 const onDragEnd = () => {
   isDragActive.value = false
+  endGlobalDrag()
   // Sync localTasks with store state after drag completes
   nextTick(() => {
     localTasks.value = [...props.tasks]
@@ -137,15 +154,23 @@ const onDragEnd = () => {
 
 const taskCount = computed(() => props.tasks.length)
 
-// Priority column color indicator
-const priorityColor = computed(() => {
-  const priorityColors: Record<string, string> = {
-    'high': 'var(--color-priority-high, #ef4444)',
-    'medium': 'var(--color-priority-medium, #f59e0b)',
-    'low': 'var(--color-priority-low, #3b82f6)',
-    'no_priority': 'rgba(255, 255, 255, 0.2)'
+// Column color indicator (priority dot or project color)
+const columnIndicatorColor = computed(() => {
+  if (props.columnType === 'priority') {
+    const priorityColors: Record<string, string> = {
+      'high': 'var(--color-priority-high, #ef4444)',
+      'medium': 'var(--color-priority-medium, #f59e0b)',
+      'low': 'var(--color-priority-low, #3b82f6)',
+      'no_priority': 'rgba(255, 255, 255, 0.2)'
+    }
+    return priorityColors[props.status] || null
   }
-  return priorityColors[props.status] || null
+  if (props.columnType === 'category') {
+    // FEATURE-1336: Show project color dot for category columns
+    const project = taskStore.projects.find((p: any) => p.id === props.status)
+    return project?.color || 'rgba(255, 255, 255, 0.2)'
+  }
+  return null
 })
 
 const wipStatusClass = computed(() => {
@@ -175,8 +200,13 @@ const handleDragChange = async (event: any) => {
   if (event.added) {
     try {
       const taskId = event.added.element.id
+      const task = event.added.element as Task
 
-      if (props.columnType === 'priority') {
+      if (props.columnType === 'category') {
+        // FEATURE-1336: Category columns: move task to target project
+        const targetProjectId = props.status as string
+        taskStore.moveTaskToProject(taskId, targetProjectId === 'uncategorized' ? '' : targetProjectId)
+      } else if (props.columnType === 'priority') {
         // Priority columns: update task priority
         taskStore.moveTaskToPriority(taskId, props.status as any)
       } else if (props.columnType === 'date') {
@@ -185,6 +215,15 @@ const handleDragChange = async (event: any) => {
       } else {
         // Status columns (default): update task status
         await taskStore.moveTaskWithUndo(taskId, props.status)
+      }
+
+      // BUG-1335: When task is dropped in a different swimlane (project),
+      // also update the task's projectId to match the target swimlane
+      if (props.columnType !== 'category' && props.swimlaneId !== 'default') {
+        const currentProjectId = task.projectId || ''
+        if (currentProjectId !== props.swimlaneId) {
+          taskStore.moveTaskToProject(taskId, props.swimlaneId)
+        }
       }
 
       // Persist order for all tasks in this column after cross-column move

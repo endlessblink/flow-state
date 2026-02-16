@@ -185,8 +185,8 @@ defineExpose({
   border: none; /* Remove container border - groups are self-contained */
   border-radius: 0;
   padding: var(--space-2); /* Inner breathing room */
-  /* Allow scrolling - don't clip content */
-  overflow-y: auto;
+  /* Parent container handles scrolling - don't create nested scroll */
+  overflow-y: visible;
   min-height: 0; /* Critical for flex scroll */
   flex: 1;
 }

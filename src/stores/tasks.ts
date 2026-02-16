@@ -384,41 +384,28 @@ export const useTaskStore = defineStore('tasks', () => {
         } else {
           // Add new task - ONLY if not deleted
           if (!normalizedTask._soft_deleted) {
-            // RACE CONDITION GUARD - Double-check before push
-            // Even though findIndex returned -1, another async operation might
-            // have added this task between findIndex and now. Check again.
-            const existingCount = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
+            // BUG-1329: Atomic find-or-push to close race window.
+            // Previous code did filter() then push() with a gap between them.
+            const existingIdx = _rawTasks.value.findIndex(t => t.id === normalizedTask.id)
 
-            if (existingCount > 0) {
-              // Task already exists - this is a race condition
-              // Update instead of push to avoid duplication
-              console.error('[TASKS:SYNC] Race condition detected - duplicate task avoided', {
-                taskId: taskId.slice(0, 8),
-                existingCount,
-                taskTitle: normalizedTask.title?.slice(0, 20),
-                action: 'UPDATE_INSTEAD_OF_PUSH',
-                storeSize: _rawTasks.value.length
-              })
-
-              // Find and update the existing task instead
-              const existingIdx = _rawTasks.value.findIndex(t => t.id === normalizedTask.id)
-              if (existingIdx !== -1) {
-                _rawTasks.value[existingIdx] = normalizedTask
-              }
+            if (existingIdx !== -1) {
+              // Task appeared between our earlier check and now — update instead
+              _rawTasks.value[existingIdx] = normalizedTask
             } else {
-              // Safe to push
               _rawTasks.value.push(normalizedTask)
 
-              // Verify no duplicate was created (should never happen now)
-              if (import.meta.env.DEV) {
-                const countAfterPush = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
-                if (countAfterPush > 1) {
-                  console.error('[TASKS:SYNC] Unexpected duplicate after push', {
-                    taskId: taskId.slice(0, 8),
-                    occurrences: countAfterPush,
-                    taskTitle: normalizedTask.title?.slice(0, 20),
-                    storeSize: _rawTasks.value.length
-                  })
+              // BUG-1329: Defense-in-depth — remove any duplicates that slipped through
+              const countAfterPush = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
+              if (countAfterPush > 1) {
+                console.error('[TASKS:SYNC] BUG-1329: Duplicate detected - removing extras', {
+                  taskId: taskId.slice(0, 8), occurrences: countAfterPush
+                })
+                // Keep LAST occurrence (freshest data), remove earlier copies
+                let kept = false
+                for (let i = _rawTasks.value.length - 1; i >= 0; i--) {
+                  if (_rawTasks.value[i].id === normalizedTask.id) {
+                    if (!kept) { kept = true } else { _rawTasks.value.splice(i, 1) }
+                  }
                 }
               }
             }

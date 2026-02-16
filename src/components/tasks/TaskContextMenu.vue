@@ -128,6 +128,19 @@
       </div>
     </div>
 
+    <!-- TASK-1336: Project Selector -->
+    <div
+      class="inline-row inline-row--single"
+      @mouseenter="openSubmenu('project', $event)"
+      @mouseleave="closeSubmenu('project')"
+    >
+      <div class="inline-select inline-select--full">
+        <FolderOpen :size="14" class="inline-icon" />
+        <span class="inline-value">{{ currentProjectLabel }}</span>
+        <ChevronDown :size="12" class="inline-arrow" />
+      </div>
+    </div>
+
     <!-- Status & Duration Row -->
     <div class="inline-row">
       <!-- Status with Submenu -->
@@ -173,6 +186,17 @@
       @mouseenter="keepSubmenuOpen"
       @mouseleave="closeSubmenu('duration')"
       @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
+    />
+
+    <!-- TASK-1336: Project Submenu -->
+    <ProjectSubmenu
+      :is-visible="showProjectSubmenu"
+      :parent-visible="isVisible"
+      :style="projectSubmenuStyle"
+      :current-project-id="currentTask?.projectId"
+      @mouseenter="keepSubmenuOpen"
+      @mouseleave="closeSubmenu('project')"
+      @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
     />
 
     <!-- Quick Actions Row -->
@@ -253,6 +277,7 @@
 import { ref, computed, onUnmounted, watch, inject } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
+import { useProjectStore } from '@/stores/projects'
 import {
   Calendar,
   CalendarPlus,
@@ -262,6 +287,7 @@ import {
   Eye,
   Play,
   Flag,
+  FolderOpen,
   ChevronRight,
   ChevronDown,
   Pencil,
@@ -282,6 +308,7 @@ import { statusOptions } from './context-menu/constants'
 import StatusSubmenu from './context-menu/StatusSubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
 import MoreSubmenu from './context-menu/MoreSubmenu.vue'
+import ProjectSubmenu from './context-menu/ProjectSubmenu.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 
 interface Props {
@@ -319,6 +346,7 @@ const {
   setPriority,
   setStatus,
   setDuration,
+  setProject,
   toggleDone,
   startTaskNow,
   startTimer,
@@ -333,6 +361,7 @@ const enterFocusModeFn = focusModeState?.enterFocusMode || null
 // Direct store access for custom date handling
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
+const projectStore = useProjectStore()
 
 const menuRef = ref<HTMLElement | null>(null)
 const showDatePicker = ref(false)
@@ -345,10 +374,12 @@ const aiAssistPosition = ref({ x: 0, y: 0 })
 const showStatusSubmenu = ref(false)
 const showDurationSubmenu = ref(false)
 const showMoreSubmenu = ref(false)
+const showProjectSubmenu = ref(false)
 const submenuTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const statusSubmenuPosition = ref({ x: 0, y: 0 })
 const durationSubmenuPosition = ref({ x: 0, y: 0 })
 const moreSubmenuPosition = ref({ x: 0, y: 0 })
+const projectSubmenuPosition = ref({ x: 0, y: 0 })
 
 // Computed properties for display
 const showInboxHeader = computed(() => {
@@ -377,6 +408,13 @@ const currentDurationLabel = computed(() => {
   if (duration === 60) return '1h'
   if (duration === 120) return '2h'
   return `${duration}m`
+})
+
+// TASK-1336: Project label for context menu
+const currentProjectLabel = computed(() => {
+  const projectId = currentTask.value?.projectId
+  if (!projectId) return 'No Project'
+  return projectStore.getProjectDisplayName(projectId)
 })
 
 const deleteText = computed(() => {
@@ -560,8 +598,13 @@ const moreSubmenuStyle = computed(() => ({
   top: moreSubmenuPosition.value.y + 'px'
 }))
 
+const projectSubmenuStyle = computed(() => ({
+  left: projectSubmenuPosition.value.x + 'px',
+  top: projectSubmenuPosition.value.y + 'px'
+}))
+
 // Submenu handlers
-const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) => {
+const openSubmenu = (type: 'status' | 'duration' | 'more' | 'project', event: MouseEvent) => {
   if (submenuTimeout.value) {
     clearTimeout(submenuTimeout.value)
     submenuTimeout.value = null
@@ -571,11 +614,12 @@ const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) =>
   showStatusSubmenu.value = false
   showDurationSubmenu.value = false
   showMoreSubmenu.value = false
+  showProjectSubmenu.value = false
 
   const target = event.currentTarget as HTMLElement
   const triggerRect = target.getBoundingClientRect()
   const menuRect = menuRef.value?.getBoundingClientRect()
-  const submenuWidth = 150
+  const submenuWidth = type === 'project' ? 200 : 150
 
   // BUG-1095: Position to the right of the MENU, not the trigger
   let x = menuRect ? menuRect.right + 4 : triggerRect.right + 4
@@ -587,7 +631,7 @@ const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) =>
     x = menuRect ? menuRect.left - submenuWidth - 4 : triggerRect.left - submenuWidth - 4
   }
 
-  const submenuHeight = type === 'more' ? 100 : 180
+  const submenuHeight = type === 'more' ? 100 : type === 'project' ? 250 : 180
   if (y + submenuHeight > window.innerHeight - 8) {
     y = window.innerHeight - submenuHeight - 8
   }
@@ -598,6 +642,9 @@ const openSubmenu = (type: 'status' | 'duration' | 'more', event: MouseEvent) =>
   } else if (type === 'duration') {
     durationSubmenuPosition.value = { x, y }
     showDurationSubmenu.value = true
+  } else if (type === 'project') {
+    projectSubmenuPosition.value = { x, y }
+    showProjectSubmenu.value = true
   } else {
     moreSubmenuPosition.value = { x, y }
     showMoreSubmenu.value = true
@@ -611,10 +658,11 @@ const keepSubmenuOpen = () => {
   }
 }
 
-const closeSubmenu = (type: 'status' | 'duration' | 'more') => {
+const closeSubmenu = (type: 'status' | 'duration' | 'more' | 'project') => {
   submenuTimeout.value = setTimeout(() => {
     if (type === 'status') showStatusSubmenu.value = false
     else if (type === 'duration') showDurationSubmenu.value = false
+    else if (type === 'project') showProjectSubmenu.value = false
     else showMoreSubmenu.value = false
   }, 150)
 }
@@ -628,6 +676,7 @@ const closeAllSubmenusNow = () => {
   showStatusSubmenu.value = false
   showDurationSubmenu.value = false
   showMoreSubmenu.value = false
+  showProjectSubmenu.value = false
 }
 
 const enterFocus = () => {
@@ -659,6 +708,7 @@ watch(() => props.isVisible, (isVisible) => {
     showStatusSubmenu.value = false
     showDurationSubmenu.value = false
     showMoreSubmenu.value = false
+    showProjectSubmenu.value = false
     showAIAssist.value = false
   }
 })
@@ -925,8 +975,16 @@ onUnmounted(() => {
   border-color: var(--glass-border-hover);
 }
 
+.inline-row--single {
+  padding: 0 var(--space-3) var(--space-1);
+}
+
+.inline-select--full {
+  flex: 1;
+}
+
 .inline-icon { color: var(--text-muted); flex-shrink: 0; }
-.inline-value { flex: 1; font-size: var(--text-xs); color: var(--text-secondary); }
+.inline-value { flex: 1; font-size: var(--text-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .inline-arrow { color: var(--text-muted); opacity: 0.5; }
 
 /* Action Bar */

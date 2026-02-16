@@ -294,6 +294,31 @@ export function useTaskContextMenuActions(
         }
     }
 
+    const setProject = async (projectId: string | null) => {
+        // TASK-1336: Capture task data BEFORE closing menu (same pattern as BUG-1090)
+        const taskId = currentTask.value?.id
+        const isBatch = isBatchOperation.value
+
+        emit('close')
+
+        if (isBatch) {
+            // Batch project change not supported yet
+            return
+        }
+
+        if (taskId) {
+            try {
+                await taskStore.updateTaskWithUndo(taskId, {
+                    projectId: projectId ?? undefined,
+                    isUncategorized: !projectId
+                })
+                canvasStore.requestSync('user:context-menu')
+            } catch (error) {
+                console.error('Error setting project:', error)
+            }
+        }
+    }
+
     const duplicateTask = async () => {
         // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
         const taskData = currentTask.value ? {
@@ -344,6 +369,7 @@ export function useTaskContextMenuActions(
         setPriority,
         setStatus,
         setDuration,
+        setProject,
         toggleDone,
         startTaskNow,
         startTimer,

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import { X, CheckCircle, LayoutGrid, Timer, Shield, Settings } from 'lucide-vue-next'
+import AppLogo from '@/components/base/AppLogo.vue'
 
 // ============================================================================
 // INLINE STYLES (Design Token-Based — faithful to WelcomeModal.vue)
@@ -13,8 +14,6 @@ const headerStyle = `display: flex; align-items: center; justify-content: space-
 
 const headerContentStyle = `display: flex; align-items: center; gap: var(--space-3);`
 
-const logoStyle = `font-size: var(--text-2xl); line-height: 1;`
-
 const titleStyle = `margin: 0; font-size: var(--text-lg); font-weight: 600; color: var(--text-primary);`
 
 const subtitleStyle = `margin: var(--space-0_5) 0 0; font-size: var(--text-meta); color: var(--text-secondary);`
@@ -23,17 +22,17 @@ const closeBtnStyle = `display: flex; align-items: center; justify-content: cent
 
 const bodyStyle = `padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-5);`
 
-const statusBannerStyle = `display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-3_5); background: transparent; border: 1px solid var(--color-work); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--color-work);`
+const statusBannerStyle = `display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-3_5); background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--brand-primary);`
 
 const featuresStyle = `display: flex; flex-direction: column; gap: var(--space-3);`
 
 const featureStyle = `display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--text-secondary);`
 
-const featureIconStyle = `color: var(--color-work); flex-shrink: 0;`
+const featureIconStyle = `color: var(--brand-primary); flex-shrink: 0;`
 
 const footerStyle = `padding: var(--space-5) var(--space-6); border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: var(--space-3);`
 
-const primaryBtnStyle = `width: 100%; padding: var(--space-3); background: transparent; border: 1px solid var(--color-work); border-radius: var(--radius-md); color: var(--color-work); font-size: var(--text-sm); font-weight: 600; cursor: pointer;`
+const primaryBtnStyle = `width: 100%; padding: var(--space-3); background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 600; cursor: pointer;`
 
 const secondaryActionsStyle = `display: flex; gap: var(--space-2); justify-content: center;`
 
@@ -54,7 +53,7 @@ const meta: Meta = {
 
 **Features:**
 - Clean, minimal layout with AppLogo
-- Status banner using \`var(--color-work)\` accent (blue)
+- Status banner using \`var(--brand-primary)\` accent (teal)
 - Three feature highlights with Lucide icons
 - "Get Started" primary action + "Settings" secondary action
 - Keyboard support: Enter/Escape to close`
@@ -73,14 +72,14 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   name: 'Default (Open)',
   render: () => ({
-    components: { X, CheckCircle, LayoutGrid, Timer, Shield, Settings },
+    components: { AppLogo, X, CheckCircle, LayoutGrid, Timer, Shield, Settings },
     template: `
       <div :style="containerStyle">
         <div :style="modalStyle">
           <!-- Header -->
           <div :style="headerStyle">
             <div :style="headerContentStyle">
-              <span :style="logoStyle">🌊</span>
+              <AppLogo size="xl" />
               <div>
                 <h2 :style="titleStyle">Welcome to FlowState</h2>
                 <p :style="subtitleStyle">Your productivity companion</p>
@@ -131,7 +130,7 @@ export const Default: Story = {
     `,
     data() {
       return {
-        containerStyle, modalStyle, headerStyle, headerContentStyle, logoStyle,
+        containerStyle, modalStyle, headerStyle, headerContentStyle,
         titleStyle, subtitleStyle, closeBtnStyle, bodyStyle, statusBannerStyle,
         featuresStyle, featureStyle, featureIconStyle, footerStyle, primaryBtnStyle,
         secondaryActionsStyle, secondaryBtnStyle
@@ -162,7 +161,7 @@ export const Closed: Story = {
     data() {
       return {
         containerStyle: `position: relative; width: 100%; height: 200px; background: var(--overlay-backdrop-bg); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);`,
-        reopenBtnStyle: `padding: var(--space-2) var(--space-4); background: transparent; border: 1px solid var(--color-work); border-radius: var(--radius-md); color: var(--color-work); font-size: var(--text-sm); font-weight: 500; cursor: pointer;`
+        reopenBtnStyle: `padding: var(--space-2) var(--space-4); background: transparent; border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 500; cursor: pointer;`
       }
     }
   })

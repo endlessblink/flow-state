@@ -170,3 +170,16 @@ export interface UpdateTaskData extends Partial<CreateTaskData> {
   dependsOn?: string[]
   connectionTypes?: { [targetTaskId: string]: 'sequential' | 'blocker' | 'reference' }
 }
+
+// TASK-1334: Group By types for All Tasks view
+export type GroupByType = 'none' | 'project' | 'status' | 'priority' | 'dueDate'
+
+export interface TaskGroup {
+  key: string
+  title: string
+  emoji?: string
+  color?: string | string[]
+  tasks: Task[]
+  parentTasks: Task[]
+  indent?: number
+}

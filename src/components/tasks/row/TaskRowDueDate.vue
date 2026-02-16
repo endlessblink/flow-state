@@ -1,6 +1,7 @@
 <template>
-  <div class="task-row__due-date" @click.stop>
+  <div ref="triggerWrapperRef" class="task-row__due-date" @click.stop>
     <span
+      ref="triggerRef"
       class="task-row__due-date-trigger"
       :class="dueDateClass"
       title="Click to change due date"
@@ -10,33 +11,28 @@
       <span class="task-row__due-date-text">{{ formattedDueDate }}</span>
     </span>
 
-    <!-- Due Date Selector Dropdown -->
-    <Transition name="dropdown-slide">
-      <div v-if="isOpen" class="due-date-dropdown">
-        <button
-          v-for="option in dateOptions"
-          :key="option.label"
-          class="due-date-dropdown__item"
-          :class="{ 'is-active': isOptionActive(option.value) }"
-          @click="selectDate(option.value)"
-        >
-          <span class="due-date-dropdown__label">{{ option.label }}</span>
-          <Check v-if="isOptionActive(option.value)" :size="14" class="due-date-dropdown__check" />
-        </button>
-      </div>
-    </Transition>
-
-    <!-- Click outside overlay -->
-    <div
-      v-if="isOpen"
-      class="due-date-dropdown__overlay"
-      @click="closeDropdown"
-    />
+    <!-- Due Date Selector Dropdown (teleported to body to avoid overflow clipping) -->
+    <Teleport to="body">
+      <Transition name="dropdown-slide">
+        <div v-if="isOpen" ref="dropdownRef" class="due-date-dropdown" :style="dropdownStyle">
+          <button
+            v-for="option in dateOptions"
+            :key="option.label"
+            class="due-date-dropdown__item"
+            :class="{ 'is-active': isOptionActive(option.value) }"
+            @click="selectDate(option.value)"
+          >
+            <span class="due-date-dropdown__label">{{ option.label }}</span>
+            <Check v-if="isOptionActive(option.value)" :size="14" class="due-date-dropdown__check" />
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { Calendar, Check } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -48,6 +44,32 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
+const triggerWrapperRef = ref<HTMLElement>()
+const triggerRef = ref<HTMLElement>()
+const dropdownRef = ref<HTMLElement>()
+
+// Fixed positioning for teleported dropdown
+const dropdownStyle = ref<Record<string, string>>({
+  position: 'fixed',
+  top: '0px',
+  left: '0px'
+})
+
+const calculateDropdownPosition = () => {
+  if (!triggerRef.value) return
+  const rect = triggerRef.value.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+  const dropdownHeight = 5 * 36 + 16 // 5 options * ~36px + padding
+  const spaceBelow = viewportHeight - rect.bottom
+  const positionAbove = spaceBelow < dropdownHeight && rect.top > spaceBelow
+
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
+    left: `${rect.left + rect.width / 2}px`,
+    transform: 'translateX(-50%)'
+  }
+}
 
 // Helper to get date string in YYYY-MM-DD format
 const toDateString = (date: Date): string => {
@@ -108,8 +130,12 @@ const isOptionActive = (value: string | null): boolean => {
   return props.dueDate === value
 }
 
-const toggleDropdown = () => {
+const toggleDropdown = async () => {
   isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    await nextTick()
+    calculateDropdownPosition()
+  }
 }
 
 const closeDropdown = () => {
@@ -121,19 +147,39 @@ const selectDate = (value: string | null) => {
   closeDropdown()
 }
 
-// Handle escape key to close dropdown
-const handleEscapeKey = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
+// Click outside to close (check both trigger and teleported dropdown)
+const handleClickOutside = (event: MouseEvent) => {
+  if (!isOpen.value) return
+  const target = event.target as Node
+  const isInsideTrigger = triggerWrapperRef.value?.contains(target)
+  const isInsideDropdown = dropdownRef.value?.contains(target)
+  if (!isInsideTrigger && !isInsideDropdown) {
     closeDropdown()
   }
 }
 
+// Handle escape key and scroll to close
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') closeDropdown()
+}
+
+const handleScroll = (event: Event) => {
+  if (!isOpen.value) return
+  const target = event.target as HTMLElement
+  if (dropdownRef.value && (target === dropdownRef.value || dropdownRef.value.contains(target))) return
+  closeDropdown()
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleEscapeKey)
+  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleScroll, true)
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscapeKey)
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleScroll, true)
 })
 </script>
 
@@ -213,12 +259,8 @@ onUnmounted(() => {
   border-color: rgba(var(--color-blue), 0.5);
 }
 
-/* Due Date Dropdown - Dark glass morphism */
+/* Due Date Dropdown - Dark glass morphism (teleported to body, positioned via inline style) */
 .due-date-dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  left: 50%;
-  transform: translateX(-50%);
   z-index: var(--z-tooltip);
 
   /* Glass morphism - dark purple-tinted with solid fallback */
@@ -279,25 +321,14 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-.due-date-dropdown__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-dropdown);
-}
-
 /* Dropdown transitions */
 .dropdown-slide-enter-active,
 .dropdown-slide-leave-active {
-  transition: all var(--duration-fast) ease;
+  transition: opacity var(--duration-fast) ease;
 }
 
-.dropdown-slide-enter-from {
-  opacity: 0;
-  transform: translateX(-50%) translateY(calc(-1 * var(--space-1)));
-}
-
+.dropdown-slide-enter-from,
 .dropdown-slide-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(calc(-1 * var(--space-1)));
 }
 </style>

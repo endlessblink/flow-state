@@ -10,6 +10,7 @@
         v-model:view-type="viewType"
         v-model:density="density"
         v-model:sort-by="sortBy"
+        v-model:group-by="groupBy"
         :filter-status="filterStatus"
         :hide-done-tasks="hideDoneTasks"
         @update:filter-status="taskStore.setActiveStatusFilter"
@@ -24,6 +25,8 @@
         <TaskTable
           v-if="viewType === 'table'"
           :tasks="sortedTasks"
+          :groups="groupedTasks"
+          :group-by="groupBy"
           :density="density"
           @select="handleSelectTask"
           @start-timer="handleStartTimer"
@@ -37,6 +40,8 @@
           v-else
           ref="taskListRef"
           :tasks="sortedTasks"
+          :groups="groupedTasks"
+          :group-by="groupBy"
           :empty-message="getEmptyMessage()"
           @select="handleSelectTask"
           @toggle-complete="handleToggleComplete"
@@ -95,7 +100,7 @@ import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 
-import type { Task } from '@/stores/tasks'
+import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
 
 // Mobile Detection
 const { isMobile } = useMobileDetection()
@@ -112,6 +117,7 @@ const { hideDoneTasks } = storeToRefs(taskStore)
 const viewType = usePersistentRef<ViewType>('flowstate:all-tasks-view-type', 'list')
 const density = usePersistentRef<DensityType>('flowstate:all-tasks-density', 'comfortable')
 const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
+const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
 
@@ -167,6 +173,176 @@ const sortedTasks = computed(() => {
     default:
       return tasks
   }
+})
+
+// TASK-1334: Group tasks by selected criteria
+const groupedTasks = computed((): TaskGroup[] => {
+  const tasks = sortedTasks.value
+  const groups: TaskGroup[] = []
+
+  if (groupBy.value === 'none') {
+    // Single flat group
+    const parentTasks = tasks.filter(t => !t.parentTaskId)
+    if (tasks.length > 0) {
+      groups.push({ key: 'all', title: 'All Tasks', tasks, parentTasks })
+    }
+  } else if (groupBy.value === 'project') {
+    // Group by project with nested hierarchy
+    const projectMap = new Map<string, Task[]>()
+    tasks.forEach(task => {
+      const key = task.projectId || ''
+      if (!projectMap.has(key)) projectMap.set(key, [])
+      projectMap.get(key)!.push(task)
+    })
+
+    // Build project hierarchy: top-level projects first, then children indented
+    const topLevelProjects = taskStore.projects.filter(p => !p.parentId)
+    const processedIds = new Set<string>()
+
+    const addProjectGroup = (project: { id: string; name: string; emoji?: string; color?: string | string[] }, indent: number) => {
+      if (processedIds.has(project.id)) return
+      processedIds.add(project.id)
+      const projectTasks = projectMap.get(project.id) || []
+      if (projectTasks.length > 0) {
+        groups.push({
+          key: project.id,
+          title: project.name,
+          emoji: project.emoji,
+          color: project.color,
+          tasks: projectTasks,
+          parentTasks: projectTasks.filter(t => !t.parentTaskId),
+          indent
+        })
+      }
+      // Add child projects
+      const children = taskStore.getChildProjects(project.id)
+      children.forEach(child => addProjectGroup(child, indent + 1))
+    }
+
+    topLevelProjects.forEach(p => addProjectGroup(p, 0))
+
+    // Add projects that aren't top-level but have tasks (orphaned projects)
+    taskStore.projects.forEach(p => {
+      if (!processedIds.has(p.id) && projectMap.has(p.id)) {
+        addProjectGroup(p, 0)
+      }
+    })
+
+    // Uncategorized tasks last
+    const uncategorized = projectMap.get('')
+    if (uncategorized && uncategorized.length > 0) {
+      groups.push({
+        key: 'uncategorized',
+        title: 'Uncategorized',
+        tasks: uncategorized,
+        parentTasks: uncategorized.filter(t => !t.parentTaskId)
+      })
+    }
+  } else if (groupBy.value === 'status') {
+    const statusOrder = ['in_progress', 'planned', 'backlog', 'on_hold', 'done']
+    const statusLabels: Record<string, string> = {
+      in_progress: 'In Progress',
+      planned: 'To Do',
+      backlog: 'Backlog',
+      on_hold: 'On Hold',
+      done: 'Done'
+    }
+    const statusMap = new Map<string, Task[]>()
+    tasks.forEach(task => {
+      const key = task.status || 'planned'
+      if (!statusMap.has(key)) statusMap.set(key, [])
+      statusMap.get(key)!.push(task)
+    })
+    statusOrder.forEach(key => {
+      const statusTasks = statusMap.get(key)
+      if (statusTasks && statusTasks.length > 0) {
+        groups.push({
+          key,
+          title: statusLabels[key] || key,
+          tasks: statusTasks,
+          parentTasks: statusTasks.filter(t => !t.parentTaskId)
+        })
+      }
+    })
+  } else if (groupBy.value === 'priority') {
+    const priorityOrder = ['high', 'medium', 'low', 'none']
+    const priorityLabels: Record<string, string> = {
+      high: 'High Priority',
+      medium: 'Medium Priority',
+      low: 'Low Priority',
+      none: 'No Priority'
+    }
+    const priorityMap = new Map<string, Task[]>()
+    tasks.forEach(task => {
+      const key = task.priority || 'none'
+      if (!priorityMap.has(key)) priorityMap.set(key, [])
+      priorityMap.get(key)!.push(task)
+    })
+    priorityOrder.forEach(key => {
+      const priorityTasks = priorityMap.get(key)
+      if (priorityTasks && priorityTasks.length > 0) {
+        groups.push({
+          key,
+          title: priorityLabels[key],
+          tasks: priorityTasks,
+          parentTasks: priorityTasks.filter(t => !t.parentTaskId)
+        })
+      }
+    })
+  } else if (groupBy.value === 'dueDate') {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const endOfWeek = new Date(today)
+    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
+
+    const buckets: Record<string, Task[]> = {
+      overdue: [],
+      today: [],
+      tomorrow: [],
+      thisWeek: [],
+      later: [],
+      noDate: []
+    }
+
+    tasks.forEach(task => {
+      if (!task.dueDate) {
+        buckets.noDate.push(task)
+        return
+      }
+      const [y, m, d] = task.dueDate.split('T')[0].split('-').map(Number)
+      const dueDate = new Date(y, m - 1, d)
+      if (dueDate < today) buckets.overdue.push(task)
+      else if (dueDate.getTime() === today.getTime()) buckets.today.push(task)
+      else if (dueDate.getTime() === tomorrow.getTime()) buckets.tomorrow.push(task)
+      else if (dueDate <= endOfWeek) buckets.thisWeek.push(task)
+      else buckets.later.push(task)
+    })
+
+    const bucketConfig: { key: string; title: string }[] = [
+      { key: 'overdue', title: 'Overdue' },
+      { key: 'today', title: 'Today' },
+      { key: 'tomorrow', title: 'Tomorrow' },
+      { key: 'thisWeek', title: 'This Week' },
+      { key: 'later', title: 'Later' },
+      { key: 'noDate', title: 'No Date' }
+    ]
+
+    bucketConfig.forEach(({ key, title }) => {
+      const bucketTasks = buckets[key]
+      if (bucketTasks.length > 0) {
+        groups.push({
+          key,
+          title,
+          tasks: bucketTasks,
+          parentTasks: bucketTasks.filter(t => !t.parentTaskId)
+        })
+      }
+    })
+  }
+
+  return groups
 })
 
 // Event Handlers

@@ -187,6 +187,11 @@
     cursor: grabbing;
 }
 
+/* TASK-1336: Hide SortableJS clone when our custom drag ghost is active */
+body.dragging-active .sortable-fallback {
+    opacity: 0 !important;
+}
+
 /* BUG-050 FIX: Sortable fallback ghost - fixed positioning for consistent appearance across scroll */
 /* BUG-1335: Dragged card should NOT be darker than other cards */
 .sortable-fallback {

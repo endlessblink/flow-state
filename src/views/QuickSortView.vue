@@ -62,82 +62,75 @@
             class="sort-progress-bar"
           />
 
-          <!-- Two-Column Layout (card + context panel on desktop) -->
+          <!-- Three-Column Layout: actions | card+projects | context -->
           <div v-if="currentTask && !isComplete" class="sort-layout">
-            <!-- Main Column: Card + Controls -->
+            <!-- Left Sidebar: Action Buttons (vertical stack) -->
+            <div class="action-sidebar">
+              <button class="action-btn done" aria-label="Mark task as done" @click="handleMarkDone">
+                <CheckCircle :size="18" />
+                <span class="action-label">Done</span>
+                <kbd>D</kbd>
+              </button>
+
+              <button class="action-btn save" aria-label="Save and advance" @click="handleSave">
+                <Save :size="18" />
+                <span class="action-label">Save</span>
+                <span v-if="isTaskDirty" class="dirty-dot" />
+                <kbd>S</kbd>
+              </button>
+
+              <button class="action-btn skip" aria-label="Skip this task" @click="handleSkip">
+                <SkipForward :size="18" />
+                <span class="action-label">Skip</span>
+                <kbd>Space</kbd>
+              </button>
+
+              <button class="action-btn edit" aria-label="Edit task" @click="handleEditTask">
+                <Edit2 :size="18" />
+                <span class="action-label">Edit</span>
+                <kbd>E</kbd>
+              </button>
+
+              <button class="action-btn delete" aria-label="Delete task" @click="handleMarkDoneAndDelete">
+                <Trash2 :size="18" />
+                <span class="action-label">Delete</span>
+                <kbd>Del</kbd>
+              </button>
+
+              <button
+                v-if="canUndo"
+                class="action-btn undo"
+                aria-label="Undo last action"
+                @click="handleUndo"
+              >
+                <Undo2 :size="18" />
+                <span class="action-label">Undo</span>
+              </button>
+            </div>
+
+            <!-- Center Column: Card + Category Selector -->
             <div class="sort-main-column">
-              <!-- Task Card (centered, simplified) -->
+              <!-- Task Card -->
               <Transition name="card-slide" mode="out-in">
                 <QuickSortCard
                   :key="currentTaskId ?? undefined"
                   :task="currentTask"
                   @update-task="handleTaskUpdate"
+                  @swipe-save="handleSave"
+                  @swipe-delete="handleMarkDoneAndDelete"
                 />
               </Transition>
 
-              <!-- Project Selector (full width) -->
+              <!-- Project Selector -->
               <CategorySelector
                 @select="handleCategorize"
                 @skip="handleSkip"
                 @create-new="showProjectModal = true"
               />
 
-              <!-- Consolidated Action Row -->
-              <div class="action-row">
-                <button
-                  class="action-btn done"
-                  aria-label="Mark task as done"
-                  @click="handleMarkDone"
-                >
-                  <CheckCircle :size="18" />
-                  Done
-                  <kbd>D</kbd>
-                </button>
-
-                <button
-                  class="action-btn save"
-                  aria-label="Save and advance to next task"
-                  @click="handleSave"
-                >
-                  <Save :size="18" />
-                  Save
-                  <span v-if="isTaskDirty" class="dirty-dot" />
-                  <kbd>S</kbd>
-                </button>
-
-                <button
-                  class="action-btn skip"
-                  aria-label="Skip this task"
-                  @click="handleSkip"
-                >
-                  <SkipForward :size="18" />
-                  Skip
-                  <kbd>Space</kbd>
-                </button>
-
-                <button
-                  class="action-btn edit"
-                  aria-label="Edit task"
-                  @click="handleEditTask"
-                >
-                  <Edit :size="18" />
-                  Edit
-                  <kbd>E</kbd>
-                </button>
-
-                <button
-                  v-if="canUndo"
-                  class="action-btn undo"
-                  aria-label="Undo last action"
-                  @click="handleUndo"
-                >
-                  <Undo2 :size="18" />
-                </button>
-              </div>
-
               <!-- Helper Hint -->
               <div class="helper-hint">
-                1-9 assign project • S save • D done • Space skip • Esc exit
+                1-9 assign project • S save • D done • Del delete • Space skip • Esc exit
               </div>
             </div>
 
@@ -277,7 +270,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit, Calendar, Briefcase, Save } from 'lucide-vue-next'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit2, Calendar, Briefcase, Save, Trash2 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
@@ -706,18 +699,142 @@ const currentTaskProject = computed(() => {
   max-width: 100%;
 }
 
-/* Two-Column Layout (Desktop: card + context panel side by side) */
+/* Three-Column Layout: actions | card+projects | context */
 .sort-layout {
   display: flex;
-  gap: var(--space-6);
+  gap: var(--space-2);
   justify-content: center;
   align-items: flex-start;
   width: 100%;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
-/* Main column (card + controls) */
+/* Left Sidebar: Vertical Action Buttons */
+.action-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  width: 140px;
+  position: sticky;
+  top: var(--space-4);
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+  white-space: nowrap;
+  width: 100%;
+}
+
+.action-btn:hover {
+  background: var(--glass-bg-medium);
+  transform: translateX(2px);
+}
+
+.action-label {
+  flex: 1;
+  text-align: left;
+}
+
+.action-btn kbd {
+  padding: var(--space-0_5) var(--space-1_5);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.action-btn.done {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.action-btn.done:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: var(--success);
+}
+
+.action-btn.save {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.action-btn.save:hover {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
+}
+
+.dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  animation: dirty-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dirty-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+
+.action-btn.skip {
+  border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+}
+
+.action-btn.skip:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.action-btn.edit {
+  border-color: var(--glass-border-hover);
+  color: var(--text-secondary);
+}
+
+.action-btn.edit:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.action-btn.delete {
+  border-color: var(--danger-muted);
+  color: var(--danger);
+}
+
+.action-btn.delete:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+.action-btn.undo {
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+}
+
+.action-btn.undo:hover {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+/* Center Column: Card + Category Selector */
 .sort-main-column {
   display: flex;
   flex-direction: column;
@@ -725,6 +842,7 @@ const currentTaskProject = computed(() => {
   gap: var(--space-5);
   flex: 1;
   max-width: 600px;
+  min-width: 0;
 }
 
 /* Context Panel (desktop only) */
@@ -896,7 +1014,7 @@ const currentTaskProject = computed(() => {
   gap: var(--space-4);
   width: 100%;
   overflow-y: auto; /* Scroll only the content area, not header/tabs */
-  padding: var(--space-2); /* Breathing room for card hover transform + shadow */
+  padding: var(--space-4) var(--space-6); /* Breathing room for card hover transform + shadow */
 }
 
 .empty-state,
@@ -976,115 +1094,6 @@ const currentTaskProject = computed(() => {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-/* Consolidated Action Row */
-.action-row {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2_5) var(--space-4);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border-hover);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: all var(--duration-normal);
-  white-space: nowrap;
-  backdrop-filter: blur(8px);
-}
-
-.action-btn:hover {
-  background: var(--glass-bg-medium);
-  transform: translateY(-2px);
-}
-
-.action-btn kbd {
-  padding: var(--space-0_5) var(--space-1_5);
-  background: var(--glass-bg-medium);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-  line-height: 1;
-}
-
-.action-btn.done {
-  border-color: var(--success);
-  color: var(--success);
-}
-
-.action-btn.done:hover {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: var(--success);
-}
-
-.action-btn.save {
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-  position: relative;
-}
-
-.action-btn.save:hover {
-  background: rgba(78, 205, 196, 0.1);
-  border-color: var(--brand-primary);
-}
-
-.dirty-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--brand-primary);
-  animation: dirty-pulse 2s ease-in-out infinite;
-}
-
-@keyframes dirty-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.8); }
-}
-
-.action-btn.skip {
-  border-color: var(--glass-border-hover);
-  color: var(--text-secondary);
-}
-
-.action-btn.skip:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-}
-
-.action-btn.edit {
-  border-color: var(--glass-border-hover);
-  color: var(--text-secondary);
-}
-
-.action-btn.edit:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--brand-primary);
-  color: var(--brand-primary);
-}
-
-.action-btn.undo {
-  border-color: var(--glass-border);
-  color: var(--text-muted);
-  padding: var(--space-2_5);
-}
-
-.action-btn.undo:hover {
-  background: var(--glass-bg-medium);
-  border-color: var(--warning);
-  color: var(--warning);
 }
 
 /* Helper Hint */
@@ -1219,11 +1228,29 @@ const currentTaskProject = computed(() => {
   }
 }
 
-/* Responsive: Tablet — compact horizontal context bar above card */
+/* Responsive: Tablet — collapse sidebar to horizontal row */
 @media (max-width: 768px) {
   .sort-layout {
     flex-direction: column;
     align-items: center;
+  }
+
+  .action-sidebar {
+    flex-direction: row;
+    width: 100%;
+    max-width: 600px;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: static;
+    order: 2; /* Move below card on mobile */
+  }
+
+  .action-btn {
+    width: auto;
+  }
+
+  .action-btn:hover {
+    transform: translateY(-2px);
   }
 
   .sort-main-column {
@@ -1332,6 +1359,24 @@ const currentTaskProject = computed(() => {
     padding: var(--space-2) var(--space-3);
   }
 
+  /* Action buttons: icon-only on mobile */
+  .action-sidebar {
+    gap: var(--space-1_5);
+  }
+
+  .action-label {
+    display: none;
+  }
+
+  .action-btn kbd {
+    display: none;
+  }
+
+  .action-btn {
+    justify-content: center;
+    padding: var(--space-2);
+  }
+
   .context-panel {
     max-width: none;
     padding: var(--space-2_5) var(--space-3);
@@ -1359,20 +1404,6 @@ const currentTaskProject = computed(() => {
 
   .sort-main-column {
     gap: var(--space-3);
-  }
-
-  .action-row {
-    gap: var(--space-2);
-  }
-
-  .action-btn {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-xs);
-    gap: var(--space-1_5);
-  }
-
-  .action-btn kbd {
-    display: none;
   }
 
   .helper-hint {

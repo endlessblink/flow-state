@@ -6,6 +6,17 @@
     @touchstart="handleTouchStart"
   >
     <div class="card-content">
+      <!-- Delete button (top-right corner) -->
+      <button
+        class="card-delete-btn"
+        aria-label="Delete task"
+        @click.stop="emit('swipeDelete')"
+        @mousedown.stop
+        @touchstart.stop
+      >
+        <Trash2 :size="16" />
+      </button>
+
       <!-- Task Title -->
       <h2 class="task-title" dir="auto">
         {{ task.title }}
@@ -99,9 +110,15 @@
       </div>
 
       <!-- Swipe Indicator (visible during drag) -->
-      <div v-if="isSwiping" class="swipe-indicator" :class="swipeDirection">
-        <ArrowRight v-if="swipeDirection === 'right'" :size="32" />
-        <ArrowLeft v-if="swipeDirection === 'left'" :size="32" />
+      <div v-if="isSwiping && swipeDirection" class="swipe-indicator" :class="swipeDirection">
+        <template v-if="swipeDirection === 'right'">
+          <Save :size="28" />
+          <span class="swipe-label">Save</span>
+        </template>
+        <template v-if="swipeDirection === 'left'">
+          <Trash2 :size="28" />
+          <span class="swipe-label">Delete</span>
+        </template>
       </div>
     </div>
   </div>
@@ -110,7 +127,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { type Task } from '@/stores/tasks'
-import { ArrowRight, ArrowLeft, CalendarDays } from 'lucide-vue-next'
+import { CalendarDays, Save, Trash2 } from 'lucide-vue-next'
 import { NPopover, NDatePicker } from 'naive-ui'
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue'
 
@@ -121,6 +138,8 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   updateTask: [updates: Partial<Task>]
+  swipeSave: []
+  swipeDelete: []
 }>()
 
 // Date picker state
@@ -273,10 +292,15 @@ function handleTouchStart(event: TouchEvent) {
 }
 
 function handleSwipeEnd() {
-  const _delta = swipeCurrentX.value - swipeStartX.value
+  const delta = swipeCurrentX.value - swipeStartX.value
 
-  // For now, just reset - actual categorization will be handled by parent
-  // This is just the visual component
+  if (Math.abs(delta) >= _SWIPE_THRESHOLD) {
+    if (delta > 0) {
+      emit('swipeSave')
+    } else {
+      emit('swipeDelete')
+    }
+  }
 
   isSwiping.value = false
   swipeStartX.value = 0
@@ -292,7 +316,7 @@ function handleSwipeEnd() {
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  padding: var(--space-5);
+  padding: var(--space-8);
   box-shadow: var(--shadow-xl);
   transition: transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal);
   cursor: grab;
@@ -301,8 +325,7 @@ function handleSwipeEnd() {
 }
 
 .quick-sort-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-3xl);
+  box-shadow: var(--shadow-2xl);
 }
 
 .quick-sort-card.is-swiping {
@@ -314,6 +337,35 @@ function handleSwipeEnd() {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  position: relative;
+}
+
+.card-delete-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--duration-normal);
+}
+
+.quick-sort-card:hover .card-delete-btn {
+  opacity: 1;
+}
+
+.card-delete-btn:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-muted);
+  color: var(--danger);
 }
 
 .task-title {
@@ -451,18 +503,29 @@ function handleSwipeEnd() {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 0.3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0.5;
   transition: opacity var(--duration-normal);
 }
 
 .swipe-indicator.right {
   right: var(--space-5);
-  color: var(--success);
+  color: var(--brand-primary);
 }
 
 .swipe-indicator.left {
   left: var(--space-5);
-  color: var(--info);
+  color: var(--danger);
+}
+
+.swipe-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Responsive: stack controls vertically on narrow screens */

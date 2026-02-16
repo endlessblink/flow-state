@@ -8,6 +8,14 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1339: All views load blank on first load, require refresh to show tasks (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+
+**Problem**: All views (Board, Calendar, All Tasks, Canvas) load blank on initial app load. Tasks only appear after a manual page refresh. Suggests a race condition in app initialization — tasks not loaded before views render.
+
+---
+
 ### BUG-1338: Calendar delete does nothing — deleteTaskInstance ignores recurringInstances (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
@@ -3271,6 +3279,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1326** | **P2** | **🔄 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
+| **TASK-1339** | **P0** | **📋 Tasks must persist over refresh in guest mode** |
 | **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |
 | **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |
 | ~~**BUG-1333**~~ | **P0** | ✅ **Calendar inbox shows only 2 tasks — stale auto-instances + wrong filter source** |

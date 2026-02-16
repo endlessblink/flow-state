@@ -1,12 +1,14 @@
 /**
  * Guest Mode Storage Utility
  *
- * Ensures guest mode is fully ephemeral - no data persists across page refreshes.
- * All localStorage keys in GUEST_EPHEMERAL_KEYS are cleared on app startup for guests.
+ * TASK-1339: Guest tasks persist across page refreshes.
+ * Only non-essential keys (backups, locks, emojis) are cleared on startup.
+ * Task data, groups, and filters survive refresh for a usable guest experience.
+ * Sign-in migration still works — clearStaleGuestTasks() runs for authenticated users.
  */
 
 // Keys that should NOT persist in guest mode (user data)
-// Guest mode is fully ephemeral - tasks are cleared on app restart.
+// TASK-1339: Tasks, groups, and filters now persist across refreshes.
 // Same-session sign-in can still migrate tasks before any restart.
 //
 // BUG-339: Historical keys that may still exist from older versions
@@ -34,20 +36,15 @@ const LEGACY_GUEST_KEYS = [
 ]
 
 const GUEST_EPHEMERAL_KEYS = [
-  // Tasks (ephemeral in guest mode - sign in to persist)
-  'flowstate-guest-tasks',
+  // TASK-1339: Tasks, groups, filters, UI state, and Quick Sort now PERSIST across refreshes.
+  // Only non-essential/transient keys are cleared below.
 
-  // Canvas
-  'flowstate-guest-groups',
-  'flowstate-canvas-viewport',
+  // Canvas transient state (locks expire, viewport recalculated)
   'flowstate-canvas-has-initial-fit',
   'flowstate-canvas-locks',
 
-  // Local auth
+  // Local auth (re-determined on startup)
   'flowstate-local-user',
-
-  // Filters and view state
-  'flowstate-filters',
 
   // Backups (no data to backup in guest mode)
   'flowstate-backup-history',
@@ -55,17 +52,10 @@ const GUEST_EPHEMERAL_KEYS = [
   'flowstate-backup-golden',
   'flowstate-max-task-count',
 
-  // Quick Sort
-  'flowstate-quicksort-history',
-  'flowstate-quicksort-last-date',
-
-  // Other user-specific data
+  // Other transient data
   'flowstate-recent-emojis',
   'flowstate-local-banner-dismissed',
   'flowstate-offline-queue',
-
-  // UI state
-  'flowstate-ui-state',
 ]
 
 /**

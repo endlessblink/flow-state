@@ -1,24 +1,29 @@
 <template>
   <div class="task-list">
-    <!-- Group by Projects -->
-    <div v-for="project in projectGroups" :key="project.id" class="project-group">
-      <!-- Project Header -->
-      <div class="project-header" @click="toggleProjectExpand(project.id)">
+    <!-- TASK-1334: Grouped rendering with sticky headers -->
+    <div v-for="group in groups" :key="group.key" class="task-group" :class="{ 'task-group--indented': (group.indent || 0) > 0 }">
+      <!-- Sticky Group Header -->
+      <div
+        v-if="groupBy !== 'none'"
+        class="group-header"
+        :style="(group.indent || 0) > 0 ? { paddingLeft: `${12 + (group.indent || 0) * 24}px` } : undefined"
+        @click="toggleGroupExpand(group.key)"
+      >
         <ChevronRight
           :size="16"
-          class="project-expand-icon"
-          :class="{ 'project-expand-icon--expanded': expandedProjects.has(project.id) }"
+          class="group-expand-icon"
+          :class="{ 'group-expand-icon--expanded': expandedGroups.has(group.key) }"
         />
-        <ProjectEmojiIcon v-if="project.emoji" :emoji="project.emoji" size="xs" />
-        <div v-else class="project-color-dot" :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : (project.color || '#6B7280') }" />
-        <span class="project-name">{{ project.name }}</span>
-        <span class="project-task-count">{{ project.tasks.length }}</span>
+        <ProjectEmojiIcon v-if="group.emoji" :emoji="group.emoji" size="xs" />
+        <div v-else-if="group.color" class="group-color-dot" :style="{ backgroundColor: Array.isArray(group.color) ? group.color[0] : (group.color || '#6B7280') }" />
+        <span class="group-name">{{ group.title }}</span>
+        <span class="group-task-count">{{ group.tasks.length }}</span>
       </div>
 
-      <!-- Project Tasks (only parent tasks, subtasks rendered recursively) -->
-      <template v-if="expandedProjects.has(project.id)">
+      <!-- Group Tasks (only parent tasks, subtasks rendered recursively) -->
+      <template v-if="groupBy === 'none' || expandedGroups.has(group.key)">
         <HierarchicalTaskRow
-          v-for="task in project.parentTasks"
+          v-for="task in group.parentTasks"
           :key="task.id"
           :task="task"
           :indent-level="0"
@@ -37,7 +42,7 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="projectGroups.length === 0" class="empty-state">
+    <div v-if="groups.length === 0" class="empty-state">
       <Inbox :size="48" class="empty-icon" />
       <p class="empty-title">
         No tasks found
@@ -50,15 +55,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { Task } from '@/stores/tasks'
-import { useTaskStore } from '@/stores/tasks'
+import { ref, watch } from 'vue'
+import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { Inbox, ChevronRight } from 'lucide-vue-next'
 
 interface Props {
   tasks: Task[]
+  groups: TaskGroup[]
+  groupBy: string
   emptyMessage?: string
 }
 
@@ -74,40 +80,10 @@ const emit = defineEmits<{
   updateTask: [taskId: string, updates: Partial<Task>]
 }>()
 
-const taskStore = useTaskStore()
-
 // Expand/collapse state
 const expandedTasks = ref<Set<string>>(new Set())
-const expandedProjects = ref<Set<string>>(new Set())
+const expandedGroups = ref<Set<string>>(new Set())
 const selectedTaskIds = ref<string[]>([])
-
-// Group tasks by project
-const projectGroups = computed(() => {
-  const groups = new Map<string, Task[]>()
-
-  props.tasks.forEach(task => {
-    const projectId = task.projectId || '' // Use empty string for uncategorized tasks
-    if (!groups.has(projectId)) {
-      groups.set(projectId, [])
-    }
-    groups.get(projectId)!.push(task)
-  })
-
-  return Array.from(groups.entries()).map(([projectId, tasks]) => {
-    const project = taskStore.projects.find(p => p.id === projectId)
-    // Filter to only show parent tasks (tasks without parentTaskId)
-    const parentTasks = tasks.filter(t => !t.parentTaskId)
-
-    return {
-      id: projectId,
-      name: project?.name || 'Uncategorized',
-      emoji: project?.emoji,
-      color: project?.color,
-      tasks: tasks,
-      parentTasks: parentTasks
-    }
-  })
-})
 
 const toggleTaskExpand = (taskId: string) => {
   if (expandedTasks.value.has(taskId)) {
@@ -117,19 +93,19 @@ const toggleTaskExpand = (taskId: string) => {
   }
 }
 
-const toggleProjectExpand = (projectId: string) => {
-  if (expandedProjects.value.has(projectId)) {
-    expandedProjects.value.delete(projectId)
+const toggleGroupExpand = (groupKey: string) => {
+  if (expandedGroups.value.has(groupKey)) {
+    expandedGroups.value.delete(groupKey)
   } else {
-    expandedProjects.value.add(projectId)
+    expandedGroups.value.add(groupKey)
   }
 }
 
 // Expand/collapse all functionality
 const expandAll = () => {
-  // Expand all projects
-  projectGroups.value.forEach(group => {
-    expandedProjects.value.add(group.id)
+  // Expand all groups
+  props.groups.forEach(group => {
+    expandedGroups.value.add(group.key)
   })
 
   // Expand all tasks with subtasks
@@ -142,7 +118,7 @@ const expandAll = () => {
 
 const collapseAll = () => {
   expandedTasks.value.clear()
-  expandedProjects.value.clear()
+  expandedGroups.value.clear()
 }
 
 // Context menu handler
@@ -155,16 +131,15 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
   emit('moveTask', taskId, targetProjectId, targetParentId)
 }
 
-// Initialize with all projects expanded by default
-expandedProjects.value = new Set(projectGroups.value.map(g => g.id))
+// Initialize with all groups expanded by default
+expandedGroups.value = new Set(props.groups.map(g => g.key))
 
-// BUG-FIX: Watch for new groups and auto-expand them (e.g. when creating first task in a project)
-
-watch(projectGroups, (newGroups, oldGroups) => {
-  const oldIds = new Set(oldGroups?.map(g => g.id) || [])
+// Auto-expand new groups when they appear
+watch(() => props.groups, (newGroups, oldGroups) => {
+  const oldKeys = new Set(oldGroups?.map(g => g.key) || [])
   newGroups.forEach(group => {
-    if (!oldIds.has(group.id)) {
-      expandedProjects.value.add(group.id)
+    if (!oldKeys.has(group.key)) {
+      expandedGroups.value.add(group.key)
     }
   })
 }, { deep: true })
@@ -180,68 +155,83 @@ defineExpose({
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2); /* ADHD: Small gap between groups */
-  background: transparent; /* Remove container background - groups have their own */
-  border: none; /* Remove container border - groups are self-contained */
+  gap: var(--space-2);
+  background: transparent;
+  border: none;
   border-radius: 0;
-  padding: var(--space-2); /* Inner breathing room */
-  /* Parent container handles scrolling - don't create nested scroll */
+  padding: var(--space-2);
   overflow-y: visible;
-  min-height: 0; /* Critical for flex scroll */
+  min-height: 0;
   flex: 1;
 }
 
-/* ADHD-friendly: Visual chunking with whitespace between project groups */
-.project-group {
-  margin-bottom: var(--space-4); /* 16px gap between groups for breathing room */
+/* TASK-1334: Group containers */
+.task-group {
+  margin-bottom: var(--space-4);
   background: var(--glass-bg-subtle);
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
-  overflow: hidden;
+  /* No overflow:hidden — TaskRowDueDate dropdown uses position:absolute */
 }
 
-.project-group:last-child {
+.task-group--indented {
+  margin-left: var(--space-6);
+  margin-bottom: var(--space-2);
+}
+
+.task-group:last-child {
   margin-bottom: 0;
 }
 
-.project-header {
+/* TASK-1334: Sticky group header */
+.group-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3); /* Increased padding for breathing room */
-  background-color: var(--glass-bg-heavy); /* Slightly darker header for contrast */
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--glass-bg-heavy);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background-color var(--duration-fast) ease;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
-.project-header:hover {
+.group-header:hover {
   background-color: var(--surface-hover);
 }
 
-.project-expand-icon {
+.group-expand-icon {
   color: var(--text-tertiary);
   transition: transform var(--duration-fast) ease;
   flex-shrink: 0;
 }
 
-.project-expand-icon--expanded {
+.group-expand-icon--expanded {
   transform: rotate(90deg);
 }
 
-.project-name {
+.group-name {
   font-size: var(--text-xs);
   font-weight: 500;
   color: var(--text-secondary);
   flex: 1;
 }
 
-.project-task-count {
+.group-task-count {
   font-size: var(--text-xs);
   color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  padding: 0 var(--space-1_5);
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
 }
 
-.project-color-dot {
+.group-color-dot {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-full);

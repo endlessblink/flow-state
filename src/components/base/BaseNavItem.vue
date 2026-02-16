@@ -20,9 +20,6 @@
     @dragover="handleDragOver"
     @dragleave="handleDragLeave"
     @drop="handleDrop"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
-    @mouseup="handleMouseUp"
   >
     <!-- Expand/collapse chevron for items with children -->
     <button
@@ -80,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, useSlots } from 'vue'
+import { computed, useSlots } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 import BaseBadge from './BaseBadge.vue'
 import OverflowTooltip from './OverflowTooltip.vue'
@@ -120,11 +117,12 @@ const emit = defineEmits<{
   projectDrop: [data: DragData]
 }>()
 
-const { isDragging, dragData, isValidDrop, setDropTarget, startDrag, endDrag } = useDragAndDrop()
+const { isDragging, dragData, dropTarget, isValidDrop, setDropTarget, startDrag, endDrag } = useDragAndDrop()
 const taskStore = useTaskStore()
 const slots = useSlots()
 
-const isDragTarget = ref(false)
+// Reactive: highlights when global dropTarget matches this project
+const isDragTarget = computed(() => isDragging.value && dropTarget.value === props.projectId && !!props.projectId)
 
 // Get the text content from the default slot for tooltip
 const slotText = computed(() => {
@@ -228,7 +226,6 @@ const handleDragEnd = () => {
 const handleDragEnter = (event: DragEvent) => {
   if (!props.projectId) return
   event.preventDefault()
-  isDragTarget.value = true
   setDropTarget(props.projectId)
 }
 
@@ -253,7 +250,6 @@ const handleDragLeave = (event: DragEvent) => {
   const y = event.clientY
 
   if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-    isDragTarget.value = false
     setDropTarget(null)
   }
 }
@@ -263,7 +259,6 @@ const handleDrop = (event: DragEvent) => {
   event.preventDefault()
   event.stopPropagation() // Prevent parent elements from handling drop
 
-  isDragTarget.value = false
   setDropTarget(null)
 
   if (dragData.value && isDragValid.value) {
@@ -291,44 +286,6 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
-// Mouse event bridge for non-native drag sources (vuedraggable forceFallback)
-// SortableJS forceFallback doesn't fire native drag events on external elements,
-// but mouseenter/mouseleave/mouseup still fire since the ghost has pointer-events: none
-const handleMouseEnter = () => {
-  if (!isDragging.value || !props.projectId) return
-  isDragTarget.value = true
-  setDropTarget(props.projectId)
-}
-
-const handleMouseLeave = () => {
-  if (!isDragging.value || !props.projectId) return
-  isDragTarget.value = false
-  setDropTarget(null)
-}
-
-const handleMouseUp = () => {
-  if (!isDragging.value || !props.projectId) return
-
-  isDragTarget.value = false
-  setDropTarget(null)
-
-  if (dragData.value && isDragValid.value) {
-    if (dragData.value.type === 'task' && dragData.value.taskId) {
-      taskStore.moveTaskToProject(dragData.value.taskId, props.projectId)
-      emit('taskDrop', dragData.value)
-    }
-    if (dragData.value.type === 'project' && dragData.value.projectId) {
-      if (props.projectId === '__root__') {
-        emit('projectDrop', dragData.value)
-      } else {
-        taskStore.updateProject(dragData.value.projectId, {
-          parentId: props.projectId
-        })
-        emit('projectDrop', dragData.value)
-      }
-    }
-  }
-}
 </script>
 
 <style scoped>
@@ -537,12 +494,6 @@ const handleMouseUp = () => {
   border-color: rgba(255, 107, 107, 0.3) !important;
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Global dragging state - fade out non-target items */
-:global(body.dragging-active) .base-nav-item:not(.is-drag-target) {
-  opacity: 0.7;
-  transition: opacity var(--duration-fast);
 }
 
 /* Pulse animation for valid drop targets */

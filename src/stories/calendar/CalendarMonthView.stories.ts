@@ -106,7 +106,7 @@ const CalendarMonthViewMock = defineComponent({
           v-for="(day, idx) in days"
           :key="idx"
           :style="{
-            background: day.isToday ? 'rgba(239, 68, 68, 0.05)' : day.isCurrentMonth ? 'var(--glass-panel-bg)' : 'var(--glass-bg-tint)',
+            background: day.isToday ? 'var(--danger-bg-subtle)' : day.isCurrentMonth ? 'var(--glass-panel-bg)' : 'var(--glass-bg-tint)',
             opacity: day.isCurrentMonth ? '1' : '0.6',
             minHeight: '90px',
             padding: 'var(--space-2)',
@@ -177,9 +177,22 @@ const CalendarMonthViewMock = defineComponent({
 const meta = {
   component: CalendarMonthViewMock,
   title: '📅 Calendar/CalendarMonthView',
-  tags: ['autodocs', 'new'],
+  tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
+    docs: {
+      description: {
+        component: `Month grid calendar displaying tasks as colored event chips within day cells.
+
+**Features:**
+- 7-column (Sun–Sat) grid with 5–6 rows
+- Drag-and-drop events between days
+- "Today" cell highlight with red badge
+- Other-month days dimmed
+- Done tasks shown with grayscale + strikethrough
+- Timer-active event glow`
+      }
+    }
   },
 } satisfies Meta<typeof CalendarMonthViewMock>
 
@@ -189,7 +202,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   args: {
     events: [
-      { id: '1', title: 'Team standup', time: '9:00', color: 'rgba(99, 102, 241, 0.85)' },
+      { id: '1', title: 'Team standup', time: '9:00', color: 'var(--brand-primary)' },
     ],
     highlightToday: true,
   },
@@ -198,10 +211,10 @@ export const Default: Story = {
 export const WithEvents: Story = {
   args: {
     events: [
-      { id: '1', title: 'Team standup', time: '9:00', color: 'rgba(99, 102, 241, 0.85)' },
-      { id: '2', title: 'Design review', time: '11:00', color: 'rgba(236, 72, 153, 0.85)' },
-      { id: '3', title: 'Sprint planning', time: '14:00', color: 'rgba(34, 197, 94, 0.85)' },
-      { id: '4', title: 'Code review', time: '16:30', color: 'rgba(245, 158, 11, 0.85)' },
+      { id: '1', title: 'Team standup', time: '9:00', color: 'var(--brand-primary)' },
+      { id: '2', title: 'Design review', time: '11:00', color: 'var(--color-danger)' },
+      { id: '3', title: 'Sprint planning', time: '14:00', color: 'var(--color-work)' },
+      { id: '4', title: 'Code review', time: '16:30', color: 'var(--color-warning)' },
     ],
     highlightToday: true,
   },
@@ -217,8 +230,8 @@ export const EmptyMonth: Story = {
 export const WithDoneTasks: Story = {
   args: {
     events: [
-      { id: '1', title: 'Completed task', time: '9:00', color: 'rgba(99, 102, 241, 0.85)', done: true },
-      { id: '2', title: 'Active task', time: '14:00', color: 'rgba(34, 197, 94, 0.85)', done: false },
+      { id: '1', title: 'Completed task', time: '9:00', color: 'var(--brand-primary)', done: true },
+      { id: '2', title: 'Active task', time: '14:00', color: 'var(--color-work)', done: false },
     ],
     highlightToday: true,
   },

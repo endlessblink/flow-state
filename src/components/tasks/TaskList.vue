@@ -1,15 +1,44 @@
 <template>
   <div class="task-list">
-    <!-- Column Headers (sticky at top) -->
-    <div class="column-headers">
-      <span></span>
-      <span>Task</span>
-      <span></span>
-      <span>Status</span>
-      <span>Priority</span>
-      <span>Due</span>
-      <span>Progress</span>
-      <span></span>
+    <!-- Column Headers / Bulk Actions Bar -->
+    <div class="column-headers" :class="{ 'column-headers--selection': selectionMode }">
+      <!-- Select-all checkbox always visible -->
+      <label class="select-all-checkbox">
+        <input
+          type="checkbox"
+          :checked="allSelected"
+          :indeterminate.prop="someSelected && !allSelected"
+          @change="toggleSelectAll"
+        >
+      </label>
+
+      <template v-if="selectionMode">
+        <!-- Bulk action bar when tasks selected -->
+        <div class="bulk-actions-bar">
+          <span class="selection-count">{{ selectedTaskIds.length }} selected</span>
+          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" @click="emit('batchEdit', [...selectedTaskIds])">
+            <Pencil :size="14" />
+            Edit
+          </button>
+          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" @click="emit('deleteSelected', [...selectedTaskIds])">
+            <Trash2 :size="14" />
+            Delete
+          </button>
+          <button class="bulk-action-btn bulk-action-btn--clear" title="Clear selection" @click="clearSelection">
+            <X :size="14" />
+            Clear
+          </button>
+        </div>
+      </template>
+      <template v-else>
+        <span>Task</span>
+        <span></span>
+        <span>Status</span>
+        <span>Priority</span>
+        <span>Due</span>
+        <span>Progress</span>
+        <span></span>
+      </template>
     </div>
 
     <!-- TASK-1334: Grouped rendering with sticky headers -->
@@ -40,8 +69,11 @@
           :task="task"
           :indent-level="0"
           :selected="selectedTaskIds.includes(task.id)"
+          :selection-mode="selectionMode"
+          :checked="selectedTaskIds.includes(task.id)"
           :expanded-tasks="expandedTasks"
-          @select="$emit('select', $event)"
+          @select="handleSelect"
+          @check="toggleTaskSelect"
           @toggle-complete="$emit('toggleComplete', $event)"
           @start-timer="$emit('startTimer', $event)"
           @edit="$emit('edit', $event)"
@@ -67,11 +99,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
-import { Inbox, ChevronRight } from 'lucide-vue-next'
+import { Inbox, ChevronRight, Pencil, Trash2, X } from 'lucide-vue-next'
 
 interface Props {
   tasks: Task[]
@@ -90,6 +122,8 @@ const emit = defineEmits<{
   contextMenu: [event: MouseEvent, task: Task]
   moveTask: [taskId: string, targetProjectId: string | null, targetParentId: string | null]
   updateTask: [taskId: string, updates: Partial<Task>]
+  batchEdit: [taskIds: string[]]
+  deleteSelected: [taskIds: string[]]
 }>()
 
 // Expand/collapse state
@@ -143,6 +177,72 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
   emit('moveTask', taskId, targetProjectId, targetParentId)
 }
 
+// --- Bulk Selection ---
+const selectionMode = computed(() => selectedTaskIds.value.length > 0)
+
+const allTasks = computed(() => {
+  return props.groups.flatMap(g => g.parentTasks || [])
+})
+
+const allSelected = computed(() => {
+  return allTasks.value.length > 0 && selectedTaskIds.value.length === allTasks.value.length
+})
+
+const someSelected = computed(() => {
+  return selectedTaskIds.value.length > 0 && selectedTaskIds.value.length < allTasks.value.length
+})
+
+const toggleSelectAll = () => {
+  if (allSelected.value) {
+    selectedTaskIds.value = []
+  } else {
+    selectedTaskIds.value = allTasks.value.map(t => t.id)
+  }
+}
+
+const toggleTaskSelect = (taskId: string) => {
+  const index = selectedTaskIds.value.indexOf(taskId)
+  if (index > -1) {
+    selectedTaskIds.value.splice(index, 1)
+  } else {
+    selectedTaskIds.value.push(taskId)
+  }
+}
+
+const clearSelection = () => {
+  selectedTaskIds.value = []
+}
+
+// Handle row click: if in selection mode, toggle selection; otherwise normal select
+const handleSelect = (taskId: string) => {
+  if (selectionMode.value) {
+    toggleTaskSelect(taskId)
+  } else {
+    emit('select', taskId)
+  }
+}
+
+// Keyboard shortcuts for bulk selection
+const handleKeyDown = (event: KeyboardEvent) => {
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+
+  if ((event.key === 'Delete' || event.key === 'Backspace') && selectedTaskIds.value.length > 0) {
+    event.preventDefault()
+    emit('deleteSelected', [...selectedTaskIds.value])
+  } else if (event.key === 'Escape' && selectionMode.value) {
+    clearSelection()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
+})
+
 // Initialize with all groups expanded by default
 expandedGroups.value = new Set(props.groups.map(g => g.key))
 
@@ -159,7 +259,8 @@ watch(() => props.groups, (newGroups, oldGroups) => {
 // Expose methods for parent component
 defineExpose({
   expandAll,
-  collapseAll
+  collapseAll,
+  clearSelection
 })
 </script>
 
@@ -296,5 +397,78 @@ defineExpose({
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Selection mode header layout */
+.column-headers--selection {
+  grid-template-columns: 28px 1fr;
+}
+
+.select-all-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.select-all-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.selection-count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--brand-primary);
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.bulk-action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-0_5) var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(8px);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.bulk-action-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-emphasis);
+}
+
+.bulk-action-btn--edit:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.bulk-action-btn--delete:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.bulk-action-btn--clear:hover {
+  border-color: var(--text-muted);
 }
 </style>

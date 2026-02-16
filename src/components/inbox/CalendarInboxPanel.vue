@@ -58,6 +58,7 @@ import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useCalendarInboxState } from '@/composables/inbox/useCalendarInboxState'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
 // Sub-components
 import CalendarInboxHeader from './calendar/CalendarInboxHeader.vue'
@@ -122,22 +123,28 @@ const addTaskWithDescription = (title: string, description: string) => {
   newTaskTitle.value = ''
 }
 
+const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+
 const onDragStart = (e: DragEvent, task: Task) => {
   if (!e.dataTransfer) return
 
   draggingTaskId.value = task.id
   e.dataTransfer.effectAllowed = 'move'
-  
+
   const dragData = {
     ...task,
     taskId: task.id,
     source: 'calendar-inbox'
   }
   e.dataTransfer.setData('application/json', JSON.stringify(dragData))
+
+  // Unified ghost pill — pass event for setDragImage
+  startGlobalDrag({ type: 'task', taskId: task.id, title: task.title, source: 'calendar' }, e)
 }
 
 const onDragEnd = () => {
   draggingTaskId.value = null
+  endGlobalDrag()
 }
 
 const handleTaskClick = (_event: MouseEvent, _task: Task) => {

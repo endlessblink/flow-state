@@ -4,6 +4,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useToast } from '@/composables/useToast'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import {
     findMatchingGroupForDueDate,
     calculatePositionInGroup,
@@ -18,6 +19,7 @@ export function useUnifiedInboxActions(
     const canvasStore = useCanvasStore()
     const { createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
     const { showToast } = useToast()
+    const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
     // Multi-select state (Actions)
     const selectedTaskIds = ref<Set<string>>(new Set())
@@ -182,7 +184,7 @@ export function useUnifiedInboxActions(
             ? Array.from(selectedTaskIds.value)
             : [task.id]
 
-        const dragData = {
+        const dragData: Record<string, unknown> = {
             ...task,
             taskId: task.id,
             taskIds: taskIds,
@@ -192,15 +194,19 @@ export function useUnifiedInboxActions(
         }
         e.dataTransfer.setData('application/json', JSON.stringify(dragData))
 
-            // Set global drag state
-            ; (window as WindowWithDrag).__draggingTaskId = task.id
+        // Set global drag state
+        ;(window as WindowWithDrag).__draggingTaskId = task.id
         document.documentElement.setAttribute('data-dragging-task-id', task.id)
+
+        // Unified ghost pill — pass event for setDragImage
+        startGlobalDrag({ type: 'task', taskId: task.id, title: task.title, source: 'kanban' }, e)
     }
 
     const onDragEnd = () => {
         draggingTaskId.value = null
         delete (window as WindowWithDrag).__draggingTaskId
         document.documentElement.removeAttribute('data-dragging-task-id')
+        endGlobalDrag()
     }
 
     // --- Send to Canvas ---

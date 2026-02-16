@@ -4,6 +4,8 @@
       :task="task"
       :indent-level="indentLevel"
       :selected="selected"
+      :selection-mode="selectionMode"
+      :checked="checked"
       :is-mobile="state.isMobile.value"
       :is-focused="state.isFocused.value"
       :is-hovered="state.isHovered.value"
@@ -33,6 +35,7 @@
       @touchstart="actions.handleTouchStart"
       @touchend="actions.handleTouchEnd"
       @toggle-complete="actions.handleToggleComplete"
+      @check="$emit('check', task.id)"
       @update-status="(val) => actions.updateTaskStatus(task.id, val)"
       @update-project-id="(val) => $emit('updateTask', task.id, { projectId: val ?? undefined })"
       @update-priority="(val) => $emit('updateTask', task.id, { priority: val as 'low' | 'medium' | 'high' })"
@@ -80,6 +83,8 @@ interface Props {
   task: Task
   indentLevel?: number
   selected?: boolean
+  selectionMode?: boolean
+  checked?: boolean
   expandedTasks?: Set<string>
   visitedIds?: Set<string>
 }
@@ -87,12 +92,15 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   indentLevel: 0,
   selected: false,
+  selectionMode: false,
+  checked: false,
   expandedTasks: () => new Set(),
   visitedIds: () => new Set()
 })
 
 const emit = defineEmits<{
   select: [taskId: string]
+  check: [taskId: string]
   toggleComplete: [taskId: string]
   startTimer: [taskId: string]
   edit: [taskId: string]

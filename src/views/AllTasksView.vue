@@ -34,6 +34,8 @@
           @context-menu="handleContextMenu"
           @move-task="handleMoveTask"
           @update-task="handleUpdateTask"
+          @batch-edit="handleBatchEdit"
+          @delete-selected="handleDeleteSelected"
         />
       </div>
     </template>
@@ -65,6 +67,14 @@
       @confirm="confirmDeleteTask"
       @cancel="cancelDeleteTask"
     />
+
+    <!-- Batch Edit Modal -->
+    <BatchEditModal
+      :is-open="showBatchEditModal"
+      :task-ids="batchEditTaskIds"
+      @close="showBatchEditModal = false; batchEditTaskIds = []"
+      @applied="handleBatchEditApplied"
+    />
   </div>
 </template>
 
@@ -81,7 +91,9 @@ import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
+import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
+import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
 
@@ -91,6 +103,7 @@ const { isMobile } = useMobileDetection()
 // Stores
 const taskStore = useTaskStore()
 const timerStore = useTimerStore()
+const { bulkDeleteTasksWithUndo } = useUnifiedUndoRedo()
 
 // Extract only reactive state refs, not computed properties
 // Computed properties stay on the store to maintain full reactivity chain
@@ -115,6 +128,8 @@ const contextMenuY = ref(0)
 const contextMenuTask = ref<Task | null>(null)
 const showConfirmModal = ref(false)
 const taskToDelete = ref<string | null>(null)
+const showBatchEditModal = ref(false)
+const batchEditTaskIds = ref<string[]>([])
 
 // Computed Tasks - Access store's computed directly (maintains full reactivity)
 const filteredTasks = computed(() => {
@@ -418,6 +433,26 @@ const handleMoveTask = async (taskId: string, targetProjectId: string | null, ta
     projectId: targetProjectId || undefined,
     parentTaskId: targetParentId || undefined
   })
+}
+
+// --- Bulk Selection Handlers ---
+const handleBatchEdit = (taskIds: string[]) => {
+  batchEditTaskIds.value = taskIds
+  showBatchEditModal.value = true
+}
+
+const handleBatchEditApplied = () => {
+  showBatchEditModal.value = false
+  batchEditTaskIds.value = []
+  taskListRef.value?.clearSelection()
+}
+
+const handleDeleteSelected = async (taskIds: string[]) => {
+  const count = taskIds.length
+  if (confirm(`Delete ${count} selected task${count !== 1 ? 's' : ''}? You can press Ctrl+Z to undo.`)) {
+    await bulkDeleteTasksWithUndo(taskIds)
+    taskListRef.value?.clearSelection()
+  }
 }
 
 // Debug function to test toggle functionality

@@ -35,9 +35,19 @@
     @touchstart="$emit('touchstart', $event)"
     @touchend="$emit('touchend', $event)"
   >
-    <!-- Done Toggle (Checkbox column) -->
+    <!-- Done Toggle / Selection Checkbox column -->
     <div class="task-row__done-toggle" @click.stop>
+      <!-- Selection mode: show checkbox -->
+      <label v-if="selectionMode" class="task-row__select-checkbox">
+        <input
+          type="checkbox"
+          :checked="checked"
+          @change="$emit('check')"
+        >
+      </label>
+      <!-- Normal mode: done toggle -->
       <DoneToggle
+        v-else
         :completed="task.status === 'done'"
         size="sm"
         variant="simple"
@@ -125,6 +135,8 @@ interface Props {
   task: Task
   indentLevel: number
   selected: boolean
+  selectionMode?: boolean
+  checked?: boolean
   isMobile: boolean
   isFocused: boolean
   isHovered: boolean
@@ -141,7 +153,10 @@ interface Props {
   statusOptions: Array<{ label: string, value: string }>
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  selectionMode: false,
+  checked: false
+})
 
 defineEmits<{
   dragstart: [event: DragEvent]
@@ -159,6 +174,7 @@ defineEmits<{
   touchstart: [event: TouchEvent]
   touchend: [event: TouchEvent]
   toggleComplete: []
+  check: []
   updateStatus: [val: string]
   updateProjectId: [val: string | null]
   updatePriority: [val: string]

@@ -8,6 +8,14 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1340: Calendar view gets stuck when dragging task to main inbox (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+
+**Problem**: Dragging a task from the calendar week view toward the sidebar/inbox causes the calendar to get stuck — the drag ghost remains visible and the view becomes unresponsive. The task appears frozen mid-drag with no way to cancel.
+
+---
+
 ### BUG-1339: All views load blank on first load, require refresh to show tasks (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS
@@ -3298,6 +3306,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1326** | **P2** | **🔄 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
 | **FEATURE-1317** | **P3** | **🔄 AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
+| ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
 | **TASK-1339** | **P0** | **📋 Tasks must persist over refresh in guest mode** |
 | ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
 | **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |

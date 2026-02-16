@@ -600,6 +600,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     // Clean up unified drag ghost + body class
     endGlobalDrag()
 
+    // BUG-1340: MUST reset ghost visibility on dragEnd, not just on successful drop.
+    // Without this, dragging outside the calendar (e.g. toward sidebar) leaves the
+    // ghost visible permanently because drop never fires.
+    dragGhost.value.visible = false
+
     // Clean up drag state to prevent stuck states
     if (isDragging.value) {
 

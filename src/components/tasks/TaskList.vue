@@ -31,12 +31,13 @@
         </div>
       </template>
       <template v-else>
-        <span>Task</span>
+        <span>Task <span class="task-total-count">{{ tasks.length }}</span></span>
         <span></span>
         <span>Status</span>
         <span>Priority</span>
         <span>Due</span>
         <span>Progress</span>
+        <span>Est.</span>
         <span></span>
       </template>
     </div>
@@ -47,9 +48,21 @@
       <div
         v-if="groupBy !== 'none'"
         class="group-header"
+        :class="{ 'group-header--drop-target': dropTargetGroup === group.key }"
         :style="(group.indent || 0) > 0 ? { paddingLeft: `${12 + (group.indent || 0) * 24}px` } : undefined"
         @click="toggleGroupExpand(group.key)"
+        @dragover.prevent="handleGroupDragOver($event, group)"
+        @dragleave="handleGroupDragLeave"
+        @drop.prevent="handleGroupDrop($event, group)"
       >
+        <label class="group-select-checkbox" @click.stop>
+          <input
+            type="checkbox"
+            :checked="isGroupAllSelected(group)"
+            :indeterminate.prop="isGroupPartiallySelected(group)"
+            @change="toggleGroupSelect(group)"
+          >
+        </label>
         <ChevronRight
           :size="16"
           class="group-expand-icon"
@@ -103,6 +116,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { Inbox, ChevronRight, Pencil, Trash2, X } from 'lucide-vue-next'
 
 interface Props {
@@ -177,6 +191,45 @@ const handleMoveTask = (taskId: string, targetProjectId: string | null, targetPa
   emit('moveTask', taskId, targetProjectId, targetParentId)
 }
 
+// --- Drag to Group Header ---
+const { endDrag } = useDragAndDrop()
+const dropTargetGroup = ref<string | null>(null)
+
+const handleGroupDragOver = (event: DragEvent, group: TaskGroup) => {
+  event.dataTransfer!.dropEffect = 'move'
+  dropTargetGroup.value = group.key
+}
+
+const handleGroupDragLeave = () => {
+  dropTargetGroup.value = null
+}
+
+const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
+  dropTargetGroup.value = null
+  const raw = event.dataTransfer?.getData('application/json')
+  if (!raw) return
+  let taskId: string
+  try {
+    const data = JSON.parse(raw)
+    taskId = data.taskId
+  } catch { return }
+  if (!taskId) return
+
+  // Determine what property to update based on groupBy
+  if (props.groupBy === 'project' && group.key) {
+    const projectId = group.key === '__no_project__' ? null : group.key
+    emit('moveTask', taskId, projectId, null)
+  } else if (props.groupBy === 'status' && group.key) {
+    emit('updateTask', taskId, { status: group.key as any })
+  } else if (props.groupBy === 'priority' && group.key) {
+    emit('updateTask', taskId, { priority: group.key as any })
+  }
+
+  // Clean up drag ghost — the original task row may be destroyed by Vue re-render
+  // before dragend fires, so we must clean up here
+  endDrag()
+}
+
 // --- Bulk Selection ---
 const selectionMode = computed(() => selectedTaskIds.value.length > 0)
 
@@ -211,6 +264,30 @@ const toggleTaskSelect = (taskId: string) => {
 
 const clearSelection = () => {
   selectedTaskIds.value = []
+}
+
+// Group-level selection
+const isGroupAllSelected = (group: TaskGroup) => {
+  const ids = (group.parentTasks || []).map(t => t.id)
+  return ids.length > 0 && ids.every(id => selectedTaskIds.value.includes(id))
+}
+
+const isGroupPartiallySelected = (group: TaskGroup) => {
+  const ids = (group.parentTasks || []).map(t => t.id)
+  const selectedCount = ids.filter(id => selectedTaskIds.value.includes(id)).length
+  return selectedCount > 0 && selectedCount < ids.length
+}
+
+const toggleGroupSelect = (group: TaskGroup) => {
+  const ids = (group.parentTasks || []).map(t => t.id)
+  if (isGroupAllSelected(group)) {
+    // Deselect all in this group
+    selectedTaskIds.value = selectedTaskIds.value.filter(id => !ids.includes(id))
+  } else {
+    // Select all in this group
+    const newIds = ids.filter(id => !selectedTaskIds.value.includes(id))
+    selectedTaskIds.value.push(...newIds)
+  }
 }
 
 // Handle row click: if in selection mode, toggle selection; otherwise normal select
@@ -317,6 +394,12 @@ defineExpose({
   background-color: var(--surface-hover);
 }
 
+.group-header--drop-target {
+  background-color: rgba(78, 205, 196, 0.1);
+  border-bottom-color: var(--brand-primary);
+  box-shadow: inset 0 0 0 1px var(--brand-primary);
+}
+
 .group-expand-icon {
   color: var(--text-tertiary);
   transition: transform var(--duration-fast) ease;
@@ -342,6 +425,21 @@ defineExpose({
   border-radius: var(--radius-full);
   min-width: 20px;
   text-align: center;
+}
+
+.group-select-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.group-select-checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
 }
 
 .group-color-dot {
@@ -381,7 +479,7 @@ defineExpose({
 /* Column Headers */
 .column-headers {
   display: grid;
-  grid-template-columns: 28px 1fr 40px 120px 72px 96px 72px 112px;
+  grid-template-columns: 52px 1fr 40px 120px 72px 96px 72px 72px 112px;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-1) var(--space-2);
@@ -416,6 +514,18 @@ defineExpose({
   height: 16px;
   accent-color: var(--brand-primary);
   cursor: pointer;
+}
+
+.task-total-count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  margin-left: var(--space-1);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .bulk-actions-bar {

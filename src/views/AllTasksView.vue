@@ -173,6 +173,12 @@ const sortedTasks = computed(() => {
 })
 
 // TASK-1334: Group tasks by selected criteria
+// Helper: get "root" tasks for a group — tasks with no parent, or whose parent is NOT in this group
+const getRootTasks = (groupTasks: Task[]) => {
+  const groupIds = new Set(groupTasks.map(t => t.id))
+  return groupTasks.filter(t => !t.parentTaskId || !groupIds.has(t.parentTaskId))
+}
+
 const groupedTasks = computed((): TaskGroup[] => {
   const tasks = sortedTasks.value
   const groups: TaskGroup[] = []
@@ -207,7 +213,7 @@ const groupedTasks = computed((): TaskGroup[] => {
           emoji: project.emoji,
           color: project.color,
           tasks: projectTasks,
-          parentTasks: projectTasks.filter(t => !t.parentTaskId),
+          parentTasks: getRootTasks(projectTasks),
           indent
         })
       }
@@ -232,7 +238,7 @@ const groupedTasks = computed((): TaskGroup[] => {
         key: 'uncategorized',
         title: 'Uncategorized',
         tasks: uncategorized,
-        parentTasks: uncategorized.filter(t => !t.parentTaskId)
+        parentTasks: getRootTasks(uncategorized)
       })
     }
   } else if (groupBy.value === 'status') {
@@ -257,7 +263,7 @@ const groupedTasks = computed((): TaskGroup[] => {
           key,
           title: statusLabels[key] || key,
           tasks: statusTasks,
-          parentTasks: statusTasks.filter(t => !t.parentTaskId)
+          parentTasks: getRootTasks(statusTasks)
         })
       }
     })
@@ -282,7 +288,7 @@ const groupedTasks = computed((): TaskGroup[] => {
           key,
           title: priorityLabels[key],
           tasks: priorityTasks,
-          parentTasks: priorityTasks.filter(t => !t.parentTaskId)
+          parentTasks: getRootTasks(priorityTasks)
         })
       }
     })
@@ -333,7 +339,7 @@ const groupedTasks = computed((): TaskGroup[] => {
           key,
           title,
           tasks: bucketTasks,
-          parentTasks: bucketTasks.filter(t => !t.parentTaskId)
+          parentTasks: getRootTasks(bucketTasks)
         })
       }
     })

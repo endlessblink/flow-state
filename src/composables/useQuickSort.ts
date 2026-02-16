@@ -303,6 +303,15 @@ export function useQuickSort() {
     }
   })
 
+  // Watch for tasks loading after session start (race condition: tasks load async from DB)
+  // If session is active but no task is selected yet, pick the first available task
+  watch(uncategorizedTasks, (tasks) => {
+    if (!currentTaskId.value && tasks.length > 0 && quickSortStore.isActive) {
+      currentTaskId.value = tasks[0].id
+      snapshotCurrentTask()
+    }
+  })
+
   // Cleanup
   onUnmounted(() => {
     // Save any pending session data if active

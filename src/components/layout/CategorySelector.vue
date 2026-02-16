@@ -215,6 +215,7 @@ onUnmounted(() => {
   margin-bottom: var(--space-5);
   max-height: 280px;
   overflow-y: auto;
+  padding: 15px;
 }
 
 .category-button {

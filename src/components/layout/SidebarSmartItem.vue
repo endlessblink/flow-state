@@ -394,8 +394,4 @@ const calculateTargetDate = (): string => {
   }
 }
 
-:global(body.dragging-active) .sidebar-smart-item:not(.is-drag-target) {
-  opacity: 0.7;
-  transition: opacity var(--duration-fast);
-}
 </style>

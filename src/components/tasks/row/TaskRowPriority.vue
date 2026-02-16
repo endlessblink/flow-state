@@ -1,12 +1,13 @@
 <template>
-  <div class="task-row__priority" @click.stop>
+  <div ref="triggerWrapperRef" class="task-row__priority" @click.stop>
     <span
-      v-if="priority"
+      ref="triggerRef"
       class="task-row__priority-badge task-row__priority-badge--clickable"
       :class="{
         'task-row__priority-badge--high': priority === 'high',
         'task-row__priority-badge--medium': priority === 'medium',
-        'task-row__priority-badge--low': priority === 'low'
+        'task-row__priority-badge--low': priority === 'low',
+        'task-row__priority-badge--none': !priority
       }"
       title="Click to change priority"
       @click="toggleDropdown"
@@ -14,36 +15,31 @@
       {{ formattedPriority }}
     </span>
 
-    <!-- Priority Selector Dropdown -->
-    <Transition name="dropdown-slide">
-      <div v-if="isOpen" class="priority-dropdown">
-        <button
-          v-for="option in priorityOptions"
-          :key="option.value"
-          class="priority-dropdown__item"
-          :class="[
-            `priority-dropdown__item--${option.value}`,
-            { 'is-active': priority === option.value }
-          ]"
-          @click="selectPriority(option.value)"
-        >
-          <span class="priority-dropdown__label">{{ option.label }}</span>
-          <Check v-if="priority === option.value" :size="14" class="priority-dropdown__check" />
-        </button>
-      </div>
-    </Transition>
-
-    <!-- Click outside overlay -->
-    <div
-      v-if="isOpen"
-      class="priority-dropdown__overlay"
-      @click="closeDropdown"
-    />
+    <!-- Priority Selector Dropdown (teleported to body to avoid overflow clipping) -->
+    <Teleport to="body">
+      <Transition name="dropdown-slide">
+        <div v-if="isOpen" ref="dropdownRef" class="priority-dropdown" :style="dropdownStyle">
+          <button
+            v-for="option in priorityOptions"
+            :key="option.value ?? 'none'"
+            class="priority-dropdown__item"
+            :class="[
+              `priority-dropdown__item--${option.value ?? 'none'}`,
+              { 'is-active': isOptionActive(option.value) }
+            ]"
+            @click="selectPriority(option.value)"
+          >
+            <span class="priority-dropdown__label">{{ option.label }}</span>
+            <Check v-if="isOptionActive(option.value)" :size="14" class="priority-dropdown__check" />
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { Check } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -55,49 +51,106 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
+const triggerWrapperRef = ref<HTMLElement>()
+const triggerRef = ref<HTMLElement>()
+const dropdownRef = ref<HTMLElement>()
 
-const priorityOptions = [
+// Fixed positioning for teleported dropdown
+const dropdownStyle = ref<Record<string, string>>({
+  position: 'fixed',
+  top: '0px',
+  left: '0px'
+})
+
+const calculateDropdownPosition = () => {
+  if (!triggerRef.value) return
+  const rect = triggerRef.value.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+  const dropdownHeight = 4 * 36 + 16 // 4 options * ~36px + padding
+  const spaceBelow = viewportHeight - rect.bottom
+  const positionAbove = spaceBelow < dropdownHeight && rect.top > spaceBelow
+
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: positionAbove ? `${rect.top - dropdownHeight - 4}px` : `${rect.bottom + 4}px`,
+    left: `${rect.left + rect.width / 2}px`,
+    transform: 'translateX(-50%)'
+  }
+}
+
+const priorityOptions: Array<{ label: string; value: string | null }> = [
   { label: 'High', value: 'high' },
   { label: 'Medium', value: 'medium' },
-  { label: 'Low', value: 'low' }
+  { label: 'Low', value: 'low' },
+  { label: 'None', value: null }
 ]
 
 const formattedPriority = computed(() => {
+  if (!props.priority) return 'None'
   const map: Record<string, string> = {
     'low': 'Low',
     'medium': 'Med',
     'high': 'High',
     'urgent': 'Urgent'
   }
-  return map[props.priority || 'medium'] || props.priority
+  return map[props.priority] || props.priority
 })
 
-const toggleDropdown = () => {
+const isOptionActive = (value: string | null): boolean => {
+  if (value === null && !props.priority) return true
+  if (!props.priority || !value) return false
+  return props.priority === value
+}
+
+const toggleDropdown = async () => {
   isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    await nextTick()
+    calculateDropdownPosition()
+  }
 }
 
 const closeDropdown = () => {
   isOpen.value = false
 }
 
-const selectPriority = (value: string) => {
-  emit('update:priority', value)
+const selectPriority = (value: string | null) => {
+  emit('update:priority', value as string)
   closeDropdown()
 }
 
-// Handle escape key to close dropdown
-const handleEscapeKey = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
+// Click outside to close (check both trigger and teleported dropdown)
+const handleClickOutside = (event: MouseEvent) => {
+  if (!isOpen.value) return
+  const target = event.target as Node
+  const isInsideTrigger = triggerWrapperRef.value?.contains(target)
+  const isInsideDropdown = dropdownRef.value?.contains(target)
+  if (!isInsideTrigger && !isInsideDropdown) {
     closeDropdown()
   }
 }
 
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') closeDropdown()
+}
+
+const handleScroll = (event: Event) => {
+  if (!isOpen.value) return
+  const target = event.target as HTMLElement
+  if (dropdownRef.value && (target === dropdownRef.value || dropdownRef.value.contains(target))) return
+  closeDropdown()
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleEscapeKey)
+  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleScroll, true)
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscapeKey)
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleScroll, true)
 })
 </script>
 
@@ -145,9 +198,9 @@ onUnmounted(() => {
 
 /* ADHD-friendly: Medium priority is visually subdued - not every task needs attention */
 .task-row__priority-badge--medium {
-  color: var(--text-muted); /* Muted text instead of orange */
-  background-color: transparent; /* No background - reduces visual noise */
-  border-color: var(--border-subtle); /* Subtle border only */
+  color: var(--text-muted);
+  background-color: transparent;
+  border-color: var(--border-subtle);
 }
 
 .task-row__priority-badge--low {
@@ -156,28 +209,32 @@ onUnmounted(() => {
   border-color: var(--priority-low-border);
 }
 
-/* Priority Selector Dropdown - Dark glass morphism */
+/* None priority - subtle empty state */
+.task-row__priority-badge--none {
+  color: var(--glass-border);
+  background-color: transparent;
+  border-color: var(--border-subtle);
+  border-style: dashed;
+}
+</style>
+
+<style>
+/* Priority Dropdown - Dark glass morphism (teleported to body, NOT scoped) */
 .priority-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
   z-index: var(--z-tooltip);
-
-  /* Glass morphism - dark purple-tinted with solid fallback */
-  background-color: var(--overlay-component-bg) !important;
-  background: var(--overlay-component-bg) !important;
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
-  border: var(--overlay-component-border) !important;
-  box-shadow: var(--overlay-component-shadow);
+  background-color: hsl(var(--slate-900)) !important;
+  background: rgba(28, 25, 45, 0.95) !important;
+  backdrop-filter: blur(var(--space-4));
+  -webkit-backdrop-filter: blur(var(--space-4));
+  border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.1) !important;
+  box-shadow:
+    0 var(--space-2) var(--space-8) rgba(var(--color-slate-900), 0.4),
+    0 0 0 var(--space-0_5) rgba(var(--color-slate-50), 0.05) inset;
   border-radius: var(--radius-md);
-
-  min-width: 100px;
-  max-height: 200px;
+  min-width: var(--space-25);
+  max-height: var(--space-50);
   overflow-y: auto;
   padding: var(--space-1);
-
   isolation: isolate;
 }
 
@@ -191,7 +248,7 @@ onUnmounted(() => {
   border: none !important;
   background: none !important;
   background-color: transparent !important;
-  color: var(--text-primary) !important;
+  color: rgba(var(--color-slate-50), 0.9) !important;
   font-size: var(--text-xs);
   font-weight: 500;
   text-transform: uppercase;
@@ -202,12 +259,12 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   user-select: none;
   white-space: nowrap;
-  min-height: 28px;
+  min-height: var(--space-7);
 }
 
 .priority-dropdown__item:hover {
-  background: var(--glass-bg-heavy) !important;
-  background-color: var(--glass-bg-heavy) !important;
+  background: rgba(var(--color-slate-50), 0.08) !important;
+  background-color: rgba(var(--color-slate-50), 0.08) !important;
 }
 
 .priority-dropdown__item.is-active {
@@ -238,6 +295,10 @@ onUnmounted(() => {
   background: var(--priority-low-bg) !important;
 }
 
+.priority-dropdown__item--none {
+  color: var(--text-muted) !important;
+}
+
 .priority-dropdown__label {
   flex: 1;
 }
@@ -247,25 +308,14 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-.priority-dropdown__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-dropdown);
-}
-
 /* Dropdown transitions */
 .dropdown-slide-enter-active,
 .dropdown-slide-leave-active {
-  transition: all var(--duration-fast) ease;
+  transition: opacity var(--duration-fast) ease;
 }
 
-.dropdown-slide-enter-from {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
-}
-
+.dropdown-slide-enter-from,
 .dropdown-slide-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
 }
 </style>

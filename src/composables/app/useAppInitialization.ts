@@ -49,7 +49,7 @@ export function useAppInitialization() {
         await authStore.initialize()
 
         if (!authStore.isAuthenticated) {
-            // Guest mode: clear all persisted data for fresh experience
+            // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
             clearGuestData()
         } else {
             // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
@@ -67,6 +67,7 @@ export function useAppInitialization() {
         uiStore.loadState()
 
         // TASK-1060: Add retry wrapper for initial load to handle transient auth failures
+        // BUG-1339: Now actually works — loadFromDatabase() propagates errors instead of swallowing them
         const loadWithRetry = async (maxRetries = 3, delayMs = 1000) => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
@@ -79,8 +80,12 @@ export function useAppInitialization() {
                 } catch (error) {
                     console.warn(`⚠️ [TASK-1060] Database load attempt ${attempt}/${maxRetries} failed:`, error)
                     if (attempt === maxRetries) {
-                        throw error // Re-throw on final attempt
+                        // BUG-1339: Don't throw — log clearly so user knows to refresh
+                        console.error('❌ [APP-INIT] All database load attempts failed. Tasks may not be visible. Try refreshing the page.')
+                        return // Graceful degradation instead of unhandled rejection
                     }
+                    // BUG-1339: Clear SWR cache between retries so we get fresh fetch, not cached error
+                    invalidateCache.all()
                     // Exponential backoff
                     await new Promise(resolve => setTimeout(resolve, delayMs * attempt))
                 }

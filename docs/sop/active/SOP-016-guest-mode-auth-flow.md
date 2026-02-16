@@ -1,47 +1,46 @@
 # SOP-016: Guest Mode & Auth Flow
 
 > **Status**: Active
-> **Last Updated**: 2026-01-21
-> **Related Tasks**: TASK-349, BUG-339
+> **Last Updated**: 2026-02-16
+> **Related Tasks**: TASK-349, BUG-339, TASK-1339
 
 ## Overview
 
 FlowState supports two modes of operation:
-1. **Guest Mode** - Ephemeral, localStorage-only data (cleared on restart)
+1. **Guest Mode** - localStorage-backed data (tasks, groups, filters persist across refreshes)
 2. **Authenticated Mode** - Persistent data stored in Supabase
 
 This SOP documents the data flow between these modes and common pitfalls.
 
 ## Guest Mode Behavior
 
-### Ephemeral by Design
+### Persistent Guest Data (TASK-1339)
 
-Guest mode is intentionally ephemeral:
-- All guest data is cleared on app startup
-- Tasks created in guest mode do NOT persist across page refreshes
-- Users must sign in to persist their work
+Guest tasks, groups, filters, and UI state persist across page refreshes via localStorage:
+- Tasks created in guest mode survive refresh (stored in `flowstate-guest-tasks`)
+- Canvas groups persist (`flowstate-guest-groups`)
+- Filters and view state persist (`flowstate-filters`, `flowstate-ui-state`)
+- Quick Sort history persists
+- Users can sign in to migrate guest data to Supabase for cross-device sync
 
-### Ephemeral Keys (cleared on startup)
+### Transient Keys (cleared on startup)
 
-Located in `src/utils/guestModeStorage.ts`:
+Only non-essential keys are cleared on guest startup. Located in `src/utils/guestModeStorage.ts`:
 
 ```typescript
 const GUEST_EPHEMERAL_KEYS = [
-  // Tasks (ephemeral in guest mode - sign in to persist)
-  'flowstate-guest-tasks',
-
-  // Canvas
-  'flowstate-guest-groups',
-  'canvas-viewport',
-  // ... other keys
+  // Canvas transient state (locks expire, viewport recalculated)
+  'flowstate-canvas-has-initial-fit',
+  'flowstate-canvas-locks',
+  // Backups, emojis, offline queue, etc.
 ]
 ```
 
-### Why Ephemeral?
+### Why Persist?
 
-1. **Clear expectations** - Users know guest mode is temporary
-2. **Privacy** - No data left on shared computers
-3. **Simplicity** - Avoids complex merge conflicts between guest and user data
+1. **Usability** - Guests can explore the app across multiple sessions without losing work
+2. **Conversion** - Users who invest time in guest mode are more likely to sign up
+3. **Sign-in migration** - Guest data seamlessly migrates to Supabase on sign-in
 
 ## Auth Flow
 
@@ -151,7 +150,7 @@ const signOut = async () => {
 
 Before releasing auth changes:
 
-- [ ] Guest mode: Create task → refresh page → tasks should be gone
+- [ ] Guest mode: Create task → refresh page → tasks should still be there
 - [ ] Guest mode: Create task → sign in (email/password) → tasks migrated
 - [ ] Sign out: User tasks should not be visible
 - [ ] Sign in: User tasks should load immediately (no refresh needed)

@@ -827,7 +827,8 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 }, 'fetchTasks')
             } catch (e: unknown) {
                 handleError(e, 'fetchTasks')
-                return []
+                // BUG-1339: Re-throw so callers can retry instead of silently returning empty
+                throw e
             }
         })
     }

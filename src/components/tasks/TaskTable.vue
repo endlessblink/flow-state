@@ -179,117 +179,138 @@
       </div>
     </template>
 
-    <!-- Standard rendering for small lists (<50 items) -->
+    <!-- Standard rendering (with grouping support) -->
     <template v-else>
       <div class="table-body">
-        <div
-          v-for="task in tasks"
-          :key="task.id"
-          class="table-row"
-          :class="{
-            'row-selected': selectedTasks.includes(task.id),
-            'is-dragging': draggingTaskId === task.id,
-            [`priority-${task.priority || 'none'}`]: true
-          }"
-          :data-status="task.status"
-          draggable="true"
-          @dragstart="handleTableRowDragStart($event, task)"
-          @dragend="handleTableRowDragEnd"
-          @click="$emit('select', task.id)"
-          @contextmenu.prevent="$emit('contextMenu', $event, task)"
-        >
-          <!-- Priority Indicator -->
-          <div v-if="task.priority" class="priority-indicator" />
-          <div class="table-cell checkbox-cell" @click.stop>
-            <input
-              type="checkbox"
-              :checked="selectedTasks.includes(task.id)"
-              @change="toggleTaskSelect(task.id)"
-            >
-          </div>
-
-          <div class="table-cell title-cell">
-            <input
-              v-if="editingTaskId === task.id && editingField === 'title'"
-              type="text"
-              :value="task.title"
-              class="inline-edit"
-              autofocus
-              @blur="saveEdit(task.id, 'title', $event)"
-              @keydown.enter="saveEdit(task.id, 'title', $event)"
-              @keydown.esc="cancelEdit"
-            >
-            <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
-              {{ task.title }}
-            </span>
-          </div>
-
-          <div class="table-cell project-cell">
-            <span
-              v-if="task.projectId"
-              class="project-emoji-badge"
-              :class="`project-visual--${getProjectVisual(task).type}`"
-              :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-            >
-              <ProjectEmojiIcon
-                v-if="getProjectVisual(task).type === 'emoji'"
-                :emoji="getProjectVisual(task).content"
-                size="xs"
-                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-                class="project-emoji"
-              />
-              <span
-                v-else-if="getProjectVisual(task).type === 'css-circle'"
-                class="project-emoji project-css-circle"
-                :style="{ '--project-color': getProjectVisual(task).color }"
-                :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
-              />
-            </span>
-          </div>
-
-          <div class="table-cell status-cell" @click.stop>
-            <CustomSelect
-              :model-value="task.status || 'planned'"
-              :options="statusOptions"
-              placeholder="Select status..."
-              @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
+        <template v-for="group in groups" :key="group.key">
+          <!-- TASK-1334: Group Header Row -->
+          <div
+            v-if="groupBy !== 'none'"
+            class="table-group-header"
+            @click="toggleTableGroupExpand(group.key)"
+          >
+            <ChevronRight
+              :size="16"
+              class="table-group-expand-icon"
+              :class="{ 'table-group-expand-icon--expanded': expandedTableGroups.has(group.key) }"
             />
+            <ProjectEmojiIcon v-if="group.emoji" :emoji="group.emoji" size="xs" />
+            <span class="table-group-name">{{ group.title }}</span>
+            <span class="table-group-count">{{ group.tasks.length }}</span>
           </div>
 
-          <div class="table-cell due-date-cell">
-            <span v-if="task.dueDate" class="due-date">
-              <Calendar :size="14" />
-              {{ formatDueDate(task.dueDate) }}
-            </span>
-            <span v-else class="no-date">-</span>
-          </div>
+          <!-- Task Rows (grouped or flat) -->
+          <template v-if="groupBy === 'none' || expandedTableGroups.has(group.key)">
+            <div
+              v-for="task in (groupBy === 'none' ? tasks : group.tasks)"
+              :key="task.id"
+              class="table-row"
+              :class="{
+                'row-selected': selectedTasks.includes(task.id),
+                'is-dragging': draggingTaskId === task.id,
+                [`priority-${task.priority || 'none'}`]: true
+              }"
+              :data-status="task.status"
+              draggable="true"
+              @dragstart="handleTableRowDragStart($event, task)"
+              @dragend="handleTableRowDragEnd"
+              @click="$emit('select', task.id)"
+              @contextmenu.prevent="$emit('contextMenu', $event, task)"
+            >
+              <!-- Priority Indicator -->
+              <div v-if="task.priority" class="priority-indicator" />
+              <div class="table-cell checkbox-cell" @click.stop>
+                <input
+                  type="checkbox"
+                  :checked="selectedTasks.includes(task.id)"
+                  @change="toggleTaskSelect(task.id)"
+                >
+              </div>
 
-          <div class="table-cell progress-cell">
-            <div v-if="task.progress > 0" class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
-              <div class="progress-bg" />
-              <div class="progress-fill" />
-              <span class="progress-text">{{ task.progress }}%</span>
+              <div class="table-cell title-cell">
+                <input
+                  v-if="editingTaskId === task.id && editingField === 'title'"
+                  type="text"
+                  :value="task.title"
+                  class="inline-edit"
+                  autofocus
+                  @blur="saveEdit(task.id, 'title', $event)"
+                  @keydown.enter="saveEdit(task.id, 'title', $event)"
+                  @keydown.esc="cancelEdit"
+                >
+                <span v-else :class="getTextAlignmentClasses(task.title)" @dblclick="startEdit(task.id, 'title')">
+                  {{ task.title }}
+                </span>
+              </div>
+
+              <div class="table-cell project-cell">
+                <span
+                  v-if="task.projectId"
+                  class="project-emoji-badge"
+                  :class="`project-visual--${getProjectVisual(task).type}`"
+                  :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                >
+                  <ProjectEmojiIcon
+                    v-if="getProjectVisual(task).type === 'emoji'"
+                    :emoji="getProjectVisual(task).content"
+                    size="xs"
+                    :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                    class="project-emoji"
+                  />
+                  <span
+                    v-else-if="getProjectVisual(task).type === 'css-circle'"
+                    class="project-emoji project-css-circle"
+                    :style="{ '--project-color': getProjectVisual(task).color }"
+                    :title="`Project: ${taskStore.getProjectDisplayName(task.projectId)}`"
+                  />
+                </span>
+              </div>
+
+              <div class="table-cell status-cell" @click.stop>
+                <CustomSelect
+                  :model-value="task.status || 'planned'"
+                  :options="statusOptions"
+                  placeholder="Select status..."
+                  @update:model-value="(val) => updateTaskStatus(task.id, String(val) as Task['status'])"
+                />
+              </div>
+
+              <div class="table-cell due-date-cell">
+                <span v-if="task.dueDate" class="due-date">
+                  <Calendar :size="14" />
+                  {{ formatDueDate(task.dueDate) }}
+                </span>
+                <span v-else class="no-date">-</span>
+              </div>
+
+              <div class="table-cell progress-cell">
+                <div v-if="task.progress > 0" class="progress-bar" :style="{ '--progress': `${task.progress}%` }">
+                  <div class="progress-bg" />
+                  <div class="progress-fill" />
+                  <span class="progress-text">{{ task.progress }}%</span>
+                </div>
+                <span v-else class="no-progress">-</span>
+              </div>
+
+              <div class="table-cell actions-cell">
+                <button
+                  class="action-btn"
+                  title="Start Timer"
+                  @click.stop="$emit('startTimer', task.id)"
+                >
+                  <Play :size="14" />
+                </button>
+                <button
+                  class="action-btn"
+                  title="Edit Task"
+                  @click.stop="$emit('edit', task.id)"
+                >
+                  <Edit :size="14" />
+                </button>
+              </div>
             </div>
-            <span v-else class="no-progress">-</span>
-          </div>
-
-          <div class="table-cell actions-cell">
-            <button
-              class="action-btn"
-              title="Start Timer"
-              @click.stop="$emit('startTimer', task.id)"
-            >
-              <Play :size="14" />
-            </button>
-            <button
-              class="action-btn"
-              title="Edit Task"
-              @click.stop="$emit('edit', task.id)"
-            >
-              <Edit :size="14" />
-            </button>
-          </div>
-        </div>
+          </template>
+        </template>
       </div>
     </template>
 
@@ -304,11 +325,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useVirtualList } from '@vueuse/core'
-import type { Task } from '@/stores/tasks'
+import type { Task, TaskGroup } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import { Play, Edit, Calendar, Inbox, Trash2, X } from 'lucide-vue-next'
+import { Play, Edit, Calendar, Inbox, Trash2, X, ChevronRight } from 'lucide-vue-next'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { DensityType } from '@/components/layout/ViewControls.vue'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
@@ -335,6 +356,8 @@ const ROW_HEIGHTS: Record<DensityType, number> = {
 
 interface Props {
   tasks: Task[]
+  groups: TaskGroup[]
+  groupBy: string
   density: DensityType
 }
 
@@ -405,8 +428,19 @@ const virtualContainerRef = ref<HTMLElement | null>(null)
 // Row height based on density
 const rowHeight = computed(() => ROW_HEIGHTS[props.density])
 
-// Determine if we should use virtual scrolling
-const useVirtual = computed(() => props.tasks.length >= VIRTUAL_THRESHOLD)
+// TASK-1334: Group expand/collapse state
+const expandedTableGroups = ref<Set<string>>(new Set(props.groups.map(g => g.key)))
+
+const toggleTableGroupExpand = (groupKey: string) => {
+  if (expandedTableGroups.value.has(groupKey)) {
+    expandedTableGroups.value.delete(groupKey)
+  } else {
+    expandedTableGroups.value.add(groupKey)
+  }
+}
+
+// Determine if we should use virtual scrolling (disable when grouping is active)
+const useVirtual = computed(() => props.groupBy === 'none' && props.tasks.length >= VIRTUAL_THRESHOLD)
 
 // Use VueUse's useVirtualList for efficient rendering
 const { list: virtualList } = useVirtualList(
@@ -524,6 +558,16 @@ const handleKeyDown = (event: KeyboardEvent) => {
     clearSelection()
   }
 }
+
+// TASK-1334: Auto-expand new groups
+watch(() => props.groups, (newGroups, oldGroups) => {
+  const oldKeys = new Set(oldGroups?.map(g => g.key) || [])
+  newGroups.forEach(group => {
+    if (!oldKeys.has(group.key)) {
+      expandedTableGroups.value.add(group.key)
+    }
+  })
+}, { deep: true })
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeyDown)
@@ -996,5 +1040,53 @@ onUnmounted(() => {
 .no-progress {
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+}
+
+/* TASK-1334: Table Group Header */
+.table-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--glass-bg-heavy);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) ease;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.table-group-header:hover {
+  background-color: var(--surface-hover);
+}
+
+.table-group-expand-icon {
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) ease;
+  flex-shrink: 0;
+}
+
+.table-group-expand-icon--expanded {
+  transform: rotate(90deg);
+}
+
+.table-group-name {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.table-group-count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  padding: 0 var(--space-1_5);
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
 }
 </style>

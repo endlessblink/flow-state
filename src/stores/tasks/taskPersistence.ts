@@ -391,6 +391,9 @@ export function useTaskPersistence(
 
         } catch (error) {
             console.error('❌ [SUPABASE] Load failed:', error)
+            // BUG-1339: Re-throw so loadWithRetry in useAppInitialization can actually retry.
+            // Previously this swallowed the error, making the retry mechanism dead code.
+            throw error
         } finally {
             isLoadingFromDatabase.value = false
             // BUG-1084 v5: Mark initialization complete (even on error)

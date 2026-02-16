@@ -73,6 +73,15 @@
         </BaseButton>
       </div>
 
+      <!-- Group By Control -->
+      <div class="control-wrapper">
+        <CustomSelect
+          :model-value="groupBy"
+          :options="groupByOptions"
+          @update:model-value="$emit('update:groupBy', $event as string)"
+        />
+      </div>
+
       <!-- Sort Control -->
       <div class="control-wrapper">
         <CustomSelect
@@ -110,6 +119,7 @@ const _emit = defineEmits<{
   (e: 'update:viewType', value: ViewType): void
   (e: 'update:density', value: DensityType): void
   (e: 'update:sortBy', value: string): void
+  (e: 'update:groupBy', value: string): void
   (e: 'update:filterStatus', value: string): void
   (e: 'update:hideDoneTasks', value: boolean): void
   (e: 'expandAll'): void
@@ -123,6 +133,7 @@ interface Props {
   viewType: ViewType
   density: DensityType
   sortBy: string
+  groupBy: string
   filterStatus: string
   hideDoneTasks?: boolean
 }
@@ -138,6 +149,14 @@ const sortOptions = [
   { label: 'Priority', value: 'priority' },
   { label: 'Title', value: 'title' },
   { label: 'Created', value: 'created' }
+]
+
+const groupByOptions = [
+  { label: 'No Grouping', value: 'none' },
+  { label: 'Project', value: 'project' },
+  { label: 'Status', value: 'status' },
+  { label: 'Priority', value: 'priority' },
+  { label: 'Due Date', value: 'dueDate' }
 ]
 
 const filterOptions = [

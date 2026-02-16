@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { WeekEvent, DragGhost } from '@/types/tasks'
 import type { TimeSlot } from '@/composables/calendar/useCalendarDayView'
@@ -73,6 +73,14 @@ const getEventTooltip = (event: any) => {
 
 // Local drag cell tracking for ghost preview positioning
 const activeDragCell = ref<{ dayIndex: number; hour: number } | null>(null)
+
+// BUG-1340: Clear activeDragCell when drag ends to prevent stuck ghost previews.
+// Without this, dragging outside the calendar leaves activeDragCell set (only cleared on drop).
+watch(() => props.isDragging, (dragging) => {
+  if (!dragging) {
+    activeDragCell.value = null
+  }
+})
 
 // Create a TimeSlot from week cell data — same shape as day view slots
 const createSlot = (dateString: string, hour: number): TimeSlot => ({

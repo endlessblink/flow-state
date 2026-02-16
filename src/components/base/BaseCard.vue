@@ -9,7 +9,11 @@
         'is-elevated': elevated
       }
     ]"
+    :role="hoverable ? 'button' : undefined"
+    :tabindex="hoverable ? 0 : undefined"
     @click="hoverable && $emit('click', $event)"
+    @keydown.enter="hoverable && $emit('click', $event)"
+    @keydown.space.prevent="hoverable && $emit('click', $event)"
   >
     <div v-if="$slots.header" class="card-header">
       <slot name="header" />
@@ -83,6 +87,13 @@ defineEmits<{
     0 var(--space-3) var(--space-10) rgba(var(--color-slate-900), 0.9),
     0 var(--space-1_5) var(--space-5) rgba(var(--color-slate-900), 0.5);
   transform: translateY(calc(var(--space-0_5) * -1));
+}
+
+/* Focus effect for keyboard accessibility */
+.base-card.has-hover:focus-visible {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1), 0 0 12px rgba(78, 205, 196, 0.05);
 }
 
 /* Glass variant - same base look, just adds inset highlight for colorful backgrounds */

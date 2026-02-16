@@ -1,11 +1,11 @@
 {
-  "version": "1.2.66",
-  "notes": "v1.2.66: AI insights expansion, URL scraping, weekly plan intelligence, lint fixes",
-  "pub_date": "2026-02-15T07:12:36.503Z",
+  "version": "1.2.72",
+  "notes": "v1.2.72: Push notifications, notification settings UI, QuickSort polish, service worker updates",
+  "pub_date": "2026-02-16T16:17:38.728Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTBSTmxsZGFzV2FQak5UZ0VTTlBvbEI3OUpaelpvb29YWEh0ME9uOWRqdzR6OEhFdzVIc3FlK0hjV0FhRXpEVC9sckZNZTdKaUFWd3V1MkRtRjR1ekFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMTM5NTU2CWZpbGU6Rmxvd1N0YXRlXzEuMi42Nl9hbWQ2NC5BcHBJbWFnZQpCWC9wNUMvWmlwRGhJTk5aZmlZeUpxdzM4UzhpNExvTHdReS9rQTFHS3Ezd0tYRGhrM1dGSGxpZjBhMVhiN2Z1U0xad2NjTzRsT2pTNEdGOXM5eUpEZz09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.66_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTBKZWtlakNCUllCQ2Rvamc1c0FpVUlOOEUyM0xySlhpOHVYMkdteUxHaGtHZGNOcnQ5VXZxK2lIYnNoZDJzRTdxOXl1QjBCNFNISFVDL0VBMTNRWUFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMjU4NjU4CWZpbGU6Rmxvd1N0YXRlXzEuMi43Ml9hbWQ2NC5BcHBJbWFnZQpRek5EYUdaM2EvZG9xYW9HdGtDa2JTZ3l0U1g3ZWpDYWJzUC9HUUNBbHpSTUJYNW1kcjhMT1VLUzlxSDRwU0Nud0ExVTZHNmt6Qm82VitJcjlYUnBCQT09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.72_amd64.AppImage"
     }
   }
 }

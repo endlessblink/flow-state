@@ -431,6 +431,7 @@ const handleCreate = async () => {
 }
 
 // Focus input when modal opens and initialize from props
+// BUG-1335: Auto-select the active project so tasks inherit the current sidebar selection
 watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
     // Reset form when opening
@@ -438,7 +439,7 @@ watch(() => props.isOpen, (isOpen) => {
     taskDescription.value = ''
     priority.value = 'medium'
     duration.value = props.duration
-    projectId.value = ''
+    projectId.value = taskStore.activeProjectId || ''
 
     // Initialize date/time from props
     localDate.value = props.startTime.toISOString().split('T')[0]

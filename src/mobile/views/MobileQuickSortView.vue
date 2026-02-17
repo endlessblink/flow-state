@@ -18,8 +18,8 @@
           <Zap :size="20" class="zap-icon" />
           <span>Quick Sort</span>
         </h1>
-        <p class="qs-subtitle" style="font-size: 10px; font-family: monospace;">
-          dX:{{ Math.round(deltaX) }} dY:{{ Math.round(deltaY) }} dir:{{ swipeDirection || '-' }} s:{{ swipeState.isSwiping ? 1 : 0 }}
+        <p class="qs-subtitle">
+          {{ activePhase === 'capture' ? 'Capture' : 'Swipe to sort' }}
         </p>
       </div>
       <div class="header-stats">

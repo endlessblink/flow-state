@@ -14,7 +14,12 @@
         @ready="onStartupReady"
       />
 
-      <!-- Main App (renders after startup completes or immediately in browser mode) -->
+      <!-- BUG-1339: Loading state while data loads (PWA/browser mode only) -->
+      <div v-if="!appReady && !showStartupScreen" class="app-loading">
+        <div class="app-loading-spinner" />
+      </div>
+
+      <!-- Main App (renders after startup completes AND data is loaded) -->
       <template v-if="appReady">
         <MobileLayout v-if="isMobile" />
         <MainLayout v-else ref="mainLayout" />
@@ -87,7 +92,12 @@ const initialized = ref(false)
 const showStartupScreen = computed(() => initialized.value && isTauriApp.value && !startupComplete.value)
 
 // App is ready when startup is complete OR we're in browser mode
-const appReady = computed(() => !initialized.value || startupComplete.value || !isTauriApp.value)
+// BUG-1339: Also require data to be loaded before showing views
+// This prevents blank views on first load due to race between render and async data fetch
+const appReady = computed(() => {
+  const startupOk = !initialized.value || startupComplete.value || !isTauriApp.value
+  return startupOk && isDataReady.value
+})
 
 // Handle startup completion
 const onStartupReady = () => {
@@ -95,7 +105,8 @@ const onStartupReady = () => {
 }
 
 // Initialize App Logic
-useAppInitialization()
+// BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
+const { isDataReady } = useAppInitialization()
 
 // Handle global events that require interaction with MainLayout
 const handleGlobalNewTask = () => {
@@ -146,5 +157,27 @@ html, body, #app {
   background: var(--app-background-gradient);
   color: var(--text-primary);
   overflow: hidden;
+}
+
+/* BUG-1339: Minimal loading spinner while data loads */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+.app-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--brand-primary, #4ECDC4);
+  border-radius: 50%;
+  animation: app-spin 0.8s linear infinite;
+}
+
+@keyframes app-spin {
+  to { transform: rotate(360deg); }
 }
 </style>

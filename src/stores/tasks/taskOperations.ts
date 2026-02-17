@@ -755,7 +755,12 @@ export function useTaskOperations(
             id: Date.now().toString(),
             ...instanceData
         }
-        const updatedInstances = [...(task.instances || []), newInstance]
+        // BUG-1343: Non-recurring tasks get ONE instance (replace, not append).
+        // Recurring tasks can have multiple instances.
+        const isRecurring = task.recurrence || instanceData.isRecurring
+        const updatedInstances = isRecurring
+            ? [...(task.instances || []), newInstance]
+            : [newInstance]
         await updateTask(taskId, { instances: updatedInstances })
         return newInstance
     }
@@ -856,9 +861,12 @@ export function useTaskOperations(
             duration: task.estimatedDuration || 60
         }
         // BUG-1090: AWAIT to ensure instance is persisted before navigation
-        // BUG-1291: APPEND new instance instead of replacing — preserves existing start times
-        const existingInstances = task.instances || []
-        await updateTask(taskId, { instances: [...existingInstances, newInstance], status: 'in_progress' })
+        // BUG-1343: Non-recurring tasks get ONE instance (replace, not append)
+        const isRecurring = task.recurrence
+        const updatedInstances = isRecurring
+            ? [...(task.instances || []), newInstance]
+            : [newInstance]
+        await updateTask(taskId, { instances: updatedInstances, status: 'in_progress' })
     }
 
     const moveTaskToSmartGroup = async (taskId: string, type: string) => {

@@ -172,9 +172,31 @@ describe('TaskStore', () => {
       expect(updatedTask?.instances?.length).toBe(0)
     })
 
-    it('supports multiple instances of same task', async () => {
+    it('non-recurring task replaces instance instead of appending', async () => {
       const store = useTaskStore()
-      const task = await store.createTask({ title: 'Recurring Task' })
+      const task = await store.createTask({ title: 'Regular Task' })
+
+      await store.createTaskInstance(task.id, {
+        scheduledDate: '2025-10-15',
+        scheduledTime: '10:00'
+      })
+      await store.createTaskInstance(task.id, {
+        scheduledDate: '2025-10-16',
+        scheduledTime: '14:00'
+      })
+
+      const updatedTask = store.tasks.find(t => t.id === task.id)
+      // BUG-1343: Non-recurring tasks get ONE instance (replace, not append)
+      expect(updatedTask?.instances?.length).toBe(1)
+      expect(updatedTask?.instances?.[0].scheduledDate).toBe('2025-10-16')
+    })
+
+    it('recurring task supports multiple instances', async () => {
+      const store = useTaskStore()
+      const task = await store.createTask({
+        title: 'Recurring Task',
+        recurrence: { frequency: 'weekly', interval: 1 } as any
+      })
 
       await store.createTaskInstance(task.id, {
         scheduledDate: '2025-10-15',
@@ -190,7 +212,7 @@ describe('TaskStore', () => {
       })
 
       const updatedTask = store.tasks.find(t => t.id === task.id)
-      // BUG-1325: createTask no longer auto-creates instances, only the 3 explicit ones exist
+      // Recurring tasks CAN have multiple instances
       expect(updatedTask?.instances?.length).toBe(3)
     })
   })

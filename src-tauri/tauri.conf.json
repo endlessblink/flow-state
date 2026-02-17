@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowState",
-  "version": "1.2.79",
+  "version": "1.2.82",
   "identifier": "com.flowstate.app",
   "build": {
     "frontendDist": "../dist",
@@ -27,7 +27,19 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'sha256-GAAIM+xe8eiG5EB+RWpJHnbWMBx1zpRlQrqhsVCUD8M='",
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src": "'self' https://fonts.gstatic.com data:",
+        "img-src": "'self' data: blob: https:",
+        "connect-src": "'self' ipc: http://ipc.localhost https: wss: http://localhost:* http://127.0.0.1:*",
+        "media-src": "'self' blob: data:",
+        "worker-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'"
+      }
     }
   },
   "bundle": {

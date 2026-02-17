@@ -3483,16 +3483,13 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1134: Enable Tauri CSP (📋 PLANNED)
+### ~~BUG-1134~~: Enable Tauri CSP (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE
 
-**Problem**: Tauri Content Security Policy is disabled (`"csp": null`), allowing any scripts to execute.
+**Problem**: Tauri Content Security Policy was disabled (`"csp": null`), allowing any scripts to execute.
 
-**Solution**: Enable CSP with appropriate policy:
-```json
-"csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
-```
+**Solution**: Enabled strict CSP in `tauri.conf.json` with object-format directives. Key decisions: `script-src` uses SHA-256 hash for the FOUC inline script (no `'unsafe-inline'`); `style-src` requires `'unsafe-inline'` for Naive UI + Vue Flow; `connect-src` uses `https:` wildcard for self-hoster compatibility. `tauriFetch` calls (Ollama, iCal, URL scraping) bypass CSP via Rust HTTP plugin.
 
 **Files**: `src-tauri/tauri.conf.json`
 

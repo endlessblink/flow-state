@@ -59,7 +59,7 @@ watch(() => props.levelEvent, (event) => {
   border: var(--level-badge-border);
   box-shadow: var(--level-badge-glow);
   font-weight: var(--font-bold);
-  color: rgba(var(--neon-cyan), 1);
+  color: rgb(var(--neon-cyan));
   user-select: none;
   cursor: default;
 }
@@ -139,13 +139,13 @@ watch(() => props.levelEvent, (event) => {
 
 /* Override the badge glow during level-up */
 .level-badge:has(.level-up-ring) {
-  box-shadow: 0 0 12px rgba(var(--neon-magenta), 0.6),
-              0 0 24px rgba(var(--neon-magenta), 0.3);
+  box-shadow: 0 0 var(--space-3) rgba(var(--neon-magenta), 0.6),
+              0 0 var(--space-6) rgba(var(--neon-magenta), 0.3);
 }
 
 .level-badge:has(.level-up-ring) .level-number {
-  color: rgba(var(--neon-magenta), 1);
-  text-shadow: 0 0 8px rgba(var(--neon-magenta), 0.8);
+  color: rgb(var(--neon-magenta));
+  text-shadow: 0 0 var(--space-2) rgba(var(--neon-magenta), 0.8);
 }
 
 @media (prefers-reduced-motion: no-preference) {

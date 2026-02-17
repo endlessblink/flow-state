@@ -975,7 +975,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
 
             // BUG-352: Wrap in withRetry for mobile network resilience
-            const { error, count } = await withRetry(async () => {
+            const { error: _error, count: _count } = await withRetry(async () => {
                 const { error, count } = await supabase
                     .from('tasks')
                     .update({ is_deleted: true, deleted_at: new Date().toISOString() })
@@ -1122,7 +1122,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
 
             // BUG-352: Wrap in withRetry for mobile network resilience
-            const { error, count } = await withRetry(async () => {
+            const { error: _error, count: _count } = await withRetry(async () => {
                 const { error, count } = await supabase
                     .from('tasks')
                     // FIX: Schema compatibility - remove deleted_at if not in DB
@@ -1243,7 +1243,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
             isSyncing.value = true
 
             // BUG-352: Wrap in withRetry for mobile network resilience
-            const { data, error, count } = await withRetry(async () => {
+            const { data, error: _error, count: _count } = await withRetry(async () => {
                 // TASK-149 FIX: Add user_id filter and verify rows affected
                 // TASK-317: Now includes deleted_at after migration
                 const { data, error, count } = await supabase
@@ -1551,7 +1551,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         let currentChannel: any = null
         let retryCount = 0
         let isExplicitlyClosed = false
-        const heartbeatInterval: any = null
+        const _heartbeatInterval: any = null
         let isRemovingChannel = false // Guard against recursive removeChannel calls (BUG-1088)
 
         // cleanup previous channels if any

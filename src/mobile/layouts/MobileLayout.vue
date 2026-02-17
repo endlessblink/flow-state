@@ -369,6 +369,8 @@ onMounted(() => {
 .mobile-content.full-screen {
   padding-bottom: 0;
   overflow: hidden;
+  touch-action: none; /* BUG-1343: Prevent browser gesture recognition in full-screen views */
+  -webkit-overflow-scrolling: auto; /* BUG-1343: Disable iOS momentum scroll for full-screen views */
 }
 
 /* ─── Pull-down indicator ─── */

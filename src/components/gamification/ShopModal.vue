@@ -8,11 +8,11 @@ import { useGamificationStore } from '@/stores/gamification'
 import type { ShopCategory, ShopItemWithOwnership } from '@/types/gamification'
 import { X, ShoppingBag, Check, Lock, Palette, Award, Sparkles, Volume2 } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   open: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   close: []
 }>()
 

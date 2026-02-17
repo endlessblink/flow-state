@@ -233,7 +233,7 @@ Full push notification system with per-category controls, Web Push subscription,
 - [ ] task-management/row (4 stories)
 - [ ] views (8 stories)
 
-**Related**: BUG-1311 (3 story files fail to import)
+**Related**: ~~BUG-1311~~ (3 story files fail to import — ✅ FIXED 2026-02-17)
 
 ---
 
@@ -2880,23 +2880,17 @@ WhatsApp (dedicated number) → WAHA (Docker, Oracle Cloud) → Webhook → Bot 
 
 ---
 
-### BUG-1311: Storybook Story Import Failures (📋 PLANNED)
+### ~~BUG-1311~~: Storybook Story Import Failures (✅ DONE)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: ✅ DONE (2026-02-17)
 
-**Problem**: Three Storybook story files fail to import when running `npm run storybook`, causing all their stories to be unavailable in the component documentation.
+**Problem**: Three Storybook story files failed to render when running `npm run storybook`.
 
-**Failing Files**:
-1. `src/stories/primitives/ReloadPrompt.stories.ts` - Failed to import (dynamic import error)
-2. `src/stories/calendar/CalendarDayView.stories.ts` - SyntaxError: Unexpected token ';' (all 6 stories fail)
-3. `src/stories/calendar/CalendarWeekView.stories.ts` - SyntaxError: Unexpected token ';' (all 4 stories fail)
+**Root Causes Found & Fixed** (`.storybook/main.ts`):
+1. **CalendarDayView & CalendarWeekView**: Stories used `defineComponent({ template: '...' })` (inline template strings) which requires Vue's runtime compiler. Storybook's default Vite config only includes the runtime-only Vue build. **Fix**: Added `vue` alias to `vue/dist/vue.esm-bundler.js` in `viteFinal`.
+2. **ReloadPrompt**: Component imports `virtual:pwa-register/vue` which is a virtual module provided by the VitePWA Vite plugin. Storybook doesn't include VitePWA. **Fix**: Added a custom Vite plugin in `viteFinal` that stubs the virtual module with a mock `useRegisterSW()`.
 
-**Impact**: These stories are not accessible in Storybook for visual testing or documentation reference. This is a documentation/testing issue, not a runtime production bug.
-
-**Next Steps**:
-- [ ] Investigate syntax errors in calendar story files
-- [ ] Fix import errors in ReloadPrompt stories
-- [ ] Verify all stories load successfully in Storybook
+**Verified**: All 3 stories render correctly in Storybook with zero console errors.
 
 ---
 
@@ -3349,7 +3343,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
 | **TASK-1337** | **P3** | **👀 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
 | ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
-| **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
+| ~~**BUG-1311**~~ | **P3** | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
 | ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
 | ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |

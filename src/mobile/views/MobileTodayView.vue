@@ -185,7 +185,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-// @ts-ignore - Avoid strict type check on imported Task type if causing issues
+// @ts-expect-error - Avoid strict type check on imported Task type if causing issues
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useMobileFilters, type GroupByType } from '@/composables/mobile/useMobileFilters'

@@ -375,7 +375,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         const gapX = 80        // Horizontal gap between columns
         const gapY = 50        // Vertical gap between rows
         const columns = 4      // Reduced columns since cards are wider
-        const gridWidth = columns * (cardWidth + gapX)
+        const _gridWidth = columns * (cardWidth + gapX)
         const groupPadding = 40 // Padding inside the group
         const groupHeaderHeight = 70 // Space for the group header
 

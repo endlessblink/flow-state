@@ -1,5 +1,10 @@
 <template>
   <div class="mobile-quick-sort">
+    <!-- BUG-1343: Edge dead zones consume edge touches before the browser
+         can interpret them as back/forward navigation gestures -->
+    <div class="edge-guard edge-guard-left" aria-hidden="true" @touchstart.prevent @touchmove.prevent />
+    <div class="edge-guard edge-guard-right" aria-hidden="true" @touchstart.prevent @touchmove.prevent />
+
     <!-- Grain Texture Overlay -->
     <div class="grain-overlay" aria-hidden="true" />
 
@@ -13,8 +18,8 @@
           <Zap :size="20" class="zap-icon" />
           <span>Quick Sort</span>
         </h1>
-        <p class="qs-subtitle">
-          {{ activePhase === 'capture' ? 'Capture' : 'Swipe to sort' }}
+        <p class="qs-subtitle" style="font-size: 10px; font-family: monospace;">
+          dX:{{ Math.round(deltaX) }} dY:{{ Math.round(deltaY) }} dir:{{ swipeDirection || '-' }} s:{{ swipeState.isSwiping ? 1 : 0 }}
         </p>
       </div>
       <div class="header-stats">
@@ -380,6 +385,53 @@
             </div>
           </div>
 
+          <!-- AI Quick Actions (TASK-1221) -->
+          <div class="quick-edit-row ai-row">
+            <span class="edit-label">AI</span>
+            <div class="date-pills-scroll">
+              <button
+                class="pill ai-pill"
+                :class="{ 'is-loading': aiAction === 'suggest' }"
+                :disabled="isAIBusy"
+                @click="handleAISuggest"
+              >
+                <Loader2 v-if="aiAction === 'suggest'" :size="12" class="spin" />
+                <Sparkles v-else :size="12" />
+                Suggest
+              </button>
+              <button
+                class="pill ai-pill"
+                :class="{ 'is-loading': aiAction === 'sort' }"
+                :disabled="isAIBusy"
+                @click="handleAISort"
+              >
+                <Loader2 v-if="aiAction === 'sort'" :size="12" class="spin" />
+                <ArrowUpDown v-else :size="12" />
+                Sort
+              </button>
+              <button
+                class="pill ai-pill"
+                :class="{ 'is-loading': aiAction === 'batch' }"
+                :disabled="isAIBusy"
+                @click="handleAIBatch"
+              >
+                <Loader2 v-if="aiAction === 'batch'" :size="12" class="spin" />
+                <Zap v-else :size="12" />
+                Batch
+              </button>
+              <button
+                class="pill ai-pill"
+                :class="{ 'is-loading': aiAction === 'explain' }"
+                :disabled="isAIBusy"
+                @click="handleAIExplain"
+              >
+                <Loader2 v-if="aiAction === 'explain'" :size="12" class="spin" />
+                <MessageSquareText v-else :size="12" />
+                Explain
+              </button>
+            </div>
+          </div>
+
           <!-- Action Buttons - Four options: Done, Save, Assign, Delete -->
           <div class="action-row">
             <button class="action-btn done" @click="handleMarkDone">
@@ -603,11 +655,112 @@
       </Transition>
     </Teleport>
 
+    <!-- AI Results Bottom Sheet (TASK-1221) -->
+    <Teleport to="body">
+      <Transition name="sheet">
+        <div v-if="showAISheet" class="sheet-overlay" @click.self="closeAISheet">
+          <div class="ai-sheet" @click.stop>
+            <div class="sheet-handle" />
+
+            <!-- AI Error -->
+            <div v-if="aiState === 'error'" class="ai-sheet-body">
+              <h3 class="sheet-title">AI Error</h3>
+              <p class="ai-error-text">{{ aiError }}</p>
+              <div class="sheet-actions">
+                <button class="sheet-btn primary" @click="closeAISheet">Close</button>
+              </div>
+            </div>
+
+            <!-- Smart Suggest Results -->
+            <div v-else-if="aiAction === 'suggest'" class="ai-sheet-body">
+              <h3 class="sheet-title">AI Suggestions</h3>
+              <div class="ai-suggestions-list">
+                <div
+                  v-for="s in currentSuggestions"
+                  :key="s.field"
+                  class="ai-suggestion-item"
+                >
+                  <div class="ai-suggestion-top">
+                    <span class="ai-field-name">{{ s.field }}</span>
+                    <span class="ai-confidence">{{ Math.round(s.confidence * 100) }}%</span>
+                  </div>
+                  <div class="ai-suggestion-change">
+                    <span class="ai-from">{{ s.currentValue || 'none' }}</span>
+                    <span class="ai-arrow">&rarr;</span>
+                    <span class="ai-to">{{ s.suggestedValue }}</span>
+                  </div>
+                  <p v-if="s.reasoning" class="ai-reason">{{ s.reasoning }}</p>
+                </div>
+                <div v-if="suggestedProjectId" class="ai-suggestion-item">
+                  <div class="ai-suggestion-top">
+                    <span class="ai-field-name">project</span>
+                  </div>
+                  <div class="ai-suggestion-change">
+                    <span class="ai-from">{{ currentTaskProject?.name || 'none' }}</span>
+                    <span class="ai-arrow">&rarr;</span>
+                    <span class="ai-to">{{ suggestedProjectName || 'Suggested' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sheet-actions">
+                <button class="sheet-btn primary" @click="handleApplySuggestions">Apply All</button>
+                <button class="sheet-btn secondary" @click="closeAISheet">Dismiss</button>
+              </div>
+            </div>
+
+            <!-- Batch Results -->
+            <div v-else-if="aiAction === 'batch'" class="ai-sheet-body">
+              <h3 class="sheet-title">{{ batchResults.length }} Tasks Categorized</h3>
+              <div class="ai-batch-list">
+                <div
+                  v-for="r in batchResults"
+                  :key="r.taskId"
+                  class="ai-batch-item"
+                >
+                  <span class="ai-batch-name">{{ r.taskTitle.slice(0, 40) }}</span>
+                  <div class="ai-batch-tags">
+                    <span v-if="r.suggestedPriority" class="ai-tag">{{ r.suggestedPriority }}</span>
+                    <span v-if="r.suggestedDueDate" class="ai-tag">{{ r.suggestedDueDate }}</span>
+                    <span v-if="r.suggestedProjectName" class="ai-tag">{{ r.suggestedProjectName }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sheet-actions">
+                <button class="sheet-btn primary" @click="handleApplyBatch">Apply All</button>
+                <button class="sheet-btn secondary" @click="closeAISheet">Dismiss</button>
+              </div>
+            </div>
+
+            <!-- Explain Results -->
+            <div v-else-if="aiAction === 'explain'" class="ai-sheet-body">
+              <h3 class="sheet-title">Task Breakdown</h3>
+              <p class="ai-explain-desc">{{ explainResult?.description }}</p>
+              <ul v-if="explainResult?.actionSteps?.length" class="ai-explain-steps">
+                <li v-for="(step, i) in explainResult.actionSteps" :key="i">{{ step }}</li>
+              </ul>
+              <div class="sheet-actions">
+                <button class="sheet-btn primary" @click="handleApplyExplain">Accept</button>
+                <button class="sheet-btn secondary" @click="closeAISheet">Dismiss</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Celebration Overlay -->
     <Transition name="celebration">
       <div v-if="showCelebration" class="mini-celebration">
         <CheckCircle :size="32" />
         <span>Sorted!</span>
+      </div>
+    </Transition>
+
+    <!-- AI Sort Feedback (TASK-1221) -->
+    <Transition name="celebration">
+      <div v-if="showAISortFeedback" class="mini-celebration ai-sort-feedback">
+        <ArrowUpDown :size="32" />
+        <span>Reordered by AI</span>
       </div>
     </Transition>
   </div>
@@ -624,6 +777,7 @@ import {
   Sparkles, ArrowUpDown, MessageSquareText, Loader2
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
+import { useQuickSortAI } from '@/composables/useQuickSortAI'
 import { useSwipeGestures } from '@/composables/useSwipeGestures'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
@@ -649,8 +803,24 @@ const {
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
-  undoLastCategorization
+  undoLastCategorization,
+  setQueueOrder
 } = useQuickSort()
+
+// AI Commands (TASK-1221)
+const quickSortAI = useQuickSortAI()
+const {
+  aiState,
+  aiAction,
+  aiError,
+  isAIBusy,
+  currentSuggestions,
+  suggestedProjectId,
+  suggestedProjectName,
+  batchResults,
+  explainResult,
+  sortedTaskOrder,
+} = quickSortAI
 
 // UI State
 const activePhase = ref<'sort' | 'capture'>('sort')
@@ -660,6 +830,9 @@ const hasSwipedOnce = ref(false)
 const sessionSummary = ref<SessionSummary | null>(null)
 const showDeleteConfirm = ref(false)
 const showQuickEditPanel = ref(false)
+const intentionalExit = ref(false) // BUG-1343: Flag to allow router navigation on intentional exit
+const showAISheet = ref(false)
+const showAISortFeedback = ref(false)
 
 // Timer cleanup tracking
 const celebrationTimers: ReturnType<typeof setTimeout>[] = []
@@ -1024,13 +1197,84 @@ async function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' |
   triggerHaptic('light')
 }
 
-function handleExit() {
-  // Remove popstate guard before intentional exit (BUG-1343)
-  window.removeEventListener('popstate', popstateHandler)
-  // Go back to pop the guard entry, then navigate
-  if (window.history.state?.quickSortGuard) {
-    window.history.back()
+// AI Handlers (TASK-1221)
+function handleAISuggest() {
+  if (!currentTask.value || isAIBusy.value) return
+  quickSortAI.autoSuggest(currentTask.value)
+}
+
+function handleAISort() {
+  if (isAIBusy.value) return
+  const tasks = uncategorizedTasks.value
+  if (tasks.length === 0) return
+  quickSortAI.aiSort(tasks)
+}
+
+function handleAIBatch() {
+  if (isAIBusy.value) return
+  const tasks = uncategorizedTasks.value
+  if (tasks.length === 0) return
+  quickSortAI.aiBatch(tasks)
+}
+
+function handleAIExplain() {
+  if (!currentTask.value || isAIBusy.value) return
+  quickSortAI.aiExplain(currentTask.value)
+}
+
+function closeAISheet() {
+  showAISheet.value = false
+  quickSortAI.dismiss()
+}
+
+async function handleApplySuggestions() {
+  if (!currentTask.value) return
+  const updates: Record<string, unknown> = {}
+  for (const s of currentSuggestions.value) {
+    if (s.field === 'priority') updates.priority = s.suggestedValue
+    else if (s.field === 'dueDate') updates.dueDate = s.suggestedValue
+    else if (s.field === 'status') updates.status = s.suggestedValue
+    else if (s.field === 'estimatedDuration') updates.estimatedDuration = s.suggestedValue
   }
+  if (suggestedProjectId.value) updates.projectId = suggestedProjectId.value
+  if (Object.keys(updates).length > 0) {
+    await taskStore.updateTask(currentTask.value.id, updates)
+  }
+  closeAISheet()
+  showCelebration.value = true
+  setTimeout(() => { showCelebration.value = false }, 600)
+}
+
+async function handleApplyBatch() {
+  for (const result of batchResults.value) {
+    const updates: Record<string, unknown> = {}
+    if (result.suggestedPriority) updates.priority = result.suggestedPriority
+    if (result.suggestedDueDate) updates.dueDate = result.suggestedDueDate
+    if (result.suggestedProjectId) updates.projectId = result.suggestedProjectId
+    if (Object.keys(updates).length > 0) {
+      await taskStore.updateTask(result.taskId, updates)
+    }
+  }
+  closeAISheet()
+  showCelebration.value = true
+  setTimeout(() => { showCelebration.value = false }, 600)
+}
+
+async function handleApplyExplain() {
+  if (!currentTask.value || !explainResult.value) return
+  const desc = explainResult.value.description
+  const steps = explainResult.value.actionSteps.length > 0
+    ? '\n\n' + explainResult.value.actionSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')
+    : ''
+  await taskStore.updateTask(currentTask.value.id, { description: desc + steps })
+  closeAISheet()
+  showCelebration.value = true
+  setTimeout(() => { showCelebration.value = false }, 600)
+}
+
+function handleExit() {
+  // BUG-1343: Signal intentional exit so the router guard allows it
+  intentionalExit.value = true
   router.push('/tasks')
 }
 
@@ -1132,27 +1376,51 @@ watch(isComplete, (completed) => {
   }
 })
 
+// Auto-open AI results sheet (TASK-1221)
+watch(aiState, (state) => {
+  if (state === 'preview' || state === 'error') {
+    if (aiAction.value === 'sort') {
+      // Sort doesn't need a sheet, just feedback
+      showAISortFeedback.value = true
+      setTimeout(() => { showAISortFeedback.value = false }, 600)
+    } else {
+      showAISheet.value = true
+    }
+  }
+})
+
+// Sync AI sort order (TASK-1221)
+watch(sortedTaskOrder, (order) => {
+  if (order) setQueueOrder(order)
+})
+
 // Lifecycle
 // BUG-1343: Prevent browser's swipe-back gesture from exiting Quick Sort on mobile PWA.
-// Push a duplicate history entry so the browser's back gesture pops our entry
-// instead of navigating away from the view.
-const popstateHandler = (e: PopStateEvent) => {
-  // Re-push the guard entry so the next back-swipe is also caught
-  window.history.pushState({ quickSortGuard: true }, '')
-}
+// The browser's back-navigation gesture operates at the compositor level (before JS touch events).
+// Vue Router beforeEach guard intercepts navigation synchronously BEFORE the route change commits.
+const removeRouterGuard = router.beforeEach((to, from, next) => {
+  if (from.name === 'mobile-quick-sort' && to.name !== 'mobile-quick-sort') {
+    if (intentionalExit.value) {
+      next()
+    } else {
+      // Browser back gesture or accidental navigation — block it
+      next(false)
+    }
+  } else {
+    next()
+  }
+})
 
 onMounted(() => {
   startSession()
-  // Push guard entry into history stack
-  window.history.pushState({ quickSortGuard: true }, '')
-  window.addEventListener('popstate', popstateHandler)
 })
 
 onUnmounted(() => {
   // Clear pending celebration timers to avoid setting refs on unmounted component
   celebrationTimers.forEach(clearTimeout)
   celebrationTimers.length = 0
-  window.removeEventListener('popstate', popstateHandler)
+  // Remove the router navigation guard
+  removeRouterGuard()
 })
 </script>
 
@@ -1176,9 +1444,21 @@ onUnmounted(() => {
   color: var(--text-primary);
   overflow: hidden;
   overscroll-behavior-x: none;
-  touch-action: pan-y; /* BUG-1343: Prevent browser horizontal swipe-back gesture */
+  touch-action: none; /* 4-directional swipe: JS handles all touch, also prevents browser back gesture (BUG-1343) */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
+/* BUG-1343: Edge dead zones consume edge touches to prevent browser back/forward gesture */
+.edge-guard {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 9999;
+  touch-action: none;
+}
+.edge-guard-left { left: 0; }
+.edge-guard-right { right: 0; }
 
 /* Grain texture overlay */
 .grain-overlay {
@@ -1469,6 +1749,7 @@ onUnmounted(() => {
   flex-direction: column;
   padding: var(--space-5);
   overflow-y: auto;
+  touch-action: pan-y; /* Capture phase needs vertical scroll */
 }
 
 .capture-input-area {
@@ -1978,6 +2259,7 @@ onUnmounted(() => {
   background: linear-gradient(to top, var(--overlay-bg), var(--overlay-component-bg-lighter), transparent);
   margin-top: auto;
   flex-shrink: 0;
+  touch-action: pan-x pan-y; /* Allow horizontal scroll on date pills + vertical scroll */
 }
 
 .quick-edit-row {
@@ -2526,7 +2808,9 @@ onUnmounted(() => {
 }
 
 .sheet-enter-from .project-sheet,
-.sheet-leave-to .project-sheet {
+.sheet-leave-to .project-sheet,
+.sheet-enter-from .ai-sheet,
+.sheet-leave-to .ai-sheet {
   transform: translateY(100%);
 }
 
@@ -2778,6 +3062,226 @@ onUnmounted(() => {
 }
 
 /* ================================
+   AI QUICK ACTIONS (TASK-1221)
+   ================================ */
+
+.ai-row {
+  border-top: 1px solid var(--glass-border);
+  padding-top: var(--space-2);
+}
+
+.pill.ai-pill {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  gap: var(--space-1);
+}
+
+.pill.ai-pill:active {
+  background: rgba(78, 205, 196, 0.15);
+}
+
+.pill.ai-pill.is-loading {
+  opacity: 0.7;
+}
+
+.pill.ai-pill:disabled {
+  opacity: 0.4;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* AI Results Bottom Sheet (TASK-1221) */
+.ai-sheet {
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--surface-primary);
+  border-top-left-radius: var(--radius-2xl);
+  border-top-right-radius: var(--radius-2xl);
+  padding: var(--space-4) var(--space-5);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+.ai-sheet-body {
+  padding: 0;
+}
+
+.ai-error-text {
+  color: var(--danger);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.ai-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.ai-suggestion-item {
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.ai-suggestion-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.ai-field-name {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.ai-confidence {
+  font-size: var(--text-xs);
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
+}
+
+.ai-suggestion-change {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.ai-from {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.ai-arrow {
+  color: var(--brand-primary);
+}
+
+.ai-to {
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+}
+
+.ai-reason {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: var(--space-1) 0 0 0;
+  font-style: italic;
+}
+
+/* AI Batch List */
+.ai-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+  margin-bottom: var(--space-3);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ai-batch-item {
+  padding: var(--space-1_5) var(--space-2);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.ai-batch-name {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: var(--space-0_5);
+}
+
+.ai-batch-tags {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.ai-tag {
+  font-size: 10px;
+  padding: 1px var(--space-1);
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+/* AI Explain Results */
+.ai-explain-desc {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.5;
+}
+
+.ai-explain-steps {
+  margin: 0 0 var(--space-3) 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.ai-explain-steps li {
+  margin-bottom: var(--space-1);
+}
+
+/* Sheet Action Buttons */
+.sheet-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.sheet-btn {
+  flex: 1;
+  padding: var(--space-2_5) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-normal);
+  backdrop-filter: blur(8px);
+}
+
+.sheet-btn.primary {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.sheet-btn.primary:active {
+  background: rgba(78, 205, 196, 0.15);
+}
+
+.sheet-btn.secondary {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.sheet-btn.secondary:active {
+  background: var(--glass-bg-medium);
+}
+
+/* AI Sort Feedback */
+.ai-sort-feedback {
+  background: rgba(78, 205, 196, 0.15) !important;
+  border-color: var(--brand-primary) !important;
+  color: var(--brand-primary) !important;
+}
+
+/* ================================
    ACCESSIBILITY - REDUCED MOTION
    ================================ */
 
@@ -2787,7 +3291,8 @@ onUnmounted(() => {
   .progress-glow,
   .celebration-icon,
   .mini-celebration,
-  .dirty-dot {
+  .dirty-dot,
+  .spin {
     animation: none !important;
     transition: none !important;
   }

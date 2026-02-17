@@ -9,7 +9,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { Challenge } from '@/types/challenges'
 import { Trophy, Zap, TrendingDown, Sparkles } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   challenge: Challenge
   xpAwarded: number
   corruptionReduction: number

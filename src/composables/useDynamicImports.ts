@@ -314,7 +314,7 @@ export const initializeDynamicImports = async (): Promise<void> => {
 
 
   // Log statistics
-  const stats = dynamicImportManager.getStats()
+  const _stats = dynamicImportManager.getStats()
 
 }
 

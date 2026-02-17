@@ -11,7 +11,7 @@
  * - Manual trigger for testing
  */
 
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export interface DateTransitionOptions {
   /** Callback when day changes */

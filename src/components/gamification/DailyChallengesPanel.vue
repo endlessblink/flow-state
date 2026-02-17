@@ -14,7 +14,7 @@ import ARIAMessage from './ARIAMessage.vue'
 import { RefreshCw, Sparkles, CheckCircle2, AlertCircle, Target } from 'lucide-vue-next'
 
 // Props
-const props = defineProps<{
+defineProps<{
   compact?: boolean
 }>()
 
@@ -28,7 +28,7 @@ const {
   activeDailies,
   allDailiesComplete,
   isGenerating,
-  lastDailyGeneration,
+  lastDailyGeneration: _lastDailyGeneration,
   completedTodayCount,
   pickedChallengeId,
   pickedChallenge,

@@ -264,11 +264,6 @@ const ariaGreeting = computed(() => {
   return `${completedCount} mission${completedCount > 1 ? 's' : ''} cleared. Proceed with remaining objectives.`
 })
 
-const ariaVariant = computed<'info' | 'warning' | 'success' | 'danger'>(() => {
-  if (activeBoss.value && bossHpPercent.value < 30) return 'warning'
-  if (completedTodayCount.value === 3) return 'success'
-  return 'info'
-})
 </script>
 
 <style scoped>

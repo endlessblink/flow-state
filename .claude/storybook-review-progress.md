@@ -29,178 +29,178 @@
   - [x] CalendarStatusOverlays
   - [x] CalendarWeekView
 
-- [ ] **canvas** (15 stories)
+- [x] **canvas** (15 stories)
   - [x] MultiSelectionOverlay
-  - [ ] CanvasContextMenu
-  - [ ] CanvasEmptyState
-  - [ ] CanvasGroup
-  - [ ] CanvasLoadingOverlay
-  - [ ] CanvasSelectionBox
-  - [ ] CanvasStatusBanner
-  - [ ] CanvasToolbar
-  - [ ] EdgeContextMenu
-  - [ ] GroupEditModal
-  - [ ] GroupNodeSimple
-  - [ ] GroupSettingsMenu
-  - [ ] ResizeHandle
-  - [ ] SectionSelectionModal
+  - [x] CanvasContextMenu
+  - [x] CanvasEmptyState
+  - [x] CanvasGroup
+  - [x] CanvasLoadingOverlay
+  - [x] CanvasSelectionBox
+  - [x] CanvasStatusBanner
+  - [x] CanvasToolbar
+  - [x] EdgeContextMenu
+  - [x] GroupEditModal
+  - [x] GroupNodeSimple
+  - [x] GroupSettingsMenu
+  - [x] ResizeHandle
+  - [x] SectionSelectionModal
   - [x] SectionSelector
-  - [ ] TaskNode
-  - [ ] UnifiedGroupModal
+  - [x] TaskNode
+  - [x] UnifiedGroupModal
 
-- [ ] **canvas/inbox** (3 stories)
-  - [ ] CalendarInboxComponents
-  - [ ] InboxFilters
-  - [ ] InboxPanel
-  - [ ] InboxTimeFilters
-  - [ ] UnifiedInboxComponents
+- [x] **canvas/inbox** (5 stories)
+  - [x] CalendarInboxComponents
+  - [x] InboxFilters
+  - [x] InboxPanel
+  - [x] InboxTimeFilters
+  - [x] UnifiedInboxComponents
 
-- [ ] **canvas/node** (6 stories)
-  - [ ] OverdueBadge
-  - [ ] TaskNodeDescription
-  - [ ] TaskNodeHeader
-  - [ ] TaskNodeMeta
-  - [ ] TaskNodePriority
-  - [ ] TaskNodeSelection
+- [x] **canvas/node** (6 stories)
+  - [x] OverdueBadge
+  - [x] TaskNodeDescription
+  - [x] TaskNodeHeader
+  - [x] TaskNodeMeta
+  - [x] TaskNodePriority
+  - [x] TaskNodeSelection
 
-- [ ] **design-system** (1 story)
-  - [ ] Colors
+- [x] **design-system** (1 story)
+  - [x] Colors
 
-- [ ] **gamification** (11 stories)
-  - [ ] AchievementBadge
-  - [ ] AchievementToast
-  - [ ] ARIAMessage
-  - [ ] BossFightPanel
-  - [ ] ChallengeCard
-  - [ ] ChallengeComplete
-  - [ ] ChallengePips
-  - [ ] DailyChallengesPanel
-  - [ ] LevelBadge
-  - [ ] StreakCounter
-  - [ ] XpBar
+- [x] **gamification** (11 stories)
+  - [x] AchievementBadge
+  - [x] AchievementToast
+  - [x] ARIAMessage
+  - [x] BossFightPanel
+  - [x] ChallengeCard
+  - [x] ChallengeComplete
+  - [x] ChallengePips
+  - [x] DailyChallengesPanel
+  - [x] LevelBadge
+  - [x] StreakCounter
+  - [x] XpBar
 
-- [ ] **kanban** (7 stories)
-  - [ ] KanbanColumn
-  - [ ] KanbanSwimlane
-  - [ ] TaskCard
-  - [ ] TaskCardSubComponents
-  - [ ] TaskList
-  - [ ] TaskRow
-  - [ ] TaskTable
+- [x] **kanban** (7 stories)
+  - [x] KanbanColumn
+  - [x] KanbanSwimlane
+  - [x] TaskCard
+  - [x] TaskCardSubComponents
+  - [x] TaskList
+  - [x] TaskRow
+  - [x] TaskTable
 
-- [ ] **layout** (12 stories)
-  - [ ] AppHeader
-  - [ ] AppSidebar
-  - [ ] BraveBanner
-  - [ ] CommandPalette
-  - [ ] ErrorBoundary
-  - [ ] LocalModeBanner
-  - [ ] RouteErrorBoundary
-  - [ ] SidebarSmartItem
-  - [ ] SyncErrorPopover
-  - [ ] SyncStatusIndicator
-  - [ ] TauriModeSelector
-  - [ ] TauriStartupScreen
-  - [ ] ViewControls
+- [x] **layout** (12 stories)
+  - [x] AppHeader
+  - [x] AppSidebar
+  - [x] BraveBanner
+  - [x] CommandPalette
+  - [x] ErrorBoundary
+  - [x] LocalModeBanner
+  - [x] RouteErrorBoundary
+  - [x] SidebarSmartItem
+  - [x] SyncErrorPopover
+  - [x] SyncStatusIndicator
+  - [x] TauriModeSelector
+  - [x] TauriStartupScreen
+  - [x] ViewControls
 
-- [ ] **modals** (12 stories)
-  - [ ] BaseModal-Redesign-Preview
-  - [ ] BaseModal
-  - [ ] BatchEditModal
-  - [ ] ConfirmationModal
-  - [ ] GroupModal
-  - [ ] ProjectModal
-  - [ ] QuickTaskCreate
-  - [ ] QuickTaskCreateModal
-  - [ ] SearchModal
-  - [ ] SettingsModal
-  - [ ] TaskEditModal
-  - [ ] WelcomeModal
+- [x] **modals** (12 stories)
+  - [x] BaseModal-Redesign-Preview
+  - [x] BaseModal
+  - [x] BatchEditModal
+  - [x] ConfirmationModal
+  - [x] GroupModal
+  - [x] ProjectModal
+  - [x] QuickTaskCreate
+  - [x] QuickTaskCreateModal
+  - [x] SearchModal
+  - [x] SettingsModal
+  - [x] TaskEditModal
+  - [x] WelcomeModal
 
-- [ ] **primitives** (21 stories)
-  - [ ] BaseBadge
-  - [ ] BaseButton
-  - [ ] BaseCard
-  - [ ] BaseDropdown
-  - [ ] BaseIconButton
-  - [ ] BaseInput
-  - [ ] BaseNavItem
-  - [ ] BasePopover
-  - [ ] ContextMenu
-  - [ ] CustomSelect
-  - [ ] DoneToggle
-  - [ ] DragHandle
-  - [ ] EmojiPicker
-  - [ ] FaviconManager
-  - [ ] IOSInstallPrompt
-  - [ ] MarkdownEditor
-  - [ ] MarkdownRenderer
-  - [ ] MultiSelectToggle
-  - [ ] OverflowTooltip
-  - [ ] ProjectEmojiIcon
-  - [ ] ReloadPrompt
-  - [ ] TauriUpdateNotification
-  - [ ] TiptapEditor
+- [x] **primitives** (21 stories)
+  - [x] BaseBadge
+  - [x] BaseButton
+  - [x] BaseCard
+  - [x] BaseDropdown
+  - [x] BaseIconButton
+  - [x] BaseInput
+  - [x] BaseNavItem
+  - [x] BasePopover
+  - [x] ContextMenu
+  - [x] CustomSelect
+  - [x] DoneToggle
+  - [x] DragHandle
+  - [x] EmojiPicker
+  - [x] FaviconManager
+  - [x] IOSInstallPrompt
+  - [x] MarkdownEditor
+  - [x] MarkdownRenderer
+  - [x] MultiSelectToggle
+  - [x] OverflowTooltip
+  - [x] ProjectEmojiIcon
+  - [x] ReloadPrompt
+  - [x] TauriUpdateNotification
+  - [x] TiptapEditor
 
-- [ ] **pwa** (1 story)
-  - [ ] PWAScreens
+- [x] **pwa** (1 story)
+  - [x] PWAScreens
 
-- [ ] **settings** (11 stories)
-  - [ ] AboutSettingsTab
-  - [ ] AccountSettingsTab
-  - [ ] AppearanceSettingsTab
-  - [ ] LanguageSettings
-  - [ ] SettingsDurationPicker
-  - [ ] SettingsOptionPicker
-  - [ ] SettingsSection
-  - [ ] SettingsToggle
-  - [ ] StorageSettingsTab
-  - [ ] TimerSettingsTab
-  - [ ] WorkflowSettingsTab
+- [x] **settings** (11 stories)
+  - [x] AboutSettingsTab
+  - [x] AccountSettingsTab
+  - [x] AppearanceSettingsTab
+  - [x] LanguageSettings
+  - [x] SettingsDurationPicker
+  - [x] SettingsOptionPicker
+  - [x] SettingsSection
+  - [x] SettingsToggle
+  - [x] StorageSettingsTab
+  - [x] TimerSettingsTab
+  - [x] WorkflowSettingsTab
 
-- [ ] **task-management** (22 stories)
-  - [ ] CalendarInboxPanel
-  - [ ] CategorySelector
-  - [ ] DoneToggleVisuals
-  - [ ] DragHandleGhost
-  - [ ] DragHandleHints
-  - [ ] DragHandleVisuals
-  - [ ] FilterControls
-  - [ ] HierarchicalTaskRow
-  - [ ] HierarchicalTaskRowContent
-  - [ ] ProjectDropZone
-  - [ ] ProjectFilterDropdown
-  - [ ] ProjectTreeItem
-  - [ ] QuickCaptureTab
-  - [ ] QuickSortCard
-  - [ ] QuickTaskDropdown
-  - [ ] RecurrenceSelector
-  - [ ] SortProgress
-  - [ ] TaskContextMenu
-  - [ ] TaskEditChildTasks
-  - [ ] TaskEditHeader
-  - [ ] TaskEditMetadata
-  - [ ] TaskEditSubtasks
-  - [ ] TaskRowTitle
-  - [ ] TimeDisplay
+- [x] **task-management** (22 stories)
+  - [x] CalendarInboxPanel
+  - [x] CategorySelector
+  - [x] DoneToggleVisuals
+  - [x] DragHandleGhost
+  - [x] DragHandleHints
+  - [x] DragHandleVisuals
+  - [x] FilterControls
+  - [x] HierarchicalTaskRow
+  - [x] HierarchicalTaskRowContent
+  - [x] ProjectDropZone
+  - [x] ProjectFilterDropdown
+  - [x] ProjectTreeItem
+  - [x] QuickCaptureTab
+  - [x] QuickSortCard
+  - [x] QuickTaskDropdown
+  - [x] RecurrenceSelector
+  - [x] SortProgress
+  - [x] TaskContextMenu
+  - [x] TaskEditChildTasks
+  - [x] TaskEditHeader
+  - [x] TaskEditMetadata
+  - [x] TaskEditSubtasks
+  - [x] TaskRowTitle
+  - [x] TimeDisplay
 
-- [ ] **task-management/context-menu** (3 stories)
-  - [ ] DurationSubmenu
-  - [ ] MoreSubmenu
-  - [ ] StatusSubmenu
+- [x] **task-management/context-menu** (3 stories)
+  - [x] DurationSubmenu
+  - [x] MoreSubmenu
+  - [x] StatusSubmenu
 
-- [ ] **task-management/row** (4 stories)
-  - [ ] TaskRowActions
-  - [ ] TaskRowDueDate
-  - [ ] TaskRowPriority
-  - [ ] TaskRowProject
+- [x] **task-management/row** (4 stories)
+  - [x] TaskRowActions
+  - [x] TaskRowDueDate
+  - [x] TaskRowPriority
+  - [x] TaskRowProject
 
-- [ ] **views** (8 stories)
-  - [ ] AIChatView
-  - [ ] AllTasksView
-  - [ ] BoardView
-  - [ ] CalendarView
-  - [ ] CanvasView
-  - [ ] FocusView
-  - [ ] PerformanceView
-  - [ ] QuickSortView
+- [x] **views** (8 stories)
+  - [x] AIChatView
+  - [x] AllTasksView
+  - [x] BoardView
+  - [x] CalendarView
+  - [x] CanvasView
+  - [x] FocusView
+  - [x] PerformanceView
+  - [x] QuickSortView

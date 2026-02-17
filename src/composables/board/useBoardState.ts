@@ -80,7 +80,7 @@ export function useBoardState(deps: BoardStateDependencies) {
                 return taskStore.nonDoneTaskCount
             }
             return taskStore?.filteredTasks?.length || 0
-        } catch (error) {
+        } catch (_error) {
             return 0
         }
     })

@@ -158,7 +158,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
                 })
               }
             })
-        } catch (err) {
+        } catch (_err) {
           // Task processing error
         }
       })

@@ -71,7 +71,7 @@ export function useSidebarManagement() {
 
     // No projects is valid - user can have uncategorized tasks without any projects
     if (filtered.length === 0) {
-
+      // intentionally empty
     }
 
     return filtered

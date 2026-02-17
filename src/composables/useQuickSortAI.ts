@@ -15,7 +15,7 @@ import { createAIRouter } from '@/services/ai'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import type { SmartSuggestion } from '@/composables/useAITaskAssist'
-import { useTaskStore } from '@/stores/tasks'
+
 import { useProjectStore } from '@/stores/projects'
 
 // ============================================================================

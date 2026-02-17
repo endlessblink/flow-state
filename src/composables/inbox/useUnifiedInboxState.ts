@@ -234,21 +234,23 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
         tasks = [...tasks].sort((a, b) => {
             switch (sortBy.value) {
-                case 'priority':
+                case 'priority': {
                     // High priority first
                     const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 3
                     const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 3
                     if (aPriority !== bPriority) return aPriority - bPriority
                     // Secondary: newest first
                     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                }
 
-                case 'dueDate':
+                case 'dueDate': {
                     // Tasks with due dates first, then by due date
                     const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
                     const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
                     if (aDue !== bDue) return aDue - bDue
                     // Secondary: newest first
                     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                }
 
                 case 'canvasOrder': {
                     // TASK-1303: Sort by group column (left→right), then top→bottom within group

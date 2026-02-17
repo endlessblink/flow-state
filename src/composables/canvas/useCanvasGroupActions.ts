@@ -163,7 +163,7 @@ export function useCanvasGroupActions(deps: GroupActionsDeps) {
         if (!section) return
 
         try {
-            const sectionNodeId = CanvasIds.groupNodeId(section.id)
+            const _sectionNodeId = CanvasIds.groupNodeId(section.id)
 
             // TASK-158 FIX: Use persistent deleted groups tracker
             markGroupDeleted(section.id)

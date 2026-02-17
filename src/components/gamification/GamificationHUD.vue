@@ -27,7 +27,7 @@ import StreakTooltipContent from '@/components/gamification/tooltips/StreakToolt
 import ChallengeTooltipContent from '@/components/gamification/tooltips/ChallengeTooltipContent.vue'
 import { Flame, ChevronDown, Target } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   panelOpen: boolean
 }>()
 

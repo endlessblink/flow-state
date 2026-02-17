@@ -50,10 +50,10 @@ const isListening = ref(false)
 const pendingLocalOperations = ref<Map<string, TaskOperation>>(new Map())
 
 export function useCrossTabSync() {
-  const authStore = useAuthStore()
+  const _authStore = useAuthStore()
   const taskStore = useTaskStore()
   const uiStore = useUIStore()
-  const canvasStore = useCanvasStore()
+  const _canvasStore = useCanvasStore()
 
   // Initialize sub-composables
   const { tabId: currentTabId, connect, disconnect, broadcast, onMessage } = useBroadcastChannelSync()
@@ -111,7 +111,7 @@ export function useCrossTabSync() {
             }
 
             // Strip geometry fields from cross-tab sync - geometry should only come from drag handlers
-            const { canvasPosition, parentId, positionFormat, ...safeUpdates } = operation.taskData as any
+            const { canvasPosition: _canvasPosition, parentId: _parentId, positionFormat: _positionFormat, ...safeUpdates } = operation.taskData as any
 
             // Apply only non-geometry updates
             Object.assign(task, safeUpdates)

@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { Bot, DollarSign, MessageSquare, Zap, Trash2, Tag, RefreshCw } from 'lucide-vue-next'
 import { useAIUsageTracking, type UsagePeriod, type UsageSummary } from '@/composables/useAIUsageTracking'
 import { useAIChat } from '@/composables/useAIChat'
-import { useAIChatStore } from '@/stores/aiChat'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
@@ -11,7 +10,6 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, type AIProviderKey } from '@/config/aiModels'
 
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
-const aiChatStore = useAIChatStore()
 const settingsStore = useSettingsStore()
 const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
 

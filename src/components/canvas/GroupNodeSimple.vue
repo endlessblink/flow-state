@@ -85,7 +85,6 @@ import '@vue-flow/node-resizer/dist/style.css'
 // BUG-043: Import Position for edge resize handles
 import { Position } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
-import { useTaskStore } from '@/stores/tasks'
 // TASK-167: Direct import to ensure latest logic
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 // TASK-166: Date picker for bi-directional day group editing
@@ -260,8 +259,8 @@ const handleResize = (event: unknown) => {
     const nodeResizerHeight = resizeEvent?.height || resizeEvent?.params?.height
 
     // Only log when near constraints to reduce noise
-    const nearMin = nodeResizerHeight && nodeResizerHeight <= 120
-    const nearMax = nodeResizerHeight && nodeResizerHeight >= 1950
+    const _nearMin = nodeResizerHeight && nodeResizerHeight <= 120
+    const _nearMax = nodeResizerHeight && nodeResizerHeight >= 1950
 
     emit('resize', { sectionId: props.id, event })
     rafId.value = null

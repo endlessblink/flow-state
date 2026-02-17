@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, type Ref } from 'vue'
 import type { Task } from '@/types/tasks'
 
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'

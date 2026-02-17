@@ -688,7 +688,7 @@ const commitOperation = async () => {
 
 // UPDATED: Now saves both tasks AND groups (ISSUE-008 fix)
 // BUG-309-B: Enhanced to support operation metadata for selective restoration
-const saveState = async (_description?: string, operation?: Omit<UndoOperation, 'timestamp'>) => {
+const saveState = async (_description?: string, _operation?: Omit<UndoOperation, 'timestamp'>) => {
   // BUG-008 DEBUG: Log when refHistoryInstance is null
   if (!refHistoryInstance) {
     console.error('❌ [UNDO-CRITICAL] saveState() called but refHistoryInstance is NULL! Calling initializeRefHistory()...')

@@ -7,7 +7,7 @@
  * @see TASK-1283 in MASTER_PLAN.md
  */
 
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref } from 'vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'

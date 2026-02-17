@@ -1,9 +1,8 @@
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
-import { useDateTransition } from '@/composables/useDateTransition'
 
 // Mock the date transition composable to avoid real timers
 vi.mock('@/composables/useDateTransition', () => ({

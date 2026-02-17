@@ -13,7 +13,7 @@
  * - Messages appear as assistant messages with narrator: true metadata
  */
 
-import { watch, ref, type Ref } from 'vue'
+import { watch, ref } from 'vue'
 import { useGamificationStore } from '@/stores/gamification'
 import { useChallengesStore } from '@/stores/challenges'
 import { useAIChatStore } from '@/stores/aiChat'

@@ -248,9 +248,9 @@ async function generateBoss() {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), var(--glass-bg-heavy));
+  background: linear-gradient(135deg, var(--danger-bg-subtle), var(--glass-bg-heavy));
   border-radius: var(--radius-lg);
-  border: 1px solid var(--danger-border-medium);
+  border: 1px solid var(--danger-border);
 }
 
 .panel--compact {
@@ -271,7 +271,7 @@ async function generateBoss() {
 }
 
 .header-icon {
-  color: var(--color-error-400);
+  color: var(--color-danger);
 }
 
 .header-title h3 {
@@ -286,7 +286,7 @@ async function generateBoss() {
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-xs);
-  color: var(--color-warning-400);
+  color: var(--color-warning);
 }
 
 .boss-content {
@@ -306,11 +306,11 @@ async function generateBoss() {
 .boss-name {
   font-size: var(--text-lg);
   font-weight: var(--font-bold);
-  color: var(--color-error-400);
+  color: var(--color-danger);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin: 0 0 var(--space-1);
-  text-shadow: 0 0 var(--space-5) var(--color-error-500);
+  text-shadow: 0 0 var(--space-5) var(--color-danger);
 }
 
 .boss-description {
@@ -362,9 +362,9 @@ async function generateBoss() {
   width: 0 !important;
 }
 
-.bg-red-500 { background: #ef4444; color: #ef4444; }
-.bg-orange-500 { background: #f97316; color: #f97316; }
-.bg-green-500 { background: #22c55e; color: #22c55e; }
+.bg-red-500 { background: var(--color-danger); color: var(--color-danger); }
+.bg-orange-500 { background: var(--color-warning); color: var(--color-warning); }
+.bg-green-500 { background: var(--color-success); color: var(--color-success); }
 
 .damage-stats {
   display: flex;
@@ -381,7 +381,7 @@ async function generateBoss() {
 }
 
 .stat svg {
-  color: var(--color-warning-400);
+  color: var(--color-warning);
 }
 
 .victory-banner {
@@ -390,7 +390,7 @@ async function generateBoss() {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: linear-gradient(135deg, var(--color-success-600), var(--color-success-500));
+  background: linear-gradient(135deg, var(--success-bg-hover), var(--color-success));
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-lg);
@@ -401,8 +401,8 @@ async function generateBoss() {
 }
 
 @keyframes victory-glow {
-  from { box-shadow: 0 0 var(--space-2_5) var(--color-success-500); }
-  to { box-shadow: 0 0 var(--space-8) var(--color-success-400); }
+  from { box-shadow: 0 0 var(--space-2_5) var(--color-success); }
+  to { box-shadow: 0 0 var(--space-8) var(--success-bg-hover); }
 }
 
 .trophy-icon {
@@ -427,7 +427,7 @@ async function generateBoss() {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  background: linear-gradient(135deg, var(--color-error-600), var(--color-error-500));
+  background: linear-gradient(135deg, var(--danger-bg-hover), var(--color-danger));
   color: var(--text-primary);
   border: none;
   border-radius: var(--radius-md);
@@ -439,7 +439,7 @@ async function generateBoss() {
 
 .generate-button:hover:not(:disabled) {
   transform: translateY(calc(-1 * var(--space-px) * 2));
-  box-shadow: 0 var(--space-1) var(--space-3) var(--danger-shadow-strong);
+  box-shadow: 0 var(--space-1) var(--space-3) var(--danger-shadow);
 }
 
 .generate-button:disabled {
@@ -462,6 +462,6 @@ async function generateBoss() {
 
 .error-message {
   font-size: var(--text-xs);
-  color: var(--color-error-400);
+  color: var(--color-danger);
 }
 </style>

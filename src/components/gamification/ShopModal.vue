@@ -228,7 +228,7 @@ function getCategoryIcon(category: ShopCategory) {
   align-items: center;
   justify-content: center;
   background: var(--overlay-bg);
-  backdrop-filter: blur(var(--blur-xs));
+  backdrop-filter: blur(var(--blur-sm));
   z-index: var(--z-modal);
 }
 
@@ -236,7 +236,7 @@ function getCategoryIcon(category: ShopCategory) {
   display: flex;
   flex-direction: column;
   width: 90%;
-  max-width: 600px;
+  max-width: var(--modal-width-md, 600px);
   max-height: 80vh;
   background: var(--gamification-panel-bg);
   border: 1px solid var(--gamification-panel-border);
@@ -249,7 +249,7 @@ function getCategoryIcon(category: ShopCategory) {
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--purple-border-medium);
+  border-bottom: 1px solid var(--border-medium);
 }
 
 .header-title {
@@ -287,7 +287,7 @@ function getCategoryIcon(category: ShopCategory) {
 .balance-amount {
   font-size: var(--text-base);
   font-weight: var(--font-bold);
-  color: rgba(var(--neon-cyan), 1);
+  color: rgb(var(--neon-cyan));
 }
 
 .close-btn {
@@ -322,7 +322,7 @@ function getCategoryIcon(category: ShopCategory) {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: transparent;
-  border: 1px solid var(--purple-border-medium);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   color: var(--gamification-text-secondary);
   font-size: var(--text-sm);
@@ -339,7 +339,7 @@ function getCategoryIcon(category: ShopCategory) {
 .category-tab.active {
   background: rgba(var(--neon-cyan), 0.15);
   border-color: rgba(var(--neon-cyan), 0.4);
-  color: rgba(var(--neon-cyan), 1);
+  color: rgb(var(--neon-cyan));
 }
 
 .shop-items {
@@ -357,7 +357,7 @@ function getCategoryIcon(category: ShopCategory) {
   gap: var(--space-3);
   padding: var(--space-3);
   background: var(--gamification-card-bg);
-  border: 1px solid var(--purple-border-medium);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   transition: all var(--duration-normal) var(--spring-smooth);
 }
@@ -436,7 +436,7 @@ function getCategoryIcon(category: ShopCategory) {
   background: rgba(var(--neon-cyan), 0.15);
   border: 1px solid rgba(var(--neon-cyan), 0.4);
   border-radius: var(--radius-md);
-  color: rgba(var(--neon-cyan), 1);
+  color: rgb(var(--neon-cyan));
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;
@@ -458,7 +458,7 @@ function getCategoryIcon(category: ShopCategory) {
   background: rgba(var(--neon-magenta), 0.15);
   border: 1px solid rgba(var(--neon-magenta), 0.4);
   border-radius: var(--radius-md);
-  color: rgba(var(--neon-magenta), 1);
+  color: rgb(var(--neon-magenta));
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   cursor: pointer;

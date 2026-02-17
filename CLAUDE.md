@@ -30,8 +30,8 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 
 | Component | Status |
 |-----------|--------|
-| Canvas | ⚠️ Partial (P0 drag bugs: BUG-1191, BUG-1193) |
-| Board | ⚠️ Regression (P0: BUG-1193 drag-drop) |
+| Canvas | ✅ Working |
+| Board | ✅ Working |
 | Calendar | ⚠️ Partial (resize issues) |
 | Supabase Sync | ⚠️ Working (offline-first in progress: TASK-1177) |
 | Backup System | ✅ Hardened (Smart Layers 1-3) |
@@ -634,64 +634,11 @@ src/stores/timer.ts                      # Timer state + leadership logic
 
 ## Timer Active Task Highlighting
 
-When a timer is running, the associated task is visually highlighted across all views with an amber glow + pulse animation.
-
-**Full SOP:** [`docs/sop/SOP-012-timer-active-highlight.md`](docs/sop/SOP-012-timer-active-highlight.md)
-
-**Quick Pattern:**
-```typescript
-const timerStore = useTimerStore()
-const isTimerActive = computed(() =>
-  timerStore.isTimerActive && timerStore.currentTaskId === props.task.id
-)
-// Add class binding: { 'timer-active': isTimerActive }
-```
-
-**Design Tokens:** `--timer-active-border`, `--timer-active-glow`, `--timer-active-glow-strong`
+Running timer highlights task with amber glow + pulse. Pattern: `isTimerActive = computed(() => timerStore.isTimerActive && timerStore.currentTaskId === task.id)`, bind `{ 'timer-active': isTimerActive }`. Tokens: `--timer-active-border`, `--timer-active-glow`. Full details: [SOP-012](docs/sop/SOP-012-timer-active-highlight.md).
 
 ## Supabase JWT Key Validation
 
-**Problem:** JWT keys must be signed with the same secret as the Supabase instance. Mismatched keys cause 401 Unauthorized and `JwtSignatureError` errors.
-
-### Local vs Production Keys
-
-| Environment | JWT Secret | Keys Location |
-|-------------|-----------|---------------|
-| **Local Supabase** | `super-secret-jwt-token-with-at-least-32-characters-long` | `.env` |
-| **Production (VPS)** | `your-super-secret-jwt-token-with-at-least-32-characters-long` | Doppler + VPS `.env` |
-
-**CRITICAL:** Local and production use DIFFERENT JWT secrets. Never mix them.
-
-### For Local Development (without Doppler)
-
-`npm run dev` validates JWT signatures before starting.
-
-**If validation fails:**
-```
-[Supabase] JWT signature mismatch!
-To fix, run: npm run generate:keys
-```
-
-**Fix:** Run `npm run generate:keys` and copy output to `.env.local`.
-
-### For Production (with Doppler)
-
-When connecting to production (`api.in-theflow.com`), validation is skipped:
-```
-[Supabase] Remote URL detected, skipping local key validation
-```
-
-**If production auth fails (401 errors):**
-1. Check that Doppler has correct keys: `doppler secrets get VITE_SUPABASE_ANON_KEY`
-2. Verify VPS Supabase has matching keys: `ssh -i ~/.ssh/id_ed25519 root@84.46.253.137 "grep ANON_KEY /opt/supabase/docker/.env"`
-3. If mismatched, follow **SOP-036** to regenerate keys
-
-**Full SOP:** [`docs/sop/SOP-036-supabase-jwt-key-regeneration.md`](docs/sop/SOP-036-supabase-jwt-key-regeneration.md)
-
-### Scripts
-
-- `scripts/validate-supabase-keys.cjs` - Validates JWT signature on startup (local only)
-- `scripts/generate-supabase-keys.cjs` - Generates keys for LOCAL Supabase
+Local and production use DIFFERENT JWT secrets — never mix them. `npm run dev` auto-validates local keys. If mismatch: run `npm run generate:keys`. For production 401 errors: check Doppler keys match VPS keys, see [SOP-036](docs/sop/SOP-036-supabase-jwt-key-regeneration.md).
 
 ## Canvas Position Persistence (CRITICAL)
 
@@ -763,46 +710,9 @@ These violated geometry invariants and caused position drift. See ADR comments i
 
 ## Dev Maestro
 
-**AI Agent Orchestration Platform** - Kanban board for MASTER_PLAN.md tasks with health scanning, skills visualization, and multi-agent workflows.
+AI orchestration dashboard at `http://localhost:6010`. Start: `./maestro.sh`. Check: `curl -s localhost:6010/api/status`. Skill: `dev-maestro`.
 
-| Item | Value |
-|------|-------|
-| URL | http://localhost:6010 |
-| Install Dir | `~/.dev-maestro` |
-| Start | `./maestro.sh` or `cd ~/.dev-maestro && npm start` |
-| Status API | `curl -s localhost:6010/api/status` |
-| Skill | `dev-maestro` |
-
-**Views**: Kanban, Orchestrator, Skills, Docs, Stats, Timeline, Health
-
-**To check if running:**
-```bash
-curl -s localhost:6010/api/status | grep -q '"running":true' && echo "Running" || echo "Not running"
-```
-
-### MASTER_PLAN.md Parsing Format
-
-**Task Header Format:**
-```markdown
-### TASK-XXX: Task Title (STATUS)
-### ~~TASK-XXX~~: Completed Task Title (✅ DONE)
-```
-
-**Status Keywords:**
-| Status | Keywords |
-|--------|----------|
-| Done | `DONE`, `COMPLETE`, `✅`, `~~strikethrough~~` |
-| In Progress | `IN PROGRESS`, `IN_PROGRESS`, `🔄` |
-| Paused | `PAUSED`, `⏸️` |
-| Review | `REVIEW`, `MONITORING`, `👀` |
-
-**Parser Gotchas (IMPORTANT):**
-1. **Only recognized `##` sections are parsed** - Tasks under `## Code Review Findings` or other custom sections are IGNORED
-2. **Table status must be explicit** - Include 🔄, ✅, etc. in the status column for correct parsing
-3. **Completed tasks** - Use BOTH `~~strikethrough~~` on ID AND `✅ DONE` in status
-4. **After MASTER_PLAN.md changes** - Hard refresh Dev-Maestro (`Ctrl+Shift+R`) to see updates
-
-**Full SOP:** [`docs/sop/SOP-031-dev-maestro-parser.md`](docs/sop/SOP-031-dev-maestro-parser.md)
+**MASTER_PLAN.md Parsing:** Task headers use `### TASK-XXX: Title (STATUS)`. Completed: `### ~~TASK-XXX~~: Title (✅ DONE)`. Status keywords: `DONE`/`✅`, `IN PROGRESS`/`🔄`, `PAUSED`/`⏸️`, `REVIEW`/`👀`. Completed tasks need BOTH `~~strikethrough~~` AND `✅ DONE`. Full SOP: [SOP-031](docs/sop/SOP-031-dev-maestro-parser.md).
 
 ## UI Component Standards
 

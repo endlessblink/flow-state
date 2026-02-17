@@ -2632,8 +2632,8 @@ npm run tasks:bugs     # Filter by BUG type
 | 1 | Mobile views (`mobile/`) | ~10 | ~500 | Highest — ✅ Phase 1 DONE |
 | 2 | AI Chat (`ai/`) | 2 | ~250 | High — ✅ Complete |
 | 3 | Gamification (`gamification/`) | ~20 | ~400 | Medium — ✅ Complete |
-| 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — TaskNode, GroupNode |
-| 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — TaskRow, drag handles |
+| 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — ✅ Complete |
+| 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — ✅ Complete |
 | 6 | CSS files (non-token) | 7 | ~300 | Lower — global overrides |
 | 7 | Remaining (base, calendar, layout, etc.) | ~60 | ~200 | Lowest — mostly clean |
 

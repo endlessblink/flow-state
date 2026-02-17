@@ -267,17 +267,17 @@ function handleChallengeClick(challenge: Challenge) {
 }
 
 .status--complete {
-  background: var(--color-success-500);
-  box-shadow: 0 0 var(--space-2) var(--color-success-500);
+  background: var(--color-success);
+  box-shadow: 0 0 var(--space-2) var(--color-success);
 }
 
 .status--active {
-  background: var(--color-primary-500);
+  background: var(--color-primary);
   animation: pulse 2s ease-in-out infinite;
 }
 
 .status--pending {
-  background: var(--color-warning-500);
+  background: var(--color-warning);
 }
 
 @keyframes pulse {
@@ -303,7 +303,7 @@ function handleChallengeClick(challenge: Challenge) {
 }
 
 .complete-icon {
-  color: var(--color-success-500);
+  color: var(--color-success);
   margin-bottom: var(--space-2);
 }
 
@@ -314,7 +314,7 @@ function handleChallengeClick(challenge: Challenge) {
 
 .all-complete .subtext {
   font-size: var(--text-sm);
-  color: var(--color-gray-500);
+  color: var(--text-tertiary);
   margin-top: var(--space-1);
 }
 
@@ -335,7 +335,7 @@ function handleChallengeClick(challenge: Challenge) {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  background: linear-gradient(135deg, var(--color-primary-600), var(--color-accent-cyan));
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-accent-cyan));
   color: var(--text-primary);
   border: none;
   border-radius: var(--radius-md);
@@ -347,7 +347,7 @@ function handleChallengeClick(challenge: Challenge) {
 
 .generate-button:hover:not(:disabled) {
   transform: translateY(calc(-1 * var(--space-px) * 2));
-  box-shadow: 0 var(--space-1) var(--space-3) rgba(0, 200, 255, 0.3);
+  box-shadow: 0 var(--space-1) var(--space-3) rgba(var(--neon-cyan), 0.3);
 }
 
 .generate-button:disabled {
@@ -377,7 +377,7 @@ function handleChallengeClick(challenge: Challenge) {
   padding: var(--space-2);
   background: var(--danger-bg-medium);
   border-radius: var(--radius-sm);
-  color: var(--color-error-400);
+  color: var(--color-danger);
   font-size: var(--text-xs);
 }
 
@@ -403,8 +403,8 @@ function handleChallengeClick(challenge: Challenge) {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: rgba(0, 240, 255, 0.06);
-  border: 1px solid rgba(0, 240, 255, 0.25);
+  background: rgba(var(--neon-cyan), 0.06);
+  border: 1px solid rgba(var(--neon-cyan), 0.25);
   border-radius: var(--radius-md);
   animation: bannerAppear 0.4s ease-out;
 }
@@ -412,14 +412,14 @@ function handleChallengeClick(challenge: Challenge) {
 .mission-banner-indicator {
   width: 3px;
   height: 24px;
-  background: var(--cf-cyan, #00f0ff);
+  background: var(--cf-cyan, rgb(var(--neon-cyan)));
   border-radius: 2px;
   flex-shrink: 0;
   animation: indicatorPulse 2s ease-in-out infinite;
 }
 
 .mission-banner-icon {
-  color: var(--cf-cyan, #00f0ff);
+  color: var(--cf-cyan, rgb(var(--neon-cyan)));
   flex-shrink: 0;
 }
 
@@ -435,7 +435,7 @@ function handleChallengeClick(challenge: Challenge) {
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
   font-size: 9px;
   font-weight: 700;
-  color: var(--cf-cyan, #00f0ff);
+  color: var(--cf-cyan, rgb(var(--neon-cyan)));
   text-transform: uppercase;
   letter-spacing: 0.12em;
   line-height: 1;
@@ -455,7 +455,7 @@ function handleChallengeClick(challenge: Challenge) {
   font-family: var(--font-cyber-data, 'Space Mono', monospace);
   font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--cf-cyan, #00f0ff);
+  color: var(--cf-cyan, rgb(var(--neon-cyan)));
   flex-shrink: 0;
 }
 
@@ -463,10 +463,10 @@ function handleChallengeClick(challenge: Challenge) {
    Picked card: persistent cyan glow + pulse
    ============================================ */
 .card--picked {
-  border-color: var(--cf-cyan, rgba(0, 240, 255, 0.8)) !important;
+  border-color: var(--cf-cyan, rgba(var(--neon-cyan), 0.8)) !important;
   box-shadow:
-    0 0 8px rgba(0, 240, 255, 0.4),
-    0 0 20px rgba(0, 240, 255, 0.15) !important;
+    0 0 var(--space-2) rgba(var(--neon-cyan), 0.4),
+    0 0 var(--space-5) rgba(var(--neon-cyan), 0.15) !important;
   animation: pickedGlow 2.5s ease-in-out infinite;
 }
 
@@ -483,13 +483,13 @@ function handleChallengeClick(challenge: Challenge) {
 @keyframes pickedGlow {
   0%, 100% {
     box-shadow:
-      0 0 8px rgba(0, 240, 255, 0.4),
-      0 0 20px rgba(0, 240, 255, 0.15);
+      0 0 var(--space-2) rgba(var(--neon-cyan), 0.4),
+      0 0 var(--space-5) rgba(var(--neon-cyan), 0.15);
   }
   50% {
     box-shadow:
-      0 0 12px rgba(0, 240, 255, 0.6),
-      0 0 28px rgba(0, 240, 255, 0.25);
+      0 0 var(--space-3) rgba(var(--neon-cyan), 0.6),
+      0 0 var(--space-7) rgba(var(--neon-cyan), 0.25);
   }
 }
 

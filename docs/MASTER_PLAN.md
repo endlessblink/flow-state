@@ -3374,6 +3374,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1343**~~ | **P2** | ✅ **Quick Sort exits when swiping right on PWA mobile** (✅ DONE 2026-02-17) |
 | **BUG-1350** | **P0** | **📋 New Task transcription page closes prematurely — transcription doesn't appear on PWA mobile** |
 | ~~**BUG-1352**~~ | **P1** | ✅ **Calendar inbox filtered by board smart view — only shows 4 tasks instead of all unscheduled** (✅ DONE 2026-02-17) |
+| ~~**BUG-1353**~~ | **P0** | ✅ **Sidebar quick task: metadata buttons disappear on click + no save confirmation** (✅ DONE 2026-02-17) |
 | **BUG-1351** | **P0** | **🔄 Calendar drag ghost stuck after inbox→day drop** |
 | ~~**BUG-1349**~~ | **P2** | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17) |
 | ~~**BUG-1348**~~ | **P0** | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17) |

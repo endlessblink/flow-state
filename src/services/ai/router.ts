@@ -37,7 +37,7 @@ import {
   OllamaProvider,
 } from './providers/ollama'
 import { recordAIUsage } from './usageTracker'
-import { getDefaultModelForProvider as getDefaultModel } from '@/config/aiModels'
+import { getDefaultModelForProvider as getDefaultModel, getDefaultPricing } from '@/config/aiModels'
 // BUG-1131: Proxy providers for secure API key handling (keys stay server-side)
 import { createGroqProxyProvider } from './providers/groqProxy'
 import { createOpenRouterProxyProvider } from './providers/openrouterProxy'
@@ -152,9 +152,9 @@ export interface ProviderCostTracking {
  * OpenRouter pricing varies by model - using Claude 3.5 Sonnet as reference.
  */
 const PROVIDER_PRICING: Record<RouterProviderType, { input: number; output: number }> = {
-  ollama: { input: 0, output: 0 },           // Free (local)
-  groq: { input: 0.59, output: 0.79 },       // Llama 3.3 70B pricing
-  openrouter: { input: 3.00, output: 15.00 } // Claude 3.5 Sonnet via OpenRouter
+  ollama: getDefaultPricing('ollama'),
+  groq: getDefaultPricing('groq'),
+  openrouter: getDefaultPricing('openrouter'),
 }
 
 // ============================================================================

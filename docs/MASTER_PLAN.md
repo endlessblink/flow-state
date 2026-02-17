@@ -8,11 +8,20 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1340: Calendar view gets stuck when dragging task to main inbox (📋 PLANNED)
+### BUG-1340: Calendar view gets stuck when dragging task to main inbox (🔄 IN PROGRESS)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
 
 **Problem**: Dragging a task from the calendar week view toward the sidebar/inbox causes the calendar to get stuck — the drag ghost remains visible and the view becomes unresponsive. The task appears frozen mid-drag with no way to cancel.
+
+**Root Cause**: 5 independent drag state systems with no single cleanup authority. Commit `1592d02` fixed calendar-originated drags but missed inbox-to-calendar drags — when dragging from inbox over calendar then away, `dragGhost.visible` and `activeDropSlot` in `useCalendarDayView` were never reset. Also `handleDragLeave` was a no-op, and `handleDrop` had silent early returns without cleanup.
+
+**Fix**:
+1. Added `watch(globalIsDragging)` in `useCalendarDayView.ts` — resets all local calendar drag state when ANY drag ends
+2. Added `resetDragState()` helper — eliminates scattered cleanup code, ensures all early returns in `handleDrop` clean up
+3. Added document-level `dragend` safety net in `CalendarView.vue` — fires on every drag end regardless of source/target
+
+**Files Changed**: `src/composables/calendar/useCalendarDayView.ts`, `src/views/CalendarView.vue`
 
 ---
 
@@ -24,9 +33,9 @@
 
 ---
 
-### BUG-1338: Calendar delete does nothing — deleteTaskInstance ignores recurringInstances (🔄 IN PROGRESS)
+### ~~BUG-1338~~: Calendar delete does nothing — deleteTaskInstance ignores recurringInstances (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
 
 **Problem**: Right-click → Delete on calendar tasks shows confirmation dialog but clicking Delete has no effect. The task stays on the calendar.
 
@@ -2653,6 +2662,24 @@ npm run tasks:bugs     # Filter by BUG type
 
 ## Planned Tasks (NEXT/BACKLOG)
 
+### ~~TASK-1342~~: Drag-to-group-header: fix uncategorized key, add dueDate handling, drop hint (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-02-17)
+
+**Problem**: TaskList.vue drag-to-group-header feature had 3 bugs:
+1. Uncategorized project key mismatch — tried to match `projectId=''` against `group.key='uncategorized'`
+2. No support for dueDate groupBy — only handled status/priority/project groups
+3. No visual drop hint — users didn't know they could drop on group headers
+
+**Implementation**:
+- ~~Fix uncategorized project key mismatch in TaskList.vue handleGroupDrop~~ ✅
+- ~~Add dueDate groupBy handling (today/tomorrow/thisWeek/later/noDate)~~ ✅
+- ~~Add visual drop hint icon (ArrowDownToLine) on group headers during drag~~ ✅
+
+**Files Changed**: `src/components/tasks/TaskList.vue`
+
+---
+
 ### INQUIRY-1249: WhatsApp Bot Integration for Task Creation via WAHA + Groq (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED (2026-02-10)
@@ -3614,15 +3641,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1148: Remove 2302 Console Statements from Production (📋 PLANNED)
+### ~~TASK-1148~~: Remove 2302 Console Statements from Production (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 📋 PLANNED
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-17)
 
 **Problem**: 2302 console statements across 256 files pollute production logs.
 
-**Solution**: Configure Vite to strip console in production, replace critical logs with logger service.
+**Solution**: Configured Vite esbuild `pure` option to strip `console.log`, `console.debug`, and `console.info` in production builds. `console.warn` and `console.error` intentionally preserved. Core work done by TASK-1281; TASK-1148 added `console.info` stripping.
 
-**Files**: 256 files, `vite.config.ts`
+**Files**: `vite.config.ts`
 
 ---
 

@@ -27,6 +27,7 @@ import BasePopover from '@/components/base/BasePopover.vue'
 import { useAITaskAssist } from '@/composables/useAITaskAssist'
 import type { SmartSuggestion } from '@/composables/useAITaskAssist'
 import type { Task } from '@/types/tasks'
+import { useWorkProfile } from '@/composables/useWorkProfile'
 
 // ============================================================================
 // Props & Emits
@@ -79,6 +80,8 @@ const {
   abort,
   clearResult
 } = useAITaskAssist()
+
+const { addSuggestionFeedback } = useWorkProfile()
 
 // ============================================================================
 // Computed
@@ -226,6 +229,12 @@ function acceptTitle() {
 const smartSuggestChecked = ref<Record<string, boolean>>({})
 const smartSuggestGroupChecked = ref<Record<string, Record<string, boolean>>>({})
 
+// FEATURE-1342: Feedback state for suggestion corrections
+const showFeedbackInputs = ref(false)
+const feedbackText = ref<Record<string, string>>({})
+const showDismissFeedback = ref(false)
+const dismissFeedbackText = ref('')
+
 function isSmartSuggestChecked(suggestion: SmartSuggestion): boolean {
   const key = suggestion.field
   if (key in smartSuggestChecked.value) return smartSuggestChecked.value[key]
@@ -251,17 +260,68 @@ function toggleGroupSuggestionCheck(taskId: string, suggestion: SmartSuggestion)
   smartSuggestGroupChecked.value[taskId][suggestion.field] = !isGroupSuggestionChecked(taskId, suggestion)
 }
 
-function acceptSmartSuggest() {
+async function acceptSmartSuggest() {
   const suggestions = result.value?.smartSuggest?.suggestions
   if (!suggestions) return
+
+  const rejected = suggestions.filter(s => !isSmartSuggestChecked(s))
+
+  // Step 1: If rejections exist and feedback not shown yet, show feedback inputs
+  if (rejected.length > 0 && !showFeedbackInputs.value) {
+    showFeedbackInputs.value = true
+    return
+  }
+
+  // Step 2: Apply accepted suggestions
   const updates = suggestions
     .filter(s => isSmartSuggestChecked(s))
     .map(s => ({ field: s.field, value: s.suggestedValue }))
   if (updates.length > 0) {
     emit('acceptSmartSuggest', updates)
   }
+
+  // FEATURE-1342: Record feedback for rejected suggestions
+  for (const s of rejected) {
+    await addSuggestionFeedback({
+      field: s.field,
+      suggestedValue: formatFieldValue(s.field, s.suggestedValue),
+      actualValue: formatFieldValue(s.field, s.currentValue),
+      reason: feedbackText.value[s.field] || undefined
+    })
+  }
+
+  showFeedbackInputs.value = false
+  feedbackText.value = {}
   clearResult()
   emit('close')
+}
+
+async function handleDismissSmart() {
+  const suggestions = result.value?.smartSuggest?.suggestions
+  if (!suggestions?.length) {
+    clearResult()
+    return
+  }
+
+  // Step 1: Show feedback input
+  if (!showDismissFeedback.value) {
+    showDismissFeedback.value = true
+    return
+  }
+
+  // Step 2: Record all as rejected
+  for (const s of suggestions) {
+    await addSuggestionFeedback({
+      field: s.field,
+      suggestedValue: formatFieldValue(s.field, s.suggestedValue),
+      actualValue: formatFieldValue(s.field, s.currentValue),
+      reason: dismissFeedbackText.value || undefined
+    })
+  }
+
+  showDismissFeedback.value = false
+  dismissFeedbackText.value = ''
+  clearResult()
 }
 
 function acceptSmartSuggestGroup() {
@@ -338,6 +398,10 @@ watch(() => props.isVisible, (visible) => {
     clearResult()
     smartSuggestChecked.value = {}
     smartSuggestGroupChecked.value = {}
+    showFeedbackInputs.value = false
+    feedbackText.value = {}
+    showDismissFeedback.value = false
+    dismissFeedbackText.value = ''
   }
 })
 
@@ -643,13 +707,39 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
             <p v-if="suggestion.reasoning" class="smart-suggestion-reason" dir="auto">
               {{ suggestion.reasoning }}
             </p>
+            <!-- FEATURE-1342: Feedback input for rejected suggestions -->
+            <div
+              v-if="showFeedbackInputs && !isSmartSuggestChecked(suggestion)"
+              class="smart-suggestion-feedback"
+              @click.stop
+            >
+              <input
+                v-model="feedbackText[suggestion.field]"
+                class="feedback-input"
+                type="text"
+                placeholder="Why not? (optional)"
+                @keydown.enter.stop="acceptSmartSuggest"
+                @click.stop
+              >
+            </div>
+          </div>
+          <!-- FEATURE-1342: Dismiss feedback input -->
+          <div v-if="showDismissFeedback" class="dismiss-feedback-section" @click.stop>
+            <input
+              v-model="dismissFeedbackText"
+              class="feedback-input feedback-input--full"
+              type="text"
+              placeholder="What was wrong? (optional)"
+              @keydown.enter.stop="handleDismissSmart"
+              @click.stop
+            >
           </div>
           <div v-if="result.smartSuggest?.suggestions?.length" class="result-actions">
             <button class="accept-btn" @click="acceptSmartSuggest">
-              Apply selected
+              {{ showFeedbackInputs ? 'Confirm & Apply' : 'Apply selected' }}
             </button>
-            <button class="dismiss-btn" @click="clearResult">
-              Dismiss
+            <button class="dismiss-btn" @click="handleDismissSmart">
+              {{ showDismissFeedback ? 'Confirm dismiss' : 'Dismiss' }}
             </button>
           </div>
           <div v-else class="result-actions">
@@ -1152,6 +1242,39 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   line-height: var(--leading-normal);
   margin: var(--space-1) 0 0;
   padding-left: calc(16px + var(--space-1_5));
+}
+
+/* ── FEATURE-1342: Suggestion Feedback ── */
+.smart-suggestion-feedback {
+  padding: var(--space-1_5) 0 0 calc(16px + var(--space-1_5));
+}
+
+.feedback-input {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border-hover);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+
+.feedback-input::placeholder {
+  color: var(--text-muted);
+}
+
+.feedback-input:focus {
+  border-color: var(--brand-primary);
+}
+
+.feedback-input--full {
+  padding-left: var(--space-2);
+}
+
+.dismiss-feedback-section {
+  padding: var(--space-2) 0 0;
 }
 
 /* ── Smart Suggest Group ── */

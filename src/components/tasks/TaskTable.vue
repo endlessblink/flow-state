@@ -738,6 +738,10 @@ onUnmounted(() => {
 .title-cell {
   font-weight: var(--font-medium);
   color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .project-cell {

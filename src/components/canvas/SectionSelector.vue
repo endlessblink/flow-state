@@ -270,10 +270,10 @@ onBeforeUnmount(() => {
   box-shadow: var(--overlay-component-shadow);
   border-radius: var(--radius-xl);
 
-  max-height: 350px;
+  max-height: var(--dropdown-max-height, 350px);
   overflow-y: auto;
   padding: var(--space-2);
-  min-width: 200px;
+  min-width: var(--dropdown-min-width, 200px);
 
   /* Ensure backdrop-filter works */
   isolation: isolate;

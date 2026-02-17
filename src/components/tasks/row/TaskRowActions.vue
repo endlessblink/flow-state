@@ -69,8 +69,8 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   padding: 0;
   border: 1px solid transparent;
   background: transparent;

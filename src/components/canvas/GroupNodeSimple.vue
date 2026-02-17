@@ -282,18 +282,18 @@ const handleResizeEnd = (event: unknown) => {
   display: flex;
   flex-direction: column;
   /* TASK-073: Double-line border effect - inner solid + outer subtle */
-  border: var(--space-0_5) solid rgba(var(--color-slate-50), 0.35) !important;
+  border: var(--space-0_5) solid var(--glass-border-medium) !important;
   border-radius: var(--radius-lg);
   /* BUG-1216: backdrop-filter removed for performance */
-  background: rgba(45, 48, 58, 0.92) !important;
+  background: var(--glass-bg-heavy) !important;
   position: relative;
   z-index: 1;
   /* TASK-073: Outer line via outline for double-border effect */
-  outline: var(--space-0_5) solid rgba(var(--color-slate-50), 0.12);
+  outline: var(--space-0_5) solid var(--glass-border-subtle);
   outline-offset: var(--space-0_5);
   box-shadow:
-    0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.4),
-    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.08);
+    0 var(--space-2) var(--space-6) var(--shadow-color-md),
+    inset 0 var(--space-0_5) 0 var(--glass-border-subtle);
   /* BUG-1216: removed 80px glow spread - too expensive during pan/zoom */
   /* BUG-1216: explicit properties only - 'all' causes drag sluggishness */
   transition: box-shadow var(--duration-fast) ease, border-color var(--duration-fast) ease, outline var(--duration-fast) ease, opacity var(--duration-fast) ease;
@@ -309,12 +309,12 @@ const handleResizeEnd = (event: unknown) => {
 
 .section-node:hover {
   /* TASK-073: Enhanced hover - brighter border and stronger outline */
-  border-color: rgba(var(--color-slate-50), 0.50) !important;
-  outline: var(--space-0_5) solid rgba(var(--color-slate-50), 0.20);
+  border-color: var(--glass-border-strong) !important;
+  outline: var(--space-0_5) solid var(--glass-border-medium);
   outline-offset: var(--space-0_75);
   box-shadow:
-    0 var(--space-3) var(--space-8) rgba(var(--color-slate-900), 0.5),
-    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.1);
+    0 var(--space-3) var(--space-8) var(--shadow-color-lg),
+    inset 0 var(--space-0_5) 0 var(--glass-border-subtle);
   /* BUG-1216: removed 100px glow spread on hover */
 }
 
@@ -322,15 +322,15 @@ const handleResizeEnd = (event: unknown) => {
 .section-node.selected,
 .section-node:focus-within {
   border-color: var(--accent-primary) !important;
-  outline: var(--space-0_5) solid rgba(99, 102, 241, 0.4);
+  outline: var(--space-0_5) solid rgba(var(--accent-primary-rgb), 0.4);
   outline-offset: var(--space-0_75);
   box-shadow:
-    0 var(--space-5) var(--space-14) rgba(var(--color-slate-900), 0.55),
-    0 var(--space-2_5) var(--space-7) rgba(var(--color-slate-900), 0.35),
+    0 var(--space-5) var(--space-14) var(--shadow-color-xl),
+    0 var(--space-2_5) var(--space-7) var(--shadow-color-lg),
     0 0 var(--space-25) var(--space-6_25) currentColor,
     /* Accent glow for selection */
-    0 0 var(--space-5) var(--space-1) rgba(99, 102, 241, 0.4),
-    inset 0 var(--space-0_5) 0 rgba(var(--color-slate-50), 0.12);
+    0 0 var(--space-5) var(--space-1) rgba(var(--accent-primary-rgb), 0.4),
+    inset 0 var(--space-0_5) 0 var(--glass-border-subtle);
 }
 
 .section-header {
@@ -521,13 +521,13 @@ const handleResizeEnd = (event: unknown) => {
   /* TASK-073: Subtle dashed outline for collapsed state distinction */
   border-style: dashed !important;
   border-color: var(--border-interactive) !important;
-  outline: var(--space-0_5) dashed rgba(var(--color-slate-50), 0.08);
+  outline: var(--space-0_5) dashed var(--glass-border-subtle);
   outline-offset: var(--space-0_5);
 }
 
 .section-node.collapsed:hover {
-  border-color: rgba(var(--color-slate-50), 0.40) !important;
-  outline: var(--space-0_5) dashed rgba(var(--color-slate-50), 0.15);
+  border-color: var(--glass-border-medium) !important;
+  outline: var(--space-0_5) dashed var(--glass-border-medium);
 }
 
 .section-node.collapsed .section-header {
@@ -543,12 +543,12 @@ const handleResizeEnd = (event: unknown) => {
 /* TASK-073: Collapsed + selected state with accent outline */
 .section-node.collapsed.vue-flow__node--selected {
   border-color: var(--accent-primary) !important;
-  outline: var(--space-0_5) solid rgba(99, 102, 241, 0.4);
+  outline: var(--space-0_5) solid rgba(var(--accent-primary-rgb), 0.4);
   outline-offset: var(--space-0_75);
   box-shadow:
-    0 var(--space-4) var(--space-12) rgba(var(--color-slate-900), 0.5),
-    0 var(--space-2) var(--space-6) rgba(var(--color-slate-900), 0.3),
-    0 0 var(--space-5) var(--space-1) rgba(99, 102, 241, 0.4);
+    0 var(--space-4) var(--space-12) var(--shadow-color-lg),
+    0 var(--space-2) var(--space-6) var(--shadow-color-md),
+    0 0 var(--space-5) var(--space-1) rgba(var(--accent-primary-rgb), 0.4);
 }
 
 /* Visual hint for collapsed sections */

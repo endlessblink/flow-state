@@ -240,8 +240,8 @@ onUnmounted(() => {
   user-select: none;
   /* Clean shadow for depth */
   box-shadow:
-    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
-    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12);
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm);
 
   box-sizing: border-box;
   display: block;
@@ -280,7 +280,7 @@ onUnmounted(() => {
   min-width: 120px;
   height: var(--space-15);
   box-shadow: none;
-  border: var(--space-1) solid rgba(var(--color-slate-50), 0.4);
+  border: var(--space-1) solid var(--border-medium);
 }
 
 .task-node.lod-3 .task-node-content {
@@ -294,8 +294,8 @@ onUnmounted(() => {
    * transform: translate(x,y) positioning, causing cursor drift on drag in Tauri.
    * Hover lift effect achieved via enhanced box-shadow only. */
   box-shadow:
-    0 var(--space-4) var(--space-8) rgba(0, 0, 0, 0.4),
-    0 var(--space-2) var(--space-4) rgba(0, 0, 0, 0.12);
+    0 var(--space-4) var(--space-8) var(--shadow-color-md),
+    0 var(--space-2) var(--space-4) var(--shadow-color-sm);
   cursor: grab;
 }
 
@@ -308,7 +308,7 @@ onUnmounted(() => {
   border: var(--space-0_5) solid var(--color-navigation) !important;
   box-shadow:
     0 0 var(--space-5) var(--color-navigation),
-    0 var(--space-2) var(--space-8) rgba(0, 0, 0, 0.4) !important;
+    0 var(--space-2) var(--space-8) var(--shadow-color-md) !important;
   animation: pulse-connection 2s infinite;
   cursor: crosshair;
 }
@@ -321,12 +321,12 @@ onUnmounted(() => {
   0%, 100% {
     box-shadow:
       0 0 var(--space-5) var(--color-navigation),
-      0 var(--space-2) var(--space-8) rgba(0, 0, 0, 0.4);
+      0 var(--space-2) var(--space-8) var(--shadow-color-md);
   }
   50% {
     box-shadow:
       0 0 var(--space-7_5) var(--color-navigation),
-      0 var(--space-3) var(--space-12) rgba(0, 0, 0, 0.4);
+      0 var(--space-3) var(--space-12) var(--shadow-color-md);
   }
 }
 
@@ -421,8 +421,8 @@ onUnmounted(() => {
 .priority-high {
   border-color: var(--priority-high-border) !important;
   box-shadow:
-    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
-    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
     0 0 var(--space-5) rgba(239, 68, 68, 0.25),
     inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.1);
 }
@@ -430,8 +430,8 @@ onUnmounted(() => {
 .priority-medium {
   border-color: var(--priority-medium-border) !important;
   box-shadow:
-    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
-    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
     0 0 var(--space-5) rgba(245, 158, 11, 0.25),
     inset 0 0 0 var(--space-0_5) rgba(245, 158, 11, 0.1);
 }
@@ -439,8 +439,8 @@ onUnmounted(() => {
 .priority-low {
   border-color: var(--priority-low-border) !important;
   box-shadow:
-    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
-    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
     0 0 var(--space-5) rgba(59, 130, 246, 0.25),
     inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.1);
 }
@@ -448,8 +448,8 @@ onUnmounted(() => {
 .timer-active {
   border: none !important;
   box-shadow:
-    0 var(--space-4) var(--space-8) rgba(0, 0, 0, 0.4),
-    0 var(--space-2) var(--space-4) rgba(0, 0, 0, 0.12),
+    0 var(--space-4) var(--space-8) var(--shadow-color-md),
+    0 var(--space-2) var(--space-4) var(--shadow-color-sm),
     0 0 var(--space-6) var(--blue-shadow) !important;
 }
 
@@ -490,8 +490,8 @@ onUnmounted(() => {
    * Visual feedback via box-shadow + border-color instead. */
   box-shadow:
     0 0 0 var(--space-0_5) var(--brand-primary),
-    0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
-    0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12);
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm);
 }
 
 /* TASK-1074: Brief flash animation when date is updated */

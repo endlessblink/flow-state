@@ -176,25 +176,44 @@ router.beforeEach(async (to, _from, next) => {
   next()
 })
 
-// Handle dynamic import failures gracefully (BUG-1101)
+// Handle dynamic import failures gracefully (BUG-1184)
+// After a deploy, old chunk hashes are removed from the VPS.
+// Browsers/service workers that cached old index.html will request stale chunk URLs → 404.
+// Fix: detect chunk load failure and force a full page reload to get fresh index.html + SW.
 router.onError((error, to, _from) => {
-  // Check if this is a dynamic import failure
-  if (
+  const isChunkError =
     error.message.includes('Failed to fetch dynamically imported module') ||
     error.message.includes('Loading chunk') ||
-    error.message.includes('Loading CSS chunk')
-  ) {
-    console.error('🚨 [BUG-1101] Dynamic import failed:', error.message)
-    console.error('🚨 [BUG-1101] Failed route:', to.fullPath)
+    error.message.includes('Loading CSS chunk') ||
+    error.message.includes('error loading dynamically imported module')
 
-    // Store the failed route for potential retry
-    sessionStorage.setItem('failedRoute', to.fullPath)
-    sessionStorage.setItem('importError', error.message)
+  if (isChunkError) {
+    console.error('[BUG-1184] Chunk load failed — reloading to get fresh assets:', error.message)
 
-    // Emit custom event for ErrorBoundary to catch
-    window.dispatchEvent(new CustomEvent('route-load-error', {
-      detail: { error, route: to.fullPath }
-    }))
+    // Prevent infinite reload loops: only auto-reload once per session
+    const reloadKey = 'chunk-reload-' + to.fullPath
+    if (!sessionStorage.getItem(reloadKey)) {
+      sessionStorage.setItem(reloadKey, Date.now().toString())
+      // Unregister stale service worker before reloading
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (const registration of registrations) {
+            registration.unregister()
+          }
+          window.location.assign(window.location.href)
+        }).catch(() => {
+          window.location.assign(window.location.href)
+        })
+      } else {
+        window.location.assign(window.location.href)
+      }
+    } else {
+      // Already reloaded once for this route — show error to user
+      console.error('[BUG-1184] Chunk reload already attempted for', to.fullPath)
+      window.dispatchEvent(new CustomEvent('route-load-error', {
+        detail: { error, route: to.fullPath }
+      }))
+    }
   }
 })
 

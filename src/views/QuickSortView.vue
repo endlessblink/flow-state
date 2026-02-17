@@ -455,7 +455,7 @@ const pendingCount = computed(() => quickCapture.pendingTasks.value.length)
 
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
-const showCelebration = ref(false)
+const _showCelebration = ref(false)
 const actionFeedback = ref<{ text: string; type: 'success' | 'info' | 'danger' | 'warning' } | null>(null)
 const sessionSummary = ref<SessionSummary | null>(null)
 const taskToEdit = ref<Task | null>(null)

@@ -102,11 +102,13 @@
 
     <!-- Progress Bar -->
     <div class="task-row__progress">
-      <div v-if="task.progress && task.progress > 0" class="task-row__progress-bar" :style="{ '--progress': `${task.progress}%` }">
-        <div class="task-row__progress-bg" />
-        <div class="task-row__progress-fill" />
+      <template v-if="task.progress && task.progress > 0">
+        <div class="task-row__progress-bar" :style="{ '--progress': `${task.progress}%` }">
+          <div class="task-row__progress-bg" />
+          <div class="task-row__progress-fill" />
+        </div>
         <span class="task-row__progress-text">{{ task.progress }}%</span>
-      </div>
+      </template>
       <span v-else class="task-row__no-progress">-</span>
     </div>
 
@@ -118,6 +120,7 @@
 
     <!-- Action Buttons -->
     <TaskRowActions
+      @ai-suggest="(event: MouseEvent) => $emit('aiSuggest', event)"
       @start-timer="$emit('startTimer')"
       @edit="$emit('edit')"
       @duplicate="$emit('duplicate')"
@@ -188,6 +191,7 @@ defineEmits<{
   updateProjectId: [val: string | null]
   updatePriority: [val: string]
   updateDueDate: [val: string | null]
+  aiSuggest: [event: MouseEvent]
   startTimer: []
   edit: []
   duplicate: []

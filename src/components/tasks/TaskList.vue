@@ -72,6 +72,13 @@
         <div v-else-if="group.color" class="group-color-dot" :style="{ backgroundColor: Array.isArray(group.color) ? group.color[0] : (group.color || '#6B7280') }" />
         <span class="group-name">{{ group.title }}</span>
         <span class="group-task-count">{{ group.tasks.length }}</span>
+        <button
+          class="group-ai-btn"
+          title="Smart Suggest all tasks in group (AI)"
+          @click.stop="handleGroupAISuggest($event, group)"
+        >
+          <Zap :size="14" />
+        </button>
       </div>
 
       <!-- Group Tasks (only parent tasks, subtasks rendered recursively) -->
@@ -88,6 +95,7 @@
           @select="handleSelect"
           @check="toggleTaskSelect"
           @toggle-complete="$emit('toggleComplete', $event)"
+          @ai-suggest="handleAISuggest"
           @start-timer="$emit('startTimer', $event)"
           @edit="$emit('edit', $event)"
           @context-menu="handleContextMenu"
@@ -108,6 +116,20 @@
         {{ emptyMessage || 'Create your first task to get started' }}
       </p>
     </div>
+
+    <!-- AI Smart Suggest Popover -->
+    <AITaskAssistPopover
+      :is-visible="showAIPopover"
+      :task="aiPopoverTask"
+      :x="aiPopoverX"
+      :y="aiPopoverY"
+      context="context-menu"
+      :auto-trigger="aiPopoverAutoTrigger"
+      :selected-task-ids="aiPopoverGroupTaskIds"
+      @close="closeAIPopover"
+      @accept-smart-suggest="handleAcceptSmartSuggest"
+      @accept-smart-suggest-group="handleAcceptSmartSuggestGroup"
+    />
   </div>
 </template>
 
@@ -116,8 +138,9 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Task, TaskGroup } from '@/types/tasks'
 import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
+import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { Inbox, ChevronRight, Pencil, Trash2, X } from 'lucide-vue-next'
+import { Inbox, ChevronRight, Pencil, Trash2, X, Zap } from 'lucide-vue-next'
 
 interface Props {
   tasks: Task[]
@@ -228,6 +251,71 @@ const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
   // Clean up drag ghost — the original task row may be destroyed by Vue re-render
   // before dragend fires, so we must clean up here
   endDrag()
+}
+
+// --- AI Smart Suggest Popover ---
+const showAIPopover = ref(false)
+const aiPopoverX = ref(0)
+const aiPopoverY = ref(0)
+const aiPopoverTask = ref<Task | null>(null)
+const aiPopoverAutoTrigger = ref<string | null>(null)
+const aiPopoverGroupTaskIds = ref<string[]>([])
+
+const handleAISuggest = (event: MouseEvent, task: Task) => {
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  aiPopoverX.value = rect.right + 4
+  aiPopoverY.value = rect.top
+  aiPopoverTask.value = task
+  aiPopoverAutoTrigger.value = 'smartSuggest'
+  aiPopoverGroupTaskIds.value = []
+  showAIPopover.value = true
+}
+
+const handleGroupAISuggest = (event: MouseEvent, group: TaskGroup) => {
+  event.stopPropagation()
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  aiPopoverX.value = rect.right + 4
+  aiPopoverY.value = rect.top
+  const taskIds = (group.tasks || []).map(t => t.id)
+  if (taskIds.length === 0) return
+  // For group mode, set the first task as context and pass all IDs
+  aiPopoverTask.value = group.tasks[0] || null
+  aiPopoverAutoTrigger.value = 'smartSuggestGroup'
+  aiPopoverGroupTaskIds.value = taskIds
+  showAIPopover.value = true
+}
+
+const closeAIPopover = () => {
+  showAIPopover.value = false
+  aiPopoverTask.value = null
+  aiPopoverAutoTrigger.value = null
+  aiPopoverGroupTaskIds.value = []
+}
+
+const handleAcceptSmartSuggest = async (updates: Array<{ field: string; value: string | number }>) => {
+  if (!aiPopoverTask.value) return
+  const taskId = aiPopoverTask.value.id
+  const updateObj: Partial<Task> = {}
+  for (const u of updates) {
+    if (u.field === 'priority') updateObj.priority = u.value as Task['priority']
+    else if (u.field === 'dueDate') updateObj.dueDate = String(u.value)
+    else if (u.field === 'status') updateObj.status = u.value as Task['status']
+    else if (u.field === 'estimatedDuration') updateObj.estimatedDuration = Number(u.value)
+  }
+  emit('updateTask', taskId, updateObj)
+}
+
+const handleAcceptSmartSuggestGroup = async (updates: Array<{ taskId: string; fields: Array<{ field: string; value: string | number }> }>) => {
+  for (const item of updates) {
+    const updateObj: Partial<Task> = {}
+    for (const u of item.fields) {
+      if (u.field === 'priority') updateObj.priority = u.value as Task['priority']
+      else if (u.field === 'dueDate') updateObj.dueDate = String(u.value)
+      else if (u.field === 'status') updateObj.status = u.value as Task['status']
+      else if (u.field === 'estimatedDuration') updateObj.estimatedDuration = Number(u.value)
+    }
+    emit('updateTask', item.taskId, updateObj)
+  }
 }
 
 // --- Bulk Selection ---
@@ -440,6 +528,33 @@ defineExpose({
   height: 14px;
   accent-color: var(--brand-primary);
   cursor: pointer;
+}
+
+.group-ai-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.group-header:hover .group-ai-btn {
+  opacity: 1;
+}
+
+.group-ai-btn:hover {
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-medium);
 }
 
 .group-color-dot {

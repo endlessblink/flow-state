@@ -215,6 +215,8 @@ onUnmounted(() => {
   margin-bottom: var(--space-4);
   max-width: 800px;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Description */

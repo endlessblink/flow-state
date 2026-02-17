@@ -1,26 +1,15 @@
 <template>
   <div class="mobile-quick-sort">
-    <!-- BUG-1343: Edge dead zones consume edge touches before the browser
-         can interpret them as back/forward navigation gestures -->
-    <div class="edge-guard edge-guard-left" aria-hidden="true" @touchstart.prevent @touchmove.prevent />
-    <div class="edge-guard edge-guard-right" aria-hidden="true" @touchstart.prevent @touchmove.prevent />
-
     <!-- Grain Texture Overlay -->
     <div class="grain-overlay" aria-hidden="true" />
 
-    <!-- Header -->
+    <!-- Compact Header (title + stats) -->
     <header class="qs-header">
-      <button class="back-btn" aria-label="Exit Quick Sort" @click="handleExit">
-        <X :size="24" />
-      </button>
       <div class="header-content">
         <h1 class="qs-title">
-          <Zap :size="20" class="zap-icon" />
+          <Zap :size="18" class="zap-icon" />
           <span>Quick Sort</span>
         </h1>
-        <p class="qs-subtitle">
-          {{ activePhase === 'capture' ? 'Capture' : 'Swipe to sort' }}
-        </p>
       </div>
       <div class="header-stats">
         <span class="stat-badge">{{ progress.current }}/{{ progress.total }}</span>
@@ -485,9 +474,9 @@
             </div>
           </div>
 
-          <button class="return-btn" @click="handleExit">
+          <button class="return-btn" @click="router.push('/tasks')">
             <ArrowLeft :size="20" />
-            Return to Tasks
+            Go to Inbox
           </button>
         </div>
       </div>
@@ -664,16 +653,24 @@
 
             <!-- AI Error -->
             <div v-if="aiState === 'error'" class="ai-sheet-body">
-              <h3 class="sheet-title">AI Error</h3>
-              <p class="ai-error-text">{{ aiError }}</p>
+              <h3 class="sheet-title">
+                AI Error
+              </h3>
+              <p class="ai-error-text">
+                {{ aiError }}
+              </p>
               <div class="sheet-actions">
-                <button class="sheet-btn primary" @click="closeAISheet">Close</button>
+                <button class="sheet-btn primary" @click="closeAISheet">
+                  Close
+                </button>
               </div>
             </div>
 
             <!-- Smart Suggest Results -->
             <div v-else-if="aiAction === 'suggest'" class="ai-sheet-body">
-              <h3 class="sheet-title">AI Suggestions</h3>
+              <h3 class="sheet-title">
+                AI Suggestions
+              </h3>
               <div class="ai-suggestions-list">
                 <div
                   v-for="s in currentSuggestions"
@@ -689,7 +686,9 @@
                     <span class="ai-arrow">&rarr;</span>
                     <span class="ai-to">{{ s.suggestedValue }}</span>
                   </div>
-                  <p v-if="s.reasoning" class="ai-reason">{{ s.reasoning }}</p>
+                  <p v-if="s.reasoning" class="ai-reason">
+                    {{ s.reasoning }}
+                  </p>
                 </div>
                 <div v-if="suggestedProjectId" class="ai-suggestion-item">
                   <div class="ai-suggestion-top">
@@ -703,14 +702,20 @@
                 </div>
               </div>
               <div class="sheet-actions">
-                <button class="sheet-btn primary" @click="handleApplySuggestions">Apply All</button>
-                <button class="sheet-btn secondary" @click="closeAISheet">Dismiss</button>
+                <button class="sheet-btn primary" @click="handleApplySuggestions">
+                  Apply All
+                </button>
+                <button class="sheet-btn secondary" @click="closeAISheet">
+                  Dismiss
+                </button>
               </div>
             </div>
 
             <!-- Batch Results -->
             <div v-else-if="aiAction === 'batch'" class="ai-sheet-body">
-              <h3 class="sheet-title">{{ batchResults.length }} Tasks Categorized</h3>
+              <h3 class="sheet-title">
+                {{ batchResults.length }} Tasks Categorized
+              </h3>
               <div class="ai-batch-list">
                 <div
                   v-for="r in batchResults"
@@ -726,21 +731,35 @@
                 </div>
               </div>
               <div class="sheet-actions">
-                <button class="sheet-btn primary" @click="handleApplyBatch">Apply All</button>
-                <button class="sheet-btn secondary" @click="closeAISheet">Dismiss</button>
+                <button class="sheet-btn primary" @click="handleApplyBatch">
+                  Apply All
+                </button>
+                <button class="sheet-btn secondary" @click="closeAISheet">
+                  Dismiss
+                </button>
               </div>
             </div>
 
             <!-- Explain Results -->
             <div v-else-if="aiAction === 'explain'" class="ai-sheet-body">
-              <h3 class="sheet-title">Task Breakdown</h3>
-              <p class="ai-explain-desc">{{ explainResult?.description }}</p>
+              <h3 class="sheet-title">
+                Task Breakdown
+              </h3>
+              <p class="ai-explain-desc">
+                {{ explainResult?.description }}
+              </p>
               <ul v-if="explainResult?.actionSteps?.length" class="ai-explain-steps">
-                <li v-for="(step, i) in explainResult.actionSteps" :key="i">{{ step }}</li>
+                <li v-for="(step, i) in explainResult.actionSteps" :key="i">
+                  {{ step }}
+                </li>
               </ul>
               <div class="sheet-actions">
-                <button class="sheet-btn primary" @click="handleApplyExplain">Accept</button>
-                <button class="sheet-btn secondary" @click="closeAISheet">Dismiss</button>
+                <button class="sheet-btn primary" @click="handleApplyExplain">
+                  Accept
+                </button>
+                <button class="sheet-btn secondary" @click="closeAISheet">
+                  Dismiss
+                </button>
               </div>
             </div>
           </div>
@@ -830,7 +849,6 @@ const hasSwipedOnce = ref(false)
 const sessionSummary = ref<SessionSummary | null>(null)
 const showDeleteConfirm = ref(false)
 const showQuickEditPanel = ref(false)
-const intentionalExit = ref(false) // BUG-1343: Flag to allow router navigation on intentional exit
 const showAISheet = ref(false)
 const showAISortFeedback = ref(false)
 
@@ -1272,12 +1290,6 @@ async function handleApplyExplain() {
   setTimeout(() => { showCelebration.value = false }, 600)
 }
 
-function handleExit() {
-  // BUG-1343: Signal intentional exit so the router guard allows it
-  intentionalExit.value = true
-  router.push('/tasks')
-}
-
 function cancelDelete() {
   showDeleteConfirm.value = false
 }
@@ -1395,22 +1407,6 @@ watch(sortedTaskOrder, (order) => {
 })
 
 // Lifecycle
-// BUG-1343: Prevent browser's swipe-back gesture from exiting Quick Sort on mobile PWA.
-// The browser's back-navigation gesture operates at the compositor level (before JS touch events).
-// Vue Router beforeEach guard intercepts navigation synchronously BEFORE the route change commits.
-const removeRouterGuard = router.beforeEach((to, from, next) => {
-  if (from.name === 'mobile-quick-sort' && to.name !== 'mobile-quick-sort') {
-    if (intentionalExit.value) {
-      next()
-    } else {
-      // Browser back gesture or accidental navigation — block it
-      next(false)
-    }
-  } else {
-    next()
-  }
-})
-
 onMounted(() => {
   startSession()
 })
@@ -1419,8 +1415,6 @@ onUnmounted(() => {
   // Clear pending celebration timers to avoid setting refs on unmounted component
   celebrationTimers.forEach(clearTimeout)
   celebrationTimers.length = 0
-  // Remove the router navigation guard
-  removeRouterGuard()
 })
 </script>
 
@@ -1431,34 +1425,14 @@ onUnmounted(() => {
    ================================ */
 
 .mobile-quick-sort {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 100vh;
-  height: 100dvh; /* Dynamic viewport height - accounts for iOS browser chrome */
+  position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--app-background-gradient);
+  height: 100%;
   color: var(--text-primary);
   overflow: hidden;
-  overscroll-behavior-x: none;
-  touch-action: none; /* 4-directional swipe: JS handles all touch, also prevents browser back gesture (BUG-1343) */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-
-/* BUG-1343: Edge dead zones consume edge touches to prevent browser back/forward gesture */
-.edge-guard {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: 20px;
-  z-index: 9999;
-  touch-action: none;
-}
-.edge-guard-left { left: 0; }
-.edge-guard-right { right: 0; }
 
 /* Grain texture overlay */
 .grain-overlay {
@@ -1478,32 +1452,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur-lg));
-  -webkit-backdrop-filter: blur(var(--blur-lg));
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--glass-border-light);
   z-index: var(--z-sticky);
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--dropdown-trigger-height);
-  height: var(--dropdown-trigger-height);
-  background: var(--glass-bg-weak);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--duration-normal) ease;
-}
-
-.back-btn:active {
-  transform: scale(0.95);
-  background: var(--glass-bg-light);
+  flex-shrink: 0;
 }
 
 .header-content {

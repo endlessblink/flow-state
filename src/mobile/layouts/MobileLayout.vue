@@ -156,7 +156,7 @@ const projectStore = useProjectStore()
 const uiStore = useUIStore()
 
 // Routes that should be full-screen (no header/nav)
-const fullScreenRoutes = ['mobile-quick-sort']
+const fullScreenRoutes: string[] = []
 
 const isFullScreenView = computed(() => {
   return fullScreenRoutes.includes(route.name as string)

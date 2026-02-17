@@ -8,6 +8,14 @@
 
 ## Active Bugs (P0-P1)
 
+### BUG-1354: Timer start time doesn't reset when reactivating pomodoro on same task (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (2026-02-17)
+
+**Problem**: When reactivating the play/pomodoro timer several times on the same task, the start time doesn't change — the session just keeps getting longer instead of resetting. Each re-press of play should start a fresh timer session.
+
+---
+
 ### ~~BUG-1350~~: Voice transcription sheet closes prematurely on PWA mobile (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
@@ -2624,7 +2632,7 @@ npm run tasks:bugs     # Filter by BUG type
 [x] Phase 1: Mobile Views (`src/mobile/`) **[DONE]**
 | 1 | Mobile views (`mobile/`) | ~10 | ~500 | Highest — ✅ Phase 1 DONE |
 | 2 | AI Chat (`ai/`) | 2 | ~250 | High — ✅ Complete |
-| 3 | Gamification (`gamification/`) | ~20 | ~400 | Medium — cyber components |
+| 3 | Gamification (`gamification/`) | ~20 | ~400 | Medium — ✅ Complete |
 | 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — TaskNode, GroupNode |
 | 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — TaskRow, drag handles |
 | 6 | CSS files (non-token) | 7 | ~300 | Lower — global overrides |
@@ -3368,6 +3376,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1350** | **P0** | **📋 New Task transcription page closes prematurely — transcription doesn't appear on PWA mobile** |
 | ~~**BUG-1352**~~ | **P1** | ✅ **Calendar inbox filtered by board smart view — only shows 4 tasks instead of all unscheduled** (✅ DONE 2026-02-17) |
 | ~~**BUG-1353**~~ | **P0** | ✅ **Sidebar quick task: metadata buttons disappear on click + no save confirmation** (✅ DONE 2026-02-17) |
+| ~~**BUG-1355**~~ | **P1** | ✅ **Can't log out — Supabase signOut fails silently, session re-establishes. Buttons squashed. Post-logout UI stuck** (✅ DONE 2026-02-17) |
+| **BUG-1354** | **P0** | **📋 Mobile PWA timer sync broken with web app** |
 | **BUG-1351** | **P0** | **🔄 Calendar drag ghost stuck after inbox→day drop** |
 | ~~**BUG-1349**~~ | **P2** | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17) |
 | ~~**BUG-1348**~~ | **P0** | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17) |

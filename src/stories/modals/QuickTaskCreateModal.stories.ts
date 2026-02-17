@@ -21,7 +21,7 @@ const meta: Meta<typeof QuickTaskCreateModal> = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="min-height: 500px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); border-radius: 12px;">
+        <div style="min-height: 500px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
           <story />
         </div>
       `,

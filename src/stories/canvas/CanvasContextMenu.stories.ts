@@ -50,7 +50,7 @@ const meta: Meta<typeof CanvasContextMenu> = {
           width: 100%;
           background: var(--app-background-gradient);
           position: relative;
-          padding: 100px 60px;
+          padding: 6.25rem var(--space-16);
         ">
           <story />
         </div>

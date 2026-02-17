@@ -60,7 +60,7 @@ const PWAFrame = (screenContent: string, title: string) => `
     width: 390px;
     height: 844px;
     background: #1a1a1a;
-    border-radius: 40px;
+    border-radius: var(--radius-full);
     border: 3px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
@@ -74,14 +74,14 @@ const PWAFrame = (screenContent: string, title: string) => `
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 16px;
-      font-size: 12px;
+      padding: 0 var(--space-4);
+      font-size: var(--text-xs);
       font-weight: 600;
       color: rgba(255, 255, 255, 0.9);
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     ">
       <span>9:41</span>
-      <div style="display: flex; gap: 6px; align-items: center;">
+      <div style="display: flex; gap: var(--space-1-5); align-items: center;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M22 11h2"/></svg>
       </div>
@@ -95,19 +95,19 @@ const PWAFrame = (screenContent: string, title: string) => `
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 16px;
+      padding: 0 var(--space-4);
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     ">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
       <span style="
-        font-size: 16px;
+        font-size: var(--text-base);
         font-weight: 600;
         color: rgba(255, 255, 255, 0.95);
         letter-spacing: 0.01em;
       ">${title}</span>
-      <div style="display: flex; gap: 12px; align-items: center;">
+      <div style="display: flex; gap: var(--space-3); align-items: center;">
         <div style="
           width: 8px;
           height: 8px;
@@ -116,7 +116,7 @@ const PWAFrame = (screenContent: string, title: string) => `
           box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
         "></div>
         <span style="
-          font-size: 14px;
+          font-size: var(--text-sm);
           font-weight: 500;
           color: rgba(78, 205, 196, 1);
           letter-spacing: 0.02em;
@@ -142,40 +142,40 @@ const PWAFrame = (screenContent: string, title: string) => `
       display: flex;
       justify-content: space-around;
       align-items: center;
-      padding: 0 12px;
+      padding: 0 var(--space-3);
     ">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-1);">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${title === 'Board' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2">
           <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
           <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
         </svg>
-        <span style="font-size: 10px; color: ${title === 'Board' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Board</span>
+        <span style="font-size: var(--text-xs); color: ${title === 'Board' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Board</span>
       </div>
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-1);">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${title === 'Calendar' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2">
           <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
           <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
-        <span style="font-size: 10px; color: ${title === 'Calendar' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Calendar</span>
+        <span style="font-size: var(--text-xs); color: ${title === 'Calendar' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Calendar</span>
       </div>
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-1);">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${title === 'Canvas' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2">
           <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
           <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
         </svg>
-        <span style="font-size: 10px; color: ${title === 'Canvas' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Canvas</span>
+        <span style="font-size: var(--text-xs); color: ${title === 'Canvas' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Canvas</span>
       </div>
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-1);">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${title === 'QuickSort' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'}" stroke-width="2">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
         </svg>
-        <span style="font-size: 10px; color: ${title === 'QuickSort' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Sort</span>
+        <span style="font-size: var(--text-xs); color: ${title === 'QuickSort' ? '#4ECDC4' : 'rgba(255,255,255,0.5)'};">Sort</span>
       </div>
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-1);">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2">
           <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
         </svg>
-        <span style="font-size: 10px; color: rgba(255,255,255,0.5);">More</span>
+        <span style="font-size: var(--text-xs); color: rgba(255,255,255,0.5);">More</span>
       </div>
     </div>
   </div>
@@ -196,120 +196,120 @@ export const Board: Story = {
   },
   render: () => ({
     template: PWAFrame(`
-      <div style="padding: 12px; overflow-y: auto; height: 100%;">
+      <div style="padding: var(--space-3); overflow-y: auto; height: 100%;">
         <!-- View Type Tabs -->
         <div style="
           display: flex;
-          gap: 8px;
-          margin-bottom: 12px;
-          padding: 4px;
+          gap: var(--space-2);
+          margin-bottom: var(--space-3);
+          padding: var(--space-1);
           background: rgba(45, 40, 70, 0.15);
-          border-radius: 8px;
+          border-radius: var(--radius-lg);
         ">
           <button style="
             flex: 1;
-            padding: 6px 12px;
+            padding: var(--space-1-5) var(--space-3);
             background: rgba(78, 205, 196, 0.15);
             border: 1px solid rgba(78, 205, 196, 0.5);
-            border-radius: 6px;
+            border-radius: var(--radius-md);
             color: #4ECDC4;
-            font-size: 12px;
+            font-size: var(--text-xs);
             font-weight: 600;
           ">Priority</button>
           <button style="
             flex: 1;
-            padding: 6px 12px;
+            padding: var(--space-1-5) var(--space-3);
             background: transparent;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
+            border-radius: var(--radius-md);
             color: rgba(255, 255, 255, 0.5);
-            font-size: 12px;
+            font-size: var(--text-xs);
           ">Date</button>
           <button style="
             flex: 1;
-            padding: 6px 12px;
+            padding: var(--space-1-5) var(--space-3);
             background: transparent;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
+            border-radius: var(--radius-md);
             color: rgba(255, 255, 255, 0.5);
-            font-size: 12px;
+            font-size: var(--text-xs);
           ">Status</button>
         </div>
 
         <!-- Kanban Columns -->
-        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;">
+        <div style="display: flex; gap: var(--space-2-5); overflow-x: auto; padding-bottom: 8px;">
           <!-- High Priority Column -->
           <div style="
             min-width: 280px;
             background: rgba(45, 40, 70, 0.15);
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: var(--radius-xl);
+            padding: var(--space-3);
           ">
             <div style="
               display: flex;
               justify-content: space-between;
               align-items: center;
-              margin-bottom: 10px;
+              margin-bottom: var(--space-2-5);
             ">
-              <span style="font-size: 13px; font-weight: 600; color: #f87171;">High</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: #f87171;">High</span>
               <span style="
-                padding: 2px 8px;
+                padding: var(--space-0-5) var(--space-2);
                 background: rgba(239, 68, 68, 0.2);
-                border-radius: 12px;
-                font-size: 11px;
+                border-radius: var(--radius-xl);
+                font-size: var(--text-xs);
                 color: #f87171;
               ">3</span>
             </div>
             <!-- Task Cards -->
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-2);">
               <div style="
                 background: rgba(35, 32, 52, 0.95);
                 border: 1px solid rgba(239, 68, 68, 0.3);
-                border-radius: 8px;
-                padding: 10px;
+                border-radius: var(--radius-lg);
+                padding: var(--space-2-5);
               ">
                 <div style="
-                  font-size: 13px;
+                  font-size: var(--text-xs);
                   font-weight: 500;
                   color: rgba(255, 255, 255, 0.95);
-                  margin-bottom: 6px;
+                  margin-bottom: var(--space-1-5);
                   line-height: 1.3;
                 ">Fix critical auth bug</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                   <span style="
-                    padding: 2px 6px;
+                    padding: var(--space-0-5) var(--space-1-5);
                     background: rgba(239, 68, 68, 0.2);
                     border: 1px solid rgba(239, 68, 68, 0.5);
-                    border-radius: 4px;
-                    font-size: 10px;
+                    border-radius: var(--radius-sm);
+                    font-size: var(--text-xs);
                     color: #f87171;
                   ">High</span>
-                  <span style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">Today</span>
+                  <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Today</span>
                 </div>
               </div>
               <div style="
                 background: rgba(35, 32, 52, 0.95);
                 border: 1px solid rgba(239, 68, 68, 0.3);
-                border-radius: 8px;
-                padding: 10px;
+                border-radius: var(--radius-lg);
+                padding: var(--space-2-5);
               ">
                 <div style="
-                  font-size: 13px;
+                  font-size: var(--text-xs);
                   font-weight: 500;
                   color: rgba(255, 255, 255, 0.95);
-                  margin-bottom: 6px;
+                  margin-bottom: var(--space-1-5);
                   line-height: 1.3;
                 ">Deploy production hotfix</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                   <span style="
-                    padding: 2px 6px;
+                    padding: var(--space-0-5) var(--space-1-5);
                     background: rgba(239, 68, 68, 0.2);
                     border: 1px solid rgba(239, 68, 68, 0.5);
-                    border-radius: 4px;
-                    font-size: 10px;
+                    border-radius: var(--radius-sm);
+                    font-size: var(--text-xs);
                     color: #f87171;
                   ">High</span>
-                  <span style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
+                  <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
                 </div>
               </div>
             </div>
@@ -319,48 +319,48 @@ export const Board: Story = {
           <div style="
             min-width: 280px;
             background: rgba(45, 40, 70, 0.15);
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: var(--radius-xl);
+            padding: var(--space-3);
           ">
             <div style="
               display: flex;
               justify-content: space-between;
               align-items: center;
-              margin-bottom: 10px;
+              margin-bottom: var(--space-2-5);
             ">
-              <span style="font-size: 13px; font-weight: 600; color: #fb923c;">Medium</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: #fb923c;">Medium</span>
               <span style="
-                padding: 2px 8px;
+                padding: var(--space-0-5) var(--space-2);
                 background: rgba(249, 115, 22, 0.2);
-                border-radius: 12px;
-                font-size: 11px;
+                border-radius: var(--radius-xl);
+                font-size: var(--text-xs);
                 color: #fb923c;
               ">5</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-2);">
               <div style="
                 background: rgba(35, 32, 52, 0.95);
                 border: 1px solid rgba(249, 115, 22, 0.3);
-                border-radius: 8px;
-                padding: 10px;
+                border-radius: var(--radius-lg);
+                padding: var(--space-2-5);
               ">
                 <div style="
-                  font-size: 13px;
+                  font-size: var(--text-xs);
                   font-weight: 500;
                   color: rgba(255, 255, 255, 0.95);
-                  margin-bottom: 6px;
+                  margin-bottom: var(--space-1-5);
                   line-height: 1.3;
                 ">Review Q4 marketing plan</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                   <span style="
-                    padding: 2px 6px;
+                    padding: var(--space-0-5) var(--space-1-5);
                     background: rgba(249, 115, 22, 0.2);
                     border: 1px solid rgba(249, 115, 22, 0.5);
-                    border-radius: 4px;
-                    font-size: 10px;
+                    border-radius: var(--radius-sm);
+                    font-size: var(--text-xs);
                     color: #fb923c;
                   ">Medium</span>
-                  <span style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">This Week</span>
+                  <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">This Week</span>
                 </div>
               </div>
             </div>
@@ -370,48 +370,48 @@ export const Board: Story = {
           <div style="
             min-width: 280px;
             background: rgba(45, 40, 70, 0.15);
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: var(--radius-xl);
+            padding: var(--space-3);
           ">
             <div style="
               display: flex;
               justify-content: space-between;
               align-items: center;
-              margin-bottom: 10px;
+              margin-bottom: var(--space-2-5);
             ">
-              <span style="font-size: 13px; font-weight: 600; color: #60a5fa;">Low</span>
+              <span style="font-size: var(--text-xs); font-weight: 600; color: #60a5fa;">Low</span>
               <span style="
-                padding: 2px 8px;
+                padding: var(--space-0-5) var(--space-2);
                 background: rgba(59, 130, 246, 0.2);
-                border-radius: 12px;
-                font-size: 11px;
+                border-radius: var(--radius-xl);
+                font-size: var(--text-xs);
                 color: #60a5fa;
               ">2</span>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-2);">
               <div style="
                 background: rgba(35, 32, 52, 0.95);
                 border: 1px solid rgba(59, 130, 246, 0.3);
-                border-radius: 8px;
-                padding: 10px;
+                border-radius: var(--radius-lg);
+                padding: var(--space-2-5);
               ">
                 <div style="
-                  font-size: 13px;
+                  font-size: var(--text-xs);
                   font-weight: 500;
                   color: rgba(255, 255, 255, 0.95);
-                  margin-bottom: 6px;
+                  margin-bottom: var(--space-1-5);
                   line-height: 1.3;
                 ">Update team wiki</div>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                   <span style="
-                    padding: 2px 6px;
+                    padding: var(--space-0-5) var(--space-1-5);
                     background: rgba(59, 130, 246, 0.2);
                     border: 1px solid rgba(59, 130, 246, 0.5);
-                    border-radius: 4px;
-                    font-size: 10px;
+                    border-radius: var(--radius-sm);
+                    font-size: var(--text-xs);
                     color: #60a5fa;
                   ">Low</span>
-                  <span style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">Next Week</span>
+                  <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Next Week</span>
                 </div>
               </div>
             </div>
@@ -440,7 +440,7 @@ export const Calendar: Story = {
       <div style="display: flex; flex-direction: column; height: 100%;">
         <!-- Calendar Header -->
         <div style="
-          padding: 12px 16px;
+          padding: var(--space-3) var(--space-4);
           background: rgba(28, 25, 45, 0.6);
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         ">
@@ -448,13 +448,13 @@ export const Calendar: Story = {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: var(--space-2-5);
           ">
             <button style="
-              padding: 6px;
+              padding: var(--space-1-5);
               background: rgba(45, 40, 70, 0.15);
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: rgba(255, 255, 255, 0.7);
             ">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -462,15 +462,15 @@ export const Calendar: Story = {
               </svg>
             </button>
             <span style="
-              font-size: 15px;
+              font-size: var(--text-sm);
               font-weight: 600;
               color: rgba(255, 255, 255, 0.95);
             ">Today Feb 13</span>
             <button style="
-              padding: 6px;
+              padding: var(--space-1-5);
               background: rgba(45, 40, 70, 0.15);
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: rgba(255, 255, 255, 0.7);
             ">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -478,34 +478,34 @@ export const Calendar: Story = {
               </svg>
             </button>
           </div>
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: var(--space-1-5);">
             <button style="
               flex: 1;
-              padding: 6px 10px;
+              padding: var(--space-1-5) var(--space-2-5);
               background: rgba(78, 205, 196, 0.15);
               border: 1px solid rgba(78, 205, 196, 0.5);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: #4ECDC4;
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 600;
             ">Day</button>
             <button style="
               flex: 1;
-              padding: 6px 10px;
+              padding: var(--space-1-5) var(--space-2-5);
               background: transparent;
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: rgba(255, 255, 255, 0.5);
-              font-size: 12px;
+              font-size: var(--text-xs);
             ">Week</button>
             <button style="
               flex: 1;
-              padding: 6px 10px;
+              padding: var(--space-1-5) var(--space-2-5);
               background: transparent;
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: rgba(255, 255, 255, 0.5);
-              font-size: 12px;
+              font-size: var(--text-xs);
             ">Month</button>
           </div>
         </div>
@@ -514,7 +514,7 @@ export const Calendar: Story = {
         <div style="
           flex: 1;
           overflow-y: auto;
-          padding: 0 12px;
+          padding: 0 var(--space-3);
         ">
           <!-- Current Time Indicator -->
           <div style="
@@ -526,7 +526,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">9:00</span>
           </div>
@@ -541,7 +541,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">10:00</span>
             <div style="
@@ -552,17 +552,17 @@ export const Calendar: Story = {
               height: 88px;
               background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.25) 100%);
               border-left: 3px solid #f87171;
-              border-radius: 6px;
-              padding: 8px;
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
             ">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 600;
                 color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
               ">Team standup</div>
               <div style="
-                font-size: 11px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.6);
               ">10:00 - 10:30</div>
             </div>
@@ -578,7 +578,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">11:00</span>
           </div>
@@ -593,7 +593,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">12:00</span>
             <div style="
@@ -627,7 +627,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">13:00</span>
             <div style="
@@ -638,17 +638,17 @@ export const Calendar: Story = {
               height: 88px;
               background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.25) 100%);
               border-left: 3px solid #60a5fa;
-              border-radius: 6px;
-              padding: 8px;
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
             ">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 600;
                 color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
               ">Code review session</div>
               <div style="
-                font-size: 11px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.6);
               ">13:00 - 13:30</div>
             </div>
@@ -664,7 +664,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">14:00</span>
           </div>
@@ -679,7 +679,7 @@ export const Calendar: Story = {
               position: absolute;
               left: 0;
               top: 8px;
-              font-size: 11px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.4);
             ">15:00</span>
           </div>
@@ -720,36 +720,36 @@ export const Canvas: Story = {
           left: 12px;
           right: 12px;
           display: flex;
-          gap: 8px;
+          gap: var(--space-2);
           z-index: 10;
         ">
           <button style="
-            padding: 8px 12px;
+            padding: var(--space-2) var(--space-3);
             background: rgba(28, 25, 45, 0.85);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
             color: rgba(255, 255, 255, 0.9);
-            font-size: 12px;
+            font-size: var(--text-xs);
             font-weight: 500;
           ">+ Task</button>
           <button style="
-            padding: 8px 12px;
+            padding: var(--space-2) var(--space-3);
             background: rgba(28, 25, 45, 0.85);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
             color: rgba(255, 255, 255, 0.9);
-            font-size: 12px;
+            font-size: var(--text-xs);
             font-weight: 500;
           ">+ Group</button>
           <div style="flex: 1;"></div>
           <button style="
-            padding: 8px;
+            padding: var(--space-2);
             background: rgba(28, 25, 45, 0.85);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
             color: rgba(255, 255, 255, 0.9);
           ">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -762,7 +762,7 @@ export const Canvas: Story = {
         <div style="
           position: relative;
           height: 100%;
-          padding: 60px 12px 12px 12px;
+          padding: 60px var(--space-3) var(--space-3) var(--space-3);
         ">
           <!-- Task Node 1 -->
           <div style="
@@ -772,26 +772,26 @@ export const Canvas: Story = {
             width: 200px;
             background: rgba(35, 32, 52, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-2-5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
           ">
             <div style="
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 600;
               color: rgba(255, 255, 255, 0.95);
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Design new feature mockups</div>
-            <div style="display: flex; gap: 6px; align-items: center;">
+            <div style="display: flex; gap: var(--space-1-5); align-items: center;">
               <span style="
-                padding: 2px 6px;
+                padding: var(--space-0-5) var(--space-1-5);
                 background: rgba(239, 68, 68, 0.2);
                 border: 1px solid rgba(239, 68, 68, 0.5);
-                border-radius: 4px;
-                font-size: 9px;
+                border-radius: var(--radius-sm);
+                font-size: var(--text-xs);
                 color: #f87171;
               ">High</span>
-              <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Today</span>
+              <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Today</span>
             </div>
           </div>
 
@@ -804,14 +804,14 @@ export const Canvas: Story = {
             height: 160px;
             background: rgba(38, 35, 55, 0.7);
             border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            padding: 8px;
+            border-radius: var(--radius-xl);
+            padding: var(--space-2);
           ">
             <div style="
-              font-size: 11px;
+              font-size: var(--text-xs);
               font-weight: 600;
               color: rgba(255, 255, 255, 0.7);
-              margin-bottom: 8px;
+              margin-bottom: var(--space-2);
               text-transform: uppercase;
               letter-spacing: 0.05em;
             ">Sprint Tasks (3)</div>
@@ -820,12 +820,12 @@ export const Canvas: Story = {
             <div style="
               background: rgba(35, 32, 52, 0.95);
               border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 6px;
-              padding: 8px;
-              margin-bottom: 6px;
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
+              margin-bottom: var(--space-1-5);
             ">
               <div style="
-                font-size: 11px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.95);
               ">API integration</div>
@@ -835,11 +835,11 @@ export const Canvas: Story = {
             <div style="
               background: rgba(35, 32, 52, 0.95);
               border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 6px;
-              padding: 8px;
+              border-radius: var(--radius-md);
+              padding: var(--space-2);
             ">
               <div style="
-                font-size: 11px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.95);
               ">Unit tests</div>
@@ -854,23 +854,23 @@ export const Canvas: Story = {
             width: 180px;
             background: rgba(35, 32, 52, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-2-5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
           ">
             <div style="
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 600;
               color: rgba(255, 255, 255, 0.95);
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Update documentation</div>
-            <div style="display: flex; gap: 6px; align-items: center;">
+            <div style="display: flex; gap: var(--space-1-5); align-items: center;">
               <span style="
-                padding: 2px 6px;
+                padding: var(--space-0-5) var(--space-1-5);
                 background: rgba(59, 130, 246, 0.2);
                 border: 1px solid rgba(59, 130, 246, 0.5);
-                border-radius: 4px;
-                font-size: 9px;
+                border-radius: var(--radius-sm);
+                font-size: var(--text-xs);
                 color: #60a5fa;
               ">Low</span>
             </div>
@@ -884,26 +884,26 @@ export const Canvas: Story = {
             width: 190px;
             background: rgba(35, 32, 52, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-2-5);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
           ">
             <div style="
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 600;
               color: rgba(255, 255, 255, 0.95);
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Refactor auth module</div>
-            <div style="display: flex; gap: 6px; align-items: center;">
+            <div style="display: flex; gap: var(--space-1-5); align-items: center;">
               <span style="
-                padding: 2px 6px;
+                padding: var(--space-0-5) var(--space-1-5);
                 background: rgba(249, 115, 22, 0.2);
                 border: 1px solid rgba(249, 115, 22, 0.5);
-                border-radius: 4px;
-                font-size: 9px;
+                border-radius: var(--radius-sm);
+                font-size: var(--text-xs);
                 color: #fb923c;
               ">Medium</span>
-              <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
+              <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
             </div>
           </div>
         </div>
@@ -918,8 +918,8 @@ export const Canvas: Story = {
           background: rgba(28, 25, 45, 0.85);
           backdrop-filter: blur(20px);
           border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 6px;
-          padding: 4px;
+          border-radius: var(--radius-md);
+          padding: var(--space-1);
         ">
           <div style="
             width: 100%;
@@ -927,7 +927,7 @@ export const Canvas: Story = {
             background:
               radial-gradient(circle at 30% 30%, rgba(239, 68, 68, 0.3) 0%, transparent 20%),
               radial-gradient(circle at 70% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 20%);
-            border-radius: 4px;
+            border-radius: var(--radius-sm);
           "></div>
         </div>
       </div>
@@ -954,19 +954,19 @@ export const QuickSort: Story = {
         display: flex;
         flex-direction: column;
         height: 100%;
-        padding: 16px;
+        padding: var(--space-4);
         justify-content: space-between;
       ">
         <!-- Progress Bar -->
-        <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: var(--space-5);">
           <div style="
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: var(--space-2);
           ">
-            <span style="font-size: 12px; color: rgba(255, 255, 255, 0.6);">Progress</span>
-            <span style="font-size: 12px; color: rgba(255, 255, 255, 0.9); font-weight: 600;">3 / 12</span>
+            <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.6);">Progress</span>
+            <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.9); font-weight: 600;">3 / 12</span>
           </div>
           <div style="
             height: 6px;
@@ -989,69 +989,69 @@ export const QuickSort: Story = {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 20px;
+          margin-bottom: var(--space-5);
         ">
           <div style="
             width: 100%;
             max-width: 340px;
             background: rgba(35, 32, 52, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
           ">
             <div style="
-              font-size: 18px;
+              font-size: var(--text-lg);
               font-weight: 600;
               color: rgba(255, 255, 255, 0.95);
-              margin-bottom: 12px;
+              margin-bottom: var(--space-3);
               line-height: 1.4;
             ">Review Q4 marketing proposal</div>
 
             <div style="
-              font-size: 13px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.6);
-              margin-bottom: 16px;
+              margin-bottom: var(--space-4);
               line-height: 1.5;
             ">Analyze the proposed budget allocation and timeline for approval.</div>
 
-            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+            <div style="display: flex; gap: var(--space-2-5); margin-bottom: var(--space-4);">
               <button style="
-                padding: 6px 12px;
+                padding: var(--space-1-5) var(--space-3);
                 background: rgba(249, 115, 22, 0.2);
                 border: 1px solid rgba(249, 115, 22, 0.5);
-                border-radius: 6px;
+                border-radius: var(--radius-md);
                 color: #fb923c;
-                font-size: 11px;
+                font-size: var(--text-xs);
                 font-weight: 600;
               ">Medium Priority</button>
               <button style="
-                padding: 6px 12px;
+                padding: var(--space-1-5) var(--space-3);
                 background: rgba(148, 163, 184, 0.15);
                 border: 1px solid rgba(148, 163, 184, 0.3);
-                border-radius: 6px;
+                border-radius: var(--radius-md);
                 color: #94a3b8;
-                font-size: 11px;
+                font-size: var(--text-xs);
               ">No due date</button>
             </div>
 
             <div style="
-              padding: 10px;
+              padding: var(--space-2-5);
               background: rgba(45, 40, 70, 0.3);
-              border-radius: 8px;
+              border-radius: var(--radius-lg);
               border: 1px solid rgba(255, 255, 255, 0.08);
             ">
               <div style="
-                font-size: 11px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.5);
-                margin-bottom: 6px;
+                margin-bottom: var(--space-1-5);
               ">Subtasks (1/3)</div>
-              <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; flex-direction: column; gap: var(--space-1);">
                 <div style="
                   display: flex;
                   align-items: center;
-                  gap: 6px;
-                  font-size: 12px;
+                  gap: var(--space-1-5);
+                  font-size: var(--text-xs);
                   color: rgba(255, 255, 255, 0.7);
                 ">
                   <div style="
@@ -1066,8 +1066,8 @@ export const QuickSort: Story = {
                 <div style="
                   display: flex;
                   align-items: center;
-                  gap: 6px;
-                  font-size: 12px;
+                  gap: var(--space-1-5);
+                  font-size: var(--text-xs);
                   color: rgba(255, 255, 255, 0.7);
                 ">
                   <div style="
@@ -1081,8 +1081,8 @@ export const QuickSort: Story = {
                 <div style="
                   display: flex;
                   align-items: center;
-                  gap: 6px;
-                  font-size: 12px;
+                  gap: var(--space-1-5);
+                  font-size: var(--text-xs);
                   color: rgba(255, 255, 255, 0.7);
                 ">
                   <div style="
@@ -1099,65 +1099,65 @@ export const QuickSort: Story = {
         </div>
 
         <!-- Category Buttons -->
-        <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: var(--space-4);">
           <div style="
-            font-size: 11px;
+            font-size: var(--text-xs);
             color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 8px;
+            margin-bottom: var(--space-2);
             text-transform: uppercase;
             letter-spacing: 0.05em;
           ">Move to:</div>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
             <button style="
-              padding: 8px 14px;
+              padding: var(--space-2) var(--space-3-5);
               background: rgba(59, 130, 246, 0.15);
               border: 1px solid rgba(59, 130, 246, 0.4);
-              border-radius: 8px;
+              border-radius: var(--radius-lg);
               color: #60a5fa;
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 500;
             ">Work</button>
             <button style="
-              padding: 8px 14px;
+              padding: var(--space-2) var(--space-3-5);
               background: rgba(34, 197, 94, 0.15);
               border: 1px solid rgba(34, 197, 94, 0.4);
-              border-radius: 8px;
+              border-radius: var(--radius-lg);
               color: #4ade80;
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 500;
             ">Personal</button>
             <button style="
-              padding: 8px 14px;
+              padding: var(--space-2) var(--space-3-5);
               background: rgba(245, 158, 11, 0.15);
               border: 1px solid rgba(245, 158, 11, 0.4);
-              border-radius: 8px;
+              border-radius: var(--radius-lg);
               color: #fbbf24;
-              font-size: 12px;
+              font-size: var(--text-xs);
               font-weight: 500;
             ">Home</button>
           </div>
         </div>
 
         <!-- Action Buttons -->
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: var(--space-2-5);">
           <button style="
             flex: 1;
-            padding: 12px;
+            padding: var(--space-3);
             background: rgba(45, 40, 70, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             color: rgba(255, 255, 255, 0.7);
-            font-size: 13px;
+            font-size: var(--text-xs);
             font-weight: 500;
           ">Skip</button>
           <button style="
             flex: 2;
-            padding: 12px;
+            padding: var(--space-3);
             background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.15));
             border: 1px solid rgba(78, 205, 196, 0.5);
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             color: #4ECDC4;
-            font-size: 13px;
+            font-size: var(--text-xs);
             font-weight: 600;
             box-shadow: 0 0 16px rgba(78, 205, 196, 0.2);
           ">Done</button>
@@ -1187,21 +1187,21 @@ export const Focus: Story = {
         align-items: center;
         justify-content: center;
         height: 100%;
-        padding: 24px;
+        padding: var(--space-6);
       ">
         <div style="text-align: center;">
           <div style="
             font-size: 48px;
-            margin-bottom: 16px;
+            margin-bottom: var(--space-4);
           ">⏱️</div>
           <div style="
             font-size: 20px;
             font-weight: 600;
             color: rgba(255, 255, 255, 0.95);
-            margin-bottom: 8px;
+            margin-bottom: var(--space-2);
           ">Focus View</div>
           <div style="
-            font-size: 13px;
+            font-size: var(--text-xs);
             color: rgba(255, 255, 255, 0.5);
           ">Timer-centric productivity interface</div>
         </div>
@@ -1232,35 +1232,35 @@ export const AllTasks: Story = {
       ">
         <!-- Filter Bar -->
         <div style="
-          padding: 12px 16px;
+          padding: var(--space-3) var(--space-4);
           background: rgba(28, 25, 45, 0.6);
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         ">
-          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-2-5);">
             <button style="
-              padding: 6px 12px;
+              padding: var(--space-1-5) var(--space-3);
               background: rgba(78, 205, 196, 0.15);
               border: 1px solid rgba(78, 205, 196, 0.5);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: #4ECDC4;
-              font-size: 11px;
+              font-size: var(--text-xs);
               font-weight: 600;
             ">All</button>
             <button style="
-              padding: 6px 12px;
+              padding: var(--space-1-5) var(--space-3);
               background: transparent;
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: rgba(255, 255, 255, 0.5);
-              font-size: 11px;
+              font-size: var(--text-xs);
             ">Today</button>
             <button style="
-              padding: 6px 12px;
+              padding: var(--space-1-5) var(--space-3);
               background: transparent;
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 6px;
+              border-radius: var(--radius-md);
               color: rgba(255, 255, 255, 0.5);
-              font-size: 11px;
+              font-size: var(--text-xs);
             ">Overdue</button>
           </div>
           <div style="
@@ -1268,16 +1268,16 @@ export const AllTasks: Story = {
             justify-content: space-between;
             align-items: center;
           ">
-            <span style="font-size: 12px; color: rgba(255, 255, 255, 0.6);">
+            <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.6);">
               12 tasks
             </span>
             <button style="
-              padding: 4px 8px;
+              padding: var(--space-1) var(--space-2);
               background: rgba(45, 40, 70, 0.3);
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 4px;
+              border-radius: var(--radius-sm);
               color: rgba(255, 255, 255, 0.7);
-              font-size: 11px;
+              font-size: var(--text-xs);
             ">Sort: Priority</button>
           </div>
         </div>
@@ -1286,45 +1286,45 @@ export const AllTasks: Story = {
         <div style="
           flex: 1;
           overflow-y: auto;
-          padding: 12px;
+          padding: var(--space-3);
         ">
           <!-- Task Row 1 -->
           <div style="
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
+            gap: var(--space-2-5);
+            padding: var(--space-3);
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
-              border-radius: 4px;
+              border-radius: var(--radius-sm);
               border: 2px solid rgba(255, 255, 255, 0.3);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
               ">Fix critical auth bug</div>
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                 <span style="
-                  padding: 2px 6px;
+                  padding: var(--space-0-5) var(--space-1-5);
                   background: rgba(239, 68, 68, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
+                  border-radius: var(--radius-sm);
+                  font-size: var(--text-xs);
                   color: #f87171;
                 ">High</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Today</span>
+                <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Today</span>
               </div>
             </div>
           </div>
@@ -1333,39 +1333,39 @@ export const AllTasks: Story = {
           <div style="
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
+            gap: var(--space-2-5);
+            padding: var(--space-3);
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
-              border-radius: 4px;
+              border-radius: var(--radius-sm);
               border: 2px solid rgba(255, 255, 255, 0.3);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
               ">Review Q4 marketing proposal</div>
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                 <span style="
-                  padding: 2px 6px;
+                  padding: var(--space-0-5) var(--space-1-5);
                   background: rgba(249, 115, 22, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
+                  border-radius: var(--radius-sm);
+                  font-size: var(--text-xs);
                   color: #fb923c;
                 ">Medium</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
+                <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Tomorrow</span>
               </div>
             </div>
           </div>
@@ -1374,41 +1374,41 @@ export const AllTasks: Story = {
           <div style="
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
+            gap: var(--space-2-5);
+            padding: var(--space-3);
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
-              border-radius: 4px;
+              border-radius: var(--radius-sm);
               border: 2px solid rgba(78, 205, 196, 0.5);
               background: rgba(78, 205, 196, 0.3);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.5);
                 text-decoration: line-through;
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
               ">Deploy production hotfix</div>
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                 <span style="
-                  padding: 2px 6px;
+                  padding: var(--space-0-5) var(--space-1-5);
                   background: rgba(34, 197, 94, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
+                  border-radius: var(--radius-sm);
+                  font-size: var(--text-xs);
                   color: #4ade80;
                 ">Done</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.4);">Yesterday</span>
+                <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.4);">Yesterday</span>
               </div>
             </div>
           </div>
@@ -1417,39 +1417,39 @@ export const AllTasks: Story = {
           <div style="
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
+            gap: var(--space-2-5);
+            padding: var(--space-3);
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-2);
           ">
             <div style="
               width: 18px;
               height: 18px;
-              border-radius: 4px;
+              border-radius: var(--radius-sm);
               border: 2px solid rgba(255, 255, 255, 0.3);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
               ">Update documentation</div>
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                 <span style="
-                  padding: 2px 6px;
+                  padding: var(--space-0-5) var(--space-1-5);
                   background: rgba(59, 130, 246, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
+                  border-radius: var(--radius-sm);
+                  font-size: var(--text-xs);
                   color: #60a5fa;
                 ">Low</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">Next Week</span>
+                <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">Next Week</span>
               </div>
             </div>
           </div>
@@ -1458,38 +1458,38 @@ export const AllTasks: Story = {
           <div style="
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
+            gap: var(--space-2-5);
+            padding: var(--space-3);
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
           ">
             <div style="
               width: 18px;
               height: 18px;
-              border-radius: 4px;
+              border-radius: var(--radius-sm);
               border: 2px solid rgba(255, 255, 255, 0.3);
               flex-shrink: 0;
             "></div>
             <div style="flex: 1; min-width: 0;">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 font-weight: 500;
                 color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 4px;
+                margin-bottom: var(--space-1);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
               ">Refactor auth module</div>
-              <div style="display: flex; gap: 6px; align-items: center;">
+              <div style="display: flex; gap: var(--space-1-5); align-items: center;">
                 <span style="
-                  padding: 2px 6px;
+                  padding: var(--space-0-5) var(--space-1-5);
                   background: rgba(249, 115, 22, 0.2);
-                  border-radius: 4px;
-                  font-size: 9px;
+                  border-radius: var(--radius-sm);
+                  font-size: var(--text-xs);
                   color: #fb923c;
                 ">Medium</span>
-                <span style="font-size: 10px; color: rgba(255, 255, 255, 0.5);">This Week</span>
+                <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.5);">This Week</span>
               </div>
             </div>
           </div>
@@ -1524,23 +1524,23 @@ export const AIChat: Story = {
         <div style="
           flex: 1;
           overflow-y: auto;
-          padding: 16px;
+          padding: var(--space-4);
         ">
           <!-- User Message -->
           <div style="
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 16px;
+            margin-bottom: var(--space-4);
           ">
             <div style="
               max-width: 75%;
-              padding: 10px 14px;
+              padding: var(--space-2-5) var(--space-3-5);
               background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.15));
               border: 1px solid rgba(78, 205, 196, 0.3);
-              border-radius: 12px 12px 4px 12px;
+              border-radius: var(--radius-xl) 12px 4px 12px;
             ">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.95);
                 line-height: 1.5;
               ">What tasks are due today?</div>
@@ -1551,24 +1551,24 @@ export const AIChat: Story = {
           <div style="
             display: flex;
             justify-content: flex-start;
-            margin-bottom: 16px;
+            margin-bottom: var(--space-4);
           ">
             <div style="
               max-width: 85%;
-              padding: 10px 14px;
+              padding: var(--space-2-5) var(--space-3-5);
               background: rgba(35, 32, 52, 0.8);
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 12px 12px 12px 4px;
+              border-radius: var(--radius-xl) 12px 12px 4px;
             ">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.9);
                 line-height: 1.6;
               ">You have <strong style="color: #4ECDC4;">3 tasks</strong> due today:</div>
               <ul style="
-                margin: 8px 0 0 0;
+                margin: var(--space-2) 0 0 0;
                 padding-left: 16px;
-                font-size: 12px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.8);
                 line-height: 1.6;
               ">
@@ -1583,17 +1583,17 @@ export const AIChat: Story = {
           <div style="
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 16px;
+            margin-bottom: var(--space-4);
           ">
             <div style="
               max-width: 75%;
-              padding: 10px 14px;
+              padding: var(--space-2-5) var(--space-3-5);
               background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(78, 205, 196, 0.15));
               border: 1px solid rgba(78, 205, 196, 0.3);
-              border-radius: 12px 12px 4px 12px;
+              border-radius: var(--radius-xl) 12px 4px 12px;
             ">
               <div style="
-                font-size: 13px;
+                font-size: var(--text-xs);
                 color: rgba(255, 255, 255, 0.95);
                 line-height: 1.5;
               ">Plan my day</div>
@@ -1606,12 +1606,12 @@ export const AIChat: Story = {
             justify-content: flex-start;
           ">
             <div style="
-              padding: 10px 14px;
+              padding: var(--space-2-5) var(--space-3-5);
               background: rgba(35, 32, 52, 0.8);
               border: 1px solid rgba(255, 255, 255, 0.1);
-              border-radius: 12px 12px 12px 4px;
+              border-radius: var(--radius-xl) 12px 12px 4px;
             ">
-              <div style="display: flex; gap: 4px; align-items: center;">
+              <div style="display: flex; gap: var(--space-1); align-items: center;">
                 <div style="
                   width: 6px;
                   height: 6px;
@@ -1640,69 +1640,69 @@ export const AIChat: Story = {
 
         <!-- Quick Actions -->
         <div style="
-          padding: 12px 16px;
+          padding: var(--space-3) var(--space-4);
           background: rgba(28, 25, 45, 0.6);
           border-top: 1px solid rgba(255, 255, 255, 0.08);
         ">
           <div style="
             display: flex;
-            gap: 6px;
+            gap: var(--space-1-5);
             overflow-x: auto;
-            margin-bottom: 12px;
+            margin-bottom: var(--space-3);
           ">
             <button style="
-              padding: 6px 12px;
+              padding: var(--space-1-5) var(--space-3);
               background: rgba(45, 40, 70, 0.5);
               border: 1px solid rgba(255, 255, 255, 0.15);
-              border-radius: 16px;
+              border-radius: var(--radius-lg);
               color: rgba(255, 255, 255, 0.8);
-              font-size: 11px;
+              font-size: var(--text-xs);
               white-space: nowrap;
             ">Plan my day</button>
             <button style="
-              padding: 6px 12px;
+              padding: var(--space-1-5) var(--space-3);
               background: rgba(45, 40, 70, 0.5);
               border: 1px solid rgba(255, 255, 255, 0.15);
-              border-radius: 16px;
+              border-radius: var(--radius-lg);
               color: rgba(255, 255, 255, 0.8);
-              font-size: 11px;
+              font-size: var(--text-xs);
               white-space: nowrap;
             ">What's overdue?</button>
             <button style="
-              padding: 6px 12px;
+              padding: var(--space-1-5) var(--space-3);
               background: rgba(45, 40, 70, 0.5);
               border: 1px solid rgba(255, 255, 255, 0.15);
-              border-radius: 16px;
+              border-radius: var(--radius-lg);
               color: rgba(255, 255, 255, 0.8);
-              font-size: 11px;
+              font-size: var(--text-xs);
               white-space: nowrap;
             ">Weekly summary</button>
           </div>
 
           <!-- Input Bar -->
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: var(--space-2);">
             <input
               type="text"
               placeholder="Ask anything..."
               style="
                 flex: 1;
-                padding: 10px 14px;
+                padding: var(--space-2-5) var(--space-3-5);
                 background: rgba(35, 32, 52, 0.6);
                 border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 20px;
+                border-radius: var(--radius-xl);
                 color: rgba(255, 255, 255, 0.95);
-                font-size: 13px;
+                font-size: var(--text-xs);
                 outline: none;
               "
             />
             <button style="
-              padding: 10px 16px;
+              padding: var(--space-2-5) var(--space-4);
               background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(78, 205, 196, 0.2));
               border: 1px solid rgba(78, 205, 196, 0.5);
-              border-radius: 20px;
+              border-radius: var(--radius-xl);
               color: #4ECDC4;
               font-weight: 600;
-              font-size: 13px;
+              font-size: var(--text-xs);
             ">Send</button>
           </div>
         </div>
@@ -1736,27 +1736,27 @@ export const Performance: Story = {
       <div style="
         height: 100%;
         overflow-y: auto;
-        padding: 16px;
+        padding: var(--space-4);
       ">
         <!-- Grade Card -->
         <div style="
           background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.08));
           border: 1px solid rgba(78, 205, 196, 0.3);
-          border-radius: 16px;
-          padding: 20px;
+          border-radius: var(--radius-lg);
+          padding: var(--space-5);
           text-align: center;
-          margin-bottom: 16px;
+          margin-bottom: var(--space-4);
         ">
           <div style="
             font-size: 56px;
             font-weight: 900;
             color: #4ECDC4;
             text-shadow: 0 0 24px rgba(78, 205, 196, 0.5);
-            margin-bottom: 8px;
+            margin-bottom: var(--space-2);
             line-height: 1;
           ">A+</div>
           <div style="
-            font-size: 14px;
+            font-size: var(--text-sm);
             color: rgba(255, 255, 255, 0.8);
             font-weight: 600;
           ">Excellent Performance</div>
@@ -1766,22 +1766,22 @@ export const Performance: Story = {
         <div style="
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          margin-bottom: 16px;
+          gap: var(--space-2-5);
+          margin-bottom: var(--space-4);
         ">
           <div style="
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-3);
             text-align: center;
           ">
             <div style="
-              font-size: 10px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.5);
               text-transform: uppercase;
               letter-spacing: 0.05em;
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Tasks Completed</div>
             <div style="
               font-size: 22px;
@@ -1793,16 +1793,16 @@ export const Performance: Story = {
           <div style="
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-3);
             text-align: center;
           ">
             <div style="
-              font-size: 10px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.5);
               text-transform: uppercase;
               letter-spacing: 0.05em;
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Focus Hours</div>
             <div style="
               font-size: 22px;
@@ -1814,16 +1814,16 @@ export const Performance: Story = {
           <div style="
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-3);
             text-align: center;
           ">
             <div style="
-              font-size: 10px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.5);
               text-transform: uppercase;
               letter-spacing: 0.05em;
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Avg Completion</div>
             <div style="
               font-size: 22px;
@@ -1835,16 +1835,16 @@ export const Performance: Story = {
           <div style="
             background: rgba(35, 32, 52, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: var(--radius-lg);
+            padding: var(--space-3);
             text-align: center;
           ">
             <div style="
-              font-size: 10px;
+              font-size: var(--text-xs);
               color: rgba(255, 255, 255, 0.5);
               text-transform: uppercase;
               letter-spacing: 0.05em;
-              margin-bottom: 6px;
+              margin-bottom: var(--space-1-5);
             ">Streak</div>
             <div style="
               font-size: 22px;
@@ -1858,20 +1858,20 @@ export const Performance: Story = {
         <div style="
           background: rgba(35, 32, 52, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 14px;
-          margin-bottom: 16px;
+          border-radius: var(--radius-xl);
+          padding: var(--space-3-5);
+          margin-bottom: var(--space-4);
         ">
           <div style="
-            font-size: 12px;
+            font-size: var(--text-xs);
             color: rgba(255, 255, 255, 0.7);
             font-weight: 600;
-            margin-bottom: 12px;
+            margin-bottom: var(--space-3);
             text-transform: uppercase;
             letter-spacing: 0.05em;
           ">Benchmark Results</div>
 
-          <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: var(--space-2-5);">
             <div style="
               display: flex;
               justify-content: space-between;
@@ -1879,9 +1879,9 @@ export const Performance: Story = {
               padding-bottom: 8px;
               border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             ">
-              <span style="font-size: 12px; color: rgba(255, 255, 255, 0.8);">Task Creation</span>
+              <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.8);">Task Creation</span>
               <span style="
-                font-size: 12px;
+                font-size: var(--text-xs);
                 font-weight: 600;
                 color: #4ECDC4;
               ">0.8ms</span>
@@ -1894,9 +1894,9 @@ export const Performance: Story = {
               padding-bottom: 8px;
               border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             ">
-              <span style="font-size: 12px; color: rgba(255, 255, 255, 0.8);">Board Render</span>
+              <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.8);">Board Render</span>
               <span style="
-                font-size: 12px;
+                font-size: var(--text-xs);
                 font-weight: 600;
                 color: #4ECDC4;
               ">12.3ms</span>
@@ -1909,9 +1909,9 @@ export const Performance: Story = {
               padding-bottom: 8px;
               border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             ">
-              <span style="font-size: 12px; color: rgba(255, 255, 255, 0.8);">Calendar Render</span>
+              <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.8);">Calendar Render</span>
               <span style="
-                font-size: 12px;
+                font-size: var(--text-xs);
                 font-weight: 600;
                 color: #4ECDC4;
               ">18.7ms</span>
@@ -1922,9 +1922,9 @@ export const Performance: Story = {
               justify-content: space-between;
               align-items: center;
             ">
-              <span style="font-size: 12px; color: rgba(255, 255, 255, 0.8);">Supabase Sync</span>
+              <span style="font-size: var(--text-xs); color: rgba(255, 255, 255, 0.8);">Supabase Sync</span>
               <span style="
-                font-size: 12px;
+                font-size: var(--text-xs);
                 font-weight: 600;
                 color: #4ECDC4;
               ">45.2ms</span>
@@ -1936,14 +1936,14 @@ export const Performance: Story = {
         <div style="
           background: rgba(35, 32, 52, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 14px;
+          border-radius: var(--radius-xl);
+          padding: var(--space-3-5);
         ">
           <div style="
-            font-size: 12px;
+            font-size: var(--text-xs);
             color: rgba(255, 255, 255, 0.7);
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: var(--space-2-5);
             text-transform: uppercase;
             letter-spacing: 0.05em;
           ">Recommendations</div>
@@ -1951,12 +1951,12 @@ export const Performance: Story = {
           <ul style="
             margin: 0;
             padding-left: 16px;
-            font-size: 12px;
+            font-size: var(--text-xs);
             color: rgba(255, 255, 255, 0.8);
             line-height: 1.6;
           ">
-            <li style="margin-bottom: 6px;">All systems optimal</li>
-            <li style="margin-bottom: 6px;">Continue current workflow</li>
+            <li style="margin-bottom: var(--space-1-5);">All systems optimal</li>
+            <li style="margin-bottom: var(--space-1-5);">Continue current workflow</li>
             <li>Great job on 7-day streak!</li>
           </ul>
         </div>

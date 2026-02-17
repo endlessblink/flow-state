@@ -18,7 +18,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 100px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; min-width: 400px; min-height: 200px;">
+        <div style="padding: 100px; background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; min-width: 400px; min-height: 200px;">
           <story />
         </div>
       `
@@ -85,9 +85,9 @@ export const Interactive: Story = {
           :y="popoverY"
           @close="isVisible = false"
         >
-          <div style="color: white; padding: 12px;">
-            <h4 style="margin: 0 0 8px 0;">Popover Content</h4>
-            <p style="margin: 0; font-size: 14px; color: #9ca3af;">
+          <div style="color: white; padding: var(--space-3);">
+            <h4 style="margin: 0 0 var(--space-2) 0;">Popover Content</h4>
+            <p style="margin: 0; font-size: var(--text-sm); color: var(--text-muted);">
               This content is rendered inside the glass popover.
             </p>
           </div>

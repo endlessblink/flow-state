@@ -36,7 +36,7 @@
     @touchstart="$emit('touchstart', $event)"
     @touchend="$emit('touchend', $event)"
   >
-    <!-- Selection Checkbox + Done Toggle column -->
+    <!-- Selection Checkbox column -->
     <div class="task-row__done-toggle" @click.stop>
       <label class="task-row__select-checkbox">
         <input
@@ -45,14 +45,6 @@
           @change="$emit('check')"
         >
       </label>
-      <DoneToggle
-        :completed="task.status === 'done'"
-        size="sm"
-        variant="simple"
-        :title="`Mark ${task.title} as ${task.status === 'done' ? 'incomplete' : 'complete'}`"
-        :aria-label="`Toggle completion for ${task.title}`"
-        @toggle="$emit('toggleComplete')"
-      />
     </div>
 
     <!-- Title Cell -->
@@ -132,7 +124,6 @@
 import { computed } from 'vue'
 import type { Task } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
-import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowTitle from './row/TaskRowTitle.vue'
 import TaskRowProject from './row/TaskRowProject.vue'

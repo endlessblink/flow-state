@@ -32,7 +32,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="min-height: 1000px; width: 100%; padding: 40px; background: var(--app-background-gradient); transform: scale(1); border-radius: var(--radius-xl);">
+        <div style="min-height: 1000px; width: 100%; padding: var(--space-10); background: var(--app-background-gradient); transform: scale(1); border-radius: var(--radius-xl);">
           <div style="position: relative; height: 100%;">
             <story />
           </div>

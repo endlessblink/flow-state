@@ -139,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
@@ -246,10 +246,27 @@ const allFilteredTasks = computed(() => {
 onMounted(() => {
   // Initialize UI store
   uiStore.loadState()
-  
+
   // Settings store is initialized automatically in its definition
   settingsStore.loadFromStorage()
+
+  // Add Escape key handler for board selection
+  document.addEventListener('keydown', handleBoardKeydown)
 })
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleBoardKeydown)
+})
+
+// Escape key to clear board selection
+const handleBoardKeydown = (event: KeyboardEvent) => {
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+
+  if (event.key === 'Escape' && taskStore.selectedTaskIds.length > 0) {
+    taskStore.clearSelection()
+  }
+}
 
 // Task management methods (wrappers for composables to match template emitters)
 const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'status' | 'priority' | 'date' | 'category' }) => {

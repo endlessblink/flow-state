@@ -18,7 +18,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 60px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center; min-width: 400px;">
+        <div style="padding: 60px; background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; min-width: 400px;">
           <story />
         </div>
       `
@@ -85,22 +85,22 @@ export const WithIcons: Story = {
       return { args }
     },
     template: `
-      <div style="width: 320px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="width: 320px; display: flex; flex-direction: column; gap: var(--space-5);">
         <BaseInput label="Search" placeholder="Search tasks...">
           <template #prefix>
-            <Search :size="16" style="color: #9ca3af; margin-left: 8px;" />
+            <Search :size="16" style="color: var(--text-muted); margin-left: var(--space-2);" />
           </template>
         </BaseInput>
 
         <BaseInput label="Email" placeholder="user@example.com" type="email">
           <template #prefix>
-            <Mail :size="16" style="color: #9ca3af; margin-left: 8px;" />
+            <Mail :size="16" style="color: var(--text-muted); margin-left: var(--space-2);" />
           </template>
         </BaseInput>
 
         <BaseInput label="Password" type="password" placeholder="••••••••">
           <template #prefix>
-            <Lock :size="16" style="color: #9ca3af; margin-left: 8px;" />
+            <Lock :size="16" style="color: var(--text-muted); margin-left: var(--space-2);" />
           </template>
         </BaseInput>
       </div>
@@ -115,7 +115,7 @@ export const States: Story = {
       return { args }
     },
     template: `
-      <div style="width: 320px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="width: 320px; display: flex; flex-direction: column; gap: var(--space-5);">
         <BaseInput label="Disabled Input" disabled placeholder="Cannot type here..." />
         <BaseInput label="Required Input" required placeholder="Must fill this..." />
         <BaseInput label="With Helper Text" helperText="This is some extra context for the user." />
@@ -139,10 +139,10 @@ export const RTLSupport: Story = {
       <div style="width: 320px;" dir="rtl">
         <BaseInput v-bind="args" v-model="value">
           <template #prefix>
-            <Search :size="16" style="color: #9ca3af; margin-right: 8px;" />
+            <Search :size="16" style="color: var(--text-muted); margin-right: var(--space-2);" />
           </template>
         </BaseInput>
-        <p style="color: #9ca3af; margin-top: 12px; font-size: 14px; text-align: right;">
+        <p style="color: var(--text-muted); margin-top: var(--space-3); font-size: var(--text-sm); text-align: right;">
           Hebrew text automatically aligns to the right.
         </p>
       </div>

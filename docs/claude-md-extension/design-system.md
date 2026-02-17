@@ -163,6 +163,48 @@ backdrop-filter: blur(20px);
 
 ---
 
+## Button Pattern (MANDATORY)
+
+**NEVER use solid-fill buttons.** All buttons must follow the glass morphism pattern:
+
+```css
+/* ✅ CORRECT — Glass morphism button */
+.my-button {
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);            /* teal text */
+  border: 1px solid var(--brand-primary); /* teal border */
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.my-button:hover {
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary-hover);
+}
+```
+
+```css
+/* ❌ WRONG — Solid fill button */
+.my-button {
+  background: var(--brand-primary);  /* solid teal fill */
+  color: white;                       /* white text */
+  border: none;
+}
+```
+
+**Tailwind utility classes available:**
+- `.btn-primary` — Glass bg + teal border + teal text (primary actions)
+- `.btn-secondary` — Surface bg + subtle border (secondary actions)
+- `.btn-ghost` — Transparent bg, text only (tertiary actions)
+
+**When solid `background: var(--brand-primary)` IS acceptable:**
+- Small indicators: checkbox fills, toggle dots, progress bar fills
+- Status badges and pills
+- Active state highlights on non-button elements
+
+---
+
 ## Shadow & Glow Handling
 
 See [SOP-004: CSS Shadow/Glow Clipping](../sop/SOP-004-css-shadow-overflow-clipping.md) for handling shadows that get clipped by `overflow: hidden`.

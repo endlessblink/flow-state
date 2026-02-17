@@ -50,7 +50,7 @@ const meta = {
         min-height: 600px;
         overflow: hidden;
         background: var(--app-background-gradient);
-        padding: 32px;
+        padding: 2rem;
         font-family: sans-serif;
         transform: scale(1);
         border-radius: var(--radius-xl);

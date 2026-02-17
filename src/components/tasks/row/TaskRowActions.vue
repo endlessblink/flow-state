@@ -1,6 +1,14 @@
 <template>
   <div class="task-row__actions">
     <button
+      class="task-row__action-btn task-row__action-btn--ai"
+      title="Smart Suggest (AI)"
+      aria-label="AI smart suggest"
+      @click.stop="$emit('aiSuggest', $event)"
+    >
+      <Zap :size="14" />
+    </button>
+    <button
       class="task-row__action-btn task-row__action-btn--focus"
       title="Focus Mode (F)"
       aria-label="Enter focus mode"
@@ -36,9 +44,10 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Play, Edit, Copy } from 'lucide-vue-next'
+import { Eye, Play, Edit, Copy, Zap } from 'lucide-vue-next'
 
 defineEmits<{
+  (e: 'aiSuggest', event: MouseEvent): void
   (e: 'focusMode'): void
   (e: 'startTimer'): void
   (e: 'edit'): void
@@ -53,14 +62,7 @@ defineEmits<{
   align-items: center;
   gap: var(--space-1);
   justify-content: flex-end;
-  opacity: 0; /* Hidden by default */
-  transition: opacity var(--duration-fast);
-}
-
-/* Show actions on row hover */
-:deep(.task-row:hover) .task-row__actions,
-.task-row__actions:focus-within {
-  opacity: 1;
+  /* opacity managed in HierarchicalTaskRow.css (unscoped) for cross-component hover */
 }
 
 .task-row__action-btn {
@@ -87,5 +89,10 @@ defineEmits<{
 .task-row__action-btn--focus:hover {
   color: var(--color-accent);
   border-color: var(--color-accent);
+}
+
+.task-row__action-btn--ai:hover {
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 </style>

@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted, type Ref } from 'vue'
+import { ref, computed, watch, onUnmounted, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCalendarCore } from '@/composables/useCalendarCore'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
@@ -45,7 +45,7 @@ function snapTo15Minutes(hour: number, minute: number): { hour: number; minute: 
 export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<string | null>, timerGrowthMap?: Ref<Map<string, number>>) {
   const taskStore = useTaskStore()
   const { getPriorityColor, getDateString } = useCalendarCore()
-  const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
+  const { isDragging: globalIsDragging, startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
 
   // --- MEMORY LEAK FIX: Listener Registry ---
   let currentMouseMoveHandler: ((e: MouseEvent) => void) | null = null
@@ -101,6 +101,17 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   const isDragging = ref(false)
   const draggedEventId = ref<string | null>(null)
   const activeDropSlot = ref<number | null>(null)
+
+  // BUG-1340: Watch global drag state to clean up calendar drag state when ANY drag ends.
+  // This covers inbox-to-calendar drags where the calendar's handleEventDragEnd never fires.
+  watch(globalIsDragging, (dragging) => {
+    if (!dragging) {
+      dragGhost.value.visible = false
+      activeDropSlot.value = null
+      isDragging.value = false
+      draggedEventId.value = null
+    }
+  })
 
   // Resize preview state - shows visual feedback during resize without updating store
   const resizePreview = ref<{
@@ -400,6 +411,13 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     // Keep ghost visible, only hide on drop
   }
 
+  const resetDragState = () => {
+    dragGhost.value.visible = false
+    isDragging.value = false
+    draggedEventId.value = null
+    activeDropSlot.value = null
+  }
+
   const handleDrop = async (event: DragEvent, slot: TimeSlot) => {
     event.preventDefault()
 
@@ -408,6 +426,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       // Try fallback for browser compatibility
       const draggingTaskId = (window as Window & typeof globalThis).__draggingTaskId
       if (!draggingTaskId) {
+        resetDragState()
         return
       }
     }
@@ -418,6 +437,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       const source = parsedData.source
 
       if (!taskId) {
+        resetDragState()
         return
       }
 
@@ -456,15 +476,10 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         }
       }
     } catch (error) {
+      // Fall through to cleanup
     }
 
-    dragGhost.value.visible = false
-
-    // Reset drag state
-    isDragging.value = false
-    draggedEventId.value = null
-    activeDropSlot.value = null
-
+    resetDragState()
   }
 
   // Event drag-and-drop (repositioning within calendar)
@@ -600,44 +615,18 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
     // Clean up unified drag ghost + body class
     endGlobalDrag()
 
-    // BUG-1340: MUST reset ghost visibility on dragEnd, not just on successful drop.
-    // Without this, dragging outside the calendar (e.g. toward sidebar) leaves the
-    // ghost visible permanently because drop never fires.
-    dragGhost.value.visible = false
+    // BUG-1340: Reset all local calendar drag state
+    resetDragState()
 
-    // Clean up drag state to prevent stuck states
-    if (isDragging.value) {
-
-      isDragging.value = false
-      draggedEventId.value = null
-      activeDropSlot.value = null
-
-      // Clean up any visual dragging classes that might be stuck
-      setTimeout(() => {
-        const draggingElements = document.querySelectorAll('.calendar-event.dragging')
-        draggingElements.forEach(el => {
-          el.classList.remove('dragging')
-
-        })
-
-        const dragOverSlots = document.querySelectorAll('.time-slot.drag-over')
-        dragOverSlots.forEach(slot => {
-          slot.classList.remove('drag-over')
-
-        })
-      }, 50) // Small delay to ensure DOM updates are processed
-    }
-
-    // Add fallback cleanup timeout as safety net
+    // Clean up any visual dragging classes that might be stuck
     setTimeout(() => {
-      if (isDragging.value || draggedEventId.value || activeDropSlot.value !== null) {
-        isDragging.value = false
-        draggedEventId.value = null
-        activeDropSlot.value = null
-      }
-    }, 2000) // 2 second fallback
-
-
+      document.querySelectorAll('.calendar-event.dragging').forEach(el => {
+        el.classList.remove('dragging')
+      })
+      document.querySelectorAll('.time-slot.drag-over').forEach(slot => {
+        slot.classList.remove('drag-over')
+      })
+    }, 50)
   }
 
   // Event resizing - uses preview state during drag, commits on mouseup

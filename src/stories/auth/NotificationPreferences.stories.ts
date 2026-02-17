@@ -63,8 +63,8 @@ const meta: Meta<typeof NotificationPreferences> = {
             display: flex;
             align-items: flex-start;
             justify-content: center;
-            border-radius: 8px;
-            padding: 2rem;
+            border-radius: var(--radius-lg);
+            padding: var(--space-8);
           ">
             <div style="max-width: 400px; width: 100%;">
               <story />

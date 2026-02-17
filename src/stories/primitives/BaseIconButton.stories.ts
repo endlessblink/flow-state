@@ -17,7 +17,7 @@ const meta = {
         (story: any) => ({
             components: { story },
             template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center;">
           <story />
         </div>
       `
@@ -61,7 +61,7 @@ export const Variants: Story = {
             return { args }
         },
         template: `
-      <div style="display: flex; gap: 16px; align-items: center;">
+      <div style="display: flex; gap: var(--space-4); align-items: center;">
         <BaseIconButton variant="default"><Settings :size="18" /></BaseIconButton>
         <BaseIconButton variant="primary" title="Search"><Search :size="18" /></BaseIconButton>
         <BaseIconButton variant="success"><Check :size="18" /></BaseIconButton>
@@ -79,7 +79,7 @@ export const Sizes: Story = {
             return { args }
         },
         template: `
-      <div style="display: flex; gap: 16px; align-items: center;">
+      <div style="display: flex; gap: var(--space-4); align-items: center;">
         <BaseIconButton size="sm"><Plus :size="14" /></BaseIconButton>
         <BaseIconButton size="md"><Plus :size="18" /></BaseIconButton>
         <BaseIconButton size="lg"><Plus :size="22" /></BaseIconButton>
@@ -95,7 +95,7 @@ export const States: Story = {
             return { args }
         },
         template: `
-      <div style="display: flex; gap: 16px; align-items: center;">
+      <div style="display: flex; gap: var(--space-4); align-items: center;">
         <BaseIconButton active variant="primary" title="Active State"><Bell :size="18" /></BaseIconButton>
         <BaseIconButton disabled title="Disabled State"><X :size="18" /></BaseIconButton>
       </div>

@@ -92,7 +92,13 @@
             @update:show="showDatePicker = $event"
           >
             <template #trigger>
-              <button class="quick-date-btn pick-btn" title="Pick date" @click.stop @mousedown.stop @touchstart.stop>
+              <button
+                class="quick-date-btn pick-btn"
+                title="Pick date"
+                @click.stop
+                @mousedown.stop
+                @touchstart.stop
+              >
                 <CalendarDays :size="14" />
               </button>
             </template>

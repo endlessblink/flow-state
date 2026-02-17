@@ -360,10 +360,14 @@ const getEventTooltip = (event: any) => {
   word-break: break-word;
 }
 
-/* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
+/* BUG-1304 + BUG-1343: Visual indicator for done tasks */
 .month-event.status-done {
   filter: grayscale(0.6) brightness(0.85);
   opacity: 0.55;
+}
+
+.month-event.status-done .event-title-short {
+  text-decoration: line-through;
 }
 
 .month-event.dragging {

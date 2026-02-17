@@ -16,6 +16,8 @@ export interface CategoryAction {
   oldStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   newStatus?: 'planned' | 'in_progress' | 'done' | 'backlog' | 'on_hold'
   deletedTask?: import('./tasks').Task // Store full task data for undo of deleted tasks
+  oldDescription?: string
+  newDescription?: string
   timestamp: number
 }
 

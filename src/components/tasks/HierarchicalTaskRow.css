@@ -8,8 +8,8 @@
 /* Lean task row - minimal like Linear/Notion */
 .task-row {
     display: grid;
-    /* done  title        proj  status   prio   due    prog   actions */
-    grid-template-columns: 52px 1fr 40px 120px 72px 96px 72px 72px 112px;
+    /* done  title        proj  status   prio   due    prog   est    actions */
+    grid-template-columns: 32px 1fr 40px 120px 72px 96px 72px 72px 112px;
     grid-template-areas: "done title project status priority due progress estimate actions";
     gap: var(--space-3);
     align-items: center;
@@ -265,4 +265,17 @@
     height: 16px;
     accent-color: var(--brand-primary);
     cursor: pointer;
+}
+
+/* Action buttons visibility - must be here (unscoped) since .task-row and .task-row__actions
+   are in different scoped components (HierarchicalTaskRowContent vs TaskRowActions) */
+.task-row__actions {
+    opacity: 0;
+    transition: opacity var(--duration-fast);
+}
+
+.task-row:hover .task-row__actions,
+.task-row--hovered .task-row__actions,
+.task-row__actions:focus-within {
+    opacity: 1;
 }

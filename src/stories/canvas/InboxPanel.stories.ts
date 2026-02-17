@@ -18,7 +18,7 @@ const meta = {
     (story) => ({
       components: { story },
       template: `
-        <div style="transform: scale(1); min-height: 600px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: 40px; box-sizing: border-box; border-radius: var(--radius-xl); overflow: hidden;">
+        <div style="transform: scale(1); min-height: 600px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: var(--space-10); box-sizing: border-box; border-radius: var(--radius-xl); overflow: hidden;">
           <div style="width: 320px; height: 100%; max-height: 800px; position: relative;">
             <story />
           </div>
@@ -93,7 +93,7 @@ export const ManyTasks: Story = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="transform: scale(1); min-height: 600px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: 40px; box-sizing: border-box; border-radius: var(--radius-xl); overflow: hidden;">
+        <div style="transform: scale(1); min-height: 600px; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--app-background-gradient); padding: var(--space-10); box-sizing: border-box; border-radius: var(--radius-xl); overflow: hidden;">
           <div style="width: 320px; height: 100%; max-height: 800px; position: relative;">
             <story />
           </div>

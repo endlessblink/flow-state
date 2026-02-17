@@ -9,7 +9,12 @@
   >
     <!-- Swimlane Header - TASK-157: Simplified Todoist-style -->
     <!-- FEATURE-1336: Hide header in category view (single swimlane, no project grouping) -->
-    <div v-if="currentViewType !== 'category'" class="swimlane-header swimlane-header--minimal" @click="toggleCollapse" @contextmenu.prevent="handleGroupContextMenu">
+    <div
+      v-if="currentViewType !== 'category'"
+      class="swimlane-header swimlane-header--minimal"
+      @click="toggleCollapse"
+      @contextmenu.prevent="handleGroupContextMenu"
+    >
       <div class="header-content--swimlane">
         <button class="collapse-btn">
           <ChevronDown v-if="!isCollapsed" :size="14" />

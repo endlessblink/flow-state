@@ -55,7 +55,7 @@ const meta: Meta<typeof AuthModal> = {
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
             border: 1px solid var(--glass-border);
           ">
             <story />

@@ -652,9 +652,15 @@ onUnmounted(() => {
           <div class="settings-group">
             <label class="settings-label">Text Direction</label>
             <div class="personality-toggle">
-              <button class="personality-option" :class="{ active: chatDirection === 'auto' }" @click="setChatDirection('auto')">Auto</button>
-              <button class="personality-option" :class="{ active: chatDirection === 'ltr' }" @click="setChatDirection('ltr')">LTR</button>
-              <button class="personality-option" :class="{ active: chatDirection === 'rtl' }" @click="setChatDirection('rtl')">RTL</button>
+              <button class="personality-option" :class="{ active: chatDirection === 'auto' }" @click="setChatDirection('auto')">
+                Auto
+              </button>
+              <button class="personality-option" :class="{ active: chatDirection === 'ltr' }" @click="setChatDirection('ltr')">
+                LTR
+              </button>
+              <button class="personality-option" :class="{ active: chatDirection === 'rtl' }" @click="setChatDirection('rtl')">
+                RTL
+              </button>
             </div>
           </div>
         </div>

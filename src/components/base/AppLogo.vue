@@ -7,7 +7,7 @@
     class="app-logo"
     :class="{ 'app-logo--round': round }"
     draggable="false"
-  />
+  >
 </template>
 
 <script setup lang="ts">

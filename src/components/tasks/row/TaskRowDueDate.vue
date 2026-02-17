@@ -22,7 +22,12 @@
     <!-- Due Date Selector Dropdown (teleported to body to avoid overflow clipping) -->
     <Teleport to="body">
       <Transition name="dropdown-slide">
-        <div v-if="isOpen" ref="dropdownRef" class="due-date-dropdown" :style="dropdownStyle">
+        <div
+          v-if="isOpen"
+          ref="dropdownRef"
+          class="due-date-dropdown"
+          :style="dropdownStyle"
+        >
           <button
             v-for="option in dateOptions"
             :key="option.label"

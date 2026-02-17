@@ -15,31 +15,30 @@ const meta: Meta<typeof LoginForm> = {
     }
   },
   decorators: [
-    () => ({
-      template: `
-        <div class="login-form-story-container" style="
-          background: var(--app-background-gradient);
-          height: 600px;
-          width: 100%;
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 8px;
-        ">
-          <!-- Force absolute positioning for the container within this wrapper -->
-          <style>
-             .login-form-story-container .auth-container {
-               margin: 0 !important;
-               max-height: 90% !important;
-               overflow-y: auto !important;
-             }
-          </style>
-          <story />
-        </div>
-      `
-    })
+    () => {
+      if (typeof document !== 'undefined') {
+        const styleId = 'login-form-story-styles'
+        if (!document.getElementById(styleId)) {
+          const style = document.createElement('style')
+          style.id = styleId
+          style.textContent = `
+            .login-form-story-container .auth-container {
+              margin: 0 !important;
+              max-height: 90% !important;
+              overflow-y: auto !important;
+            }
+          `
+          document.head.appendChild(style)
+        }
+      }
+      return {
+        template: `
+          <div class="login-form-story-container" style="background: var(--app-background-gradient); height: 600px; width: 100%; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-lg);">
+            <story />
+          </div>
+        `
+      }
+    }
   ]
 }
 

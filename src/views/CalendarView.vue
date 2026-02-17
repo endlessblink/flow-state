@@ -551,6 +551,16 @@ const handleDropCapture = (e: Event) => {
   if (slotObj) handleDrop(dragEvent, slotObj)
 }
 
+// BUG-1340: Document-level dragend safety net — resets ALL calendar drag state
+// regardless of drag source (inbox, calendar, kanban) or drop target.
+// The dragend event fires on the source element and bubbles to document on EVERY drag end.
+const handleGlobalDragEnd = () => {
+  dragGhost.value.visible = false
+  activeDropSlot.value = null
+  isDragging.value = false
+  draggedEventId.value = null
+}
+
 // Listen for start-task-now events
 const handleStartTaskNow = () => {
   // Ensure we're in day view
@@ -607,6 +617,10 @@ onMounted(() => {
     calendarEl.addEventListener('dragleave', handleDragLeaveCapture, { ...DRAG_CAPTURE_OPTIONS, signal })
     calendarEl.addEventListener('drop', handleDropCapture, { ...DRAG_CAPTURE_OPTIONS, signal })
   }
+
+  // BUG-1340: Document-level dragend safety net — fires on every drag end regardless of
+  // drop target, covering inbox-to-calendar drags, cross-component drags, and browser edge cases.
+  document.addEventListener('dragend', handleGlobalDragEnd)
 })
 
 onUnmounted(() => {
@@ -625,6 +639,9 @@ onUnmounted(() => {
   // ✅ CLEANUP CAPTURE PHASE DRAG EVENT LISTENERS
   dragAbortController?.abort()
   dragAbortController = null
+
+  // BUG-1340: Remove document-level dragend safety net
+  document.removeEventListener('dragend', handleGlobalDragEnd)
 })
 
 // Watchers for auto-scrolling to current time

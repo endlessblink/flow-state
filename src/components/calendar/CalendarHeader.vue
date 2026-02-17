@@ -54,6 +54,17 @@ const showFilters = ref(false)
         <SlidersHorizontal :size="20" :stroke-width="1.5" />
       </button>
 
+      <!-- BUG-1343: Hide/Show Done Tasks — always visible in header -->
+      <button
+        class="hide-done-toggle"
+        :class="{ active: hideCalendarDoneTasks }"
+        :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+        @click="$emit('toggleDoneTasks')"
+      >
+        <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
+        <Eye v-else :size="16" :stroke-width="1.5" />
+      </button>
+
       <!-- TASK-1317: External Calendar Sync Button -->
       <button
         v-if="externalCalendarEnabled"
@@ -96,18 +107,6 @@ const showFilters = ref(false)
     <div v-if="showFilters" class="filter-bar">
       <!-- Project Filter -->
       <ProjectFilterDropdown />
-
-      <!-- Hide Done Tasks Toggle -->
-      <button
-        class="hide-done-toggle"
-        :class="{ active: hideCalendarDoneTasks }"
-        :title="hideCalendarDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
-        @click="$emit('toggleDoneTasks')"
-      >
-        <EyeOff v-if="hideCalendarDoneTasks" :size="16" :stroke-width="1.5" />
-        <Eye v-else :size="16" :stroke-width="1.5" />
-        <span>{{ hideCalendarDoneTasks ? 'Hidden' : 'Done' }}</span>
-      </button>
     </div>
   </Transition>
 </template>
@@ -190,47 +189,27 @@ const showFilters = ref(false)
 }
 
 .hide-done-toggle {
-  background: linear-gradient(
-    135deg,
-    var(--glass-bg-soft) 0%,
-    var(--glass-bg-light) 100%
-  );
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-normal) var(--spring-smooth);
-  box-shadow: var(--shadow-md);
-  position: relative;
-  z-index: 1000;
-  pointer-events: auto;
-  user-select: none;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .hide-done-toggle:hover {
-  background: linear-gradient(
-    135deg,
-    var(--state-hover-bg) 0%,
-    var(--glass-bg-soft) 100%
-  );
-  border-color: var(--state-hover-border);
+  background: var(--glass-bg-heavy);
   color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
 }
 
 .hide-done-toggle.active {
-  background: var(--state-active-bg);
-  border-color: var(--state-active-border);
-  backdrop-filter: var(--state-active-glass);
-  color: var(--state-active-text);
-  box-shadow: var(--state-hover-shadow), var(--state-hover-glow);
+  background: var(--color-indigo-bg-medium);
+  color: var(--color-indigo);
 }
 
 .view-selector {

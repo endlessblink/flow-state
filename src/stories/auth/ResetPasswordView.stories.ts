@@ -20,7 +20,7 @@ const meta: Meta<typeof ResetPasswordView> = {
         <div style="
           background: var(--glass-bg-solid);
           min-height: 600px;
-          padding: 2rem;
+          padding: var(--space-8);
           display: flex;
           align-items: center;
           justify-content: center;

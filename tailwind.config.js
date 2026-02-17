@@ -438,13 +438,15 @@ module.exports = {
         },
 
         '.btn-primary': {
-          background: 'var(--color-primary-500)',
-          color: 'white',
-          borderColor: 'var(--color-primary-500)',
+          background: 'var(--glass-bg-soft)',
+          color: 'var(--brand-primary)',
+          borderColor: 'var(--brand-primary)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
 
           '&:hover:not(:disabled)': {
-            background: 'var(--color-primary-600)',
-            borderColor: 'var(--color-primary-600)',
+            background: 'var(--glass-bg-medium)',
+            borderColor: 'var(--brand-primary-hover)',
           },
 
           '&:active': {

@@ -123,8 +123,12 @@
             class="graph-tooltip"
             :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
           >
-            <div class="tooltip-relation">{{ formatRelation(tooltipObs.relation) }}</div>
-            <div class="tooltip-value">{{ tooltipObs.value }}</div>
+            <div class="tooltip-relation">
+              {{ formatRelation(tooltipObs.relation) }}
+            </div>
+            <div class="tooltip-value">
+              {{ tooltipObs.value }}
+            </div>
             <div class="tooltip-meta">
               {{ Math.round(tooltipObs.confidence * 100) }}% confidence · {{ tooltipObs.source.replace(/_/g, ' ') }}
             </div>

@@ -173,7 +173,7 @@ export const FilterRow: Story = {
       }
     },
     template: `
-      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
         <div style="min-width: 140px;">
           <CustomSelect
             v-model="projectValue"

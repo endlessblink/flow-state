@@ -25,12 +25,14 @@
         <MainLayout v-else ref="mainLayout" />
         <ModalManager ref="modalManager" />
         <FaviconManager />
-        <!-- PWA Reload Prompt (Browser Only) -->
-        <ReloadPrompt v-if="!isTauriApp" />
+        <!-- PWA Reload Prompt (Browser/PWA Only — not native apps) -->
+        <ReloadPrompt v-if="!isTauriApp && !isCapacitorApp" />
         <!-- iOS Install Prompt (Mobile Browser Only) -->
-        <IOSInstallPrompt v-if="!isTauriApp" />
+        <IOSInstallPrompt v-if="!isTauriApp && !isCapacitorApp" />
         <!-- Tauri Update Notification (Desktop Only) -->
         <TauriUpdateNotification v-if="isTauriApp" />
+        <!-- FEATURE-1201: Onboarding Wizard (first-time visitors, desktop + mobile) -->
+        <OnboardingWizard />
       </template>
     </NMessageProvider>
   </NConfigProvider>
@@ -70,10 +72,12 @@ import TauriUpdateNotification from '@/components/common/TauriUpdateNotification
 import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'
 import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'
+import OnboardingWizard from '@/components/onboarding/OnboardingWizard.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
 import { useTauriDebug } from '@/composables/useTauriDebug'
+import { isTauri as isTauriFn, isCapacitor as isCapacitorFn } from '@/utils/platform'
 
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
@@ -83,9 +87,10 @@ const modalManager = ref<InstanceType<typeof ModalManager> | null>(null)
 const { isMobile } = useMobileDetection()
 const { handleKeydown } = useAppShortcuts()
 
-// Startup state - check Tauri AFTER mount to ensure __TAURI__ is injected
+// Startup state - check Tauri/Capacitor AFTER mount to ensure globals are injected
 const startupComplete = ref(false)
 const isTauriApp = ref(false)
+const isCapacitorApp = ref(false)
 const initialized = ref(false)
 
 // Only show startup screen in Tauri mode during initialization
@@ -116,12 +121,13 @@ const handleGlobalNewTask = () => {
 }
 
 onMounted(async () => {
-  // Check for Tauri AFTER mount - __TAURI__ should be injected by now
-  isTauriApp.value = typeof window !== 'undefined' && '__TAURI__' in window
+  // Check for Tauri/Capacitor AFTER mount - globals should be injected by now
+  isTauriApp.value = isTauriFn()
+  isCapacitorApp.value = isCapacitorFn()
   initialized.value = true
 
   // Log for debugging
-  console.log('[App] Tauri detected:', isTauriApp.value)
+  console.log('[App] Platform detected:', { tauri: isTauriApp.value, capacitor: isCapacitorApp.value })
 
   // TASK-1060: Start Tauri memory monitoring for SIGTERM debugging
   if (isTauriApp.value) {

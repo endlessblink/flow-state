@@ -161,3 +161,12 @@ jobs:
               exit 1
             fi
             echo "✓ API is healthy (HTTP $API_CODE)"
+
+      # BUG-1184: Verify every chunk referenced in index.html + main bundle actually loads.
+      # Catches: stale assets after rsync --delete, partial deploys, SW/Cloudflare cache mismatches.
+      - name: Verify Chunk Integrity
+        run: |
+            chmod +x ./scripts/validate-chunks.sh
+            ./scripts/validate-chunks.sh
+        env:
+          DOMAIN: https://in-theflow.com

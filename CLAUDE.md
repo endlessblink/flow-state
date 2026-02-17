@@ -181,31 +181,9 @@ FlowState desktop app checks for updates from the VPS and can download + install
 - Users see a toast notification with "Download" button when an update is available
 - Optional auto-update toggle in Settings > About
 
-**Key Files:**
-```
-src-tauri/tauri.conf.json                           # Updater endpoint + signing pubkey
-src/composables/useTauriUpdater.ts                  # Updater composable (check/download/restart)
-src/components/common/TauriUpdateNotification.vue   # Launch notification toast
-src/components/settings/tabs/AboutSettingsTab.vue    # Settings UI (Check for Updates + auto toggle)
-scripts/generate-update-manifest.cjs                # Generates latest.json from build artifacts
-.github/workflows/release.yml                       # CI/CD builds + deploys to VPS
-```
+**Additional updater-specific files:** `TauriUpdateNotification.vue`, `AboutSettingsTab.vue`
 
-**Release Workflow:**
-1. Bump version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`
-2. `git tag vX.X.X && git push --tags`
-3. CI/CD builds, signs, generates manifest, and rsyncs to VPS automatically
-4. Users see "Update Available" notification in the app
-
-**Manual Release (without CI):**
-```bash
-export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flow-state.key)"
-npm run build && npx tauri build
-npm run tauri:update-manifest
-# Upload artifacts + latest.json to VPS /var/www/flowstate/updates/
-```
-
-**Signing Key Location:** `~/.tauri/flow-state.key` (private), `~/.tauri/flow-state.key.pub` (public)
+**Release Workflow:** Bump version in 3 files (package.json, tauri.conf.json, Cargo.toml) → `git tag vX.X.X && git push --tags` → CI/CD auto-builds, signs, and deploys to VPS.
 
 ## VPS Production Deployment (Contabo)
 
@@ -292,23 +270,7 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 /etc/caddy/certs/             # Cloudflare origin certificates
 ```
 
-### Contabo-Specific Considerations
-
-**Gotchas to Know:**
-- No built-in firewall GUI - configure via `ufw` manually
-- No live chat support - email-only during business hours
-- VNC passwords sent in plain text email (avoid VNC console)
-- No DDoS protection - Cloudflare proxy provides this
-- Cannot scale RAM/CPU independently (must upgrade entire plan)
-
-**Security Hardening (Already Applied):**
-- SSH on default port 22
-- UFW firewall enabled (80, 443, SSH only)
-- Fail2Ban monitoring SSH
-- Root login disabled
-- Password auth disabled (SSH keys only)
-
-**Maintenance Commands:**
+### VPS Maintenance Commands
 ```bash
 # SSH into VPS
 ssh -i ~/.ssh/id_ed25519 root@84.46.253.137
@@ -331,19 +293,7 @@ docker stats
 
 ### Backup Strategy
 
-**Database Backups:**
-```bash
-# Manual backup
-docker exec supabase-db pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
-
-# Automated via cron (recommended)
-# See docs/sop/deployment/VPS-DEPLOYMENT.md
-```
-
-**Application Backups:**
-- FlowState's built-in Shadow Mirror backup (Settings > Storage)
-- Supabase database snapshots
-- External backup via Rclone to S3/B2 (optional)
+DB backups via `pg_dumpall` + cron (see `docs/sop/deployment/VPS-DEPLOYMENT.md`). App backups via built-in Shadow Mirror (Settings > Storage).
 
 ### Deployment SOPs
 
@@ -355,17 +305,54 @@ docker exec supabase-db pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
 | [`deployment/VPS-DEPLOYMENT.md`](docs/sop/deployment/VPS-DEPLOYMENT.md) | Full VPS setup guide |
 | [`deployment/PWA-DEPLOYMENT-CHECKLIST.md`](docs/sop/deployment/PWA-DEPLOYMENT-CHECKLIST.md) | Pre/post deploy verification |
 
-### Deployment vs Desktop (Side-by-Side)
+### Production Chunk Load Failure — Diagnostic Runbook (BUG-1184)
 
-| Aspect | VPS (Web) | Tauri (Desktop) |
-|--------|-----------|-----------------|
-| **Delivery** | Browser URL | Native installer |
-| **Database** | Shared Supabase on VPS | Local Supabase per user |
-| **Offline** | Service worker (limited) | Full offline (local DB) |
-| **Updates** | Auto (CI/CD) | Auto-updater (GitHub releases) |
-| **Target Users** | Web access, mobile | Power users, full control |
+**When user reports "chunk load failure", "site down", or "blank page" on production:**
 
-**Both are active and production-ready.**
+This is almost always a **stale asset hash mismatch** — the browser/SW/Cloudflare is requesting chunk files that no longer exist on VPS after a deploy.
+
+**Step 1: Check if CI/CD is broken**
+```bash
+gh run list --limit 5   # Look for recent failures
+gh run view <id> --log-failed  # See why it failed
+```
+Common cause: a file imported in code but never committed (like AISetupWizard.vue incident).
+
+**Step 2: Three-layer hash comparison**
+Compare chunk hashes across all three layers. They MUST match:
+```bash
+# Layer 1: What Cloudflare serves (via index.html → main bundle)
+MAIN=$(curl -s https://in-theflow.com/ | grep -oP 'src="/assets/index-[^"]+' | sed 's|src="||')
+curl -s "https://in-theflow.com${MAIN}" | grep -oP 'AllTasksView[^"]*' | sort -u
+
+# Layer 2: What VPS filesystem has
+ssh root@84.46.253.137 "ls /var/www/flowstate/assets/AllTasksView*"
+
+# Layer 3: What service worker precaches
+ssh root@84.46.253.137 "grep -oP 'AllTasksView[^\"]*' /var/www/flowstate/sw.js" | sort -u
+```
+If ANY layer has different hashes → that's the broken layer.
+
+**Step 3: Identify the cause**
+| Mismatch | Cause | Fix |
+|----------|-------|-----|
+| Cloudflare ≠ VPS | Cloudflare CDN caching old assets | Purge CF cache or wait |
+| VPS index.html ≠ VPS assets | Partial deploy (rsync interrupted) | Redeploy |
+| SW ≠ VPS assets | SW from different build than assets | Redeploy (SW has no-cache headers, will update) |
+| All match but user still broken | User's browser has stale SW | User must hard-refresh (Ctrl+Shift+R) |
+
+**Step 4: Fix**
+- If CI/CD is broken: fix the build error, push, let CI redeploy
+- If assets are stale: `doppler run -- npm run build && rsync -avz --delete --exclude='updates/' dist/ root@84.46.253.137:/var/www/flowstate/`
+- The router auto-recovery (BUG-1184 fix) will unregister stale SW and reload for users automatically
+
+**Key facts:**
+- `rsync --delete` in deploy removes old chunks immediately
+- Cloudflare caches `/assets/*` with `max-age=31536000, immutable` (1 year)
+- `index.html` and `sw.js` are `no-cache` (always fresh from origin)
+- Workbox service worker precaches chunk list at install time
+
+Both **VPS (web PWA)** and **Tauri (desktop)** distributions are active and production-ready.
 
 ## Key Development Rules
 

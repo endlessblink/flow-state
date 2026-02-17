@@ -116,7 +116,8 @@ const {
           height: `${Math.ceil(dragGhost.duration / 30) * 30}px`,
           width: 'calc(100% - 8px)',
           left: '4px',
-          zIndex: 40
+          zIndex: 40,
+          pointerEvents: 'none'
         }"
       >
         <div class="ghost-content">

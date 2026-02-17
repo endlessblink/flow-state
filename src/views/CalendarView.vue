@@ -307,6 +307,11 @@ const currentTime = ref(new Date())
 // Destructure commonly used items from composables
 const { hours, timeSlots, dragGhost, isDragging, draggedEventId, activeDropSlot, handleDragEnter, handleDragOver, handleDragLeave, handleDrop, handleEventDragStart: _rawEventDragStart, handleEventDragEnd: _rawEventDragEnd, startResize, resizePreview, getTasksForSlot, isTaskPrimarySlot, getSlotTaskStyle } = dayView
 
+// BUG-1351: Diagnostic watch — logs EVERY ghost visibility change with stack trace
+watch(() => dragGhost.value.visible, (newVal, oldVal) => {
+  console.log(`[BUG-1351:GHOST] visible changed: ${oldVal} → ${newVal}`, new Error().stack?.split('\n').slice(1, 4).join('\n'))
+})
+
 const { workingHours, weekDays, weekEvents, getWeekEventStyle, isCurrentWeekTimeCell, startWeekResize, resizePreview: weekResizePreview } = weekView
 
 const { monthDays, handleMonthDragStart: _rawMonthDragStart, handleMonthDrop, handleMonthDragEnd: _rawMonthDragEnd, handleMonthDayClick: monthDayClickHandler } = monthView
@@ -555,7 +560,9 @@ const handleDropCapture = (e: Event) => {
 // regardless of drag source (inbox, calendar, kanban) or drop target.
 // The dragend event fires on the source element and bubbles to document on EVERY drag end.
 const handleGlobalDragEnd = () => {
-  dragGhost.value.visible = false
+  console.log('[BUG-1351:DRAGEND] handleGlobalDragEnd — hiding ghost. Was visible:', dragGhost.value.visible)
+  // BUG-1351: Replace entire object for guaranteed prop reactivity
+  dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
   activeDropSlot.value = null
   isDragging.value = false
   draggedEventId.value = null

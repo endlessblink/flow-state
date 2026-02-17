@@ -20,6 +20,15 @@
           <ChevronDown v-if="!isCollapsed" :size="14" />
           <ChevronRight v-if="isCollapsed" :size="14" />
         </button>
+        <span
+          v-if="project.colorType === 'emoji' && project.emoji"
+          class="swimlane-emoji"
+        >{{ project.emoji }}</span>
+        <div
+          v-else-if="project.color"
+          class="swimlane-color-dot"
+          :style="{ backgroundColor: Array.isArray(project.color) ? project.color[0] : project.color }"
+        />
         <h3 class="project-name">
           {{ project.name }}
         </h3>
@@ -198,14 +207,14 @@ const statusColumns = computed(() => {
   return columns
 })
 
+// TASK-1348: No Date first (most visible), removed dead Inbox column
 const dateColumns = [
+  { key: 'noDate', label: 'No Date' },
   { key: 'overdue', label: 'Overdue' },
-  { key: 'inbox', label: 'Inbox' },
   { key: 'today', label: 'Today' },
   { key: 'tomorrow', label: 'Tomorrow' },
   { key: 'thisWeek', label: 'This Week' },
-  { key: 'later', label: 'Later' },
-  { key: 'noDate', label: 'No Date' }
+  { key: 'later', label: 'Later' }
 ]
 
 const priorityColumns = [

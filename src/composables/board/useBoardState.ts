@@ -169,14 +169,14 @@ export function groupTasksByPriority(tasks: Task[]) {
 }
 
 export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) {
+    // TASK-1348: Removed dead 'inbox' bucket (was never populated)
     const result: Record<string, Task[]> = {
+        noDate: [],
         overdue: [],
-        inbox: [],
         today: [],
         tomorrow: [],
         thisWeek: [],
-        later: [],
-        noDate: []
+        later: []
     }
 
     const today = new Date()
@@ -197,17 +197,21 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
         const oneDayAgo = new Date(today)
         oneDayAgo.setDate(oneDayAgo.getDate() - 1)
 
+        // TASK-1348: Normalize dueDate from ISO format ("2026-02-22T00:00:00+00:00") to "YYYY-MM-DD"
+        // Supabase returns full ISO timestamps but parseDateKey/formatDateKey use "YYYY-MM-DD"
+        const dueDateKey = task.dueDate ? task.dueDate.slice(0, 10) : null
+
         const isCreatedToday = taskCreatedDate.getTime() === today.getTime()
-        const isDueToday = task.dueDate === todayStr
+        const isDueToday = dueDateKey === todayStr
         const isInProgress = task.status === 'in_progress'
-        const isOverdueByDate = task.dueDate && task.dueDate < todayStr
+        const isOverdueByDate = dueDateKey && dueDateKey < todayStr
 
         const hasPastInstance = instances.length > 0 && instances.some((instance: any) => {
             const instanceDate = parseDateKey(instance.scheduledDate)
             return instanceDate && instanceDate < today
         })
         const isOldAndUnscheduled = taskCreatedDate < oneDayAgo && instances.length === 0 &&
-            !task.dueDate && task.status !== 'backlog'
+            !dueDateKey && task.status !== 'backlog'
 
         // Overdue check
         if (task.status !== 'done' && (isOverdueByDate || hasPastInstance || isOldAndUnscheduled)) {
@@ -216,7 +220,26 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
         }
 
         if (instances.length === 0) {
-            if (isCreatedToday || isDueToday || isInProgress) {
+            // TASK-1348: Use dueDate for bucketing when no explicit instances exist
+            if (dueDateKey && dueDateKey >= todayStr) {
+                const dueDate = parseDateKey(dueDateKey)
+                if (dueDate) {
+                    if (isSameDay(dueDate, today)) {
+                        result.today.push(task)
+                    } else if (isSameDay(dueDate, tomorrow) && !(dueDate >= weekendStart && dueDate <= weekendEnd)) {
+                        result.tomorrow.push(task)
+                    } else if ((dueDate >= weekendStart && dueDate <= weekendEnd) || (dueDate >= nextWeekStart && dueDate <= nextWeekEnd)) {
+                        result.thisWeek.push(task)
+                    } else if (dueDate >= afterNextWeekStart) {
+                        result.later.push(task)
+                    } else {
+                        // Between today and weekend/next week but not matching specific buckets
+                        result.thisWeek.push(task)
+                    }
+                } else {
+                    result.noDate.push(task)
+                }
+            } else if (isCreatedToday || isDueToday || isInProgress) {
                 result.today.push(task)
             } else {
                 result.noDate.push(task)

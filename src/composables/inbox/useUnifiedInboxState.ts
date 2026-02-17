@@ -97,8 +97,13 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     // --- Filter Logic ---
 
     // Base Inbox Tasks (Filtered by global rules + context rules)
+    // BUG-1351: Calendar inbox must NOT be affected by board-level smart view/status/duration
+    // filters. Use calendarFilteredTasks (project + hide-done only) for calendar context.
     const baseInboxTasks = computed(() => {
-        return taskStore.filteredTasks.filter(task => {
+        const sourceTasks = props.context === 'calendar'
+            ? taskStore.calendarFilteredTasks
+            : taskStore.filteredTasks
+        return sourceTasks.filter(task => {
             // 1. Done/Active filter (exclusive - show one OR the other)
             const isDone = task.status === 'done'
             if (showDoneOnly.value) {
@@ -116,11 +121,14 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
             // 3. Context Specific Rules
             if (props.context === 'calendar') {
-                // CALENDAR INBOX: Show tasks NOT on the calendar grid
-                const hasInstances = task.instances && task.instances.length > 0
-                const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
-                    (task.scheduledTime && task.scheduledTime.trim() !== '')
-                return !hasInstances && !hasLegacySchedule
+                // CALENDAR INBOX: Show tasks NOT scheduled on the calendar grid
+                // BUG-1351: Only exclude tasks with instances that have scheduledDate
+                // (matching useCalendarInboxState logic). Tasks with empty instances
+                // or instances without scheduledDate should still appear in inbox.
+                const isScheduledOnCalendar = task.instances &&
+                    task.instances.length > 0 &&
+                    task.instances.some(inst => inst.scheduledDate)
+                return !isScheduledOnCalendar
             } else {
                 // CANVAS INBOX: Show tasks NOT on the canvas
                 // (Dec 16, 2025 FIX: ONLY check canvasPosition)
@@ -147,18 +155,23 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     // Done task count (for the visible Done toggle badge)
     // Counts tasks in inbox that are done (before the done filter is applied)
+    // BUG-1351: Use same source as baseInboxTasks
     const doneTaskCount = computed(() => {
-        return taskStore.filteredTasks.filter(task => {
+        const sourceTasks = props.context === 'calendar'
+            ? taskStore.calendarFilteredTasks
+            : taskStore.filteredTasks
+        return sourceTasks.filter(task => {
             // Must be a done task
             if (task.status !== 'done') return false
             // Must not be soft deleted
             if (task._soft_deleted) return false
             // Must be an inbox task (not on canvas/calendar)
             if (props.context === 'calendar') {
-                const hasInstances = task.instances && task.instances.length > 0
-                const hasLegacySchedule = (task.scheduledDate && task.scheduledDate.trim() !== '') &&
-                    (task.scheduledTime && task.scheduledTime.trim() !== '')
-                return !hasInstances && !hasLegacySchedule
+                // BUG-1351: Match baseInboxTasks logic
+                const isScheduledOnCalendar = task.instances &&
+                    task.instances.length > 0 &&
+                    task.instances.some(inst => inst.scheduledDate)
+                return !isScheduledOnCalendar
             } else {
                 return !task.canvasPosition
             }

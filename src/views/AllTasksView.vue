@@ -7,7 +7,6 @@
     <template v-else>
       <!-- View Controls -->
       <ViewControls
-        v-model:density="density"
         v-model:sort-by="sortBy"
         v-model:group-by="groupBy"
         :filter-status="filterStatus"
@@ -36,6 +35,7 @@
           @update-task="handleUpdateTask"
           @batch-edit="handleBatchEdit"
           @delete-selected="handleDeleteSelected"
+          @add-task-to-group="handleAddTaskToGroup"
         />
       </div>
     </template>
@@ -85,7 +85,7 @@ import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useMobileDetection } from '@/composables/useMobileDetection'
-import ViewControls, { type DensityType } from '@/components/layout/ViewControls.vue'
+import ViewControls from '@/components/layout/ViewControls.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
 import MobileInboxView from '@/mobile/views/MobileInboxView.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
@@ -110,7 +110,6 @@ const { bulkDeleteTasksWithUndo } = useUnifiedUndoRedo()
 const { hideDoneTasks } = storeToRefs(taskStore)
 
 // View State (TASK-1215: Persist across restarts via Tauri store + localStorage)
-const density = usePersistentRef<DensityType>('flowstate:all-tasks-density', 'comfortable')
 const sortBy = usePersistentRef<string>('flowstate:all-tasks-sort-by', 'dueDate')
 const groupBy = usePersistentRef<GroupByType>('flowstate:all-tasks-group-by', 'project')
 // Use global status filter directly from store (maintains reactivity)
@@ -369,6 +368,46 @@ const handleEditTask = (taskId: string) => {
 const closeEditModal = () => {
   showEditModal.value = false
   selectedTask.value = null
+}
+
+const handleAddTaskToGroup = async (groupKey: string, groupByMode: string) => {
+  // Build partial task with pre-filled group property
+  const taskDefaults: Partial<Task> = { title: 'New Task' }
+
+  if (groupByMode === 'project') {
+    taskDefaults.projectId = (groupKey === 'uncategorized' || groupKey === '__no_project__') ? undefined : groupKey
+  } else if (groupByMode === 'status') {
+    taskDefaults.status = groupKey as Task['status']
+  } else if (groupByMode === 'priority') {
+    taskDefaults.priority = groupKey as Task['priority']
+  } else if (groupByMode === 'dueDate') {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const endOfWeek = new Date(today)
+    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
+    const formatDate = (d: Date) => d.toISOString().split('T')[0]
+
+    const dateMap: Record<string, string | undefined> = {
+      overdue: undefined,
+      today: formatDate(today),
+      tomorrow: formatDate(tomorrow),
+      thisWeek: formatDate(endOfWeek),
+      later: formatDate(new Date(today.getTime() + 14 * 86400000)),
+      noDate: undefined
+    }
+    if (groupKey in dateMap && dateMap[groupKey]) {
+      taskDefaults.dueDate = dateMap[groupKey]
+    }
+  }
+
+  // createTask returns the new Task object directly
+  const newTask = await taskStore.createTask(taskDefaults)
+  if (newTask) {
+    selectedTask.value = newTask
+    showEditModal.value = true
+  }
 }
 
 const handleContextMenu = (event: MouseEvent, task: Task) => {

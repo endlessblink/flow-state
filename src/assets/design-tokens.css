@@ -664,6 +664,13 @@
   --danger-bg-light: rgba(239, 68, 68, 0.10);
   --danger-shadow-strong: rgba(239, 68, 68, 0.4);
 
+  /* Amber states (for highlight actions like "Done for now") */
+  --amber-text: rgb(251, 191, 36);
+  --amber-bg-soft: rgba(251, 191, 36, 0.05);
+  --amber-bg-light: rgba(251, 191, 36, 0.08);
+  --amber-bg-medium: rgba(251, 191, 36, 0.15);
+  --amber-border-subtle: rgba(251, 191, 36, 0.2);
+
   /* Purple interactive states (for buttons/UI) */
   --purple-bg-subtle: rgba(139, 92, 246, 0.08);
   --purple-bg-start: rgba(99, 102, 241, 0.16);

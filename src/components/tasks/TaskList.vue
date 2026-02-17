@@ -78,6 +78,13 @@
         <span class="group-name">{{ group.title }}</span>
         <span class="group-task-count">{{ group.tasks.length }}</span>
         <button
+          class="group-add-btn"
+          title="Add task to this group"
+          @click.stop="emit('addTaskToGroup', group.key, props.groupBy)"
+        >
+          <Plus :size="14" />
+        </button>
+        <button
           class="group-ai-btn"
           title="Smart Suggest all tasks in group (AI)"
           @click.stop="handleGroupAISuggest($event, group)"
@@ -148,7 +155,7 @@ import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { Inbox, ChevronRight, Pencil, Trash2, X, Zap, ArrowDownToLine } from 'lucide-vue-next'
+import { Inbox, ChevronRight, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
 
 interface Props {
   tasks: Task[]
@@ -169,6 +176,7 @@ const emit = defineEmits<{
   updateTask: [taskId: string, updates: Partial<Task>]
   batchEdit: [taskIds: string[]]
   deleteSelected: [taskIds: string[]]
+  addTaskToGroup: [groupKey: string, groupBy: string]
 }>()
 
 // Expand/collapse state
@@ -582,6 +590,28 @@ defineExpose({
 }
 
 .group-ai-btn:hover {
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-medium);
+}
+
+.group-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+}
+
+.group-add-btn:hover {
   color: var(--brand-primary);
   border-color: var(--brand-primary);
   background: var(--glass-bg-medium);

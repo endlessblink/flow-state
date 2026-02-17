@@ -41,6 +41,8 @@ import { getDefaultModelForProvider as getDefaultModel, getDefaultPricing } from
 // BUG-1131: Proxy providers for secure API key handling (keys stay server-side)
 import { createGroqProxyProvider } from './providers/groqProxy'
 import { createOpenRouterProxyProvider } from './providers/openrouterProxy'
+// TASK-1350: Direct Groq provider for BYOK (user provides own API key)
+import { createGroqProvider } from './providers/groq'
 
 // ============================================================================
 // Task Types - Determine routing strategy
@@ -96,16 +98,20 @@ export interface RouterConfig {
 
   /** Enable debug logging */
   debug: boolean
+
+  /** TASK-1350: Groq API key for direct BYOK access (no proxy needed) */
+  groqApiKey?: string
 }
 
 /**
  * Default router configuration.
- * Priority: Ollama (local) → Groq (fast cloud) → OpenRouter (premium fallback)
+ * TASK-1350: Priority changed to Groq (cloud) first for better quality.
+ * Groq (BYOK, free tier) → Ollama (local fallback) → OpenRouter (premium fallback)
  */
 export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
-  providers: ['ollama', 'groq', 'openrouter'],
+  providers: ['groq', 'ollama', 'openrouter'],
   fallbackEnabled: true,
-  preferLocal: true,
+  preferLocal: false,
   maxRetries: 2,
   healthCheckIntervalMs: 60000,    // 1 minute
   healthCacheDurationMs: 30000,    // 30 seconds
@@ -354,9 +360,28 @@ export class AIRouter {
 
   /**
    * Create Groq provider instance.
-   * BUG-1131: Uses proxy to keep API key server-side.
+   * TASK-1350: Uses direct BYOK provider when user has API key, falls back to proxy.
    */
   private async createGroqProvider(): Promise<AIProvider | null> {
+    // TASK-1350: If user provided their own Groq API key, use direct provider (no proxy needed)
+    if (this.config.groqApiKey) {
+      try {
+        this.log('Creating Groq direct provider (BYOK)')
+        const directProvider = createGroqProvider(this.config.groqApiKey)
+        const directSuccess = await directProvider.initialize()
+
+        if (directSuccess) {
+          this.log('Groq direct provider initialized successfully (BYOK)')
+          return directProvider
+        }
+
+        this.log('Groq direct provider initialization failed — invalid API key?')
+      } catch (error) {
+        this.log('Failed to create Groq direct provider', error)
+      }
+    }
+
+    // Fallback to proxy provider (API key server-side via Supabase Edge Function)
     try {
       this.log('Creating Groq proxy provider')
       const proxyProvider = createGroqProxyProvider()
@@ -661,7 +686,8 @@ export class AIRouter {
    * Get provider order based on task type.
    */
   private getProviderOrder(taskType: TaskType): RouterProviderType[] {
-    const localPreferredTasks: TaskType[] = ['chat', 'task_parsing', 'canvas_analysis', 'suggestion']
+    // TASK-1350: Removed 'suggestion' — suggestions benefit from larger cloud models
+    const localPreferredTasks: TaskType[] = ['chat', 'task_parsing', 'canvas_analysis']
     const cloudPreferredTasks: TaskType[] = ['task_breakdown', 'planning']
 
     // If prefer local and task is local-preferred, prioritize local

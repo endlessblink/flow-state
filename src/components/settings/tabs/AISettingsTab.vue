@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Bot, DollarSign, MessageSquare, Zap, Trash2, Tag, RefreshCw } from 'lucide-vue-next'
+import { Bot, DollarSign, MessageSquare, Zap, Trash2, Tag, RefreshCw, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Wand2 } from 'lucide-vue-next'
 import { useAIUsageTracking, type UsagePeriod, type UsageSummary } from '@/composables/useAIUsageTracking'
 import { useAIChat } from '@/composables/useAIChat'
 import { useWorkProfile } from '@/composables/useWorkProfile'
@@ -8,6 +8,8 @@ import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, type AIProviderKey } from '@/config/aiModels'
+import { tauriFetch } from '@/services/ai/utils/tauriHttp'
+import { resetSharedRouter } from '@/services/ai/routerFactory'
 
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
 const settingsStore = useSettingsStore()
@@ -79,6 +81,55 @@ function onWpProviderChange(provider: AIProviderKey) {
 function onWpModelChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
   settingsStore.updateSetting('weeklyPlanModel', value || '')
+}
+
+// ── TASK-1350: Groq API Key Management ──
+const groqKeyInput = ref(settingsStore.groqApiKey || '')
+const showGroqKey = ref(false)
+const groqTestStatus = ref<'success' | 'error' | 'testing' | null>(null)
+const groqTestMessage = ref('')
+
+async function testGroqConnection() {
+  groqTestStatus.value = 'testing'
+  groqTestMessage.value = 'Testing...'
+  try {
+    const response = await tauriFetch('https://api.groq.com/openai/v1/models', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${groqKeyInput.value}` },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (response.ok) {
+      groqTestStatus.value = 'success'
+      groqTestMessage.value = 'Connected!'
+    } else if (response.status === 401) {
+      groqTestStatus.value = 'error'
+      groqTestMessage.value = 'Invalid API key'
+    } else {
+      groqTestStatus.value = 'error'
+      groqTestMessage.value = `HTTP ${response.status}`
+    }
+  } catch (err) {
+    groqTestStatus.value = 'error'
+    groqTestMessage.value = err instanceof Error ? err.message : 'Failed'
+  }
+}
+
+function saveGroqKey() {
+  settingsStore.updateSetting('groqApiKey', groqKeyInput.value)
+  resetSharedRouter()
+  groqTestStatus.value = null
+}
+
+function clearGroqKey() {
+  groqKeyInput.value = ''
+  settingsStore.updateSetting('groqApiKey', '')
+  resetSharedRouter()
+  groqTestStatus.value = null
+}
+
+// Re-run wizard via global event (wizard lives in App.vue, not in settings modal tree)
+function rerunWizard() {
+  window.dispatchEvent(new Event('global-rerun-ai-wizard'))
 }
 
 /** Currently selected time period */
@@ -296,6 +347,71 @@ async function onClearMemories() {
           <RefreshCw :size="14" />
         </button>
       </div>
+    </SettingsSection>
+
+    <!-- TASK-1350: Groq API Key -->
+    <SettingsSection title="Groq API Key">
+      <p class="section-desc">
+        Provide your own Groq API key for direct access. Free tier available at
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" class="settings-link">console.groq.com</a>.
+      </p>
+
+      <div class="groq-key-row">
+        <div class="groq-key-input-wrapper">
+          <input
+            :type="showGroqKey ? 'text' : 'password'"
+            v-model="groqKeyInput"
+            placeholder="gsk_..."
+            class="groq-key-input"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button class="key-toggle-btn" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'">
+            <EyeOff v-if="showGroqKey" :size="14" />
+            <Eye v-else :size="14" />
+          </button>
+        </div>
+
+        <div class="groq-key-actions">
+          <button
+            class="groq-action-btn save"
+            :disabled="groqKeyInput === settingsStore.groqApiKey"
+            @click="saveGroqKey"
+          >
+            Save
+          </button>
+          <button
+            class="groq-action-btn test"
+            :disabled="!groqKeyInput || groqTestStatus === 'testing'"
+            @click="testGroqConnection"
+          >
+            <Loader2 v-if="groqTestStatus === 'testing'" :size="12" class="spinning" />
+            Test
+          </button>
+          <button
+            v-if="settingsStore.groqApiKey"
+            class="groq-action-btn danger"
+            @click="clearGroqKey"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div v-if="groqTestStatus" class="groq-test-result" :class="groqTestStatus">
+        <CheckCircle2 v-if="groqTestStatus === 'success'" :size="14" />
+        <AlertCircle v-if="groqTestStatus === 'error'" :size="14" />
+        <Loader2 v-if="groqTestStatus === 'testing'" :size="14" class="spinning" />
+        <span>{{ groqTestMessage }}</span>
+      </div>
+    </SettingsSection>
+
+    <!-- Re-run AI Setup Wizard -->
+    <SettingsSection title="Setup Wizard">
+      <button class="wizard-rerun-btn" @click="rerunWizard()">
+        <Wand2 :size="14" />
+        Re-run AI Setup Wizard
+      </button>
     </SettingsSection>
 
     <!-- TASK-1327: Weekly Plan Model Override -->
@@ -1426,5 +1542,144 @@ async function onClearMemories() {
   color: var(--text-muted);
   font-style: italic;
   margin: 0;
+}
+
+/* ── TASK-1350: Groq API Key ── */
+.settings-link {
+  color: var(--brand-primary);
+  text-decoration: none;
+}
+.settings-link:hover {
+  text-decoration: underline;
+}
+
+.groq-key-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.groq-key-input-wrapper {
+  display: flex;
+  gap: var(--space-1_5);
+}
+
+.groq-key-input {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono, monospace);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  transition: border-color var(--duration-fast);
+}
+.groq-key-input:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+.groq-key-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.key-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+}
+.key-toggle-btn:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+
+.groq-key-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.groq-action-btn {
+  padding: var(--space-1_5) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all var(--duration-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.groq-action-btn:hover:not(:disabled) {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+}
+.groq-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.groq-action-btn.save {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+.groq-action-btn.danger:hover:not(:disabled) {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.groq-test-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+.groq-test-result.success {
+  background: rgba(78, 205, 196, 0.1);
+  color: var(--brand-primary);
+}
+.groq-test-result.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+.groq-test-result.testing {
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+}
+
+.wizard-rerun-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all var(--duration-fast);
+}
+.wizard-rerun-btn:hover {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 </style>

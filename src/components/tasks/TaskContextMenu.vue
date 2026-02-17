@@ -777,7 +777,7 @@ onUnmounted(() => {
 /* Highlighted menu item - stands out */
 .menu-item--highlight {
   background: var(--amber-bg-light);
-  border-left: var(--space-0_75) solid var(--amber-text);
+  border-left: 3px solid var(--amber-text);
   margin: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   width: calc(100% - var(--space-4));
@@ -939,13 +939,17 @@ onUnmounted(() => {
 }
 
 .footer-btn--now {
-  background: var(--brand-primary);
+  background: var(--glass-bg-soft);
   border-color: var(--brand-primary);
-  color: white;
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .footer-btn--now:hover {
-  background: var(--brand-primary-hover, var(--brand-primary));
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary-hover, var(--brand-primary));
 }
 
 /* Inline Row for Status/Duration */

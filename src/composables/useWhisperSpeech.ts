@@ -35,7 +35,7 @@ export interface UseWhisperSpeechOptions {
 }
 
 const DEFAULT_OPTIONS = {
-  model: 'whisper-large-v3-turbo', // Best value: $0.04/hour, excellent quality
+  model: 'whisper-large-v3', // Best Hebrew accuracy: $0.111/hour (vs $0.04 for turbo)
   maxDuration: 30
 }
 

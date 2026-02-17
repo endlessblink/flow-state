@@ -4,7 +4,6 @@
       <div
         v-if="isOpen"
         class="sheet-overlay"
-        @click="handleCancel"
         @touchmove.prevent
       >
         <div
@@ -202,6 +201,7 @@ interface Props {
   voiceTranscript?: string
   voiceError?: string | null  // BUG-1350: Show transcription errors in sheet
   canReRecord?: boolean  // TASK-1110: Allow re-recording
+  voiceSessionActive?: boolean  // BUG-1350: True during entire voice lifecycle
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -209,7 +209,8 @@ const props = withDefaults(defineProps<Props>(), {
   isProcessing: false,
   voiceTranscript: '',
   voiceError: null,
-  canReRecord: false
+  canReRecord: false,
+  voiceSessionActive: false
 })
 
 const emit = defineEmits<{
@@ -414,6 +415,9 @@ const pendingDiscard = ref(false)
 function handleCancel() {
   // BUG-1350: Don't close during active recording or processing — transcription would be lost
   if (props.isListening || props.isProcessing) return
+
+  // BUG-1350: Block close during entire voice session (covers gaps between states)
+  if (props.voiceSessionActive) return
 
   // BUG-1350: Grace period prevents accidental immediate close from stale touch events on mobile
   if (Date.now() - openTimestamp.value < OPEN_GRACE_MS) return
@@ -747,9 +751,9 @@ function autoResize(event: Event) {
 }
 
 .scraping-cancel {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: var(--icon-2xl);
+  height: var(--icon-2xl);
+  border-radius: var(--radius-full);
   border: none;
   background: transparent;
   color: var(--text-tertiary);
@@ -883,7 +887,7 @@ function autoResize(event: Event) {
   font-weight: var(--font-semibold);
   cursor: pointer;
   flex-shrink: 0;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-xs));
 }
 
 .voice-retry-btn:active {

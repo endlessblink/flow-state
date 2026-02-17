@@ -185,8 +185,15 @@ export function useTaskPersistence(
             // console.debug(`✅ [SUPABASE] Saved ${validTasksToSave.length} tasks (${context})`)
 
         } catch (_e) {
-            // Supabase failed or skipped (guest mode) - localStorage backup is still saved
-            console.debug(`⏭️ [PERSISTENCE] Supabase skipped/failed - localStorage backup saved (${context})`)
+            // BUG-1182 FIX: Distinguish between guest-mode skip (expected) and authenticated save failure (data loss risk)
+            if (authStore.isAuthenticated) {
+                console.error(`❌ [PERSISTENCE] Save failed while authenticated (${context}):`, _e)
+                // Re-throw so callers can handle (e.g., enqueue for sync retry)
+                throw _e
+            } else {
+                // Guest mode: Supabase skipped - localStorage backup is the primary store
+                console.debug(`⏭️ [PERSISTENCE] Supabase skipped (guest mode) - localStorage backup saved (${context})`)
+            }
         }
     }
 

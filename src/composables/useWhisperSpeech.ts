@@ -18,6 +18,7 @@ export interface WhisperResult {
   transcript: string
   language: string // Detected language code (e.g., 'he', 'en')
   duration: number // Audio duration in seconds
+  segments?: Array<{ text: string; start: number; end: number; no_speech_prob: number; avg_logprob: number }>
 }
 
 export interface UseWhisperSpeechOptions {
@@ -139,9 +140,11 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
           ? 'audio/webm'
-          : MediaRecorder.isTypeSupported('audio/mp4')
-            ? 'audio/mp4'
-            : 'audio/wav'
+          : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+            ? 'audio/ogg;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/mp4')
+              ? 'audio/mp4'
+              : 'audio/wav'
 
       mediaRecorder = new MediaRecorder(stream, { mimeType })
 
@@ -289,13 +292,19 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       // Whisper API expects specific file extensions
       const extension = audioBlob.type.includes('webm') ? 'webm'
-        : audioBlob.type.includes('mp4') ? 'mp4'
+        : audioBlob.type.includes('ogg') ? 'ogg'
+        : audioBlob.type.includes('mp4') ? 'm4a'
         : audioBlob.type.includes('wav') ? 'wav'
         : 'webm'
 
       formData.append('file', audioBlob, `audio.${extension}`)
       formData.append('model', model)
-      // Don't specify language - let Whisper auto-detect for mixed language support
+      // Hebrew as primary language — Whisper preserves English proper nouns listed in the prompt
+      formData.append('language', 'he')
+      formData.append('prompt', 'שלום, זהו תמלול של משימות יומיות בעברית. מונחים באנגלית שיש לשמור כפי שהם: '
+        + 'email, meeting, Zoom, GitHub, Slack, FlowState, Supabase, deadline, update, review, deploy, '
+        + 'PR, bug, feature, sprint, backlog, standup, sync, TODO, ASAP, FYI.')
+      formData.append('temperature', '0')
 
       // Call Edge Function (API key is server-side, synced from Doppler)
       const response = await fetch(getWhisperEndpoint(), {
@@ -310,7 +319,23 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       const data = await response.json()
 
-      transcript.value = data.text || ''
+      // Filter out hallucinated segments using confidence thresholds
+      // Segments with high no_speech_prob are likely silence/noise hallucinations
+      if (data.segments && data.segments.length > 0) {
+        const filtered = data.segments
+          .filter((seg: { no_speech_prob?: number; avg_logprob?: number; text?: string }) => {
+            const noSpeechProb = seg.no_speech_prob ?? 0
+            const avgLogprob = seg.avg_logprob ?? 0
+            // Keep segments where speech is likely detected and confidence is reasonable
+            return noSpeechProb < 0.6 && avgLogprob > -1.0
+          })
+          .map((seg: { text?: string }) => seg.text?.trim() || '')
+          .filter(Boolean)
+
+        transcript.value = filtered.length > 0 ? filtered.join(' ') : (data.text || '')
+      } else {
+        transcript.value = data.text || ''
+      }
       detectedLanguage.value = data.language || null
 
       if (import.meta.env.DEV) {
@@ -327,7 +352,8 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         onResult({
           transcript: transcript.value,
           language: detectedLanguage.value || 'unknown',
-          duration: data.duration || recordingDuration.value
+          duration: data.duration || recordingDuration.value,
+          segments: data.segments
         })
       }
 

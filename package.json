@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.2.78",
+  "version": "1.2.79",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://in-theflow.com",
   "repository": {
@@ -211,6 +211,18 @@
   "author": "EndlessBlink",
   "license": "MIT",
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/browser": "^8.0.1",
+    "@capacitor/cli": "^7.5.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.1",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
     "@fabianlars/tauri-plugin-oauth": "^2.0.0",
     "@supabase/supabase-js": "^2.89.0",
     "@tauri-apps/plugin-dialog": "^2.6.0",

@@ -180,15 +180,25 @@
           </div>
         </div>
 
-        <!-- Swipe Instructions - Clear hierarchy explanation -->
+        <!-- Swipe Instructions - 4-direction hints -->
         <div v-if="!hasSwipedOnce" class="swipe-hints">
-          <div class="hint hint-left">
-            <ChevronLeft :size="24" />
-            <span>Skip</span>
+          <div class="hint hint-up">
+            <ChevronUp :size="20" />
+            <span>Edit</span>
           </div>
-          <div class="hint hint-right">
-            <span>Save</span>
-            <ChevronRight :size="24" />
+          <div class="hint-row">
+            <div class="hint hint-left">
+              <ChevronLeft :size="20" />
+              <span>Delete</span>
+            </div>
+            <div class="hint hint-right">
+              <span>Save</span>
+              <ChevronRight :size="20" />
+            </div>
+          </div>
+          <div class="hint hint-down">
+            <ChevronDown :size="20" />
+            <span>Skip</span>
           </div>
         </div>
 
@@ -213,18 +223,20 @@
             :class="{
               'swiping': swipeState.isSwiping,
               'swipe-left': swipeDirection === 'left',
-              'swipe-right': swipeDirection === 'right'
+              'swipe-right': swipeDirection === 'right',
+              'swipe-up': swipeDirection === 'up',
+              'swipe-down': swipeDirection === 'down'
             }"
             :style="cardStyle"
           >
-            <!-- Swipe Indicators - Clear action feedback -->
+            <!-- Swipe Indicators - Clear action feedback for all 4 directions -->
             <div
               class="swipe-indicator left"
               :style="{ opacity: leftOverlayOpacity }"
             >
               <div class="swipe-content">
-                <SkipForward :size="32" />
-                <span>Skip</span>
+                <Trash2 :size="32" />
+                <span>Delete</span>
               </div>
             </div>
             <div
@@ -234,6 +246,24 @@
               <div class="swipe-content">
                 <Save :size="32" />
                 <span>Save</span>
+              </div>
+            </div>
+            <div
+              class="swipe-indicator up"
+              :style="{ opacity: upOverlayOpacity }"
+            >
+              <div class="swipe-content">
+                <Pencil :size="32" />
+                <span>Edit</span>
+              </div>
+            </div>
+            <div
+              class="swipe-indicator down"
+              :style="{ opacity: downOverlayOpacity }"
+            >
+              <div class="swipe-content">
+                <SkipForward :size="32" />
+                <span>Skip</span>
               </div>
             </div>
 
@@ -589,8 +619,9 @@ import { useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, CalendarDays, Flag,
-  ChevronLeft, ChevronRight, SkipForward, PartyPopper,
-  ArrowLeft, Trash2, Edit3, FolderOpen, Search, Save
+  ChevronLeft, ChevronRight, ChevronUp, ChevronDown, SkipForward, PartyPopper,
+  ArrowLeft, Trash2, Edit3, FolderOpen, Search, Save, Pencil,
+  Sparkles, ArrowUpDown, MessageSquareText, Loader2
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useSwipeGestures } from '@/composables/useSwipeGestures'
@@ -705,6 +736,7 @@ const stackPreview = computed(() => {
 const {
   swipeState,
   deltaX,
+  deltaY,
   progress: swipeProgress,
   direction: swipeDirection,
   triggerHaptic
@@ -712,14 +744,25 @@ const {
   threshold: 120,
   velocityThreshold: 0.4,
   haptics: true,
+  fourDirectional: true,
   onSwipeRight: () => {
     hasSwipedOnce.value = true
-    // Swipe right = Save task (matches desktop QuickSortCard behavior)
+    // Swipe right = Save task
     handleSave()
   },
   onSwipeLeft: () => {
     hasSwipedOnce.value = true
-    // Swipe left = Skip to next task
+    // Swipe left = Delete task (with confirmation)
+    showDeleteConfirm.value = true
+  },
+  onSwipeUp: () => {
+    hasSwipedOnce.value = true
+    // Swipe up = Open task edit modal
+    handleEditTask()
+  },
+  onSwipeDown: () => {
+    hasSwipedOnce.value = true
+    // Swipe down = Skip to next task
     handleSkip()
   },
   onSwipeEnd: () => {
@@ -727,39 +770,62 @@ const {
   }
 })
 
-// Card transform style
+// Card transform style - supports both horizontal and vertical movement
 const cardStyle = computed(() => {
   if (!swipeState.value.isSwiping) {
     return {
-      transform: 'translateX(0) rotate(0deg)',
+      transform: 'translateX(0) translateY(0) rotate(0deg)',
       transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
     }
   }
 
-  const rotate = deltaX.value * 0.05
-  const maxRotate = 15
-  const clampedRotate = Math.max(-maxRotate, Math.min(maxRotate, rotate))
+  const absX = Math.abs(deltaX.value)
+  const absY = Math.abs(deltaY.value)
+  const isHorizontal = absX > absY
 
-  return {
-    transform: `translateX(${deltaX.value}px) rotate(${clampedRotate}deg)`,
-    transition: 'none'
+  if (isHorizontal) {
+    // Horizontal swipe: translate X + rotate
+    const rotate = deltaX.value * 0.05
+    const maxRotate = 15
+    const clampedRotate = Math.max(-maxRotate, Math.min(maxRotate, rotate))
+    return {
+      transform: `translateX(${deltaX.value}px) rotate(${clampedRotate}deg)`,
+      transition: 'none'
+    }
+  } else {
+    // Vertical swipe: translate Y only (no rotate)
+    return {
+      transform: `translateY(${deltaY.value}px)`,
+      transition: 'none'
+    }
   }
 })
 
-// Overlay opacities
+// Overlay opacities - all 4 directions
 const leftOverlayOpacity = computed(() => {
-  if (deltaX.value >= 0) return 0
+  if (deltaX.value >= 0 || Math.abs(deltaY.value) > Math.abs(deltaX.value)) return 0
   return Math.min(Math.abs(deltaX.value) / 120, 1) * 0.9
 })
 
 const rightOverlayOpacity = computed(() => {
-  if (deltaX.value <= 0) return 0
+  if (deltaX.value <= 0 || Math.abs(deltaY.value) > Math.abs(deltaX.value)) return 0
   return Math.min(deltaX.value / 120, 1) * 0.9
 })
 
-// Content blur effect when swiping
+const upOverlayOpacity = computed(() => {
+  if (deltaY.value >= 0 || Math.abs(deltaX.value) > Math.abs(deltaY.value)) return 0
+  return Math.min(Math.abs(deltaY.value) / 120, 1) * 0.9
+})
+
+const downOverlayOpacity = computed(() => {
+  if (deltaY.value <= 0 || Math.abs(deltaX.value) > Math.abs(deltaY.value)) return 0
+  return Math.min(deltaY.value / 120, 1) * 0.9
+})
+
+// Content blur effect when swiping (any direction)
 const contentBlurStyle = computed(() => {
-  const progress = Math.min(Math.abs(deltaX.value) / 100, 1)
+  const dominant = Math.max(Math.abs(deltaX.value), Math.abs(deltaY.value))
+  const progress = Math.min(dominant / 100, 1)
   if (progress < 0.1) {
     return { filter: 'none', opacity: 1 }
   }
@@ -867,6 +933,15 @@ function handleSortWithoutProject() {
   triggerHaptic('medium')
 }
 
+function handleEditTask() {
+  if (!currentTask.value) return
+  // Open task edit modal via global custom event (ModalManager listens for this)
+  window.dispatchEvent(new CustomEvent('open-task-edit', {
+    detail: { taskId: currentTask.value.id }
+  }))
+  triggerHaptic('medium')
+}
+
 function handleSkip() {
   skipTask()
   triggerHaptic('light')
@@ -950,6 +1025,12 @@ async function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' |
 }
 
 function handleExit() {
+  // Remove popstate guard before intentional exit (BUG-1343)
+  window.removeEventListener('popstate', popstateHandler)
+  // Go back to pop the guard entry, then navigate
+  if (window.history.state?.quickSortGuard) {
+    window.history.back()
+  }
   router.push('/tasks')
 }
 
@@ -1052,14 +1133,26 @@ watch(isComplete, (completed) => {
 })
 
 // Lifecycle
+// BUG-1343: Prevent browser's swipe-back gesture from exiting Quick Sort on mobile PWA.
+// Push a duplicate history entry so the browser's back gesture pops our entry
+// instead of navigating away from the view.
+const popstateHandler = (e: PopStateEvent) => {
+  // Re-push the guard entry so the next back-swipe is also caught
+  window.history.pushState({ quickSortGuard: true }, '')
+}
+
 onMounted(() => {
   startSession()
+  // Push guard entry into history stack
+  window.history.pushState({ quickSortGuard: true }, '')
+  window.addEventListener('popstate', popstateHandler)
 })
 
 onUnmounted(() => {
   // Clear pending celebration timers to avoid setting refs on unmounted component
   celebrationTimers.forEach(clearTimeout)
   celebrationTimers.length = 0
+  window.removeEventListener('popstate', popstateHandler)
 })
 </script>
 
@@ -1083,6 +1176,7 @@ onUnmounted(() => {
   color: var(--text-primary);
   overflow: hidden;
   overscroll-behavior-x: none;
+  touch-action: pan-y; /* BUG-1343: Prevent browser horizontal swipe-back gesture */
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -1595,13 +1689,21 @@ onUnmounted(() => {
   opacity: 0.3;
 }
 
-/* Swipe hints */
+/* Swipe hints - 4 direction layout */
 .swipe-hints {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
   padding: 0 var(--space-4);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   animation: fadeInOut 3s ease-in-out infinite;
+}
+
+.swipe-hints .hint-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }
 
 @keyframes fadeInOut {
@@ -1617,6 +1719,20 @@ onUnmounted(() => {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.hint.hint-up,
+.hint.hint-down {
+  flex-direction: column;
+  gap: 0;
+}
+
+.hint.hint-left {
+  color: var(--color-danger);
+}
+
+.hint.hint-right {
+  color: var(--brand-primary);
 }
 
 /* Card Stack */
@@ -1660,12 +1776,17 @@ onUnmounted(() => {
     var(--shadow-dark-lg),
     inset 0 1px 0 var(--glass-bg-weak);
   z-index: var(--z-sticky);
-  touch-action: pan-y;
+  touch-action: none; /* 4-directional swipe needs full touch control */
   user-select: none;
   overflow: hidden;
 }
 
 .task-card.swiping {
+  cursor: grabbing;
+}
+
+.task-card.swipe-up,
+.task-card.swipe-down {
   cursor: grabbing;
 }
 
@@ -1682,16 +1803,28 @@ onUnmounted(() => {
   z-index: var(--z-sticky); /* Above blurred content */
 }
 
-/* Left swipe = Skip (muted) */
+/* Left swipe = Delete (destructive - red) */
 .swipe-indicator.left {
-  border: var(--space-0_5) solid var(--glass-border-hover);
-  background: var(--glass-bg-medium);
+  border: var(--space-0_5) solid var(--color-danger);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 /* Right swipe = Save (positive action - teal) */
 .swipe-indicator.right {
   border: var(--space-0_5) solid var(--brand-primary);
   background: rgba(78, 205, 196, 0.15);
+}
+
+/* Up swipe = Edit (info - blue) */
+.swipe-indicator.up {
+  border: var(--space-0_5) solid var(--color-info);
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* Down swipe = Skip (muted) */
+.swipe-indicator.down {
+  border: var(--space-0_5) solid var(--glass-border-hover);
+  background: var(--glass-bg-medium);
 }
 
 .swipe-content {
@@ -1702,14 +1835,24 @@ onUnmounted(() => {
   color: inherit;
 }
 
-/* Left swipe content = Skip (muted) */
+/* Left swipe content = Delete (red) */
 .swipe-indicator.left .swipe-content {
-  color: var(--text-secondary);
+  color: var(--color-danger);
 }
 
 /* Right swipe content = Save (teal) */
 .swipe-indicator.right .swipe-content {
   color: var(--brand-primary);
+}
+
+/* Up swipe content = Edit (blue) */
+.swipe-indicator.up .swipe-content {
+  color: var(--color-info);
+}
+
+/* Down swipe content = Skip (muted) */
+.swipe-indicator.down .swipe-content {
+  color: var(--text-secondary);
 }
 
 .swipe-content span {
@@ -2726,7 +2869,7 @@ onUnmounted(() => {
   text-align: right;
 }
 
-[dir="rtl"] .swipe-hints {
+[dir="rtl"] .swipe-hints .hint-row {
   flex-direction: row-reverse;
 }
 

@@ -21,6 +21,8 @@ export interface SwipeGestureOptions {
   haptics?: boolean
   /** Lock vertical movement during horizontal swipe */
   lockVertical?: boolean
+  /** Enable 4-direction mode (prevents page scroll during vertical swipes on the target) */
+  fourDirectional?: boolean
   /** Callbacks */
   onSwipeLeft?: () => void
   onSwipeRight?: () => void
@@ -50,6 +52,7 @@ export function useSwipeGestures(
     velocityThreshold = 0.5,
     haptics = true,
     lockVertical = true,
+    fourDirectional = false,
     onSwipeLeft,
     onSwipeRight,
     onSwipeUp,
@@ -79,8 +82,11 @@ export function useSwipeGestures(
   const velocity = computed(() => {
     const dt = lastMoveTime.value - startTime.value
     if (dt === 0) return 0
-    const dx = Math.abs(deltaX.value)
-    return dx / dt
+    const absX = Math.abs(deltaX.value)
+    const absY = Math.abs(deltaY.value)
+    // Use the dominant axis for velocity
+    const dominant = absX > absY ? absX : absY
+    return dominant / dt
   })
 
   const direction = computed<'left' | 'right' | 'up' | 'down' | null>(() => {
@@ -100,7 +106,10 @@ export function useSwipeGestures(
 
   const progress = computed(() => {
     const absX = Math.abs(deltaX.value)
-    return Math.min(absX / threshold, 1)
+    const absY = Math.abs(deltaY.value)
+    // Use the dominant axis for progress
+    const dominant = absX > absY ? absX : absY
+    return Math.min(dominant / threshold, 1)
   })
 
   const swipeState = computed<SwipeState>(() => ({
@@ -150,19 +159,26 @@ export function useSwipeGestures(
     const absX = Math.abs(deltaX.value)
     const absY = Math.abs(deltaY.value)
 
-    // Lock direction once determined (for horizontal swipes)
+    // Lock direction once determined
     if (!isLocked.value && (absX > 10 || absY > 10)) {
       isLocked.value = true
 
-      // If primarily horizontal, prevent vertical scroll
-      if (lockVertical && absX > absY) {
+      if (fourDirectional) {
+        // In 4-directional mode, prevent scroll for ANY swipe direction
+        e.preventDefault()
+      } else if (lockVertical && absX > absY) {
+        // If primarily horizontal, prevent vertical scroll
         e.preventDefault()
       }
     }
 
-    // If locked to horizontal, prevent default
-    if (isLocked.value && absX > absY && lockVertical) {
-      e.preventDefault()
+    // Continue preventing default once locked
+    if (isLocked.value) {
+      if (fourDirectional) {
+        e.preventDefault()
+      } else if (absX > absY && lockVertical) {
+        e.preventDefault()
+      }
     }
 
     // Milestone haptics

@@ -197,9 +197,9 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (🔄 IN PROGRESS)
+### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (👀 REVIEW)
 
-**Priority**: P3 | **Status**: 🔄 IN PROGRESS
+**Priority**: P3 | **Status**: 👀 REVIEW
 
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
@@ -3347,7 +3347,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1303** | **P2** | **🔄 Mark Done doesn't stop active timer running on that task** |
 | **BUG-1304** | **P2** | **🔄 Done tasks in calendar view have no visual done indicator** |
 | ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
-| **TASK-1337** | **P3** | **📋 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
+| **TASK-1337** | **P3** | **👀 Storybook Design Streamlining — align all 163 stories with design system (glass morphism, tokens, components)** |
 | ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
 | **BUG-1311** | **P3** | **📋 Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
 | ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |

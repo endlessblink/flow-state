@@ -95,9 +95,9 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   esbuild: {
     target: 'esnext',
-    // TASK-1281: Strip console.log and console.debug at build-time for production
+    // TASK-1281/TASK-1148: Strip console.log, console.debug, console.info at build-time for production
     // Using 'pure' instead of 'drop' to preserve console.warn and console.error
-    pure: mode === 'production' ? ['console.log', 'console.debug'] : [],
+    pure: mode === 'production' ? ['console.log', 'console.debug', 'console.info'] : [],
     // Disable TypeScript checking for development
     // tsconfigRaw removed to fix type conflict
   },

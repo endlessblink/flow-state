@@ -33,9 +33,13 @@
 
 **Root Cause**: Auth token refresh race condition. When `authStore.initialize()` resolves with an expired session (refresh fails), `loadFromDatabase()` takes the guest-mode path and finds nothing → `_rawTasks = []`. Then `markAppInitLoadComplete()` is called unconditionally, so when the delayed Supabase `onAuthStateChange` fires `SIGNED_IN` (token eventually refreshed), the auth handler sees `appInitLoadComplete = true` and **skips the store reload**. On manual refresh, the fresh token is already in localStorage, so the load succeeds immediately.
 
+**Root Cause (refined - BUG-1339)**: The SWR cache is the missing piece. `fetchTasks()` returns 0 rows during RLS JWT propagation delay, caches the empty result for 3 seconds. The `SIGNED_IN` handler fires within that window, sees `_rawTasks.length === 0`, calls `loadFromDatabase()`, but `fetchTasks()` returns the **cached empty result** — so nothing loads even on retry.
+
 **Fix**:
 1. `useAppInitialization.ts`: `loadWithRetry` now returns `boolean`. `markAppInitLoadComplete()` only called on success — leaves the door open for SIGNED_IN handler to retry
-2. `auth.ts` SIGNED_IN handler: Defense-in-depth — even when `appInitLoadComplete` is true, checks if `_rawTasks` is empty and reloads if so
+2. `auth.ts` SIGNED_IN handler (appInitLoadComplete path): Calls `invalidateCache.all()` BEFORE retry so fresh data is fetched, not the cached empty result
+3. `auth.ts` SIGNED_IN handler (post-init path): Same — calls `invalidateCache.all()` before store reload on post-login sign-in
+4. `useAppInitialization.ts`: Defense-in-depth 2s delayed retry — if authenticated but 0 tasks loaded after `loadWithRetry` succeeds, schedules a `setTimeout(2000)` that invalidates cache and reloads all stores
 
 **Files Changed**: `src/composables/app/useAppInitialization.ts`, `src/stores/auth.ts`
 
@@ -193,9 +197,9 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (📋 PLANNED)
+### TASK-1337: Storybook Design Streamlining — Align All Stories with Design System (🔄 IN PROGRESS)
 
-**Priority**: P3 | **Status**: 📋 PLANNED
+**Priority**: P3 | **Status**: 🔄 IN PROGRESS
 
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
@@ -3343,10 +3347,10 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
 | **FEATURE-1342** | **P2** | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data** |
-| **TASK-1339** | **P0** | **📋 Tasks must persist over refresh in guest mode** |
+| ~~**TASK-1339**~~ | **P0** | ✅ **Tasks must persist over refresh in guest mode** (✅ DONE 2026-02-17) |
 | ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
 | **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |
-| **TASK-1324** | **P0** | **📋 URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** |
+| ~~**TASK-1324**~~ | **P0** | ✅ **URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** (✅ DONE 2026-02-17) |
 | ~~**BUG-1333**~~ | **P0** | ✅ **Calendar inbox shows only 2 tasks — stale auto-instances + wrong filter source** |
 | ~~**TASK-1323**~~ | **P1** | ✅ **Console Log Cleanup — reduce verbose/debug logging noise across app** (✅ DONE 2026-02-14) |
 | **TASK-1322** | **P1** | **🔄 Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** |

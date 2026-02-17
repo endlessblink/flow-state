@@ -31,10 +31,12 @@
 
       <!-- Combined Priority + Date Controls (single row) -->
       <div class="quick-controls-row" @mousedown.stop @touchstart.stop>
-        <div class="priority-buttons">
+        <div class="priority-buttons" role="group" aria-label="Priority selection">
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'low' }"
+            :aria-pressed="task.priority === 'low'"
+            aria-label="Set low priority"
             @click="updatePriority('low')"
           >
             Low
@@ -42,6 +44,8 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'medium' }"
+            :aria-pressed="task.priority === 'medium'"
+            aria-label="Set medium priority"
             @click="updatePriority('medium')"
           >
             Med
@@ -49,16 +53,20 @@
           <button
             class="priority-btn"
             :class="{ active: task.priority === 'high' }"
+            :aria-pressed="task.priority === 'high'"
+            aria-label="Set high priority"
             @click="updatePriority('high')"
           >
             High
           </button>
         </div>
 
-        <div class="date-shortcuts">
+        <div class="date-shortcuts" role="group" aria-label="Due date shortcuts">
           <button
             class="quick-date-btn"
             :class="{ active: isToday }"
+            :aria-pressed="isToday"
+            aria-label="Set due date to today"
             @click.stop="setToday"
           >
             ☀️ Today
@@ -66,6 +74,8 @@
           <button
             class="quick-date-btn"
             :class="{ active: isTomorrow }"
+            :aria-pressed="isTomorrow"
+            aria-label="Set due date to tomorrow"
             @click.stop="setTomorrow"
           >
             🌅 +1
@@ -73,6 +83,8 @@
           <button
             class="quick-date-btn"
             :class="{ active: isNextWeek }"
+            :aria-pressed="isNextWeek"
+            aria-label="Set due date to next week"
             @click.stop="setNextWeek"
           >
             📆 +7
@@ -80,6 +92,8 @@
           <button
             class="quick-date-btn clear-btn"
             :class="{ active: hasNoDate }"
+            :aria-pressed="hasNoDate"
+            aria-label="Clear due date"
             @click.stop="clearDate"
           >
             Clear
@@ -92,7 +106,16 @@
             @update:show="showDatePicker = $event"
           >
             <template #trigger>
-              <button class="quick-date-btn pick-btn" title="Pick date" @click.stop @mousedown.stop @touchstart.stop>
+              <button
+                class="quick-date-btn pick-btn"
+                title="Pick custom date"
+                aria-label="Choose custom date"
+                aria-haspopup="dialog"
+                :aria-expanded="showDatePicker"
+                @click.stop
+                @mousedown.stop
+                @touchstart.stop
+              >
                 <CalendarDays :size="14" />
               </button>
             </template>

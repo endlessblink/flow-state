@@ -99,6 +99,28 @@ export function useAppInitialization() {
 
         const loadSucceeded = await loadWithRetry()
 
+        // BUG-1339 FIX: Defense-in-depth — if authenticated but got 0 tasks,
+        // the initial fetch may have hit an RLS timing issue. Schedule a delayed retry.
+        if (loadSucceeded && authStore.isAuthenticated && taskStore._rawTasks.length === 0) {
+            console.warn('⚠️ [BUG-1339] Authenticated but 0 tasks loaded — scheduling delayed retry (2s)')
+            setTimeout(async () => {
+                if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
+                    console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
+                    invalidateCache.all()
+                    try {
+                        await Promise.all([
+                            taskStore.loadFromDatabase(),
+                            projectStore.loadProjectsFromDatabase(),
+                            canvasStore.loadFromDatabase()
+                        ])
+                        console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
+                    } catch (e) {
+                        console.warn('⚠️ [BUG-1339] Delayed retry failed:', e)
+                    }
+                }
+            }, 2000)
+        }
+
         // TASK-1215: Load persisted filters (smart view, project, duration, etc.)
         // This was previously missing — loadFromDatabase() only loads tasks,
         // not the filter state. Without this, activeSmartView resets to null on restart.

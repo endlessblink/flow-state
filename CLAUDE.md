@@ -381,6 +381,7 @@ docker exec supabase-db pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
 10. **Completion Protocol** - NEVER claim "done" without artifacts + user verification (see below)
 11. **Version Bump Protocol** - When releasing: update 3 files (package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml) + create git tag
 12. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS run `./scripts/deploy-tauri-update.sh --notes "TASK-XXX: description"` to build, sign, and deploy to VPS so the user receives the update via Tauri's in-app auto-updater. Never just offer `npm run dev` or local `dpkg -i` as the final delivery. See SOP-037 for details.
+13. **No Client-Side API Keys (BUG-1131)** - NEVER use `VITE_` prefix for API keys/secrets. Cloud API keys go through Supabase Edge Function proxies. A build-time guard (`scripts/check-vite-secrets.cjs`) blocks builds with non-allowlisted VITE_ vars. To add a new safe VITE_ var, add it to the allowlist in that script.
 
 ## Completion Protocol (MANDATORY - TASK-334)
 

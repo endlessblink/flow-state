@@ -27,6 +27,7 @@
     "dev:manager": "cd dev-maestro && npm start",
     "postinstall": "cd dev-maestro && npm install",
     "kill": "bash scripts/kill-flow-state.sh",
+    "prebuild": "node scripts/check-vite-secrets.cjs",
     "build": "npx vite build --mode production",
     "preview": "vite preview",
     "tauri": "bash scripts/sync-doppler.sh && npm run verify-auth && tauri",

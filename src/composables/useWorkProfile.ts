@@ -259,6 +259,27 @@ export function useWorkProfile() {
     }
   }
 
+  /** FEATURE-1342: Record when user corrects/rejects an AI suggestion */
+  async function addSuggestionFeedback(feedback: {
+    field: string
+    suggestedValue: string
+    actualValue: string
+    reason?: string
+  }): Promise<void> {
+    const relation = feedback.reason ? 'user_corrected_because' : 'user_corrected'
+    const value = feedback.reason
+      ? `AI suggested ${feedback.suggestedValue}, user chose ${feedback.actualValue}: "${feedback.reason}"`
+      : `AI suggested ${feedback.suggestedValue}, user chose ${feedback.actualValue}`
+
+    await addMemoryObservation({
+      entity: `suggestion:${feedback.field}`,
+      relation,
+      value,
+      confidence: 0.9,
+      source: 'suggestion_feedback'
+    })
+  }
+
   async function generateObservationsFromStats(): Promise<void> {
     const p = cachedProfile.value
     if (!p) return
@@ -581,9 +602,9 @@ export function useWorkProfile() {
       insights.push('- User prefers ramping up: lighter Mon-Tue, heavier Thu-Fri.')
     }
 
-    // FEATURE-1317 Phase 2: Include memory observations
+    // FEATURE-1317 Phase 2: Include memory observations (exclude suggestion feedback — shown separately)
     const memoryObs = (p.memoryGraph || [])
-      .filter(o => o.confidence >= 0.5)
+      .filter(o => o.confidence >= 0.5 && o.source !== 'suggestion_feedback')
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 10)
 
@@ -592,6 +613,19 @@ export function useWorkProfile() {
       insights.push('Observations from past weeks:')
       for (const obs of memoryObs) {
         insights.push(`- ${obs.entity} ${obs.relation}: ${obs.value} (confidence: ${obs.confidence.toFixed(2)})`)
+      }
+    }
+
+    // FEATURE-1342: Dedicated section for suggestion feedback (higher priority for AI learning)
+    const feedbackObs = (p.memoryGraph || [])
+      .filter(o => o.source === 'suggestion_feedback')
+      .sort((a, b) => b.confidence - a.confidence)
+
+    if (feedbackObs.length > 0) {
+      insights.push('')
+      insights.push('Past suggestion corrections (learn from these):')
+      for (const obs of feedbackObs) {
+        insights.push(`- ${obs.entity} ${obs.relation}: ${obs.value}`)
       }
     }
 
@@ -627,6 +661,7 @@ export function useWorkProfile() {
     computeCapacityMetrics,
     recordWeeklyOutcome,
     addMemoryObservation,
+    addSuggestionFeedback,
     generateObservationsFromStats,
     generateObservationsFromWeeklyOutcome,
     getProfileContext,

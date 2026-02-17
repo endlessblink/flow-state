@@ -565,6 +565,15 @@ export function useAITaskAssist() {
             parts.push(`Estimation bias: underestimates ${bias}x`)
           }
           if (parts.length > 0) userContext = '\n' + parts.join(' | ')
+
+          // FEATURE-1342: Include past suggestion corrections for learning
+          const feedbackObs = (profile.memoryGraph || [])
+            .filter((o: { source?: string }) => o.source === 'suggestion_feedback')
+          if (feedbackObs.length > 0) {
+            userContext += '\nPast corrections: ' + feedbackObs
+              .map((o: { entity: string; value: string }) => `${o.entity}: ${o.value}`)
+              .join('; ')
+          }
         }
       } catch {
         // Work profile not available, continue without it
@@ -579,7 +588,8 @@ Rules:
 - estimatedDuration: minutes (15, 30, 60, 90, 120)
 - Only suggest fields that need changing. Omit good values.
 - confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
-- reason: 1 short sentence` + langHint
+- reason: 1 short sentence
+- If past corrections are provided, learn from them. Avoid repeating suggestions the user has rejected for similar tasks.` + langHint
 
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}

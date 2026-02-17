@@ -86,7 +86,7 @@ const S = {
   tdName: 'padding:var(--space-3); font-weight:var(--font-semibold); color:var(--text-primary);',
   tdMuted: 'padding:var(--space-3); color:var(--text-muted);',
   badgeFast: 'display:inline-block; padding:var(--space-1) var(--space-2); background:var(--success-bg-subtle); color:var(--color-success); border-radius:var(--radius-sm); font-size:var(--text-xs); font-weight:700;',
-  badgeOk: 'display:inline-block; padding:var(--space-1) var(--space-2); background:var(--warning-bg-subtle); color:var(--color-warning); border-radius:var(--radius-sm); font-size:var(--text-xs); font-weight:700;',
+  badgeOk: 'display:inline-block; padding:var(--space-1) var(--space-2); background:var(--color-priority-medium-bg-subtle); color:var(--color-warning); border-radius:var(--radius-sm); font-size:var(--text-xs); font-weight:700;',
   badgeSlow: 'display:inline-block; padding:var(--space-1) var(--space-2); background:var(--danger-bg); color:var(--danger); border-radius:var(--radius-sm); font-size:var(--text-xs); font-weight:700;',
   sidebar: 'padding:var(--space-6); background:var(--glass-bg-tint); backdrop-filter:blur(12px); border:1px solid var(--glass-border); border-radius:var(--radius-lg); margin-top:var(--space-4);',
   sidebarTitle: 'font-size:var(--text-lg); font-weight:var(--font-semibold); margin:0 0 var(--space-4) 0; color:var(--text-primary);',

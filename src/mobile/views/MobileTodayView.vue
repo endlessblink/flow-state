@@ -587,8 +587,8 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   padding: var(--space-1_5) var(--space-3);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: var(--primary-brand);
-  background: var(--primary-brand-bg-subtle);
+  color: var(--brand-primary);
+  background: var(--brand-primary-subtle);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -681,8 +681,8 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .dropdown-item.active {
-  background: var(--primary-brand-bg-subtle);
-  color: var(--primary-brand);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
 }
 
 .project-emoji {
@@ -736,7 +736,7 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 
 .priority-badge.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
 .priority-badge.high { background: var(--orange-bg-subtle); color: var(--color-priority-medium); }
-.priority-badge.medium { background: var(--primary-brand-bg-subtle); color: var(--primary-brand); }
+.priority-badge.medium { background: var(--brand-primary-subtle); color: var(--brand-primary); }
 .priority-badge.low { background: var(--surface-tertiary); color: var(--text-muted); }
 
 .project-badge {
@@ -846,8 +846,8 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
 }
 
 .checkbox-circle.checked {
-  background: var(--primary-brand);
-  border-color: var(--primary-brand);
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: var(--text-primary);
 }
 
@@ -895,8 +895,8 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   height: var(--space-9);
   border-radius: var(--radius-full);
   border: none;
-  background: var(--primary-brand-bg-subtle);
-  color: var(--primary-brand);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;

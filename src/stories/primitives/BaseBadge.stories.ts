@@ -16,7 +16,7 @@ const meta = {
         (story: any) => ({
             components: { story },
             template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center;">
           <story />
         </div>
       `
@@ -55,7 +55,7 @@ export const Variants: Story = {
             return { args }
         },
         template: `
-      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+      <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center;">
         <BaseBadge variant="default">Default</BaseBadge>
         <BaseBadge variant="success">Success</BaseBadge>
         <BaseBadge variant="warning">Warning</BaseBadge>
@@ -74,7 +74,7 @@ export const Sizes: Story = {
             return { args }
         },
         template: `
-      <div style="display: flex; gap: 12px; align-items: center;">
+      <div style="display: flex; gap: var(--space-3); align-items: center;">
         <BaseBadge size="sm">Small</BaseBadge>
         <BaseBadge size="md">Medium</BaseBadge>
         <BaseBadge size="lg">Large</BaseBadge>
@@ -93,7 +93,7 @@ export const Rounded: Story = {
             return { args }
         },
         template: `
-      <div style="display: flex; gap: 12px; align-items: center;">
+      <div style="display: flex; gap: var(--space-3); align-items: center;">
         <BaseBadge rounded variant="success">Pill Success</BaseBadge>
         <BaseBadge rounded variant="count">8</BaseBadge>
       </div>

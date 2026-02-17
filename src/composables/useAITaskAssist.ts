@@ -1,7 +1,7 @@
 /**
  * AI Task Assist Composable
  *
- * Provides 7 AI-powered task assist actions:
+ * Provides 9 AI-powered task assist actions:
  * 1. suggestSubtasks - Generate subtask suggestions
  * 2. suggestPriorityDuration - Analyze priority and time estimate
  * 3. breakDownTask - Split into smaller tasks
@@ -9,10 +9,12 @@
  * 5. improveTitle - Rewrite vague titles to be actionable
  * 6. findRelatedTasks - Fuzzy-match related tasks (no AI)
  * 7. summarizeBatch - Summarize a group of tasks
+ * 8. smartSuggest - One-click suggest all fields (priority, dueDate, status, estimatedDuration)
+ * 9. smartSuggestGroup - Batch smart suggest for multiple tasks in one LLM call
  *
  * Uses the AI Router singleton for streaming inference.
  *
- * @see TASK-1302 in MASTER_PLAN.md
+ * @see TASK-1302, FEATURE-1342 in MASTER_PLAN.md
  */
 
 import { ref } from 'vue'
@@ -25,8 +27,22 @@ import { useTaskStore } from '@/stores/tasks'
 // Types
 // ============================================================================
 
+export interface SmartSuggestion {
+  field: 'priority' | 'dueDate' | 'status' | 'estimatedDuration'
+  currentValue: string | number | null
+  suggestedValue: string | number
+  confidence: number
+  reasoning: string
+}
+
+export interface SmartSuggestGroupItem {
+  taskId: string
+  taskTitle: string
+  suggestions: SmartSuggestion[]
+}
+
 export interface AIAssistResult {
-  type: 'subtasks' | 'priority' | 'breakdown' | 'date' | 'title' | 'related' | 'summary'
+  type: 'subtasks' | 'priority' | 'breakdown' | 'date' | 'title' | 'related' | 'summary' | 'smartSuggest' | 'smartSuggestGroup'
   subtasks?: string[]
   priority?: { priority: string; duration: number; reasoning: string }
   breakdown?: Array<{ title: string; priority?: string }>
@@ -34,6 +50,8 @@ export interface AIAssistResult {
   title?: string
   related?: Task[]
   summary?: { summary: string; suggestedGroup: string }
+  smartSuggest?: { suggestions: SmartSuggestion[] }
+  smartSuggestGroup?: SmartSuggestGroupItem[]
 }
 
 // ============================================================================
@@ -449,6 +467,304 @@ export function useAITaskAssist() {
   }
 
   // ============================================================================
+  // 8. Smart Suggest (all fields at once)
+  // ============================================================================
+
+  function getSmartSuggestFallback(task: Task): SmartSuggestion[] {
+    const suggestions: SmartSuggestion[] = []
+    const today = new Date().toISOString().split('T')[0]
+
+    // Priority fallback
+    if (!task.priority) {
+      const isOverdue = task.dueDate && task.dueDate < today
+      suggestions.push({
+        field: 'priority',
+        currentValue: null,
+        suggestedValue: isOverdue ? 'high' : task.dueDate ? 'medium' : 'medium',
+        confidence: 0.4,
+        reasoning: isOverdue ? 'Task is overdue' : 'Default suggestion'
+      })
+    }
+
+    // Duration fallback
+    if (!task.estimatedDuration) {
+      const taskStore = useTaskStore()
+      const subtaskCount = taskStore.tasks.filter(t => t.parentTaskId === task.id).length
+      const duration = subtaskCount > 0 ? 60 : task.title.length < 20 ? 15 : 30
+      suggestions.push({
+        field: 'estimatedDuration',
+        currentValue: null,
+        suggestedValue: duration,
+        confidence: 0.3,
+        reasoning: subtaskCount > 0 ? 'Has subtasks, likely complex' : 'Default estimate'
+      })
+    }
+
+    // Status fallback
+    if (task.dueDate && task.dueDate < today && task.status !== 'in_progress' && task.status !== 'done') {
+      suggestions.push({
+        field: 'status',
+        currentValue: task.status || null,
+        suggestedValue: 'in_progress',
+        confidence: 0.5,
+        reasoning: 'Task is overdue, should be in progress'
+      })
+    }
+
+    // Date fallback
+    if (!task.dueDate) {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      suggestions.push({
+        field: 'dueDate',
+        currentValue: null,
+        suggestedValue: tomorrow.toISOString().split('T')[0],
+        confidence: 0.3,
+        reasoning: 'Default: tomorrow'
+      })
+    }
+
+    return suggestions
+  }
+
+  async function smartSuggest(task: Task) {
+    resetState('smartSuggest')
+    try {
+      const langHint = detectLanguageInstruction(task.title)
+      const today = new Date().toISOString().split('T')[0]
+      const taskStore = useTaskStore()
+
+      // Gather context
+      const subtasks = taskStore.tasks.filter(t => t.parentTaskId === task.id)
+      const subtasksDone = subtasks.filter(t => t.status === 'done').length
+      const siblings = taskStore.tasks
+        .filter(t => t.projectId === task.projectId && t.id !== task.id && t.status !== 'done')
+        .slice(0, 5)
+        .map(t => t.title)
+
+      const overdueTasks = taskStore.tasks.filter(t =>
+        t.dueDate && t.dueDate < today && t.status !== 'done'
+      ).length
+
+      // Try to get work profile for user context
+      let userContext = ''
+      try {
+        const { useWorkProfile } = await import('@/composables/useWorkProfile')
+        const { loadProfile } = useWorkProfile()
+        const profile = await loadProfile()
+        if (profile) {
+          const parts: string[] = []
+          if (profile.peakProductivityDays?.length) {
+            parts.push(`Peak days: ${profile.peakProductivityDays.join(', ')}`)
+          }
+          if (profile.avgTasksCompletedPerDay) {
+            parts.push(`Avg: ${profile.avgTasksCompletedPerDay} tasks/day`)
+          }
+          if (profile.avgPlanAccuracy && profile.avgPlanAccuracy < 0.8) {
+            const bias = (1 / profile.avgPlanAccuracy).toFixed(1)
+            parts.push(`Estimation bias: underestimates ${bias}x`)
+          }
+          if (parts.length > 0) userContext = '\n' + parts.join(' | ')
+        }
+      } catch {
+        // Work profile not available, continue without it
+      }
+
+      const systemPrompt = `You suggest task metadata. Return ONLY valid JSON.
+Format: { "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
+Rules:
+- priority: "high", "medium", "low"
+- dueDate: "YYYY-MM-DD" (today or future only)
+- status: "planned", "in_progress", "backlog"
+- estimatedDuration: minutes (15, 30, 60, 90, 120)
+- Only suggest fields that need changing. Omit good values.
+- confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
+- reason: 1 short sentence` + langHint
+
+      const descSnippet = task.description ? task.description.slice(0, 100) : ''
+      const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
+Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'planned'}, duration=${task.estimatedDuration || 'none'}min
+Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}
+Today: ${today} | Overdue tasks: ${overdueTasks}${userContext}`
+
+      const messages: RouterChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]
+
+      const raw = await streamAI(messages)
+      if (aborted) return
+
+      const parsed = parseAIResponse<{ suggestions: Array<{ field: string; value: string | number; confidence: number; reason: string }> }>(raw)
+      if (!parsed?.suggestions || !Array.isArray(parsed.suggestions)) {
+        // Fall back to deterministic suggestions
+        const fallback = getSmartSuggestFallback(task)
+        if (fallback.length === 0) {
+          finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions: [] } })
+          return
+        }
+        finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions: fallback } })
+        return
+      }
+
+      // Validate and normalize suggestions
+      const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
+      const validPriorities = new Set(['high', 'medium', 'low'])
+      const validStatuses = new Set(['planned', 'in_progress', 'backlog'])
+      const validDurations = new Set([15, 30, 60, 90, 120])
+
+      const currentValues: Record<string, string | number | null> = {
+        priority: task.priority || null,
+        dueDate: task.dueDate || null,
+        status: task.status || null,
+        estimatedDuration: task.estimatedDuration || null
+      }
+
+      const suggestions: SmartSuggestion[] = parsed.suggestions
+        .filter(s => validFields.has(s.field))
+        .filter(s => {
+          // Validate field-specific values
+          if (s.field === 'priority') return validPriorities.has(String(s.value))
+          if (s.field === 'status') return validStatuses.has(String(s.value))
+          if (s.field === 'dueDate') return /^\d{4}-\d{2}-\d{2}$/.test(String(s.value))
+          if (s.field === 'estimatedDuration') return validDurations.has(Number(s.value))
+          return false
+        })
+        .filter(s => {
+          // Filter out unchanged values
+          const current = currentValues[s.field]
+          return String(s.value) !== String(current)
+        })
+        .map(s => ({
+          field: s.field as SmartSuggestion['field'],
+          currentValue: currentValues[s.field],
+          suggestedValue: s.field === 'estimatedDuration' ? Number(s.value) : s.value,
+          confidence: Math.max(0, Math.min(1, s.confidence)),
+          reasoning: s.reason || ''
+        }))
+
+      finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions } })
+    } catch (e) {
+      if (aborted) return
+      // On AI failure, try deterministic fallback
+      try {
+        const fallback = getSmartSuggestFallback(task)
+        if (fallback.length > 0) {
+          finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions: fallback } })
+          return
+        }
+      } catch { /* ignore fallback errors */ }
+      finishWithError(e instanceof Error ? e.message : 'Failed to generate suggestions')
+    }
+  }
+
+  // ============================================================================
+  // 9. Smart Suggest Group (batch)
+  // ============================================================================
+
+  async function smartSuggestGroup(taskIds: string[]) {
+    resetState('smartSuggestGroup')
+    try {
+      const taskStore = useTaskStore()
+      const tasks = taskIds
+        .map(id => taskStore.getTask(id))
+        .filter((t): t is Task => t != null)
+        .slice(0, 20)
+
+      if (tasks.length === 0) {
+        finishWithError('No valid tasks found for the provided IDs.')
+        return
+      }
+
+      const langHint = detectLanguageInstruction(tasks[0]?.title || '')
+      const today = new Date().toISOString().split('T')[0]
+
+      const systemPrompt = `You suggest task metadata for multiple tasks. Return ONLY valid JSON.
+Format: { "tasks": [{ "taskId": "...", "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }] }
+Rules:
+- priority: "high", "medium", "low"
+- dueDate: "YYYY-MM-DD" (today or future only)
+- status: "planned", "in_progress", "backlog"
+- estimatedDuration: minutes (15, 30, 60, 90, 120)
+- Only suggest fields that need changing per task. Omit good values.
+- confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
+- reason: 1 short sentence` + langHint
+
+      const taskList = tasks.map(t =>
+        `[${t.id}] "${t.title}" — priority=${t.priority || 'none'}, due=${t.dueDate || 'none'}, status=${t.status || 'planned'}, est=${t.estimatedDuration || 'none'}min`
+      ).join('\n')
+
+      const messages: RouterChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Today: ${today}\nTasks:\n${taskList}` }
+      ]
+
+      const raw = await streamAI(messages)
+      if (aborted) return
+
+      const parsed = parseAIResponse<{ tasks: Array<{ taskId: string; suggestions: Array<{ field: string; value: string | number; confidence: number; reason: string }> }> }>(raw)
+      if (!parsed?.tasks || !Array.isArray(parsed.tasks)) {
+        // Fallback: generate deterministic suggestions for each task
+        const fallbackResults: SmartSuggestGroupItem[] = tasks
+          .map(t => ({
+            taskId: t.id,
+            taskTitle: t.title,
+            suggestions: getSmartSuggestFallback(t)
+          }))
+          .filter(r => r.suggestions.length > 0)
+
+        finishWithResult({ type: 'smartSuggestGroup', smartSuggestGroup: fallbackResults })
+        return
+      }
+
+      // Validate and normalize
+      const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
+      const validPriorities = new Set(['high', 'medium', 'low'])
+      const validStatuses = new Set(['planned', 'in_progress', 'backlog'])
+      const validDurations = new Set([15, 30, 60, 90, 120])
+      const taskMap = new Map(tasks.map(t => [t.id, t]))
+
+      const groupResults: SmartSuggestGroupItem[] = parsed.tasks
+        .filter(r => taskMap.has(r.taskId))
+        .map(r => {
+          const task = taskMap.get(r.taskId)!
+          const currentValues: Record<string, string | number | null> = {
+            priority: task.priority || null,
+            dueDate: task.dueDate || null,
+            status: task.status || null,
+            estimatedDuration: task.estimatedDuration || null
+          }
+
+          const suggestions: SmartSuggestion[] = (r.suggestions || [])
+            .filter(s => validFields.has(s.field))
+            .filter(s => {
+              if (s.field === 'priority') return validPriorities.has(String(s.value))
+              if (s.field === 'status') return validStatuses.has(String(s.value))
+              if (s.field === 'dueDate') return /^\d{4}-\d{2}-\d{2}$/.test(String(s.value))
+              if (s.field === 'estimatedDuration') return validDurations.has(Number(s.value))
+              return false
+            })
+            .filter(s => String(s.value) !== String(currentValues[s.field]))
+            .map(s => ({
+              field: s.field as SmartSuggestion['field'],
+              currentValue: currentValues[s.field],
+              suggestedValue: s.field === 'estimatedDuration' ? Number(s.value) : s.value,
+              confidence: Math.max(0, Math.min(1, s.confidence)),
+              reasoning: s.reason || ''
+            }))
+
+          return { taskId: task.id, taskTitle: task.title, suggestions }
+        })
+        .filter(r => r.suggestions.length > 0)
+
+      finishWithResult({ type: 'smartSuggestGroup', smartSuggestGroup: groupResults })
+    } catch (e) {
+      if (aborted) return
+      finishWithError(e instanceof Error ? e.message : 'Failed to generate group suggestions')
+    }
+  }
+
+  // ============================================================================
   // Controls
   // ============================================================================
 
@@ -477,6 +793,8 @@ export function useAITaskAssist() {
     improveTitle,
     findRelatedTasks,
     summarizeBatch,
+    smartSuggest,
+    smartSuggestGroup,
 
     // State
     isLoading,

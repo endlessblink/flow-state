@@ -58,9 +58,9 @@ const meta: Meta<typeof AuthStatusNotice> = {
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
             border: 1px solid var(--glass-border);
-            padding: 2rem;
+            padding: var(--space-8);
           ">
             <story />
           </div>

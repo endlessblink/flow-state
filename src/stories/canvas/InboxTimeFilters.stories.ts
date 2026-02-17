@@ -11,7 +11,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 100px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <div style="padding: 6.25rem; background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center;">
           <story />
         </div>
       `

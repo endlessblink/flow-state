@@ -1,6 +1,7 @@
+import type { Meta, StoryObj } from '@storybook/vue3'
 import SignupForm from '@/components/auth/SignupForm.vue'
 
-const meta = {
+const meta: Meta<typeof SignupForm> = {
   title: '🔐 Auth/SignupForm',
   component: SignupForm,
   tags: ['autodocs'],
@@ -8,10 +9,10 @@ const meta = {
     layout: 'centered',
   },
   decorators: [
-    (story: any) => ({
+    (story) => ({
       components: { story },
       template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; min-width: 400px;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); border-radius: var(--radius-xl); min-width: 25rem;">
           <story />
         </div>
       `
@@ -20,14 +21,15 @@ const meta = {
 }
 
 export default meta
+type Story = StoryObj<typeof SignupForm>
 
-export const Default = {
+export const Default: Story = {
   args: {
     loading: false
   }
 }
 
-export const Loading = {
+export const Loading: Story = {
   args: {
     loading: true
   }

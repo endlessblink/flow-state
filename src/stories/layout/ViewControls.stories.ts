@@ -48,7 +48,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 200px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); min-height: 200px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">
           <story />
         </div>
       `
@@ -188,9 +188,9 @@ export const ListViewMode: Story = {
     },
     template: `
       <div>
-        <div style="margin-bottom: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
-          <h4 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-primary);">List View Mode</h4>
-          <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-bottom: var(--space-6); padding: var(--space-4); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
+          <h4 style="margin: 0 0 var(--space-2) 0; font-size: var(--text-base); color: var(--text-primary);">List View Mode</h4>
+          <p style="margin: 0; font-size: var(--text-sm); color: var(--text-secondary);">
             In list view, you can expand/collapse all items and manage hierarchical display.
           </p>
         </div>
@@ -238,21 +238,21 @@ export const DensityVariations: Story = {
     },
     template: `
       <div style="width: 100%; max-width: 800px; overflow: visible;">
-        <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">Density Variations</h3>
+        <h3 style="margin: 0 0 var(--space-6) 0; font-size: var(--text-lg); color: var(--text-primary);">Density Variations</h3>
 
-        <div style="display: grid; gap: 24px;">
+        <div style="display: grid; gap: var(--space-6);">
           <div
             v-for="option in densityOptions"
             :key="option.value"
-            style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);"
+            style="padding: var(--space-6); background: var(--surface-primary); border-radius: var(--radius-xl); border: 1px solid var(--border-subtle);"
           >
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4 style="margin: 0; font-size: 16px; color: var(--text-primary);">{{ option.label }}</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+              <h4 style="margin: 0; font-size: var(--text-base); color: var(--text-primary);">{{ option.label }}</h4>
               <span
                 :style="{
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
+                  padding: 'var(--space-1) var(--space-2)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 'var(--text-xs)',
                   fontWeight: '500',
                   background: 'transparent',
                   border: currentDensity === option.value ? '1px solid var(--brand-primary)' : '1px solid var(--glass-border)',
@@ -263,7 +263,7 @@ export const DensityVariations: Story = {
               </span>
             </div>
 
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: var(--space-5);">
               <ViewControls
                 :view-type="currentViewType"
                 :density="currentDensity"
@@ -276,15 +276,15 @@ export const DensityVariations: Story = {
               />
             </div>
 
-            <div style="font-size: 14px; color: var(--text-secondary);">
+            <div style="font-size: var(--text-sm); color: var(--text-secondary);">
               {{ option.description }}
             </div>
           </div>
         </div>
 
-        <div style="margin-top: 24px; padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
-          <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Density Comparison</h4>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: var(--space-6); padding: var(--space-5); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
+          <h4 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); color: var(--text-primary);">Density Comparison</h4>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); font-size: var(--text-sm); color: var(--text-secondary);">
             <div>
               <strong>Compact:</strong><br>
               • Max information density<br>
@@ -398,19 +398,19 @@ export const InteractiveDemo: Story = {
     },
     template: `
       <div style="width: 100%; max-width: 800px; overflow: visible;">
-        <h3 style="margin: 0 0 24px 0; font-size: 20px; color: var(--text-primary);">Interactive View Controls Demo</h3>
+        <h3 style="margin: 0 0 var(--space-6) 0; font-size: var(--text-xl); color: var(--text-primary);">Interactive View Controls Demo</h3>
 
-        <div style="margin-bottom: 24px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
+        <div style="margin-bottom: var(--space-6); padding: var(--space-4); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <h4 style="margin: 0 0 4px 0; font-size: 16px; color: var(--text-primary);">Statistics</h4>
-              <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+              <h4 style="margin: 0 0 var(--space-1) 0; font-size: var(--text-base); color: var(--text-primary);">Statistics</h4>
+              <p style="margin: 0; font-size: var(--text-sm); color: var(--text-secondary);">
                 {{ filteredTasks.length }} / {{ tasks.length }} tasks shown
               </p>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Current Settings</div>
-              <div style="font-size: 13px; color: var(--text-secondary);">
+              <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-1);">Current Settings</div>
+              <div style="font-size: var(--text-xs); color: var(--text-secondary);">
                 View: {{ viewType }}<br>
                 Density: {{ density }}<br>
                 Sort: {{ sortBy }}<br>
@@ -433,19 +433,19 @@ export const InteractiveDemo: Story = {
           @collapse-all="handleCollapseAll"
         />
 
-        <div style="margin-top: 24px;">
-          <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Task List Preview</h4>
+        <div style="margin-top: var(--space-6);">
+          <h4 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); color: var(--text-primary);">Task List Preview</h4>
           <div :style="{
             background: 'var(--surface-primary)',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-xl)',
             border: '1px solid var(--border-subtle)',
             overflow: 'hidden'
           }">
-            <div style="display: grid; grid-template-columns: auto auto auto auto; gap: 1px; background: var(--border-subtle); font-size: 14px; color: var(--text-secondary);">
-              <div style="padding: 12px; font-weight: 500;">Title</div>
-              <div style="padding: 12px; font-weight: 500;">Priority</div>
-              <div style="padding: 12px; font-weight: 500;">Status</div>
-              <div style="padding: 12px; font-weight: 500;">Due Date</div>
+            <div style="display: grid; grid-template-columns: auto auto auto auto; gap: 1px; background: var(--border-subtle); font-size: var(--text-sm); color: var(--text-secondary);">
+              <div style="padding: var(--space-3); font-weight: 500;">Title</div>
+              <div style="padding: var(--space-3); font-weight: 500;">Priority</div>
+              <div style="padding: var(--space-3); font-weight: 500;">Status</div>
+              <div style="padding: var(--space-3); font-weight: 500;">Due Date</div>
             </div>
 
             <div
@@ -453,17 +453,17 @@ export const InteractiveDemo: Story = {
               :key="task.id"
               style="display: grid; grid-template-columns: auto auto auto auto; gap: 1px; background: var(--surface-primary);"
               :style="{
-                padding: density === 'compact' ? '8px 12px' : density === 'spacious' ? '16px 20px' : '12px 16px',
-                fontSize: density === 'compact' ? '13px' : '14px'
+                padding: density === 'compact' ? 'var(--space-2) var(--space-3)' : density === 'spacious' ? 'var(--space-4) var(--space-5)' : 'var(--space-3) var(--space-4)',
+                fontSize: density === 'compact' ? 'var(--text-xs)' : 'var(--text-sm)'
               }"
             >
               <div style="color: var(--text-primary);">{{ task.title }}</div>
               <div>
                 <span
                   :style="{
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
+                    padding: '2px var(--space-1-5)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 'var(--text-xs)',
                     fontWeight: '500',
                     background: task.priority === 'high' ? '#fef2f2' : task.priority === 'medium' ? '#fffbeb' : '#eff6ff',
                     color: task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#2563eb',
@@ -475,9 +475,9 @@ export const InteractiveDemo: Story = {
               <div>
                 <span
                   :style="{
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
+                    padding: '2px var(--space-1-5)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 'var(--text-xs)',
                     fontWeight: '500',
                     background: task.status === 'done' ? '#f0fdf4' : task.status === 'in_progress' ? '#fffbeb' : '#f9fafb',
                     color: task.status === 'done' ? '#166534' : task.status === 'in_progress' ? '#d97706' : '#6b7280',
@@ -533,17 +533,17 @@ export const AllControlsShowcase: Story = {
     },
     template: `
       <div style="width: 100%; max-width: 800px; overflow: visible;">
-        <h3 style="margin: 0 0 24px 0; font-size: 18px; color: var(--text-primary);">All Controls Showcase</h3>
+        <h3 style="margin: 0 0 var(--space-6) 0; font-size: var(--text-lg); color: var(--text-primary);">All Controls Showcase</h3>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6);">
           <div
             v-for="control in allControls"
             :key="control.label"
-            style="padding: 24px; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);"
+            style="padding: var(--space-6); background: var(--surface-primary); border-radius: var(--radius-xl); border: 1px solid var(--border-subtle);"
           >
-            <div style="margin-bottom: 16px;">
-              <h4 style="margin: 0 0 4px 0; font-size: 16px; color: var(--text-primary);">{{ control.label }}</h4>
-              <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">{{ control.description }}</p>
+            <div style="margin-bottom: var(--space-4);">
+              <h4 style="margin: 0 0 var(--space-1) 0; font-size: var(--text-base); color: var(--text-primary);">{{ control.label }}</h4>
+              <p style="margin: 0; font-size: var(--text-xs); color: var(--text-secondary);">{{ control.description }}</p>
             </div>
 
             <ViewControls
@@ -561,9 +561,9 @@ export const AllControlsShowcase: Story = {
           </div>
         </div>
 
-        <div style="margin-top: 32px; padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
-          <h4 style="margin: 0 0 12px 0; font_size: 16px; color: var(--text-primary);">Control Categories</h4>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 14px; color: var(--text-secondary);">
+        <div style="margin-top: var(--space-8); padding: var(--space-5); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
+          <h4 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); color: var(--text-primary);">Control Categories</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); font-size: var(--text-sm); color: var(--text-secondary);">
             <div>
               <strong>View Controls:</strong><br>
               • Table/List toggle<br>

@@ -24,7 +24,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 600px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); min-height: 600px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">
           <story />
         </div>
       `,

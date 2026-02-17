@@ -25,7 +25,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 100px; background: var(--app-background-gradient); min-height: 300px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+        <div style="padding: 6.25rem; background: var(--app-background-gradient); min-height: 300px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">
           <story />
         </div>
       `
@@ -61,7 +61,7 @@ export const Default: Story = {
     components: { SidebarSmartItem, Calendar },
     setup() { return { args } },
     template: `
-      <div style="width: 300px; padding: 20px;">
+      <div style="width: 300px; padding: var(--space-5);">
         <SidebarSmartItem v-bind="args">
           <template #icon><Calendar :size="16" /></template>
           Today
@@ -80,7 +80,7 @@ export const Active: Story = {
     components: { SidebarSmartItem, Calendar },
     setup() { return { args } },
     template: `
-      <div style="width: 300px; padding: 20px;">
+      <div style="width: 300px; padding: var(--space-5);">
         <SidebarSmartItem v-bind="args">
           <template #icon><Calendar :size="16" /></template>
           Today
@@ -99,7 +99,7 @@ export const Compact: Story = {
     components: { SidebarSmartItem, Calendar },
     setup() { return { args } },
     template: `
-      <div style="width: 300px; padding: 20px;">
+      <div style="width: 300px; padding: var(--space-5);">
         <SidebarSmartItem v-bind="args">
           <template #icon><Calendar :size="14" /></template>
           Today
@@ -113,7 +113,7 @@ export const AllColors: Story = {
   render: () => ({
     components: { SidebarSmartItem, Calendar, Inbox, List, Clock, Zap },
     template: `
-      <div style="display: grid; grid-template-columns: repeat(2, 240px); gap: 16px; padding: 20px;">
+      <div style="display: grid; grid-template-columns: repeat(2, 240px); gap: var(--space-4); padding: var(--space-5);">
         <SidebarSmartItem color="azure" :active="true" :count="3">
           <template #icon><Calendar :size="14" /></template>
           Today
@@ -155,12 +155,12 @@ export const InteractiveDragging: Story = {
       return { isDragging }
     },
     template: `
-      <div style="width: 340px; padding: 40px; background: var(--app-background-gradient);">
-        <div 
-          draggable="true" 
-          @dragstart="isDragging = true" 
+      <div style="width: 340px; padding: var(--space-10); background: var(--app-background-gradient);">
+        <div
+          draggable="true"
+          @dragstart="isDragging = true"
           @dragend="isDragging = false"
-          style="padding: 10px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: 8px; margin-bottom: 20px; cursor: move; text-align: center; color: var(--text-primary);"
+          style="padding: var(--space-2-5); background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); margin-bottom: var(--space-5); cursor: move; text-align: center; color: var(--text-primary);"
         >
           DRAG ME
         </div>
@@ -175,7 +175,7 @@ export const InteractiveDragging: Story = {
           Drop Target
         </SidebarSmartItem>
         
-        <p style="margin-top: 16px; font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+        <p style="margin-top: var(--space-4); font-size: var(--text-xs); color: var(--text-muted); line-height: 1.4;">
           Drag the box over the item to see the glassmorphism "glow" and "pulse" effects that indicate a valid drop target.
         </p>
       </div>

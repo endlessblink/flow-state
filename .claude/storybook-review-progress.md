@@ -12,22 +12,22 @@
   - [x] ChatMessage
   - [x] TaskQuickEditPopover
 
-- [ ] **auth** (8 stories)
-  - [ ] AuthModal
-  - [ ] AuthStatusNotice
-  - [ ] GoogleSignInButton
-  - [ ] LoginForm
-  - [ ] NotificationPreferences
-  - [ ] ResetPasswordView
-  - [ ] SignupForm
-  - [ ] UserProfile
+- [x] **auth** (8 stories)
+  - [x] AuthModal
+  - [x] AuthStatusNotice
+  - [x] GoogleSignInButton
+  - [x] LoginForm
+  - [x] NotificationPreferences
+  - [x] ResetPasswordView
+  - [x] SignupForm
+  - [x] UserProfile
 
-- [ ] **calendar** (5 stories)
-  - [ ] CalendarDayView
-  - [ ] CalendarHeader
-  - [ ] CalendarMonthView
-  - [ ] CalendarStatusOverlays
-  - [ ] CalendarWeekView
+- [x] **calendar** (5 stories)
+  - [x] CalendarDayView
+  - [x] CalendarHeader
+  - [x] CalendarMonthView
+  - [x] CalendarStatusOverlays
+  - [x] CalendarWeekView
 
 - [ ] **canvas** (15 stories)
   - [x] MultiSelectionOverlay

@@ -87,14 +87,14 @@ const HierarchicalTaskRowContentMock = defineComponent({
       <!-- Priority Dot -->
       <span :style="{
         width: '10px', height: '10px', borderRadius: '50%', flexShrink: '0',
-        background: priority === 'high' ? '#ef4444' : priority === 'medium' ? '#f59e0b' : priority === 'low' ? '#3b82f6' : 'rgba(255,255,255,0.2)',
+        background: priority === 'high' ? 'var(--color-danger)' : priority === 'medium' ? 'var(--color-warning)' : priority === 'low' ? '#3b82f6' : 'rgba(255,255,255,0.2)',
         boxShadow: priority === 'high' ? '0 0 6px rgba(239,68,68,0.4)' : priority === 'medium' ? '0 0 6px rgba(245,158,11,0.3)' : priority === 'low' ? '0 0 6px rgba(59,130,246,0.3)' : 'none'
       }" />
 
       <!-- Due Date -->
       <span v-if="dueDate" :style="{
         fontSize: 'var(--text-xs)', flexShrink: '0',
-        color: isOverdue ? '#ef4444' : 'var(--text-tertiary)'
+        color: isOverdue ? 'var(--color-danger)' : 'var(--text-tertiary)'
       }">{{ dueDate }}</span>
 
       <!-- Progress -->
@@ -102,7 +102,7 @@ const HierarchicalTaskRowContentMock = defineComponent({
         <div style="position: relative; height: 4px; background: var(--glass-bg-heavy); border-radius: 2px; overflow: hidden;">
           <div :style="{ width: progress + '%', height: '100%', background: 'var(--brand-primary)', borderRadius: '2px', transition: 'width 0.3s ease' }" />
         </div>
-        <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px; display: block; text-align: center;">{{ progress }}%</span>
+        <span style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px; display: block; text-align: center;">{{ progress }}%</span>
       </div>
       <span v-else style="width: 60px; text-align: center; font-size: var(--text-xs); color: var(--text-muted); flex-shrink: 0;">-</span>
 

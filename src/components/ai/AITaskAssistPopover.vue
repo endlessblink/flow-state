@@ -9,7 +9,7 @@
  * @see TASK-1302 in MASTER_PLAN.md
  */
 
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   Sparkles,
   Target,
@@ -19,10 +19,13 @@ import {
   Link2,
   LayoutList,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Check,
+  Zap
 } from 'lucide-vue-next'
 import BasePopover from '@/components/base/BasePopover.vue'
 import { useAITaskAssist } from '@/composables/useAITaskAssist'
+import type { SmartSuggestion } from '@/composables/useAITaskAssist'
 import type { Task } from '@/types/tasks'
 
 // ============================================================================
@@ -36,10 +39,12 @@ interface Props {
   y: number
   context: 'context-menu' | 'edit-modal' | 'quick-create'
   selectedTaskIds?: string[]
+  autoTrigger?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  selectedTaskIds: () => []
+  selectedTaskIds: () => [],
+  autoTrigger: null
 })
 
 const emit = defineEmits<{
@@ -49,6 +54,8 @@ const emit = defineEmits<{
   acceptBreakdown: [tasks: Array<{ title: string; priority?: string }>]
   acceptDate: [date: string]
   acceptTitle: [title: string]
+  acceptSmartSuggest: [updates: Array<{ field: string; value: string | number }>]
+  acceptSmartSuggestGroup: [updates: Array<{ taskId: string; fields: Array<{ field: string; value: string | number }> }>]
 }>()
 
 // ============================================================================
@@ -63,6 +70,8 @@ const {
   improveTitle,
   findRelatedTasks,
   summarizeBatch,
+  smartSuggest,
+  smartSuggestGroup,
   isLoading,
   currentAction,
   result,
@@ -90,7 +99,9 @@ const loadingText = computed(() => {
     suggestDate: 'Finding best date...',
     improveTitle: 'Improving title...',
     findRelatedTasks: 'Searching related tasks...',
-    summarizeBatch: 'Summarizing tasks...'
+    summarizeBatch: 'Summarizing tasks...',
+    smartSuggest: 'Analyzing task...',
+    smartSuggestGroup: 'Analyzing tasks...'
   }
   return labels[currentAction.value || ''] || 'Thinking...'
 })
@@ -100,9 +111,9 @@ const loadingText = computed(() => {
 // ============================================================================
 
 const contextActions: Record<string, string[]> = {
-  'context-menu': ['priority', 'breakdown', 'date', 'related', 'summary'],
-  'edit-modal': ['subtasks', 'priority', 'date', 'title'],
-  'quick-create': ['priority', 'date', 'title']
+  'context-menu': ['smartSuggest', 'priority', 'breakdown', 'date', 'related', 'summary'],
+  'edit-modal': ['smartSuggest', 'subtasks', 'priority', 'date', 'title'],
+  'quick-create': ['smartSuggest', 'priority', 'date', 'title']
 }
 
 function showAction(action: string): boolean {
@@ -152,6 +163,18 @@ function doSummarizeBatch() {
   summarizeBatch(props.selectedTaskIds)
 }
 
+function doSmartSuggest() {
+  if (!props.task) return
+  smartSuggestChecked.value = {}
+  smartSuggest(props.task)
+}
+
+function doSmartSuggestGroup() {
+  if (!props.selectedTaskIds?.length) return
+  smartSuggestGroupChecked.value = {}
+  smartSuggestGroup(props.selectedTaskIds)
+}
+
 // ============================================================================
 // Accept Handlers
 // ============================================================================
@@ -197,6 +220,96 @@ function acceptTitle() {
 }
 
 // ============================================================================
+// Smart Suggest Selection State
+// ============================================================================
+
+const smartSuggestChecked = ref<Record<string, boolean>>({})
+const smartSuggestGroupChecked = ref<Record<string, Record<string, boolean>>>({})
+
+function isSmartSuggestChecked(suggestion: SmartSuggestion): boolean {
+  const key = suggestion.field
+  if (key in smartSuggestChecked.value) return smartSuggestChecked.value[key]
+  // Default: checked if confidence > 0.7
+  return suggestion.confidence > 0.7
+}
+
+function toggleSmartSuggestCheck(suggestion: SmartSuggestion) {
+  const key = suggestion.field
+  smartSuggestChecked.value[key] = !isSmartSuggestChecked(suggestion)
+}
+
+function isGroupSuggestionChecked(taskId: string, suggestion: SmartSuggestion): boolean {
+  const taskChecks = smartSuggestGroupChecked.value[taskId]
+  if (taskChecks && suggestion.field in taskChecks) return taskChecks[suggestion.field]
+  return suggestion.confidence > 0.7
+}
+
+function toggleGroupSuggestionCheck(taskId: string, suggestion: SmartSuggestion) {
+  if (!smartSuggestGroupChecked.value[taskId]) {
+    smartSuggestGroupChecked.value[taskId] = {}
+  }
+  smartSuggestGroupChecked.value[taskId][suggestion.field] = !isGroupSuggestionChecked(taskId, suggestion)
+}
+
+function acceptSmartSuggest() {
+  const suggestions = result.value?.smartSuggest?.suggestions
+  if (!suggestions) return
+  const updates = suggestions
+    .filter(s => isSmartSuggestChecked(s))
+    .map(s => ({ field: s.field, value: s.suggestedValue }))
+  if (updates.length > 0) {
+    emit('acceptSmartSuggest', updates)
+  }
+  clearResult()
+  emit('close')
+}
+
+function acceptSmartSuggestGroup() {
+  const items = result.value?.smartSuggestGroup
+  if (!items) return
+  const updates = items
+    .map(item => ({
+      taskId: item.taskId,
+      fields: item.suggestions
+        .filter(s => isGroupSuggestionChecked(item.taskId, s))
+        .map(s => ({ field: s.field, value: s.suggestedValue }))
+    }))
+    .filter(u => u.fields.length > 0)
+  if (updates.length > 0) {
+    emit('acceptSmartSuggestGroup', updates)
+  }
+  clearResult()
+  emit('close')
+}
+
+function getFieldLabel(field: string): string {
+  const labels: Record<string, string> = {
+    priority: 'Priority',
+    dueDate: 'Due Date',
+    status: 'Status',
+    estimatedDuration: 'Estimate'
+  }
+  return labels[field] || field
+}
+
+function formatFieldValue(field: string, value: string | number | null): string {
+  if (value === null || value === undefined) return 'none'
+  if (field === 'dueDate') return formatDate(String(value))
+  if (field === 'estimatedDuration') return `${value}min`
+  if (field === 'status') {
+    const statusLabels: Record<string, string> = { planned: 'To Do', in_progress: 'In Progress', backlog: 'Backlog' }
+    return statusLabels[String(value)] || String(value)
+  }
+  return String(value)
+}
+
+function getConfidenceClass(confidence: number): string {
+  if (confidence >= 0.8) return 'confidence--high'
+  if (confidence >= 0.6) return 'confidence--medium'
+  return 'confidence--low'
+}
+
+// ============================================================================
 // Lifecycle
 // ============================================================================
 
@@ -223,6 +336,17 @@ function handleAbort() {
 watch(() => props.isVisible, (visible) => {
   if (!visible) {
     clearResult()
+    smartSuggestChecked.value = {}
+    smartSuggestGroupChecked.value = {}
+  }
+})
+
+// Auto-trigger an action when the popover opens (e.g., from task row sparkles button)
+watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) => {
+  if (visible && trigger === 'smartSuggest' && props.task && !isLoading.value && !result.value) {
+    doSmartSuggest()
+  } else if (visible && trigger === 'smartSuggestGroup' && props.selectedTaskIds?.length && !isLoading.value && !result.value) {
+    doSmartSuggestGroup()
   }
 })
 </script>
@@ -246,6 +370,15 @@ watch(() => props.isVisible, (visible) => {
 
       <!-- Action buttons (shown when no result and not loading) -->
       <div v-if="!result && !isLoading && !error" class="ai-assist-actions">
+        <button
+          v-if="showAction('smartSuggest')"
+          class="assist-action-btn assist-action-btn--smart"
+          :disabled="isLoading"
+          @click="doSmartSuggest"
+        >
+          <Zap :size="14" />
+          Smart Suggest
+        </button>
         <button
           v-if="showAction('subtasks')"
           class="assist-action-btn"
@@ -472,6 +605,103 @@ watch(() => props.isVisible, (visible) => {
             Suggested group: <strong>{{ result.summary.suggestedGroup }}</strong>
           </div>
           <div class="result-actions">
+            <button class="dismiss-btn" @click="clearResult">
+              Close
+            </button>
+          </div>
+        </div>
+
+        <!-- SMART SUGGEST result -->
+        <div v-if="result.type === 'smartSuggest'" class="result-smart-suggest">
+          <div class="result-label">
+            Suggestions
+          </div>
+          <div v-if="!result.smartSuggest?.suggestions?.length" class="no-results">
+            Task looks good — no changes needed
+          </div>
+          <div
+            v-for="suggestion in result.smartSuggest?.suggestions"
+            :key="suggestion.field"
+            class="smart-suggestion-card"
+            :class="{ 'smart-suggestion-card--checked': isSmartSuggestChecked(suggestion) }"
+            @click="toggleSmartSuggestCheck(suggestion)"
+          >
+            <div class="smart-suggestion-header">
+              <div class="smart-suggestion-check">
+                <Check v-if="isSmartSuggestChecked(suggestion)" :size="12" />
+              </div>
+              <span class="smart-suggestion-field">{{ getFieldLabel(suggestion.field) }}</span>
+              <span class="confidence-bar" :class="getConfidenceClass(suggestion.confidence)">
+                {{ Math.round(suggestion.confidence * 100) }}%
+              </span>
+            </div>
+            <div class="smart-suggestion-values">
+              <span class="smart-value-current">{{ formatFieldValue(suggestion.field, suggestion.currentValue) }}</span>
+              <span class="smart-value-arrow">&rarr;</span>
+              <span class="smart-value-suggested">{{ formatFieldValue(suggestion.field, suggestion.suggestedValue) }}</span>
+            </div>
+            <p v-if="suggestion.reasoning" class="smart-suggestion-reason" dir="auto">
+              {{ suggestion.reasoning }}
+            </p>
+          </div>
+          <div v-if="result.smartSuggest?.suggestions?.length" class="result-actions">
+            <button class="accept-btn" @click="acceptSmartSuggest">
+              Apply selected
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
+          </div>
+          <div v-else class="result-actions">
+            <button class="dismiss-btn" @click="clearResult">
+              Close
+            </button>
+          </div>
+        </div>
+
+        <!-- SMART SUGGEST GROUP result -->
+        <div v-if="result.type === 'smartSuggestGroup'" class="result-smart-suggest-group">
+          <div class="result-label">
+            Group Suggestions
+          </div>
+          <div v-if="!result.smartSuggestGroup?.length" class="no-results">
+            All tasks look good — no changes needed
+          </div>
+          <div
+            v-for="item in result.smartSuggestGroup"
+            :key="item.taskId"
+            class="group-task-section"
+          >
+            <div class="group-task-title" dir="auto">
+              {{ item.taskTitle }}
+            </div>
+            <div
+              v-for="suggestion in item.suggestions"
+              :key="`${item.taskId}-${suggestion.field}`"
+              class="smart-suggestion-card smart-suggestion-card--compact"
+              :class="{ 'smart-suggestion-card--checked': isGroupSuggestionChecked(item.taskId, suggestion) }"
+              @click="toggleGroupSuggestionCheck(item.taskId, suggestion)"
+            >
+              <div class="smart-suggestion-header">
+                <div class="smart-suggestion-check">
+                  <Check v-if="isGroupSuggestionChecked(item.taskId, suggestion)" :size="12" />
+                </div>
+                <span class="smart-suggestion-field">{{ getFieldLabel(suggestion.field) }}</span>
+                <span class="smart-value-current">{{ formatFieldValue(suggestion.field, suggestion.currentValue) }}</span>
+                <span class="smart-value-arrow">&rarr;</span>
+                <span class="smart-value-suggested">{{ formatFieldValue(suggestion.field, suggestion.suggestedValue) }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="result.smartSuggestGroup?.length" class="result-actions">
+            <button class="accept-btn" @click="acceptSmartSuggestGroup">
+              Apply selected
+            </button>
+            <button class="dismiss-btn" @click="clearResult">
+              Dismiss
+            </button>
+          </div>
+          <div v-else class="result-actions">
             <button class="dismiss-btn" @click="clearResult">
               Close
             </button>
@@ -800,21 +1030,174 @@ watch(() => props.isVisible, (visible) => {
   color: var(--brand-primary);
 }
 
+/* ── Smart Suggest Button ── */
+.assist-action-btn--smart {
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
+}
+
+/* ── Smart Suggest Result ── */
+.smart-suggestion-card {
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-light);
+  border: 1px solid transparent;
+  margin-bottom: var(--space-1_5);
+  cursor: pointer;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.smart-suggestion-card:hover {
+  background: var(--glass-bg-medium);
+}
+
+.smart-suggestion-card--checked {
+  border-color: var(--brand-primary);
+}
+
+.smart-suggestion-card--compact {
+  padding: var(--space-1_5) var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.smart-suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  margin-bottom: var(--space-1);
+}
+
+.smart-suggestion-card--compact .smart-suggestion-header {
+  margin-bottom: 0;
+}
+
+.smart-suggestion-check {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--brand-primary);
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.smart-suggestion-card--checked .smart-suggestion-check {
+  border-color: var(--brand-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.smart-suggestion-field {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+}
+
+.confidence-bar {
+  margin-left: auto;
+  font-size: 0.625rem;
+  font-weight: var(--font-semibold);
+  padding: 1px var(--space-1_5);
+  border-radius: var(--radius-full);
+}
+
+.confidence--high {
+  background: var(--brand-primary-bg, rgba(78, 205, 196, 0.15));
+  color: var(--brand-primary);
+}
+
+.confidence--medium {
+  background: rgba(255, 193, 7, 0.15);
+  color: var(--color-priority-medium);
+}
+
+.confidence--low {
+  background: var(--glass-bg-medium);
+  color: var(--text-muted);
+}
+
+.smart-suggestion-values {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding-left: calc(16px + var(--space-1_5));
+}
+
+.smart-value-current {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.smart-value-arrow {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+.smart-value-suggested {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--brand-primary);
+  text-transform: capitalize;
+}
+
+.smart-suggestion-reason {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  line-height: var(--leading-normal);
+  margin: var(--space-1) 0 0;
+  padding-left: calc(16px + var(--space-1_5));
+}
+
+/* ── Smart Suggest Group ── */
+.group-task-section {
+  margin-bottom: var(--space-2);
+}
+
+.group-task-section:last-child {
+  margin-bottom: 0;
+}
+
+.group-task-title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  padding: var(--space-0_5) 0;
+  border-bottom: 1px solid var(--glass-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-smart-suggest-group {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 /* ── Buttons ── */
 .accept-btn {
   padding: var(--space-1_5) var(--space-3);
-  background: var(--brand-primary);
-  color: white;
-  border: none;
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   cursor: pointer;
-  transition: opacity var(--duration-fast);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 
 .accept-btn:hover {
-  opacity: 0.9;
+  background: var(--glass-bg-medium);
+  border-color: var(--brand-primary-hover);
 }
 
 .dismiss-btn {

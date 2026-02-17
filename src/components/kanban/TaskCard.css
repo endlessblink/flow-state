@@ -405,6 +405,14 @@
     /* Ensure focus ring is visible */
 }
 
+/* Selected state must always show teal border, even when focused */
+.task-card.selected.focused,
+.task-card.selected:focus-visible {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px var(--brand-primary), var(--shadow-sm);
+    z-index: 10;
+}
+
 /* Completion circle focus states */
 .completion-circle:focus {
     outline: 2px solid var(--color-work);

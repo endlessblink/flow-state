@@ -32,12 +32,12 @@ const QuickTaskDropdownMock = defineComponent({
       <!-- Dropdown -->
       <div v-if="isOpen" style="position: absolute; top: 36px; left: 50%; transform: translateX(-50%); width: 280px; background: var(--overlay-component-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: 0 8px 32px rgba(0,0,0,0.4); padding: var(--space-2) 0; z-index: 100; max-height: 400px; overflow-y: auto;">
         <!-- Quick Add Input -->
-        <div style="display: flex; align-items: center; gap: var(--space-1); padding: 6px var(--space-3);">
+        <div style="display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1-5) var(--space-3);">
           <input
             :value="inputValue"
             type="text"
             placeholder="Pin a new quick task..."
-            style="flex: 1; background: var(--glass-bg-medium); border: 1px solid var(--glass-bg-heavy); border-radius: var(--radius-md); padding: 6px 8px; font-size: var(--text-sm); color: var(--text-primary); outline: none;"
+            style="flex: 1; background: var(--glass-bg-medium); border: 1px solid var(--glass-bg-heavy); border-radius: var(--radius-md); padding: var(--space-1-5) var(--space-2); font-size: var(--text-sm); color: var(--text-primary); outline: none;"
           />
           <button v-if="inputValue.trim()" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--glass-bg-heavy); border: 1px solid var(--glass-border); border-radius: var(--radius-md); cursor: pointer; color: var(--text-secondary); flex-shrink: 0;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
@@ -48,7 +48,7 @@ const QuickTaskDropdownMock = defineComponent({
 
         <!-- Pinned Section -->
         <template v-if="pinnedTasks.length > 0">
-          <div style="display: flex; align-items: center; gap: 6px; padding: 6px var(--space-3); font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+          <div style="display: flex; align-items: center; gap: var(--space-1-5); padding: var(--space-1-5) var(--space-3); font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.6;"><path d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1h1V4H7v2h1a1 1 0 0 1 1 1z"/></svg>
             <span>Pinned</span>
           </div>
@@ -73,7 +73,7 @@ const QuickTaskDropdownMock = defineComponent({
         <!-- Frequent Section -->
         <template v-if="frequentTasks.length > 0">
           <div v-if="pinnedTasks.length > 0" style="height: 1px; background: var(--glass-bg-heavy); margin: var(--space-1) 0;" />
-          <div style="display: flex; align-items: center; gap: 6px; padding: 6px var(--space-3); font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+          <div style="display: flex; align-items: center; gap: var(--space-1-5); padding: var(--space-1-5) var(--space-3); font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.6;"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
             <span>Frequent</span>
           </div>

@@ -20,7 +20,8 @@
     <Transition name="tooltip-fade">
       <div
         v-if="showTooltip && isOverflowing"
-        :class="['overflow-tooltip', 'tooltip-position-' + tooltipPosition]"
+        class="overflow-tooltip"
+        :class="['tooltip-position-' + tooltipPosition]"
         role="tooltip"
         :aria-hidden="!showTooltip"
       >

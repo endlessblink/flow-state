@@ -45,7 +45,7 @@ export const CustomContent = {
         <OverflowTooltip text="Long Project Name">
           Long Project Name
           <template #tooltip-content>
-            <div style="color: #4ECDC4; font-weight: bold;">Project Detail:</div>
+            <div style="color: var(--brand-primary); font-weight: bold;">Project Detail:</div>
             <div>This project focuses on Storybook coverage.</div>
           </template>
         </OverflowTooltip>

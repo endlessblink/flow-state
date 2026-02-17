@@ -225,7 +225,7 @@ Below the card is the CategorySelector with project buttons.`
             height: 48px;
             background: var(--glass-bg-medium, rgba(255,255,255,0.05));
             border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-            border-radius: var(--radius-lg, 12px);
+            border-radius: var(--radius-xl);
             color: var(--text-primary, #fff);
             cursor: pointer;
           " @click="handleExit">
@@ -321,7 +321,7 @@ export const CardOnly: Story = {
       <div style="
         min-height: 100vh;
         background: var(--app-background-gradient);
-        padding: 2rem;
+        padding: var(--space-8);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -376,11 +376,11 @@ export const EmptyState: Story = {
             <h1 style="
               display: flex;
               align-items: center;
-              gap: 0.75rem;
-              font-size: 2rem;
+              gap: var(--space-3);
+              font-size: var(--text-4xl);
               font-weight: 700;
               color: var(--text-primary, #fff);
-              margin: 0 0 0.5rem 0;
+              margin: 0 0 var(--space-2) 0;
             ">
               <Zap :size="32" />
               Quick Sort
@@ -397,7 +397,7 @@ export const EmptyState: Story = {
             height: 48px;
             background: var(--glass-bg-medium, rgba(255,255,255,0.05));
             border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-            border-radius: 12px;
+            border-radius: var(--radius-xl);
             color: var(--text-primary, #fff);
             cursor: pointer;
           " @click="handleExit">
@@ -412,29 +412,29 @@ export const EmptyState: Story = {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 1.5rem;
+          gap: var(--space-6);
           text-align: center;
-          padding: 3rem;
+          padding: var(--space-10);
         ">
           <CheckCircle :size="64" style="color: var(--color-success, #22c55e);" />
           <h2 style="
-            font-size: 1.75rem;
+            font-size: var(--text-3xl);
             font-weight: 700;
             color: var(--text-primary, #fff);
             margin: 0;
           ">All Caught Up!</h2>
           <p style="
-            font-size: 1rem;
+            font-size: var(--text-base);
             color: var(--text-secondary, rgba(255,255,255,0.6));
             margin: 0;
           ">You have no uncategorized tasks.</p>
           <button style="
-            padding: 0.75rem 1.5rem;
+            padding: var(--space-3) var(--space-6);
             background: transparent;
             border: 1px solid var(--brand-primary);
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             color: var(--brand-primary);
-            font-size: 1rem;
+            font-size: var(--text-base);
             font-weight: 600;
             cursor: pointer;
           " @click="handleExit">Return to Tasks</button>
@@ -473,10 +473,10 @@ export const CompletionState: Story = {
       <div style="
         min-height: 100vh;
         background: var(--app-background-gradient);
-        padding: 2rem;
+        padding: var(--space-8);
         display: flex;
         flex-direction: column;
-        gap: 2rem;
+        gap: var(--space-8);
       ">
         <!-- Header -->
         <header style="
@@ -488,11 +488,11 @@ export const CompletionState: Story = {
             <h1 style="
               display: flex;
               align-items: center;
-              gap: 0.75rem;
-              font-size: 2rem;
+              gap: var(--space-3);
+              font-size: var(--text-4xl);
               font-weight: 700;
               color: var(--text-primary, #fff);
-              margin: 0 0 0.5rem 0;
+              margin: 0 0 var(--space-2) 0;
             ">
               <Zap :size="32" />
               Quick Sort
@@ -509,7 +509,7 @@ export const CompletionState: Story = {
             height: 48px;
             background: var(--glass-bg-medium, rgba(255,255,255,0.05));
             border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-            border-radius: 12px;
+            border-radius: var(--radius-xl);
             color: var(--text-primary, #fff);
             cursor: pointer;
           " @click="handleExit">
@@ -524,19 +524,19 @@ export const CompletionState: Story = {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 2rem;
+          gap: var(--space-8);
           text-align: center;
-          padding: 2rem;
+          padding: var(--space-8);
         ">
           <div style="font-size: 64px; animation: bounce 0.6s ease;">🎉</div>
           <h2 style="
-            font-size: 1.75rem;
+            font-size: var(--text-3xl);
             font-weight: 700;
             color: var(--text-primary, #fff);
             margin: 0;
           ">Amazing Work!</h2>
           <p style="
-            font-size: 1rem;
+            font-size: var(--text-base);
             color: var(--text-secondary, rgba(255,255,255,0.6));
             margin: 0;
           ">You've sorted all your tasks!</p>
@@ -545,7 +545,7 @@ export const CompletionState: Story = {
           <div style="
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
+            gap: var(--space-4);
             max-width: 600px;
             width: 100%;
           ">
@@ -553,16 +553,16 @@ export const CompletionState: Story = {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 0.5rem;
-              padding: 1.25rem 1rem;
+              gap: var(--space-2);
+              padding: var(--space-5) var(--space-4);
               background: var(--glass-bg-medium, rgba(255,255,255,0.05));
               border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-              border-radius: 12px;
+              border-radius: var(--radius-xl);
             ">
-              <span style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary, #fff);">
+              <span style="font-size: var(--text-3xl); font-weight: 700; color: var(--text-primary, #fff);">
                 {{ stats.tasksProcessed }}
               </span>
-              <span style="font-size: 0.75rem; color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
+              <span style="font-size: var(--text-xs); color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
                 Tasks Sorted
               </span>
             </div>
@@ -570,16 +570,16 @@ export const CompletionState: Story = {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 0.5rem;
-              padding: 1.25rem 1rem;
+              gap: var(--space-2);
+              padding: var(--space-5) var(--space-4);
               background: var(--glass-bg-medium, rgba(255,255,255,0.05));
               border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-              border-radius: 12px;
+              border-radius: var(--radius-xl);
             ">
-              <span style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary, #fff);">
+              <span style="font-size: var(--text-3xl); font-weight: 700; color: var(--text-primary, #fff);">
                 {{ stats.timeSpent }}
               </span>
-              <span style="font-size: 0.75rem; color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
+              <span style="font-size: var(--text-xs); color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
                 Time Taken
               </span>
             </div>
@@ -587,16 +587,16 @@ export const CompletionState: Story = {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 0.5rem;
-              padding: 1.25rem 1rem;
+              gap: var(--space-2);
+              padding: var(--space-5) var(--space-4);
               background: var(--glass-bg-medium, rgba(255,255,255,0.05));
               border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
-              border-radius: 12px;
+              border-radius: var(--radius-xl);
             ">
-              <span style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary, #fff);">
+              <span style="font-size: var(--text-3xl); font-weight: 700; color: var(--text-primary, #fff);">
                 {{ stats.efficiency }}
               </span>
-              <span style="font-size: 0.75rem; color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
+              <span style="font-size: var(--text-xs); color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
                 Tasks/Min
               </span>
             </div>
@@ -604,16 +604,16 @@ export const CompletionState: Story = {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 0.5rem;
-              padding: 1.25rem 1rem;
+              gap: var(--space-2);
+              padding: var(--space-5) var(--space-4);
               background: rgba(251, 146, 60, 0.1);
               border: 1px solid rgba(251, 146, 60, 0.3);
-              border-radius: 12px;
+              border-radius: var(--radius-xl);
             ">
-              <span style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary, #fff);">
+              <span style="font-size: var(--text-3xl); font-weight: 700; color: var(--text-primary, #fff);">
                 🔥 {{ stats.streakDays }}
               </span>
-              <span style="font-size: 0.75rem; color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
+              <span style="font-size: var(--text-xs); color: var(--text-muted, rgba(255,255,255,0.5)); text-transform: uppercase;">
                 Day Streak
               </span>
             </div>
@@ -622,13 +622,13 @@ export const CompletionState: Story = {
           <button style="
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-6);
             background: transparent;
             border: 1px solid var(--brand-primary);
-            border-radius: 10px;
+            border-radius: var(--radius-lg);
             color: var(--brand-primary);
-            font-size: 1rem;
+            font-size: var(--text-base);
             font-weight: 600;
             cursor: pointer;
           " @click="handleExit">

@@ -782,10 +782,14 @@ const {
   50% { opacity: 0.85; }
 }
 
-/* BUG-1304: Visual indicator for done tasks — low opacity only, no strikethrough */
+/* BUG-1304 + BUG-1343: Visual indicator for done tasks */
 .slot-task.status-done {
   filter: grayscale(0.6) brightness(0.85);
   opacity: 0.55;
+}
+
+.slot-task.status-done .task-title {
+  text-decoration: line-through;
 }
 
 /* TASK-1317: External calendar events (read-only overlays) */

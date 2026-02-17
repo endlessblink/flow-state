@@ -74,13 +74,13 @@ export const Default: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick Task Create Modal</h3>
-        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Fast task creation with time scheduling</p>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Quick Task Create Modal</h3>
+        <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Fast task creation with time scheduling</p>
 
         <button
           @click="isOpen = !isOpen"
-          style="padding: 12px 24px; background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: 8px; cursor: pointer;"
+          style="padding: var(--space-3) var(--space-6); background: transparent; border: 1px solid var(--brand-primary); color: var(--brand-primary); border-radius: var(--radius-lg); cursor: pointer;"
         >
           {{ isOpen ? 'Close Modal' : 'Open Quick Create' }}
         </button>
@@ -123,9 +123,9 @@ export const MorningTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Morning Task Creation</h3>
-        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Quick task for 9:00 AM - 9:30 AM slot</p>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Morning Task Creation</h3>
+        <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Quick task for 9:00 AM - 9:30 AM slot</p>
 
         <QuickTaskCreate
           :is-open="isOpen"
@@ -165,9 +165,9 @@ export const AfternoonMeeting: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Afternoon Meeting</h3>
-        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Schedule a meeting from 2:30 PM to 4:00 PM</p>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Afternoon Meeting</h3>
+        <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Schedule a meeting from 2:30 PM to 4:00 PM</p>
 
         <QuickTaskCreate
           :is-open="isOpen"
@@ -207,9 +207,9 @@ export const ShortTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Quick 15-Minute Task</h3>
-        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">Perfect for quick actions and micro-tasks</p>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Quick 15-Minute Task</h3>
+        <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">Perfect for quick actions and micro-tasks</p>
 
         <QuickTaskCreate
           :is-open="isOpen"
@@ -249,9 +249,9 @@ export const LongTask: Story = {
       return { ...args, isOpen, handleClose, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">Extended Work Session</h3>
-        <p style="margin: 0 0 24px 0; color: var(--text-secondary);">2-hour deep work session from 10:00 AM to 12:00 PM</p>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">Extended Work Session</h3>
+        <p style="margin: 0 0 var(--space-6) 0; color: var(--text-secondary);">2-hour deep work session from 10:00 AM to 12:00 PM</p>
 
         <QuickTaskCreate
           :is-open="isOpen"
@@ -348,34 +348,34 @@ export const InteractiveDemo: Story = {
       }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h2 style="margin: 0 0 16px 0; font-size: 20px; color: var(--text-primary);">Interactive QuickTaskCreate Demo</h2>
-        <p style="margin: 0 0 32px 0; color: var(--text-secondary);">Click any time slot below to open the quick create modal</p>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h2 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-xl); color: var(--text-primary);">Interactive QuickTaskCreate Demo</h2>
+        <p style="margin: 0 0 var(--space-8) 0; color: var(--text-secondary);">Click any time slot below to open the quick create modal</p>
 
         <!-- Last Created Task Display -->
-        <div v-if="lastCreatedTask" style="margin-bottom: 32px; padding: 16px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
-          <h4 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-primary);">✅ Recently Created Task</h4>
-          <div style="font-size: 14px; color: var(--text-secondary);">
+        <div v-if="lastCreatedTask" style="margin-bottom: var(--space-8); padding: var(--space-4); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
+          <h4 style="margin: 0 0 var(--space-2) 0; font-size: var(--text-base); color: var(--text-primary);">Recently Created Task</h4>
+          <div style="font-size: var(--text-sm); color: var(--text-secondary);">
             <strong>{{ lastCreatedTask.title }}</strong>
             <span v-if="lastCreatedTask.description"> - {{ lastCreatedTask.description }}</span>
           </div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: var(--space-1);">
             Priority: {{ lastCreatedTask.priority }} • Duration: {{ lastCreatedTask.estimatedDuration }} mins
           </div>
         </div>
 
         <!-- Time Slots Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-5); margin-bottom: var(--space-8);">
           <div
             v-for="slot in timeSlots"
             :key="slot.label"
-            style="padding: 24px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
+            style="padding: var(--space-6); background: var(--glass-bg-solid); border-radius: var(--radius-xl); border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
             @click="openQuickCreate(slot.startTime, new Date(slot.startTime.getTime() + slot.duration * 60 * 1000), slot.duration)"
             @mouseenter="$event.target.style.transform = 'translateY(-2px)'"
             @mouseleave="$event.target.style.transform = 'translateY(0)'"
           >
-            <h4 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-primary);">{{ slot.label }}</h4>
-            <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+            <h4 style="margin: 0 0 var(--space-2) 0; font-size: var(--text-base); color: var(--text-primary);">{{ slot.label }}</h4>
+            <p style="margin: 0; font-size: var(--text-sm); color: var(--text-secondary);">
               {{ slot.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}
               -
               {{ new Date(slot.startTime.getTime() + slot.duration * 60 * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}
@@ -384,9 +384,9 @@ export const InteractiveDemo: Story = {
         </div>
 
         <!-- Instructions -->
-        <div style="padding: 20px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
-          <h4 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-primary);">Features</h4>
-          <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+        <div style="padding: var(--space-5); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
+          <h4 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); color: var(--text-primary);">Features</h4>
+          <ul style="margin: 0; padding-left: var(--space-5); color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.6;">
             <li><strong>Auto-focus</strong> - Title input gets focus automatically</li>
             <li><strong>Keyboard shortcuts</strong> - Enter to create, Escape to cancel</li>
             <li><strong>Priority cycling</strong> - Click priority chip to cycle through levels</li>
@@ -480,22 +480,22 @@ export const AllVariants: Story = {
       return { modals, openModal, closeModal, handleCreated }
     },
     template: `
-      <div style="padding: 40px; min-height: 600px; background: var(--app-background-gradient); border-radius: 12px;">
-        <h2 style="margin: 0 0 24px 0; font-size: 20px; text-align: center; color: var(--text-primary);">QuickTaskCreate Duration Variants</h2>
+      <div style="padding: var(--space-10); min-height: 600px; background: var(--app-background-gradient); border-radius: var(--radius-xl);">
+        <h2 style="margin: 0 0 var(--space-6) 0; font-size: var(--text-xl); text-align: center; color: var(--text-primary);">QuickTaskCreate Duration Variants</h2>
 
         <!-- Task Type Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6); margin-bottom: var(--space-10);">
           <div
             v-for="modal in modals"
             :key="modal.id"
-            style="padding: 24px; background: var(--glass-bg-solid); border-radius: 12px; border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
+            style="padding: var(--space-6); background: var(--glass-bg-solid); border-radius: var(--radius-xl); border: 1px solid var(--border-medium); cursor: pointer; transition: all var(--duration-fast) ease;"
             @click="openModal(modal.id)"
             @mouseenter="$event.target.style.transform = 'translateY(-2px)'; $event.target.style.borderColor = 'var(--brand-primary)'"
             @mouseleave="$event.target.style.transform = 'translateY(0)'; $event.target.style.borderColor = 'var(--border-medium)'"
           >
-            <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--text-primary);">{{ modal.label }}</h3>
-            <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary);">{{ modal.description }}</p>
-            <div style="font-size: 13px; color: var(--text-muted);">
+            <h3 style="margin: 0 0 var(--space-2) 0; font-size: var(--text-lg); color: var(--text-primary);">{{ modal.label }}</h3>
+            <p style="margin: 0 0 var(--space-3) 0; font-size: var(--text-sm); color: var(--text-secondary);">{{ modal.description }}</p>
+            <div style="font-size: var(--text-xs); color: var(--text-muted);">
               {{ modal.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}
               -
               {{ modal.endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}
@@ -504,41 +504,41 @@ export const AllVariants: Story = {
         </div>
 
         <!-- Features Overview -->
-        <div style="padding: 24px; background: var(--glass-bg-soft); border-radius: 12px; border: 1px solid var(--glass-border);">
-          <h3 style="margin: 0 0 16px 0; font-size: 18px; color: var(--text-primary);">QuickTaskCreate Features</h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 14px;">
-            <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">⚡</span>
+        <div style="padding: var(--space-6); background: var(--glass-bg-soft); border-radius: var(--radius-xl); border: 1px solid var(--glass-border);">
+          <h3 style="margin: 0 0 var(--space-4) 0; font-size: var(--text-lg); color: var(--text-primary);">QuickTaskCreate Features</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); font-size: var(--text-sm);">
+            <div style="display: flex; align-items: start; gap: var(--space-2);">
+              <span style="font-size: var(--text-base);">⚡</span>
               <div style="color: var(--text-secondary);">
                 <strong>Lightning Fast</strong> - Create tasks in seconds
               </div>
             </div>
-            <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">📅</span>
+            <div style="display: flex; align-items: start; gap: var(--space-2);">
+              <span style="font-size: var(--text-base);">📅</span>
               <div style="color: var(--text-secondary);">
                 <strong>Smart Scheduling</strong> - Auto calendar integration
               </div>
             </div>
-            <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">🎯</span>
+            <div style="display: flex; align-items: start; gap: var(--space-2);">
+              <span style="font-size: var(--text-base);">🎯</span>
               <div style="color: var(--text-secondary);">
                 <strong>Priority Control</strong> - Click to cycle levels
               </div>
             </div>
-            <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">⏱️</span>
+            <div style="display: flex; align-items: start; gap: var(--space-2);">
+              <span style="font-size: var(--text-base);">⏱️</span>
               <div style="color: var(--text-secondary);">
                 <strong>Flexible Duration</strong> - Edit time on the fly
               </div>
             </div>
-            <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">🏷️</span>
+            <div style="display: flex; align-items: start; gap: var(--space-2);">
+              <span style="font-size: var(--text-base);">🏷️</span>
               <div style="color: var(--text-secondary);">
                 <strong>Project Assignment</strong> - Organize by project
               </div>
             </div>
-            <div style="display: flex; align-items: start; gap: 8px;">
-              <span style="font-size: 16px;">⌨️</span>
+            <div style="display: flex; align-items: start; gap: var(--space-2);">
+              <span style="font-size: var(--text-base);">⌨️</span>
               <div style="color: var(--text-secondary);">
                 <strong>Keyboard Friendly</strong> - Enter/Escape shortcuts
               </div>

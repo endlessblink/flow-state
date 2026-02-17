@@ -63,7 +63,7 @@ export const Default: Story = {
       return { todoTasks, inProgressTasks, doneTasks }
     },
     template: `
-      <div style="display: flex; gap: 12px; height: 100%; width: 100%;">
+      <div style="display: flex; gap: var(--space-3); height: 100%; width: 100%;">
         <KanbanColumn
           title="Planned"
           status="planned"
@@ -114,9 +114,9 @@ export const WipStates: Story = {
       return { normalTasks, warningTasks, exceededTasks }
     },
     template: `
-      <div style="display: flex; gap: 12px; height: 100%; width: 100%;">
-        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
-          <span style="color: var(--text-muted); font-size: 12px; text-align: center;">Normal (1/3)</span>
+      <div style="display: flex; gap: var(--space-3); height: 100%; width: 100%;">
+        <div style="display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-width: 0;">
+          <span style="color: var(--text-muted); font-size: var(--text-xs); text-align: center;">Normal (1/3)</span>
           <KanbanColumn
             title="In Progress"
             status="in_progress"
@@ -126,8 +126,8 @@ export const WipStates: Story = {
             @select-task="() => {}"
           />
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
-          <span style="color: var(--text-muted); font-size: 12px; text-align: center;">Warning (2/3)</span>
+        <div style="display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-width: 0;">
+          <span style="color: var(--text-muted); font-size: var(--text-xs); text-align: center;">Warning (2/3)</span>
           <KanbanColumn
             title="In Progress"
             status="in_progress"
@@ -137,8 +137,8 @@ export const WipStates: Story = {
             @select-task="() => {}"
           />
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0;">
-          <span style="color: var(--text-muted); font-size: 12px; text-align: center;">Exceeded (3/3)</span>
+        <div style="display: flex; flex-direction: column; gap: var(--space-2); flex: 1; min-width: 0;">
+          <span style="color: var(--text-muted); font-size: var(--text-xs); text-align: center;">Exceeded (3/3)</span>
           <KanbanColumn
             title="In Progress"
             status="in_progress"

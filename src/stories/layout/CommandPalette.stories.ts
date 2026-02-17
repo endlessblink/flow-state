@@ -79,10 +79,10 @@ export const Default: Story = {
       return { args, commandPaletteRef, isOpen, openCommandPalette }
     },
     template: `
-      <div style="position: relative; width: 100%; height: 100vh; padding: 40px;">
+      <div style="position: relative; width: 100%; height: 100vh; padding: var(--space-10);">
         <div style="text-align: center; color: white;">
           <h1>Command Palette Demo</h1>
-          <p style="margin-bottom: 20px;">Click the button below or press Cmd+K (Ctrl+K) to open the command palette</p>
+          <p style="margin-bottom: var(--space-5);">Click the button below or press Cmd+K (Ctrl+K) to open the command palette</p>
           <BaseButton
             variant="secondary"
             size="lg"
@@ -123,10 +123,10 @@ export const WithPreOpened: Story = {
       return { args, commandPaletteRef, isOpen, openCommandPalette }
     },
     template: `
-      <div style="position: relative; width: 100%; height: 100vh; padding: 40px;">
+      <div style="position: relative; width: 100%; height: 100vh; padding: var(--space-10);">
         <div style="text-align: center; color: white;">
           <h1>Pre-Opened Command Palette</h1>
-          <p style="margin-bottom: 20px;">The palette is open by default in this story</p>
+          <p style="margin-bottom: var(--space-5);">The palette is open by default in this story</p>
           <BaseButton
             variant="secondary"
             size="lg"
@@ -163,9 +163,9 @@ export const IntegrationExample: Story = {
       return { args, commandPaletteRef, tasks, openCommandPalette }
     },
     template: `
-      <div style="position: relative; width: 100%; height: 100vh; padding: 40px;">
+      <div style="position: relative; width: 100%; height: 100vh; padding: var(--space-10);">
         <div style="max-width: 800px; margin: 0 auto;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.875rem;">
             <h1 style="color: white; margin: 0;">Task Management</h1>
             <BaseButton
               variant="secondary"
@@ -176,11 +176,11 @@ export const IntegrationExample: Story = {
             </BaseButton>
           </div>
 
-          <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-radius: 8px; padding: 20px;">
+          <div style="background: var(--glass-bg-subtle); backdrop-filter: blur(10px); border-radius: var(--radius-lg); padding: var(--space-5);">
             <h2 style="color: white; margin-top: 0;">Today's Tasks</h2>
-            <div v-for="task in tasks" :key="task.id" style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 6px; margin-bottom: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+            <div v-for="task in tasks" :key="task.id" style="background: var(--glass-bg-subtle); padding: var(--space-3); border-radius: var(--radius-md); margin-bottom: var(--space-2); border: 1px solid var(--glass-border);">
               <span style="color: white;">{{ task.title }}</span>
-              <span style="color: #9ca3af; margin-left: 10px; font-size: 12px;">{{ task.status }}</span>
+              <span style="color: var(--text-muted); margin-left: var(--space-2-5); font-size: var(--text-xs);">{{ task.status }}</span>
             </div>
           </div>
         </div>

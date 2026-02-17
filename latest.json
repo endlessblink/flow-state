@@ -1,11 +1,11 @@
 {
-  "version": "1.2.73",
-  "notes": "v1.2.73: Quick Sort UX polish - left sidebar action buttons, arrow key shortcuts, color-coded action feedback, swipe handler fix",
-  "pub_date": "2026-02-16T19:13:47.890Z",
+  "version": "1.2.74",
+  "notes": "v1.2.74: Task list UX — estimates, hierarchy, group drag-drop, date picker",
+  "pub_date": "2026-02-16T22:24:39.532Z",
   "platforms": {
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRTQ3ckIwd0ZQWVZCZmFjTU9nNTBua2lwR2VrRVEzYTlxY1gvUGZDVHFvZWdkTFI5ZThkZlQ2SmJDNWlIT0ViR0QyR1EzalY3SzJyWW50NnZNeWVNS3cwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMjY5MjI3CWZpbGU6Rmxvd1N0YXRlXzEuMi43M19hbWQ2NC5BcHBJbWFnZQpuSi9QVmlwSUNmSVYzQjQ4WlAzZ1FuSnpiMXdRNThzVlgrTGorczBTMU9pdTVlQXJpZnpSVEZJT0pFSnh0cDhKa0pETWFWeS9HM0xDKzJ0S3dGdTZCQT09Cg==",
-      "url": "https://in-theflow.com/updates/FlowState_1.2.73_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSaC9HWWpJMlVwRXhtV2ZSUVNyQXVzWG0rcTcxR0ZqQityVzRoVU03S1hsSmpnbmFLTWdkbkhNUFZ4MXBRZlArVjArb2YwMWlhWGhpZGhFR1dFcEovTWhObDY2bW9aS2djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcxMjgwNjc5CWZpbGU6Rmxvd1N0YXRlXzEuMi43NF9hbWQ2NC5BcHBJbWFnZQpVWTB1NDF3cEdsMFp0a01mRnhQVWdEMHY1UlFUT3pNUldjaXRvTHBkSEpSVVFBQjhlOEtPYThRSFB4Y0RSSnp3UGlGdW5wRStveVowZHpyYnowTVpEdz09Cg==",
+      "url": "https://in-theflow.com/updates/FlowState_1.2.74_amd64.AppImage"
     }
   }
 }

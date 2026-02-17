@@ -21,7 +21,7 @@ const meta: Meta<typeof EmojiPicker> = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); min-height: 500px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); min-height: 500px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-xl);">
           <story />
         </div>
       `,
@@ -142,7 +142,7 @@ export const Closed: Story = {
     },
     template: `
       <div style="color: var(--text-secondary); text-align: center;">
-        <p style="margin-bottom: 16px;">Picker is closed. Toggle isOpen control to open.</p>
+        <p style="margin-bottom: var(--space-4);">Picker is closed. Toggle isOpen control to open.</p>
         <EmojiPicker
           :is-open="args.isOpen"
           :current-emoji="args.currentEmoji"

@@ -48,7 +48,7 @@ const meta: Meta<typeof BaseCard> = {
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: var(--radius-lg);
             padding: 2rem;
           ">
             <story />
@@ -116,7 +116,7 @@ export const WithHeaderAndFooter: Story = {
         <p style="color: var(--text-primary);">Detailed information goes here in the main content section of the card.</p>
 
         <template #footer>
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
             <BaseButton variant="ghost" size="sm">Cancel</BaseButton>
             <BaseButton variant="primary" size="sm">Action</BaseButton>
           </div>
@@ -137,7 +137,7 @@ export const Interactive: Story = {
     },
     template: `
       <BaseCard v-bind="args" style="width: 400px;">
-        <h3 style="color: var(--text-primary); margin-bottom: 8px;">Interactive Card</h3>
+        <h3 style="color: var(--text-primary); margin-bottom: var(--space-2);">Interactive Card</h3>
         <p style="color: var(--text-secondary);">Hover over this card to see the glass highlight and elevation effect.</p>
       </BaseCard>
     `
@@ -156,7 +156,7 @@ export const GlassVariant: Story = {
     },
     template: `
       <BaseCard v-bind="args" style="width: 400px;">
-        <h3 style="color: var(--text-primary); margin-bottom: 8px;">Glass Highlight</h3>
+        <h3 style="color: var(--text-primary); margin-bottom: var(--space-2);">Glass Highlight</h3>
         <p style="color: var(--text-secondary);">The glass variant adds an inset highlight that works best on colorful backgrounds.</p>
       </BaseCard>
     `
@@ -174,7 +174,7 @@ export const Elevated: Story = {
     },
     template: `
       <BaseCard v-bind="args" style="width: 400px;">
-        <h3 style="color: var(--text-primary); margin-bottom: 8px;">Elevated Hierarchy</h3>
+        <h3 style="color: var(--text-primary); margin-bottom: var(--space-2);">Elevated Hierarchy</h3>
         <p style="color: var(--text-secondary);">Deeper shadows help this card stand out as a primary UI element.</p>
       </BaseCard>
     `

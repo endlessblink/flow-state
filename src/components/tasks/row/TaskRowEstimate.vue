@@ -13,7 +13,12 @@
     <!-- Estimate Selector Dropdown (teleported to body to avoid overflow clipping) -->
     <Teleport to="body">
       <Transition name="dropdown-slide">
-        <div v-if="isOpen" ref="dropdownRef" class="estimate-dropdown" :style="dropdownStyle">
+        <div
+          v-if="isOpen"
+          ref="dropdownRef"
+          class="estimate-dropdown"
+          :style="dropdownStyle"
+        >
           <button
             v-for="option in estimateOptions"
             :key="option.label"
@@ -38,7 +43,9 @@
               @keydown.enter="applyCustom"
               @keydown.stop
             >
-            <button class="estimate-dropdown__apply" @click="applyCustom">Set</button>
+            <button class="estimate-dropdown__apply" @click="applyCustom">
+              Set
+            </button>
           </div>
         </div>
       </Transition>

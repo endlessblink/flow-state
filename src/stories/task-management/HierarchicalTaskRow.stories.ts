@@ -43,7 +43,7 @@ const meta = {
                 ] as any
                 return {}
             },
-            template: '<div style="padding: 20px; background: var(--app-background-gradient); min-height: 300px; width: 100%;"><div style="min-width: 900px;"><story /></div></div>'
+            template: '<div style="padding: var(--space-5); background: var(--app-background-gradient); min-height: 300px; width: 100%;"><div style="min-width: 900px;"><story /></div></div>'
         })
     ],
     argTypes: {

@@ -17,7 +17,7 @@ const meta = {
     (story: any) => ({
       components: { story },
       template: `
-        <div style="padding: 40px; background: var(--app-background-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <div style="padding: var(--space-10); background: var(--app-background-gradient); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center;">
           <story />
         </div>
       `
@@ -67,7 +67,7 @@ export const AppNavigation: Story = {
       return { args }
     },
     template: `
-      <div style="width: 240px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="width: 240px; display: flex; flex-direction: column; gap: var(--space-1);">
         <BaseNavItem active>
           <template #icon><Inbox :size="18" /></template>
           Inbox
@@ -93,7 +93,7 @@ export const Projects: Story = {
       return { args }
     },
     template: `
-      <div style="width: 240px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="width: 240px; display: flex; flex-direction: column; gap: var(--space-1);">
         <BaseNavItem hasChildren expanded>
           <template #icon><Hash :size="18" /></template>
           Personal

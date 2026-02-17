@@ -92,7 +92,7 @@ const meta = {
         return {}
       },
       template: `
-        <div style="transform: scale(1); padding: 40px; background: var(--app-background-gradient); min-height: 400px; border-radius: 12px;">
+        <div style="transform: scale(1); padding: var(--space-10); background: var(--app-background-gradient); min-height: 400px; border-radius: var(--radius-xl);">
           <story />
         </div>
       `

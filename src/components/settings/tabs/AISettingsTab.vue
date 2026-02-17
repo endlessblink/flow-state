@@ -277,7 +277,9 @@ async function onClearMemories() {
             :value="selectedModel || ''"
             @change="onModelChange"
           >
-            <option value="">Default</option>
+            <option value="">
+              Default
+            </option>
             <option
               v-for="m in currentModelOptions"
               :key="m.id"
@@ -290,8 +292,8 @@ async function onClearMemories() {
         <button
           v-if="selectedProvider === 'ollama'"
           class="refresh-models-btn"
-          @click="refreshOllamaModels()"
           title="Refresh local models"
+          @click="refreshOllamaModels()"
         >
           <RefreshCw :size="14" />
         </button>
@@ -327,7 +329,9 @@ async function onClearMemories() {
             :value="settingsStore.weeklyPlanModel || ''"
             @change="onWpModelChange"
           >
-            <option value="">Default</option>
+            <option value="">
+              Default
+            </option>
             <option
               v-for="m in wpModelOptions"
               :key="m.id"
@@ -340,8 +344,8 @@ async function onClearMemories() {
         <button
           v-if="settingsStore.weeklyPlanProvider === 'ollama'"
           class="refresh-models-btn"
-          @click="refreshOllamaModels()"
           title="Refresh local models"
+          @click="refreshOllamaModels()"
         >
           <RefreshCw :size="14" />
         </button>

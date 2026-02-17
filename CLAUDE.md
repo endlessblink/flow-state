@@ -478,6 +478,26 @@ padding: 8px 12px;                padding: var(--space-2) var(--space-3);
 border-radius: 12px;              border-radius: var(--radius-lg);
 ```
 
+### Button Pattern (CRITICAL — NEVER SOLID FILL)
+
+**ALL buttons MUST use glass morphism. NEVER `background: var(--brand-primary); color: white;`**
+
+```css
+/* ✅ CORRECT — Glass morphism button */
+background: var(--glass-bg-soft);
+color: var(--brand-primary);
+border: 1px solid var(--brand-primary);
+backdrop-filter: blur(8px);
+
+/* ❌ WRONG — Solid fill (FORBIDDEN) */
+background: var(--brand-primary);
+color: white;
+border: none;
+```
+
+Tailwind classes: `.btn-primary` (glass+teal), `.btn-secondary` (surface+border), `.btn-ghost` (transparent).
+Solid `var(--brand-primary)` background is ONLY acceptable for small indicators (checkbox fills, toggle dots, progress bars), NOT buttons.
+
 ## Atomic Task Breakdown (CRITICAL)
 
 **Problem:** Broad tasks like "test all features" or "fix everything" cause extended thinking loops (3+ minutes stuck).

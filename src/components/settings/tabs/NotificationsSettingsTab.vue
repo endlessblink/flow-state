@@ -218,7 +218,7 @@ async function handleSubscribe() {
           <p>Browser notification permission was denied. Please enable it in your browser settings to use push notifications.</p>
         </div>
         <div v-else-if="isSubscribed" class="status-chip subscribed">
-          <span class="status-indicator"></span>
+          <span class="status-indicator" />
           <span>Subscribed</span>
         </div>
         <button v-else-if="!isSubscribed" class="subscribe-btn" @click="handleSubscribe">
@@ -244,7 +244,9 @@ async function handleSubscribe() {
             <div class="category-header">
               <div class="category-info">
                 <span class="category-label">{{ category.label }}</span>
-                <p class="category-description">{{ category.description }}</p>
+                <p class="category-description">
+                  {{ category.description }}
+                </p>
               </div>
               <div class="category-toggle">
                 <input
@@ -264,7 +266,7 @@ async function handleSubscribe() {
                   :checked="pushSettings.categories[category.key].inApp"
                   @change="updateCategoryChannel(category.key, 'inApp', ($event.target as HTMLInputElement).checked)"
                 >
-                <span class="checkbox-custom"></span>
+                <span class="checkbox-custom" />
                 <span class="channel-label">In-app</span>
               </label>
               <label class="channel-checkbox">
@@ -274,7 +276,7 @@ async function handleSubscribe() {
                   :disabled="isTauri"
                   @change="updateCategoryChannel(category.key, 'webPush', ($event.target as HTMLInputElement).checked)"
                 >
-                <span class="checkbox-custom"></span>
+                <span class="checkbox-custom" />
                 <span class="channel-label">Web push</span>
               </label>
             </div>
@@ -343,7 +345,7 @@ async function handleSubscribe() {
               :checked="pushSettings.taskReminderLeadTimes.includes(15)"
               @change="toggleLeadTime(15)"
             >
-            <span class="checkbox-custom"></span>
+            <span class="checkbox-custom" />
             <span class="lead-time-label">15 minutes before</span>
           </label>
           <label class="lead-time-checkbox">
@@ -352,7 +354,7 @@ async function handleSubscribe() {
               :checked="pushSettings.taskReminderLeadTimes.includes(60)"
               @change="toggleLeadTime(60)"
             >
-            <span class="checkbox-custom"></span>
+            <span class="checkbox-custom" />
             <span class="lead-time-label">1 hour before</span>
           </label>
           <label class="lead-time-checkbox">
@@ -361,7 +363,7 @@ async function handleSubscribe() {
               :checked="pushSettings.taskReminderLeadTimes.includes(1440)"
               @change="toggleLeadTime(1440)"
             >
-            <span class="checkbox-custom"></span>
+            <span class="checkbox-custom" />
             <span class="lead-time-label">1 day before</span>
           </label>
         </div>

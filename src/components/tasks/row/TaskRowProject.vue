@@ -38,7 +38,12 @@
     <!-- Project Selector Dropdown (teleported to body to avoid overflow clipping) -->
     <Teleport to="body">
       <Transition name="dropdown-slide">
-        <div v-if="isOpen" ref="dropdownRef" class="project-dropdown" :style="dropdownStyle">
+        <div
+          v-if="isOpen"
+          ref="dropdownRef"
+          class="project-dropdown"
+          :style="dropdownStyle"
+        >
           <div class="project-dropdown__list">
             <!-- Uncategorized option -->
             <button

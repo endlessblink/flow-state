@@ -389,13 +389,13 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
       </div>
 
       <!-- Rendered Message Text -->
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div
-          v-else-if="renderedContent"
-          class="message-text markdown-body"
-          :dir="direction || 'auto'"
-          v-html="renderedContent"
-        />
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div
+        v-else-if="renderedContent"
+        class="message-text markdown-body"
+        :dir="direction || 'auto'"
+        v-html="renderedContent"
+      />
 
       <!-- Streaming cursor (when there IS content) -->
       <span v-if="isStreaming && !isThinking && renderedContent" class="cursor-blink">|</span>

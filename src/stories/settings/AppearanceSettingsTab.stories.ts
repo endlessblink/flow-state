@@ -41,8 +41,8 @@ const AppearanceSettingsTabMock = defineComponent({
           <button
             @click="toggleSound"
             :style="soundEnabled
-              ? 'width: 44px; height: 24px; border-radius: 12px; background: var(--brand-primary); border: none; cursor: pointer; position: relative;'
-              : 'width: 44px; height: 24px; border-radius: 12px; background: var(--surface-tertiary); border: none; cursor: pointer; position: relative;'"
+              ? 'width: 44px; height: 24px; border-radius: var(--radius-xl); background: var(--brand-primary); border: none; cursor: pointer; position: relative;'
+              : 'width: 44px; height: 24px; border-radius: var(--radius-xl); background: var(--surface-tertiary); border: none; cursor: pointer; position: relative;'"
           >
             <span :style="soundEnabled
               ? 'position: absolute; top: 2px; left: 22px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: left 0.2s;'

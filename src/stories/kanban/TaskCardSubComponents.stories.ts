@@ -43,22 +43,22 @@ const TaskCardBadgesMock = defineComponent({
       <span v-if="dueDate"
         :style="{
           display: 'inline-flex', alignItems: 'center',
-          fontSize: '11px', fontWeight: dueDateClass ? '500' : '400',
+          fontSize: 'var(--text-xs)', fontWeight: dueDateClass ? '500' : '400',
           color: dueDateClass === 'overdue' ? '#ef4444' : dueDateClass === 'today' ? '#22c55e' : 'var(--text-tertiary)',
           whiteSpace: 'nowrap'
         }"
       >{{ dueDate }}</span>
 
-      <span v-if="dueDate && subtasksTotal > 0" style="color: var(--text-subtle); font-size: 11px; margin: 0 var(--space-1); user-select: none;">·</span>
+      <span v-if="dueDate && subtasksTotal > 0" style="color: var(--text-subtle); font-size: var(--text-xs); margin: 0 var(--space-1); user-select: none;">·</span>
 
-      <span v-if="subtasksTotal > 0" style="display: inline-flex; align-items: center; font-size: 11px; color: var(--text-tertiary); white-space: nowrap;">
+      <span v-if="subtasksTotal > 0" style="display: inline-flex; align-items: center; font-size: var(--text-xs); color: var(--text-tertiary); white-space: nowrap;">
         {{ subtasksDone }}/{{ subtasksTotal }}
       </span>
 
-      <span v-if="(dueDate || subtasksTotal > 0) && pomodoros > 0" style="color: var(--text-subtle); font-size: 11px; margin: 0 var(--space-1); user-select: none;">·</span>
+      <span v-if="(dueDate || subtasksTotal > 0) && pomodoros > 0" style="color: var(--text-subtle); font-size: var(--text-xs); margin: 0 var(--space-1); user-select: none;">·</span>
 
-      <span v-if="pomodoros > 0" style="display: inline-flex; align-items: center; font-size: 11px; color: rgba(239,68,68,0.6); white-space: nowrap;">
-        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 4px;" />
+      <span v-if="pomodoros > 0" style="display: inline-flex; align-items: center; font-size: var(--text-xs); color: rgba(239,68,68,0.6); white-space: nowrap;">
+        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: var(--space-1);" />
         {{ pomodoros }}
       </span>
     </div>

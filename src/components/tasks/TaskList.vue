@@ -32,18 +32,23 @@
       </template>
       <template v-else>
         <span>Task <span class="task-total-count">{{ tasks.length }}</span></span>
-        <span></span>
+        <span />
         <span>Status</span>
         <span>Priority</span>
         <span>Due</span>
         <span>Progress</span>
         <span>Est.</span>
-        <span></span>
+        <span />
       </template>
     </div>
 
     <!-- TASK-1334: Grouped rendering with sticky headers -->
-    <div v-for="group in groups" :key="group.key" class="task-group" :class="{ 'task-group--indented': (group.indent || 0) > 0 }">
+    <div
+      v-for="group in groups"
+      :key="group.key"
+      class="task-group"
+      :class="{ 'task-group--indented': (group.indent || 0) > 0 }"
+    >
       <!-- Sticky Group Header -->
       <div
         v-if="groupBy !== 'none'"
@@ -79,6 +84,9 @@
         >
           <Zap :size="14" />
         </button>
+        <span class="group-drop-hint">
+          <ArrowDownToLine :size="14" />
+        </span>
       </div>
 
       <!-- Group Tasks (only parent tasks, subtasks rendered recursively) -->
@@ -140,7 +148,7 @@ import HierarchicalTaskRow from '@/components/tasks/HierarchicalTaskRow.vue'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { Inbox, ChevronRight, Pencil, Trash2, X, Zap } from 'lucide-vue-next'
+import { Inbox, ChevronRight, Pencil, Trash2, X, Zap, ArrowDownToLine } from 'lucide-vue-next'
 
 interface Props {
   tasks: Task[]
@@ -240,12 +248,34 @@ const handleGroupDrop = (event: DragEvent, group: TaskGroup) => {
 
   // Determine what property to update based on groupBy
   if (props.groupBy === 'project' && group.key) {
-    const projectId = group.key === '__no_project__' ? null : group.key
+    const projectId = (group.key === 'uncategorized' || group.key === '__no_project__') ? null : group.key
     emit('moveTask', taskId, projectId, null)
   } else if (props.groupBy === 'status' && group.key) {
     emit('updateTask', taskId, { status: group.key as any })
   } else if (props.groupBy === 'priority' && group.key) {
     emit('updateTask', taskId, { priority: group.key as any })
+  } else if (props.groupBy === 'dueDate' && group.key) {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const endOfWeek = new Date(today)
+    endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()))
+    const formatDate = (d: Date) => d.toISOString().split('T')[0]
+
+    const dateMap: Record<string, string | null> = {
+      today: formatDate(today),
+      tomorrow: formatDate(tomorrow),
+      thisWeek: formatDate(endOfWeek),
+      later: formatDate(new Date(today.getTime() + 14 * 86400000)),
+      noDate: null
+    }
+    // 'overdue' intentionally excluded — can't set a past due date
+
+    if (group.key in dateMap) {
+      const newDate = dateMap[group.key]
+      emit('updateTask', taskId, { dueDate: newDate ?? undefined })
+    }
   }
 
   // Clean up drag ghost — the original task row may be destroyed by Vue re-render
@@ -695,5 +725,23 @@ defineExpose({
 
 .bulk-action-btn--clear:hover {
   border-color: var(--text-muted);
+}
+
+/* Drop hint icon — visible only during active drag */
+.group-drop-hint {
+  display: none;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+:global(body.dragging-active) .group-drop-hint {
+  display: flex;
+  align-items: center;
+  animation: pulse-hint 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-hint {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
 }
 </style>

@@ -241,12 +241,13 @@ export const Hidden: Story = {
           @click="toggleVisibility"
           style="
             padding: var(--space-2) var(--space-4);
-            background: var(--brand-primary);
-            color: white;
-            border: none;
+            background: var(--glass-bg-soft);
+            color: var(--brand-primary);
+            border: 1px solid var(--brand-primary);
             border-radius: var(--radius-md);
             cursor: pointer;
             font-size: var(--text-sm);
+            backdrop-filter: blur(8px);
           "
         >
           {{ isVisible ? 'Hide' : 'Show' }} Submenu

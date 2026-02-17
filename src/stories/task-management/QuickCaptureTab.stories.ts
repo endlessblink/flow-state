@@ -74,7 +74,7 @@ const QuickCaptureTabMock = defineComponent({
             <div style="display: flex; gap: var(--space-1);">
               <button v-for="p in ['None', 'Low', 'Med', 'High']" :key="p"
                 :style="{
-                  padding: '6px 12px', background: activePriority === p.toLowerCase() ? 'transparent' : 'var(--glass-bg-soft)',
+                  padding: 'var(--space-1-5) var(--space-3)', background: activePriority === p.toLowerCase() ? 'transparent' : 'var(--glass-bg-soft)',
                   border: '1px solid ' + (activePriority === p.toLowerCase() ? (p === 'Low' ? 'var(--success)' : p === 'Med' ? 'var(--warning)' : p === 'High' ? 'var(--danger)' : 'var(--brand-primary)') : 'var(--glass-border)'),
                   borderRadius: 'var(--radius-md)',
                   color: activePriority === p.toLowerCase() ? (p === 'Low' ? 'var(--success)' : p === 'Med' ? 'var(--warning)' : p === 'High' ? 'var(--danger)' : 'var(--brand-primary)') : 'var(--text-secondary)',
@@ -90,7 +90,7 @@ const QuickCaptureTabMock = defineComponent({
             <div style="display: flex; gap: var(--space-1);">
               <button v-for="d in ['Today', 'Tomorrow', 'Weekend']" :key="d"
                 :style="{
-                  padding: '6px 12px', background: activeDatePreset === d.toLowerCase() ? 'transparent' : 'var(--glass-bg-soft)',
+                  padding: 'var(--space-1-5) var(--space-3)', background: activeDatePreset === d.toLowerCase() ? 'transparent' : 'var(--glass-bg-soft)',
                   border: '1px solid ' + (activeDatePreset === d.toLowerCase() ? 'var(--brand-primary)' : 'var(--glass-border)'),
                   borderRadius: 'var(--radius-md)',
                   color: activeDatePreset === d.toLowerCase() ? 'var(--brand-primary)' : 'var(--text-secondary)',
@@ -119,7 +119,7 @@ const QuickCaptureTabMock = defineComponent({
             Pending Tasks
             <span v-if="pendingTasks.length > 0" style="color: var(--brand-primary);">({{ pendingTasks.length }})</span>
           </h3>
-          <button v-if="pendingTasks.length > 0" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--glass-bg-medium); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 500; cursor: pointer;">
+          <button v-if="pendingTasks.length > 0" style="display: flex; align-items: center; gap: var(--space-1-5); padding: var(--space-2) var(--space-4); background: var(--glass-bg-medium); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-size: var(--text-sm); font-weight: 500; cursor: pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <span>Sort All</span>
             <kbd style="padding: 2px 4px; background: rgba(255,255,255,0.06); border-radius: var(--radius-sm); font-size: var(--text-xs); font-family: monospace;">Tab</kbd>
@@ -142,7 +142,7 @@ const QuickCaptureTabMock = defineComponent({
               </div>
               <p v-if="task.description" style="font-size: var(--text-xs); color: var(--text-muted); margin: 0;">{{ task.description }}</p>
             </div>
-            <button style="flex-shrink: 0; padding: 6px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;">
+            <button style="flex-shrink: 0; padding: var(--space-1-5); background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </div>

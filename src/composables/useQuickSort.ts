@@ -16,6 +16,9 @@ export function useQuickSort() {
   // Session-scoped set of processed task IDs (saved/done/deleted)
   const processedTaskIds = ref<Set<string>>(new Set())
 
+  // AI-driven queue reorder (TASK-1221)
+  const queueOrderOverride = ref<string[] | null>(null)
+
   // Dirty state tracking for save/undo
   interface TaskSnapshot {
     projectId: string | null | undefined
@@ -60,6 +63,18 @@ export function useQuickSort() {
     )
   })
 
+  // AI-reordered view of uncategorized tasks (TASK-1221)
+  const sortedUncategorizedTasks = computed<Task[]>(() => {
+    const tasks = uncategorizedTasks.value
+    if (!queueOrderOverride.value) return tasks
+    const idOrder = new Map(queueOrderOverride.value.map((id, i) => [id, i]))
+    return [...tasks].sort((a, b) => {
+      const aIdx = idOrder.get(a.id) ?? 999
+      const bIdx = idOrder.get(b.id) ?? 999
+      return aIdx - bIdx
+    })
+  })
+
   // Look up current task by ID from rawTasks (reactive to live edits)
   const currentTask = computed<Task | null>(() => {
     if (!currentTaskId.value) return null
@@ -95,7 +110,7 @@ export function useQuickSort() {
 
   // Navigation helpers
   function advanceToNextTask() {
-    const tasks = uncategorizedTasks.value
+    const tasks = sortedUncategorizedTasks.value
     if (tasks.length === 0) {
       currentTaskId.value = null
       return
@@ -109,8 +124,9 @@ export function useQuickSort() {
   function startSession() {
     quickSortStore.startSession()
     processedTaskIds.value.clear()
+    queueOrderOverride.value = null
     // Pin to first task
-    const tasks = uncategorizedTasks.value
+    const tasks = sortedUncategorizedTasks.value
     if (tasks.length > 0) {
       currentTaskId.value = tasks[0].id
       snapshotCurrentTask()
@@ -176,7 +192,7 @@ export function useQuickSort() {
   }
 
   function skipTask() {
-    const tasks = uncategorizedTasks.value
+    const tasks = sortedUncategorizedTasks.value
     if (tasks.length === 0) return
 
     // Find current task index in uncategorized list (it may not be there if edited)
@@ -293,6 +309,15 @@ export function useQuickSort() {
     currentTaskId.value = null
     processedTaskIds.value.clear()
     taskSnapshot.value = null
+    queueOrderOverride.value = null
+  }
+
+  function setQueueOrder(orderedIds: string[]) {
+    queueOrderOverride.value = orderedIds
+  }
+
+  function clearQueueOrder() {
+    queueOrderOverride.value = null
   }
 
   // Watch for external task deletion (task deleted while viewing)
@@ -305,7 +330,7 @@ export function useQuickSort() {
 
   // Watch for tasks loading after session start (race condition: tasks load async from DB)
   // If session is active but no task is selected yet, pick the first available task
-  watch(uncategorizedTasks, (tasks) => {
+  watch(sortedUncategorizedTasks, (tasks) => {
     if (!currentTaskId.value && tasks.length > 0 && quickSortStore.isActive) {
       currentTaskId.value = tasks[0].id
       snapshotCurrentTask()
@@ -324,9 +349,11 @@ export function useQuickSort() {
     // State
     currentTaskId,
     processedTaskIds,
+    queueOrderOverride,
 
     // Getters
     uncategorizedTasks,
+    sortedUncategorizedTasks,
     currentTask,
     progress,
     isComplete,
@@ -346,6 +373,8 @@ export function useQuickSort() {
     skipTask,
     undoLastCategorization,
     redoLastCategorization,
-    cancelSession
+    cancelSession,
+    setQueueOrder,
+    clearQueueOrder
   }
 }

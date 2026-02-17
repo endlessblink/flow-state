@@ -187,7 +187,7 @@
             <span>Skip</span>
           </div>
           <div class="hint hint-right">
-            <span>Exit</span>
+            <span>Save</span>
             <ChevronRight :size="24" />
           </div>
         </div>
@@ -232,8 +232,8 @@
               :style="{ opacity: rightOverlayOpacity }"
             >
               <div class="swipe-content">
-                <X :size="32" />
-                <span>Exit</span>
+                <Save :size="32" />
+                <span>Save</span>
               </div>
             </div>
 
@@ -630,6 +630,9 @@ const sessionSummary = ref<SessionSummary | null>(null)
 const showDeleteConfirm = ref(false)
 const showQuickEditPanel = ref(false)
 
+// Timer cleanup tracking
+const celebrationTimers: ReturnType<typeof setTimeout>[] = []
+
 // Capture phase state
 const newTaskTitle = ref('')
 const newTaskPriority = ref<'low' | 'medium' | 'high' | undefined>()
@@ -711,8 +714,8 @@ const {
   haptics: true,
   onSwipeRight: () => {
     hasSwipedOnce.value = true
-    // Swipe right = Exit Quick Sort
-    handleExit()
+    // Swipe right = Save task (matches desktop QuickSortCard behavior)
+    handleSave()
   },
   onSwipeLeft: () => {
     hasSwipedOnce.value = true
@@ -874,9 +877,9 @@ function handleSave() {
   saveTask()
 
   showCelebration.value = true
-  setTimeout(() => {
+  celebrationTimers.push(setTimeout(() => {
     showCelebration.value = false
-  }, 600)
+  }, 600))
 
   triggerHaptic('heavy')
 }
@@ -886,9 +889,9 @@ function handleMarkDone() {
   markTaskDone(currentTask.value.id)
 
   showCelebration.value = true
-  setTimeout(() => {
+  celebrationTimers.push(setTimeout(() => {
     showCelebration.value = false
-  }, 600)
+  }, 600))
 
   triggerHaptic('heavy')
 }
@@ -1052,6 +1055,12 @@ watch(isComplete, (completed) => {
 onMounted(() => {
   startSession()
 })
+
+onUnmounted(() => {
+  // Clear pending celebration timers to avoid setting refs on unmounted component
+  celebrationTimers.forEach(clearTimeout)
+  celebrationTimers.length = 0
+})
 </script>
 
 <style scoped>
@@ -1073,6 +1082,7 @@ onMounted(() => {
   background: var(--app-background-gradient);
   color: var(--text-primary);
   overflow: hidden;
+  overscroll-behavior-x: none;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -1678,10 +1688,10 @@ onMounted(() => {
   background: var(--glass-bg-medium);
 }
 
-/* Right swipe = Exit (muted) */
+/* Right swipe = Save (positive action - teal) */
 .swipe-indicator.right {
-  border: var(--space-0_5) solid var(--glass-border-hover);
-  background: var(--glass-bg-medium);
+  border: var(--space-0_5) solid var(--brand-primary);
+  background: rgba(78, 205, 196, 0.15);
 }
 
 .swipe-content {
@@ -1697,9 +1707,9 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-/* Right swipe content = Exit (muted) */
+/* Right swipe content = Save (teal) */
 .swipe-indicator.right .swipe-content {
-  color: var(--text-secondary);
+  color: var(--brand-primary);
 }
 
 .swipe-content span {

@@ -570,13 +570,18 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### TASK-1221: Quick Sort AI Commands Interface (📋 PLANNED)
+### TASK-1221: Quick Sort AI Commands Interface (🔄 IN PROGRESS)
 
-**Priority**: P3-LOW | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
 
-**Goal**: Future concept — AI command interface in Quick Sort pull-down panel. Users can give natural language commands like "show all tasks that are overdue" or "create 3 tasks for project X". Builds on TASK-1220 pull-down panel.
+**Goal**: Add 4 AI commands to Quick Sort (desktop + mobile): Auto-suggest (priority/date/project), AI Sort by importance, AI Batch categorize, AI Explain task. Reuses existing `useAITaskAssist.ts` infrastructure.
 
-**Blocked By**: TASK-1220
+**Files**:
+- `src/composables/useQuickSortAI.ts` — NEW: 4 AI functions + state management
+- `src/stores/quickSort.ts` — Extend CategoryAction with description fields
+- `src/composables/useQuickSort.ts` — Add queue reorder support
+- `src/views/QuickSortView.vue` — AI buttons in left sidebar + context panel results
+- `src/mobile/views/MobileQuickSortView.vue` — AI pills in thumb zone + bottom sheets
 
 ---
 
@@ -3354,6 +3359,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
 | **FEATURE-1342** | **P2** | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data** |
+| **BUG-1343** | **P2** | **📋 Quick Sort exits when swiping right on PWA mobile** |
 | ~~**TASK-1339**~~ | **P0** | ✅ **Tasks must persist over refresh in guest mode** (✅ DONE 2026-02-17) |
 | ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
 | **TASK-1327** | **P0** | **📋 Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** |
@@ -3593,15 +3599,22 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### BUG-1143: Add onUnmounted Cleanup to MobileQuickSortView (📋 PLANNED)
+### BUG-1143: Add onUnmounted Cleanup to MobileQuickSortView (👀 REVIEW)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+**Priority**: P0-CRITICAL | **Status**: 👀 REVIEW
 
-**Problem**: Memory leak - MobileQuickSortView creates intervals/subscriptions but never cleans them up.
+**Problem**: Memory leak - MobileQuickSortView creates setTimeout timers but never cleans them up on unmount.
 
-**Solution**: Add proper cleanup in onUnmounted lifecycle hook.
+**Root Cause**: `handleSave()` and `handleMarkDone()` both create `setTimeout` for celebration overlay (600ms) without tracking or clearing on unmount. If component unmounts before timeout fires, stale refs are set.
 
-**Files**: `src/mobile/views/MobileQuickSortView.vue:979`
+**Fix**:
+1. Added `celebrationTimers` array to track all setTimeout IDs
+2. Updated `handleSave()` and `handleMarkDone()` to push timer IDs to tracking array
+3. Added `onUnmounted()` hook to clear all pending timers
+
+**Note**: `useSwipeGestures` and `useQuickSort` composables already have their own `onUnmounted` cleanup — no additional cleanup needed for those.
+
+**Files**: `src/mobile/views/MobileQuickSortView.vue`
 
 ---
 

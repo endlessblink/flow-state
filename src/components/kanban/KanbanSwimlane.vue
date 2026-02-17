@@ -20,10 +20,7 @@
           <ChevronDown v-if="!isCollapsed" :size="14" />
           <ChevronRight v-if="isCollapsed" :size="14" />
         </button>
-        <span
-          v-if="project.colorType === 'emoji' && project.emoji"
-          class="swimlane-emoji"
-        >{{ project.emoji }}</span>
+        <ProjectEmojiIcon v-if="project.emoji" :emoji="project.emoji" size="sm" />
         <div
           v-else-if="project.color"
           class="swimlane-color-dot"
@@ -139,7 +136,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import KanbanColumn from './KanbanColumn.vue' 
+import KanbanColumn from './KanbanColumn.vue'
+import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { Task, Project } from '@/stores/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-vue-next'

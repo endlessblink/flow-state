@@ -8,15 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
-### TASK-1348: Board Due Date grouping missing nested category representation (🔄 IN PROGRESS)
+### ~~TASK-1348~~: Board Due Date grouping + emojis + column order (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
 
-**Problem**: When Board view is grouped by "Due Date", nested categories (projects) are not represented within the date columns. Tasks belonging to categories like "Work" don't appear distributed across the date columns (Overdue, Today, Tomorrow, etc.). Also, "No Date" column is on the far right and not visible without scrolling.
+**Root Cause**: Supabase returns `dueDate` as full ISO (`"2026-02-22T00:00:00+00:00"`) but `parseDateKey()` only handles `"YYYY-MM-DD"`. The third segment parsed as `NaN` → returned `null` → all tasks fell to "No Date".
 
-**Expected**:
-1. Categories should appear as sub-groups within date columns, showing task distribution per category per date bucket
-2. "No Date" column should be on the far LEFT (most visible position), not far right
+**Fix**:
+1. Normalized `task.dueDate` via `.slice(0, 10)` in `useBoardState.ts` — tasks now sort into correct date buckets
+2. Moved "No Date" column to leftmost position, removed dead "Inbox" column
+3. Added `ProjectEmojiIcon` component to swimlane headers for project emoji/color display
 
 ---
 

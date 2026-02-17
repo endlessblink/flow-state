@@ -773,7 +773,7 @@ import { useLocalStorage } from '@vueuse/core'
 import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, CalendarDays, Flag,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, SkipForward, PartyPopper,
-  ArrowLeft, Trash2, Edit3, FolderOpen, Search, Save, Pencil,
+  ArrowLeft, Trash2, FolderOpen, Search, Save, Pencil,
   Sparkles, ArrowUpDown, MessageSquareText, Loader2
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
@@ -791,7 +791,7 @@ const projectStore = useProjectStore()
 // Quick Sort composable
 const {
   currentTask,
-  currentTaskId,
+  currentTaskId: _currentTaskId,
   uncategorizedTasks,
   progress,
   isComplete,
@@ -803,7 +803,7 @@ const {
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
-  undoLastCategorization,
+  undoLastCategorization: _undoLastCategorization,
   setQueueOrder
 } = useQuickSort()
 
@@ -910,7 +910,7 @@ const {
   swipeState,
   deltaX,
   deltaY,
-  progress: swipeProgress,
+  progress: _swipeProgress,
   direction: swipeDirection,
   triggerHaptic
 } = useSwipeGestures(cardRef, {

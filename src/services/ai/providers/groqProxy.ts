@@ -18,6 +18,7 @@ import type {
   ProviderHealthStatus,
 } from '../types'
 import { proxyAIChat, proxyAIChatStream, isProxyAvailable } from '../proxy/aiChatProxy'
+import { GROQ_MODELS, toAIModels } from '@/config/aiModels'
 
 // ============================================================================
 // Groq Proxy Provider Implementation
@@ -103,40 +104,7 @@ export class GroqProxyProvider implements AIProvider {
   // ============================================================================
 
   async listModels(): Promise<AIModel[]> {
-    return [
-      {
-        id: 'llama-3.3-70b-versatile',
-        name: 'Llama 3.3 70B Versatile',
-        description: 'Fast, high quality general purpose model',
-        contextLength: 128000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'llama-3.1-8b-instant',
-        name: 'Llama 3.1 8B Instant',
-        description: 'Ultra-fast, efficient model',
-        contextLength: 128000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'mixtral-8x7b-32768',
-        name: 'Mixtral 8x7B',
-        description: 'Large context window MoE model',
-        contextLength: 32768,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'gemma2-9b-it',
-        name: 'Gemma 2 9B',
-        description: 'Google open model',
-        contextLength: 8192,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-    ]
+    return toAIModels(GROQ_MODELS)
   }
 
   // ============================================================================

@@ -9,6 +9,7 @@
 
 import { computed } from 'vue'
 import { getUsageEntries, clearUsageEntries } from '@/services/ai/usageTracker'
+import { OLLAMA_MODELS, GROQ_MODELS, OPENROUTER_MODELS, DEFAULT_MODELS, type ModelEntry } from '@/config/aiModels'
 
 // ============================================================================
 // Types
@@ -67,14 +68,26 @@ export interface UsageSummary {
 // ============================================================================
 
 /**
- * Pricing per provider (per 1M tokens).
- * Must match PROVIDER_PRICING in src/services/ai/router.ts
+ * Derive provider-level pricing from registry's default models.
  */
-const PROVIDER_PRICING: Record<string, { input: number; output: number }> = {
-  ollama: { input: 0, output: 0 },           // Free (local)
-  groq: { input: 0.59, output: 0.79 },       // Llama 3.3 70B pricing
-  openrouter: { input: 3.00, output: 15.00 } // Claude 3.5 Sonnet via OpenRouter
+function getProviderPricing(): Record<string, { input: number; output: number }> {
+  const result: Record<string, { input: number; output: number }> = {}
+  const providerModels: Record<string, ModelEntry[]> = {
+    ollama: OLLAMA_MODELS,
+    groq: GROQ_MODELS,
+    openrouter: OPENROUTER_MODELS,
+  }
+  for (const [provider, models] of Object.entries(providerModels)) {
+    const defaultId = DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS]
+    const defaultModel = models.find(m => m.id === defaultId)
+    result[provider] = defaultModel?.pricing
+      ? { input: defaultModel.pricing.inputPer1M, output: defaultModel.pricing.outputPer1M }
+      : { input: 0, output: 0 }
+  }
+  return result
 }
+
+const PROVIDER_PRICING = getProviderPricing()
 
 /**
  * Display names for providers.
@@ -111,150 +124,39 @@ export interface ModelPricingInfo {
 }
 
 /**
- * Full pricing catalog for all supported models.
+ * Build pricing catalog from centralized model registry.
  * Updated: February 2026
- * Sources: https://groq.com/pricing, https://openrouter.ai/pricing
  */
-export const MODEL_PRICING_CATALOG: ModelPricingInfo[] = [
-  // --- Ollama (Local, Free) ---
-  {
-    model: 'llama3.2',
-    displayName: 'Llama 3.2 3B',
-    provider: 'ollama',
-    inputPer1M: 0,
-    outputPer1M: 0,
-    contextWindow: 128_000,
-    isDefault: true
-  },
-  {
-    model: 'llama3.1:8b',
-    displayName: 'Llama 3.1 8B',
-    provider: 'ollama',
-    inputPer1M: 0,
-    outputPer1M: 0,
-    contextWindow: 128_000
-  },
-  {
-    model: 'mistral',
-    displayName: 'Mistral 7B',
-    provider: 'ollama',
-    inputPer1M: 0,
-    outputPer1M: 0,
-    contextWindow: 32_000
-  },
-  {
-    model: 'gemma2',
-    displayName: 'Gemma 2 9B',
-    provider: 'ollama',
-    inputPer1M: 0,
-    outputPer1M: 0,
-    contextWindow: 8_192
-  },
+function buildPricingCatalog(): ModelPricingInfo[] {
+  const catalog: ModelPricingInfo[] = []
 
-  // --- Groq (Cloud, Fast Inference) ---
-  // Source: https://groq.com/pricing (Feb 2026)
-  {
-    model: 'llama-3.3-70b-versatile',
-    displayName: 'Llama 3.3 70B Versatile',
-    provider: 'groq',
-    inputPer1M: 0.59,
-    outputPer1M: 0.79,
-    contextWindow: 128_000,
-    isDefault: true
-  },
-  {
-    model: 'llama-3.1-8b-instant',
-    displayName: 'Llama 3.1 8B Instant',
-    provider: 'groq',
-    inputPer1M: 0.05,
-    outputPer1M: 0.08,
-    contextWindow: 128_000
-  },
-  {
-    model: 'llama-4-scout-17bx16e',
-    displayName: 'Llama 4 Scout (17Bx16E)',
-    provider: 'groq',
-    inputPer1M: 0.11,
-    outputPer1M: 0.34,
-    contextWindow: 128_000
-  },
-  {
-    model: 'llama-4-maverick-17bx128e',
-    displayName: 'Llama 4 Maverick (17Bx128E)',
-    provider: 'groq',
-    inputPer1M: 0.20,
-    outputPer1M: 0.60,
-    contextWindow: 128_000
-  },
-  {
-    model: 'qwen-3-32b',
-    displayName: 'Qwen 3 32B',
-    provider: 'groq',
-    inputPer1M: 0.29,
-    outputPer1M: 0.59,
-    contextWindow: 131_000
-  },
+  const providerModels: [string, ModelEntry[]][] = [
+    ['ollama', OLLAMA_MODELS],
+    ['groq', GROQ_MODELS],
+    ['openrouter', OPENROUTER_MODELS],
+  ]
 
-  // --- OpenRouter (Cloud, Premium Models) ---
-  // Source: https://openrouter.ai/pricing (Feb 2026)
-  {
-    model: 'anthropic/claude-sonnet-4.5',
-    displayName: 'Claude Sonnet 4.5',
-    provider: 'openrouter',
-    inputPer1M: 3.00,
-    outputPer1M: 15.00,
-    contextWindow: 200_000,
-    isDefault: true
-  },
-  {
-    model: 'anthropic/claude-sonnet-4',
-    displayName: 'Claude Sonnet 4',
-    provider: 'openrouter',
-    inputPer1M: 3.00,
-    outputPer1M: 15.00,
-    contextWindow: 200_000
-  },
-  {
-    model: 'anthropic/claude-opus-4',
-    displayName: 'Claude Opus 4',
-    provider: 'openrouter',
-    inputPer1M: 15.00,
-    outputPer1M: 75.00,
-    contextWindow: 200_000
-  },
-  {
-    model: 'openai/gpt-4o',
-    displayName: 'GPT-4o',
-    provider: 'openrouter',
-    inputPer1M: 2.50,
-    outputPer1M: 10.00,
-    contextWindow: 128_000
-  },
-  {
-    model: 'openai/gpt-4o-mini',
-    displayName: 'GPT-4o Mini',
-    provider: 'openrouter',
-    inputPer1M: 0.15,
-    outputPer1M: 0.60,
-    contextWindow: 128_000
-  },
-  {
-    model: 'google/gemini-2.0-flash',
-    displayName: 'Gemini 2.0 Flash',
-    provider: 'openrouter',
-    inputPer1M: 0.10,
-    outputPer1M: 0.40,
-    contextWindow: 1_000_000
-  },
-  {
-    model: 'deepseek/deepseek-v3',
-    displayName: 'DeepSeek V3',
-    provider: 'openrouter',
-    inputPer1M: 0.30,
-    outputPer1M: 0.88,
-    contextWindow: 128_000
+  for (const [provider, models] of providerModels) {
+    const defaultId = DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS]
+    for (const model of models) {
+      if (model.pricing) {
+        catalog.push({
+          model: model.id,
+          displayName: model.label,
+          provider,
+          inputPer1M: model.pricing.inputPer1M,
+          outputPer1M: model.pricing.outputPer1M,
+          contextWindow: model.contextLength ?? 0,
+          isDefault: model.id === defaultId,
+        })
+      }
+    }
   }
-]
+
+  return catalog
+}
+
+export const MODEL_PRICING_CATALOG: ModelPricingInfo[] = buildPricingCatalog()
 
 // ============================================================================
 // Composable

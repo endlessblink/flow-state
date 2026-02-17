@@ -26,6 +26,7 @@ import type {
   ProviderHealthStatus,
 } from '../types'
 import { proxyAIChat, proxyAIChatStream, isProxyAvailable } from '../proxy/aiChatProxy'
+import { OPENROUTER_MODELS, toAIModels } from '@/config/aiModels'
 
 // ============================================================================
 // OpenRouter Proxy Provider Implementation
@@ -111,65 +112,7 @@ export class OpenRouterProxyProvider implements AIProvider {
   // ============================================================================
 
   async listModels(): Promise<AIModel[]> {
-    // OpenRouter supports many models - listing popular ones
-    return [
-      {
-        id: 'anthropic/claude-3.5-sonnet',
-        name: 'Claude 3.5 Sonnet',
-        description: 'Anthropic flagship model - fast and intelligent',
-        contextLength: 200000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'anthropic/claude-opus-4-6',
-        name: 'Claude Opus 4.6',
-        description: 'Anthropic most powerful model',
-        contextLength: 200000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'openai/gpt-4o',
-        name: 'GPT-4o',
-        description: 'OpenAI flagship model',
-        contextLength: 128000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'meta-llama/llama-3.3-70b-instruct',
-        name: 'Llama 3.3 70B',
-        description: 'Meta open model',
-        contextLength: 128000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'mistralai/mistral-large',
-        name: 'Mistral Large',
-        description: 'Mistral flagship model',
-        contextLength: 128000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'google/gemini-2.0-flash',
-        name: 'Gemini 2.0 Flash',
-        description: 'Google flagship model',
-        contextLength: 1000000,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-      {
-        id: 'moonshotai/kimi-k2-instruct-0905',
-        name: 'Kimi K2',
-        description: 'Moonshot AI MoE model - strong tool calling and coding',
-        contextLength: 131072,
-        supportsStreaming: true,
-        capabilities: ['chat', 'completion'],
-      },
-    ]
+    return toAIModels(OPENROUTER_MODELS)
   }
 
   // ============================================================================

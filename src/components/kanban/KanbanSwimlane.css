@@ -56,6 +56,19 @@
     display: none;
 }
 
+.swimlane-emoji {
+    flex-shrink: 0;
+    font-size: var(--text-base);
+    line-height: 1;
+}
+
+.swimlane-color-dot {
+    width: var(--space-2);
+    height: var(--space-2);
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
 .project-name {
     color: rgba(255, 255, 255, 0.8);
     font-size: 14px;

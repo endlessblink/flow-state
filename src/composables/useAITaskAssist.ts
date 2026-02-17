@@ -18,7 +18,7 @@
  */
 
 import { ref } from 'vue'
-import { createAIRouter } from '@/services/ai'
+import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
@@ -58,16 +58,9 @@ export interface AIAssistResult {
 // Router Singleton
 // ============================================================================
 
-let routerInstance: ReturnType<typeof createAIRouter> | null = null
-let routerInitPromise: Promise<void> | null = null
-
+// TASK-1350: Use shared router singleton (reads user's API key from settings)
 async function getRouter() {
-  if (!routerInstance) {
-    routerInstance = createAIRouter({ debug: false })
-    routerInitPromise = routerInstance.initialize()
-  }
-  await routerInitPromise
-  return routerInstance
+  return getSharedRouter()
 }
 
 // ============================================================================

@@ -19,7 +19,8 @@ import { useAIChatStore, type ChatAction, type ChatContext } from '@/stores/aiCh
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTimerStore } from '@/stores/timer'
-import { createAIRouter, type TaskType, type RouterProviderType } from '@/services/ai'
+import { type TaskType, type RouterProviderType } from '@/services/ai'
+import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import {
   parseToolCalls,
@@ -64,19 +65,9 @@ export interface QuickAction {
 // Router Instance
 // ============================================================================
 
-let routerInstance: ReturnType<typeof createAIRouter> | null = null
-let routerInitPromise: Promise<void> | null = null
-
-/**
- * Get or initialize the AI router.
- */
+// TASK-1350: Use shared router singleton (reads user's API key from settings)
 async function getRouter() {
-  if (!routerInstance) {
-    routerInstance = createAIRouter({ debug: true })
-    routerInitPromise = routerInstance.initialize()
-  }
-  await routerInitPromise
-  return routerInstance
+  return getSharedRouter()
 }
 
 // Active provider tracking

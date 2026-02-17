@@ -33,6 +33,8 @@
         <TauriUpdateNotification v-if="isTauriApp" />
         <!-- FEATURE-1201: Onboarding Wizard (first-time visitors, desktop + mobile) -->
         <OnboardingWizard />
+        <!-- TASK-1350: AI Setup Wizard (first-time AI provider setup) -->
+        <AISetupWizard ref="aiSetupWizard" />
       </template>
     </NMessageProvider>
   </NConfigProvider>
@@ -58,6 +60,10 @@ const themeOverrides: GlobalThemeOverrides = {
     calendarTitleColorHover: 'rgba(255, 255, 255, 0.95)',
     arrowColor: 'rgba(255, 255, 255, 0.45)',
   },
+  Popover: {
+    color: 'rgb(22, 19, 38)', // Match context menu bg (fully opaque)
+    borderRadius: '12px',
+  },
 }
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAppInitialization } from '@/composables/app/useAppInitialization'
@@ -73,6 +79,8 @@ import TauriStartupScreen from '@/components/startup/TauriStartupScreen.vue'
 import BraveBanner from '@/components/ui/BraveBanner.vue'
 import RouteErrorBoundary from '@/components/error/RouteErrorBoundary.vue'
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard.vue'
+// TASK-1350: AI Setup Wizard (first-time BYOK Groq setup)
+import AISetupWizard from '@/components/ai/AISetupWizard.vue'
 import { destroyGlobalKeyboardShortcuts } from '@/utils/globalKeyboardHandlerSimple'
 import { useMobileDetection } from '@/composables/useMobileDetection'
 import { initializeBraveProtection } from '@/utils/braveProtection'
@@ -82,6 +90,7 @@ import { isTauri as isTauriFn, isCapacitor as isCapacitorFn } from '@/utils/plat
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
 const modalManager = ref<InstanceType<typeof ModalManager> | null>(null)
+const aiSetupWizard = ref<InstanceType<typeof AISetupWizard> | null>(null)
 
 // Core Composables
 const { isMobile } = useMobileDetection()
@@ -120,6 +129,11 @@ const handleGlobalNewTask = () => {
   }
 }
 
+// TASK-1350: Handle re-run AI setup wizard from Settings > AI
+const handleRerunAIWizard = () => {
+  aiSetupWizard.value?.show()
+}
+
 onMounted(async () => {
   // Check for Tauri/Capacitor AFTER mount - globals should be injected by now
   isTauriApp.value = isTauriFn()
@@ -143,11 +157,13 @@ onMounted(async () => {
   }
 
   window.addEventListener('global-new-task', handleGlobalNewTask)
+  window.addEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
   window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('global-new-task', handleGlobalNewTask)
+  window.removeEventListener('global-rerun-ai-wizard', handleRerunAIWizard)
   window.removeEventListener('keydown', handleKeydown)
   destroyGlobalKeyboardShortcuts()
 })

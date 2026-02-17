@@ -65,6 +65,12 @@ export type {
   ProviderCostTracking,
 } from './router'
 
+// TASK-1350: Shared router factory (reads user's API key from settings)
+export {
+  getSharedRouter,
+  resetSharedRouter,
+} from './routerFactory'
+
 // TASK-1186: Tauri HTTP utilities for CORS-free requests
 export {
   tauriFetch,

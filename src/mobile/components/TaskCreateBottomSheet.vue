@@ -11,12 +11,18 @@
           class="task-create-sheet"
           :class="{ 'sheet-active': isOpen }"
           @click.stop
+          @touchstart.stop
+          @touchend.stop
           @touchmove.stop
         >
           <!-- Header: Cancel | New Task | Add/Stop -->
           <div class="sheet-header">
-            <button class="header-btn cancel-btn" @click="handleCancel">
-              Cancel
+            <button
+              class="header-btn cancel-btn"
+              :class="{ 'discard-warning': pendingDiscard }"
+              @click="handleCancel"
+            >
+              {{ pendingDiscard ? 'Discard?' : 'Cancel' }}
             </button>
             <h3 class="sheet-title">
               {{ isListening ? 'Recording...' : isProcessing ? 'Processing...' : 'New Task' }}
@@ -157,9 +163,17 @@
               </button>
             </div>
 
+            <!-- BUG-1350: Voice error feedback (shown in sheet, not just quick-add bar) -->
+            <div v-if="voiceError && !isListening && !isProcessing" class="voice-error-sheet">
+              <span class="voice-error-text">{{ voiceError }}</span>
+              <button v-if="canReRecord" class="voice-retry-btn" @click="emit('startRecording')">
+                Try Again
+              </button>
+            </div>
+
             <!-- Re-record button (TASK-1110) - Shows when voice is supported and not actively recording -->
             <button
-              v-if="canReRecord && !isListening && !isProcessing"
+              v-if="canReRecord && !isListening && !isProcessing && !voiceError"
               class="rerecord-btn"
               @click="emit('startRecording')"
             >
@@ -186,6 +200,7 @@ interface Props {
   isListening?: boolean
   isProcessing?: boolean
   voiceTranscript?: string
+  voiceError?: string | null  // BUG-1350: Show transcription errors in sheet
   canReRecord?: boolean  // TASK-1110: Allow re-recording
 }
 
@@ -193,6 +208,7 @@ const props = withDefaults(defineProps<Props>(), {
   isListening: false,
   isProcessing: false,
   voiceTranscript: '',
+  voiceError: null,
   canReRecord: false
 })
 
@@ -209,6 +225,10 @@ interface TaskCreationData {
   priority: 'high' | 'medium' | 'low' | null
   dueDate: Date | null
 }
+
+// BUG-1350: Grace period to prevent accidental immediate close on mobile
+const openTimestamp = ref(0)
+const OPEN_GRACE_MS = 400
 
 // Form state
 const taskTitle = ref('')
@@ -294,8 +314,8 @@ watch(() => props.voiceTranscript, (transcript) => {
     // Parse the transcript to extract title, date, priority
     const parsed = parseTranscription(transcript.trim())
 
-    // Set the cleaned title (with date/priority keywords removed)
-    taskTitle.value = parsed.title
+    // BUG-1350: Fall back to raw transcript if NLP strips everything
+    taskTitle.value = parsed.title || transcript.trim()
 
     // Set priority if detected
     if (parsed.priority) {
@@ -311,6 +331,9 @@ watch(() => props.voiceTranscript, (transcript) => {
       }
     }
 
+    // BUG-1350: Focus the title input after transcript fills (keyboard wasn't opened during recording)
+    nextTick(() => titleInputRef.value?.focus())
+
     if (import.meta.env.DEV) {
       console.log('[VoiceNLP] Parsed:', parsed)
     }
@@ -320,10 +343,16 @@ watch(() => props.voiceTranscript, (transcript) => {
 // Focus title input when opened
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
+    openTimestamp.value = Date.now()
+    pendingDiscard.value = false
     await nextTick()
-    titleInputRef.value?.focus()
+    // BUG-1350: Don't auto-focus during recording (prevents keyboard from covering voice UI)
+    if (!props.isListening && !props.isProcessing) {
+      titleInputRef.value?.focus()
+    }
   } else {
     // Reset form when closed
+    pendingDiscard.value = false
     resetForm()
   }
 })
@@ -371,7 +400,34 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// BUG-1350: Check if form has any user-entered content worth protecting
+const hasUnsavedContent = computed(() => {
+  return taskTitle.value.trim().length > 0 ||
+    taskDescription.value.trim().length > 0 ||
+    taskPriority.value !== null ||
+    taskDueDate.value !== null
+})
+
+// BUG-1350: Track if user already confirmed discard (reset on each open)
+const pendingDiscard = ref(false)
+
 function handleCancel() {
+  // BUG-1350: Don't close during active recording or processing — transcription would be lost
+  if (props.isListening || props.isProcessing) return
+
+  // BUG-1350: Grace period prevents accidental immediate close from stale touch events on mobile
+  if (Date.now() - openTimestamp.value < OPEN_GRACE_MS) return
+
+  // BUG-1350: If form has content, require double-tap to discard
+  if (hasUnsavedContent.value && !pendingDiscard.value) {
+    pendingDiscard.value = true
+    triggerHaptic(30)
+    // Auto-reset after 3 seconds if user doesn't confirm
+    setTimeout(() => { pendingDiscard.value = false }, 3000)
+    return
+  }
+
+  pendingDiscard.value = false
   triggerHaptic(10)
   emit('close')
 }
@@ -482,10 +538,24 @@ function autoResize(event: Event) {
 .cancel-btn {
   background: transparent;
   color: var(--text-secondary);
+  transition: all var(--duration-normal) ease;
 }
 
 .cancel-btn:active {
   background: var(--glass-bg-weak);
+}
+
+/* BUG-1350: Discard warning state — red text to signal destructive action */
+.cancel-btn.discard-warning {
+  color: var(--color-priority-high);
+  font-weight: var(--font-bold);
+  animation: discard-pulse 0.3s ease-out;
+}
+
+@keyframes discard-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 .add-btn {
@@ -783,6 +853,41 @@ function autoResize(event: Event) {
 .stop-recording-btn:active {
   transform: scale(0.96);
   background: var(--danger-bg-medium);
+}
+
+/* BUG-1350: Voice error feedback in sheet */
+.voice-error-sheet {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.voice-error-text {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-priority-high);
+  line-height: var(--leading-normal);
+}
+
+.voice-retry-btn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-high);
+  border-radius: var(--radius-md);
+  color: var(--color-priority-high);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+
+.voice-retry-btn:active {
+  transform: scale(0.96);
 }
 
 /* Re-record button (TASK-1110) */

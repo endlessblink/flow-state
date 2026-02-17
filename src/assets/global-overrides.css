@@ -432,11 +432,11 @@ button svg {
    NAIVE UI DATE PICKER - DARK THEME OVERRIDE (BUG-367/TASK-368)
    ============================================================================= */
 
-/* Date picker panel - purple-tinted background */
+/* Date picker panel - opaque dark background matching context menu */
 .n-date-picker-panel,
 .n-date-panel,
 .n-date-panel-calendar {
-    background: var(--overlay-component-bg, rgba(35, 32, 55, 0.98)) !important;
+    background: rgb(22, 19, 38) !important;
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
     border-radius: var(--radius-lg, 12px) !important;
 }
@@ -626,5 +626,28 @@ div.n-date-panel-date--excluded .n-date-panel-date__trigger {
     --n-border-hover: 1px solid #4ECDC4 !important;
     --n-border-pressed: 1px solid #4ECDC4 !important;
     --n-border-focus: 1px solid #4ECDC4 !important;
+}
+
+/* =============================================================================
+   NAIVE UI POPOVER - DARK GLASS OVERRIDE
+   Ensures NPopover containers (e.g. wrapping date pickers) use glass morphism,
+   not the Naive UI default gray background.
+   ============================================================================= */
+
+.n-popover:not(.n-popover--raw) {
+    --n-color: rgb(22, 19, 38) !important;
+    --n-border-radius: var(--radius-lg, 12px) !important;
+}
+
+.n-popover-content,
+.n-popover__content {
+    background: rgb(22, 19, 38) !important;
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08)) !important;
+    border-radius: var(--radius-lg, 12px) !important;
+}
+
+/* Popover arrow (caret) matches background */
+.n-popover-arrow-wrapper .n-popover-arrow {
+    background: rgb(22, 19, 38) !important;
 }
 

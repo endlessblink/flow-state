@@ -103,7 +103,7 @@ import DoneToggle from '@/components/tasks/DoneToggle.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import TaskRowProject from '@/components/tasks/row/TaskRowProject.vue'
 import TaskRowDueDate from '@/components/tasks/row/TaskRowDueDate.vue'
-import type { DensityType } from '@/components/layout/ViewControls.vue'
+type DensityType = 'compact' | 'comfortable' | 'spacious'
 import { useHebrewAlignment } from '@/composables/useHebrewAlignment'
 
 interface Props {

@@ -27,20 +27,6 @@
   <!-- Collapsible Filter Bar -->
   <Transition name="slide-down">
     <div v-if="showFilters" class="filter-bar">
-      <!-- Density Control -->
-      <div class="density-control">
-        <button
-          v-for="option in densityOptions"
-          :key="option.value"
-          class="density-option"
-          :class="{ active: density === option.value }"
-          :title="option.label"
-          @click="$emit('update:density', option.value)"
-        >
-          <component :is="option.icon" :size="16" />
-        </button>
-      </div>
-
       <!-- Expand/Collapse Controls -->
       <div class="tree-controls">
         <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">
@@ -85,17 +71,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { AlignJustify, List, Rows, ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
+import { ChevronsDown, ChevronsUp, Eye, EyeOff, SlidersHorizontal } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
-
-export type DensityType = 'compact' | 'comfortable' | 'spacious'
 
 defineProps<Props>()
 
 // Use explicit function signature to avoid emit type inference issues
 const _emit = defineEmits<{
-  (e: 'update:density', value: DensityType): void
   (e: 'update:sortBy', value: string): void
   (e: 'update:groupBy', value: string): void
   (e: 'update:filterStatus', value: string): void
@@ -108,18 +91,11 @@ const _emit = defineEmits<{
 const showFilters = ref(false)
 
 interface Props {
-  density: DensityType
   sortBy: string
   groupBy: string
   filterStatus: string
   hideDoneTasks?: boolean
 }
-
-const densityOptions = [
-  { value: 'compact' as DensityType, label: 'Compact', icon: AlignJustify },
-  { value: 'comfortable' as DensityType, label: 'Comfortable', icon: List },
-  { value: 'spacious' as DensityType, label: 'Spacious', icon: Rows }
-]
 
 const sortOptions = [
   { label: 'Due Date', value: 'dueDate' },
@@ -155,44 +131,6 @@ const filterOptions = [
 .tree-controls {
   display: flex;
   gap: var(--space-1);
-}
-
-.density-control {
-  display: flex;
-  gap: var(--space-0_5);
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-0_5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.density-option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: calc(var(--radius-md) - 2px);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--spring-smooth);
-}
-
-.density-option:hover {
-  background: var(--state-hover-bg);
-  border-color: var(--state-hover-border);
-  color: var(--text-primary);
-}
-
-.density-option.active {
-  /* Outlined active state (not filled) - consistent with BaseButton variant-active */
-  background: transparent;
-  border-color: var(--brand-primary);
-  color: var(--text-primary);
-  box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 
 .control-wrapper {

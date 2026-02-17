@@ -286,6 +286,7 @@
       :is-listening="isListening"
       :is-processing="isProcessingVoice"
       :voice-transcript="finalVoiceTranscript || whisperTranscript"
+      :voice-error="voiceError"
       :can-re-record="isVoiceSupported"
       @close="handleTaskCreateClose"
       @created="handleTaskSheetCreated"
@@ -903,6 +904,10 @@ const _submitTask = () => {
 
 // Task create sheet handler
 const handleTaskCreateClose = () => {
+  // BUG-1350: Cancel any active recording when closing the sheet
+  if (isListening.value) {
+    cancelVoice()
+  }
   isTaskCreateOpen.value = false
   finalVoiceTranscript.value = ''
 }

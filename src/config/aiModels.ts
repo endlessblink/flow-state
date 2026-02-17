@@ -94,10 +94,11 @@ export const DEFAULT_MODELS = {
 /**
  * Provider options for selector UI
  */
+// TASK-1350: Updated descriptions for BYOK model
 export const PROVIDER_OPTIONS: ProviderOption[] = [
-  { key: 'auto' as const, label: 'Auto', desc: 'Prefers local, falls back to cloud' },
+  { key: 'auto' as const, label: 'Auto', desc: 'Groq (cloud) first, Ollama fallback' },
+  { key: 'groq' as const, label: 'Groq', desc: 'Free API key, fast cloud AI (recommended)' },
   { key: 'ollama' as const, label: 'Local (Ollama)', desc: 'Free, private, runs on your machine' },
-  { key: 'groq' as const, label: 'Groq', desc: 'Fast cloud inference' },
   { key: 'openrouter' as const, label: 'OpenRouter', desc: 'Premium models (Claude, GPT-4, Kimi)' }
 ] as const
 

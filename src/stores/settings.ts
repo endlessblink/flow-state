@@ -73,6 +73,11 @@ export interface AppSettings {
     externalCalendars: ExternalCalendarConfig[]
     externalCalendarSyncInterval: number // minutes, 0 = manual only
 
+    // TASK-1350: AI Setup (BYOK Groq + first-time wizard)
+    groqApiKey: string
+    aiSetupComplete: boolean
+    aiPreferredProvider: 'auto' | 'groq' | 'ollama' | 'openrouter'
+
     // Miscellaneous UI State (Persisted)
     sidebarCollapsed?: boolean
     kanbanSettings?: Record<string, unknown>
@@ -135,6 +140,11 @@ export const useSettingsStore = defineStore('settings', {
         // TASK-1317: External calendar defaults
         externalCalendars: [],
         externalCalendarSyncInterval: 30,
+
+        // TASK-1350: AI Setup defaults (BYOK Groq + first-time wizard)
+        groqApiKey: '',
+        aiSetupComplete: false,
+        aiPreferredProvider: 'auto' as 'auto' | 'groq' | 'ollama' | 'openrouter',
 
         // Miscellaneous defaults
         sidebarCollapsed: false,
@@ -256,6 +266,16 @@ export const useSettingsStore = defineStore('settings', {
                     // TASK-1338: Backfill push notification preferences
                     if (!this.$state.pushNotifications) {
                         this.$state.pushNotifications = JSON.parse(JSON.stringify(DEFAULT_PUSH_NOTIFICATION_PREFERENCES))
+                    }
+                    // TASK-1350: Backfill AI setup fields
+                    if (this.$state.groqApiKey === undefined) {
+                        this.$state.groqApiKey = ''
+                    }
+                    if (this.$state.aiSetupComplete === undefined) {
+                        this.$state.aiSetupComplete = false
+                    }
+                    if (this.$state.aiPreferredProvider === undefined) {
+                        this.$state.aiPreferredProvider = 'auto'
                     }
                 } catch (e) {
                     console.error('Failed to parse settings from storage', e)

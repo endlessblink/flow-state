@@ -12,9 +12,11 @@
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
 
-**Problem**: When Board view is grouped by "Due Date", nested categories (projects) are not represented within the date columns. Tasks belonging to categories like "Work" don't appear distributed across the date columns (Overdue, Today, Tomorrow, etc.).
+**Problem**: When Board view is grouped by "Due Date", nested categories (projects) are not represented within the date columns. Tasks belonging to categories like "Work" don't appear distributed across the date columns (Overdue, Today, Tomorrow, etc.). Also, "No Date" column is on the far right and not visible without scrolling.
 
-**Expected**: Categories should appear as sub-groups within date columns, showing task distribution per category per date bucket.
+**Expected**:
+1. Categories should appear as sub-groups within date columns, showing task distribution per category per date bucket
+2. "No Date" column should be on the far LEFT (most visible position), not far right
 
 ---
 
@@ -3370,6 +3372,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
 | **FEATURE-1342** | **P2** | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data** |
 | ~~**BUG-1343**~~ | **P2** | ✅ **Quick Sort exits when swiping right on PWA mobile** (✅ DONE 2026-02-17) |
+| **BUG-1350** | **P0** | **📋 New Task transcription page closes prematurely — transcription doesn't appear on PWA mobile** |
+| **BUG-1351** | **P0** | **🔄 Calendar drag ghost stuck after inbox→day drop** |
 | ~~**BUG-1349**~~ | **P2** | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17) |
 | ~~**BUG-1348**~~ | **P0** | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17) |
 | **BUG-1347** | **P0** | **📋 KDE Plasma widget not responding** |
@@ -4508,6 +4512,39 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 - [ ] **TASK-1306-P6d**: Build verification — `npm run build` passes, `npm run test` passes, no TypeScript errors.
 
 **Progress (2026-02-12):** V1 prototype existed but was fundamentally broken (instant corruption, no visible projectiles, camera not following player, approach speed 30x too fast). Full research completed (Ruiner visual style, combat mechanics, VFX patterns). Detailed skill created. Starting from-scratch rewrite with agent team.
+
+---
+
+### BUG-1351: Calendar drag ghost stuck after inbox→day drop (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: After dragging a task from the calendar inbox to the today view, a ghost/duplicate element remains stuck on screen. The real task lands correctly in the target view, but a visual ghost/phantom element is not cleaned up.
+
+**Expected Behavior**: When dropping a task from inbox to today, the task should move cleanly with no visual artifacts remaining.
+
+**Actual Behavior**: Ghost element stuck on screen after drop completes.
+
+**Impact**: UI clutter, confusing UX during drag-drop operations in calendar.
+
+**Affected Components**:
+- `src/components/calendar/CalendarDayView.vue`
+- `src/components/calendar/CalendarInboxView.vue`
+- Vuedraggable integration in calendar views
+
+**Root Cause**: Likely incomplete cleanup of drag-drop temporary DOM elements or state after cross-view drops.
+
+**Investigation Steps**:
+1. Reproduce: Open calendar, drag task from inbox to today view
+2. Inspect DOM for stale drag-related elements
+3. Check vuedraggable state after drop completion
+4. Verify `handleDrop()` cleanup logic
+
+**Files to Check**:
+- `src/components/calendar/CalendarDayView.vue`
+- `src/components/calendar/CalendarInboxView.vue`
+- `src/composables/useCalendarDayView.ts`
+- `src/composables/useCalendarInboxState.ts`
 
 ---
 

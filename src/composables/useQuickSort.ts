@@ -87,7 +87,13 @@ export function useQuickSort() {
   const progress = computed(() => {
     const processed = processedTaskIds.value.size
     const remaining = uncategorizedTasks.value.length
-    const total = processed + remaining
+    // If current task was categorized (assigned a project, so no longer in uncategorizedTasks)
+    // but not yet processed (saved/done/deleted), still count it in the total so the
+    // progress bar doesn't jump just from pressing a number key to assign a project
+    const currentCategorizedNotProcessed = currentTaskId.value &&
+      !processedTaskIds.value.has(currentTaskId.value) &&
+      !uncategorizedTasks.value.some(t => t.id === currentTaskId.value) ? 1 : 0
+    const total = processed + remaining + currentCategorizedNotProcessed
     if (total === 0) return { current: processed, total: 0, percentage: 100 }
 
     return {

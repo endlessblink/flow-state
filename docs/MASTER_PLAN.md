@@ -3182,24 +3182,25 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 **Priority**: P2 | **Status**: 👀 REVIEW (2026-02-17)
 
-**Feature**: 4-step onboarding wizard replacing the old WelcomeModal. Same flow for guest and signed-in users.
+**Feature**: Single-screen welcome modal replacing the old WelcomeModal. Same flow for guest and signed-in users.
+
+**Design Pivot**: Initially built as 4-step wizard, then pivoted to single screen based on UX research showing multi-step wizards have ~10-19% completion rates with 72% user abandonment. Linear (most admired productivity UX) uses zero wizards. Single screen gets users to first task faster.
 
 **Design Decisions (Resolved)**:
-- [x] What to show: Feature highlights (step 1-2) + sync benefits (step 3) + auth-aware CTA (step 4)
-- [x] Format: Multi-step wizard with progress dots, directional slide transitions
+- [x] What to show: Logo, 3 feature highlights, "Get Started" CTA, optional sign-up link for guests
+- [x] Format: Single welcome screen (research-backed — "quick win" retains 80% more users)
 - [x] Reappear: No — dismissed permanently via localStorage (`flowstate-onboarding-v2`)
 
 **Implementation**:
-- [x] `useOnboardingWizard.ts` composable — state machine, keyboard/swipe navigation, localStorage persistence
-- [x] 4 step components: Welcome, Views Showcase, Sync Benefits, Ready (auth-aware)
-- [x] `OnboardingWizard.vue` container with Teleport, transitions, progress dots
+- [x] `useOnboardingWizard.ts` composable — visibility, dismiss, keyboard, localStorage persistence
+- [x] `OnboardingWizard.vue` — single-screen modal with Teleport, glass morphism, auth-aware sign-up CTA
 - [x] Moved from MainLayout to App.vue — now shows on both desktop and mobile
 - [x] Removed old WelcomeModal from MainLayout (component kept for reference)
-- [x] Keyboard: ArrowRight/Left, Enter, Escape. Mobile: swipe left/right
-- [x] Storybook stories for all steps + interactive demo
+- [x] Keyboard: Enter or Escape to dismiss
+- [x] Storybook stories (Guest + Signed In variants)
 - [x] Build passes, zero new TS errors
 
-**Files Created**: `src/composables/app/useOnboardingWizard.ts`, `src/components/onboarding/OnboardingWizard.vue`, `OnboardingStepWelcome.vue`, `OnboardingStepViews.vue`, `OnboardingStepSync.vue`, `OnboardingStepReady.vue`, `OnboardingProgressDots.vue`, `src/stories/modals/OnboardingWizard.stories.ts`
+**Files Created**: `src/composables/app/useOnboardingWizard.ts`, `src/components/onboarding/OnboardingWizard.vue`, `src/stories/modals/OnboardingWizard.stories.ts`
 **Files Modified**: `src/App.vue`, `src/layouts/MainLayout.vue`
 
 ---
@@ -3412,7 +3413,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1281~~ | P3 | ✅ Adopt build-time console.log stripping (esbuild pure config) |
 | ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
-| FEATURE-1201 | P2 | 👀 Intro/onboarding wizard — 4-step with progress dots, keyboard + swipe nav |
+| FEATURE-1201 | P2 | 👀 Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | TASK-1283 | P1 | 📋 Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | **TASK-1284** | **P0** | **🔄 Add quick task creation to KDE Plasma widget (pomoflow-kde repo)** |

@@ -55,7 +55,6 @@ export {
 export {
   GroqProvider,
   createGroqProvider,
-  autoDetectGroq,
 } from './groq'
 
 // Re-export commonly used types from @/types/ai for convenience

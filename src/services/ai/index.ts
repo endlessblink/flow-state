@@ -44,7 +44,6 @@ export {
   autoDetectOllama,
   GroqProvider,
   createGroqProvider,
-  autoDetectGroq,
   GroqProxyProvider,
   createGroqProxyProvider,
   OpenRouterProxyProvider,

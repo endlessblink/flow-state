@@ -262,7 +262,7 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 
 | Secret Location | Secrets |
 |-----------------|---------|
-| **Doppler** (`flowstate-prod`) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GROQ_API_KEY` |
+| **Doppler** (`flowstate-prod`) | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
 | **GitHub Secrets** | `DOPPLER_TOKEN`, `SSH_PRIVATE_KEY`, `VPS_HOST`, `VPS_USER` |
 
 **Local Development Setup:**

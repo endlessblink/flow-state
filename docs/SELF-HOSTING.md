@@ -433,7 +433,7 @@ FlowState includes an AI chat sidebar that can help with task management. It sup
 
 1. Get an API key at https://console.groq.com/
 2. For Docker (Option A): add `GROQ_API_KEY=gsk_your_key_here` to `.env.self-host` and restart
-3. For local dev (Option B): add `VITE_GROQ_API_KEY=gsk_your_key_here` to `.env.local`
+3. For local dev (Option B): AI chat uses Supabase Edge Functions — no API keys needed in `.env.local` (BUG-1131)
 4. In FlowState, go to **Settings > AI** and select Groq as the provider
 
 ### Supabase Edge Functions (Advanced)

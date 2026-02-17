@@ -307,7 +307,7 @@ import TaskCreateBottomSheet from '@/mobile/components/TaskCreateBottomSheet.vue
 import SwipeableTaskItem from '@/mobile/components/SwipeableTaskItem.vue'
 import {
   Plus, Check, Play, Calendar, Inbox,
-  Circle, Clock, CheckCircle2, ArrowUpDown,
+  CheckCircle2, ArrowUpDown,
   Flag, ChevronDown, Mic, MicOff, X,
   Layers, CalendarClock, AlertCircle, FolderOpen, ListFilter
 } from 'lucide-vue-next'
@@ -324,15 +324,12 @@ const { triggerHaptic } = useHaptics()
 
 // Shared mobile filter state (persists across view navigation)
 const {
-  selectedProject,
-  selectedPriority,
   groupBy,
   hideDoneTasks,
-  hasActiveFilters,
+  hasActiveFilters: _hasActiveFilters,
   priorityLabel,
-  clearFilters,
   setGroupBy,
-  toggleHideDoneTasks
+  toggleHideDoneTasks: _toggleHideDoneTasks
 } = useMobileFilters()
 
 // State
@@ -502,7 +499,7 @@ const toggleVoiceInput = async () => {
 }
 
 // Date quick options
-const dateOptions = [
+const _dateOptions = [
   { label: 'Today', value: 'today' },
   { label: 'Tomorrow', value: 'tomorrow' },
   { label: 'Next Week', value: 'nextweek' },
@@ -510,7 +507,7 @@ const dateOptions = [
 ]
 
 // Priority options (matches Task type: 'low' | 'medium' | 'high' | null)
-const priorityOptions = [
+const _priorityOptions = [
   { label: 'High', value: 'high' },
   { label: 'Medium', value: 'medium' },
   { label: 'Low', value: 'low' }
@@ -837,12 +834,12 @@ onBeforeUnmount(() => {
 })
 
 // Quick-add expansion handlers
-const expandQuickAdd = () => {
+const _expandQuickAdd = () => {
   console.log('[TASK-1005] expandQuickAdd called, setting isQuickAddExpanded to true')
   isQuickAddExpanded.value = true
 }
 
-const collapseQuickAdd = () => {
+const _collapseQuickAdd = () => {
   isQuickAddExpanded.value = false
 }
 
@@ -851,11 +848,11 @@ const openTaskCreateSheet = () => {
   isTaskCreateOpen.value = true
 }
 
-const selectDueDate = (value: string | null) => {
+const _selectDueDate = (value: string | null) => {
   selectedDueDate.value = value
 }
 
-const selectQuickAddPriority = (value: string | null) => {
+const _selectQuickAddPriority = (value: string | null) => {
   quickAddPriority.value = quickAddPriority.value === value ? null : value
 }
 
@@ -884,7 +881,7 @@ const calculateDueDate = (option: string | null): Date | null => {
   }
 }
 
-const submitTask = () => {
+const _submitTask = () => {
   if (!newTaskTitle.value.trim()) return
 
   const dueDate = calculateDueDate(selectedDueDate.value)
@@ -967,8 +964,9 @@ const isOverdue = (dueDate: string | Date): boolean => {
 .mobile-inbox {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  padding-bottom: 140px; /* Space for quick-add + nav */
+  min-height: 100%;
+  /* Space for teleported quick-add bar (~80px incl padding) — nav spacing handled by MobileLayout */
+  padding-bottom: 80px;
 }
 
 .mobile-inbox-header {
@@ -1035,8 +1033,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .filter-chip.active {
   background: transparent;
-  border-color: var(--primary-brand);
-  color: var(--primary-brand);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .sort-section {
@@ -1055,7 +1053,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .filter-chip.active .filter-count {
-  background: var(--primary-brand);
+  background: var(--brand-primary);
   color: white;
 }
 
@@ -1127,8 +1125,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .dropdown-item.active {
-  background: var(--primary-brand-bg-subtle);
-  color: var(--primary-brand);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
 }
 
 /* Hide Done Toggle */
@@ -1139,9 +1137,9 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .hide-done-btn.active {
-  background: var(--primary-brand-bg-subtle);
-  border-color: var(--primary-brand);
-  color: var(--primary-brand);
+  background: var(--brand-primary-subtle);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .sort-btn {
@@ -1190,8 +1188,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
   padding: var(--space-1_5) var(--space-3);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: var(--primary-brand);
-  background: var(--primary-brand-bg-subtle);
+  color: var(--brand-primary);
+  background: var(--brand-primary-subtle);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -1284,7 +1282,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .mobile-task-item.timer-active {
-  border: var(--space-0_5) solid var(--timer-active-border, var(--primary-brand));
+  border: var(--space-0_5) solid var(--timer-active-border, var(--brand-primary));
   box-shadow: var(--timer-active-glow-strong);
 }
 
@@ -1305,8 +1303,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .checkbox-circle.checked {
-  background: var(--primary-brand);
-  border-color: var(--primary-brand);
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: white;
 }
 
@@ -1365,8 +1363,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .priority-badge-inline.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
-.priority-badge-inline.high { background: var(--warning-bg-subtle); color: var(--warning-text); }
-.priority-badge-inline.medium { background: var(--primary-brand-bg-subtle); color: var(--primary-brand); }
+.priority-badge-inline.high { background: var(--color-priority-medium-bg-subtle); color: var(--color-warning); }
+.priority-badge-inline.medium { background: var(--brand-primary-subtle); color: var(--brand-primary); }
 .priority-badge-inline.low { background: var(--surface-tertiary); color: var(--text-muted); }
 
 .task-meta {
@@ -1385,8 +1383,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .priority-badge.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
-.priority-badge.high { background: var(--warning-bg-subtle); color: var(--warning-text); }
-.priority-badge.medium { background: var(--primary-brand-bg-subtle); color: var(--primary-brand); }
+.priority-badge.high { background: var(--color-priority-medium-bg-subtle); color: var(--color-warning); }
+.priority-badge.medium { background: var(--brand-primary-subtle); color: var(--brand-primary); }
 .priority-badge.low { background: var(--surface-tertiary); color: var(--text-muted); }
 
 .due-date {
@@ -1406,8 +1404,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
   height: var(--space-9);
   border-radius: var(--radius-full);
   border: none;
-  background: var(--primary-brand-bg-subtle);
-  color: var(--primary-brand);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1440,7 +1438,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   box-sizing: border-box;
   background: var(--surface-primary);
   border-top: 1px solid var(--border-subtle);
-  z-index: 50;
+  z-index: var(--z-sticky);
   box-shadow: var(--shadow-md);
   transition: all var(--duration-slow) var(--spring-smooth);
 }
@@ -1472,7 +1470,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
 }
 
 .quick-add-input:focus {
-  border-color: var(--primary-brand);
+  border-color: var(--brand-primary);
   box-shadow: var(--brand-primary-glow);
 }
 
@@ -1481,7 +1479,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   height: var(--space-12);
   border-radius: var(--radius-full);
   border: none;
-  background: var(--primary-brand);
+  background: var(--brand-primary);
   color: white;
   display: flex;
   align-items: center;
@@ -1561,8 +1559,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .option-chip.active {
   background: transparent;
-  border-color: var(--primary-brand);
-  color: var(--primary-brand);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 /* Priority-specific colors when active */
@@ -1574,8 +1572,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 .option-chip.priority-chip.medium.active {
   background: transparent;
-  border-color: var(--warning-text);
-  color: var(--warning-text);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 .option-chip.priority-chip.low.active {
@@ -1795,7 +1793,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   right: var(--space-0_5);
   width: var(--space-2);
   height: var(--space-2);
-  background: var(--warning-text);
+  background: var(--color-warning);
   border-radius: var(--radius-full);
   border: var(--space-0_5) solid var(--surface-primary);
 }
@@ -1810,7 +1808,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
   color: white;
-  background: var(--primary-brand);
+  background: var(--brand-primary);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -1834,7 +1832,7 @@ const isOverdue = (dueDate: string | Date): boolean => {
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   background: var(--orange-bg-light);
-  color: var(--warning-text);
+  color: var(--color-warning);
 }
 
 .voice-queue-status {
@@ -1842,8 +1840,8 @@ const isOverdue = (dueDate: string | Date): boolean => {
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  background: var(--primary-brand-bg-subtle);
-  color: var(--primary-brand);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
 }
 
 /* Debug Banner */

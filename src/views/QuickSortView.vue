@@ -271,8 +271,12 @@
 
                 <!-- AI Error -->
                 <div v-if="aiState === 'error'" class="ai-error-section">
-                  <p class="ai-error-text">{{ aiError }}</p>
-                  <button class="action-btn ai-retry" @click="handleAIRetry">Retry</button>
+                  <p class="ai-error-text">
+                    {{ aiError }}
+                  </p>
+                  <button class="action-btn ai-retry" @click="handleAIRetry">
+                    Retry
+                  </button>
                 </div>
 
                 <!-- Smart Suggest Results -->
@@ -293,7 +297,9 @@
                       <span class="ai-arrow">&rarr;</span>
                       <span class="ai-new-value">{{ suggestion.suggestedValue }}</span>
                     </div>
-                    <p v-if="suggestion.reasoning" class="ai-suggestion-reason">{{ suggestion.reasoning }}</p>
+                    <p v-if="suggestion.reasoning" class="ai-suggestion-reason">
+                      {{ suggestion.reasoning }}
+                    </p>
                   </div>
                   <div v-if="suggestedProjectId" class="ai-suggestion-card">
                     <div class="ai-suggestion-header">
@@ -306,14 +312,20 @@
                     </div>
                   </div>
                   <div class="ai-actions-row">
-                    <button class="action-btn ai-apply" @click="handleApplySuggestions">Apply All</button>
-                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">Dismiss</button>
+                    <button class="action-btn ai-apply" @click="handleApplySuggestions">
+                      Apply All
+                    </button>
+                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">
+                      Dismiss
+                    </button>
                   </div>
                 </div>
 
                 <!-- Batch Results -->
                 <div v-else-if="aiAction === 'batch'" class="ai-batch-results">
-                  <p class="ai-batch-count">{{ batchResults.length }} tasks categorized</p>
+                  <p class="ai-batch-count">
+                    {{ batchResults.length }} tasks categorized
+                  </p>
                   <div
                     v-for="result in batchResults.slice(0, 5)"
                     :key="result.taskId"
@@ -325,22 +337,36 @@
                       <span v-if="result.suggestedDueDate" class="ai-batch-tag">{{ result.suggestedDueDate }}</span>
                     </div>
                   </div>
-                  <p v-if="batchResults.length > 5" class="ai-batch-more">+ {{ batchResults.length - 5 }} more</p>
+                  <p v-if="batchResults.length > 5" class="ai-batch-more">
+                    + {{ batchResults.length - 5 }} more
+                  </p>
                   <div class="ai-actions-row">
-                    <button class="action-btn ai-apply" @click="handleApplyBatch">Apply All</button>
-                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">Dismiss</button>
+                    <button class="action-btn ai-apply" @click="handleApplyBatch">
+                      Apply All
+                    </button>
+                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">
+                      Dismiss
+                    </button>
                   </div>
                 </div>
 
                 <!-- Explain Results -->
                 <div v-else-if="aiAction === 'explain'" class="ai-explain-results">
-                  <p class="ai-explain-desc">{{ explainResult?.description }}</p>
+                  <p class="ai-explain-desc">
+                    {{ explainResult?.description }}
+                  </p>
                   <ul v-if="explainResult?.actionSteps?.length" class="ai-explain-steps">
-                    <li v-for="(step, i) in explainResult.actionSteps" :key="i">{{ step }}</li>
+                    <li v-for="(step, i) in explainResult.actionSteps" :key="i">
+                      {{ step }}
+                    </li>
                   </ul>
                   <div class="ai-actions-row">
-                    <button class="action-btn ai-apply" @click="handleApplyExplain">Accept</button>
-                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">Dismiss</button>
+                    <button class="action-btn ai-apply" @click="handleApplyExplain">
+                      Accept
+                    </button>
+                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">
+                      Dismiss
+                    </button>
                   </div>
                 </div>
               </template>
@@ -1081,7 +1107,7 @@ const currentTaskProject = computed(() => {
 }
 
 .action-btn.done:hover {
-  background: rgba(16, 185, 129, 0.1);
+  background: var(--success-bg-light);
   border-color: var(--success);
 }
 
@@ -1091,7 +1117,7 @@ const currentTaskProject = computed(() => {
 }
 
 .action-btn.save:hover {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-subtle);
   border-color: var(--brand-primary);
 }
 
@@ -1213,17 +1239,17 @@ const currentTaskProject = computed(() => {
 
 .priority-dot.priority-high {
   color: var(--color-priority-high);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
 }
 
 .priority-dot.priority-medium {
   color: var(--color-priority-medium);
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--color-warning-alpha-10);
 }
 
 .priority-dot.priority-low {
   color: var(--color-priority-low);
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--blue-bg-light);
 }
 
 .priority-dot.priority-none {
@@ -1392,7 +1418,7 @@ const currentTaskProject = computed(() => {
 }
 
 .stat-card.streak-card {
-  background: rgba(251, 146, 60, 0.1);
+  background: var(--orange-bg-light);
   border-color: rgba(251, 146, 60, 0.3);
 }
 
@@ -1444,7 +1470,7 @@ const currentTaskProject = computed(() => {
 }
 
 .primary-button:hover {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-primary-subtle);
   border-color: var(--brand-hover);
   color: var(--brand-hover);
   transform: translateY(-2px);
@@ -1465,23 +1491,23 @@ const currentTaskProject = computed(() => {
 }
 
 .feedback-overlay.success {
-  background: rgba(16, 185, 129, 0.9);
-  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.4);
+  background: var(--color-work);
+  box-shadow: 0 4px 24px var(--success-shadow);
 }
 
 .feedback-overlay.info {
-  background: rgba(78, 205, 196, 0.9);
-  box-shadow: 0 4px 24px rgba(78, 205, 196, 0.4);
+  background: var(--brand-primary);
+  box-shadow: 0 4px 24px var(--brand-primary-dim);
 }
 
 .feedback-overlay.warning {
-  background: rgba(245, 158, 11, 0.9);
+  background: var(--color-warning);
   box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4);
 }
 
 .feedback-overlay.danger {
-  background: rgba(239, 68, 68, 0.9);
-  box-shadow: 0 4px 24px rgba(239, 68, 68, 0.4);
+  background: var(--color-danger);
+  box-shadow: 0 4px 24px var(--danger-shadow-strong);
 }
 
 .feedback-text {
@@ -1781,7 +1807,7 @@ const currentTaskProject = computed(() => {
 .action-btn.ai-sort:hover,
 .action-btn.ai-batch:hover,
 .action-btn.ai-explain:hover {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-subtle);
   border-color: var(--brand-primary);
 }
 
@@ -1845,7 +1871,7 @@ const currentTaskProject = computed(() => {
 }
 
 .action-btn.ai-apply:hover {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-subtle);
 }
 
 .action-btn.ai-dismiss {

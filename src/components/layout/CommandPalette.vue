@@ -201,7 +201,7 @@ defineExpose({ open, close })
 
 /* Modal */
 .command-palette-modal {
-  background: rgba(35, 32, 50, 0.75);
+  background: var(--glass-panel-bg);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--glass-border-medium);
@@ -233,7 +233,7 @@ defineExpose({ open, close })
 }
 
 .quick-add-section:focus-within .add-icon {
-  color: rgba(78, 205, 196, 0.8);
+  color: var(--brand-primary);
 }
 
 .task-input {
@@ -294,7 +294,7 @@ defineExpose({ open, close })
 .field-input:focus {
   border-color: var(--brand-primary-alpha-50);
   background: var(--glass-bg-tint);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
+  box-shadow: 0 0 0 3px var(--state-hover-bg), 0 0 8px var(--glass-glow);
 }
 
 .field-select option {
@@ -346,7 +346,7 @@ defineExpose({ open, close })
 .toggle-options-btn:focus-visible {
   outline: none;
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.15), 0 0 8px rgba(78, 205, 196, 0.1);
+  box-shadow: 0 0 0 3px var(--state-hover-bg), 0 0 8px var(--glass-glow);
 }
 
 .keyboard-hints {

@@ -108,7 +108,7 @@ onUnmounted(() => {
 .route-error-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,12 +171,12 @@ h2 {
 }
 
 .retry-button {
-  background: var(--accent-primary, #3b82f6);
+  background: var(--color-info);
   color: white;
 }
 
 .retry-button:hover:not(:disabled) {
-  background: var(--accent-primary-hover, #2563eb);
+  background: #2563eb;
 }
 
 .retry-button:disabled {
@@ -191,11 +191,11 @@ h2 {
 }
 
 .reload-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-tint);
 }
 
 .max-retries-message {
-  color: var(--status-error, #ef4444);
+  color: var(--color-danger);
   font-size: var(--text-sm);
   margin-top: var(--space-4, 16px);
   margin-bottom: 0;

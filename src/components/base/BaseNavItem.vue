@@ -325,13 +325,13 @@ const handleDrop = (event: DragEvent) => {
 
 /* Selected State - Multi-select highlight */
 .base-nav-item.is-selected {
-  background: var(--brand-primary-alpha-15, rgba(78, 205, 196, 0.15));
-  border: 1px solid var(--brand-primary-alpha-30, rgba(78, 205, 196, 0.3));
+  background: var(--state-active-bg);
+  border: 1px solid var(--brand-primary-dim);
 }
 
 .base-nav-item.is-selected.is-active {
-  background: var(--brand-primary-alpha-20, rgba(78, 205, 196, 0.2));
-  border: 1px solid var(--brand-primary-alpha-40, rgba(78, 205, 196, 0.4));
+  background: var(--brand-border-subtle);
+  border: 1px solid var(--state-hover-border);
 }
 
 /* Nested items - dynamic indentation based on CSS custom property */
@@ -491,7 +491,7 @@ const handleDrop = (event: DragEvent) => {
 /* Red highlight when mouse enters an invalid target */
 .base-nav-item.is-drag-target.is-drag-invalid {
   background: var(--color-danger-bg-light) !important;
-  border-color: rgba(255, 107, 107, 0.3) !important;
+  border-color: var(--danger-border-subtle) !important;
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -566,7 +566,7 @@ const handleDrop = (event: DragEvent) => {
   );
   border-color: rgba(147, 197, 253, 1);
   box-shadow:
-    0 4px 12px rgba(147, 197, 253, 0.3),
-    0 0 0 2px rgba(147, 197, 253, 0.2);
+    0 var(--space-1) var(--space-3) rgba(147, 197, 253, 0.3),
+    0 0 0 var(--space-0_5) rgba(147, 197, 253, 0.2);
 }
 </style>

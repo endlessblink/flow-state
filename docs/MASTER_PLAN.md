@@ -8,6 +8,16 @@
 
 ## Active Bugs (P0-P1)
 
+### TASK-1348: Board Due Date grouping missing nested category representation (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+
+**Problem**: When Board view is grouped by "Due Date", nested categories (projects) are not represented within the date columns. Tasks belonging to categories like "Work" don't appear distributed across the date columns (Overdue, Today, Tomorrow, etc.).
+
+**Expected**: Categories should appear as sub-groups within date columns, showing task distribution per category per date bucket.
+
+---
+
 ### ~~BUG-1340~~: Calendar view gets stuck when dragging task to main inbox (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)

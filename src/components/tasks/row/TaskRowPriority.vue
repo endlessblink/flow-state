@@ -201,11 +201,10 @@ onBeforeUnmount(() => {
   border-color: var(--priority-high-border);
 }
 
-/* ADHD-friendly: Medium priority is visually subdued - not every task needs attention */
 .task-row__priority-badge--medium {
-  color: var(--text-muted);
-  background-color: transparent;
-  border-color: var(--border-subtle);
+  color: var(--priority-medium-text);
+  background-color: var(--priority-medium-bg);
+  border-color: var(--priority-medium-border);
 }
 
 .task-row__priority-badge--low {

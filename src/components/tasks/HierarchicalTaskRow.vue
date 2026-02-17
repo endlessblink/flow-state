@@ -43,6 +43,7 @@
       @update-priority="(val) => $emit('updateTask', task.id, { priority: val as 'low' | 'medium' | 'high' })"
       @update-due-date="(val) => $emit('updateTask', task.id, { dueDate: val ?? undefined })"
       @update-estimate="(val) => $emit('updateTask', task.id, { estimatedDuration: val ?? undefined })"
+      @ai-suggest="(event: MouseEvent) => $emit('aiSuggest', event, task)"
       @start-timer="$emit('startTimer', task.id)"
       @edit="$emit('edit', task.id)"
       @duplicate="$emit('duplicate', task.id)"
@@ -61,6 +62,7 @@
           :expanded-tasks="expandedTasks"
           @select="$emit('select', $event)"
           @toggle-complete="$emit('toggleComplete', $event)"
+          @ai-suggest="(event: MouseEvent, task: Task) => $emit('aiSuggest', event, task)"
           @start-timer="$emit('startTimer', $event)"
           @edit="$emit('edit', $event)"
           @context-menu="$emit('contextMenu', $event, childTask)"
@@ -105,6 +107,7 @@ const emit = defineEmits<{
   select: [taskId: string]
   check: [taskId: string]
   toggleComplete: [taskId: string]
+  aiSuggest: [event: MouseEvent, task: Task]
   startTimer: [taskId: string]
   edit: [taskId: string]
   duplicate: [taskId: string]

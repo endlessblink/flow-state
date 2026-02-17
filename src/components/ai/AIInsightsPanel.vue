@@ -877,8 +877,8 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   height: 100%;
-  background: rgba(78, 205, 196, 0.15);
-  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: var(--state-active-bg);
+  border: 1px solid var(--brand-primary-dim);
   border-radius: var(--radius-sm);
 }
 
@@ -887,7 +887,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   height: 100%;
-  background: rgba(78, 205, 196, 0.4);
+  background: var(--state-hover-border);
   border-radius: var(--radius-sm);
 }
 
@@ -926,12 +926,12 @@ onUnmounted(() => {
 }
 
 .legend-planned {
-  background: rgba(78, 205, 196, 0.15);
-  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: var(--state-active-bg);
+  border: 1px solid var(--brand-primary-dim);
 }
 
 .legend-completed {
-  background: rgba(78, 205, 196, 0.4);
+  background: var(--state-hover-border);
 }
 
 /* Buttons */
@@ -957,7 +957,7 @@ onUnmounted(() => {
 }
 
 .primary-btn:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.08);
+  background: var(--brand-primary-subtle);
   border-color: var(--brand-primary-hover);
 }
 
@@ -1015,8 +1015,8 @@ onUnmounted(() => {
 
 .status-message.success {
   color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.08);
-  border: 1px solid rgba(78, 205, 196, 0.2);
+  background: var(--brand-primary-subtle);
+  border: 1px solid var(--brand-border-subtle);
 }
 
 .status-message.warning {
@@ -1027,8 +1027,8 @@ onUnmounted(() => {
 
 .status-message.error {
   color: var(--color-danger);
-  background: rgba(255, 85, 85, 0.08);
-  border: 1px solid rgba(255, 85, 85, 0.2);
+  background: var(--danger-bg-subtle);
+  border: 1px solid var(--danger-border-subtle);
 }
 
 /* Spinner */

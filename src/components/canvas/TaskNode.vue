@@ -419,7 +419,7 @@ onUnmounted(() => {
 
 /* Priority-based glow effects on card outline */
 .priority-high {
-  border-color: rgba(239, 68, 68, 0.5) !important;
+  border-color: var(--priority-high-border) !important;
   box-shadow:
     0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
     0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
@@ -428,7 +428,7 @@ onUnmounted(() => {
 }
 
 .priority-medium {
-  border-color: rgba(245, 158, 11, 0.5) !important;
+  border-color: var(--priority-medium-border) !important;
   box-shadow:
     0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
     0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
@@ -437,7 +437,7 @@ onUnmounted(() => {
 }
 
 .priority-low {
-  border-color: rgba(59, 130, 246, 0.5) !important;
+  border-color: var(--priority-low-border) !important;
   box-shadow:
     0 var(--space-3) var(--space-6) rgba(0, 0, 0, 0.12),
     0 var(--space-1_5) var(--space-3) rgba(0, 0, 0, 0.12),
@@ -468,7 +468,7 @@ onUnmounted(() => {
 
 .status-done::before {
   /* Slightly darker/muted purple backdrop for completed tasks */
-  background: rgba(38, 35, 52, 0.70);
+  background: var(--canvas-task-bg);
 }
 
 .status-in-progress {

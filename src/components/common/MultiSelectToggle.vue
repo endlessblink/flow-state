@@ -400,59 +400,24 @@ defineExpose({
    Sophisticated Glass Morphism with Professional Animations
    ========================================================================== */
 
-/* Enhanced CSS Custom Properties with Comprehensive Design System */
-:root {
-  /* Animation Timing Functions */
-  --spring-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --spring-bouncy: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --spring-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+/* Component-local variables (only those not available as globals) */
+.multi-select-container {
+  /* Purple accent for indeterminate state (no global purple RGB tuple) */
+  --toggle-purple-rgb: 147, 51, 234;
+
+  /* Easing function not available as a global token */
   --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Glass Morphism Layers */
-  --glass-bg-soft: rgba(255, 255, 255, 0.08);
-  --glass-bg-light: rgba(255, 255, 255, 0.12);
-  --glass-bg-medium: rgba(255, 255, 255, 0.16);
-  --glass-bg-strong: rgba(255, 255, 255, 0.24);
-  --glass-border-subtle: rgba(255, 255, 255, 0.15);
-  --glass-border-medium: rgba(255, 255, 255, 0.25);
-  --glass-border-strong: rgba(255, 255, 255, 0.35);
+  /* State colors derived from global teal brand color */
+  --state-selected: rgba(var(--color-primary-500), 0.85);
+  --state-selected-hover: rgba(var(--color-primary-500), 0.95);
+  --state-indeterminate: rgba(var(--toggle-purple-rgb), 0.85);
+  --state-hover: rgba(var(--color-primary-500), 0.15);
+  --state-focus: rgba(var(--color-primary-500), 0.12);
 
-  /* Color System */
-  --primary-rgb: 59, 130, 246;
-  --primary-light-rgb: 147, 197, 253;
-  --success-rgb: 34, 197, 94;
-  --warning-rgb: 251, 146, 60;
-  --purple-rgb: 147, 51, 234;
-
-  /* State Colors */
-  --state-selected: rgba(var(--primary-rgb), 0.85);
-  --state-selected-hover: rgba(var(--primary-rgb), 0.95);
-  --state-indeterminate: rgba(var(--purple-rgb), 0.85);
-  --state-hover: rgba(var(--primary-rgb), 0.15);
-  --state-focus: rgba(var(--primary-rgb), 0.12);
-
-  /* Blur Values */
-  --blur-light: blur(8px);
-  --blur-medium: blur(12px);
-  --blur-strong: blur(16px);
-
-  /* Shadows */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
-  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.16);
-  --shadow-glow: 0 0 24px rgba(var(--primary-rgb), 0.3);
-  --shadow-glow-strong: 0 0 32px rgba(var(--primary-rgb), 0.4);
-
-  /* Transitions */
-  --transition-fast: var(--duration-fast);
-  --transition-normal: var(--duration-normal);
-  --transition-slow: var(--duration-slower);
-
-  /* Border Radius */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Glow shadows derived from global teal brand color */
+  --shadow-glow: 0 0 24px rgba(var(--color-primary-500), 0.3);
+  --shadow-glow-strong: 0 0 32px rgba(var(--color-primary-500), 0.4);
 }
 
 /* ==========================================================================
@@ -491,7 +456,7 @@ defineExpose({
 
   /* Multi-layer glass morphism background */
   background:
-    linear-gradient(135deg, var(--glass-bg-strong) 0%, var(--glass-bg-medium) 100%),
+    linear-gradient(135deg, var(--glass-bg-heavy) 0%, var(--glass-bg-medium) 100%),
     linear-gradient(225deg, var(--glass-bg-light) 0%, var(--glass-bg-soft) 100%);
 
   /* Enhanced border system */
@@ -527,9 +492,9 @@ defineExpose({
 
   background:
     linear-gradient(135deg, var(--state-hover) 0%, var(--glass-bg-medium) 50%, var(--glass-bg-light) 100%),
-    linear-gradient(225deg, var(--glass-bg-strong) 0%, var(--glass-bg-medium) 100%);
+    linear-gradient(225deg, var(--glass-bg-heavy) 0%, var(--glass-bg-medium) 100%);
 
-  border-color: rgba(var(--primary-rgb), 0.4);
+  border-color: rgba(var(--color-primary-500), 0.4);
 
   box-shadow:
     var(--shadow-medium),
@@ -547,7 +512,7 @@ defineExpose({
 /* Focus state with enhanced visibility */
 .toggle-box:focus-visible {
   outline: none;
-  border-color: rgba(var(--primary-rgb), 0.6);
+  border-color: rgba(var(--color-primary-500), 0.6);
   box-shadow:
     var(--shadow-medium),
     0 0 0 3px var(--state-focus),
@@ -559,10 +524,10 @@ defineExpose({
    ========================================================================== */
 .toggle-box--selected {
   background:
-    linear-gradient(135deg, var(--state-selected) 0%, rgba(var(--primary-light-rgb), 0.9) 100%),
-    linear-gradient(225deg, rgba(var(--primary-rgb), 0.8) 0%, var(--state-selected) 100%);
+    linear-gradient(135deg, var(--state-selected) 0%, rgba(var(--color-primary-300), 0.9) 100%),
+    linear-gradient(225deg, rgba(var(--color-primary-500), 0.8) 0%, var(--state-selected) 100%);
 
-  border-color: rgba(var(--primary-rgb), 1);
+  border-color: rgba(var(--color-primary-500), 1);
   box-shadow:
     var(--shadow-medium),
     var(--shadow-glow-strong),
@@ -575,9 +540,9 @@ defineExpose({
 .toggle-box--selected:hover:not(.toggle-box--disabled) {
   background:
     linear-gradient(135deg, var(--state-selected-hover) 0%, var(--state-selected) 100%),
-    linear-gradient(225deg, rgba(var(--primary-light-rgb), 0.95) 0%, var(--state-selected-hover) 100%);
+    linear-gradient(225deg, rgba(var(--color-primary-300), 0.95) 0%, var(--state-selected-hover) 100%);
 
-  border-color: rgba(var(--primary-rgb), 1);
+  border-color: rgba(var(--color-primary-500), 1);
   transform: translateY(-2px) scale(1.08) translateZ(0);
 }
 
@@ -587,12 +552,12 @@ defineExpose({
 .toggle-box--indeterminate {
   background:
     linear-gradient(135deg, var(--state-indeterminate) 0%, rgba(167, 139, 250, 0.9) 100%),
-    linear-gradient(225deg, rgba(var(--purple-rgb), 0.8) 0%, var(--state-indeterminate) 100%);
+    linear-gradient(225deg, rgba(var(--toggle-purple-rgb), 0.8) 0%, var(--state-indeterminate) 100%);
 
-  border-color: rgba(var(--purple-rgb), 1);
+  border-color: rgba(var(--toggle-purple-rgb), 1);
   box-shadow:
     var(--shadow-medium),
-    0 0 24px rgba(var(--purple-rgb), 0.3),
+    0 0 24px rgba(var(--toggle-purple-rgb), 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 
@@ -646,7 +611,7 @@ defineExpose({
   inset: -2px; /* RTL: full coverage glow layer */
   background: linear-gradient(45deg,
     transparent 30%,
-    rgba(var(--primary-rgb), 0.1) 50%,
+    rgba(var(--color-primary-500), 0.1) 50%,
     transparent 70%);
   border-radius: var(--radius-md);
   opacity: 0;
@@ -662,7 +627,7 @@ defineExpose({
 .toggle-box__border-glow {
   position: absolute;
   inset: 0; /* RTL: full coverage border glow */
-  border: 1px solid rgba(var(--primary-rgb), 0.3);
+  border: 1px solid rgba(var(--color-primary-500), 0.3);
   border-radius: calc(var(--radius-md) - 1px);
   opacity: 0;
   transition: all var(--transition-normal) var(--spring-smooth);
@@ -671,7 +636,7 @@ defineExpose({
 
 .toggle-box--selected .toggle-box__border-glow {
   opacity: 1;
-  border-color: rgba(var(--primary-rgb), 0.6);
+  border-color: rgba(var(--color-primary-500), 0.6);
   animation: borderPulse 2s ease-in-out infinite;
 }
 
@@ -708,12 +673,12 @@ defineExpose({
 }
 
 .toggle-box:hover .toggle-box__empty-inner {
-  border-color: rgba(var(--primary-rgb), 0.8);
-  background: rgba(var(--primary-rgb), 0.1);
+  border-color: rgba(var(--color-primary-500), 0.8);
+  background: rgba(var(--color-primary-500), 0.1);
   transform: scale(1.1);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.1),
-    0 0 8px rgba(var(--primary-rgb), 0.2);
+    0 0 8px rgba(var(--color-primary-500), 0.2);
 }
 
 /* ==========================================================================
@@ -727,7 +692,7 @@ defineExpose({
   margin-top: var(--space-2);
   min-width: 200px;
   background:
-    linear-gradient(135deg, var(--glass-bg-strong) 0%, var(--glass-bg-medium) 100%),
+    linear-gradient(135deg, var(--glass-bg-heavy) 0%, var(--glass-bg-medium) 100%),
     linear-gradient(225deg, var(--glass-bg-light) 0%, var(--glass-bg-soft) 100%);
 
   border: 1px solid var(--glass-border-medium);
@@ -798,14 +763,14 @@ defineExpose({
 
 .toolbar-btn:hover {
   background: var(--glass-bg-medium);
-  border-color: rgba(var(--primary-rgb), 0.3);
-  color: rgba(var(--primary-rgb), 0.9);
+  border-color: rgba(var(--color-primary-500), 0.3);
+  color: rgba(var(--color-primary-500), 0.9);
   transform: translateY(-1px) translateZ(0);
 }
 
 .toolbar-btn--active {
   background: var(--state-selected);
-  border-color: rgba(var(--primary-rgb), 0.6);
+  border-color: rgba(var(--color-primary-500), 0.6);
   color: white;
 }
 
@@ -821,7 +786,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  background: var(--glass-bg-strong);
+  background: var(--glass-bg-heavy);
   border: 1px solid var(--glass-border-medium);
   border-radius: var(--radius-md);
   padding: var(--space-2);

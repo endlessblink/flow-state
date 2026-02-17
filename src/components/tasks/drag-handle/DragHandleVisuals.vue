@@ -174,11 +174,10 @@ const getDotStyle = (index: number) => ({
   /* Glass Morphism Layers - uses global tokens from design-tokens.css:
      --glass-bg-*, --glass-border-* already defined globally */
 
-  /* Color System */
-  --primary-rgb: 59, 130, 246;
-  --primary-light-rgb: 147, 197, 253;
+  /* Color System — teal brand tokens from design-tokens.css */
+  --primary-rgb: var(--color-primary-500); /* was blue 59,130,246 — now teal 78,205,196 */
+  --primary-light-rgb: var(--color-primary-300); /* was blue-light 147,197,253 — now teal-300 116,233,226 */
   --accent-rgb: 99, 102, 241;
-  --success-rgb: 34, 197, 94;
 
   /* State Colors */
   --state-dragging: rgba(var(--primary-rgb), 0.9);
@@ -198,10 +197,7 @@ const getDotStyle = (index: number) => ({
   --shadow-glow: 0 0 20px rgba(var(--primary-rgb), 0.25);
   --shadow-glow-strong: 0 0 32px rgba(var(--primary-rgb), 0.35);
 
-  /* Transitions - uses global --duration-* tokens */
-  --transition-fast: var(--duration-fast);
-  --transition-normal: var(--duration-normal);
-  --transition-slow: var(--duration-slower);
+  /* Transitions — use global --duration-* tokens directly (no local aliases) */
 
   /* Border Radius - uses global --radius-* tokens
      (local aliases kept for backward compat within this component) */
@@ -240,7 +236,7 @@ const getDotStyle = (index: number) => ({
   user-select: none;
   touch-action: none;
   outline: none;
-  transition: all var(--transition-normal) var(--spring-smooth);
+  transition: all var(--duration-normal) var(--spring-smooth);
   will-change: transform, box-shadow, border-color, background;
   z-index: 10;
 }
@@ -317,7 +313,7 @@ const getDotStyle = (index: number) => ({
   bottom: -var(--space-2_5);
   z-index: -1;
   border-radius: inherit;
-  transition: background-color var(--transition-fast) ease;
+  transition: background-color var(--duration-fast) ease;
 }
 
 .drag-handle__touch-area--active {
@@ -335,7 +331,7 @@ const getDotStyle = (index: number) => ({
   height: var(--space-6);
   padding: var(--space-1);
   gap: var(--space-1);
-  transition: transform var(--transition-normal) var(--spring-bouncy);
+  transition: transform var(--duration-normal) var(--spring-bouncy);
 }
 
 .drag-handle__grip--animating {
@@ -349,7 +345,7 @@ const getDotStyle = (index: number) => ({
   gap: var(--space-1);
   width: 100%;
   height: 100%;
-  transition: transform var(--transition-normal) var(--spring-smooth);
+  transition: transform var(--duration-normal) var(--spring-smooth);
 }
 
 .drag-handle__dots--sm {
@@ -373,9 +369,9 @@ const getDotStyle = (index: number) => ({
   border-radius: var(--radius-full);
   box-shadow: 0 var(--space-0_5) var(--space-0_5) rgba(var(--color-slate-900), 0.2);
   transition:
-    background-color var(--transition-normal) ease,
-    transform var(--transition-normal) var(--spring-bouncy),
-    box-shadow var(--transition-normal) ease;
+    background-color var(--duration-normal) ease,
+    transform var(--duration-normal) var(--spring-bouncy),
+    box-shadow var(--duration-normal) ease;
 }
 
 .drag-handle__dot--dragging {
@@ -404,7 +400,7 @@ const getDotStyle = (index: number) => ({
     transparent 70%
   );
   opacity: 0;
-  transition: opacity var(--transition-fast) ease;
+  transition: opacity var(--duration-fast) ease;
   pointer-events: none;
   filter: blur(var(--blur-xs));
 }
@@ -437,7 +433,7 @@ const getDotStyle = (index: number) => ({
   height: 100%;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--transition-fast) ease;
+  transition: opacity var(--duration-fast) ease;
 }
 
 .drag-handle__indicators--visible {

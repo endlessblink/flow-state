@@ -786,8 +786,8 @@ const handleOutsideClick = (event: MouseEvent) => {
 const {
   isRecording: isWhisperRecording,
   isProcessing: isWhisperProcessing,
-  isSupported: isWhisperSupported,
-  hasApiKey: hasWhisperApiKey,
+  isSupported: _isWhisperSupported,
+  hasApiKey: _hasWhisperApiKey,
   transcript: whisperTranscript,
   error: whisperError,
   start: startWhisper,
@@ -1241,7 +1241,7 @@ defineExpose({
 
 .quick-task-input.voice-active {
   border-color: var(--danger-text, #ef4444);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 0 2px var(--danger-bg-medium);
 }
 
 /* Mic Button (TASK-1024) */
@@ -1277,7 +1277,7 @@ defineExpose({
 
 @keyframes pulse-recording {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 0 0 var(--danger-shadow-strong);
   }
   50% {
     box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
@@ -1352,7 +1352,7 @@ defineExpose({
 .voice-error {
   margin-top: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
   color: var(--danger-text, #ef4444);
@@ -1608,7 +1608,7 @@ defineExpose({
 
 .selection-action.delete-action:hover {
   background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: var(--danger-border-strong);
   color: var(--color-danger);
 }
 
@@ -1630,7 +1630,7 @@ defineExpose({
 }
 
 .delete-confirm-modal {
-  background: rgba(28, 25, 45, 0.95);
+  background: var(--overlay-component-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
@@ -1712,7 +1712,7 @@ defineExpose({
 
 .quick-task-textarea.voice-active {
   border-color: var(--danger-text, #ef4444);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 0 2px var(--danger-bg-medium);
 }
 
 /* TASK-1324: Metadata row for date + priority pickers (Features 2 & 3) */
@@ -1810,7 +1810,7 @@ defineExpose({
 }
 
 .dropdown-option.priority-low:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--blue-bg-light);
 }
 
 .dropdown-option.priority-medium {
@@ -1818,7 +1818,7 @@ defineExpose({
 }
 
 .dropdown-option.priority-medium:hover {
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--color-warning-alpha-10);
 }
 
 .dropdown-option.priority-high {
@@ -1826,7 +1826,7 @@ defineExpose({
 }
 
 .dropdown-option.priority-high:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
 }
 
 /* Fade-slide transition for metadata row */

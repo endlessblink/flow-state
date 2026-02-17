@@ -218,7 +218,7 @@ onUnmounted(() => {
 }
 
 .task-row--selected {
-  background: rgba(78, 205, 196, 0.08) !important; /* Brand tint */
+  background: var(--brand-primary-subtle) !important; /* Brand tint */
   border-left: var(--space-0_5) solid var(--brand-primary);
   border-bottom-color: var(--brand-primary-bg-heavy);
 }
@@ -286,7 +286,7 @@ onUnmounted(() => {
 
 .task-row--selected .task-row__title-text {
   color: var(--brand-primary-light, hsl(var(--brand-200)));
-  text-shadow: 0 0 var(--space-2_5) rgba(78, 205, 196, 0.3);
+  text-shadow: 0 0 var(--space-2_5) var(--brand-primary-dim);
 }
 
 /* Project Emoji Cell - handled by TaskRowProject component */
@@ -388,7 +388,7 @@ onUnmounted(() => {
   outline: none;
   background: var(--glass-bg-soft);
   border-color: var(--brand-primary-alpha-50);
-  box-shadow: 0 0 0 var(--space-0_5) rgba(78, 205, 196, 0.2);
+  box-shadow: 0 0 0 var(--space-0_5) var(--brand-border-subtle);
 }
 
 /* Timer active state - amber glow */

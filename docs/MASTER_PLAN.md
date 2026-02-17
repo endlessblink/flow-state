@@ -610,18 +610,17 @@ Full push notification system with per-category controls, Web Push subscription,
 
 ---
 
-### TASK-1221: Quick Sort AI Commands Interface (🔄 IN PROGRESS)
+### ~~TASK-1221~~: Quick Sort AI Auto-Suggest (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 🔄 IN PROGRESS
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-02-17)
 
-**Goal**: Add 4 AI commands to Quick Sort (desktop + mobile): Auto-suggest (priority/date/project), AI Sort by importance, AI Batch categorize, AI Explain task. Reuses existing `useAITaskAssist.ts` infrastructure.
+**Goal**: Add AI Auto-suggest to Quick Sort (desktop + mobile) — suggests priority, due date, duration, and project for the current task. Originally scoped as 4 AI commands (Sort, Batch, Explain, Suggest) but trimmed to Suggest-only after evaluating reliability. Improved system prompt with stricter confidence thresholds.
 
 **Files**:
-- `src/composables/useQuickSortAI.ts` — NEW: 4 AI functions + state management
-- `src/stores/quickSort.ts` — Extend CategoryAction with description fields
-- `src/composables/useQuickSort.ts` — Add queue reorder support
-- `src/views/QuickSortView.vue` — AI buttons in left sidebar + context panel results
-- `src/mobile/views/MobileQuickSortView.vue` — AI pills in thumb zone + bottom sheets
+- `src/composables/useQuickSortAI.ts` — Auto-suggest with improved prompt (Sort/Batch/Explain removed)
+- `src/composables/useQuickSort.ts` — Removed queue reorder support (was for AI Sort)
+- `src/views/QuickSortView.vue` — Single AI Suggest button + results panel
+- `src/mobile/views/MobileQuickSortView.vue` — Single AI Suggest pill + bottom sheet results
 
 ---
 
@@ -3378,7 +3377,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1353**~~ | **P0** | ✅ **Sidebar quick task: metadata buttons disappear on click + no save confirmation** (✅ DONE 2026-02-17) |
 | ~~**BUG-1355**~~ | **P1** | ✅ **Can't log out — Supabase signOut fails silently, session re-establishes. Buttons squashed. Post-logout UI stuck** (✅ DONE 2026-02-17) |
 | **BUG-1354** | **P0** | **📋 Mobile PWA timer sync broken with web app** |
-| **BUG-1351** | **P0** | **🔄 Calendar drag ghost stuck after inbox→day drop** |
+| ~~**BUG-1351**~~ | **P0** | ✅ **Calendar drag ghost stuck after inbox→day drop** (✅ DONE 2026-02-17) |
 | ~~**BUG-1349**~~ | **P2** | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17) |
 | ~~**BUG-1348**~~ | **P0** | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17) |
 | **BUG-1347** | **P0** | **📋 KDE Plasma widget not responding** |
@@ -4520,9 +4519,9 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 
 ---
 
-### BUG-1351: Calendar drag ghost stuck after inbox→day drop (🔄 IN PROGRESS)
+### ~~BUG-1351~~: Calendar drag ghost stuck after inbox→day drop (✅ DONE 2026-02-17)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
 
 **Problem**: After dragging a task from the calendar inbox to the today view, a ghost/duplicate element remains stuck on screen. The real task lands correctly in the target view, but a visual ghost/phantom element is not cleaned up.
 

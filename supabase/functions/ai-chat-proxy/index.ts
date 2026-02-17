@@ -109,7 +109,8 @@ function buildRequestBody(request: AIChatRequest, defaultModel: string): object 
  */
 async function handleGroqRequest(
   request: AIChatRequest,
-  apiKey: string
+  apiKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const body = buildRequestBody(request, DEFAULT_GROQ_MODEL)
 
@@ -156,7 +157,8 @@ async function handleGroqRequest(
  */
 async function handleOpenRouterRequest(
   request: AIChatRequest,
-  apiKey: string
+  apiKey: string,
+  corsHeaders: Record<string, string>
 ): Promise<Response> {
   const body = buildRequestBody(request, DEFAULT_OPENROUTER_MODEL)
 
@@ -243,11 +245,11 @@ serve(async (req) => {
       )
     }
 
-    // Route to appropriate handler
+    // Route to appropriate handler (pass corsHeaders explicitly)
     if (request.provider === 'groq') {
-      return await handleGroqRequest(request, apiKey)
+      return await handleGroqRequest(request, apiKey, corsHeaders)
     } else {
-      return await handleOpenRouterRequest(request, apiKey)
+      return await handleOpenRouterRequest(request, apiKey, corsHeaders)
     }
 
   } catch (error) {

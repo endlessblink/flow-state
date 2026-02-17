@@ -37,8 +37,8 @@ FlowState uses [Doppler](https://doppler.com) for secure secrets management acro
 |--------|----------|-------------|
 | `VITE_SUPABASE_URL` | Yes | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anonymous key |
-| `VITE_OPENAI_API_KEY` | No | OpenAI API key for AI features |
-| `VITE_GROQ_API_KEY` | No | Groq API key for voice input (Whisper) |
+| ~~VITE_OPENAI_API_KEY~~ | No | Removed — AI keys are now server-side in Supabase Edge Functions (BUG-1131) |
+| ~~VITE_GROQ_API_KEY~~ | No | Removed — AI keys are now server-side in Supabase Edge Functions (BUG-1131) |
 | `NODE_ENV` | Yes | Environment (production) |
 
 ### GitHub Repository Secrets
@@ -70,8 +70,7 @@ In Doppler dashboard, add these secrets to the `prod` environment:
 ```
 VITE_SUPABASE_URL=https://api.in-theflow.com
 VITE_SUPABASE_ANON_KEY=<your-production-key>
-VITE_OPENAI_API_KEY=<your-openai-key>  # Optional
-VITE_GROQ_API_KEY=<your-groq-key>      # Optional - for voice input
+# AI API keys are now server-side only (BUG-1131) — no VITE_* keys needed for AI
 NODE_ENV=production
 ```
 

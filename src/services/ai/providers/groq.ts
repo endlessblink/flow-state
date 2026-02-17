@@ -404,7 +404,7 @@ export class GroqProvider implements AIProvider {
             if (choice.finish_reason) {
               return
             }
-          } catch (parseError) {
+          } catch (_parseError) {
             console.warn('[Groq] Failed to parse SSE chunk:', line)
           }
         }
@@ -493,13 +493,13 @@ export class GroqProvider implements AIProvider {
 /**
  * Create a new Groq provider instance.
  *
- * @param apiKey - Groq API key (from VITE_GROQ_API)
+ * @param apiKey - Groq API key
  * @param config - Optional configuration overrides
  * @returns Initialized Groq provider
  *
  * @example
  * ```typescript
- * const provider = createGroqProvider(import.meta.env.VITE_GROQ_API)
+ * const provider = createGroqProvider('your-api-key')
  * await provider.initialize()
  * const response = await provider.generate([
  *   { role: 'user', content: 'Hello!' }
@@ -514,33 +514,4 @@ export function createGroqProvider(
     ...config,
     apiKey,
   })
-}
-
-/**
- * Auto-detect and create a Groq provider from environment variables.
- * Returns null if API key is not found.
- *
- * @param config - Optional configuration overrides
- * @returns Groq provider or null
- */
-export async function autoDetectGroq(
-  config: Partial<GroqConfig> = {}
-): Promise<GroqProvider | null> {
-  const apiKey = import.meta.env.VITE_GROQ_API
-
-  if (!apiKey) {
-    console.warn('[Groq] No API key found in VITE_GROQ_API')
-    return null
-  }
-
-  const provider = createGroqProvider(apiKey, config)
-  const success = await provider.initialize()
-
-  if (!success) {
-    console.warn('[Groq] Initialization failed')
-    provider.dispose()
-    return null
-  }
-
-  return provider
 }

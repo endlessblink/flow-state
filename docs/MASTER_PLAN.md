@@ -3178,24 +3178,29 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### FEATURE-1201: Intro/Onboarding Page for Guest and Signed-In Users (📋 PLANNED)
+### FEATURE-1201: Intro/Onboarding Page for Guest and Signed-In Users (👀 REVIEW)
 
-**Priority**: P2 | **Status**: 📋 PLANNED
+**Priority**: P2 | **Status**: 👀 REVIEW (2026-02-17)
 
-**Feature**: Add an intro/onboarding page when users first enter the app, both in guest mode and after signing in. Need to decide what content belongs on each.
+**Feature**: 4-step onboarding wizard replacing the old WelcomeModal. Same flow for guest and signed-in users.
 
-**Design Decisions Needed**:
-- [ ] What to show guest users (feature highlights, sign-up CTA, quick tour?)
-- [ ] What to show signed-in users on first visit (workspace setup, quick tutorial, keyboard shortcuts?)
-- [ ] Should it be a single splash page, multi-step wizard, or dismissable overlay?
-- [ ] Should it reappear after major updates?
+**Design Decisions (Resolved)**:
+- [x] What to show: Feature highlights (step 1-2) + sync benefits (step 3) + auth-aware CTA (step 4)
+- [x] Format: Multi-step wizard with progress dots, directional slide transitions
+- [x] Reappear: No — dismissed permanently via localStorage (`flowstate-onboarding-v2`)
 
-**Requirements**:
-- [ ] Guest mode intro: explain app capabilities, encourage sign-up
-- [ ] Signed-in intro: workspace orientation, key features walkthrough
-- [ ] "Don't show again" option
-- [ ] Mobile-responsive design
-- [ ] Matches glass morphism design system
+**Implementation**:
+- [x] `useOnboardingWizard.ts` composable — state machine, keyboard/swipe navigation, localStorage persistence
+- [x] 4 step components: Welcome, Views Showcase, Sync Benefits, Ready (auth-aware)
+- [x] `OnboardingWizard.vue` container with Teleport, transitions, progress dots
+- [x] Moved from MainLayout to App.vue — now shows on both desktop and mobile
+- [x] Removed old WelcomeModal from MainLayout (component kept for reference)
+- [x] Keyboard: ArrowRight/Left, Enter, Escape. Mobile: swipe left/right
+- [x] Storybook stories for all steps + interactive demo
+- [x] Build passes, zero new TS errors
+
+**Files Created**: `src/composables/app/useOnboardingWizard.ts`, `src/components/onboarding/OnboardingWizard.vue`, `OnboardingStepWelcome.vue`, `OnboardingStepViews.vue`, `OnboardingStepSync.vue`, `OnboardingStepReady.vue`, `OnboardingProgressDots.vue`, `src/stories/modals/OnboardingWizard.stories.ts`
+**Files Modified**: `src/App.vue`, `src/layouts/MainLayout.vue`
 
 ---
 
@@ -3354,7 +3359,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
 | **FEATURE-1342** | **P2** | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data** |
 | ~~**BUG-1343**~~ | **P2** | ✅ **Quick Sort exits when swiping right on PWA mobile** (✅ DONE 2026-02-17) |
+| **TASK-1345** | **P2** | **🔄 Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
 | **TASK-1344** | **P2** | **📋 AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync** |
+| **FEATURE-1345** | **P2** | **📋 Capacitor Android App — wrap Vue PWA for Play Store distribution** |
 | ~~**TASK-1339**~~ | **P0** | ✅ **Tasks must persist over refresh in guest mode** (✅ DONE 2026-02-17) |
 | ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
 | ~~**TASK-1327**~~ | **P0** | ✅ **Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** (✅ DONE 2026-02-17) |
@@ -3405,7 +3412,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~TASK-1281~~ | P3 | ✅ Adopt build-time console.log stripping (esbuild pure config) |
 | ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
 | FEATURE-1200 | P2 | Quick Add full RTL support + auto-expand for long tasks |
-| FEATURE-1201 | P2 | Intro/onboarding page for guest + signed-in users |
+| FEATURE-1201 | P2 | 👀 Intro/onboarding wizard — 4-step with progress dots, keyboard + swipe nav |
 | ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
 | TASK-1283 | P1 | 📋 Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
 | **TASK-1284** | **P0** | **🔄 Add quick task creation to KDE Plasma widget (pomoflow-kde repo)** |
@@ -3432,24 +3439,15 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ---
 
-### BUG-1131: Move All Exposed API Keys to Backend Proxy (📋 PLANNED)
+### ~~BUG-1131~~: Move All Exposed API Keys to Backend Proxy (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE
 
-**Problem**: API keys with `VITE_*` prefix are bundled into client JavaScript by Vite, making them visible to anyone who inspects the bundle:
-- `VITE_GROQ_API_KEY` - Groq Whisper for voice transcription
-- `VITE_DEEPSEEK_API_KEY` - DeepSeek AI chat
-- `VITE_ANTHROPIC_API_KEY` - Anthropic Claude API
-- `VITE_OPENAI_API_KEY` - OpenAI API
+**Problem**: API keys with `VITE_*` prefix were bundled into client JavaScript by Vite.
 
-**Root Cause**: Using `import.meta.env.VITE_*` to access API keys. Even when stored in Doppler, the VITE_ prefix causes client bundling.
+**Solution**: All cloud AI calls now go through Supabase Edge Functions (`ai-chat-proxy`, `whisper-transcribe`, `url-scraper-proxy`). Proxy providers (`groqProxy.ts`, `openrouterProxy.ts`) have `requiresApiKey = false` — keys are server-side only. Dead code (`autoDetectGroq`, `VITE_GROQ_API_KEY` env references) removed in cleanup pass. No `VITE_*_API_KEY` variables remain in the client bundle.
 
-**Solution**: Create Supabase Edge Functions as backend proxies:
-1. Create `supabase/functions/ai-proxy/` for all AI API calls
-2. Move API keys to Supabase Edge Function secrets (not VITE_ prefixed)
-3. Update frontend services to call Edge Functions instead of direct API calls
-
-**Files**: `src/services/groqWhisper.ts`, `src/services/ai/deepseek.ts`, `src/services/ai/anthropic.ts`, `src/services/ai/openai.ts`
+**Files**: `src/services/ai/providers/groqProxy.ts`, `src/services/ai/providers/openrouterProxy.ts`, `src/services/ai/proxy/aiChatProxy.ts`, `supabase/functions/ai-chat-proxy/`, `supabase/functions/whisper-transcribe/`
 
 ---
 

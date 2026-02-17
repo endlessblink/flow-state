@@ -19,7 +19,25 @@
 
     <!-- Header -->
     <div class="mobile-inbox-header">
-      <h2>Inbox</h2>
+      <div class="header-left">
+        <div class="view-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'tasks' }"
+            @click="setViewMode('tasks')"
+          >
+            Tasks
+          </button>
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'today' }"
+            @click="setViewMode('today')"
+          >
+            Today
+          </button>
+        </div>
+        <span v-if="viewMode === 'today'" class="today-subtitle">{{ todayDateLabel }}</span>
+      </div>
       <div class="header-actions">
         <span class="task-count">{{ filteredTasks.length }}</span>
       </div>
@@ -27,8 +45,8 @@
 
     <!-- TASK-1104: Enhanced Filter Section -->
     <div class="filter-section">
-      <!-- Time-based Filters Row -->
-      <div class="filter-chips">
+      <!-- Time-based Filters Row (hidden in Today mode) -->
+      <div v-if="viewMode === 'tasks'" class="filter-chips">
         <button
           v-for="filter in timeFilters"
           :key="filter.value"
@@ -97,7 +115,10 @@
     <div class="mobile-task-list">
       <div v-if="filteredTasks.length === 0" class="empty-state">
         <Inbox :size="48" />
-        <p v-if="activeTimeFilter === 'all'">
+        <p v-if="viewMode === 'today'">
+          All clear for today!
+        </p>
+        <p v-else-if="activeTimeFilter === 'all'">
           No tasks yet
         </p>
         <p v-else>
@@ -341,6 +362,23 @@ const taskInput = ref<HTMLInputElement | null>(null)
 const showDebug = ref(false)
 const isDevUser = computed(() => authStore.user?.email === 'endlessblink@gmail.com')
 const sortBy = ref<'newest' | 'priority' | 'dueDate'>('newest')
+
+// View mode toggle: Tasks (all) vs Today (due today + overdue)
+type ViewMode = 'tasks' | 'today'
+const VIEW_MODE_KEY = 'flowstate-inbox-view-mode'
+const viewMode = ref<ViewMode>((localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || 'tasks')
+
+const setViewMode = (mode: ViewMode) => {
+  viewMode.value = mode
+  localStorage.setItem(VIEW_MODE_KEY, mode)
+}
+
+const todayDateLabel = computed(() => {
+  const now = new Date()
+  const day = now.toLocaleDateString('en-US', { weekday: 'long' })
+  const date = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  return `${day}, ${date}`
+})
 
 // TASK-1104: Enhanced filtering state (view-specific)
 type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
@@ -634,23 +672,34 @@ const groupByLabel = computed(() => {
 const filteredTasks = computed(() => {
   let tasks = [...taskStore.tasks]
 
+  // Today view mode: only show tasks due today + overdue (exclude done)
+  if (viewMode.value === 'today') {
+    tasks = tasks.filter(t => {
+      if (t.status === 'done') return false
+      if (!t.dueDate) return false
+      return isDueToday(t.dueDate) || isTaskOverdue(t.dueDate)
+    })
+  }
+
   // Hide done tasks filter
   if (hideDoneTasks.value) {
     tasks = tasks.filter(t => t.status !== 'done')
   }
 
-  // Time-based filter
-  switch (activeTimeFilter.value) {
-    case 'today':
-      tasks = tasks.filter(t => isDueToday(t.dueDate))
-      break
-    case 'week':
-      tasks = tasks.filter(t => isDueThisWeek(t.dueDate))
-      break
-    case 'overdue':
-      tasks = tasks.filter(t => isTaskOverdue(t.dueDate) && t.status !== 'done')
-      break
-    // 'all' shows everything
+  // Time-based filter (only in Tasks mode — Today mode already filters)
+  if (viewMode.value === 'tasks') {
+    switch (activeTimeFilter.value) {
+      case 'today':
+        tasks = tasks.filter(t => isDueToday(t.dueDate))
+        break
+      case 'week':
+        tasks = tasks.filter(t => isDueThisWeek(t.dueDate))
+        break
+      case 'overdue':
+        tasks = tasks.filter(t => isTaskOverdue(t.dueDate) && t.status !== 'done')
+        break
+      // 'all' shows everything
+    }
   }
 
   // Sort
@@ -1006,6 +1055,46 @@ const isOverdue = (dueDate: string | Date): boolean => {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
+}
+
+/* Header left with toggle */
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* View toggle pill */
+.view-toggle {
+  display: flex;
+  background: var(--surface-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-0_5);
+  gap: var(--space-0_5);
+}
+
+.toggle-btn {
+  padding: var(--space-1_5) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) ease;
+}
+
+.toggle-btn.active {
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.today-subtitle {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  padding-left: var(--space-2);
 }
 
 /* Filter Section */
@@ -1931,6 +2020,11 @@ const isOverdue = (dueDate: string | Date): boolean => {
 [dir="rtl"] .dropdown-menu {
   left: auto;
   right: 0;
+}
+
+[dir="rtl"] .today-subtitle {
+  padding-left: 0;
+  padding-right: var(--space-2);
 }
 
 [dir="rtl"] .debug-toggle {

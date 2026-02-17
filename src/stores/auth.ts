@@ -308,7 +308,24 @@ export const useAuthStore = defineStore('auth', () => {
             handledSignInForUserId = newSession.user.id
 
             if (appInitLoadComplete) {
-              console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: skipping store reload (useAppInitialization already loaded)`)
+              // BUG-1339: Defense-in-depth — even if appInitLoadComplete is true,
+              // check if tasks actually loaded. If they didn't (e.g., auth was stale
+              // during init), reload now that we have a valid session.
+              const { useTaskStore } = await import('@/stores/tasks')
+              const taskStore = useTaskStore()
+              if (taskStore._rawTasks.length === 0) {
+                console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: appInitLoadComplete but tasks empty — reloading stores`)
+                const { useProjectStore } = await import('@/stores/projects')
+                const { useCanvasStore } = await import('@/stores/canvas')
+                await Promise.all([
+                  useProjectStore().loadProjectsFromDatabase(),
+                  taskStore.loadFromDatabase(),
+                  useCanvasStore().loadFromDatabase()
+                ])
+                console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after delayed auth recovery`)
+              } else {
+                console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: skipping store reload (useAppInitialization already loaded)`)
+              }
             } else {
               // Post-init sign-in: user signed in via modal after app loaded in guest mode
               console.log(`👤 [AUTH:${currentTabId}] User signed in (post-init) - reloading stores...`)

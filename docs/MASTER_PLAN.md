@@ -8,9 +8,9 @@
 
 ## Active Bugs (P0-P1)
 
-### BUG-1340: Calendar view gets stuck when dragging task to main inbox (🔄 IN PROGRESS)
+### ~~BUG-1340~~: Calendar view gets stuck when dragging task to main inbox (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
 
 **Problem**: Dragging a task from the calendar week view toward the sidebar/inbox causes the calendar to get stuck — the drag ghost remains visible and the view becomes unresponsive. The task appears frozen mid-drag with no way to cancel.
 
@@ -25,11 +25,19 @@
 
 ---
 
-### BUG-1339: All views load blank on first load, require refresh to show tasks (🔄 IN PROGRESS)
+### BUG-1339: All views load blank on first load, require refresh to show tasks (👀 REVIEW)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS
+**Priority**: P1 | **Status**: 👀 REVIEW
 
 **Problem**: All views (Board, Calendar, All Tasks, Canvas) load blank on initial app load. Tasks only appear after a manual page refresh. Suggests a race condition in app initialization — tasks not loaded before views render.
+
+**Root Cause**: Auth token refresh race condition. When `authStore.initialize()` resolves with an expired session (refresh fails), `loadFromDatabase()` takes the guest-mode path and finds nothing → `_rawTasks = []`. Then `markAppInitLoadComplete()` is called unconditionally, so when the delayed Supabase `onAuthStateChange` fires `SIGNED_IN` (token eventually refreshed), the auth handler sees `appInitLoadComplete = true` and **skips the store reload**. On manual refresh, the fresh token is already in localStorage, so the load succeeds immediately.
+
+**Fix**:
+1. `useAppInitialization.ts`: `loadWithRetry` now returns `boolean`. `markAppInitLoadComplete()` only called on success — leaves the door open for SIGNED_IN handler to retry
+2. `auth.ts` SIGNED_IN handler: Defense-in-depth — even when `appInitLoadComplete` is true, checks if `_rawTasks` is empty and reloads if so
+
+**Files Changed**: `src/composables/app/useAppInitialization.ts`, `src/stores/auth.ts`
 
 ---
 

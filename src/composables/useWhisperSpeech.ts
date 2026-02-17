@@ -306,6 +306,9 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         + 'PR, bug, feature, sprint, backlog, standup, sync, TODO, ASAP, FYI.')
       formData.append('temperature', '0')
 
+      // BUG-1350: Log model for production diagnostics (Whisper model verification)
+      console.log('[VOICE] Sending to Whisper:', { model, language: 'he', audioSize: audioBlob.size, mimeType: audioBlob.type })
+
       // Call Edge Function (API key is server-side, synced from Doppler)
       const response = await fetch(getWhisperEndpoint(), {
         method: 'POST',

@@ -210,6 +210,7 @@
         <div class="quick-add-row">
           <input
             type="text"
+            dir="ltr"
             placeholder="Add a task..."
             class="quick-add-input"
             readonly
@@ -288,6 +289,7 @@
       :voice-transcript="finalVoiceTranscript || whisperTranscript"
       :voice-error="voiceError"
       :can-re-record="isVoiceSupported"
+      :voice-session-active="voiceSessionActive"
       @close="handleTaskCreateClose"
       @created="handleTaskSheetCreated"
       @stop-recording="stopVoice"
@@ -464,6 +466,12 @@ const isProcessingVoice = computed(() => isWhisperProcessing.value || isQueuePro
 const isVoiceQueued = computed(() => isWhisperQueued.value)
 const isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
 const voiceError = computed(() => whisperError.value)
+
+// BUG-1350: Track entire voice session to prevent premature sheet close
+// True from mic tap until transcript is populated in the sheet
+const voiceSessionActive = computed(() => {
+  return isListening.value || isProcessingVoice.value || isWhisperQueued.value
+})
 
 // Voice control functions - Whisper only
 const startVoice = async () => {
@@ -904,8 +912,8 @@ const _submitTask = () => {
 
 // Task create sheet handler
 const handleTaskCreateClose = () => {
-  // BUG-1350: Cancel any active recording when closing the sheet
-  if (isListening.value) {
+  // BUG-1350: Cancel any active voice session when closing the sheet
+  if (isListening.value || isProcessingVoice.value) {
     cancelVoice()
   }
   isTaskCreateOpen.value = false
@@ -1633,10 +1641,10 @@ const isOverdue = (dueDate: string | Date): boolean => {
 
 @keyframes pulse-recording {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 0 0 hsla(var(--red-500), 0.4);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 12px hsla(var(--red-500), 0);
   }
 }
 

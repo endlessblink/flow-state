@@ -223,8 +223,16 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
                 }
 
                 // 2. Auth Errors (401/403) - Can happen if GoTrue/PostgREST is restarting or cache is stale
+                // BUG-1182 FIX: Refresh the auth token before retrying. After sleep/wake, the JWT
+                // may have expired. Without this, all 3 retries use the same stale token and all fail.
                 if (status === 401 || status === 403 || status === '401' || status === '403' || message.includes('JWKS') || message.includes('invalid_token')) {
-                    console.warn(`🔐 [AUTH-RETRY] ${context} failed (${status}). Retrying with backoff in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
+                    console.warn(`🔐 [AUTH-RETRY] ${context} failed (${status}). Refreshing token and retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`)
+                    try {
+                        await supabase.auth.refreshSession()
+                        console.log(`🔐 [AUTH-RETRY] Token refreshed successfully before retry`)
+                    } catch (refreshErr) {
+                        console.warn(`🔐 [AUTH-RETRY] Token refresh failed:`, refreshErr)
+                    }
                     await new Promise(resolve => setTimeout(resolve, delay))
                     continue
                 }
@@ -1725,6 +1733,16 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         const onVisibilityChange = async () => {
             if (document.visibilityState === 'visible') {
                 console.log('👀 [REALTIME] App visible - checking connection health...')
+
+                // BUG-1182 FIX: Proactively refresh auth token on wake-up.
+                // After sleep, the JWT may have expired. Refreshing here ensures subsequent
+                // REST save calls have a valid token, preventing silent save failures.
+                try {
+                    await supabase.auth.refreshSession()
+                } catch (e) {
+                    console.warn('👀 [REALTIME] Token refresh on wake failed:', e)
+                }
+
                 const state = currentChannel?.state
 
                 if (!currentChannel || state === 'closed' || state === 'errored') {

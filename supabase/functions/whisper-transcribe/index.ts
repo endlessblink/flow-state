@@ -72,6 +72,16 @@ serve(async (req) => {
       groqFormData.append('language', language as string)
     }
 
+    const prompt = formData.get('prompt')
+    const temperature = formData.get('temperature')
+
+    if (prompt) {
+      groqFormData.append('prompt', prompt as string)
+    }
+    if (temperature) {
+      groqFormData.append('temperature', temperature as string)
+    }
+
     // Call Groq Whisper API
     const groqResponse = await fetch(GROQ_API_URL, {
       method: 'POST',

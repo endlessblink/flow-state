@@ -4025,13 +4025,15 @@ header Access-Control-Allow-Origin "https://in-theflow.com"
 
 ---
 
-### TASK-1174: Fix 16 npm Audit Vulnerabilities (📋 PLANNED)
+### ~~TASK-1174~~: Fix 16 npm Audit Vulnerabilities (✅ DONE)
 
-**Priority**: P2-MEDIUM | **Status**: 📋 PLANNED
+**Priority**: P2-MEDIUM | **Status**: ✅ DONE
 
-**Problem**: 16 vulnerabilities (0 critical, 2 high, 14 moderate).
+**Problem**: 13 vulnerabilities (7 low, 3 moderate, 3 high).
 
-**Solution**: Run `npm audit fix` and address remaining issues.
+**Solution**: `npm audit fix` resolved 7 (all high + moderate). Remaining 6 are low-severity `elliptic` chain via `vite-plugin-node-polyfills` — requires breaking downgrade, not worth the risk.
+
+**Result**: 13 → 6 (all low severity). Build verified clean.
 
 **Files**: `package.json`, `package-lock.json`
 

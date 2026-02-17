@@ -451,7 +451,7 @@ onUnmounted(() => {
     background: var(--color-priority-high);
   }
   50% {
-    background: hsl(0, 90%, 55%);
+    background: var(--color-priority-high);
   }
 }
 

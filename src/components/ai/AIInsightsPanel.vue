@@ -431,24 +431,24 @@ const graphEdges = ref<GraphEdge[]>([])
 let animFrame: number | null = null
 
 const RELATION_COLORS: Record<string, string> = {
-  'peak_productivity': '#4ECDC4',
-  'completion_rate': '#4ECDC4',
-  'avg_completion_speed': '#4ECDC4',
-  'reliable_planner': '#4ECDC4',
-  'most_active': '#3db8af',
-  'overdue_pattern': '#ff9f43',
-  'backlog_heavy': '#ff9f43',
-  'high_wip': '#ff9f43',
-  'underestimates': '#ff9f43',
-  'capacity_gap': '#ff9f43',
-  'stale': '#ff5555',
-  'frequently_missed': '#ff5555',
-  'overestimates': '#ff9f43',
-  'overplans': '#ff9f43',
+  'peak_productivity': 'var(--brand-primary)',
+  'completion_rate': 'var(--brand-primary)',
+  'avg_completion_speed': 'var(--brand-primary)',
+  'reliable_planner': 'var(--brand-primary)',
+  'most_active': 'var(--brand-secondary)',
+  'overdue_pattern': 'var(--color-warning)',
+  'backlog_heavy': 'var(--color-warning)',
+  'high_wip': 'var(--color-warning)',
+  'underestimates': 'var(--color-warning)',
+  'capacity_gap': 'var(--color-warning)',
+  'stale': 'var(--color-danger)',
+  'frequently_missed': 'var(--color-danger)',
+  'overestimates': 'var(--color-warning)',
+  'overplans': 'var(--color-warning)',
 }
 
 function getNodeColor(obs: MemoryObservation): string {
-  return RELATION_COLORS[obs.relation] || '#4ECDC4'
+  return RELATION_COLORS[obs.relation] || 'var(--brand-primary)'
 }
 
 function buildGraph() {
@@ -471,7 +471,7 @@ function buildGraph() {
     vx: 0,
     vy: 0,
     radius: 28,
-    color: '#4ECDC4',
+    color: 'var(--brand-primary)',
     type: 'center',
     pinned: true,
   })
@@ -952,8 +952,8 @@ onUnmounted(() => {
   background: var(--glass-bg-soft);
   border: 1px solid var(--brand-primary);
   color: var(--brand-primary);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 .primary-btn:hover:not(:disabled) {
@@ -970,8 +970,8 @@ onUnmounted(() => {
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border-hover);
   color: var(--text-secondary);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 .ghost-btn:hover {
@@ -984,8 +984,8 @@ onUnmounted(() => {
   background: var(--glass-bg-soft);
   border: 1px solid var(--color-danger);
   color: var(--color-danger);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 .danger-btn:hover {
@@ -1055,8 +1055,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--space-7);
+  height: var(--space-7);
   border: none;
   background: transparent;
   color: var(--text-muted);

@@ -141,7 +141,10 @@ const canChangePassword = computed(() => true)
 
 const handleSignOut = async () => {
   await authStore.signOut()
-  emit('closeModal')
+  // BUG-1352: Force full page reload to reset all reactive state to guest mode.
+  // Just closing the modal leaves stale data in composables, watchers, and views
+  // that don't properly react to the auth→guest transition.
+  window.location.reload()
 }
 
 const handleChangePassword = async () => {
@@ -561,18 +564,28 @@ const handleChangePassword = async () => {
 
 .account-info {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-3);
   padding: var(--space-4);
   background: var(--glass-bg-soft);
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-border);
 }
 
+.user-details {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .user-email {
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin-bottom: var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-status {
@@ -584,6 +597,7 @@ const handleChangePassword = async () => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  white-space: nowrap;
   background: var(--color-danger-bg-light);
   border: 1px solid rgba(239, 68, 68, 0.2);
   color: var(--color-danger);
@@ -620,6 +634,7 @@ const handleChangePassword = async () => {
 
 .account-actions {
   display: flex;
+  flex-shrink: 0;
   gap: var(--space-2);
 }
 
@@ -627,6 +642,7 @@ const handleChangePassword = async () => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  white-space: nowrap;
   background: var(--glass-bg-medium);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);

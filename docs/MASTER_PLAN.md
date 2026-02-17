@@ -8,6 +8,25 @@
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1350~~: Voice transcription sheet closes prematurely on PWA mobile (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
+
+**Problem**: On mobile PWA, tapping mic to record and transcribe closes the TaskCreateBottomSheet prematurely — transcription never appears in the task title field.
+
+**Root Cause**: `sheet-overlay` div had `@click="handleCancel"` which fired on mobile due to touch events during recording→processing layout shifts. Sheet is full-screen (100dvh) so overlay clicks are unnecessary. Additionally, a lifecycle gap existed between recording stopping and processing starting where `voiceSessionActive` wasn't tracked.
+
+**Fixes**:
+1. Removed `@click="handleCancel"` from the `.sheet-overlay` div in `TaskCreateBottomSheet.vue` — full-screen sheet has no dismissable backdrop
+2. Added `voiceSessionActive` prop to `TaskCreateBottomSheet` — blocks `handleCancel` during the entire voice lifecycle (recording → processing → transcript received)
+3. Added `voiceSessionActive` computed in `MobileInboxView.vue` — true when `isListening || isProcessingVoice || isWhisperQueued`
+4. Updated `handleTaskCreateClose` to also cancel voice when `isProcessingVoice` (not just `isListening`)
+5. Added production-safe `[VOICE] Sending to Whisper: { model, ... }` log in `useWhisperSpeech.ts` for model verification
+
+**Files Changed**: `src/mobile/components/TaskCreateBottomSheet.vue`, `src/mobile/views/MobileInboxView.vue`, `src/composables/useWhisperSpeech.ts`
+
+---
+
 ### ~~TASK-1348~~: Board Due Date grouping + emojis + column order (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-02-17)
@@ -2601,9 +2620,10 @@ npm run tasks:bugs     # Filter by BUG type
 **Phased Plan** (by domain, priority order):
 
 | Phase | Domain | Files | Est. Violations | Priority |
-|---|---|---|---|---|
-| 1 | Mobile views (`mobile/`) | ~10 | ~500 | Highest — worst offender area |
-| 2 | AI Chat (`ai/`) | 2 | ~250 | High — AIChatPanel + ChatMessage |
+|---|---|---|---|---
+[x] Phase 1: Mobile Views (`src/mobile/`) **[DONE]**
+| 1 | Mobile views (`mobile/`) | ~10 | ~500 | Highest — ✅ Phase 1 DONE |
+| 2 | AI Chat (`ai/`) | 2 | ~250 | High — ✅ Complete |
 | 3 | Gamification (`gamification/`) | ~20 | ~400 | Medium — cyber components |
 | 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — TaskNode, GroupNode |
 | 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — TaskRow, drag handles |

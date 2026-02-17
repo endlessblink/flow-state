@@ -106,7 +106,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   // This covers inbox-to-calendar drags where the calendar's handleEventDragEnd never fires.
   watch(globalIsDragging, (dragging) => {
     if (!dragging) {
-      console.log('[BUG-1351:WATCH] globalIsDragging→false — hiding ghost. Was visible:', dragGhost.value.visible)
       // BUG-1351: Replace entire object for guaranteed prop reactivity
       dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
       activeDropSlot.value = null
@@ -334,10 +333,8 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     // BUG-1351: Don't show ghost if no active drag (stray browser events after drop)
     if (!globalIsDragging.value) {
-      console.log('[BUG-1351:ENTER] handleDragEnter BLOCKED — globalIsDragging is false')
       return
     }
-    console.log('[BUG-1351:ENTER] handleDragEnter — showing ghost at slot', slot.slotIndex)
 
     const data = event.dataTransfer?.getData('application/json')
     let parsedData: CalendarDragData | null = null
@@ -417,7 +414,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
   }
 
   const resetDragState = () => {
-    console.log('[BUG-1351:RESET] resetDragState called. Ghost was visible:', dragGhost.value.visible)
     // BUG-1351: Replace entire object (not just .visible) to guarantee Vue reactivity
     dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
     isDragging.value = false
@@ -430,7 +426,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
     // BUG-1351: Hide ghost IMMEDIATELY on drop, before any async work.
     // This prevents ghost from persisting during await or if dragend doesn't fire.
-    console.log('[BUG-1351:DROP] handleDrop fired — hiding ghost immediately')
     dragGhost.value = { visible: false, title: '', duration: 30, slotIndex: 0 }
     activeDropSlot.value = null
 

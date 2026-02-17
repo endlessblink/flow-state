@@ -1178,8 +1178,8 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   border-color: var(--brand-primary);
   background: var(--glass-bg-soft);
   color: var(--brand-primary);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
 }
 
 .smart-suggestion-field {
@@ -1197,12 +1197,12 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
 }
 
 .confidence--high {
-  background: var(--brand-primary-bg, rgba(78, 205, 196, 0.15));
+  background: var(--brand-primary-bg, var(--glass-bg-medium));
   color: var(--brand-primary);
 }
 
 .confidence--medium {
-  background: rgba(255, 193, 7, 0.15);
+  background: var(--warning-bg-light);
   color: var(--color-priority-medium);
 }
 
@@ -1313,8 +1313,8 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
   transition: background var(--duration-fast), border-color var(--duration-fast);
 }
 

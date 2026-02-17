@@ -22,6 +22,7 @@ import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -539,38 +540,8 @@ export function useAITaskAssist() {
         t.dueDate && t.dueDate < today && t.status !== 'done'
       ).length
 
-      // Try to get work profile for user context
-      let userContext = ''
-      try {
-        const { useWorkProfile } = await import('@/composables/useWorkProfile')
-        const { loadProfile } = useWorkProfile()
-        const profile = await loadProfile()
-        if (profile) {
-          const parts: string[] = []
-          if (profile.peakProductivityDays?.length) {
-            parts.push(`Peak days: ${profile.peakProductivityDays.join(', ')}`)
-          }
-          if (profile.avgTasksCompletedPerDay) {
-            parts.push(`Avg: ${profile.avgTasksCompletedPerDay} tasks/day`)
-          }
-          if (profile.avgPlanAccuracy && profile.avgPlanAccuracy < 0.8) {
-            const bias = (1 / profile.avgPlanAccuracy).toFixed(1)
-            parts.push(`Estimation bias: underestimates ${bias}x`)
-          }
-          if (parts.length > 0) userContext = '\n' + parts.join(' | ')
-
-          // FEATURE-1342: Include past suggestion corrections for learning
-          const feedbackObs = (profile.memoryGraph || [])
-            .filter((o: { source?: string }) => o.source === 'suggestion_feedback')
-          if (feedbackObs.length > 0) {
-            userContext += '\nPast corrections: ' + feedbackObs
-              .map((o: { entity: string; value: string }) => `${o.entity}: ${o.value}`)
-              .join('; ')
-          }
-        }
-      } catch {
-        // Work profile not available, continue without it
-      }
+      // TASK-1350: Use centralized AI user context
+      const userContext = await getAIUserContext('taskassist')
 
       const systemPrompt = `You suggest task metadata. Return ONLY valid JSON.
 Format: { "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }

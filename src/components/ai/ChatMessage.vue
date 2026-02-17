@@ -212,21 +212,21 @@ function formatTimeRemaining(minutes: number): string {
 
 function tierColor(tier?: string): string {
   switch (tier) {
-    case 'bronze': return '#cd7f32'
-    case 'silver': return '#c0c0c0'
-    case 'gold': return '#ffd700'
-    case 'platinum': return '#e5e4e2'
-    default: return 'var(--text-secondary, rgba(255,255,255,0.6))'
+    case 'bronze': return 'rgb(var(--tier-bronze))'
+    case 'silver': return 'rgb(var(--tier-silver))'
+    case 'gold': return 'rgb(var(--tier-gold))'
+    case 'platinum': return 'rgb(var(--tier-platinum))'
+    default: return 'var(--text-secondary)'
   }
 }
 
 function priorityColor(priority?: string): string {
   switch (priority) {
-    case 'urgent': return '#ef4444'
-    case 'high': return '#f97316'
-    case 'medium': return '#eab308'
-    case 'low': return '#22c55e'
-    default: return 'rgba(255,255,255,0.4)'
+    case 'urgent': return 'var(--color-priority-high)'
+    case 'high': return 'var(--color-priority-medium)'
+    case 'medium': return 'var(--color-priority-low)' // Typically yellow/orange
+    case 'low': return 'var(--color-success)'
+    default: return 'var(--glass-handle)'
   }
 }
 
@@ -407,7 +407,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-if="isDailySummaryResult(result)" class="tool-result-card">
             <div class="tool-result-header tool-read">
               <component :is="toolIcon(result.type)" :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <div class="summary-stats-grid">
               <div class="summary-stat">
@@ -450,7 +450,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
               >
                 <span
                   class="task-priority-dot"
-                  :style="{ background: '#ef4444' }"
+                  :style="{ background: 'var(--color-priority-high)' }"
                 />
                 <span class="task-title" :dir="direction || 'auto'">{{ task.title || '(untitled)' }}</span>
                 <div class="task-meta-row">
@@ -564,7 +564,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isGamificationStatusResult(result)" class="tool-result-card gamification-card">
             <div class="tool-result-header tool-read">
               <Trophy :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <div class="gam-profile-row">
               <div class="gam-level-badge">
@@ -597,7 +597,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="gam-stat-label">Achievements</span>
               </div>
             </div>
-            <div v-if="result.data.streakAtRisk" class="gam-warning">
+            <div v-if="result.data.streakAtRisk" class="gam-warning" dir="auto">
               Streak at risk! Complete a task today to keep your {{ result.data.currentStreak }}-day streak.
             </div>
           </div>
@@ -606,7 +606,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isActiveChallengesResult(result)" class="tool-result-card challenges-card">
             <div class="tool-result-header tool-read">
               <Swords :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <!-- Daily Challenges -->
             <div v-if="result.data.dailies.length > 0" class="challenge-section">
@@ -669,7 +669,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 </div>
               </div>
             </div>
-            <div v-if="result.data.dailies.length === 0 && !result.data.boss" class="gam-empty">
+            <div v-if="result.data.dailies.length === 0 && !result.data.boss" class="gam-empty" dir="auto">
               No active challenges. New dailies generate each morning.
             </div>
           </div>
@@ -678,9 +678,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isAchievementsNearResult(result)" class="tool-result-card achievements-card">
             <div class="tool-result-header tool-read">
               <Target :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
-            <div v-if="result.data.length === 0" class="gam-empty">
+            <div v-if="result.data.length === 0" class="gam-empty" dir="auto">
               No achievements close to completion yet. Keep going!
             </div>
             <div
@@ -693,7 +693,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="achievement-name">{{ ach.name }}</span>
                 <span class="achievement-percent">{{ ach.progressPercent }}%</span>
               </div>
-              <div class="achievement-desc">
+              <div class="achievement-desc" dir="auto">
                 {{ ach.description }}
               </div>
               <div class="achievement-progress-row">
@@ -713,7 +713,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isProductivityStatsResult(result)" class="tool-result-card">
             <div class="tool-result-header tool-read">
               <TrendingUp :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <div class="summary-stats-grid">
               <div class="summary-stat">
@@ -747,9 +747,9 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isSuggestNextTaskResult(result)" class="tool-result-card">
             <div class="tool-result-header tool-read">
               <TrendingUp :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
-            <div v-if="result.data.length === 0" class="gam-empty">
+            <div v-if="result.data.length === 0" class="gam-empty" dir="auto">
               No suggestions available. All tasks are done!
             </div>
             <div class="task-list">
@@ -767,7 +767,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                     class="task-priority-dot"
                     :style="{ background: priorityColor(task.priority) }"
                   />
-                  <span class="suggest-reason" :class="'reason-' + task.reason.replace(/\s+/g, '-')">{{ task.reason }}</span>
+                  <span class="suggest-reason" :class="'reason-' + task.reason.replace(/\s+/g, '-')" dir="auto">{{ task.reason }}</span>
                   <span v-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
                 </div>
                 <div class="task-inline-actions" @click.stop>
@@ -806,7 +806,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isWeeklySummaryResult(result)" class="tool-result-card">
             <div class="tool-result-header tool-read">
               <TrendingUp :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <div class="summary-stats-grid">
               <div class="summary-stat">
@@ -849,7 +849,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isWeeklyPlanResult(result)" class="tool-result-card weekly-plan-card">
             <div class="tool-result-header tool-read">
               <CalendarDays :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
             </div>
             <div class="summary-stats-grid">
               <div class="summary-stat">
@@ -932,7 +932,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
                 <span class="task-title" :dir="direction || 'auto'">{{ task.title }}</span>
               </button>
             </div>
-            <div v-if="result.data.reasoning" class="plan-reasoning">
+            <div v-if="result.data.reasoning" class="plan-reasoning" dir="auto">
               {{ result.data.reasoning }}
             </div>
           </div>
@@ -941,7 +941,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <div v-else-if="isTaskListResult(result)" class="tool-result-card">
             <div class="tool-result-header" :class="'tool-' + (result.type || 'read')">
               <component :is="toolIcon(result.type)" :size="14" class="tool-result-icon" />
-              <span class="tool-result-title">{{ result.message }}</span>
+              <span class="tool-result-title" dir="auto">{{ result.message }}</span>
               <span v-if="getTasksFromResult(result).length > MAX_VISIBLE_TASKS" class="section-count">({{ getTasksFromResult(result).length }})</span>
             </div>
             <div class="task-list">
@@ -1012,7 +1012,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
           <!-- Simple chip for write/destructive results or results without task data -->
           <div v-else class="tool-result-chip" :class="'tool-' + (result.type || 'read')">
             <component :is="toolIcon(result.type)" :size="12" class="tool-result-icon" />
-            <span>{{ result.message }}</span>
+            <span dir="auto">{{ result.message }}</span>
           </div>
         </template>
       </div>
@@ -1137,7 +1137,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 }
 
 .message-assistant .message-avatar {
-  background: linear-gradient(135deg, var(--color-focus), #06b6d4);
+  background: linear-gradient(135deg, var(--color-focus), var(--color-info));
   color: white;
 }
 
@@ -1146,8 +1146,8 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
    ============================================================================ */
 
 .message-avatar {
-  width: 28px;
-  height: 28px;
+  width: var(--space-7);
+  height: var(--space-7);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -1182,8 +1182,8 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--space-7);
+  height: var(--space-7);
   border: none;
   background: var(--border-subtle);
   color: var(--text-secondary);
@@ -1771,10 +1771,10 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: var(--level-badge-size);
+  height: var(--level-badge-size);
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-focus), #06b6d4);
+  background: var(--level-badge-bg);
   flex-shrink: 0;
 }
 
@@ -1841,7 +1841,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
 }
 
 .gam-corruption-icon {
-  color: #06b6d4;
+  color: var(--color-info);
 }
 
 .gam-corruption-icon.gam-corruption-high {

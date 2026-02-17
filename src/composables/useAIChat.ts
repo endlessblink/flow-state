@@ -34,6 +34,7 @@ import {
 } from '@/services/ai/tools'
 import type { NativeToolCall } from '@/services/ai/types'
 import { useAgentChains } from './useAgentChains'
+import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -272,12 +273,12 @@ export function useAIChat() {
   /**
    * Build messages for the AI including context.
    */
-  function buildMessagesForAI(userMessage: string): RouterChatMessage[] {
+  async function buildMessagesForAI(userMessage: string): Promise<RouterChatMessage[]> {
     const ctx = buildContext()
     const aiMessages: RouterChatMessage[] = []
 
     // System prompt with context
-    const systemPrompt = buildSystemPrompt(ctx)
+    const systemPrompt = await buildSystemPrompt(ctx)
     aiMessages.push({ role: 'system', content: systemPrompt })
 
     // Add recent message history (last 10 messages)
@@ -301,7 +302,7 @@ export function useAIChat() {
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
    */
-  function buildSystemPrompt(ctx: ChatContext): string {
+  async function buildSystemPrompt(ctx: ChatContext): Promise<string> {
     // Prepend personality prompt if active
     const personalityPrompt = getPersonalitySystemPrompt()
 
@@ -400,7 +401,9 @@ export function useAIChat() {
     parts.push('- Be encouraging and practical in your summary')
     parts.push('- IMPORTANT: Your acknowledgment text before/during tool execution must match the user\'s language (e.g., Hebrew user → "בדיוק, אני מתכנן את השבוע שלך..." NOT "generating weekly plan...")')
 
-    return parts.join('\n')
+    // Add centralized AI user context
+    const userContext = await getAIUserContext('chat')
+    return parts.join('\n') + userContext
   }
 
   // ============================================================================
@@ -445,7 +448,7 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const aiMessages = buildMessagesForAI(content)
+      const aiMessages = await buildMessagesForAI(content)
 
       // Determine task type from content
       const taskType = options.taskType ?? inferTaskType(content)
@@ -654,7 +657,7 @@ export function useAIChat() {
 
     try {
       const router = await getRouter()
-      const conversationMessages: RouterChatMessage[] = buildMessagesForAI(content)
+      const conversationMessages: RouterChatMessage[] = await buildMessagesForAI(content)
       const taskType = options.taskType ?? inferTaskType(content)
 
       let stepCount = 0

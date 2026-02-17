@@ -2,7 +2,7 @@
   <div class="mobile-layout" :dir="isRTL ? 'rtl' : 'ltr'">
     <!-- Pull-down indicator (shows during gesture) -->
     <div
-      v-if="!isFullScreenView && !showPanel"
+      v-if="!isFullScreenView && !disablePullDown && !showPanel"
       class="pull-indicator"
       :class="{ visible: pullDistance > 0, triggered: pullTriggered }"
       :style="{ transform: `translateY(${Math.min(pullDistance * 0.5, 60)}px)` }"
@@ -162,6 +162,11 @@ const isFullScreenView = computed(() => {
   return fullScreenRoutes.includes(route.name as string)
 })
 
+// Routes where pull-down gesture should be disabled (e.g. views with their own swipe gestures)
+const disablePullDown = computed(() => {
+  return route.name === 'mobile-quick-sort'
+})
+
 // RTL detection based on browser language
 const isRTL = computed(() => {
   const lang = navigator.language || navigator.languages?.[0] || 'en'
@@ -279,7 +284,7 @@ const isPulling = ref(false)
 const PULL_THRESHOLD = 80
 
 function onTouchStart(e: TouchEvent) {
-  if (isFullScreenView.value || showPanel.value) return
+  if (isFullScreenView.value || disablePullDown.value || showPanel.value) return
   const el = contentRef.value
   if (el && el.scrollTop <= 0) {
     touchStartY.value = e.touches[0].clientY
@@ -289,7 +294,7 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (!isPulling.value || isFullScreenView.value || showPanel.value) return
+  if (!isPulling.value || isFullScreenView.value || disablePullDown.value || showPanel.value) return
   const el = contentRef.value
   if (el && el.scrollTop > 0) {
     isPulling.value = false

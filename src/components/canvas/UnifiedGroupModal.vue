@@ -626,8 +626,8 @@ watch(() => props.isOpen, async (isOpen) => {
   position: fixed;
   inset: 0;
   background: var(--overlay-backdrop-bg);
-  backdrop-filter: blur(20px) saturate(100%);
-  -webkit-backdrop-filter: blur(20px) saturate(100%);
+  backdrop-filter: var(--overlay-backdrop);
+  -webkit-backdrop-filter: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -642,7 +642,7 @@ watch(() => props.isOpen, async (isOpen) => {
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--overlay-component-shadow);
-  max-width: 520px;
+  max-width: var(--modal-width-sm, 520px);
   width: 90%;
   max-height: 90vh;
   overflow: auto;
@@ -733,9 +733,9 @@ watch(() => props.isOpen, async (isOpen) => {
   gap: var(--space-2);
   margin-bottom: var(--space-3);
   padding: var(--space-3);
-  background: var(--glass-bg-light);
+  background: var(--surface-secondary);
   border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-medium);
 }
 
 .color-preset {
@@ -754,7 +754,7 @@ watch(() => props.isOpen, async (isOpen) => {
 
 .color-preset.active {
   border-color: var(--text-primary);
-  box-shadow: 0 0 0 2px var(--glass-bg-light);
+  box-shadow: 0 0 0 2px var(--bg-primary);
   transform: scale(1.1);
 }
 
@@ -763,9 +763,9 @@ watch(() => props.isOpen, async (isOpen) => {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--glass-bg-light);
+  background: var(--surface-secondary);
   border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-medium);
 }
 
 .custom-color-input {
@@ -790,7 +790,7 @@ watch(() => props.isOpen, async (isOpen) => {
   flex: 1;
   padding: var(--space-2);
   background: var(--surface-primary);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--text-sm);

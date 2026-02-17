@@ -534,7 +534,7 @@ onBeforeUnmount(() => {
   max-height: 240px;
   overflow-y: auto;
   background: var(--dropdown-bg);
-  backdrop-filter: blur(16px);
+  backdrop-filter: var(--overlay-backdrop);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
@@ -619,8 +619,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--space-6);
+  height: var(--space-6);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);

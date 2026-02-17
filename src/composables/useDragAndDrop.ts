@@ -112,7 +112,6 @@ export function useDragAndDrop() {
   }
 
   const endDrag = () => {
-    console.log('[BUG-1351:GLOBAL] endDrag (endGlobalDrag) called')
     // Clean up event handlers
     if (mouseMoveHandler) {
       document.removeEventListener('mousemove', mouseMoveHandler)

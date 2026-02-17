@@ -29,6 +29,9 @@ export const useAuthStore = defineStore('auth', () => {
   // When true, the SIGNED_IN handler skips redundant loadFromDatabase() calls
   let appInitLoadComplete = false
 
+  // BUG-1352: Flag to prevent onAuthStateChange from re-establishing session during signOut
+  let isSigningOut = false
+
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -244,6 +247,13 @@ export const useAuthStore = defineStore('auth', () => {
             'current:', currentUserId, '→ new:', newUserId,
             'hasSession:', !!session.value, '→', !!newSession)
 
+          // BUG-1352: If we're in the middle of an explicit signOut, ignore all auth events
+          // to prevent auto-refresh or other mechanisms from re-establishing the session
+          if (isSigningOut) {
+            console.log(`👤 [AUTH:${currentTabId}] Ignoring ${_event} during explicit sign-out`)
+            return
+          }
+
           // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
           // This ensures cached guest data doesn't persist after sign-in
           invalidateCache.onAuthChange(newSession?.user?.id || null)
@@ -252,7 +262,8 @@ export const useAuthStore = defineStore('auth', () => {
           // When Tab 2 signs in, Supabase may fire SIGNED_OUT (old session) before SIGNED_IN (new session)
           // Tab 1 would blindly clear state, even though localStorage has Tab 2's valid new session
           // Fix: On SIGNED_OUT, check if localStorage actually has a session before clearing
-          if (_event === 'SIGNED_OUT' && !newSession) {
+          // BUG-1352: Skip this recovery when the user explicitly requested sign-out
+          if (_event === 'SIGNED_OUT' && !newSession && !isSigningOut) {
             // Double-check: maybe another tab just signed in and localStorage has their session
             const { data: currentSession } = await supabase.auth.getSession()
             if (currentSession.session) {
@@ -659,16 +670,30 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       isLoading.value = true
 
+      // BUG-1352: Set flag to prevent onAuthStateChange from re-establishing session
+      isSigningOut = true
+
       // BUG-339: Clear refresh timer on sign-out
       if (refreshTimer) {
         clearTimeout(refreshTimer)
         refreshTimer = null
       }
 
-      // FEATURE-1202: Use scope: 'local' for reliable logout.
-      // Server-side signOut can hang/fail when session was established via setSession()
-      // (e.g., after Google OAuth with manual token extraction).
-      // Local scope clears localStorage session — sufficient for logout.
+      // BUG-1352: supabase.auth.signOut() still makes a server request even with
+      // scope: 'local'. If the server returns an error (500, timeout), the Supabase
+      // client returns { error } WITHOUT removing the session from localStorage and
+      // WITHOUT firing SIGNED_OUT. The auto-refresh mechanism then re-establishes
+      // the session, making the user appear logged in again.
+      //
+      // Fix: Force-remove the session from localStorage BEFORE calling signOut,
+      // so even if signOut fails, the session can't be restored.
+      try {
+        localStorage.removeItem('flowstate-supabase-auth')
+        localStorage.removeItem('flowstate-supabase-auth-code-verifier')
+      } catch (e) {
+        // localStorage might not be available in some edge cases
+      }
+
       try {
         await supabase.auth.signOut({ scope: 'local' })
       } catch (signOutErr) {
@@ -692,12 +717,20 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear guest ephemeral data for fresh guest experience
       clearGuestData()
 
+      // BUG-1352: Disconnect realtime to prevent stale authenticated connections
+      try {
+        supabase?.realtime.disconnect()
+      } catch (e) {
+        // Not critical if this fails
+      }
+
       console.log('[AUTH] Signed out, cleared task store and guest data')
     } catch (e: unknown) {
       error.value = e as AuthError
       console.error('Sign out failed:', e)
     } finally {
       isLoading.value = false
+      isSigningOut = false
     }
   }
 

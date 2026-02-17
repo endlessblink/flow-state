@@ -105,7 +105,7 @@
                 <span class="ai-divider-label">AI</span>
               </div>
 
-              <!-- Row 3: AI Suggest + AI Sort -->
+              <!-- Row 3: AI Suggest -->
               <div class="action-row">
                 <button
                   class="action-btn ai-suggest"
@@ -118,46 +118,6 @@
                   <Sparkles v-else :size="16" />
                   <span class="action-label">Suggest</span>
                   <kbd>A</kbd>
-                </button>
-                <button
-                  class="action-btn ai-sort"
-                  :class="{ 'is-loading': aiAction === 'sort' }"
-                  :disabled="isAIBusy"
-                  aria-label="AI sort tasks by importance"
-                  @click="handleAISort"
-                >
-                  <Loader2 v-if="aiAction === 'sort'" :size="16" class="spin" />
-                  <ArrowUpDown v-else :size="16" />
-                  <span class="action-label">Sort</span>
-                  <kbd>I</kbd>
-                </button>
-              </div>
-
-              <!-- Row 4: AI Batch + AI Explain -->
-              <div class="action-row">
-                <button
-                  class="action-btn ai-batch"
-                  :class="{ 'is-loading': aiAction === 'batch' }"
-                  :disabled="isAIBusy"
-                  aria-label="AI auto-categorize all tasks"
-                  @click="handleAIBatch"
-                >
-                  <Loader2 v-if="aiAction === 'batch'" :size="16" class="spin" />
-                  <Zap v-else :size="16" />
-                  <span class="action-label">Batch</span>
-                  <kbd>B</kbd>
-                </button>
-                <button
-                  class="action-btn ai-explain"
-                  :class="{ 'is-loading': aiAction === 'explain' }"
-                  :disabled="isAIBusy"
-                  aria-label="AI explain task"
-                  @click="handleAIExplain"
-                >
-                  <Loader2 v-if="aiAction === 'explain'" :size="16" class="spin" />
-                  <MessageSquareText v-else :size="16" />
-                  <span class="action-label">Explain</span>
-                  <kbd>X</kbd>
                 </button>
               </div>
 
@@ -205,7 +165,7 @@
 
               <!-- Helper Hint -->
               <div class="helper-hint">
-                1-9 assign • →/S save • D done • ← del • ↓ skip • ↑ edit • A suggest • I sort • B batch • X explain
+                1-9 assign • →/S save • D done • ← del • ↓ skip • ↑ edit • A suggest
               </div>
             </div>
 
@@ -271,7 +231,7 @@
 
                 <!-- AI Error -->
                 <div v-if="aiState === 'error'" class="ai-error-section">
-                  <p class="ai-error-text">
+                  <p class="ai-error-text" dir="auto">
                     {{ aiError }}
                   </p>
                   <button class="action-btn ai-retry" @click="handleAIRetry">
@@ -297,7 +257,7 @@
                       <span class="ai-arrow">&rarr;</span>
                       <span class="ai-new-value">{{ suggestion.suggestedValue }}</span>
                     </div>
-                    <p v-if="suggestion.reasoning" class="ai-suggestion-reason">
+                    <p v-if="suggestion.reasoning" class="ai-suggestion-reason" dir="auto">
                       {{ suggestion.reasoning }}
                     </p>
                   </div>
@@ -314,55 +274,6 @@
                   <div class="ai-actions-row">
                     <button class="action-btn ai-apply" @click="handleApplySuggestions">
                       Apply All
-                    </button>
-                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Batch Results -->
-                <div v-else-if="aiAction === 'batch'" class="ai-batch-results">
-                  <p class="ai-batch-count">
-                    {{ batchResults.length }} tasks categorized
-                  </p>
-                  <div
-                    v-for="result in batchResults.slice(0, 5)"
-                    :key="result.taskId"
-                    class="ai-batch-card"
-                  >
-                    <span class="ai-batch-title">{{ result.taskTitle.slice(0, 30) }}</span>
-                    <div class="ai-batch-meta">
-                      <span v-if="result.suggestedPriority" class="ai-batch-tag">{{ result.suggestedPriority }}</span>
-                      <span v-if="result.suggestedDueDate" class="ai-batch-tag">{{ result.suggestedDueDate }}</span>
-                    </div>
-                  </div>
-                  <p v-if="batchResults.length > 5" class="ai-batch-more">
-                    + {{ batchResults.length - 5 }} more
-                  </p>
-                  <div class="ai-actions-row">
-                    <button class="action-btn ai-apply" @click="handleApplyBatch">
-                      Apply All
-                    </button>
-                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Explain Results -->
-                <div v-else-if="aiAction === 'explain'" class="ai-explain-results">
-                  <p class="ai-explain-desc">
-                    {{ explainResult?.description }}
-                  </p>
-                  <ul v-if="explainResult?.actionSteps?.length" class="ai-explain-steps">
-                    <li v-for="(step, i) in explainResult.actionSteps" :key="i">
-                      {{ step }}
-                    </li>
-                  </ul>
-                  <div class="ai-actions-row">
-                    <button class="action-btn ai-apply" @click="handleApplyExplain">
-                      Accept
                     </button>
                     <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">
                       Dismiss
@@ -450,7 +361,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit2, Calendar, Briefcase, Save, Trash2, Sparkles, ArrowUpDown, MessageSquareText, Loader2 } from 'lucide-vue-next'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit2, Calendar, Briefcase, Save, Trash2, Sparkles, Loader2 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickSortAI } from '@/composables/useQuickSortAI'
 import { useQuickCapture } from '@/composables/useQuickCapture'
@@ -528,8 +439,7 @@ const {
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
-  undoLastCategorization,
-  setQueueOrder
+  undoLastCategorization
 } = useQuickSort()
 
 const quickSortAI = useQuickSortAI()
@@ -540,10 +450,7 @@ const {
   isAIBusy,
   currentSuggestions,
   suggestedProjectId,
-  suggestedProjectName,
-  batchResults,
-  explainResult,
-  sortedTaskOrder,
+  suggestedProjectName
 } = quickSortAI
 
 // Start session on mount
@@ -561,14 +468,6 @@ watch(isComplete, (completed) => {
   if (completed) {
     const summary = endSession()
     sessionSummary.value = summary || null
-  }
-})
-
-// Sync AI sort order to Quick Sort queue (TASK-1221)
-watch(sortedTaskOrder, (order) => {
-  if (order) {
-    setQueueOrder(order)
-    showFeedback('Tasks reordered by AI', 'info')
   }
 })
 
@@ -637,29 +536,10 @@ function handleExit() {
   router.push({ name: 'board' })
 }
 
-// AI Command Handlers (TASK-1221)
+// AI Command Handler (TASK-1221)
 function handleAISuggest() {
   if (!currentTask.value || isAIBusy.value) return
   quickSortAI.autoSuggest(currentTask.value)
-}
-
-function handleAISort() {
-  if (isAIBusy.value) return
-  const tasks = uncategorizedTasks.value
-  if (tasks.length === 0) return
-  quickSortAI.aiSort(tasks)
-}
-
-function handleAIBatch() {
-  if (isAIBusy.value) return
-  const tasks = uncategorizedTasks.value
-  if (tasks.length === 0) return
-  quickSortAI.aiBatch(tasks)
-}
-
-function handleAIExplain() {
-  if (!currentTask.value || isAIBusy.value) return
-  quickSortAI.aiExplain(currentTask.value)
 }
 
 function handleAICancel() {
@@ -690,35 +570,6 @@ async function handleApplySuggestions() {
   }
   quickSortAI.dismiss()
   showFeedback('AI suggestions applied!', 'success')
-}
-
-async function handleApplyBatch() {
-  for (const result of batchResults.value) {
-    const updates: Record<string, unknown> = {}
-    if (result.suggestedPriority) updates.priority = result.suggestedPriority
-    if (result.suggestedDueDate) updates.dueDate = result.suggestedDueDate
-    if (result.suggestedProjectId) updates.projectId = result.suggestedProjectId
-    if (Object.keys(updates).length > 0) {
-      await taskStore.updateTask(result.taskId, updates)
-    }
-  }
-  quickSortAI.dismiss()
-  showFeedback(`${batchResults.value.length} tasks categorized!`, 'success')
-}
-
-async function handleApplyExplain() {
-  if (!currentTask.value || !explainResult.value) return
-  const newDesc = explainResult.value.description
-  if (explainResult.value.actionSteps.length > 0) {
-    const steps = explainResult.value.actionSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')
-    await taskStore.updateTask(currentTask.value.id, {
-      description: newDesc + '\n\n' + steps
-    })
-  } else {
-    await taskStore.updateTask(currentTask.value.id, { description: newDesc })
-  }
-  quickSortAI.dismiss()
-  showFeedback('Description updated!', 'success')
 }
 
 function shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
@@ -799,23 +650,11 @@ function handleGlobalKeydown(event: KeyboardEvent) {
     handleSkip()
   }
 
-  // AI shortcuts (TASK-1221) - only in sort tab, not during AI operation
+  // AI shortcut (TASK-1221) - only in sort tab, not during AI operation
   if (activeTab.value === 'sort' && !isAIBusy.value) {
     if (event.key === 'a' || event.key === 'A') {
       event.preventDefault()
       handleAISuggest()
-    }
-    if (event.key === 'i' || event.key === 'I') {
-      event.preventDefault()
-      handleAISort()
-    }
-    if (event.key === 'b' || event.key === 'B') {
-      event.preventDefault()
-      handleAIBatch()
-    }
-    if (event.key === 'x' || event.key === 'X') {
-      event.preventDefault()
-      handleAIExplain()
     }
   }
 }

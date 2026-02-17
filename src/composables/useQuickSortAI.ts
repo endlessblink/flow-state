@@ -1,11 +1,8 @@
 /**
  * Quick Sort AI Commands Composable (TASK-1221)
  *
- * Provides 4 AI-powered actions for the Quick Sort workflow:
- * 1. autoSuggest - Suggest priority, date, project for current task
- * 2. aiSort - Rank remaining tasks by importance (reorders queue)
- * 3. aiBatch - Auto-categorize all remaining tasks (preview before apply)
- * 4. aiExplain - Expand vague task titles into descriptions + action steps
+ * Provides 1 AI-powered action for the Quick Sort workflow:
+ * - autoSuggest: Suggest priority, date, project for current task (one at a time)
  *
  * Reuses AI Router singleton pattern from useAITaskAssist.ts
  */
@@ -17,27 +14,13 @@ import type { Task } from '@/types/tasks'
 import type { SmartSuggestion } from '@/composables/useAITaskAssist'
 
 import { useProjectStore } from '@/stores/projects'
+import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface AutoCategorizeResult {
-  taskId: string
-  taskTitle: string
-  suggestedPriority?: 'low' | 'medium' | 'high'
-  suggestedDueDate?: string // YYYY-MM-DD
-  suggestedProjectId?: string
-  suggestedProjectName?: string
-  confidence: number
-}
-
-export interface AIExplainResult {
-  description: string
-  actionSteps: string[]
-}
-
-export type AIAction = 'suggest' | 'sort' | 'batch' | 'explain'
+export type AIAction = 'suggest'
 
 // ============================================================================
 // Router Singleton (same pattern as useAITaskAssist)
@@ -113,15 +96,6 @@ export function useQuickSortAI() {
   const suggestedProjectId = ref<string | null>(null)
   const suggestedProjectName = ref<string | null>(null)
 
-  // Sort state
-  const sortedTaskOrder = ref<string[] | null>(null)
-
-  // Batch categorize state
-  const batchResults = ref<AutoCategorizeResult[]>([])
-
-  // Explain state
-  const explainResult = ref<AIExplainResult | null>(null)
-
   const isAIBusy = computed(() => aiState.value === 'loading')
 
   let aborted = false
@@ -171,21 +145,44 @@ export function useQuickSortAI() {
       const today = new Date().toISOString().split('T')[0]
       const projectCtx = getProjectContext()
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
+      const userContext = await getAIUserContext('quicksort')
 
-      const systemPrompt = `You suggest task metadata for a Quick Sort workflow. The user is rapidly categorizing uncategorized tasks. Return ONLY valid JSON.
-Format: { "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration|projectId", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
-Rules:
-- priority: "high", "medium", "low"
-- dueDate: "YYYY-MM-DD" (today or future)
-- status: "planned", "in_progress", "backlog"
-- estimatedDuration: minutes (15, 30, 60, 90, 120)
-- projectId: one of the provided project IDs, or omit if unsure
-- Only suggest fields that need changing
-- confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
-- reason: 1 short sentence` + langHint
+      const systemPrompt = `You are a task triage assistant in a Quick Sort workflow. The user is rapidly categorizing uncategorized tasks one at a time. Your job: suggest metadata ONLY when the task title/description clearly implies a specific value.
+
+Return ONLY valid JSON:
+{ "suggestions": [{ "field": "priority|dueDate|estimatedDuration|projectId", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
+
+## Field Rules
+
+**priority** ("high" | "medium" | "low"):
+- "high": deadline pressure, blocking others, urgent keywords (ASAP, urgent, broken, outage, overdue)
+- "low": nice-to-have, someday, research, explore, optional
+- Do NOT suggest "medium" as a default — only suggest priority when the task clearly implies one
+
+**dueDate** ("YYYY-MM-DD"):
+- ONLY suggest when the title mentions a specific time reference ("by Friday", "before the meeting", "this week", "tomorrow")
+- For "this week" → next Friday. For "today/tonight" → today. For "tomorrow" → tomorrow.
+- NEVER guess a date when no time reference exists — omit the field entirely
+
+**estimatedDuration** (minutes: 15 | 30 | 60 | 90 | 120):
+- Quick actions (email, call, review) → 15
+- Standard tasks (write, fix, implement small thing) → 30
+- Larger work (design, plan, build feature) → 60-120
+- Only suggest when task scope is reasonably clear from the title
+
+**projectId** (one of the provided IDs):
+- ONLY suggest when the task title clearly names or strongly implies a specific project
+- "Fix login bug" → probably belongs to an auth/app project
+- "Buy groceries" → no project match, omit entirely
+
+## Critical Rules
+- NEVER suggest a field just to fill it in — empty is better than a bad guess
+- confidence 0.85+ = obvious from task content, 0.7-0.84 = reasonable inference. Below 0.7 = don't include it.
+- reason: ONE sentence explaining why THIS specific task gets THIS value. Never generic like "tasks should have priorities".
+- If the task is too vague to suggest anything meaningful, return { "suggestions": [] }` + langHint + userContext
 
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
-Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'planned'}
+Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, estimatedDuration=${task.estimatedDuration || 'none'}
 Available projects: ${projectCtx}
 Today: ${today}`
 
@@ -223,15 +220,13 @@ Today: ${today}`
       }
 
       // Validate and normalize standard suggestions
-      const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
+      const validFields = new Set(['priority', 'dueDate', 'estimatedDuration'])
       const validPriorities = new Set(['high', 'medium', 'low'])
-      const validStatuses = new Set(['planned', 'in_progress', 'backlog'])
       const validDurations = new Set([15, 30, 60, 90, 120])
 
       const currentValues: Record<string, string | number | null> = {
         priority: task.priority || null,
         dueDate: task.dueDate || null,
-        status: task.status || null,
         estimatedDuration: task.estimatedDuration || null
       }
 
@@ -239,7 +234,6 @@ Today: ${today}`
         .filter(s => validFields.has(s.field))
         .filter(s => {
           if (s.field === 'priority') return validPriorities.has(String(s.value))
-          if (s.field === 'status') return validStatuses.has(String(s.value))
           if (s.field === 'dueDate') return /^\d{4}-\d{2}-\d{2}$/.test(String(s.value))
           if (s.field === 'estimatedDuration') return validDurations.has(Number(s.value))
           return false
@@ -272,185 +266,6 @@ Today: ${today}`
     }
   }
 
-  // ============================================================================
-  // 2. AI Sort (rank tasks by importance)
-  // ============================================================================
-
-  async function aiSort(tasks: Task[]) {
-    resetForAction('sort')
-    try {
-      const capped = tasks.slice(0, 30)
-      const langHint = detectLanguageInstruction(capped[0]?.title || '')
-      const today = new Date().toISOString().split('T')[0]
-
-      const systemPrompt = `Rank these tasks by importance for a productivity app user. Consider urgency (overdue/due soon), priority level, and task complexity. Return ONLY valid JSON: { "rankedIds": ["id1", "id2", ...] }` + langHint
-
-      const taskList = capped.map(t =>
-        `[${t.id}] "${t.title}" — priority=${t.priority || 'none'}, due=${t.dueDate || 'none'}, status=${t.status || 'planned'}`
-      ).join('\n')
-
-      const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Today: ${today}\nTasks:\n${taskList}` }
-      ]
-
-      const raw = await streamAI(messages)
-      if (aborted) return
-
-      const parsed = parseAIResponse<{ rankedIds: string[] }>(raw)
-      if (!parsed?.rankedIds || !Array.isArray(parsed.rankedIds)) {
-        // Fallback: deterministic sort
-        sortedTaskOrder.value = getFallbackSortOrder(capped)
-        aiState.value = 'idle'
-        return
-      }
-
-      // Ensure all task IDs are included (AI may miss some)
-      const taskIdSet = new Set(capped.map(t => t.id))
-      const validRanked = parsed.rankedIds.filter(id => taskIdSet.has(id))
-      const missing = capped.filter(t => !validRanked.includes(t.id)).map(t => t.id)
-      sortedTaskOrder.value = [...validRanked, ...missing]
-      aiState.value = 'idle'
-    } catch (e) {
-      if (aborted) return
-      try {
-        sortedTaskOrder.value = getFallbackSortOrder(tasks.slice(0, 30))
-        aiState.value = 'idle'
-        return
-      } catch { /* ignore */ }
-      failWithError(e instanceof Error ? e.message : 'Failed to sort tasks')
-    }
-  }
-
-  // ============================================================================
-  // 3. AI Batch (auto-categorize all remaining tasks)
-  // ============================================================================
-
-  async function aiBatch(tasks: Task[]) {
-    resetForAction('batch')
-    try {
-      const capped = tasks.slice(0, 20)
-      const langHint = detectLanguageInstruction(capped[0]?.title || '')
-      const today = new Date().toISOString().split('T')[0]
-      const projectCtx = getProjectContext()
-
-      const systemPrompt = `For each task, suggest priority, dueDate, and projectId. The user is doing a Quick Sort to categorize all uncategorized tasks at once. Return ONLY valid JSON: { "tasks": [{ "taskId": "...", "priority": "high|medium|low", "dueDate": "YYYY-MM-DD", "projectId": "...", "confidence": 0.0-1.0 }] }
-Rules:
-- priority: "high", "medium", "low"
-- dueDate: "YYYY-MM-DD" (today or future)
-- projectId: one of the provided project IDs, or omit if unsure
-- confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess` + langHint
-
-      const taskList = capped.map(t =>
-        `[${t.id}] "${t.title}" — priority=${t.priority || 'none'}, due=${t.dueDate || 'none'}, status=${t.status || 'planned'}`
-      ).join('\n')
-
-      const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Today: ${today}\nAvailable projects: ${projectCtx}\nTasks:\n${taskList}` }
-      ]
-
-      const raw = await streamAI(messages)
-      if (aborted) return
-
-      const parsed = parseAIResponse<{
-        tasks: Array<{
-          taskId: string
-          priority?: string
-          dueDate?: string
-          projectId?: string
-          confidence?: number
-        }>
-      }>(raw)
-
-      if (!parsed?.tasks || !Array.isArray(parsed.tasks)) {
-        // Fallback: deterministic batch
-        batchResults.value = getFallbackBatch(capped)
-        aiState.value = 'preview'
-        return
-      }
-
-      const projectStore = useProjectStore()
-      const taskMap = new Map(capped.map(t => [t.id, t]))
-      const validPriorities = new Set(['high', 'medium', 'low'])
-
-      batchResults.value = parsed.tasks
-        .filter(r => taskMap.has(r.taskId))
-        .map(r => {
-          const task = taskMap.get(r.taskId)!
-          const project = r.projectId
-            ? projectStore.projects.find(p => p.id === r.projectId)
-            : null
-
-          const result: AutoCategorizeResult = {
-            taskId: r.taskId,
-            taskTitle: task.title,
-            confidence: Math.max(0, Math.min(1, r.confidence ?? 0.5))
-          }
-
-          if (r.priority && validPriorities.has(r.priority)) {
-            result.suggestedPriority = r.priority as 'low' | 'medium' | 'high'
-          }
-          if (r.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(r.dueDate)) {
-            result.suggestedDueDate = r.dueDate
-          }
-          if (project) {
-            result.suggestedProjectId = project.id
-            result.suggestedProjectName = project.name
-          }
-
-          return result
-        })
-
-      aiState.value = 'preview'
-    } catch (e) {
-      if (aborted) return
-      try {
-        batchResults.value = getFallbackBatch(tasks.slice(0, 20))
-        aiState.value = 'preview'
-        return
-      } catch { /* ignore */ }
-      failWithError(e instanceof Error ? e.message : 'Failed to batch categorize tasks')
-    }
-  }
-
-  // ============================================================================
-  // 4. AI Explain (expand vague task titles)
-  // ============================================================================
-
-  async function aiExplain(task: Task) {
-    resetForAction('explain')
-    try {
-      const langHint = detectLanguageInstruction(task.title)
-
-      const systemPrompt = `The user has a vague task title in their todo list. Provide a clearer description (2-3 sentences) and suggest 2-3 specific action steps. Return ONLY valid JSON: { "description": "...", "actionSteps": ["step1", "step2"] }` + langHint
-
-      const userPrompt = `Task: "${task.title}"${task.description ? `\nExisting description: "${task.description.slice(0, 200)}"` : ''}`
-
-      const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ]
-
-      const raw = await streamAI(messages)
-      if (aborted) return
-
-      const parsed = parseAIResponse<{ description: string; actionSteps: string[] }>(raw)
-      if (!parsed?.description || !Array.isArray(parsed?.actionSteps)) {
-        failWithError('AI response could not be parsed. Try again or check your AI provider connection.')
-        return
-      }
-
-      explainResult.value = {
-        description: parsed.description,
-        actionSteps: parsed.actionSteps
-      }
-      aiState.value = 'preview'
-    } catch (e) {
-      if (aborted) return
-      failWithError(e instanceof Error ? e.message : 'AI not available')
-    }
-  }
 
   // ============================================================================
   // Deterministic Fallbacks
@@ -496,42 +311,6 @@ Rules:
     return suggestions
   }
 
-  function getFallbackSortOrder(tasks: Task[]): string[] {
-    const priorityWeight: Record<string, number> = { high: 3, medium: 2, low: 1 }
-    return [...tasks]
-      .sort((a, b) => {
-        const aPri = priorityWeight[a.priority || ''] || 0
-        const bPri = priorityWeight[b.priority || ''] || 0
-        if (aPri !== bPri) return bPri - aPri
-        // Then by due date (soonest first, no-date last)
-        if (a.dueDate && !b.dueDate) return -1
-        if (!a.dueDate && b.dueDate) return 1
-        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
-        return 0
-      })
-      .map(t => t.id)
-  }
-
-  function getFallbackBatch(tasks: Task[]): AutoCategorizeResult[] {
-    const today = new Date().toISOString().split('T')[0]
-    return tasks.map(t => {
-      const isOverdue = t.dueDate && t.dueDate < today
-      const result: AutoCategorizeResult = {
-        taskId: t.id,
-        taskTitle: t.title,
-        confidence: 0.3
-      }
-      if (!t.priority) {
-        result.suggestedPriority = isOverdue ? 'high' : 'medium'
-      }
-      if (!t.dueDate) {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        result.suggestedDueDate = tomorrow.toISOString().split('T')[0]
-      }
-      return result
-    })
-  }
 
   // ============================================================================
   // Controls
@@ -547,8 +326,6 @@ Rules:
     aiState.value = 'idle'
     aiAction.value = null
     currentSuggestions.value = []
-    batchResults.value = []
-    explainResult.value = null
     suggestedProjectId.value = null
     suggestedProjectName.value = null
     aiError.value = null
@@ -570,20 +347,8 @@ Rules:
     suggestedProjectId,
     suggestedProjectName,
 
-    // Sort
-    sortedTaskOrder,
-
-    // Batch
-    batchResults,
-
-    // Explain
-    explainResult,
-
     // Actions
     autoSuggest,
-    aiSort,
-    aiBatch,
-    aiExplain,
 
     // Controls
     abort,

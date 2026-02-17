@@ -374,7 +374,7 @@
             </div>
           </div>
 
-          <!-- AI Quick Actions (TASK-1221) -->
+          <!-- AI Quick Action (TASK-1221) -->
           <div class="quick-edit-row ai-row">
             <span class="edit-label">AI</span>
             <div class="date-pills-scroll">
@@ -387,36 +387,6 @@
                 <Loader2 v-if="aiAction === 'suggest'" :size="12" class="spin" />
                 <Sparkles v-else :size="12" />
                 Suggest
-              </button>
-              <button
-                class="pill ai-pill"
-                :class="{ 'is-loading': aiAction === 'sort' }"
-                :disabled="isAIBusy"
-                @click="handleAISort"
-              >
-                <Loader2 v-if="aiAction === 'sort'" :size="12" class="spin" />
-                <ArrowUpDown v-else :size="12" />
-                Sort
-              </button>
-              <button
-                class="pill ai-pill"
-                :class="{ 'is-loading': aiAction === 'batch' }"
-                :disabled="isAIBusy"
-                @click="handleAIBatch"
-              >
-                <Loader2 v-if="aiAction === 'batch'" :size="12" class="spin" />
-                <Zap v-else :size="12" />
-                Batch
-              </button>
-              <button
-                class="pill ai-pill"
-                :class="{ 'is-loading': aiAction === 'explain' }"
-                :disabled="isAIBusy"
-                @click="handleAIExplain"
-              >
-                <Loader2 v-if="aiAction === 'explain'" :size="12" class="spin" />
-                <MessageSquareText v-else :size="12" />
-                Explain
               </button>
             </div>
           </div>
@@ -656,7 +626,7 @@
               <h3 class="sheet-title">
                 AI Error
               </h3>
-              <p class="ai-error-text">
+              <p class="ai-error-text" dir="auto">
                 {{ aiError }}
               </p>
               <div class="sheet-actions">
@@ -684,9 +654,9 @@
                   <div class="ai-suggestion-change">
                     <span class="ai-from">{{ s.currentValue || 'none' }}</span>
                     <span class="ai-arrow">&rarr;</span>
-                    <span class="ai-to">{{ s.suggestedValue }}</span>
+                    <span class="ai-to" dir="auto">{{ s.suggestedValue }}</span>
                   </div>
-                  <p v-if="s.reasoning" class="ai-reason">
+                  <p v-if="s.reasoning" class="ai-reason" dir="auto">
                     {{ s.reasoning }}
                   </p>
                 </div>
@@ -697,65 +667,13 @@
                   <div class="ai-suggestion-change">
                     <span class="ai-from">{{ currentTaskProject?.name || 'none' }}</span>
                     <span class="ai-arrow">&rarr;</span>
-                    <span class="ai-to">{{ suggestedProjectName || 'Suggested' }}</span>
+                    <span class="ai-to" dir="auto">{{ suggestedProjectName || 'Suggested' }}</span>
                   </div>
                 </div>
               </div>
               <div class="sheet-actions">
                 <button class="sheet-btn primary" @click="handleApplySuggestions">
                   Apply All
-                </button>
-                <button class="sheet-btn secondary" @click="closeAISheet">
-                  Dismiss
-                </button>
-              </div>
-            </div>
-
-            <!-- Batch Results -->
-            <div v-else-if="aiAction === 'batch'" class="ai-sheet-body">
-              <h3 class="sheet-title">
-                {{ batchResults.length }} Tasks Categorized
-              </h3>
-              <div class="ai-batch-list">
-                <div
-                  v-for="r in batchResults"
-                  :key="r.taskId"
-                  class="ai-batch-item"
-                >
-                  <span class="ai-batch-name">{{ r.taskTitle.slice(0, 40) }}</span>
-                  <div class="ai-batch-tags">
-                    <span v-if="r.suggestedPriority" class="ai-tag">{{ r.suggestedPriority }}</span>
-                    <span v-if="r.suggestedDueDate" class="ai-tag">{{ r.suggestedDueDate }}</span>
-                    <span v-if="r.suggestedProjectName" class="ai-tag">{{ r.suggestedProjectName }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="sheet-actions">
-                <button class="sheet-btn primary" @click="handleApplyBatch">
-                  Apply All
-                </button>
-                <button class="sheet-btn secondary" @click="closeAISheet">
-                  Dismiss
-                </button>
-              </div>
-            </div>
-
-            <!-- Explain Results -->
-            <div v-else-if="aiAction === 'explain'" class="ai-sheet-body">
-              <h3 class="sheet-title">
-                Task Breakdown
-              </h3>
-              <p class="ai-explain-desc">
-                {{ explainResult?.description }}
-              </p>
-              <ul v-if="explainResult?.actionSteps?.length" class="ai-explain-steps">
-                <li v-for="(step, i) in explainResult.actionSteps" :key="i">
-                  {{ step }}
-                </li>
-              </ul>
-              <div class="sheet-actions">
-                <button class="sheet-btn primary" @click="handleApplyExplain">
-                  Accept
                 </button>
                 <button class="sheet-btn secondary" @click="closeAISheet">
                   Dismiss
@@ -774,14 +692,6 @@
         <span>Sorted!</span>
       </div>
     </Transition>
-
-    <!-- AI Sort Feedback (TASK-1221) -->
-    <Transition name="celebration">
-      <div v-if="showAISortFeedback" class="mini-celebration ai-sort-feedback">
-        <ArrowUpDown :size="32" />
-        <span>Reordered by AI</span>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -793,7 +703,7 @@ import {
   Zap, X, Plus, CheckCircle, Calendar, CalendarPlus, CalendarDays, Flag,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown, SkipForward, PartyPopper,
   ArrowLeft, Trash2, FolderOpen, Search, Save, Pencil,
-  Sparkles, ArrowUpDown, MessageSquareText, Loader2
+  Sparkles, Loader2
 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useQuickSortAI } from '@/composables/useQuickSortAI'
@@ -822,11 +732,10 @@ const {
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
-  undoLastCategorization: _undoLastCategorization,
-  setQueueOrder
+  undoLastCategorization: _undoLastCategorization
 } = useQuickSort()
 
-// AI Commands (TASK-1221)
+// AI Command (TASK-1221)
 const quickSortAI = useQuickSortAI()
 const {
   aiState,
@@ -835,10 +744,7 @@ const {
   isAIBusy,
   currentSuggestions,
   suggestedProjectId,
-  suggestedProjectName,
-  batchResults,
-  explainResult,
-  sortedTaskOrder,
+  suggestedProjectName
 } = quickSortAI
 
 // UI State
@@ -850,7 +756,6 @@ const sessionSummary = ref<SessionSummary | null>(null)
 const showDeleteConfirm = ref(false)
 const showQuickEditPanel = ref(false)
 const showAISheet = ref(false)
-const showAISortFeedback = ref(false)
 
 // Timer cleanup tracking
 const celebrationTimers: ReturnType<typeof setTimeout>[] = []
@@ -1215,29 +1120,10 @@ async function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' |
   triggerHaptic('light')
 }
 
-// AI Handlers (TASK-1221)
+// AI Handler (TASK-1221)
 function handleAISuggest() {
   if (!currentTask.value || isAIBusy.value) return
   quickSortAI.autoSuggest(currentTask.value)
-}
-
-function handleAISort() {
-  if (isAIBusy.value) return
-  const tasks = uncategorizedTasks.value
-  if (tasks.length === 0) return
-  quickSortAI.aiSort(tasks)
-}
-
-function handleAIBatch() {
-  if (isAIBusy.value) return
-  const tasks = uncategorizedTasks.value
-  if (tasks.length === 0) return
-  quickSortAI.aiBatch(tasks)
-}
-
-function handleAIExplain() {
-  if (!currentTask.value || isAIBusy.value) return
-  quickSortAI.aiExplain(currentTask.value)
 }
 
 function closeAISheet() {
@@ -1258,33 +1144,6 @@ async function handleApplySuggestions() {
   if (Object.keys(updates).length > 0) {
     await taskStore.updateTask(currentTask.value.id, updates)
   }
-  closeAISheet()
-  showCelebration.value = true
-  setTimeout(() => { showCelebration.value = false }, 600)
-}
-
-async function handleApplyBatch() {
-  for (const result of batchResults.value) {
-    const updates: Record<string, unknown> = {}
-    if (result.suggestedPriority) updates.priority = result.suggestedPriority
-    if (result.suggestedDueDate) updates.dueDate = result.suggestedDueDate
-    if (result.suggestedProjectId) updates.projectId = result.suggestedProjectId
-    if (Object.keys(updates).length > 0) {
-      await taskStore.updateTask(result.taskId, updates)
-    }
-  }
-  closeAISheet()
-  showCelebration.value = true
-  setTimeout(() => { showCelebration.value = false }, 600)
-}
-
-async function handleApplyExplain() {
-  if (!currentTask.value || !explainResult.value) return
-  const desc = explainResult.value.description
-  const steps = explainResult.value.actionSteps.length > 0
-    ? '\n\n' + explainResult.value.actionSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')
-    : ''
-  await taskStore.updateTask(currentTask.value.id, { description: desc + steps })
   closeAISheet()
   showCelebration.value = true
   setTimeout(() => { showCelebration.value = false }, 600)
@@ -1391,19 +1250,8 @@ watch(isComplete, (completed) => {
 // Auto-open AI results sheet (TASK-1221)
 watch(aiState, (state) => {
   if (state === 'preview' || state === 'error') {
-    if (aiAction.value === 'sort') {
-      // Sort doesn't need a sheet, just feedback
-      showAISortFeedback.value = true
-      setTimeout(() => { showAISortFeedback.value = false }, 600)
-    } else {
-      showAISheet.value = true
-    }
+    showAISheet.value = true
   }
-})
-
-// Sync AI sort order (TASK-1221)
-watch(sortedTaskOrder, (order) => {
-  if (order) setQueueOrder(order)
 })
 
 // Lifecycle
@@ -2039,19 +1887,19 @@ onUnmounted(() => {
 /* Left swipe = Delete (destructive - red) */
 .swipe-indicator.left {
   border: var(--space-0_5) solid var(--color-danger);
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--danger-bg-subtle);
 }
 
 /* Right swipe = Save (positive action - teal) */
 .swipe-indicator.right {
   border: var(--space-0_5) solid var(--brand-primary);
-  background: rgba(78, 205, 196, 0.15);
+  background: var(--brand-bg-subtle);
 }
 
 /* Up swipe = Edit (info - blue) */
 .swipe-indicator.up {
   border: var(--space-0_5) solid var(--color-info);
-  background: rgba(59, 130, 246, 0.15);
+  background: var(--blue-bg-subtle);
 }
 
 /* Down swipe = Skip (muted) */
@@ -3029,7 +2877,7 @@ onUnmounted(() => {
 }
 
 .pill.ai-pill:active {
-  background: rgba(78, 205, 196, 0.15);
+  background: var(--brand-bg-subtle);
 }
 
 .pill.ai-pill.is-loading {
@@ -3228,7 +3076,7 @@ onUnmounted(() => {
 
 /* AI Sort Feedback */
 .ai-sort-feedback {
-  background: rgba(78, 205, 196, 0.15) !important;
+  background: var(--brand-bg-subtle) !important;
   border-color: var(--brand-primary) !important;
   color: var(--brand-primary) !important;
 }

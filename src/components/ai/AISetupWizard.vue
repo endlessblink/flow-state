@@ -373,8 +373,8 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(var(--blur-xs));
 }
 
 .wizard-modal {
@@ -386,7 +386,7 @@ defineExpose({
   background: var(--overlay-component-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(var(--blur-xl));
   padding: var(--space-6);
 }
 
@@ -481,7 +481,7 @@ defineExpose({
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
   cursor: pointer;
   text-align: left;
   transition: all var(--duration-fast);
@@ -491,7 +491,7 @@ defineExpose({
 }
 .provider-card.selected {
   border-color: var(--brand-primary);
-  background: rgba(78, 205, 196, 0.06);
+  background: var(--brand-bg-subtle, rgba(78, 205, 196, 0.06));
 }
 
 .provider-badge {
@@ -504,7 +504,7 @@ defineExpose({
   border-radius: var(--radius-sm);
 }
 .provider-badge.recommended {
-  background: rgba(78, 205, 196, 0.15);
+  background: var(--brand-bg-subtle);
   color: var(--brand-primary);
 }
 
@@ -541,11 +541,11 @@ defineExpose({
   border-radius: var(--radius-lg);
   color: var(--brand-primary);
   cursor: pointer;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
   transition: all var(--duration-fast);
 }
 .btn-primary:hover:not(:disabled) {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-bg-hover);
 }
 .btn-primary:disabled {
   opacity: 0.4;
@@ -564,7 +564,7 @@ defineExpose({
   border-radius: var(--radius-lg);
   color: var(--text-secondary);
   cursor: pointer;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
   transition: all var(--duration-fast);
 }
 .btn-secondary:hover {
@@ -625,7 +625,7 @@ defineExpose({
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
   transition: border-color var(--duration-fast);
 }
 .text-input:focus {
@@ -666,11 +666,11 @@ defineExpose({
   font-size: var(--text-sm);
 }
 .test-result.success {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-bg-subtle);
   color: var(--brand-primary);
 }
 .test-result.error {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg-subtle);
   color: var(--color-danger);
 }
 .test-result.testing {
@@ -689,11 +689,11 @@ defineExpose({
   font-weight: var(--font-medium);
 }
 .ollama-status.detected {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-bg-subtle);
   color: var(--brand-primary);
 }
 .ollama-status.not-detected {
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--warning-bg-subtle);
   color: var(--color-warning);
 }
 

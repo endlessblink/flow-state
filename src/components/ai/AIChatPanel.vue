@@ -960,9 +960,9 @@ onUnmounted(() => {
   width: 600px;
   max-width: 100vw;
   height: 100vh;
-  background: rgba(20, 18, 35, 0.45);
-  backdrop-filter: blur(40px) saturate(1.4);
-  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+  background: var(--glass-panel-bg);
+  backdrop-filter: var(--overlay-component-backdrop) saturate(1.4);
+  -webkit-backdrop-filter: var(--overlay-component-backdrop) saturate(1.4);
   border-inline-start: 1px solid var(--overlay-component-border-color);
   display: flex;
   flex-direction: column;
@@ -997,8 +997,8 @@ onUnmounted(() => {
   position: fixed;
   inset: 0;
   background: var(--overlay-component-bg-lighter);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
   z-index: calc(var(--z-overlay) - 1);
 }
 
@@ -1029,8 +1029,8 @@ onUnmounted(() => {
 }
 
 .grid-handler-icon {
-  color: #00ff88;
-  filter: drop-shadow(0 0 var(--space-1) rgba(0, 255, 136, 0.5));
+  color: var(--color-success);
+  filter: drop-shadow(0 0 var(--space-1) rgba(var(--color-success-rgb), 0.5));
 }
 
 .provider-badge {
@@ -1379,7 +1379,7 @@ onUnmounted(() => {
 
 .health-degraded {
   background: var(--color-warning);
-  box-shadow: 0 0 var(--space-1) rgba(234, 179, 8, 0.4);
+  box-shadow: 0 0 var(--space-1) var(--warning-border);
 }
 
 .health-unavailable {
@@ -1427,8 +1427,8 @@ onUnmounted(() => {
 }
 
 .grid-handler-option.active {
-  background: linear-gradient(135deg, #00ff88, #06b6d4);
-  color: #0a0a0f;
+  background: linear-gradient(135deg, var(--color-success), var(--color-info));
+  color: var(--text-primary-inverse);
   text-shadow: none;
 }
 

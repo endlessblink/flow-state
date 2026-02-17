@@ -51,8 +51,8 @@
             :dir="quickTaskDirection"
             type="text"
             class="quick-task-input"
-            :class="{ 'voice-active': isListening }"
-            :placeholder="isListening ? 'Listening...' : 'Quick add task (Enter)...'"
+            :class="{ 'voice-active': isListening, 'success-flash': showSuccessFlash }"
+            :placeholder="isListening ? 'Listening...' : (showSuccessFlash ? 'Task added!' : 'Quick add task (Enter)...')"
             aria-label="Quick add task"
             @keydown.enter.prevent="createQuickTask"
             @keydown.escape="collapseQuickAdd"
@@ -96,6 +96,7 @@
                 class="metadata-btn"
                 :class="{ 'has-value': quickTaskDueDate }"
                 :style="quickTaskDueDate ? { color: 'var(--brand-primary)' } : {}"
+                @mousedown.prevent
                 @click="toggleDatePicker"
               >
                 <CalendarDays :size="14" />
@@ -105,7 +106,7 @@
 
               <!-- Date dropdown -->
               <Transition name="fade">
-                <div v-if="showDatePicker" class="metadata-dropdown date-dropdown">
+                <div v-if="showDatePicker" class="metadata-dropdown date-dropdown" @mousedown.prevent>
                   <button class="dropdown-option" @click="selectDate('today')">
                     Today
                   </button>
@@ -130,6 +131,7 @@
                 class="metadata-btn"
                 :class="{ 'has-value': quickTaskPriority }"
                 :style="getPriorityColor(quickTaskPriority)"
+                @mousedown.prevent
                 @click="togglePriorityPicker"
               >
                 <Flag :size="14" />
@@ -138,7 +140,7 @@
 
               <!-- Priority dropdown -->
               <Transition name="fade">
-                <div v-if="showPriorityPicker" class="metadata-dropdown priority-dropdown">
+                <div v-if="showPriorityPicker" class="metadata-dropdown priority-dropdown" @mousedown.prevent>
                   <button class="dropdown-option" @click="selectPriority(null)">
                     <Flag :size="12" />
                     <span>None</span>
@@ -665,6 +667,8 @@ const quickTaskExpandedRef = ref<HTMLTextAreaElement | null>(null)
 const quickTaskText = ref('')
 const quickTaskFocused = ref(false)
 
+const showSuccessFlash = ref(false)
+
 // TASK-1324: Quick task metadata (date + priority)
 const quickTaskDueDate = ref<string | null>(null)
 const quickTaskPriority = ref<'low' | 'medium' | 'high' | null>(null)
@@ -687,9 +691,9 @@ const isQuickAddExpanded = computed(() => {
   return wordCount >= 6 || text.length > 40
 })
 
-// Show metadata row when input is focused OR has values set
+// Show metadata row when input is focused, has values set, or a dropdown is open
 const showMetadataRow = computed(() => {
-  return quickTaskFocused.value || quickTaskDueDate.value !== null || quickTaskPriority.value !== null
+  return quickTaskFocused.value || quickTaskDueDate.value !== null || quickTaskPriority.value !== null || showDatePicker.value || showPriorityPicker.value
 })
 
 // Auto-focus the textarea when expanding
@@ -843,6 +847,9 @@ const createQuickTask = async () => {
     quickTaskText.value = ''
     quickTaskDueDate.value = null
     quickTaskPriority.value = null
+    // Visual confirmation flash
+    showSuccessFlash.value = true
+    setTimeout(() => { showSuccessFlash.value = false }, 1200)
   } catch (error) {
     console.error('Error creating quick task:', error)
   }
@@ -1242,6 +1249,16 @@ defineExpose({
 .quick-task-input.voice-active {
   border-color: var(--danger-text, #ef4444);
   box-shadow: 0 0 0 2px var(--danger-bg-medium);
+}
+
+.quick-task-input.success-flash {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.25);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.quick-task-input.success-flash::placeholder {
+  color: var(--brand-primary);
 }
 
 /* Mic Button (TASK-1024) */
@@ -1774,13 +1791,11 @@ defineExpose({
   left: 0;
   z-index: var(--z-tooltip);
   min-width: 140px;
-  background: var(--glass-bg-heavy);
+  background: rgb(22, 19, 38);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: var(--space-1);
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .dropdown-option {

@@ -314,7 +314,10 @@ export const useAuthStore = defineStore('auth', () => {
               const { useTaskStore } = await import('@/stores/tasks')
               const taskStore = useTaskStore()
               if (taskStore._rawTasks.length === 0) {
-                console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: appInitLoadComplete but tasks empty — reloading stores`)
+                console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: appInitLoadComplete but tasks empty — invalidating cache and reloading stores`)
+                // BUG-1339 FIX: Clear SWR cache so retry gets fresh data instead of cached empty result
+                const { invalidateCache } = await import('@/composables/useSupabaseDatabase')
+                invalidateCache.all()
                 const { useProjectStore } = await import('@/stores/projects')
                 const { useCanvasStore } = await import('@/stores/canvas')
                 await Promise.all([
@@ -330,6 +333,9 @@ export const useAuthStore = defineStore('auth', () => {
               // Post-init sign-in: user signed in via modal after app loaded in guest mode
               console.log(`👤 [AUTH:${currentTabId}] User signed in (post-init) - reloading stores...`)
               try {
+                // BUG-1339 FIX: Clear SWR cache so fresh fetch isn't stale
+                const { invalidateCache } = await import('@/composables/useSupabaseDatabase')
+                invalidateCache.all()
                 const { useProjectStore } = await import('@/stores/projects')
                 const { useTaskStore } = await import('@/stores/tasks')
                 const { useCanvasStore } = await import('@/stores/canvas')

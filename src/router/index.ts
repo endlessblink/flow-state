@@ -17,6 +17,7 @@ const mobileToDesktopRedirects: Record<string, string> = {
   'mobile-quick-sort': 'quick-sort',
   'mobile-today': 'canvas',
   'mobile-timer': 'canvas',
+  'mobile-ai-chat': 'ai',
 }
 
 const router = createRouter({
@@ -104,6 +105,12 @@ const router = createRouter({
       path: '/mobile-quick-sort',
       name: 'mobile-quick-sort',
       component: () => import('@/mobile/views/MobileQuickSortView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/mobile-ai-chat',
+      name: 'mobile-ai-chat',
+      component: () => import('@/mobile/views/MobileAIChatView.vue'),
       meta: { requiresAuth: false }
     },
     {

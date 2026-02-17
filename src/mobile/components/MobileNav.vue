@@ -2,7 +2,7 @@
   <nav class="mobile-nav">
     <router-link to="/tasks" class="nav-item" active-class="active">
       <InboxIcon />
-      <span>Inbox</span>
+      <span>Tasks</span>
     </router-link>
 
     <router-link to="/mobile-quick-sort" class="nav-item" active-class="active">
@@ -15,9 +15,9 @@
       <span>Timer</span>
     </router-link>
 
-    <router-link to="/today" class="nav-item" active-class="active">
-      <CalendarCheck />
-      <span>Today</span>
+    <router-link to="/mobile-ai-chat" class="nav-item" active-class="active">
+      <Sparkles />
+      <span>AI</span>
     </router-link>
 
     <div class="nav-item" @click="toggleMenu">
@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Inbox as InboxIcon, CalendarCheck, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw } from 'lucide-vue-next'
+import { Inbox as InboxIcon, Sparkles, Menu as MenuIcon, LogIn, LogOut, Settings, X, Timer as TimerIcon, Zap, RefreshCw } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 

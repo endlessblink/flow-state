@@ -1124,47 +1124,19 @@ Implemented **Last-Write-Wins (LWW)** auto-conflict resolution in `useSyncOrches
 
 ---
 
-### BUG-1184: Production Site Down - Chunk Load Failure + Network Errors (🔄 IN PROGRESS)
+### ~~BUG-1184~~: Production Site Down - Chunk Load Failure + Network Errors (✅ DONE)
 
-**Priority**: P1-HIGH | **Status**: 🔄 IN PROGRESS (2026-02-02)
+**Priority**: P1-HIGH | **Status**: ✅ DONE (2026-02-17)
 
-**Problem**: Production site at `in-theflow.com` is broken with two critical issues:
+**Root Cause**: `AISetupWizard.vue` imported by App.vue but never committed → CI/CD builds fail → no new deploys can ship → VPS stuck on stale assets. Manual deploys with `rsync --delete` nuked old chunks. Browsers/service workers with cached old hashes → chunk 404 → blank page.
 
-1. **Chunk Load Failure**:
-   ```
-   error loading dynamically imported module: https://in-theflow.com/assets/AllTasksView-BA62OH4U.js
-   ```
+**Fixes Applied (2026-02-17)**:
+1. Committed missing `AISetupWizard.vue` (unblocks CI/CD)
+2. Router `onError` now auto-recovers: unregisters stale SW + force-reloads (once per route per session)
+3. Added `scripts/validate-chunks.sh` — post-deploy CI step verifies all 118 chunks (direct + lazy + SW precache) return 200
+4. Diagnostic runbook added to CLAUDE.md (three-layer hash comparison: Cloudflare → VPS → SW)
 
-2. **Network Errors on All Sync Operations**:
-   - `fetchActiveTimerSession`: NetworkError
-   - `fetchGroups`: NetworkError
-   - `fetchTasks`: NetworkError
-   - `fetchProjects`: NetworkError
-   - `fetchNotifications`: NetworkError
-   - `fetchQuickSortHistory`: NetworkError
-
-**Symptoms**:
-- UI loads but shows "No tasks yet"
-- Multiple sync error popups appear
-- All Supabase API calls fail with "NetworkError when attempting to fetch resource"
-
-**Likely Causes**:
-1. Stale build deployed - chunk hash mismatch between index.html and actual assets
-2. VPS Supabase service down or unreachable
-3. CORS misconfiguration after recent changes
-4. Caddy reverse proxy issue
-
-**Investigation Steps**:
-- [ ] Check if VPS is reachable: `ssh root@84.46.253.137`
-- [ ] Check Caddy status: `systemctl status caddy`
-- [ ] Check Supabase status: `cd /opt/supabase/docker && docker compose ps`
-- [ ] Check if chunk file exists: `ls -la /var/www/flowstate/assets/AllTasksView*`
-- [ ] Check CORS headers: `curl -I https://api.in-theflow.com/rest/v1/`
-- [ ] Redeploy if needed: `doppler run -- npm run build && rsync -avz dist/ root@84.46.253.137:/var/www/flowstate/`
-
-**Status Note (2026-02-14):** Investigation stale. Production appears functional.
-
-**Files**: VPS `/var/www/flowstate/`, `/etc/caddy/Caddyfile`, `/opt/supabase/docker/`
+**Files**: `src/router/index.ts`, `scripts/validate-chunks.sh`, `.github/workflows/deploy.yml`, `CLAUDE.md`
 
 ---
 

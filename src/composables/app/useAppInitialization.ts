@@ -37,6 +37,9 @@ export function useAppInitialization() {
     const activeChannel = ref<any>(null)
     const realtimeInitialized = ref(false)
     const onMountedCompleted = ref(false)  // BUG-1106: Prevent race condition between watcher and onMounted
+    // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)
+    // Views should NOT render content until this is true to prevent blank-on-first-load
+    const isDataReady = ref(false)
 
     onMounted(async () => {
         // MARK: SESSION START for stability guards
@@ -68,7 +71,8 @@ export function useAppInitialization() {
 
         // TASK-1060: Add retry wrapper for initial load to handle transient auth failures
         // BUG-1339: Now actually works — loadFromDatabase() propagates errors instead of swallowing them
-        const loadWithRetry = async (maxRetries = 3, delayMs = 1000) => {
+        // BUG-1339 Fix: Returns boolean so we know whether to mark appInitLoadComplete
+        const loadWithRetry = async (maxRetries = 3, delayMs = 1000): Promise<boolean> => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     await Promise.all([
@@ -76,13 +80,13 @@ export function useAppInitialization() {
                         projectStore.loadProjectsFromDatabase(),
                         canvasStore.loadFromDatabase()
                     ])
-                    return // Success
+                    return true // Success
                 } catch (error) {
                     console.warn(`⚠️ [TASK-1060] Database load attempt ${attempt}/${maxRetries} failed:`, error)
                     if (attempt === maxRetries) {
                         // BUG-1339: Don't throw — log clearly so user knows to refresh
                         console.error('❌ [APP-INIT] All database load attempts failed. Tasks may not be visible. Try refreshing the page.')
-                        return // Graceful degradation instead of unhandled rejection
+                        return false // Graceful degradation instead of unhandled rejection
                     }
                     // BUG-1339: Clear SWR cache between retries so we get fresh fetch, not cached error
                     invalidateCache.all()
@@ -90,9 +94,10 @@ export function useAppInitialization() {
                     await new Promise(resolve => setTimeout(resolve, delayMs * attempt))
                 }
             }
+            return false
         }
 
-        await loadWithRetry()
+        const loadSucceeded = await loadWithRetry()
 
         // TASK-1215: Load persisted filters (smart view, project, duration, etc.)
         // This was previously missing — loadFromDatabase() only loads tasks,
@@ -101,7 +106,20 @@ export function useAppInitialization() {
 
         // BUG-1207: Tell auth store that app init has loaded stores
         // This prevents the SIGNED_IN handler from doing a redundant double-load
-        authStore.markAppInitLoadComplete()
+        // BUG-1339: Only mark complete if load actually succeeded — if it failed
+        // (e.g., expired token), leave appInitLoadComplete=false so the SIGNED_IN
+        // handler can retry when auth eventually succeeds
+        if (loadSucceeded) {
+            authStore.markAppInitLoadComplete()
+            // BUG-1339: Signal to views that data is ready to render
+            isDataReady.value = true
+        } else {
+            console.warn('⚠️ [APP-INIT] Load failed — NOT marking appInitLoadComplete so SIGNED_IN handler can retry')
+            // BUG-1339: Even on failure, unblock views after retries are exhausted
+            // so the app doesn't stay on a loading screen forever.
+            // The SIGNED_IN handler will reload data when auth recovers.
+            isDataReady.value = true
+        }
 
         // FEATURE-1118: Initialize gamification system
         try {
@@ -542,4 +560,7 @@ export function useAppInitialization() {
             activeChannel.value = null
         }
     })
+
+    // BUG-1339: Return isDataReady so App.vue can gate view rendering
+    return { isDataReady }
 }

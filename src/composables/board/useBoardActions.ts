@@ -50,7 +50,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
 
     const handleWithError = async <T>(
         operation: () => Promise<T>,
-        errorMessage: string
+        _errorMessage: string
     ): Promise<T | null> => {
         try {
             return await operation()

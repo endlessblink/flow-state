@@ -18,9 +18,7 @@ import {
   detectPowerKeyword,
   getSmartGroupDate,
   getSmartGroupType,
-  type SmartGroupType,
   SMART_GROUPS,
-  DAY_OF_WEEK_KEYWORDS
 } from '@/composables/usePowerKeywords'
 import { CANVAS } from '@/constants/canvas'
 
@@ -100,7 +98,7 @@ function doesTaskMatchGroup(taskDueDate: string, group: CanvasGroup): boolean {
   // Handle day-of-week groups (Monday, Tuesday, etc.)
   if (powerKeyword.category === 'day_of_week') {
     const dayIndex = parseInt(powerKeyword.value, 10)
-    const nextOccurrence = getNextDayOfWeekDate(dayIndex)
+    const _nextOccurrence = getNextDayOfWeekDate(dayIndex)
 
     // Match if task is due on that day of the week (this week or next)
     const taskDate = new Date(taskDateOnly)

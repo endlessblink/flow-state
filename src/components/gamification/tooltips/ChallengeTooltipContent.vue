@@ -9,7 +9,6 @@ import { getChallengeNarrative } from '@/composables/useAriaTooltipNarrative'
 
 const challengesStore = useChallengesStore()
 
-const dailies = computed(() => challengesStore.activeDailies)
 const boss = computed(() => challengesStore.activeBoss)
 const completedToday = computed(() => challengesStore.completedTodayCount)
 

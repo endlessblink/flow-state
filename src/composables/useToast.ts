@@ -1,4 +1,3 @@
-import { ref } from 'vue'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 

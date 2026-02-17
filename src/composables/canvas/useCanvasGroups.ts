@@ -128,8 +128,8 @@ export function useCanvasGroups() {
         // Direct reactivity update on Vue Flow node data
         const node = getNodes.value.find(n => n.id === sectionNodeId)
         if (node && node.data) {
-            const oldDirect = node.data.directTaskCount
-            const oldAggregated = node.data.aggregatedTaskCount
+            const _oldDirect = node.data.directTaskCount
+            const _oldAggregated = node.data.aggregatedTaskCount
 
             // Update ALL count properties to ensure UI consistency
             node.data.directTaskCount = directCount

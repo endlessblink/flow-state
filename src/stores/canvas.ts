@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
 import { breakGroupCycles, resetAllGroupsToRoot } from '@/utils/canvas/storeHelpers'

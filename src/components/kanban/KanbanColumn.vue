@@ -16,6 +16,7 @@
     </div>
 
     <div class="tasks-container">
+      <!-- eslint-disable vue/prefer-true-attribute-shorthand -- BUG-1335: vuedraggable requires explicit :attr="true" bindings, shorthand breaks drag -->
       <draggable
         v-model="localTasks"
         :group="dragGroup"

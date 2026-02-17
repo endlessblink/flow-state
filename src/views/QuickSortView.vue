@@ -100,6 +100,77 @@
                 </button>
               </div>
 
+              <!-- AI Actions Divider (TASK-1221) -->
+              <div class="ai-divider">
+                <span class="ai-divider-label">AI</span>
+              </div>
+
+              <!-- Row 3: AI Suggest + AI Sort -->
+              <div class="action-row">
+                <button
+                  class="action-btn ai-suggest"
+                  :class="{ 'is-loading': aiAction === 'suggest' }"
+                  :disabled="isAIBusy"
+                  aria-label="AI suggest priority, date, project"
+                  @click="handleAISuggest"
+                >
+                  <Loader2 v-if="aiAction === 'suggest'" :size="16" class="spin" />
+                  <Sparkles v-else :size="16" />
+                  <span class="action-label">Suggest</span>
+                  <kbd>A</kbd>
+                </button>
+                <button
+                  class="action-btn ai-sort"
+                  :class="{ 'is-loading': aiAction === 'sort' }"
+                  :disabled="isAIBusy"
+                  aria-label="AI sort tasks by importance"
+                  @click="handleAISort"
+                >
+                  <Loader2 v-if="aiAction === 'sort'" :size="16" class="spin" />
+                  <ArrowUpDown v-else :size="16" />
+                  <span class="action-label">Sort</span>
+                  <kbd>I</kbd>
+                </button>
+              </div>
+
+              <!-- Row 4: AI Batch + AI Explain -->
+              <div class="action-row">
+                <button
+                  class="action-btn ai-batch"
+                  :class="{ 'is-loading': aiAction === 'batch' }"
+                  :disabled="isAIBusy"
+                  aria-label="AI auto-categorize all tasks"
+                  @click="handleAIBatch"
+                >
+                  <Loader2 v-if="aiAction === 'batch'" :size="16" class="spin" />
+                  <Zap v-else :size="16" />
+                  <span class="action-label">Batch</span>
+                  <kbd>B</kbd>
+                </button>
+                <button
+                  class="action-btn ai-explain"
+                  :class="{ 'is-loading': aiAction === 'explain' }"
+                  :disabled="isAIBusy"
+                  aria-label="AI explain task"
+                  @click="handleAIExplain"
+                >
+                  <Loader2 v-if="aiAction === 'explain'" :size="16" class="spin" />
+                  <MessageSquareText v-else :size="16" />
+                  <span class="action-label">Explain</span>
+                  <kbd>X</kbd>
+                </button>
+              </div>
+
+              <!-- AI Cancel (visible during loading) -->
+              <button
+                v-if="isAIBusy"
+                class="action-btn ai-cancel"
+                @click="handleAICancel"
+              >
+                <X :size="14" />
+                <span class="action-label">Cancel AI</span>
+              </button>
+
               <!-- Undo (appears when available) -->
               <button
                 v-if="canUndo"
@@ -134,7 +205,7 @@
 
               <!-- Helper Hint -->
               <div class="helper-hint">
-                1-9 assign project • →/S save • D done • ←/Del delete • ↓ skip • ↑ edit • Esc exit
+                1-9 assign • →/S save • D done • ← del • ↓ skip • ↑ edit • A suggest • I sort • B batch • X explain
               </div>
             </div>
 
@@ -191,6 +262,88 @@
                   <span v-else class="context-value context-empty">No project</span>
                 </div>
               </div>
+
+              <!-- AI Results (TASK-1221) -->
+              <template v-if="aiState === 'preview' || aiState === 'error'">
+                <div class="ai-divider">
+                  <span class="ai-divider-label">AI Results</span>
+                </div>
+
+                <!-- AI Error -->
+                <div v-if="aiState === 'error'" class="ai-error-section">
+                  <p class="ai-error-text">{{ aiError }}</p>
+                  <button class="action-btn ai-retry" @click="handleAIRetry">Retry</button>
+                </div>
+
+                <!-- Smart Suggest Results -->
+                <div v-else-if="aiAction === 'suggest'" class="ai-suggest-results">
+                  <div
+                    v-for="suggestion in currentSuggestions"
+                    :key="suggestion.field"
+                    class="ai-suggestion-card"
+                  >
+                    <div class="ai-suggestion-header">
+                      <span class="ai-suggestion-field">{{ suggestion.field }}</span>
+                      <span class="ai-suggestion-confidence" :style="{ opacity: suggestion.confidence }">
+                        {{ Math.round(suggestion.confidence * 100) }}%
+                      </span>
+                    </div>
+                    <div class="ai-suggestion-values">
+                      <span class="ai-old-value">{{ suggestion.currentValue || 'none' }}</span>
+                      <span class="ai-arrow">&rarr;</span>
+                      <span class="ai-new-value">{{ suggestion.suggestedValue }}</span>
+                    </div>
+                    <p v-if="suggestion.reasoning" class="ai-suggestion-reason">{{ suggestion.reasoning }}</p>
+                  </div>
+                  <div v-if="suggestedProjectId" class="ai-suggestion-card">
+                    <div class="ai-suggestion-header">
+                      <span class="ai-suggestion-field">project</span>
+                    </div>
+                    <div class="ai-suggestion-values">
+                      <span class="ai-old-value">{{ currentTaskProject?.name || 'none' }}</span>
+                      <span class="ai-arrow">&rarr;</span>
+                      <span class="ai-new-value">{{ suggestedProjectName || suggestedProjectId }}</span>
+                    </div>
+                  </div>
+                  <div class="ai-actions-row">
+                    <button class="action-btn ai-apply" @click="handleApplySuggestions">Apply All</button>
+                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">Dismiss</button>
+                  </div>
+                </div>
+
+                <!-- Batch Results -->
+                <div v-else-if="aiAction === 'batch'" class="ai-batch-results">
+                  <p class="ai-batch-count">{{ batchResults.length }} tasks categorized</p>
+                  <div
+                    v-for="result in batchResults.slice(0, 5)"
+                    :key="result.taskId"
+                    class="ai-batch-card"
+                  >
+                    <span class="ai-batch-title">{{ result.taskTitle.slice(0, 30) }}</span>
+                    <div class="ai-batch-meta">
+                      <span v-if="result.suggestedPriority" class="ai-batch-tag">{{ result.suggestedPriority }}</span>
+                      <span v-if="result.suggestedDueDate" class="ai-batch-tag">{{ result.suggestedDueDate }}</span>
+                    </div>
+                  </div>
+                  <p v-if="batchResults.length > 5" class="ai-batch-more">+ {{ batchResults.length - 5 }} more</p>
+                  <div class="ai-actions-row">
+                    <button class="action-btn ai-apply" @click="handleApplyBatch">Apply All</button>
+                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">Dismiss</button>
+                  </div>
+                </div>
+
+                <!-- Explain Results -->
+                <div v-else-if="aiAction === 'explain'" class="ai-explain-results">
+                  <p class="ai-explain-desc">{{ explainResult?.description }}</p>
+                  <ul v-if="explainResult?.actionSteps?.length" class="ai-explain-steps">
+                    <li v-for="(step, i) in explainResult.actionSteps" :key="i">{{ step }}</li>
+                  </ul>
+                  <div class="ai-actions-row">
+                    <button class="action-btn ai-apply" @click="handleApplyExplain">Accept</button>
+                    <button class="action-btn ai-dismiss" @click="quickSortAI.dismiss()">Dismiss</button>
+                  </div>
+                </div>
+              </template>
             </aside>
           </div>
 
@@ -271,8 +424,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit2, Calendar, Briefcase, Save, Trash2 } from 'lucide-vue-next'
+import { Zap, X, CheckCircle, Undo2, SkipForward, Plus, Edit2, Calendar, Briefcase, Save, Trash2, Sparkles, ArrowUpDown, MessageSquareText, Loader2 } from 'lucide-vue-next'
 import { useQuickSort } from '@/composables/useQuickSort'
+import { useQuickSortAI } from '@/composables/useQuickSortAI'
 import { useQuickCapture } from '@/composables/useQuickCapture'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
@@ -348,8 +502,23 @@ const {
   markTaskDone,
   markDoneAndDeleteTask,
   skipTask,
-  undoLastCategorization
+  undoLastCategorization,
+  setQueueOrder
 } = useQuickSort()
+
+const quickSortAI = useQuickSortAI()
+const {
+  aiState,
+  aiAction,
+  aiError,
+  isAIBusy,
+  currentSuggestions,
+  suggestedProjectId,
+  suggestedProjectName,
+  batchResults,
+  explainResult,
+  sortedTaskOrder,
+} = quickSortAI
 
 // Start session on mount
 onMounted(() => {
@@ -366,6 +535,14 @@ watch(isComplete, (completed) => {
   if (completed) {
     const summary = endSession()
     sessionSummary.value = summary || null
+  }
+})
+
+// Sync AI sort order to Quick Sort queue (TASK-1221)
+watch(sortedTaskOrder, (order) => {
+  if (order) {
+    setQueueOrder(order)
+    showFeedback('Tasks reordered by AI', 'info')
   }
 })
 
@@ -432,6 +609,90 @@ function _closeEditModal() {
 
 function handleExit() {
   router.push({ name: 'board' })
+}
+
+// AI Command Handlers (TASK-1221)
+function handleAISuggest() {
+  if (!currentTask.value || isAIBusy.value) return
+  quickSortAI.autoSuggest(currentTask.value)
+}
+
+function handleAISort() {
+  if (isAIBusy.value) return
+  const tasks = uncategorizedTasks.value
+  if (tasks.length === 0) return
+  quickSortAI.aiSort(tasks)
+}
+
+function handleAIBatch() {
+  if (isAIBusy.value) return
+  const tasks = uncategorizedTasks.value
+  if (tasks.length === 0) return
+  quickSortAI.aiBatch(tasks)
+}
+
+function handleAIExplain() {
+  if (!currentTask.value || isAIBusy.value) return
+  quickSortAI.aiExplain(currentTask.value)
+}
+
+function handleAICancel() {
+  quickSortAI.abort()
+}
+
+let lastAIAction: (() => void) | null = null
+
+function handleAIRetry() {
+  quickSortAI.dismiss()
+  if (lastAIAction) lastAIAction()
+}
+
+async function handleApplySuggestions() {
+  if (!currentTask.value) return
+  const updates: Record<string, unknown> = {}
+  for (const s of currentSuggestions.value) {
+    if (s.field === 'priority') updates.priority = s.suggestedValue
+    else if (s.field === 'dueDate') updates.dueDate = s.suggestedValue
+    else if (s.field === 'status') updates.status = s.suggestedValue
+    else if (s.field === 'estimatedDuration') updates.estimatedDuration = s.suggestedValue
+  }
+  if (suggestedProjectId.value) {
+    updates.projectId = suggestedProjectId.value
+  }
+  if (Object.keys(updates).length > 0) {
+    await taskStore.updateTask(currentTask.value.id, updates)
+  }
+  quickSortAI.dismiss()
+  showFeedback('AI suggestions applied!', 'success')
+}
+
+async function handleApplyBatch() {
+  for (const result of batchResults.value) {
+    const updates: Record<string, unknown> = {}
+    if (result.suggestedPriority) updates.priority = result.suggestedPriority
+    if (result.suggestedDueDate) updates.dueDate = result.suggestedDueDate
+    if (result.suggestedProjectId) updates.projectId = result.suggestedProjectId
+    if (Object.keys(updates).length > 0) {
+      await taskStore.updateTask(result.taskId, updates)
+    }
+  }
+  quickSortAI.dismiss()
+  showFeedback(`${batchResults.value.length} tasks categorized!`, 'success')
+}
+
+async function handleApplyExplain() {
+  if (!currentTask.value || !explainResult.value) return
+  const newDesc = explainResult.value.description
+  if (explainResult.value.actionSteps.length > 0) {
+    const steps = explainResult.value.actionSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')
+    await taskStore.updateTask(currentTask.value.id, {
+      description: newDesc + '\n\n' + steps
+    })
+  } else {
+    await taskStore.updateTask(currentTask.value.id, { description: newDesc })
+  }
+  quickSortAI.dismiss()
+  showFeedback('Description updated!', 'success')
 }
 
 function shouldIgnoreKeyEvent(event: KeyboardEvent): boolean {
@@ -510,6 +771,26 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   if (activeTab.value === 'sort' && event.key === 'ArrowDown') {
     event.preventDefault()
     handleSkip()
+  }
+
+  // AI shortcuts (TASK-1221) - only in sort tab, not during AI operation
+  if (activeTab.value === 'sort' && !isAIBusy.value) {
+    if (event.key === 'a' || event.key === 'A') {
+      event.preventDefault()
+      handleAISuggest()
+    }
+    if (event.key === 'i' || event.key === 'I') {
+      event.preventDefault()
+      handleAISort()
+    }
+    if (event.key === 'b' || event.key === 'B') {
+      event.preventDefault()
+      handleAIBatch()
+    }
+    if (event.key === 'x' || event.key === 'X') {
+      event.preventDefault()
+      handleAIExplain()
+    }
   }
 }
 
@@ -1462,5 +1743,255 @@ const currentTaskProject = computed(() => {
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
   }
+}
+
+/* AI Divider (TASK-1221) */
+.ai-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-divider::before,
+.ai-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+
+.ai-divider-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--brand-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* AI Button Variants */
+.action-btn.ai-suggest,
+.action-btn.ai-sort,
+.action-btn.ai-batch,
+.action-btn.ai-explain {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.action-btn.ai-suggest:hover,
+.action-btn.ai-sort:hover,
+.action-btn.ai-batch:hover,
+.action-btn.ai-explain:hover {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: var(--brand-primary);
+}
+
+.action-btn.is-loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.action-btn.ai-cancel {
+  border-color: var(--danger-muted);
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+.action-btn.ai-cancel:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* AI Results in Context Panel */
+.ai-error-section {
+  padding: var(--space-3);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-muted);
+  border-radius: var(--radius-md);
+}
+
+.ai-error-text {
+  font-size: var(--text-sm);
+  color: var(--danger);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.action-btn.ai-retry {
+  border-color: var(--danger-muted);
+  color: var(--danger);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+}
+
+.action-btn.ai-apply {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  font-size: var(--text-xs);
+  flex: 1;
+}
+
+.action-btn.ai-apply:hover {
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.action-btn.ai-dismiss {
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  flex: 1;
+}
+
+.ai-actions-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* Suggestion Cards */
+.ai-suggest-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-suggestion-card {
+  padding: var(--space-2);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.ai-suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.ai-suggestion-field {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.ai-suggestion-confidence {
+  font-size: var(--text-xs);
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
+}
+
+.ai-suggestion-values {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.ai-old-value {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.ai-arrow {
+  color: var(--brand-primary);
+}
+
+.ai-new-value {
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+}
+
+.ai-suggestion-reason {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: var(--space-1) 0 0 0;
+  font-style: italic;
+}
+
+/* Batch Results */
+.ai-batch-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-batch-count {
+  font-size: var(--text-sm);
+  color: var(--brand-primary);
+  font-weight: var(--font-semibold);
+  margin: 0;
+}
+
+.ai-batch-card {
+  padding: var(--space-1_5) var(--space-2);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.ai-batch-title {
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: var(--space-0_5);
+}
+
+.ai-batch-meta {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.ai-batch-tag {
+  font-size: 10px;
+  padding: 1px var(--space-1);
+  background: var(--glass-bg-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.ai-batch-more {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Explain Results */
+.ai-explain-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-explain-desc {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ai-explain-steps {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.ai-explain-steps li {
+  margin-bottom: var(--space-1);
 }
 </style>

@@ -505,7 +505,7 @@ const pinAsQuickTask = async () => {
 }
 
 // AI Assist handlers
-const openAIAssist = (event: MouseEvent) => {
+const openAIAssist = (_event: MouseEvent) => {
   const menuRect = menuRef.value?.getBoundingClientRect()
   if (menuRect) {
     aiAssistPosition.value = {

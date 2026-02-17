@@ -9,11 +9,11 @@ import AchievementBadge from './AchievementBadge.vue'
 import type { AchievementCategory } from '@/types/gamification'
 import { X, Trophy, Target, Flame, Compass, Lock } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   open: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   close: []
 }>()
 

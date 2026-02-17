@@ -2,7 +2,7 @@ import { ref, computed, type Ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSettingsStore } from '@/stores/settings'
-import { detectPowerKeyword, DAY_OF_WEEK_KEYWORDS } from '@/composables/usePowerKeywords'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { useWeeklyPlanAI, type WeeklyPlan, type WeeklyPlanState, type WeeklyPlanStatus, type TaskSummary, type InterviewAnswers, type BehavioralContext } from './useWeeklyPlanAI'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useProjectStore } from '@/stores/projects'
@@ -13,7 +13,6 @@ import type { MemoryObservation } from '@/utils/supabaseMappers'
 // ============================================================================
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
-type DayKey = typeof DAY_KEYS[number]
 
 // TASK-1321: Parameterized week start to support Sunday or Monday start
 function getWeekStart(weekStartsOn: 0 | 1 = 0): Date {
@@ -94,7 +93,7 @@ function savePlanToStorage(state: WeeklyPlanState) {
   }
 }
 
-function loadPlanFromStorage(weekStartsOn: 0 | 1 = 0): WeeklyPlanState | null {
+function loadPlanFromStorage(_weekStartsOn: 0 | 1 = 0): WeeklyPlanState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
@@ -620,7 +619,7 @@ export function useWeeklyPlan() {
   const eligibleTasks = computed(() => getEligibleTasks())
   const eligibleTaskCount = computed(() => getEligibleTasks().length)
 
-  const appliedStats = computed(() => {
+  const _appliedStats = computed(() => {
     if (state.value.status !== 'applied' || !state.value.plan) return null
     let totalScheduled = 0
     let daysUsed = 0

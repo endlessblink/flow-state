@@ -331,7 +331,7 @@ const getDurationCount = (duration: DurationCategory): number => {
 // TASK-1246: Toggle handlers (multi-select, don't close dropdown)
 const togglePriority = (priority: 'high' | 'medium' | 'low') => {
   const next = new Set(props.selectedPriorities)
-  next.has(priority) ? next.delete(priority) : next.add(priority)
+  if (next.has(priority)) { next.delete(priority) } else { next.add(priority) }
   emit('update:selectedPriorities', next)
 }
 
@@ -342,7 +342,7 @@ const clearPriorities = () => {
 
 const toggleProject = (projectId: string) => {
   const next = new Set(props.selectedProjects)
-  next.has(projectId) ? next.delete(projectId) : next.add(projectId)
+  if (next.has(projectId)) { next.delete(projectId) } else { next.add(projectId) }
   emit('update:selectedProjects', next)
 }
 
@@ -353,7 +353,7 @@ const clearProjects = () => {
 
 const toggleDuration = (duration: DurationCategory) => {
   const next = new Set(props.selectedDurations)
-  next.has(duration) ? next.delete(duration) : next.add(duration)
+  if (next.has(duration)) { next.delete(duration) } else { next.add(duration) }
   emit('update:selectedDurations', next)
 }
 

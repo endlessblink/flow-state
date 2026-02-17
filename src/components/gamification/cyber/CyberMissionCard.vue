@@ -95,7 +95,7 @@ const objectiveIcon = computed(() => {
 
 // Objective text (CLEAR ACTION VERBS)
 const objectiveText = computed(() => {
-  const current = props.challenge.objectiveCurrent
+  const _current = props.challenge.objectiveCurrent
   const target = props.challenge.objectiveTarget
   const ctx = props.challenge.objectiveContext
 

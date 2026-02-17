@@ -43,7 +43,7 @@ export function useCanvasActions(
     const canvasStore = useCanvasStore()
     const contextMenuStore = useCanvasContextMenuStore()
     const taskStore = useTaskStore()
-    const { getSelectedNodes, screenToFlowCoordinate, removeNodes, fitView } = useVueFlow()
+    const { getSelectedNodes, screenToFlowCoordinate, removeNodes: _removeNodes, fitView } = useVueFlow()
 
     // --- Instantiate Sub-Composables ---
 

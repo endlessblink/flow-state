@@ -1103,7 +1103,7 @@ export function useAIChat() {
     for (const line of lines) {
       const trimmed = line.trim()
       // Match "1. Title", "2. Title", etc.
-      const numberedMatch = trimmed.match(/^\d+[\.\)]\s+(.+)/)
+      const numberedMatch = trimmed.match(/^\d+[.)]\s+(.+)/)
       // Match "- Title" or "* Title"
       const bulletMatch = trimmed.match(/^[-*]\s+(.+)/)
 

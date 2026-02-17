@@ -107,7 +107,7 @@ Call client"
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { NButton } from 'naive-ui'
 import { Mic, MicOff, X, Loader2, Globe } from 'lucide-vue-next'
 import { useBrainDump } from '@/composables/useBrainDump'

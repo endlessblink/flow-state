@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSettingsStore } from '@/stores/settings'
 import SettingsSection from '../SettingsSection.vue'
@@ -7,7 +7,7 @@ import SettingsToggle from '../SettingsToggle.vue'
 import { RefreshCw, Trash2 } from 'lucide-vue-next'
 
 const settingsStore = useSettingsStore()
-const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData, addMemoryObservation } = useWorkProfile()
+const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
 
 const isSaving = ref(false)
 const isRecalculating = ref(false)
@@ -70,7 +70,7 @@ async function onSave() {
     })
     saveMessage.value = 'Preferences saved!'
     setTimeout(() => { saveMessage.value = '' }, 3000)
-  } catch (err) {
+  } catch (_err) {
     saveMessage.value = 'Failed to save'
   } finally {
     isSaving.value = false

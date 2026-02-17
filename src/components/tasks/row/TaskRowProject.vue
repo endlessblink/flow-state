@@ -92,7 +92,7 @@ import { Check } from 'lucide-vue-next'
 import { useProjectStore } from '@/stores/projects'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 
-const props = defineProps<{
+defineProps<{
   visual: any
   projectDisplayName: string
   currentProjectId?: string | null

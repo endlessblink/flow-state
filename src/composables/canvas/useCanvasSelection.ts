@@ -1,7 +1,6 @@
 import { ref, reactive, type Ref, onMounted, onUnmounted } from 'vue'
-import { type Node, useVueFlow } from '@vue-flow/core'
+import { type Node } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
-import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 import { useCanvasCore } from './useCanvasCore'
 

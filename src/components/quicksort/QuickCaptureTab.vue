@@ -228,7 +228,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, reactive } from 'vue'
-import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff, Globe, Loader2 } from 'lucide-vue-next'
+import { X, Plus, Inbox, Flag, Calendar, Zap, Mic, MicOff, Globe } from 'lucide-vue-next'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useUrlScraping } from '@/composables/useUrlScraping'
 import { useQuickCapture, type PendingTask } from '@/composables/useQuickCapture'
@@ -245,7 +245,7 @@ const titleInputRef = ref<HTMLInputElement>()
 // TASK-1322: Whisper-only voice input (browser speech recognition removed)
 const {
   isRecording: isListening,
-  isProcessing: isProcessingVoice,
+  isProcessing: _isProcessingVoice,
   isSupported: isWhisperSupported,
   hasApiKey: hasWhisperApiKey,
   transcript: whisperTranscript,
@@ -264,7 +264,7 @@ const {
   }
 })
 
-const isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
+const _isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
 const displayTranscript = computed(() => whisperTranscript.value)
 
 // Toggle voice recording

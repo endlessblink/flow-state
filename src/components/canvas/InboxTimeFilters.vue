@@ -92,7 +92,7 @@ const _isTomorrow = (dateStr?: string) => {
 // TASK-1089: Use calendar week ending at Sunday 00:00 (exclusive)
 const _isThisWeek = (dateStr?: string) => {
   if (!dateStr) return false
-  const today = getToday()
+  const _today = getToday()
   const weekEnd = getWeekEnd()
   const date = new Date(dateStr)
   date.setHours(0, 0, 0, 0)

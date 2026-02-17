@@ -83,7 +83,7 @@ const totalCount = computed(() => gamificationStore.achievements.length)
 
     <!-- Streak -->
     <div class="panel-section">
-      <StreakCounter :show-freezes="true" />
+      <StreakCounter show-freezes />
     </div>
 
     <!-- Daily Challenges (FEATURE-1132) -->

@@ -11,7 +11,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { Download, X, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 import { NButton, NCard, NText, NProgress } from 'naive-ui'
-import { useTauriUpdater, type UpdateStatus } from '@/composables/useTauriUpdater'
+import { useTauriUpdater } from '@/composables/useTauriUpdater'
 import { isTauri } from '@/composables/useTauriStartup'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -21,9 +21,6 @@ const {
   updateInfo,
   error,
   downloadProgress,
-  hasUpdate,
-  isChecking,
-  isDownloading,
   checkForUpdates,
   downloadAndInstall,
   restart

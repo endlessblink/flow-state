@@ -1,4 +1,4 @@
-import { ref, reactive, nextTick, type Ref, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, type Ref } from 'vue'
 import { type Node, type NodeDragEvent, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore, type CanvasSection } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
@@ -20,7 +20,7 @@ import { useCanvasSectionProperties } from './useCanvasSectionProperties'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { DRAG_SETTLE_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS } from '@/config/timing'
 import { lockManager } from '@/services/canvas/LockManager'
-import { getPlatformDiagnostics, isLinuxTauri } from '@/utils/contextMenuCoordinates'
+import { getPlatformDiagnostics } from '@/utils/contextMenuCoordinates'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -342,16 +342,16 @@ export function useCanvasInteractions(deps?: {
     let vueFlow: ReturnType<typeof useVueFlow> | null = null
     try {
         if (!deps) vueFlow = useVueFlow()
-    } catch (e) {
+    } catch (_e) {
         if (import.meta.env.DEV) {
             console.warn('⚠️ [CANVAS-INTERACTIONS] useVueFlow context fallback')
         }
     }
 
-    const { getNodes } = useCanvasCore()
+    const { getNodes: _getNodes } = useCanvasCore()
     const findNode = deps?.findNode || vueFlow?.findNode || (() => null)
     const updateNode = deps?.updateNode || vueFlow?.updateNode || (() => { })
-    const applyNodeChanges = deps?.applyNodeChanges || vueFlow?.applyNodeChanges || (() => { })
+    const _applyNodeChanges = deps?.applyNodeChanges || vueFlow?.applyNodeChanges || (() => { })
     const nodes = (deps?.nodes || vueFlow?.nodes || ref([])) as Ref<any[]>
 
     const canvasStore = useCanvasStore()

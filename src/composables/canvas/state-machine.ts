@@ -103,7 +103,7 @@ export function useNodeStateMachine(initialState: NodeState = NodeState.IDLE) {
             return false;
         }
 
-        const previousState = currentState.value;
+        const _previousState = currentState.value;
         currentState.value = targetState;
 
         // Track state history for debugging

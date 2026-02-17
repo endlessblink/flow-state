@@ -52,7 +52,8 @@ export function useCalendarModals() {
             try {
                 await taskStore.deleteTaskWithUndo(taskToDelete.value)
                 taskToDelete.value = null
-            } catch (error) {
+            } catch (_error) {
+              // intentionally empty
             }
         }
         showConfirmModal.value = false

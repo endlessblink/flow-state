@@ -34,9 +34,29 @@ const config: StorybookConfig = {
         ...config.resolve,
         alias: {
           '@': resolve(__dirname, '../src'),
-          '~': resolve(__dirname, '../src')
+          '~': resolve(__dirname, '../src'),
+          // Enable runtime compiler for inline template strings in story mocks
+          'vue': resolve(__dirname, '../node_modules/vue/dist/vue.esm-bundler.js')
         }
       },
+      plugins: [
+        ...(config.plugins || []),
+        // Mock virtual:pwa-register/vue for stories that import ReloadPrompt
+        {
+          name: 'mock-pwa-register',
+          resolveId(id: string) {
+            if (id === 'virtual:pwa-register/vue') return id
+          },
+          load(id: string) {
+            if (id === 'virtual:pwa-register/vue') return `
+              import { ref } from 'vue'
+              export function useRegisterSW() {
+                return { offlineReady: ref(false), needRefresh: ref(false), updateServiceWorker: () => {} }
+              }
+            `
+          }
+        }
+      ],
       optimizeDeps: {
         ...config.optimizeDeps,
         exclude: ['vue-i18n', '@intlify/unplugin-vue-i18n']

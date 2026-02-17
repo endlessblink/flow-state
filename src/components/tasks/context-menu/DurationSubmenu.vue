@@ -31,7 +31,7 @@
 import { durationOptions } from './constants'
 import type { CSSProperties } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   isVisible: boolean
   parentVisible?: boolean // BUG-1095: Track parent menu visibility
   style: CSSProperties

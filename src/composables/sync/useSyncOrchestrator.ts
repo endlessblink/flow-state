@@ -547,7 +547,7 @@ function startProcessing(): void {
 /**
  * Stop the sync processing loop
  */
-function stopProcessing(): void {
+function _stopProcessing(): void {
   if (processIntervalId.value) {
     clearInterval(processIntervalId.value)
     processIntervalId.value = null

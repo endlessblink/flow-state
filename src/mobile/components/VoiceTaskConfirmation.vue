@@ -6,8 +6,8 @@
       size="md"
       :show-header="false"
       :show-footer="false"
-      :close-on-overlay-click="true"
-      :close-on-escape="true"
+      close-on-overlay-click
+      close-on-escape
       @close="handleCancel"
     >
       <div class="voice-confirmation-content">

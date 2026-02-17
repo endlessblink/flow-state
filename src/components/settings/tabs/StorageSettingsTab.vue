@@ -28,7 +28,6 @@ const {
   createBackup,
   downloadBackup,
   restoreFromFile,
-  restoreFromGoldenBackup,
   restoreFromGoldenBackupByIndex,
   getGoldenBackupValidation,
   getGoldenBackups,
@@ -89,16 +88,6 @@ const handleFileUpload = async (event: Event) => {
 }
 
 
-
-const confirmGoldenRestore = async () => {
-  isRestoring.value = true
-  const success = await restoreFromGoldenBackup(true) // skip validation since we just did it
-  isRestoring.value = false
-  if (success) {
-    alert('Golden backup restored!')
-    showValidation.value = false
-  }
-}
 
 const checkShadowHub = async () => {
   isScanningShadow.value = true

@@ -12,13 +12,13 @@ import ARIAMessage from './ARIAMessage.vue'
 import { Skull, Swords, Clock, Zap, Trophy, RefreshCw, Sparkles } from 'lucide-vue-next'
 
 // Props
-const props = defineProps<{
+defineProps<{
   compact?: boolean
 }>()
 
 // Store
 const challengesStore = useChallengesStore()
-const { activeBoss, isGenerating, lastWeeklyGeneration } = storeToRefs(challengesStore)
+const { activeBoss, isGenerating, lastWeeklyGeneration: _lastWeeklyGeneration } = storeToRefs(challengesStore)
 
 // AI Router for boss generation
 let router: ReturnType<typeof createAIRouter> | null = null

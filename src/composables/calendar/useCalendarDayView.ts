@@ -174,10 +174,6 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
           // Create calendar events only for tasks with explicit instances
           if (hasInstanceForToday) {
-            let startTime: Date
-            let duration: number
-            let instanceId: string | undefined
-
             // Use instance-specific schedule
             const todayInstance = task.instances?.find(instance => instance && instance.scheduledDate === dateStr)
             if (!todayInstance || !todayInstance.scheduledTime) return
@@ -185,9 +181,9 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
             const [hour, minute] = todayInstance.scheduledTime.split(':').map(Number)
             if (isNaN(hour) || isNaN(minute)) return
 
-            startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
-            duration = todayInstance.duration || task.estimatedDuration || 30
-            instanceId = todayInstance.id
+            const startTime = new Date(`${dateStr}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
+            const duration = todayInstance.duration || task.estimatedDuration || 30
+            const instanceId = todayInstance.id
 
             // Validate startTime
             if (isNaN(startTime.getTime())) return
@@ -221,7 +217,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
 
             events.push(event)
           }
-        } catch (taskError) {
+        } catch (_taskError) {
           // Continue with other tasks
         }
       })
@@ -230,11 +226,11 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       try {
         const positionedEvents = calculateOverlappingPositions(events)
         return positionedEvents as CalendarEvent[]
-      } catch (positionError) {
+      } catch (_positionError) {
         // Return events without positioning if calculation fails
         return events as CalendarEvent[]
       }
-    } catch (error) {
+    } catch (_error) {
       // Return empty array to prevent template rendering failure
       return []
     }
@@ -367,7 +363,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       try {
         parsedData = JSON.parse(data) as CalendarDragData
 
-      } catch (error) {
+      } catch (_error) {
         return
       }
     }
@@ -475,7 +471,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           // Successfully created instance
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Fall through to cleanup
     }
 
@@ -605,6 +601,7 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         event
       )
     } else {
+      // intentionally empty
     }
 
     // Don't prevent default - let HTML5 drag work naturally

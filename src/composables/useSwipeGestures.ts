@@ -144,6 +144,12 @@ export function useSwipeGestures(
     startTime.value = Date.now()
     lastMoveTime.value = Date.now()
 
+    // In 4-directional mode, prevent default on touchstart to stop
+    // the browser from claiming the touch for scrolling
+    if (fourDirectional) {
+      e.preventDefault()
+    }
+
     onSwipeStart?.()
     triggerHaptic('light')
   }
@@ -159,26 +165,26 @@ export function useSwipeGestures(
     const absX = Math.abs(deltaX.value)
     const absY = Math.abs(deltaY.value)
 
-    // Lock direction once determined
-    if (!isLocked.value && (absX > 10 || absY > 10)) {
-      isLocked.value = true
-
-      if (fourDirectional) {
-        // In 4-directional mode, prevent scroll for ANY swipe direction
-        e.preventDefault()
-      } else if (lockVertical && absX > absY) {
-        // If primarily horizontal, prevent vertical scroll
+    // In 4-directional mode, always prevent default to stop browser scroll
+    if (fourDirectional) {
+      e.preventDefault()
+    } else {
+      // Lock direction once determined
+      if (!isLocked.value && (absX > 10 || absY > 10)) {
+        isLocked.value = true
+        if (lockVertical && absX > absY) {
+          e.preventDefault()
+        }
+      }
+      // Continue preventing default once locked
+      if (isLocked.value && absX > absY && lockVertical) {
         e.preventDefault()
       }
     }
 
-    // Continue preventing default once locked
-    if (isLocked.value) {
-      if (fourDirectional) {
-        e.preventDefault()
-      } else if (absX > absY && lockVertical) {
-        e.preventDefault()
-      }
+    // Mark as locked once direction is determined
+    if (!isLocked.value && (absX > 10 || absY > 10)) {
+      isLocked.value = true
     }
 
     // Milestone haptics
@@ -250,7 +256,7 @@ export function useSwipeGestures(
     const el = targetRef.value
     if (!el) return
 
-    el.addEventListener('touchstart', handleTouchStart, { passive: true })
+    el.addEventListener('touchstart', handleTouchStart, { passive: !fourDirectional })
     el.addEventListener('touchmove', handleTouchMove, { passive: false })
     el.addEventListener('touchend', handleTouchEnd, { passive: true })
     el.addEventListener('touchcancel', handleTouchCancel, { passive: true })

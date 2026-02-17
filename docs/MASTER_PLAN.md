@@ -1378,7 +1378,14 @@ None of the "sha512" hashes in the integrity attribute match the content of the 
 
 ---
 
-### BUG-1182: saveTasks Fails After Realtime Disconnect (📋 PLANNED)
+### BUG-1182: saveTasks Fails After Realtime Disconnect (👀 REVIEW)
+
+**Root Cause**: After sleep/wake, the JWT token expires but `withRetry()` retries 401 errors with the same stale token (all 3 attempts fail). The save failure was silently swallowed in `saveTasksToStorage()`, causing data loss.
+
+**Fix (3 layers)**:
+1. Token refresh in `withRetry()` before retrying on 401/403 (`useSupabaseDatabase.ts`)
+2. Proactive token refresh on visibility change / wake-up (`useSupabaseDatabase.ts`)
+3. Surface save failures when authenticated — re-throw instead of silently swallowing (`taskPersistence.ts`)
 
 **Priority**: P2-MEDIUM | **Status**: 📋 PLANNED (2026-02-02)
 

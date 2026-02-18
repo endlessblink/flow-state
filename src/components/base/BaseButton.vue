@@ -283,18 +283,18 @@ defineExpose({
 /* Size Variants - using spacing tokens */
 .base-button.size-sm {
   height: var(--btn-sm);
-  padding: 0 var(--space-3);
+  padding-inline: var(--space-3);
   font-size: var(--text-xs);
 }
 
 .base-button.size-md {
   height: var(--btn-md);
-  padding: 0 var(--space-4);
+  padding-inline: var(--space-4);
 }
 
 .base-button.size-lg {
   height: var(--btn-lg);
-  padding: 0 var(--space-6);
+  padding-inline: var(--space-6);
   font-size: var(--text-base);
 }
 

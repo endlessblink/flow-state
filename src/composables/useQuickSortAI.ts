@@ -14,7 +14,6 @@ import type { Task } from '@/types/tasks'
 import type { SmartSuggestion } from '@/composables/useAITaskAssist'
 
 import { useProjectStore } from '@/stores/projects'
-import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -145,8 +144,6 @@ export function useQuickSortAI() {
       const today = new Date().toISOString().split('T')[0]
       const projectCtx = getProjectContext()
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
-      const userContext = await getAIUserContext('quicksort')
-
       const systemPrompt = `You are a task triage assistant in a Quick Sort workflow. The user is rapidly categorizing uncategorized tasks one at a time. Your job: suggest metadata ONLY when the task title/description clearly implies a specific value.
 
 Return ONLY valid JSON:
@@ -179,7 +176,7 @@ Return ONLY valid JSON:
 - NEVER suggest a field just to fill it in — empty is better than a bad guess
 - confidence 0.85+ = obvious from task content, 0.7-0.84 = reasonable inference. Below 0.7 = don't include it.
 - reason: ONE sentence explaining why THIS specific task gets THIS value. Never generic like "tasks should have priorities".
-- If the task is too vague to suggest anything meaningful, return { "suggestions": [] }` + langHint + userContext
+- If the task is too vague to suggest anything meaningful, return { "suggestions": [] }` + langHint
 
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
 Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, estimatedDuration=${task.estimatedDuration || 'none'}

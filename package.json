@@ -47,6 +47,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run",
+    "test:ai-quality": "node scripts/test-ai-quality.cjs",
     "test:storybook": "vitest run --config vitest.storybook.config.ts",
     "test:all": "npm run test:unit && npm run test:storybook",
     "test:safety": "vitest run tests/safety/",

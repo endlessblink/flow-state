@@ -2634,7 +2634,7 @@ npm run tasks:bugs     # Filter by BUG type
 | 3 | Gamification (`gamification/`) | ~20 | ~400 | Medium — ✅ Complete |
 | 4 | Canvas nodes (`canvas/`) | ~10 | ~200 | Medium — ✅ Complete |
 | 5 | Task components (`tasks/`) | ~10 | ~150 | Medium — ✅ Complete |
-| 6 | CSS files (non-token) | 7 | ~300 | Lower — global overrides |
+| 6 | CSS files (non-token) | 7 | ~300 | Lower — ✅ Complete |
 | 7 | Remaining (base, calendar, layout, etc.) | ~60 | ~200 | Lowest — mostly clean |
 
 **Rules**:
@@ -3376,7 +3376,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1352**~~ | **P1** | ✅ **Calendar inbox filtered by board smart view — only shows 4 tasks instead of all unscheduled** (✅ DONE 2026-02-17) |
 | ~~**BUG-1353**~~ | **P0** | ✅ **Sidebar quick task: metadata buttons disappear on click + no save confirmation** (✅ DONE 2026-02-17) |
 | ~~**BUG-1355**~~ | **P1** | ✅ **Can't log out — Supabase signOut fails silently, session re-establishes. Buttons squashed. Post-logout UI stuck** (✅ DONE 2026-02-17) |
-| **BUG-1354** | **P0** | **📋 Mobile PWA timer sync broken with web app** |
+| ~~**BUG-1357**~~ | **P0** | ✅ **Mobile PWA timer sync broken with web app** (✅ DONE 2026-02-18) |
 | ~~**BUG-1351**~~ | **P0** | ✅ **Calendar drag ghost stuck after inbox→day drop** (✅ DONE 2026-02-17) |
 | ~~**BUG-1349**~~ | **P2** | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17) |
 | ~~**BUG-1348**~~ | **P0** | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17) |

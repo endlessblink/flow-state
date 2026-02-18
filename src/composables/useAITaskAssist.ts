@@ -22,7 +22,6 @@ import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -540,9 +539,6 @@ export function useAITaskAssist() {
         t.dueDate && t.dueDate < today && t.status !== 'done'
       ).length
 
-      // TASK-1350: Use centralized AI user context
-      const userContext = await getAIUserContext('taskassist')
-
       const systemPrompt = `You suggest task metadata. Return ONLY valid JSON.
 Format: { "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
 Rules:
@@ -559,7 +555,7 @@ Rules:
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
 Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'planned'}, duration=${task.estimatedDuration || 'none'}min
 Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}
-Today: ${today} | Overdue tasks: ${overdueTasks}${userContext}`
+Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const messages: RouterChatMessage[] = [
         { role: 'system', content: systemPrompt },

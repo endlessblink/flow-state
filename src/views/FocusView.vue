@@ -288,7 +288,7 @@ onUnmounted(() => {
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-normal);
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--blur-md);
   color: var(--text-primary);
 }
 
@@ -314,7 +314,7 @@ onUnmounted(() => {
 }
 
 .focus-btn--start:hover {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
   border-color: var(--color-accent);
 }
 
@@ -334,7 +334,7 @@ onUnmounted(() => {
 }
 
 .focus-btn--complete:hover {
-  background: rgba(78, 205, 196, 0.1);
+  background: var(--brand-primary-bg-subtle);
   border-color: var(--brand-primary-hover);
   color: var(--brand-primary-hover);
 }
@@ -345,7 +345,7 @@ onUnmounted(() => {
 }
 
 .focus-btn--pause-leave:hover {
-  background: rgba(234, 179, 8, 0.1);
+  background: var(--warning-bg-subtle);
   border-color: var(--color-warning);
 }
 

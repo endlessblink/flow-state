@@ -320,7 +320,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   display: grid;
   grid-template-columns: 80px repeat(7, 1fr);
   background: var(--glass-panel-bg);
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--blur-md);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 0;
@@ -410,7 +410,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 }
 
 .week-time-cell.current-time {
-  background: rgba(239, 68, 68, 0.05);
+  background: var(--danger-bg-subtle);
   box-shadow: inset 0 -2px 0 var(--color-danger);
 }
 
@@ -489,7 +489,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .resize-handle-bottom {
   bottom: 0;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--white-alpha-30);
 }
 
 .week-event:hover .resize-handle {
@@ -501,8 +501,8 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
   position: absolute;
   left: 0;
   right: 0;
-  background: rgba(99, 102, 241, 0.12);
-  border: 2px dashed rgba(99, 102, 241, 0.6);
+  background: var(--brand-primary-bg-subtle);
+  border: 2px dashed var(--brand-primary-alpha-medium);
   border-radius: var(--radius-sm);
   pointer-events: none;
   z-index: 50;
@@ -515,8 +515,8 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .resize-preview-overlay .preview-duration {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(99, 102, 241, 0.9);
-  background: rgba(255, 255, 255, 0.9);
+  color: var(--brand-primary);
+  background: var(--surface-0);
   padding: 1px var(--space-1);
   border-radius: var(--radius-sm);
   line-height: 1.3;
@@ -525,7 +525,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 /* Ghost preview — IDENTICAL to day view */
 .ghost-preview-inline {
   background: linear-gradient(135deg, var(--calendar-ghost-bg-start) 0%, var(--calendar-ghost-bg-end) 100%);
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--blur-md);
   border: 3px solid var(--calendar-ghost-border);
   border-radius: var(--radius-lg);
   pointer-events: none;
@@ -545,7 +545,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 .ghost-title {
   font-weight: 700;
   font-size: var(--text-xs);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: var(--text-shadow-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -564,7 +564,7 @@ const getWeekEventCellStyle = (event: WeekEvent) => {
 
 /* Timer active glow */
 .week-event.timer-active-event {
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 8px var(--glass-glow), inset 0 0 0 1px var(--glass-glow);
   animation: timer-pulse 2s ease-in-out infinite;
 }
 

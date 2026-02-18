@@ -516,9 +516,8 @@ export const useTimerStore = defineStore('timer', () => {
       console.log('🍅 [TIMER] startTimer called:', { taskId, duration, isBreak })
     }
 
-    // TASK-1287 + BUG-1294: If a work timer is actively running (not paused), don't reset
-    // BUG-1354: If paused (gap), fall through to create a fresh session with new startTime
-    if (currentSession.value?.isActive && !currentSession.value.isPaused && !currentSession.value.isBreak && !isBreak) {
+    // TASK-1287 + BUG-1294: If a work timer is already running, don't reset
+    if (currentSession.value?.isActive && !currentSession.value.isBreak && !isBreak) {
       if (currentSession.value.taskId !== taskId) {
         // Different task — switch association without resetting countdown
         await switchTimerTask(taskId)

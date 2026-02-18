@@ -205,7 +205,7 @@ const calculateTargetDate = (): string => {
   cursor: pointer;
   transition: all var(--duration-normal) var(--spring-smooth);
   position: relative;
-  min-height: 40px;
+  min-height: var(--space-10);
   user-select: none;
   border: 1px solid transparent;
 }
@@ -213,7 +213,7 @@ const calculateTargetDate = (): string => {
 .sidebar-smart-item.is-compact {
   padding: var(--space-1_5) var(--space-2);
   gap: var(--space-2);
-  min-height: 32px;
+  min-height: var(--space-8);
   border-radius: var(--radius-md);
 }
 
@@ -337,7 +337,7 @@ const calculateTargetDate = (): string => {
 
 .sidebar-smart-item.is-drag-target.is-drag-invalid {
   background: var(--color-danger-bg-light) !important;
-  border-color: rgba(255, 107, 107, 0.3) !important;
+  border-color: var(--danger-border-low) !important;
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -355,8 +355,8 @@ const calculateTargetDate = (): string => {
     color-mix(in srgb, var(--brand-primary) 95%, transparent) 0%,
     color-mix(in srgb, var(--brand-primary) 85%, transparent) 100%
   );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   color: #0a0a0a;

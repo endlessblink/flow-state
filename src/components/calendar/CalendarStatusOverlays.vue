@@ -112,7 +112,7 @@ defineEmits<{
   color: white;
   padding: var(--space-3) var(--space-4);
   border-bottom: 2px solid var(--border-hover);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
   animation: slideDown 0.3s ease-out;
 }
 
@@ -137,7 +137,7 @@ defineEmits<{
 
 .health-retry-btn {
   background: var(--border-hover);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--white-alpha-30);
   color: white;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
@@ -147,7 +147,7 @@ defineEmits<{
 }
 
 .health-retry-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--white-alpha-30);
   transform: translateY(-1px);
 }
 
@@ -173,7 +173,7 @@ defineEmits<{
   color: white;
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+  box-shadow: 0 4px 12px var(--danger-bg-subtle);
   max-width: 600px;
   width: 90%;
   animation: slideDown 0.3s ease-out;
@@ -211,7 +211,7 @@ defineEmits<{
 .dismiss-btn,
 .refresh-btn {
   background: var(--border-hover);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--white-alpha-30);
   color: white;
   padding: var(--space-1_5) var(--space-3);
   border-radius: var(--radius-sm);
@@ -224,17 +224,17 @@ defineEmits<{
 .retry-btn:hover,
 .dismiss-btn:hover,
 .refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--white-alpha-30);
   transform: translateY(-1px);
 }
 
 .refresh-btn {
-  background: rgba(255, 71, 87, 0.3);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: var(--danger-bg-subtle);
+  border-color: var(--white-alpha-40);
 }
 
 .refresh-btn:hover {
-  background: rgba(255, 71, 87, 0.4);
+  background: var(--danger-bg-medium);
 }
 
 /* Global Loading Overlay */
@@ -245,7 +245,7 @@ defineEmits<{
   right: 0;
   bottom: 0;
   background: var(--overlay-darker);
-  backdrop-filter: blur(4px);
+  backdrop-filter: var(--blur-sm);
   z-index: var(--z-tooltip);
   display: flex;
   align-items: center;
@@ -257,7 +257,7 @@ defineEmits<{
   background: var(--surface-secondary);
   padding: var(--space-6) var(--space-8);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-2xl);
   display: flex;
   flex-direction: column;
   align-items: center;

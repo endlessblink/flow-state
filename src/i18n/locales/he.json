@@ -1,16 +1,18 @@
 {
   "common": {
-    "app_name": "פומו-פלו",
+    "app_name": "FlowState",
     "tasks": "משימות",
     "projects": "פרויקטים",
     "settings": "הגדרות",
     "search": "חיפוש",
-    "add": "הוסף",
-    "edit": "ערוך",
-    "delete": "מחק",
-    "save": "שמור",
-    "cancel": "בטל",
-    "confirm": "אשר"
+    "add": "הוספה",
+    "edit": "עריכה",
+    "delete": "מחיקה",
+    "save": "שמירה",
+    "cancel": "ביטול",
+    "confirm": "אישור",
+    "close": "סגירה",
+    "required": "נדרש"
   },
   "timer": {
     "start": "התחל",
@@ -29,7 +31,7 @@
   "smart_views": {
     "today": "היום",
     "week": "השבוע",
-    "uncategorized_tasks": "משימות לא מסווגגות",
+    "uncategorized_tasks": "משימות לא משויכות",
     "all_active_tasks": "כל המשימות הפעילות"
   },
   "task": {
@@ -38,8 +40,8 @@
     "status": "סטטוס",
     "priority": "עדיפות",
     "due_date": "תאריך יעד",
-    "completed": "הושלמה",
-    "in_progress": "בביצוע",
+    "completed": "הושלם",
+    "in_progress": "בתהליך",
     "planned": "מתוכנן",
     "create_task": "צור משימה",
     "add_task": "הוסף משימה...",
@@ -57,22 +59,22 @@
     "appearance": "מראה",
     "language": "שפה",
     "direction": "כיוון טקסט",
-    "ltr": "LTR",
+    "ltr": "שמאל לימין (LTR)",
     "ltrDescription": "כיוון טקסט משמאל לימין",
-    "rtl": "RTL",
+    "rtl": "ימין לשמאל (RTL)",
     "rtlDescription": "כיוון טקסט מימין לשמאל",
     "auto": "אוטומטי",
-    "autoDescription": "זיהוי אוטומטי לפי שפה"
+    "autoDescription": "זיהוי אוטומטי לפי השפה"
   },
   "auth": {
     "displayName": "שם תצוגה",
-    "displayNamePlaceholder": "הזן שם תצוגה",
+    "displayNamePlaceholder": "הכנס את שם התצוגה שלך",
     "email": "אימייל",
-    "emailPlaceholder": "הזן אימייל",
+    "emailPlaceholder": "הכנס את האימייל שלך",
     "password": "סיסמה",
-    "passwordPlaceholder": "הזן סיסמה",
+    "passwordPlaceholder": "הכנס את הסיסמה שלך",
     "confirmPassword": "אימות סיסמה",
-    "confirmPasswordPlaceholder": "הזן שוב את הסיסמה",
+    "confirmPasswordPlaceholder": "הכנס את הסיסמה שוב",
     "passwordMismatch": "הסיסמאות אינן תואמות",
     "createAccount": "צור חשבון",
     "creatingAccount": "יוצר חשבון...",
@@ -86,15 +88,15 @@
       "title": "התחברות",
       "subtitle": "ברוך שובך! התחבר כדי לגשת למשימות שלך",
       "email": "אימייל",
-      "emailPlaceholder": "הזן את האימייל שלך",
+      "emailPlaceholder": "הכנס את האימייל שלך",
       "password": "סיסמה",
-      "passwordPlaceholder": "הזן את הסיסמה שלך",
+      "passwordPlaceholder": "הכנס את הסיסמה שלך",
       "forgotPassword": "שכחת סיסמה?",
       "or": "או",
       "noAccount": "אין לך חשבון?",
-      "signUp": "צור חשבון",
-      "signIn": "התחבר",
-      "signingIn": "מתחבר..."
+      "signUp": "הרשמה",
+      "signingIn": "מתחבר...",
+      "signIn": "התחבר"
     },
     "passwordStrengthWeak": "חלש",
     "passwordStrengthMedium": "בינוני",
@@ -105,10 +107,10 @@
     },
     "resetPassword": {
       "title": "איפוס סיסמה",
-      "subtitle": "הזן את המייל שלך לקבלת קישור לאיפוס",
-      "emailSent": "המייל נשלח",
-      "checkEmail": "בדוק את תיבת המייל שלך",
-      "didntReceive": "לא קיבלת את המייל?",
+      "subtitle": "הכנס את האימייל שלך לקבלת קישור לאיפוס",
+      "emailSent": "אימייל נשלח",
+      "checkEmail": "בדוק את האימייל שלך לקבלת הקישור",
+      "didntReceive": "לא קיבלת את האימייל?",
       "resend": "שלח שוב"
     }
   }

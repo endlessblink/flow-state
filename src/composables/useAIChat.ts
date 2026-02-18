@@ -19,6 +19,7 @@ import { useAIChatStore, type ChatAction, type ChatContext } from '@/stores/aiCh
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTimerStore } from '@/stores/timer'
+import { useAIEventTracking } from '@/composables/useAIEventTracking'
 import { type TaskType, type RouterProviderType } from '@/services/ai'
 import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
@@ -672,6 +673,15 @@ export function useAIChat() {
     if (!content.trim()) return
     if (store.isGenerating) return
 
+    // TASK-1356: Behavioral event tracking
+    const { trackChatMessage, trackChatSessionStart, trackToolCall } = useAIEventTracking()
+    const sessionId = store.activeConversation?.id || 'unknown'
+    // Track session start on first message
+    if (store.activeConversation && store.activeConversation.messages.length === 0) {
+      trackChatSessionStart(sessionId)
+    }
+    trackChatMessage(sessionId, { contentLength: content.length })
+
     // Set up abort controller for this ReAct session
     const abortController = new AbortController()
     reactAbortController.value = abortController
@@ -756,6 +766,7 @@ export function useAIChat() {
           const toolResults: ToolResult[] = []
           for (const call of immediateTools) {
             console.log(`[AIChat] ReAct step ${stepCount} - executing tool:`, call.tool, call.parameters)
+            trackToolCall(sessionId, call.tool) // TASK-1356
             const result = await executeTool(call)
             toolResults.push(result)
 

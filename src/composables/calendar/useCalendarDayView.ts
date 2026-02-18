@@ -223,13 +223,31 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
         }
       })
 
+      // BUG-1354: Dedup guard — remove duplicate events for the same task
+      // Race conditions in Realtime sync can briefly cause _rawTasks to have duplicates
+      const seenTaskIds = new Set<string>()
+      const dedupedEvents = events.filter(event => {
+        if (seenTaskIds.has(event.taskId)) {
+          if (import.meta.env.DEV) {
+            console.warn('[BUG-1354:CALENDAR] Duplicate event detected and removed:', {
+              taskId: event.taskId,
+              instanceId: event.instanceId,
+              title: event.title
+            })
+          }
+          return false
+        }
+        seenTaskIds.add(event.taskId)
+        return true
+      })
+
       // Calculate overlapping positions with error handling
       try {
-        const positionedEvents = calculateOverlappingPositions(events)
+        const positionedEvents = calculateOverlappingPositions(dedupedEvents)
         return positionedEvents as CalendarEvent[]
       } catch (_positionError) {
         // Return events without positioning if calculation fails
-        return events as CalendarEvent[]
+        return dedupedEvents as CalendarEvent[]
       }
     } catch (_error) {
       // Return empty array to prevent template rendering failure

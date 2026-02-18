@@ -319,8 +319,8 @@ const handleDrop = (event: DragEvent) => {
 .base-nav-item.is-active {
   background: var(--glass-bg-medium);
   border: 1px solid var(--state-active-border);
-  backdrop-filter: blur(var(--space-2));
-  -webkit-backdrop-filter: blur(var(--space-2));
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
 }
 
 /* Selected State - Multi-select highlight */
@@ -519,8 +519,8 @@ const handleDrop = (event: DragEvent) => {
     color-mix(in srgb, var(--brand-primary) 95%, transparent) 0%,
     color-mix(in srgb, var(--brand-primary) 85%, transparent) 100%
   );
-  backdrop-filter: blur(var(--space-3));
-  -webkit-backdrop-filter: blur(var(--space-3));
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   color: hsl(var(--slate-900));

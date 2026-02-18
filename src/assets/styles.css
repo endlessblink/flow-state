@@ -110,7 +110,7 @@ body {
 /* TASK-079: Canvas visibility improvements */
 .canvas-contour {
   /* Brighter canvas background for better element visibility */
-  background: rgba(45, 50, 60, 0.5) !important;
+  background: var(--overlay-component-bg) !important;
   border: 1px solid var(--border-medium) !important;
 }
 
@@ -122,8 +122,8 @@ body {
 
 /* Force dark styling on ALL native select elements - purple-tinted */
 select {
-  background-color: #221f35 !important;
-  color: #e0e0e0 !important;
+  background-color: var(--surface-0) !important;
+  color: var(--text-primary) !important;
   border: 1px solid var(--border-hover) !important;
   border-radius: var(--radius-md);
 }
@@ -134,8 +134,8 @@ select:focus {
 }
 
 select option {
-  background-color: #221f35 !important;
-  color: #e0e0e0 !important;
+  background-color: var(--surface-0) !important;
+  color: var(--text-primary) !important;
   padding: var(--space-2);
 }
 
@@ -144,8 +144,8 @@ select option {
 .filter-controls .filter-select,
 .filter-control select,
 .filter-select {
-  background-color: #221f35 !important;
-  color: #e0e0e0 !important;
+  background-color: var(--surface-0) !important;
+  color: var(--text-primary) !important;
   border: 1px solid var(--border-hover) !important;
 }
 
